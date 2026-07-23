@@ -27,12 +27,14 @@ interface InputFieldProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   maxLength?: number;
   iconPosition?: 'left' | 'right';
   message?: ReactNode;
   messageType?: 'default' | 'info' | 'alert' | 'error' | 'success';
   size?: 'sm' | 'md' | 'lg';
   dataCy?: string;
+  inputClassName?: React.HTMLAttributes<HTMLInputElement>['className'];
 }
 export function InputField({
   id,
@@ -53,12 +55,14 @@ export function InputField({
   onChange,
   onBlur,
   onKeyDown,
+  onPaste,
   maxLength,
   iconPosition = 'left',
   message,
   messageType = 'default',
   size = 'md',
   dataCy,
+  inputClassName,
 }: InputFieldProps) {
   const t = useTranslations('common');
   const resolvedLoadingText = loadingText ?? t('loading');
@@ -109,7 +113,7 @@ export function InputField({
           id={id}
           name={name}
           type="text"
-          className={cn('w-full border-none !bg-transparent')}
+          className={cn('w-full border-none !bg-transparent', inputClassName)}
           value={loading ? resolvedLoadingText : value}
           placeholder={placeholder}
           disabled={disabled || loading}
@@ -118,6 +122,7 @@ export function InputField({
           onChange={onChange}
           onBlur={onBlur}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
           maxLength={maxLength}
           aria-invalid={status === 'error'}
           data-cy={dataCy}

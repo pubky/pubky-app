@@ -1,9 +1,11 @@
 'use client';
+import { getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { PostHeaderTimestamp } from '../PostHeaderTimestamp/PostHeaderTimestamp';
 import { UserInfoPopover } from '../UserInfoPopover/UserInfoPopover';
 
@@ -32,7 +34,8 @@ export function PostHeaderUserInfo({
   indexedAt,
 }: PostHeaderUserInfoProps) {
   const formattedPublicKey = formatPublicKey({ key: userId });
-  const profileUrl = `/profile/${userId}`;
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const profileUrl = getUserProfileUrl(userId, currentUserPubky);
 
   // Prevent click from bubbling to parent post card (which navigates to post)
   const handleLinkClick = (e: React.MouseEvent) => {
@@ -40,7 +43,13 @@ export function PostHeaderUserInfo({
   };
 
   const content = (
-    <Container overrideDefaults className={cn('flex w-fit min-w-0 items-center', size === 'large' ? 'gap-4' : 'gap-3')}>
+    <Container
+      overrideDefaults
+      className={cn(
+        'grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center',
+        size === 'large' ? 'gap-4' : 'gap-3',
+      )}
+    >
       <Link href={profileUrl} onClick={handleLinkClick} className="shrink-0">
         <AvatarWithFallback
           avatarUrl={avatarUrl}
@@ -49,8 +58,8 @@ export function PostHeaderUserInfo({
           size={size === 'large' ? 'xl' : 'default'}
         />
       </Link>
-      <Container overrideDefaults className="min-w-0 flex-1">
-        <Link href={profileUrl} onClick={handleLinkClick} className="block w-fit max-w-full min-w-0">
+      <Container overrideDefaults className="max-w-full min-w-0">
+        <Link href={profileUrl} onClick={handleLinkClick} className="block w-full max-w-full min-w-0 overflow-hidden">
           <Typography
             className={cn(
               'block w-full max-w-full cursor-pointer truncate font-bold text-foreground',

@@ -11,6 +11,7 @@ import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
 import { AppError } from '@/libs/error/error';
 import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
+import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { generateRandomUsername } from '@/libs/utils/utils';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -43,6 +44,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const router = useRouter();
   const { toast } = useToast();
   const tProfile = useTranslations('toast.profile');
+  const tFile = useTranslations('toast.file');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Generate a stable initial username for create mode (only generated once)
@@ -344,18 +346,27 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         }
         toast({
           title: tProfile('updated'),
-          description: tProfile('updatedDesc'),
         });
         router.push(PROFILE_ROUTES.PROFILE);
       }
     } catch (error) {
+      const sizeLimitMessage = getImageUploadSizeLimitToastMessage(error, tFile);
+      if (sizeLimitMessage) {
+        setSubmitTextKey('tryAgain');
+        toast({
+          variant: 'error',
+          description: sizeLimitMessage,
+        });
+        return;
+      }
+
       if (error instanceof AppError) {
         // Handle session expiration - user needs to re-authenticate
         if (requiresLogin(error)) {
           Logger.error('Session expired while saving profile', error);
           setSubmitTextKey('tryAgain');
           toast({
-            title: tProfile('sessionExpired'),
+            variant: 'error',
             description: tProfile('sessionExpiredDesc'),
           });
           return;
@@ -366,8 +377,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           Logger.error('Failed to save profile in Homeserver', error);
           setSubmitTextKey('tryAgain');
           toast({
-            title: tProfile('saveFailed'),
-            description: tProfile('saveFailedDesc'),
+            variant: 'error',
+            description: tProfile('saveFailed'),
           });
           return;
         }
@@ -375,7 +386,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
       setSubmitTextKey('tryAgain');
       toast({
-        title: tProfile('fetchFailed'),
+        variant: 'error',
         description: mode === 'create' ? tProfile('fetchFailedDesc') : tProfile('updateFailed'),
       });
     } finally {
@@ -392,6 +403,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     setShowWelcomeDialog,
     router,
     toast,
+    tFile,
     tProfile,
   ]);
 

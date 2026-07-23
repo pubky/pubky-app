@@ -10,5 +10,5 @@ export interface TaggerUserRowProps {
   /** Callback when user is clicked */
   onUserClick: (userId: string) => void;
   /** Callback when follow button is clicked */
-  onFollowClick: (userId: string, isFollowing: boolean) => void;
+  onFollowClick: (userId: string, isFollowing: boolean, displayName: string) => void;
 }

@@ -1,16 +1,99 @@
 {
   "time": {
-    "now": "الان",
+    "secondsShort": "{count}ث",
     "minutesShort": "{count}د",
-    "hoursShort": "{count}س"
+    "hoursShort": "{count}س",
+    "daysShort": "{count}ي",
+    "weeksShort": "{count}أ",
+    "monthsShort": "{count}ش"
   },
   "landing": {
     "title": "<highlight>افتح</highlight> الويب.",
     "subtitle": "مفاتيحك، محتواك، قواعدك.",
-    "explore": "استكشف",
-    "joinNow": "انضم الآن",
+    "signIn": "تسجيل الدخول",
+    "learn": "تعلّم",
+    "join": "انضم",
+    "createAccount": "انضم الآن",
+    "videoLabel": "فيديو Pubky",
+    "scrollToNext": "التمرير إلى القسم التالي",
+    "scrollToTop": "التمرير إلى الأعلى",
     "aTetherCompany": "شركة تابعة لـ <tether>tether.</tether>",
-    "copyright": "Synonym Software, S.A. DE C.V. ©2026. جميع الحقوق محفوظة."
+    "copyright": "Synonym Software, S.A. DE C.V. ©2026. جميع الحقوق محفوظة.",
+    "broken": {
+      "eyebrow": "المشكلة",
+      "title": "الويب <highlight>معطّل</highlight>.",
+      "description": "المنصات المركزية تتحكم بهويتك وبياناتك ومدى وصولك.",
+      "features": {
+        "identity": {
+          "title": "هم يملكونك",
+          "description": "يجعلونك مدمنا على المحتوى الرخيص والدوبامين. يمكن سحب الوصول في أي وقت."
+        },
+        "data": {
+          "title": "هم يحبسونك",
+          "description": "المنشورات والملفات الشخصية والعلاقات محبوسة داخل صوامع تجعل المغادرة صعبة."
+        },
+        "reach": {
+          "title": "هم يحدّونك",
+          "description": "الخوارزميات تقرر من يسمعك، وما الذي ينتشر، وما الذي يختفي في الفراغ."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "الحل",
+      "title": "<highlight>Pubky</highlight> مختلف.",
+      "description": "يعيدك إلى التحكم في حياتك الرقمية.",
+      "features": {
+        "core": {
+          "title": "أنت مفاتيحك",
+          "description": "تعمل الحسابات بمفاتيح تشفيرية. لا خادم مركزي، لا حراس بوابة."
+        },
+        "taggable": {
+          "title": "الويب القابل للوسم",
+          "description": "وسم المنشورات والوسائط والملفات الشخصية. تضيف الوسوم معنى وتساعد في تشكيل رسمك الاجتماعي."
+        },
+        "social": {
+          "title": "اجتماعي، لكنه شخصي",
+          "description": "أنت المسؤول عن خلاصتك ومحتواك واتصالاتك. أنت تختار تجربتك."
+        },
+        "portable": {
+          "title": "هوية قابلة للنقل",
+          "description": "انتقل بين التطبيقات دون البدء من الصفر. تبقى هويتك وبياناتك وأصدقاؤك ملكا لك."
+        }
+      }
+    },
+    "freedom": {
+      "eyebrow": "مبني من أجل الحرية",
+      "title": "أنت <highlight>الخوارزمية</highlight>.",
+      "description": "لا أحد يقرر خلاصتك. أنشئ وشكّل واختبر الويب بشروطك.",
+      "nextSlide": "الشريحة التالية",
+      "features": {
+        "creation": {
+          "title": "أنشئ بلا حدود",
+          "description": "انشر أي شيء: أفكارا، مقالات، صورا، فيديوهات، روابط. يبدأ محتواك منك ويبقى معك."
+        },
+        "browsing": {
+          "title": "تصفح بطريقتك",
+          "description": "بدّل بين التخطيطات أو غيّر مدى وصولك لتصفية الضجيج والتركيز على ما يهم."
+        },
+        "feeds": {
+          "title": "شكّل منظورات",
+          "description": "ابن خلاصات ديناميكية تتحدث في الوقت الفعلي وتبقى محفوظة كمنظورات قابلة لإعادة الاستخدام."
+        },
+        "tagging": {
+          "title": "وسم كل شيء",
+          "description": "وسم المنشورات والوسائط والملفات الشخصية لإضافة السياق، والعثور على محتوى أفضل، واكتشاف أشخاص، والتفاعل بسرعة."
+        },
+        "collections": {
+          "title": "اجمع ما يهم",
+          "description": "احفظ المنشورات التي تستحق الاحتفاظ بها، ونسّق أفكارك الخاصة، وشارك مجموعاتك مع الآخرين."
+        }
+      }
+    },
+    "final": {
+      "title": "ادخل <line><highlight>ويب الحرية</highlight>.</line>",
+      "joinNow": "انضم الآن"
+    },
+    "explore": "استكشف"
   },
   "status": {
     "available": "متاح",
@@ -74,11 +157,13 @@
   "header": {
     "home": "الرئيسية",
     "hot": "الرائج",
-    "bookmarks": "المفضلة",
     "settings": "الاعدادات",
     "newHere": "جديد هنا؟",
     "signIn": "تسجيل الدخول",
-    "feed": "فيد"
+    "feed": "فيد",
+    "search": "بحث",
+    "collections": "المجموعات",
+    "new": "جديد"
   },
   "settings": {
     "title": "الاعدادات",
@@ -184,9 +269,15 @@
       "blocked": "رقم الهاتف محظور",
       "blockedDescription": "لا يمكن استخدام رقم الهاتف هذا للتحقق.",
       "tooManyAttempts": "محاولات تحقق كثيرة جدا",
-      "tooManyAttemptsDescription": "لقد وصلت الى الحد الاقصى للتحقق لهذا الرقم.",
+      "tooManyAttemptsDescription": "محاولات تحقق كثيرة جداً",
       "sendFailed": "فشل ارسال رمز الرسالة القصيرة",
-      "sendFailedDescription": "يرجى المحاولة لاحقا. اذا استمرت المشكلة، تواصل مع الدعم."
+      "sendFailedDescription": "تعذر إرسال رمز التحقق. حاول لاحقاً.",
+      "rateLimitedWithRetry": "محاولات تحقق كثيرة جداً. أعد المحاولة خلال {seconds} ث.",
+      "weeklyLimitReached": "محاولات تحقق كثيرة جداً",
+      "weeklyLimitDescription": "محاولات تحقق كثيرة جداً",
+      "yearlyLimitReached": "محاولات تحقق كثيرة جداً",
+      "yearlyLimitDescription": "محاولات تحقق كثيرة جداً",
+      "verificationFailed": "فشل التحقق من الهاتف. حاول مرة أخرى."
     },
     "phoneCode": {
       "title": "ادخل <highlight>الرمز.</highlight>",
@@ -199,7 +290,7 @@
       "valid": "رمز التحقق صحيح",
       "invalid": "رمز التحقق غير صحيح. حاول مرة اخرى.",
       "verifyFailed": "فشل التحقق من رمز الرسالة القصيرة",
-      "verifyFailedDescription": "يرجى المحاولة لاحقا. اذا استمرت المشكلة، تواصل مع الدعم."
+      "verifyFailedDescription": "تعذر التحقق من الرمز. حاول لاحقاً."
     },
     "lightning": {
       "title": "امسح <highlight>للدفع.</highlight>",
@@ -215,9 +306,9 @@
       "paymentSuccess": "تم الدفع بنجاح",
       "paymentExpired": "انتهت صلاحية الدفع",
       "requestFailed": "فشل طلب فاتورة Lightning",
-      "requestFailedDescription": "يرجى المحاولة لاحقا. اذا استمرت المشكلة، تواصل مع الدعم.",
+      "requestFailedDescription": "تعذر طلب فاتورة Lightning. حاول لاحقاً.",
       "invoiceCopied": "تم نسخ الفاتورة الى الحافظة",
-      "copyFailed": "فشل نسخ الفاتورة"
+      "copyFailed": "تعذر نسخ الفاتورة."
     },
     "inviteCode": {
       "title": "اثبت انك <highlight>لست روبوتا.</highlight>",
@@ -237,13 +328,13 @@
       "notAvailable": "غير متاح حاليا في بلدك",
       "unavailable": "الخدمة غير متاحة مؤقتا"
     },
-    "sms": {
+    "phoneNumber": {
       "title": "رقم الهاتف",
       "free": "مجاني",
       "lessPrivate": "اقل خصوصية لكن سهل",
       "storage": "1 جيجابايت تخزين",
       "speedLimit": "حد سرعة 1 ميجابايت/ث",
-      "receiveSms": "استلام رسالة قصيرة",
+      "receiveCode": "استلام الرمز",
       "notAvailable": "غير متاح حاليا في بلدك",
       "unavailable": "الخدمة غير متاحة مؤقتا"
     },
@@ -259,11 +350,8 @@
       "subtitleDesktop": "افتح Pubky Ring، اضغط على 'اضافة pubky'، وامسح رمز QR هذا.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
-
       "clickToReload": "انقر لإعادة التحميل",
-
       "openingRing": "جارٍ فتح Pubky Ring...",
-
       "authorize": "تفويض باستخدام Pubky Ring",
       "authorizeSub": "استخدم <pubkyRing>Pubky Ring</pubkyRing> او اي سلسلة مفاتيح اخرى مدعومة من <pubkyCore>Pubky Core</pubkyCore>.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
@@ -276,22 +364,18 @@
       "progressSubtitle": "يرجى الانتظار بينما يتم تحميل تجربتك على Pubky.",
       "generating": "جاري انشاء رمز QR...",
       "generatingShort": "جاري الانشاء...",
-
       "clickToReload": "انقر لإعادة التحميل",
-
       "openingRing": "جارٍ فتح Pubky Ring...",
-
       "authorize": "تفويض باستخدام Pubky Ring",
       "linkCopied": "تم نسخ الرابط",
-      "linkCopiedDescription": "تم نسخ رابط المصادقة الى الحافظة.",
       "linkFailed": "تعذر الاتصال بتطبيق التوقيع Pubky Ring",
       "tryAgain": "يرجى المحاولة مرة اخرى.",
-      "authInitFailedTitle": "فشل تسجيل الدخول. يرجى المحاولة مرة اخرى.",
-      "authInitFailedDescription": "تعذر اكمال التفويض باستخدام Pubky Ring. يرجى المحاولة مرة اخرى.",
+      "authInitFailedTitle": "فشل تسجيل الدخول. حاول مرة أخرى.",
+      "authInitFailedDescription": "فشل تسجيل الدخول. حاول مرة أخرى.",
       "authNotCompletedTitle": "لم يكتمل التفويض",
-      "authNotCompletedDescription": "لم يكمل تطبيق التوقيع عملية التفويض. يرجى المحاولة مرة اخرى.",
+      "authNotCompletedDescription": "فشل التفويض. حاول مرة أخرى.",
       "qrGenerationFailedTitle": "فشل انشاء رمز QR",
-      "qrGenerationFailedDescription": "تعذر انشاء رمز QR لتسجيل الدخول. يرجى التحديث والمحاولة مرة اخرى.",
+      "qrGenerationFailedDescription": "تعذر إنشاء رمز QR. حدّث الصفحة وحاول مرة أخرى.",
       "recoveryHint": "لا تستطيع تسجيل الدخول باستخدام <pubkyRing>Pubky Ring</pubkyRing>؟ استخدم عبارة الاسترداد او الملف المشفر لاستعادة حسابك.",
       "verifyingAccount": "جاري التحقق من الحساب",
       "loadingData": "جاري تحميل بياناتك",
@@ -308,7 +392,7 @@
         "restore": "استعادة",
         "restoring": "جاري الاستعادة...",
         "errorTitle": "خطا في تسجيل الدخول بالعبارة السرية",
-        "errorDescription": "يرجى المحاولة مرة اخرى."
+        "errorDescription": "تعذر تسجيل الدخول. حاول مرة أخرى."
       },
       "restoreEncryptedFile": {
         "title": "الاستعادة باستخدام ملف مشفر",
@@ -318,11 +402,11 @@
         "passwordPlaceholder": "ادخل كلمة المرور الخاصة بك",
         "selectFile": "اختر ملف",
         "invalidFileType": "يرجى اختيار ملف .pkarr",
-        "missingFields": "يرجى اختيار ملف وادخال كلمة المرور",
+        "missingFields": "يرجى اختيار ملف",
         "invalidPassword": "كلمة مرور غير صالحة او ملف تالف. يرجى التحقق من كلمة المرور والمحاولة مرة اخرى.",
         "nexusError": "حدث خطا مع nexus. يرجى المحاولة مرة اخرى.",
         "restoreError": "فشلت الاستعادة من الملف. يرجى التحقق من الملف والمحاولة مرة اخرى.",
-        "unexpectedError": "حدث خطا غير متوقع",
+        "unexpectedError": "حدث خطأ غير متوقع.",
         "cancel": "الغاء",
         "restore": "استعادة",
         "restoring": "جاري الاستعادة..."
@@ -338,25 +422,25 @@
       "myPubky": "بوبكي الخاص بي",
       "shareText": "هذا هو بوبكي الخاص بي:\n{displayPubky}",
       "shareUnavailable": "المشاركة غير متاحة",
-      "shareUnavailableDescription": "قمنا بنسخ البوبكي الخاص بك حتى تتمكن من لصقه في تطبيقك المفضل.",
       "shareFailed": "فشلت المشاركة",
-      "shareFailedDescription": "تعذرت المشاركة الان. يرجى المحاولة مرة اخرى.",
+      "shareFailedDescription": "تعذر المشاركة. حاول مرة أخرى.",
       "signUpFailed": "خطأ - فشل التسجيل",
-      "signUpError": "حدث خطأ ما. يرجى المحاولة مرة اخرى.",
-      "invalidInvite": "رمز الدعوة غير صالح او منتهي الصلاحية. يرجى الحصول على رمز دعوة جديد."
+      "signUpError": "تعذر التسجيل. حاول مرة أخرى.",
+      "invalidInvite": "رمز الدعوة غير صالح أو منتهي الصلاحية."
     },
     "backupMethod": {
       "title": "اختر طريقة النسخ الاحتياطي",
       "subtitle": "قم بعمل نسخة احتياطية امنة وتخزين البذرة السرية للبوبكي الخاص بك. اي طريقة نسخ احتياطي تفضل؟ يمكنك ايضا اختيار القيام بذلك لاحقا.",
       "recoveryPhrase": "عبارة الاسترداد",
-      "encryptedFile": "ملف مشفر"
+      "encryptedFile": "ملف مشفر",
+      "exportRing": "تصدير إلى Pubky Ring"
     },
     "backup": {
       "title": "قم بعمل نسخة احتياطية <highlight>للبوبكي.</highlight>",
       "subtitle": "تحتاج الى نسخة احتياطية لاستعادة الوصول الى حسابك لاحقا.",
       "signUpFailed": "خطا - فشل التسجيل",
-      "signUpError": "حدث خطا ما. يرجى المحاولة مرة اخرى.",
-      "invalidInvite": "رمز دعوة غير صالح او منتهي الصلاحية. يرجى الحصول على رمز دعوة جديد."
+      "signUpError": "تعذر التسجيل. حاول مرة أخرى.",
+      "invalidInvite": "رمز الدعوة غير صالح أو منتهي الصلاحية."
     },
     "backupPhrase": {
       "title": "نسخ احتياطي لعبارة الاسترداد",
@@ -394,13 +478,9 @@
       "createInBrowser": "انشاء المفاتيح في المتصفح",
       "continueWithRing": "متابعة مع Pubky Ring",
       "inviteCodeApplied": "تم تطبيق رمز الدعوة",
-      "inviteCodeAppliedDescription": "تم تطبيق رمز الدعوة {inviteCode}.",
       "invalidInviteCode": "رمز دعوة غير صالح",
-      "invalidInviteCodeDescription": "رمز الدعوة هذا غير صالح أو منتهي الصلاحية. يرجى استخدام رمز دعوة صالح.",
       "usedInviteCode": "رمز الدعوة مستخدم بالفعل",
-      "usedInviteCodeDescription": "تم استخدام رمز الدعوة هذا بالفعل. يرجى استخدام رمز دعوة مختلف.",
-      "verificationFailed": "تعذّر التحقق من رمز الدعوة",
-      "verificationFailedDescription": "تعذّر علينا التحقق من رمز الدعوة الآن. يرجى التحقق من اتصالك والمحاولة مرة أخرى."
+      "verificationFailed": "تعذّر التحقق من رمز الدعوة"
     },
     "createProfile": {
       "title": "انشئ <highlight>ملفك الشخصي.</highlight>",
@@ -431,9 +511,11 @@
       "followUser": "متابعة {username}",
       "unfollowUser": "الغاء متابعة {username}",
       "muteUser": "كتم {username}",
-      "unmuteUser": "الغاء كتم {username}"
+      "unmuteUser": "الغاء كتم {username}",
+      "tagPost": "وسم المنشور ({count})"
     },
     "deleted": "تم حذف هذا المنشور من قبل صاحبه.",
+    "missing": "المنشور غير موجود.",
     "dropFiles": "اسقط الملفات هنا",
     "articleTitle": "عنوان المقال",
     "addTag": "اضافة وسم",
@@ -444,6 +526,8 @@
     "addArticle": "اضافة مقال",
     "posting": "جاري النشر...",
     "viewOriginal": "عرض المنشور الاصلي",
+    "postBy": "منشور بواسطة",
+    "replyBy": "رد بواسطة",
     "youReposted": "أعدت النشر",
     "newPostsSingular": "عرض {count} منشور جديد",
     "newPostsPlural": "عرض {count} منشورات جديدة",
@@ -470,6 +554,7 @@
     "tabs": {
       "notifications": "الاشعارات",
       "posts": "المنشورات",
+      "collections": "المجموعات",
       "replies": "الردود",
       "followers": "المتابعون",
       "following": "المتابَعون",
@@ -560,6 +645,12 @@
       "confirmButton": "حذف",
       "cancelButton": "إلغاء"
     },
+    "deleteCollection": {
+      "title": "حذف المجموعة؟",
+      "description": "هل أنت متأكد من أنك تريد حذف «{name}»؟ لن يتمكن الأشخاص الذين يتابعون هذه المجموعة من الوصول إليها بعد الآن. لن يتم حذف المنشورات داخل المجموعة.",
+      "confirmButton": "حذف",
+      "cancelButton": "إلغاء"
+    },
     "editPost": {
       "editArticle": "تعديل المقال",
       "editPost": "تعديل المنشور",
@@ -587,7 +678,7 @@
       "newHere": "جديد هنا؟",
       "newHereDescription": "انشئ حسابك وابدا باستكشاف Pubky.",
       "joinButton": "انضم الى Pubky",
-      "alreadyHaveAccount": "لديك حساب بالفعل؟",
+      "alreadyHaveAccount": "هل لديك pubky بالفعل؟",
       "alreadyHaveAccountDescription": "سجل الدخول للتفاعل مع المنشورات والملفات الشخصية.",
       "signInButton": "تسجيل الدخول"
     },
@@ -628,7 +719,9 @@
     },
     "deleteAccount": {
       "title": "حذف الحساب",
-      "description": "هل انت متاكد؟ لا يمكن استرداد معلومات حسابك."
+      "description": "هل انت متاكد؟ لا يمكن استرداد معلومات حسابك.",
+      "button": "حذف الحساب",
+      "buttonLoading": "جاري الحذف... {progress}%"
     },
     "confirmDiscard": {
       "title": "هل تريد الاغلاق؟",
@@ -666,11 +759,11 @@
       "saveFeed": "حفظ الخلاصة",
       "deleteFeed": "حذف الخلاصة",
       "feedCreated": "تم إنشاء الخلاصة {name}!",
-      "feedCreateError": "تعذر إنشاء الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم.",
+      "feedCreateError": "تعذر إنشاء الخلاصة. حاول مرة أخرى.",
       "feedEdited": "تم تعديل الخلاصة {name}!",
-      "feedEditError": "تعذر تعديل الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم.",
+      "feedEditError": "تعذر تحديث الخلاصة. حاول مرة أخرى.",
       "feedDeleted": "تم حذف الخلاصة {name}!",
-      "feedDeleteError": "تعذر حذف الخلاصة، يرجى المحاولة مرة أخرى أو التواصل مع الدعم."
+      "feedDeleteError": "تعذر حذف الخلاصة. حاول مرة أخرى."
     }
   },
   "sidebar": {
@@ -706,7 +799,7 @@
     },
     "userSuggestion": "المستخدم {name} ({pubky})",
     "viewProfile": "عرض ملف {name} الشخصي",
-    "invalidTag": "يجب أن تكون العلامات 20 حرفًا أو أقل ولا يمكن أن تحتوي على أحرف خاصة"
+    "invalidTag": "يمكن أن تكون الوسوم بحد أقصى 20 حرفاً ولا يمكن أن تحتوي على أحرف خاصة"
   },
   "feedback": {
     "title": "ارسال ملاحظات",
@@ -756,12 +849,24 @@
       "followedYou": "تابعك",
       "newFriend": "اصبح صديقك الان",
       "taggedPost": "وسم منشورك",
+      "taggedCollection": "وسم مجموعتك",
+      "taggedArticle": "وسم مقالتك",
       "taggedProfile": "وسم ملفك الشخصي",
       "repliedToPost": "رد على منشورك",
+      "repliedToCollection": "رد على مجموعتك",
+      "repliedToArticle": "رد على مقالتك",
       "repostedPost": "اعاد نشر منشورك",
+      "repostedCollection": "أعاد نشر مجموعتك",
+      "repostedArticle": "أعاد نشر مقالتك",
       "mentionedYou": "ذكرك في منشور",
+      "mentionedYouInCollection": "ذكرك في مجموعة",
+      "mentionedYouInArticle": "ذكرك في مقال",
       "deletedPost": "حذف منشورا",
+      "deletedCollection": "حذف مجموعة",
+      "deletedArticle": "حذف مقالاً",
       "editedPost": "عدّل منشوراً تفاعلت معه",
+      "updatedCollection": "حدّث مجموعة",
+      "updatedArticle": "حدّث مقالاً",
       "fallback": "إشعار جديد"
     },
     "settings": {
@@ -893,123 +998,119 @@
     "success": "نجاح",
     "error": "خطا",
     "errors": "اخطاء",
-    "genericErrorTitle": "عذرا! حدث خطا ما!",
+    "genericErrorTitle": "خطأ",
     "post": {
       "replyPosted": "تم نشر الرد",
-      "replyPostedDesc": "تم نشر ردك بنجاح.",
-      "replyFailed": "فشل نشر الرد. يرجى المحاولة مرة اخرى.",
-      "postCreated": "تم انشاء المنشور",
-      "postCreatedDesc": "تم انشاء منشورك بنجاح.",
-      "postFailed": "فشل انشاء المنشور. يرجى المحاولة مرة اخرى.",
+      "replyFailed": "تعذر نشر الرد. حاول مرة أخرى.",
+      "postCreated": "تم نشر المنشور",
+      "postFailed": "تعذر إنشاء المنشور. حاول مرة أخرى.",
       "repostSuccess": "تمت إعادة النشر!",
-      "repostSuccessDesc": "لقد أعدت نشر منشور {author} بنجاح!",
-      "repostSuccessDescFallback": "تمت إعادة نشر منشورك بنجاح.",
       "repostUndo": "تراجع",
-      "repostFailed": "فشلت اعادة النشر. يرجى المحاولة مرة اخرى.",
+      "repostFailed": "تعذر إعادة النشر. حاول مرة أخرى.",
       "postEdited": "تم تعديل المنشور",
-      "postEditedDesc": "تم تعديل منشورك بنجاح.",
-      "editFailed": "فشل تعديل المنشور. يرجى المحاولة مرة اخرى.",
+      "editFailed": "تعذر تحديث المنشور. حاول مرة أخرى.",
       "postDeleted": "تم حذف المنشور",
-      "postDeletedDesc": "تم حذف منشورك",
-      "deleteFailed": "فشل حذف المنشور. يرجى المحاولة مرة اخرى.",
-      "invalidPostId": "معرف منشور غير صالح. يرجى المحاولة مرة اخرى.",
+      "deleteFailed": "تعذر حذف المنشور. حاول مرة أخرى.",
+      "invalidPostId": "منشور غير صالح. حاول مرة أخرى.",
       "attachmentsCleared": "تم ازالة المرفقات",
-      "attachmentsClearedDesc": "المقالات تدعم صورة غلاف واحدة فقط.",
-      "failedToLoadPosts": "فشل تحميل المنشورات الجديدة",
-      "failedToLoadPostsDesc": "تعذر عرض المنشورات الجديدة. يرجى المحاولة مرة اخرى.",
-      "parseError": "فشل تحليل محتوى المقال",
-      "coverImageError": "فشل تحميل صورة غلاف المقال",
-      "attachmentsLoadFailed": "فشل تحميل المرفقات"
+      "failedToLoadPosts": "تعذر تحميل المنشورات الجديدة",
+      "parseError": "تعذر تحليل محتوى المقال",
+      "collectionParseError": "تعذر تحليل محتوى المجموعة",
+      "coverImageError": "تعذر تحميل صورة الغلاف",
+      "attachmentsLoadFailed": "تعذر تحميل المرفقات",
+      "repostSuccessFallback": "أُعيد النشر"
     },
     "bookmark": {
       "added": "تمت اضافة المفضلة",
-      "addedDesc": "تم حفظ المنشور في مفضلتك",
       "removed": "تمت ازالة المفضلة",
-      "removedDesc": "تمت ازالة المنشور من مفضلتك",
-      "addFailed": "فشل اضافة المفضلة",
-      "removeFailed": "فشل ازالة المفضلة",
-      "loginRequired": "يجب تسجيل الدخول لحفظ المنشورات"
+      "addFailed": "تعذر إضافة الإشارة المرجعية",
+      "removeFailed": "تعذر إزالة الإشارة المرجعية",
+      "loginRequired": "سجّل الدخول لحفظ المنشورات"
+    },
+    "collection": {
+      "collectionDeleted": "تم حذف مجموعتك",
+      "deleteFailed": "فشل حذف المجموعة. يُرجى المحاولة مرة أخرى."
     },
     "copy": {
       "pubkyCopied": "تم نسخ البوبكي الى الحافظة",
       "linkCopied": "تم نسخ الرابط الى الحافظة",
       "textCopied": "تم نسخ النص الى الحافظة",
       "profileLinkCopied": "تم نسخ رابط الملف الشخصي الى الحافظة",
-      "copyFailed": "فشل النسخ",
-      "copyFailedDesc": "تعذر النسخ الى الحافظة"
+      "copyFailed": "تعذر النسخ إلى الحافظة",
+      "copyFailedDesc": "تعذر النسخ إلى الحافظة"
     },
     "follow": {
-      "failed": "فشل تحديث حالة المتابعة"
+      "followed": "تتابع {username}",
+      "unfollowed": "ألغيت متابعة {username}",
+      "followFailed": "تعذر متابعة {username}",
+      "unfollowFailed": "تعذر إلغاء متابعة {username}"
     },
     "mute": {
-      "muted": "تم كتم المستخدم",
-      "unmuted": "تم الغاء كتم المستخدم",
-      "mutedDesc": "تم كتم {username}.",
-      "unmutedDesc": "تم الغاء كتم {username}.",
-      "failed": "فشل تحديث حالة الكتم"
+      "muted": "تم كتم {username}",
+      "unmuted": "تم إلغاء كتم {username}",
+      "failed": "تعذر تحديث حالة الكتم"
     },
     "profile": {
       "updated": "تم تحديث الملف الشخصي",
-      "updatedDesc": "تم تحديث ملفك الشخصي بنجاح.",
       "sessionExpired": "انتهت الجلسة",
-      "sessionExpiredDesc": "يرجى تسجيل الخروج وتسجيل الدخول مرة اخرى للمتابعة.",
-      "saveFailed": "فشل حفظ الملف الشخصي",
-      "saveFailedDesc": "يرجى المحاولة مرة اخرى.",
-      "fetchFailed": "يرجى المحاولة مرة اخرى.",
-      "fetchFailedDesc": "فشل جلب بيانات المستخدم الجديدة. قد تكون الفهرسة جارية...",
-      "updateFailed": "فشل تحديث الملف الشخصي."
+      "sessionExpiredDesc": "انتهت الجلسة. يرجى تسجيل الدخول.",
+      "saveFailed": "تعذر حفظ الملف الشخصي",
+      "fetchFailedDesc": "تعذر تحديث الملف الشخصي",
+      "updateFailed": "تعذر تحديث الملف الشخصي"
     },
     "report": {
-      "userNotLoaded": "لم يتم تحميل ملف المستخدم. يرجى المحاولة مرة اخرى.",
-      "submitFailed": "فشل ارسال البلاغ",
-      "submitFailedDesc": "فشل ارسال البلاغ. يرجى المحاولة مرة اخرى."
+      "userNotLoaded": "تعذر تحميل الملف الشخصي",
+      "submitFailedDesc": "تعذر إرسال البلاغ. حاول مرة أخرى."
     },
     "feedback": {
-      "userNotLoaded": "لم يتم تحميل ملف المستخدم. يرجى المحاولة مرة اخرى.",
-      "submitFailed": "فشل ارسال الملاحظات",
-      "submitFailedDesc": "فشل ارسال الملاحظات. يرجى المحاولة مرة اخرى."
+      "userNotLoaded": "تعذر تحميل الملف الشخصي",
+      "submitFailedDesc": "تعذر إرسال الملاحظات. حاول مرة أخرى."
     },
     "copyright": {
       "success": "تم ارسال الطلب بنجاح",
-      "error": "خطا في ارسال الطلب",
-      "submitFailed": "فشل ارسال الطلب"
+      "error": "تعذر إرسال الطلب",
+      "submitFailed": "تعذر إرسال الطلب"
     },
     "tags": {
-      "loadFailed": "فشل تحميل المزيد من الوسوم",
-      "loadFailedDesc": "تعذر تحميل المزيد من الوسوم. يرجى المحاولة مرة اخرى.",
+      "loadFailed": "تعذر تحميل المزيد من الوسوم",
       "labelEmpty": "تسمية الوسم لا يمكن ان تكون فارغة",
       "postIdRequired": "معرف المنشور مطلوب",
       "userIdRequired": "معرف المستخدم مطلوب",
       "loginRequired": "يجب تسجيل الدخول لاضافة وسوم",
       "alreadyAdded": "لقد اضفت هذا الوسم بالفعل",
-      "addFailed": "فشل اضافة الوسم",
-      "addFailedDesc": "تعذر اضافة \"{label}\". يرجى المحاولة مرة اخرى.",
-      "removeFailed": "فشل ازالة الوسم",
-      "removeFailedDesc": "تعذر ازالة \"{label}\". يرجى المحاولة مرة اخرى."
+      "added": "تمت إضافة الوسم: {label}",
+      "removed": "تمت إزالة الوسم: {label}",
+      "addFailed": "تعذر إضافة الوسم: {label}",
+      "removeFailed": "تعذر إزالة الوسم: {label}"
     },
     "auth": {
-      "signInFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة اخرى.",
-      "signInFailedDesc": "تعذر اكمال التفويض مع Pubky Ring. يرجى المحاولة مرة اخرى.",
+      "signInFailed": "فشل تسجيل الدخول. حاول مرة أخرى.",
+      "signInFailedDesc": "فشل تسجيل الدخول. حاول مرة أخرى.",
       "authNotCompleted": "لم يكتمل التفويض",
-      "authNotCompletedDesc": "لم يكمل الموقع التفويض. يرجى المحاولة مرة اخرى.",
+      "authNotCompletedDesc": "فشل التفويض. حاول مرة أخرى.",
       "qrFailed": "فشل انشاء رمز QR",
-      "qrFailedDesc": "تعذر انشاء رمز QR لتسجيل الدخول. يرجى التحديث والمحاولة مرة اخرى."
+      "qrFailedDesc": "تعذر إنشاء رمز QR. حدّث الصفحة وحاول مرة أخرى."
     },
     "file": {
-      "maxFiles": "الحد الاقصى {max} ملفات",
-      "maxFilesPartial": "الحد الاقصى {max} ملفات. لم تتم اضافة بعض الملفات.",
-      "unsupportedType": "\"{name}\" نوعه \"{type}\" غير مدعوم. الانواع المدعومة: {formats}.",
-      "fileTooLarge": "\"{name}\" يتجاوز الحجم الاقصى {maxSize}."
+      "maxFiles": "الحد الأقصى {max} ملفات",
+      "maxFilesPartial": "الحد الأقصى {max} ملفات. لم تتم إضافة بعض الملفات.",
+      "unsupportedType": "نوع ملف غير مدعوم لـ {name}. المدعوم: {formats}.",
+      "fileTooLarge": "{name} يتجاوز حد {maxSize}.",
+      "imageTooLargeRaw": "الصورة كبيرة جداً. الحد الأقصى للحجم هو {maxSize}.",
+      "imageTooLargeGif": "يتجاوز ملف GIF هذا حد الرفع البالغ {maxSize} ولا يمكن ضغطه. يرجى استخدام ملف GIF أصغر.",
+      "imageTooLargeAnimatedWebp": "يتجاوز ملف WebP المتحرك هذا حد الرفع البالغ {maxSize} ولا يمكن ضغطه. يرجى استخدام ملف أصغر.",
+      "imageTooLargeSvg": "يتجاوز ملف SVG هذا حد الرفع البالغ {maxSize} بعد التنظيف. يرجى استخدام ملف أصغر.",
+      "imageTooLargeRaster": "تعذر ضغط الصورة إلى أقل من {maxSize}. يرجى استخدام صورة أصغر أو بدقة أقل."
     },
     "status": {
-      "updateFailed": "فشل تحديث الحالة. يرجى المحاولة مرة اخرى.",
-      "userNotLoaded": "لم يتم تحميل ملف المستخدم. يرجى المحاولة مرة اخرى."
+      "updateFailed": "تعذر تحديث الحالة. حاول مرة أخرى.",
+      "userNotLoaded": "تعذر تحميل الملف الشخصي. حاول مرة أخرى."
     },
     "fullscreen": {
-      "error": "خطأ في محاولة تفعيل وضع ملء الشاشة"
+      "error": "تعذر تفعيل ملء الشاشة."
     },
     "logout": {
-      "failed": "فشل تسجيل الخروج. يرجى المحاولة مرة اخرى."
+      "failed": "تعذر تسجيل الخروج. حاول مرة أخرى."
     }
   },
   "empty": {
@@ -1020,9 +1121,10 @@
     "noNotifications": "لا توجد اشعارات"
   },
   "errors": {
-    "signOutFailed": "فشل تسجيل الخروج. يرجى المحاولة مرة اخرى.",
+    "signOutFailed": "تعذر تسجيل الخروج. حاول مرة أخرى.",
+    "deleteAccountFailed": "فشل حذف الحساب. يرجى المحاولة مرة اخرى.",
     "generic": "حدث خطا ما",
-    "network": "خطا في الشبكة. يرجى المحاولة مرة اخرى.",
+    "network": "خطأ في الشبكة",
     "notFound": "الصفحة غير موجودة",
     "couldNotFind": "تعذر العثور على المورد المطلوب",
     "database": {
@@ -1070,6 +1172,7 @@
       "title": "التخطيط",
       "columns": "اعمدة",
       "wide": "عريض",
+      "list": "قائمة",
       "visual": "مرئي"
     },
     "content": {
@@ -1080,7 +1183,8 @@
       "images": "الصور",
       "videos": "الفيديوهات",
       "links": "الروابط",
-      "files": "الملفات"
+      "files": "الملفات",
+      "collections": "المجموعات"
     },
     "timeframe": {
       "title": "الفترة الزمنية",
@@ -1121,9 +1225,7 @@
     "unmuteAll": "الغاء كتم جميع المستخدمين",
     "noMutedUsers": "لا يوجد مستخدمون مكتومون بعد",
     "userUnmuted": "تم الغاء كتم المستخدم",
-    "userUnmutedDesc": "تم الغاء كتم {username}.",
     "allUsersUnmuted": "تم الغاء كتم جميع المستخدمين",
-    "allUsersUnmutedDesc": "تم الغاء كتم جميع المستخدمين المكتومين.",
     "partialSuccess": "نجاح جزئي",
     "partialSuccessDesc": "تم الغاء كتم {success} مستخدمين، فشل {failed}."
   },
@@ -1234,5 +1336,138 @@
     "toolbarAriaLabel": "شريط أدوات تحرير ماركداون",
     "warningApproaching": "أنت تقترب من الحد الأقصى لعدد الأحرف.",
     "warningReached": "لقد وصلت إلى الحد الأقصى لعدد الأحرف."
+  },
+  "collections": {
+    "deleted": "تم حذف هذه المجموعة من قبل صاحبها.",
+    "missing": "المجموعة غير موجودة.",
+    "postCount": "{count, plural, one {منشور} other {منشورات}}",
+    "new": {
+      "cta": "مجموعة جديدة",
+      "ctaShort": "جديد",
+      "title": "مجموعة جديدة",
+      "nameLabel": "العنوان",
+      "namePlaceholder": "سمِّ مجموعتك",
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "ماذا سيجد الناس هنا؟",
+      "backgroundLabel": "الخلفية",
+      "addImage": "إضافة صورة",
+      "removeImage": "إزالة الصورة",
+      "coverImageInvalid": "يجب أن تكون صورة الغلاف ملف صورة.",
+      "coverImageTooLarge": "صورة الغلاف كبيرة جداً. الحد الأقصى للحجم هو {maxSize}.",
+      "nameRequired": "عنوان المجموعة مطلوب.",
+      "cancel": "إلغاء",
+      "save": "حفظ المجموعة",
+      "saving": "جارٍ الحفظ...",
+      "created": "تم إنشاء المجموعة",
+      "createFailed": "فشل إنشاء المجموعة."
+    },
+    "intro": {
+      "title": "مرحبًا بك في المجموعات",
+      "description": "احفظ المنشورات التي تستحق الاحتفاظ بها. اجمع أفضل المحتوى من شبكتك. نظّم الأفكار، وصفِّ الإشارة من الضوضاء، وشارك ما يهم.",
+      "imageAlt": "المجموعات",
+      "publicNote": "يرجى ملاحظة: المجموعات عامة وقابلة للاكتشاف.",
+      "cancel": "إلغاء",
+      "continue": "متابعة"
+    },
+    "edit": {
+      "title": "تعديل المجموعة",
+      "save": "حفظ التغييرات",
+      "updated": "تم تحديث المجموعة",
+      "updateFailed": "فشل تحديث المجموعة."
+    },
+    "showMore": "عرض المزيد",
+    "loadFailed": "تعذّر تحميل المجموعات. يُرجى المحاولة مرة أخرى.",
+    "my": {
+      "title": "مجموعاتي"
+    },
+    "followed": {
+      "title": "المجموعات المتابَعة",
+      "empty": "لم تتابع أي مجموعات بعد."
+    },
+    "discover": {
+      "title": "اكتشف المجموعات",
+      "empty": "لا توجد مجموعات لاكتشافها الآن."
+    },
+    "bookmarks": {
+      "title": "الإشارات المرجعية",
+      "description": "كل ما حفظته لوقت لاحق."
+    },
+    "card": {
+      "follow": "متابعة",
+      "unfollow": "إلغاء المتابعة",
+      "delete": "حذف",
+      "toast": {
+        "followed": "لقد تابعت هذه المجموعة",
+        "unfollowed": "لقد ألغيت متابعة هذه المجموعة",
+        "shared": "لقد شاركت هذه المجموعة"
+      }
+    },
+    "single": {
+      "share": "مشاركة",
+      "shareTitle": "مشاركة المجموعة",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "follow": "متابعة",
+      "unfollow": "إلغاء المتابعة",
+      "content": "إضافة منشور",
+      "addContent": "إضافة منشور",
+      "empty": "هذه المجموعة فارغة.",
+      "notFound": {
+        "title": "المجموعة غير موجودة",
+        "subtitle1": "هذه المجموعة غير متاحة.",
+        "subtitle2": "قد تكون قد أُزيلت أو لم يعد الرابط صالحًا.",
+        "imageAlt": "المجموعة غير موجودة",
+        "backToCollections": "العودة إلى المجموعات",
+        "viewProfile": "عرض الملف الشخصي"
+      }
+    },
+    "addContentDialog": {
+      "title": "إضافة منشور",
+      "description": "هناك عدة طرق لإضافة منشورات إلى مجموعتك.",
+      "fromFeedTitle": "إضافة من الخلاصة",
+      "fromFeedLead": "ابحث عن منشور",
+      "fromFeedRest": " تريد إضافته واضغط على زر المجموعات.",
+      "pasteTitle": "لصق رابط المنشور",
+      "pasteDescription": "يمكنك أيضًا لصق رابط منشور لإضافته بسرعة إلى مجموعتك.",
+      "createPostTitle": "إنشاء منشور جديد",
+      "createPostPlaceholder": "بماذا تفكر؟",
+      "createPostAvatarFallback": "أنت",
+      "adding": "جارٍ الإضافة...",
+      "errors": {
+        "required": "الصق رابط منشور.",
+        "invalid": "أدخل رابط منشور صالحًا.",
+        "notFound": "تعذر العثور على ذلك المنشور.",
+        "alreadyAdded": "تمت إضافة هذا المنشور بالفعل.",
+        "collectionNotAllowed": "لا يمكن إضافة مجموعة إلى مجموعة.",
+        "failure": "تعذرت إضافة هذا المنشور."
+      }
+    }
+  },
+  "fab": {
+    "newPost": "منشور جديد",
+    "newCollection": "مجموعة جديدة",
+    "newPostInCollection": "منشور جديد في المجموعة",
+    "newBookmark": "إشارة مرجعية جديدة",
+    "addedToCollection": "تمت إضافة المنشور إلى المجموعة."
+  },
+  "postSave": {
+    "title": "حفظ المنشور",
+    "description": "اختر مكان حفظ هذا المنشور.",
+    "open": "حفظ المنشور",
+    "loading": "جارٍ تحميل خيارات الحفظ",
+    "bookmarks": "الإشارات المرجعية",
+    "newCollection": "مجموعة جديدة",
+    "collectionNamePlaceholder": "اسم المجموعة",
+    "createCollection": "إنشاء مجموعة",
+    "loadingCollections": "جارٍ تحميل المجموعات...",
+    "addedToCollection": "تمت إضافة المنشور إلى المجموعة.",
+    "removedFromCollection": "تمت إزالة المنشور من المجموعة.",
+    "updateCollectionFailed": "فشل تحديث المجموعة.",
+    "collectionCreated": "تم إنشاء المجموعة وحفظ المنشور.",
+    "createCollectionFailed": "فشل إنشاء المجموعة."
+  },
+  "moderation": {
+    "postContentModerated": "تم حظر محتوى المنشور.",
+    "collectionContentModerated": "تم حظر محتوى المجموعة."
   }
 }

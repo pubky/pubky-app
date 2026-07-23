@@ -36,13 +36,13 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
 
   return (
     <>
-      <Container className={cn('justify-between gap-6 lg:flex-row', className)}>
+      <Container className={cn('justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!', className)}>
         <Container className="gap-y-1">
           <Typography size="lg" className="wrap-anywhere">
             {title}
           </Typography>
 
-          <PostText content={body} isArticle onLinkClick={handleLinkClick} className="text-muted-foreground" />
+          <PostText content={body} isArticle onLinkClick={handleLinkClick} />
         </Container>
 
         {finalCoverImage && (

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMenuActions } from './PostMenuActions';
 
 vi.mock('@/atoms/DropdownMenu/DropdownMenu', () => {
@@ -77,13 +78,19 @@ vi.mock('@/atoms/Sheet/Sheet', () => {
   };
 });
 
-const mockUseIsMobile = vi.fn(() => false);
-const mockDeletePost = vi.fn();
-const mockUsePostMenuActions = vi.fn((_postId: string) => ({
-  menuItems: [] as unknown[],
+const { mockUseIsMobile, mockDeletePost, mockUsePostMenuActions, mockRequireAuth } = vi.hoisted(() => ({
+  mockUseIsMobile: vi.fn(() => false),
+  mockDeletePost: vi.fn(),
+  mockUsePostMenuActions: vi.fn((_postId: string) => ({
+    menuItems: [] as unknown[],
+    isLoading: false,
+  })),
+  mockRequireAuth: vi.fn((action: () => void) => action()),
+}));
+const mockUsePostDetails = vi.fn((_postId: string) => ({
+  postDetails: { kind: 'short' } as { kind: string } | null,
   isLoading: false,
 }));
-const mockRequireAuth = vi.fn((action: () => void) => action());
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),
@@ -105,6 +112,10 @@ vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
     deletePost: mockDeletePost,
     isDeleting: false,
   })),
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: (postId: string) => mockUsePostDetails(postId),
 }));
 
 // Mock DialogReportPost and DialogEditPost
@@ -134,6 +145,21 @@ vi.mock('@/organisms/DialogReportPost/DialogReportPost', () => {
     ),
   };
 });
+
+vi.mock('@/organisms/Collections/DialogEditCollection/DialogEditCollection', () => ({
+  DialogEditCollection: ({
+    open,
+    compositeCollectionId,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    compositeCollectionId: string;
+  }) => (
+    <div data-testid="edit-collection-dialog" data-open={open.toString()} data-collection-id={compositeCollectionId}>
+      DialogEditCollection
+    </div>
+  ),
+}));
 
 vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => {
   return {
@@ -225,6 +251,7 @@ describe('PostMenuActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseIsMobile.mockReturnValue(false);
+    mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'short' }, isLoading: false });
   });
 
   it('renders dropdown menu on desktop', () => {
@@ -361,6 +388,60 @@ describe('PostMenuActions', () => {
     expect(mockRequireAuth).toHaveBeenCalled();
     expect(screen.getByTestId('dropdown-menu')).toHaveAttribute('data-open', 'false');
   });
+
+  describe('edit dialog routing by post kind', () => {
+    it('renders DialogEditPost (and not DialogEditCollection) for short posts', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'short' }, isLoading: false });
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      expect(screen.getByTestId('dialog-edit-post')).toBeInTheDocument();
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
+    });
+
+    it('renders DialogEditPost (not DialogEditCollection) for long-form articles', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'long' }, isLoading: false });
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      expect(screen.getByTestId('dialog-edit-post')).toBeInTheDocument();
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
+    });
+
+    it('renders DialogEditCollection (not DialogEditPost) for collection posts', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'collection' }, isLoading: false });
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      const dialog = screen.getByTestId('edit-collection-dialog');
+      expect(dialog).toBeInTheDocument();
+      expect(dialog).toHaveAttribute('data-collection-id', 'pk:test123:post456');
+      expect(screen.queryByTestId('dialog-edit-post')).not.toBeInTheDocument();
+    });
+
+    it('opens the DialogEditCollection when Edit is clicked on a collection post', async () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: { kind: 'collection' }, isLoading: false });
+      const user = userEvent.setup();
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      const editButton = screen.getByTestId('edit-button');
+      await user.click(editButton);
+
+      const dialog = screen.getByTestId('edit-collection-dialog');
+      expect(dialog).toHaveAttribute('data-open', 'true');
+      expect(dialog).toHaveAttribute('data-collection-id', 'pk:test123:post456');
+    });
+
+    it('falls back to DialogEditPost when post details have not loaded yet', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: true });
+      const trigger = <button>Menu</button>;
+      render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
+
+      expect(screen.getByTestId('dialog-edit-post')).toBeInTheDocument();
+      expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
+    });
+  });
 });
 
 describe('PostMenuActions - Snapshots', () => {
@@ -374,9 +455,20 @@ describe('PostMenuActions - Snapshots', () => {
     const { container } = render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
     expect(container.firstChild).toMatchSnapshot();
   });
+});
 
-  it('matches snapshot for mobile sheet', () => {
+describe('PostMenuActions - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
     mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
     const trigger = <button>Menu</button>;
     const { container } = render(<PostMenuActions postId="pk:test123:post456" trigger={trigger} />);
     expect(container.firstChild).toMatchSnapshot();

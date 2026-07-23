@@ -54,7 +54,7 @@ describe('StreamPostsController', () => {
       });
     });
 
-    it('should fetch missing posts and re-filter deleted when cacheMissPostIds exist', async () => {
+    it('should fetch missing posts and re-filter stream posts when cacheMissPostIds exist', async () => {
       const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
       const cacheMissPostIds = ['user-1:post-3', 'user-1:post-4'];
       const timestamp = 1000000;
@@ -67,7 +67,7 @@ describe('StreamPostsController', () => {
 
       const fetchMissingPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
 
-      const filterDeletedSpy = vi.spyOn(PostStreamApplication, 'filterDeletedPosts').mockResolvedValue(nextPageIds);
+      const filterStreamPostsSpy = vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue(nextPageIds);
 
       const result = await StreamPostsController.getOrFetchStreamSlice({
         streamId,
@@ -86,14 +86,14 @@ describe('StreamPostsController', () => {
         cacheMissPostIds,
         viewerId,
       });
-      expect(filterDeletedSpy).toHaveBeenCalledWith(nextPageIds);
+      expect(filterStreamPostsSpy).toHaveBeenCalledWith({ streamId, postIds: nextPageIds });
       expect(result).toEqual({
         nextPageIds,
         timestamp,
       });
     });
 
-    it('should remove deleted posts discovered after cache-miss fetch', async () => {
+    it('should remove posts hidden by stream filters after cache-miss fetch', async () => {
       const nextPageIds = ['user-1:post-1', 'user-1:post-2', 'user-1:post-3'];
       const cacheMissPostIds = ['user-1:post-2'];
       const timestamp = 1000000;
@@ -106,7 +106,7 @@ describe('StreamPostsController', () => {
 
       vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
 
-      vi.spyOn(PostStreamApplication, 'filterDeletedPosts').mockResolvedValue(['user-1:post-1', 'user-1:post-3']);
+      vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue(['user-1:post-1', 'user-1:post-3']);
 
       const result = await StreamPostsController.getOrFetchStreamSlice({
         streamId,
@@ -392,6 +392,19 @@ describe('StreamPostsController', () => {
         nextPageIds,
         timestamp,
       });
+    });
+  });
+
+  describe('filterStreamPosts', () => {
+    it('should delegate stream-aware filtering to PostStreamApplication', async () => {
+      const postIds = ['user-1:post-1', 'user-1:post-2'];
+      const filteredPostIds = ['user-1:post-1'];
+      const filterSpy = vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue(filteredPostIds);
+
+      const result = await StreamPostsController.filterStreamPosts({ streamId, postIds });
+
+      expect(filterSpy).toHaveBeenCalledWith({ streamId, postIds });
+      expect(result).toEqual(filteredPostIds);
     });
   });
 

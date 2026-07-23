@@ -1,11 +1,12 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayoutContext';
 
@@ -176,6 +177,16 @@ vi.mock('@/organisms/PostContent/PostContent', () => {
   };
 });
 
+vi.mock('./PostMainListRow/PostMainListRow', () => {
+  return {
+    PostMainListRow: ({ postId, showFullContent }: { postId: string; showFullContent: boolean }) => (
+      <div data-testid="post-main-list-row" data-show-full-content={String(showFullContent)}>
+        {postId}
+      </div>
+    ),
+  };
+});
+
 vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: ({
@@ -204,6 +215,12 @@ vi.mock('@/organisms/PostTagsPanel/PostTagsPanel', () => {
 vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
   return {
     PostDeleted: () => <div data-testid="post-deleted">PostDeleted</div>,
+  };
+});
+
+vi.mock('@/molecules/PostMissing/PostMissing', () => {
+  return {
+    PostMissing: () => <div data-testid="post-missing">PostMissing</div>,
   };
 });
 
@@ -281,6 +298,8 @@ describe('PostMain', () => {
     vi.mocked(usePostNavigation).mockReturnValue({
       getPostHref: vi.fn(() => '/post/author/post-abc'),
       navigateToPost: vi.fn(),
+      getCollectionHref: vi.fn(() => '/collections/author/collection-abc'),
+      navigateToCollection: vi.fn(),
       handlePostClick: mockHandlePostClick,
       handlePostAuxClick: mockHandlePostAuxClick,
       handlePostKeyDown: vi.fn(),
@@ -382,6 +401,31 @@ describe('PostMain', () => {
     expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
     expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
     expect(screen.queryByTestId('post-actions')).not.toBeInTheDocument();
+  });
+
+  it('renders PostMissing when the post is not found (settled null)', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: null,
+      isLoading: false,
+    });
+
+    render(<PostMain postId="post-missing" />);
+
+    expect(screen.getByTestId('post-missing')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-deleted')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
+  });
+
+  it('does not render PostMissing while the post is still loading (null + loading)', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: null,
+      isLoading: true,
+    });
+
+    render(<PostMain postId="post-loading" />);
+
+    expect(screen.queryByTestId('post-missing')).not.toBeInTheDocument();
   });
 
   it('renders normal content when post is not deleted', () => {
@@ -613,6 +657,24 @@ describe('PostMain', () => {
     });
   });
 
+  it('falls back to inline layout on mobile when the inherited layout is list', () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-mobile-list-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('clickable-tags-list')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-main-list-row')).not.toBeInTheDocument();
+    expect(mockPostHeader).toHaveBeenCalledWith({
+      postId: 'post-mobile-list-1',
+      size: undefined,
+      timeAgoPlacement: undefined,
+    });
+  });
+
   it('inherits side tags layout from the thread context', () => {
     render(
       <PostMainLayoutProvider tagsLayout="side">
@@ -626,6 +688,39 @@ describe('PostMain', () => {
       timeAgoPlacement: 'bottom-left',
     });
     expect(screen.getByTestId('post-content')).toHaveAttribute('data-text-class-name', 'text-xl leading-7');
+  });
+
+  it('renders the compact list row for list tags layout', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-list-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-main-list-row')).toHaveTextContent('post-list-1');
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', 'false');
+    expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
+    expect(mockPostHeader).not.toHaveBeenCalled();
+  });
+
+  it('passes full content mode to the list row only for non-reply posts', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-list-full-1" showFullContentInListLayout />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', 'true');
+  });
+
+  it('keeps reply rows compact even when full list content is enabled', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="post-list-reply-1" isReply showFullContentInListLayout />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', 'false');
   });
 });
 
@@ -685,10 +780,17 @@ describe('PostMain - Tag Expansion', () => {
 describe('PostMain - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useIsMobile).mockReturnValue(false);
+    vi.mocked(usePostNavigation).mockReturnValue({
+      getPostHref: vi.fn(() => '/post/author/post-abc'),
+      navigateToPost: vi.fn(),
+      getCollectionHref: vi.fn(() => '/collections/author/collection-abc'),
+      navigateToCollection: vi.fn(),
+      handlePostClick: vi.fn(),
+      handlePostAuxClick: vi.fn(),
+      handlePostKeyDown: vi.fn(),
+    });
 
-    // Reset mocked hook return values that are overridden in earlier (non-snapshot) tests.
-    // Without this, running the full suite (e.g. CI `test:coverage`) can leak mocked
-    // implementations into snapshot tests and cause snapshot drift.
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
@@ -709,7 +811,11 @@ describe('PostMain - Snapshots', () => {
   });
 
   it('matches snapshot with default state', () => {
-    const { container } = render(<PostMain postId="post-123" />);
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="post-123" />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -771,6 +877,55 @@ describe('PostMain - Snapshots', () => {
     });
 
     const { container } = render(<PostMain postId="other-user:repost-1" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('PostMain - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Replicate the snapshot describe's mock-state setup so mobile snapshots stay stable.
+    vi.mocked(usePostNavigation).mockReturnValue({
+      getPostHref: vi.fn(() => '/post/author/post-abc'),
+      navigateToPost: vi.fn(),
+      getCollectionHref: vi.fn(() => '/collections/author/collection-abc'),
+      navigateToCollection: vi.fn(),
+      handlePostClick: vi.fn(),
+      handlePostAuxClick: vi.fn(),
+      handlePostKeyDown: vi.fn(),
+    });
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: false,
+      shouldShowPostHeader: true,
+    });
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: {
+        id: 'post-123',
+        indexed_at: 0,
+        kind: 'short',
+        uri: 'pubky://test-user/pub/pubky.app/posts/post-123',
+        content: 'Some post content',
+        attachments: [],
+        is_moderated: false,
+        is_blurred: false,
+      },
+      isLoading: false,
+    });
+    vi.mocked(useIsMobile).mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="post-123" />
+      </PostMainLayoutProvider>,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

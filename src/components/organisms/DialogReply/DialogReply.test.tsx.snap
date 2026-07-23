@@ -8,7 +8,7 @@ exports[`DialogReply - Snapshots > matches snapshot with default props 1`] = `
   >
     <div
       aria-label="Reply to post"
-      class="w-3xl"
+      class="flex max-h-[calc(100dvh-2rem)] w-3xl flex-col"
       data-testid="dialog-content"
     >
       <div
@@ -26,7 +26,7 @@ exports[`DialogReply - Snapshots > matches snapshot with default props 1`] = `
         </p>
       </div>
       <div
-        class="gap-3"
+        class="min-h-0 flex-1 gap-3 overflow-x-hidden overscroll-contain pr-1"
         data-testid="container"
       >
         <div
@@ -37,7 +37,7 @@ exports[`DialogReply - Snapshots > matches snapshot with default props 1`] = `
           snapshot-post-id
         </div>
         <div
-          class="relative pl-6"
+          class="relative w-full min-w-0 pl-6"
           data-override-defaults="true"
           data-testid="container"
         >
@@ -84,7 +84,7 @@ exports[`DialogReply - Snapshots > matches snapshot with open prop 1`] = `
   >
     <div
       aria-label="Reply to post"
-      class="w-3xl"
+      class="flex max-h-[calc(100dvh-2rem)] w-3xl flex-col"
       data-testid="dialog-content"
     >
       <div
@@ -102,7 +102,7 @@ exports[`DialogReply - Snapshots > matches snapshot with open prop 1`] = `
         </p>
       </div>
       <div
-        class="gap-3"
+        class="min-h-0 flex-1 gap-3 overflow-x-hidden overscroll-contain pr-1"
         data-testid="container"
       >
         <div
@@ -113,7 +113,7 @@ exports[`DialogReply - Snapshots > matches snapshot with open prop 1`] = `
           snapshot-post-id
         </div>
         <div
-          class="relative pl-6"
+          class="relative w-full min-w-0 pl-6"
           data-override-defaults="true"
           data-testid="container"
         >

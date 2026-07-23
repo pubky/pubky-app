@@ -28,7 +28,7 @@ exports[`DialogEditPost - Snapshots > matches snapshot for long post (Edit Artic
     </div>
     <div
       data-cy="edit-post-input"
-      data-edit-content="Snapshot article content"
+      data-edit-content="{\\"title\\":\\"Snapshot article title\\",\\"body\\":\\"Snapshot article content\\"}"
       data-edit-is-article="true"
       data-edit-post-id="snapshot-article-id"
       data-expanded="true"

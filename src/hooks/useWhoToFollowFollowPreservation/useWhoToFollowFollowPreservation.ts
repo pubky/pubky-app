@@ -34,12 +34,11 @@ export function useWhoToFollowFollowPreservation({ resetKey }: UseWhoToFollowFol
     });
   };
 
-  const handleFollowClick = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
+  const handleFollowClick = async (userId: Pubky, isCurrentlyFollowing: boolean, displayName: string) => {
     updatePreservedUserIds(userId, isCurrentlyFollowing);
 
-    try {
-      await toggleFollow(userId, isCurrentlyFollowing);
-    } catch {
+    const ok = await toggleFollow(userId, isCurrentlyFollowing, displayName);
+    if (!ok) {
       rollbackPreservedUserIds(userId, isCurrentlyFollowing);
     }
   };

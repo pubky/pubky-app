@@ -283,10 +283,8 @@ vi.mock('@/atoms/Select/Select', () => {
     ),
     SelectValue: ({ placeholder }: { placeholder?: string }) => <span data-testid="select-value">{placeholder}</span>,
     SelectContent: ({ children }: { children: React.ReactNode }) => <div data-testid="select-content">{children}</div>,
-    SelectItem: ({ children, value }: { children: React.ReactNode; key?: string; value: string }) => (
-      <div data-testid={`select-item-${value}`} data-value={value}>
-        {children}
-      </div>
+    SelectItem: ({ children }: { children: React.ReactNode; key?: string; value: string }) => (
+      <div data-testid="select-item">{children}</div>
     ),
   };
 });
@@ -308,18 +306,6 @@ vi.mock('@/atoms/Typography/Typography', () => {
         {children}
       </span>
     ),
-  };
-});
-
-// Mock env — real implementations with Env override
-vi.mock('@/libs/env/env', async () => {
-  const actual = await vi.importActual<typeof import('@/libs/env/env')>('@/libs/env/env');
-  return {
-    ...actual,
-    Env: {
-      ...actual.Env,
-      NEXT_MAX_STREAM_TAGS: 5,
-    },
   };
 });
 
@@ -709,6 +695,7 @@ describe('CustomFeedDialog', () => {
     expect(within(section).getByText('All')).toBeInTheDocument();
     expect(within(section).getByText('Posts')).toBeInTheDocument();
     expect(within(section).getByText('Articles')).toBeInTheDocument();
+    expect(within(section).getByText('Collections')).toBeInTheDocument();
     expect(within(section).getByText('Images')).toBeInTheDocument();
     expect(within(section).getByText('Videos')).toBeInTheDocument();
     expect(within(section).getByText('Links')).toBeInTheDocument();
@@ -731,6 +718,7 @@ describe('CustomFeedDialog', () => {
       expect(within(section).getByText('Videos')).toBeInTheDocument();
       expect(within(section).queryByText('Posts')).not.toBeInTheDocument();
       expect(within(section).queryByText('Articles')).not.toBeInTheDocument();
+      expect(within(section).queryByText('Collections')).not.toBeInTheDocument();
       expect(within(section).queryByText('Links')).not.toBeInTheDocument();
       expect(within(section).queryByText('Files')).not.toBeInTheDocument();
     });
@@ -932,8 +920,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Feed My Feed created!',
+        title: 'Feed created: My Feed',
       });
       expect(mockPush).toHaveBeenCalledWith('/feed/new-feed-123');
     });
@@ -954,8 +941,8 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Could not create feed, please try again or reach out to support.',
+        variant: 'error',
+        description: 'Could not create feed. Try again.',
       });
     });
   });
@@ -1070,8 +1057,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Feed Bitcoin News edited!',
+        title: 'Feed updated: Bitcoin News',
       });
       expect(mockPush).toHaveBeenCalledWith('/feed/feed-abc123');
     });
@@ -1093,8 +1079,8 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Could not edit feed, please try again or reach out to support.',
+        variant: 'error',
+        description: 'Could not update feed. Try again.',
       });
     });
   });
@@ -1159,8 +1145,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Feed Bitcoin News deleted!',
+        title: 'Feed deleted: Bitcoin News',
       });
       expect(mockPush).toHaveBeenCalledWith('/home');
     });
@@ -1181,8 +1166,8 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Could not delete feed, please try again or reach out to support.',
+        variant: 'error',
+        description: 'Could not delete feed. Try again.',
       });
     });
   });

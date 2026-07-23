@@ -1,4 +1,4 @@
-import { EXCHANGE_RATE_API } from '@/config/network';
+import { getExchangeRateApi } from '@/config/network';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
@@ -22,29 +22,30 @@ export class ExchangerateService {
    * @throws {AppError} If the API request fails, response is invalid, or BTCUSD ticker is not found
    */
   private static async getBtcUsdRate(): Promise<number> {
+    const exchangeRateApi = getExchangeRateApi();
     const response = await safeFetch(
-      EXCHANGE_RATE_API,
+      exchangeRateApi,
       { method: HttpMethod.GET },
       ErrorService.Exchangerate,
       'getBtcUsdRate',
     );
 
     if (!response.ok) {
-      throw httpResponseToError(response, ErrorService.Exchangerate, 'getBtcUsdRate', EXCHANGE_RATE_API);
+      throw httpResponseToError(response, ErrorService.Exchangerate, 'getBtcUsdRate', exchangeRateApi);
     }
 
     const data = await parseResponseOrThrow<BlockTankResponse>(
       response,
       ErrorService.Exchangerate,
       'getBtcUsdRate',
-      EXCHANGE_RATE_API,
+      exchangeRateApi,
     );
 
     if (!data.tickers || !Array.isArray(data.tickers)) {
       throw Err.server(ServerErrorCode.INVALID_RESPONSE, 'Invalid response format from exchange rate API', {
         service: ErrorService.Exchangerate,
         operation: 'getBtcUsdRate',
-        context: { endpoint: EXCHANGE_RATE_API },
+        context: { endpoint: exchangeRateApi },
       });
     }
 
@@ -54,7 +55,7 @@ export class ExchangerateService {
       throw Err.server(ServerErrorCode.INVALID_RESPONSE, 'BTCUSD ticker not found in API response', {
         service: ErrorService.Exchangerate,
         operation: 'getBtcUsdRate',
-        context: { endpoint: EXCHANGE_RATE_API, availableSymbols: data.tickers.map((t) => t.symbol) },
+        context: { endpoint: exchangeRateApi, availableSymbols: data.tickers.map((t) => t.symbol) },
       });
     }
 
@@ -64,7 +65,7 @@ export class ExchangerateService {
       throw Err.server(ServerErrorCode.INVALID_RESPONSE, `Invalid exchange rate value: ${btcUsdTicker.lastPrice}`, {
         service: ErrorService.Exchangerate,
         operation: 'getBtcUsdRate',
-        context: { endpoint: EXCHANGE_RATE_API, lastPrice: btcUsdTicker.lastPrice },
+        context: { endpoint: exchangeRateApi, lastPrice: btcUsdTicker.lastPrice },
       });
     }
 

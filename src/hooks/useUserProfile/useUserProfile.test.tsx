@@ -43,12 +43,12 @@ vi.mock('@/controllers/file/file', () => ({
   },
 }));
 
-// Mock Config to provide DEFAULT_URL
+// Mock Config to provide default URL
 vi.mock('@/config/metadata', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/config/metadata')>();
   return {
     ...actual,
-    DEFAULT_URL: 'https://example.com',
+    getDefaultUrl: () => 'https://example.com',
   };
 });
 
@@ -172,7 +172,7 @@ describe('useUserProfile', () => {
 
       const { result } = renderHook(() => useUserProfile('test-user-id'));
 
-      // Uses DEFAULT_URL from config (SSR-safe)
+      // Uses the mocked getDefaultUrl() from @/config/metadata (SSR-safe)
       expect(result.current.profile?.link).toBe('https://example.com/profile/test-user-id');
     });
   });

@@ -1,10 +1,21 @@
+import { createRef, type ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildAuthorCollectionsStreamId,
+  buildCollectionItemsStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
+import { useFeedOptimisticStore } from '@/stores/feedOptimistic/feedOptimistic.store';
+import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
+import { LAYOUT } from '@/stores/home/home.types';
+import { useTimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
@@ -65,9 +76,9 @@ vi.mock('@/molecules/Timeline/TimelineLoading', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/showErrorToast', () => {
+vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
-    showErrorToast: vi.fn(),
+    toast: vi.fn(),
   };
 });
 
@@ -95,9 +106,55 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
   };
 });
 
+vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
+  return {
+    TimelineGridPosts: ({
+      postIds,
+      showEndMessage,
+      emptyState,
+      trailingSlot,
+    }: {
+      postIds: string[];
+      showEndMessage?: boolean;
+      emptyState?: ReactNode;
+      trailingSlot?: ReactNode;
+    }) => (
+      <div
+        data-testid="timeline-grid-posts"
+        data-show-end-message={String(showEndMessage)}
+        data-has-trailing-slot={String(Boolean(trailingSlot))}
+      >
+        <span data-testid="grid-post-count">{postIds.length}</span>
+        {postIds.length === 0 ? emptyState : null}
+        {trailingSlot}
+      </div>
+    ),
+  };
+});
+
+const COLLECTION_STREAM_ID = buildCollectionItemsStreamId('author-pubky', 'collection-post');
+
+const gridLayoutResolution: FeedLayoutResolution = {
+  requestedLayout: LAYOUT.COLUMNS,
+  effectiveLayout: LAYOUT.COLUMNS,
+  isVisualRequested: false,
+  isVisualActive: false,
+  isGridActive: true,
+  isPhoneViewport: false,
+};
+
+const visualGridLayoutResolution: FeedLayoutResolution = {
+  ...gridLayoutResolution,
+  requestedLayout: LAYOUT.VISUAL,
+  effectiveLayout: LAYOUT.VISUAL,
+  isVisualRequested: true,
+  isVisualActive: true,
+};
+
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
 const mockPrependPosts = vi.fn();
+const mockPrependOptimisticPosts = vi.fn();
 const mockRemovePosts = vi.fn();
 
 const defaultMutedUsersResult = {
@@ -116,10 +173,17 @@ const defaultPaginationResult = {
   loadMore: mockLoadMore,
   refresh: mockRefresh,
   prependPosts: mockPrependPosts,
+  prependOptimisticPosts: mockPrependOptimisticPosts,
   removePosts: mockRemovePosts,
 };
 const mockUseStreamPagination = vi.mocked(useStreamPagination);
 const mockUseMutedUsers = vi.mocked(useMutedUsers);
+
+function ContextProbe() {
+  const context = useTimelineFeedContext();
+
+  return <div data-testid="timeline-context-collection-id">{context?.collectionId ?? 'none'}</div>;
+}
 
 describe('TimelineFeedContent', () => {
   beforeEach(() => {
@@ -201,6 +265,75 @@ describe('TimelineFeedContent', () => {
         />,
       );
       expect(screen.getByTestId('post-count')).toHaveTextContent('3');
+    });
+
+    it('provides collection id in the timeline feed context when passed', () => {
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        >
+          <ContextProbe />
+        </TimelineFeedWithStream>,
+      );
+      expect(screen.getByTestId('timeline-context-collection-id')).toHaveTextContent('author-pubky:collection-post');
+    });
+  });
+
+  describe('Optimistic feed inserts (FAB bridge)', () => {
+    const collectionId = 'author-pubky:collection-post';
+    const collectionKey = buildFeedKey({ type: 'collection', collectionId });
+
+    beforeEach(() => {
+      useFeedOptimisticStore.setState({ pendingByKey: {} });
+    });
+
+    it('applies queued ids to a single collection feed and clears them', () => {
+      useFeedOptimisticStore.setState({ pendingByKey: { [collectionKey]: ['author:new1'] } });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId={collectionId}
+        />,
+      );
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['author:new1']);
+      expect(useFeedOptimisticStore.getState().pendingByKey[collectionKey]).toBeUndefined();
+    });
+
+    it('applies queued ids to the bookmarks feed', () => {
+      useFeedOptimisticStore.setState({ pendingByKey: { bookmarks: ['author:bm1'] } });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+          variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['author:bm1']);
+      expect(useFeedOptimisticStore.getState().pendingByKey.bookmarks).toBeUndefined();
+    });
+
+    it('ignores queued ids for non-participating feeds (home)', () => {
+      useFeedOptimisticStore.setState({ pendingByKey: { bookmarks: ['author:bm1'] } });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+      expect(useFeedOptimisticStore.getState().pendingByKey.bookmarks).toEqual(['author:bm1']);
     });
   });
 
@@ -400,6 +533,40 @@ describe('TimelineFeedContent', () => {
       expect(mockRemovePosts).not.toHaveBeenCalled();
     });
 
+    it('does not remove or refresh posts for profile collections feeds', () => {
+      let mutedUserIds = ['muted-user'];
+      const profileCollectionsStreamId = buildAuthorCollectionsStreamId('profile-user');
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['muted-user:collection-1', 'other-user:collection-2'],
+      });
+      mockUseMutedUsers.mockImplementation(() => ({
+        ...defaultMutedUsersResult,
+        mutedUserIds,
+        mutedUserIdSet: new Set(mutedUserIds),
+      }));
+
+      const { rerender } = render(
+        <TimelineFeedWithStream
+          streamId={profileCollectionsStreamId}
+          variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS}
+          tagsLayout="inline"
+        />,
+      );
+
+      mutedUserIds = [];
+      rerender(
+        <TimelineFeedWithStream
+          streamId={profileCollectionsStreamId}
+          variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+      expect(mockRemovePosts).not.toHaveBeenCalled();
+    });
+
     it('does not remove or refresh posts for bookmarks feeds', () => {
       let mutedUserIds = ['muted-user'];
       mockUseStreamPagination.mockReturnValue({
@@ -432,6 +599,195 @@ describe('TimelineFeedContent', () => {
       expect(mockRefresh).not.toHaveBeenCalled();
       expect(mockRemovePosts).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('Grid layout variants (decisions D5/D7)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+    mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
+  });
+
+  it('renders the grid renderer (not the vertical list) when isGridActive', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
+    expect(screen.getByTestId('grid-post-count')).toHaveTextContent('3');
+  });
+
+  it('suppresses the end-of-feed message for the collection grid', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+  });
+
+  it('forwards a custom empty state to the grid renderer', () => {
+    mockUseStreamPagination.mockReturnValue({
+      ...defaultPaginationResult,
+      postIds: [],
+    });
+
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+        emptyState={<div data-testid="custom-empty">Collection is empty</div>}
+      />,
+    );
+
+    expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
+  });
+
+  it('forwards gridTrailingSlot to the grid renderer', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+        gridTrailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
+      />,
+    );
+
+    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('grid-trailing-slot')).toBeInTheDocument();
+  });
+
+  it('renders the bookmarks variant in the grid and suppresses the end-of-feed message', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+        variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+
+    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
+    expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-show-end-message', 'false');
+  });
+
+  it('keeps header children visible for bookmarks when visual layout still resolves to the grid', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_BOOKMARKS_ALL}
+        variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
+        tagsLayout="inline"
+        layoutResolution={visualGridLayoutResolution}
+      >
+        <div data-testid="bookmarks-header">Bookmarks hero</div>
+      </TimelineFeedWithStream>,
+    );
+
+    expect(screen.getByTestId('bookmarks-header')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('visual-timeline-posts')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the vertical list when no grid layout resolution is provided', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+      />,
+    );
+    expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-grid-posts')).not.toBeInTheDocument();
+  });
+
+  it('enables pull-to-refresh for the collection variant', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(mockUsePullToRefresh).toHaveBeenCalledWith(expect.objectContaining({ disabled: false }));
+  });
+
+  it('uses an external pull-to-refresh container ref when provided', () => {
+    const pullToRefreshContainerRef = createRef<HTMLElement>();
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+        pullToRefreshContainerRef={pullToRefreshContainerRef}
+      />,
+    );
+    expect(mockUsePullToRefresh).toHaveBeenCalledWith(
+      expect.objectContaining({ containerRef: pullToRefreshContainerRef }),
+    );
+  });
+
+  it('shows pull-to-refresh indicator for the collection variant when pulling', () => {
+    mockUsePullToRefresh.mockReturnValue({ state: 'pulling' as const, pullDistance: 50 });
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(screen.getByTestId('pull-to-refresh')).toBeInTheDocument();
+  });
+
+  it('applies muting for the collection variant (not in the mute skip list, D7)', () => {
+    let mutedUserIds: string[] = [];
+    mockUseStreamPagination.mockReturnValue({
+      ...defaultPaginationResult,
+      postIds: ['muted-user:post-1', 'other-user:post-2'],
+    });
+    mockUseMutedUsers.mockImplementation(() => ({
+      ...defaultMutedUsersResult,
+      mutedUserIds,
+      mutedUserIdSet: new Set(mutedUserIds),
+    }));
+
+    const { rerender } = render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+    expect(mockRemovePosts).not.toHaveBeenCalled();
+
+    mutedUserIds = ['muted-user'];
+    rerender(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+      />,
+    );
+
+    expect(mockRemovePosts).toHaveBeenCalledWith(['muted-user:post-1']);
   });
 });
 

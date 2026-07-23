@@ -81,6 +81,19 @@ vi.mock('../PostArticle/PostArticle', () => ({
   PostArticle: vi.fn(({ content }: { content: string }) => <div data-testid="post-article">{content}</div>),
 }));
 
+vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
+  CollectionCard: vi.fn(
+    ({ authorPubky, postId, presentation }: { authorPubky: string; postId: string; presentation?: string }) => (
+      <div
+        data-testid="collection-card"
+        data-author-pubky={authorPubky}
+        data-post-id={postId}
+        data-presentation={presentation ?? 'landing'}
+      />
+    ),
+  ),
+}));
+
 vi.mock('../PostAttachments/PostAttachments', () => ({
   PostAttachments: vi.fn(() => <div data-testid="post-attachments" />),
 }));
@@ -91,11 +104,16 @@ vi.mock('../PostContentBlurred/PostContentBlurred', () => ({
   )),
 }));
 
+vi.mock('@/molecules/PostMissing/PostMissing', () => ({
+  PostMissing: () => <div data-testid="post-missing" />,
+}));
+
 const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseLocalFilesStore = vi.mocked(useLocalFilesStore);
 const mockPostAttachments = vi.mocked(PostAttachments);
 const mockPostContentBlurred = vi.mocked(PostContentBlurred);
 const mockPostArticle = vi.mocked(PostArticle);
+const mockPostText = vi.mocked(PostText);
 
 // Helper to create complete PostDetails mock
 const createMockPostDetails = (
@@ -103,7 +121,7 @@ const createMockPostDetails = (
     content: string;
     attachments: string[] | null;
     is_blurred: boolean;
-    kind: 'short' | 'long';
+    kind: 'short' | 'long' | 'collection';
   }> = {},
 ): EnrichedPostDetails => ({
   id: 'test-author:test-post',
@@ -182,6 +200,21 @@ describe('PostContentBase', () => {
 
     expect(mockPostAttachments).toHaveBeenCalledWith(
       { attachments: ['file-id-1'], localAttachments: mockLocalAttachments },
+      undefined,
+    );
+  });
+
+  it('renders attachments in the default content stack when there is no text content', () => {
+    const mockAttachments = ['file-id-1', 'file-id-2'];
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({ content: '', attachments: mockAttachments }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="post-123" />);
+
+    expect(mockPostAttachments).toHaveBeenCalledWith(
+      { attachments: mockAttachments, localAttachments: undefined },
       undefined,
     );
   });
@@ -277,6 +310,45 @@ describe('PostContentBase', () => {
     expect(screen.queryByTestId('container')).not.toBeInTheDocument();
   });
 
+  it('renders malformed long posts as normal post text', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({
+        content: 'raw long content that is not an article envelope',
+        kind: 'long',
+      }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="post-123" />);
+
+    expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+    expect(screen.getByTestId('container')).toBeInTheDocument();
+    expect(mockPostText).toHaveBeenCalledWith(
+      { content: 'raw long content that is not an article envelope', className: undefined },
+      undefined,
+    );
+  });
+
+  it('renders CollectionCard with embed presentation when kind is collection', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({
+        content: '{"name":"My Collection"}',
+        kind: 'collection',
+      }),
+      isLoading: false,
+    });
+
+    render(<PostContentBase postId="author-pubky:raw-post-id" className="custom-class" />);
+
+    const card = screen.getByTestId('collection-card');
+    expect(card).toBeInTheDocument();
+    expect(card).toHaveAttribute('data-author-pubky', 'author-pubky');
+    expect(card).toHaveAttribute('data-post-id', 'raw-post-id');
+    expect(card).toHaveAttribute('data-presentation', 'embed');
+    expect(screen.queryByTestId('container')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+  });
+
   it('prioritizes is_blurred over kind for blurred articles', () => {
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({
@@ -291,6 +363,24 @@ describe('PostContentBase', () => {
 
     expect(screen.getByTestId('post-content-blurred')).toBeInTheDocument();
     expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+  });
+
+  it('renders PostMissing when the post is not found (settled null)', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+
+    render(<PostContentBase postId="post-missing" />);
+
+    expect(screen.getByTestId('post-missing')).toBeInTheDocument();
+    expect(screen.queryByTestId('skeleton')).not.toBeInTheDocument();
+  });
+
+  it('renders the skeleton (not PostMissing) while still loading', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: true });
+
+    render(<PostContentBase postId="post-loading" />);
+
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('post-missing')).not.toBeInTheDocument();
   });
 });
 

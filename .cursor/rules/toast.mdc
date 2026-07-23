@@ -1,0 +1,31 @@
+---
+description: Toast variants and toast() API — default, error, warning, info
+globs: src/components/atoms/Toast/**,src/components/molecules/Toaster/**,src/hooks/**,src/providers/**/*
+alwaysApply: false
+---
+
+# Toast Rules
+
+@docs/components.md — _Toasts_
+
+## Variants
+
+Use `variant` on `toast()` — never  `className: 'destructive …'`, or `showErrorToast` / `showSuccessToast` helpers.
+
+| Variant | When |
+|---------|------|
+| `default` | Success, confirmation (omit `variant`) |
+| `error` | Failures; omit `title` for `toast.genericErrorTitle` |
+| `warning` | Caution, rate limits |
+| `info` | Neutral info (e.g. clipboard copy) |
+
+## API
+
+```tsx
+import { toast } from '@/molecules/Toaster/use-toast';
+
+toast({ variant: 'error', description: '...' });
+toast({ title: 'Saved', description: '...' }); // default
+```
+
+Styling: [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts) only. `ToastAction` needs `variant` when not rendered by `Toaster`.

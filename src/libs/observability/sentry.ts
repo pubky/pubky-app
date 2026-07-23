@@ -8,6 +8,12 @@ import {
   scrubTransactionEvent,
   shouldDropAppErrorFromSentry,
 } from '@/libs/observability/sentry.utils';
+import {
+  getSentryDsn,
+  getSentryEnvironment,
+  getSentryTracesSampleRate,
+  getTestnet,
+} from '@/libs/runtime-config/runtime-config';
 
 /**
  * Single source of truth for Sentry configuration shared across the three Next.js runtimes
@@ -23,7 +29,9 @@ import {
 
 /**
  * Whether Sentry should be initialized in the current runtime.
- * False during tests, testnet/E2E builds, and when no DSN is configured.
+ * False during tests, testnet deployments, and when no DSN is configured.
+ * The DSN and testnet gates read RUNTIME config (PUBKY_RUNTIME_* / window.__PUBKY_CONFIG__),
+ * so a single public image enables Sentry purely through deploy-time env vars.
  *
  * The `!Env` guard protects against a module-init circular dependency:
  * env.ts → @/libs/error → error.factories.ts → observability/sentry.ts → env.ts.
@@ -35,19 +43,37 @@ export function shouldEnableSentry(): boolean {
   if (!Env) return false;
   if (Env.NODE_ENV === 'test') return false;
   if (Env.VITEST) return false;
-  if (Env.NEXT_PUBLIC_TESTNET) return false;
-  if (!Env.NEXT_PUBLIC_SENTRY_DSN) return false;
+  // Resolving runtime config can throw on a misconfigured deploy (missing PUBKY_RUNTIME_*).
+  // The capture funnel must never throw — and especially must not mask the original boot
+  // error with its own — so an unresolvable config simply means "Sentry disabled".
+  try {
+    if (getTestnet()) return false;
+    if (!getSentryDsn()) return false;
+  } catch {
+    return false;
+  }
   return true;
 }
 
 /**
- * Resolved environment tag attached to every event.
- * Falls back to NODE_ENV when NEXT_PUBLIC_SENTRY_ENVIRONMENT is unset.
- * Internal: consumed only by getSentryInitBase() in the same file.
+ * Whether `Sentry.init()` actually ran in the CURRENT runtime (browser or Node).
+ * `shouldEnableSentry()` says whether Sentry SHOULD be enabled; this says whether init
+ * really happened. The two diverge when init is skipped or fails — e.g. the client init
+ * evaluating before `window.__PUBKY_CONFIG__` was injected — which otherwise fails silently.
  */
-function getSentryEnvironment(): string {
+export function isSentryInitialized(): boolean {
+  return Sentry.getClient() !== undefined;
+}
+
+/**
+ * Resolved environment tag attached to every event.
+ * Falls back to NODE_ENV when the runtime sentryEnvironment is unset.
+ * Internal: consumed only by getSentryInitBase() in the same file (which only runs after
+ * shouldEnableSentry() returned true, so the runtime config is already resolved and memoized).
+ */
+function resolveSentryEnvironment(): string {
   if (!Env) return 'unknown';
-  return Env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? Env.NODE_ENV;
+  return getSentryEnvironment() ?? Env.NODE_ENV;
 }
 
 /**
@@ -63,12 +89,14 @@ function getSentryEnvironment(): string {
  */
 export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions {
   return {
-    dsn: Env.NEXT_PUBLIC_SENTRY_DSN,
-    environment: getSentryEnvironment(),
+    dsn: getSentryDsn(),
+    environment: resolveSentryEnvironment(),
+    // The release stays build-time on purpose: Docker CI sets this to the commit SHA,
+    // local builds fall back to package.json version, and source-map uploads must match it.
     release: Env.NEXT_PUBLIC_APP_VERSION,
     debug: false,
     sendDefaultPii: false,
-    tracesSampleRate: Env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+    tracesSampleRate: getSentryTracesSampleRate(),
     ignoreErrors: [
       'ResizeObserver loop limit exceeded',
       'ResizeObserver loop completed with undelivered notifications',

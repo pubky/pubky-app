@@ -1,3 +1,6 @@
+import type { LookupFunction } from 'node:net';
+import type { Dispatcher } from 'undici';
+import { Agent } from 'undici';
 import type { TOgMetadataFallbackReason, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
@@ -12,6 +15,7 @@ const MAX_REDIRECTS = 5;
 const FETCH_TIMEOUT_MS = 10_000;
 const OG_METADATA_OPERATION = 'fetchOgMetadata';
 const DNS_SAFETY_OPERATION = 'checkDnsSafety';
+const SAFE_LOOKUP_OPERATION = 'safeOgMetadataLookup';
 
 const FETCH_HEADERS = {
   'User-Agent':
@@ -20,6 +24,23 @@ const FETCH_HEADERS = {
   'Accept-Language': 'en-US,en;q=0.9',
   'Upgrade-Insecure-Requests': '1',
 };
+
+type FetchInitWithDispatcher = RequestInit & { dispatcher: Dispatcher };
+
+/**
+ * Internal transport signal for an expected connection-time DNS miss.
+ * This must stay outside Err.* so best-effort enrichment failures do not reach Sentry.
+ */
+class OgMetadataDnsError extends Error {
+  constructor(cause?: unknown) {
+    super('Connection-time DNS resolution failed', { cause });
+    this.name = 'OgMetadataDnsError';
+  }
+}
+
+const SAFE_OG_METADATA_DISPATCHER: Dispatcher = new Agent({
+  connect: { lookup: safeOgMetadataLookup },
+});
 
 /**
  * Next.js OG Metadata Service
@@ -38,31 +59,22 @@ export class NextJsOgMetadataService {
    */
   static async fetch(validatedUrl: URL): Promise<TOgMetadataResult> {
     const url = validatedUrl.toString();
-    const hostname = validatedUrl.hostname;
 
     try {
-      // 1. Resolve DNS and validate IP (prevents SSRF via DNS rebinding)
-      const dnsResult = await checkDnsSafety(hostname);
-      if (!dnsResult.ok) {
-        if (dnsResult.reason === 'unsafe_ip') {
-          throwBlockedIpError(hostname, DNS_SAFETY_OPERATION);
-        }
-        return fallback(url, dnsResult.reason, { hostname });
-      }
-
-      // 2. Fetch with redirect following and DNS validation on each hop
+      // 1. Fetch with redirect following and two DNS checks on every hop:
+      // a preflight check for IP literals/all answers, then a connection-time check that pins the socket to vetted answers.
       const fetchResult = await fetchWithRedirectsForOgMetadata(url);
       if (!fetchResult.ok) {
         return fallback(fetchResult.url, fetchResult.reason, fetchResult.context);
       }
       const { response } = fetchResult;
 
-      // 3. Handle non-OK responses
+      // 2. Handle non-OK responses
       if (!response.ok) {
         return handleErrorResponse(response, url);
       }
 
-      // 4. Check for media content types (image/video/audio)
+      // 3. Check for media content types (image/video/audio)
       const mediaResult = detectMediaType(url, response);
       if (mediaResult) {
         // If it's valid media content type, return result and stop fetch process
@@ -70,16 +82,16 @@ export class NextJsOgMetadataService {
         return mediaResult;
       }
 
-      // 5. Validate HTML content type
+      // 4. Validate HTML content type
       const contentTypeOutcome = resolveHtmlContentType(response, url);
       if (contentTypeOutcome) {
         return contentTypeOutcome;
       }
 
-      // 6. Read response body with size limit
+      // 5. Read response body with size limit
       const html = await readResponseBody(response);
 
-      // 7. Extract and normalize metadata
+      // 6. Extract and normalize metadata
       return await extractMetadata(url, html);
     } catch (error) {
       if (error instanceof AppError) {
@@ -134,7 +146,7 @@ function resolveHtmlContentType(response: Response, url: string): TOgMetadataRes
 /**
  * Follows redirects manually, validating DNS on each hop to prevent SSRF via open redirects.
  */
-async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgRedirectFetchResult> {
+async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgFetchResult> {
   let currentUrl = url;
 
   for (let i = 0; i < MAX_REDIRECTS; i++) {
@@ -153,14 +165,6 @@ async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgRedirectF
     // Release the redirect response body before following the next hop so the TCP connection can be reused promptly.
     response.body?.cancel().catch(() => {});
 
-    const redirectDnsResult = await checkDnsSafety(redirectUrl.hostname);
-    if (!redirectDnsResult.ok) {
-      if (redirectDnsResult.reason === 'unsafe_ip') {
-        throwBlockedIpError(redirectUrl.hostname, DNS_SAFETY_OPERATION);
-      }
-      return { ok: false, reason: redirectDnsResult.reason, url: redirectUrl.toString() };
-    }
-
     currentUrl = redirectUrl.toString();
   }
 
@@ -172,15 +176,6 @@ async function fetchWithRedirectsForOgMetadata(url: string): Promise<OgRedirectF
 }
 
 type OgFetchResult =
-  | { ok: true; response: Response }
-  | {
-      ok: false;
-      reason: Extract<TOgMetadataFallbackReason, 'network' | 'timeout'>;
-      url: string;
-      context?: Record<string, unknown>;
-    };
-
-type OgRedirectFetchResult =
   | { ok: true; response: Response }
   | {
       ok: false;
@@ -213,7 +208,11 @@ function logFallback(
 }
 
 function throwBlockedIpError(hostname: string, operation: string): never {
-  throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
+  throw createBlockedIpError(hostname, operation);
+}
+
+function createBlockedIpError(hostname: string, operation: string): AppError {
+  return Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
     service: ErrorService.NextJsServer,
     operation,
     context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
@@ -229,6 +228,16 @@ function getHostname(url: string): string | undefined {
 }
 
 async function fetchForOgMetadata(url: string, options: RequestInit): Promise<OgFetchResult> {
+  const hostname = new URL(url).hostname;
+  const dnsResult = await checkDnsSafety(hostname);
+  if (!dnsResult.ok) {
+    if (dnsResult.reason === 'unsafe_ip') {
+      throwBlockedIpError(hostname, DNS_SAFETY_OPERATION);
+    }
+
+    return { ok: false, reason: dnsResult.reason, url, context: { hostname } };
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -236,20 +245,99 @@ async function fetchForOgMetadata(url: string, options: RequestInit): Promise<Og
     const response = await fetch(url, {
       ...options,
       signal: controller.signal,
-    });
+      dispatcher: SAFE_OG_METADATA_DISPATCHER,
+    } as FetchInitWithDispatcher);
     return { ok: true, response };
   } catch (error) {
-    if (isAbortError(error)) {
-      return { ok: false, reason: 'timeout', url, context: { errorName: getErrorName(error) } };
+    const appError = findErrorInCauseChain(error, (candidate): candidate is AppError => candidate instanceof AppError);
+    if (appError) {
+      throw appError;
     }
 
-    return { ok: false, reason: 'network', url, context: { errorName: getErrorName(error) } };
+    const dnsError = findErrorInCauseChain(
+      error,
+      (candidate): candidate is OgMetadataDnsError => candidate instanceof OgMetadataDnsError,
+    );
+    if (dnsError) {
+      return {
+        ok: false,
+        reason: 'dns_failed',
+        url,
+        context: { errorName: dnsError.name },
+      };
+    }
+
+    const abortError = findErrorInCauseChain(error, isAbortError);
+    return {
+      ok: false,
+      reason: abortError ? 'timeout' : 'network',
+      url,
+      context: { errorName: getErrorName(abortError ?? error) },
+    };
   } finally {
     clearTimeout(timeoutId);
   }
 }
 
-function isAbortError(error: unknown): boolean {
+function safeOgMetadataLookup(...[hostname, options, callback]: Parameters<LookupFunction>): void {
+  void (async () => {
+    try {
+      const dnsResult = await checkDnsSafety(hostname);
+      if (!dnsResult.ok) {
+        if (dnsResult.reason === 'unsafe_ip') {
+          callback(createBlockedIpError(hostname, SAFE_LOOKUP_OPERATION), '');
+          return;
+        }
+
+        callback(new OgMetadataDnsError(dnsResult.cause), '');
+        return;
+      }
+
+      const requestedFamily = normalizeRequestedIpFamily(options.family);
+      const addresses = dnsResult.addresses.filter(({ family }) => !requestedFamily || requestedFamily === family);
+      if (addresses.length === 0) {
+        callback(new OgMetadataDnsError(), '');
+        return;
+      }
+
+      if (options.all) {
+        callback(null, addresses);
+        return;
+      }
+
+      const [address] = addresses;
+      callback(null, address.address, address.family);
+    } catch (error) {
+      callback(
+        error instanceof AppError
+          ? error
+          : Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Connection-time DNS safety check failed', {
+              service: ErrorService.NextJsServer,
+              operation: SAFE_LOOKUP_OPERATION,
+              cause: error,
+              context: { hostname },
+            }),
+        '',
+      );
+    }
+  })();
+}
+
+function findErrorInCauseChain<T>(error: unknown, predicate: (candidate: unknown) => candidate is T): T | null {
+  const seen = new Set<unknown>();
+  let candidate = error;
+
+  while (candidate && typeof candidate === 'object' && !seen.has(candidate)) {
+    if (predicate(candidate)) return candidate;
+
+    seen.add(candidate);
+    candidate = 'cause' in candidate ? candidate.cause : undefined;
+  }
+
+  return null;
+}
+
+function isAbortError(error: unknown): error is { name: string } {
   return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
 }
 
@@ -258,5 +346,12 @@ function getErrorName(error: unknown): string | undefined {
   if (typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string') {
     return error.name;
   }
+
+  return undefined;
+}
+
+function normalizeRequestedIpFamily(family: number | string | undefined): 4 | 6 | undefined {
+  if (family === 4 || family === 'IPv4') return 4;
+  if (family === 6 || family === 'IPv6') return 6;
   return undefined;
 }

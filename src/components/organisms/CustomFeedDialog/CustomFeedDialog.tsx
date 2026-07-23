@@ -13,10 +13,12 @@ import {
   Image,
   Layers,
   LayoutGrid,
+  Library,
   Link,
-  Menu,
   Newspaper,
   Radio,
+  Rows2,
+  Rows4,
   SquareAsterisk,
   StickyNote,
 } from 'lucide-react';
@@ -32,7 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FeedController } from '@/controllers/feed/feed';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { UsersRound2 } from '@/icons';
-import { Env } from '@/libs/env/env';
+import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -51,7 +53,6 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
   const customFeed = useCustomFeed();
   const tFilter = useTranslations('filters');
   const tDialog = useTranslations('dialogs.customFeed');
-  const tToast = useTranslations('toast');
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [reach, setReach] = useState<PubkyAppFeedReach | undefined>(
@@ -123,12 +124,17 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
     {
       value: PubkyAppFeedLayout.Wide,
       label: tFilter('layout.wide'),
-      icon: Menu,
+      icon: Rows2,
     },
     {
       value: PubkyAppFeedLayout.Visual,
       label: tFilter('layout.visual'),
       icon: LayoutGrid,
+    },
+    {
+      value: PubkyAppFeedLayout.List,
+      label: tFilter('layout.list'),
+      icon: Rows4,
     },
   ];
   const allContentFilters: Array<{
@@ -150,6 +156,11 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       value: PubkyAppPostKind.Long,
       label: tFilter('content.articles'),
       icon: Newspaper,
+    },
+    {
+      value: PubkyAppPostKind.Collection,
+      label: tFilter('content.collections'),
+      icon: Library,
     },
     {
       value: PubkyAppPostKind.Image,
@@ -207,15 +218,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         });
         setOpen(false);
         toast({
-          title: tToast('success'),
-          description: tDialog('feedCreated', {
+          title: tDialog('feedCreated', {
             name: feed.name,
           }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tDialog('feedCreateError'),
         });
       } finally {
@@ -238,15 +248,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
         });
         setOpen(false);
         toast({
-          title: tToast('success'),
-          description: tDialog('feedEdited', {
+          title: tDialog('feedEdited', {
             name: feed.name,
           }),
         });
         router.push(`${APP_ROUTES.FEED}/${feed.id}`);
       } catch {
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tDialog('feedEditError'),
         });
       } finally {
@@ -263,15 +272,14 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
       });
       setOpen(false);
       toast({
-        title: tToast('success'),
-        description: tDialog('feedDeleted', {
+        title: tDialog('feedDeleted', {
           name: customFeed.name,
         }),
       });
       router.push(APP_ROUTES.HOME);
     } catch {
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: tDialog('feedDeleteError'),
       });
     } finally {
@@ -414,7 +422,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
             }))}
             showCloseButton={false}
             disabled={disabled}
-            maxTags={Env.NEXT_MAX_STREAM_TAGS}
+            maxTags={getMaxStreamTags()}
             currentTagsCount={tags.length}
             enableApiSuggestions
             excludeFromApiSuggestions={tags}

@@ -134,8 +134,8 @@ export const Youtube: EmbedProvider = {
     // (starting at 0 is semantically identical to no start parameter)
     const embedUrl =
       timestamp && timestamp > 0
-        ? `https://www.youtube-nocookie.com/embed/${id}?start=${timestamp}`
-        : `https://www.youtube-nocookie.com/embed/${id}`;
+        ? `https://www.youtube-nocookie.com/embed/${id}?start=${timestamp}&enablejsapi=1`
+        : `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1`;
 
     return { type: 'url', value: embedUrl };
   },

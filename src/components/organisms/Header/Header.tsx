@@ -2,7 +2,9 @@
 
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import type { MouseEvent } from 'react';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { cn } from '@/libs/utils/utils';
 import {
   HeaderContainer,
   HeaderExploreNavigationButtons,
@@ -22,14 +24,15 @@ export function Header() {
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
   const isOnboarding = pathname?.startsWith('/onboarding') ?? false;
+  const isLandingPage = pathname === '/';
   const isCopyrightPage = pathname === '/copyright';
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
   const currentTitle = stepConfig?.titleKey ? t(stepConfig.titleKey) : undefined;
 
   // Hide header on mobile when:
-  // - User is on a core explore route (/home, /hot, /search) — MobileHeader + MobileFooter
-  // - Any user on a dynamic public route (/post/..., /profile/[pubky]) — page shell owns mobile chrome
+  // - User is on a core explore route (/home, /hot, /search, /collections) — MobileHeader + MobileFooter
+  // - Any user on a dynamic public route (/post/..., /profile/[pubky], /collections/[userId]/[postId]) — page shell owns mobile chrome
   // - Authenticated on standard app routes — MobileHeader + MobileFooter
   const shouldHideHeaderOnMobile =
     isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
@@ -46,7 +49,7 @@ export function Header() {
   // Determine which header content to show:
   // - Onboarding: HeaderOnboarding
   // - Authenticated: HeaderSignIn (navigation + avatar)
-  // - Unauthenticated on core explore or dynamic public routes (home/hot/search/post/profile): explore navigation + join
+  // - Unauthenticated on core explore or dynamic public routes (home/hot/search/collections/post/profile): explore navigation + join
   // - Unauthenticated on landing/other: HeaderHome (social links + sign in)
   const renderHeaderContent = () => {
     if (isOnboarding) {
@@ -72,9 +75,19 @@ export function Header() {
     );
   }
 
+  const handleLandingLogoClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!isLandingPage) return;
+
+    event.preventDefault();
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  };
+
   return (
-    <HeaderContainer classNameNav={classNameNav} className={shouldHideHeaderOnMobile ? 'hidden lg:block' : undefined}>
-      <Logo noLink={currentStep === 5} />
+    <HeaderContainer
+      classNameNav={classNameNav}
+      className={cn(isLandingPage && 'p-0 sm:py-6', shouldHideHeaderOnMobile && 'hidden lg:block')}
+    >
+      <Logo noLink={currentStep === 5} onClick={handleLandingLogoClick} />
       {shouldShowTitle && <HeaderTitle currentTitle={currentTitle} />}
       {renderHeaderContent()}
     </HeaderContainer>

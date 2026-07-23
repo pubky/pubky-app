@@ -6,8 +6,8 @@ export interface ControlledInputFieldProps<T extends FieldValues> {
   name: Path<T>;
   /** React Hook Form control object */
   control: Control<T>;
-  /** Label text displayed above the input */
-  label: string;
+  /** Optional label text displayed above the input */
+  label?: string;
   /** Optional hint text displayed after the label */
   labelHint?: ReactNode;
   /** Placeholder text for the input */
@@ -24,4 +24,16 @@ export interface ControlledInputFieldProps<T extends FieldValues> {
   iconPosition?: 'left' | 'right';
   /** Disabled state */
   disabled?: boolean;
+  /** Loading state */
+  loading?: boolean;
+  /** Optional loading text */
+  loadingText?: string;
+  /** Optional paste handler */
+  onPaste?: (event: React.ClipboardEvent<HTMLInputElement>) => void;
+  /** Optional input wrapper class */
+  className?: string;
+  /** Optional class applied to the inner input element */
+  inputClassName?: string;
+  /** Cypress selector forwarded to the input */
+  dataCy?: string;
 }

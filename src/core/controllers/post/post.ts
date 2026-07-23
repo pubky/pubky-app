@@ -1,27 +1,37 @@
+import { postUriBuilder } from 'pubky-app-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostApplication } from '@/application/post/post';
-import type { TGetOrFetchPostParams } from '@/application/post/post.types';
+import type { TGetDetailsByIdsParams, TGetOrFetchPostParams } from '@/application/post/post.types';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
 import type {
+  TCreateCollectionParams,
   TCreatePostParams,
   TDeletePostParams,
+  TEditCollectionParams,
   TEditPostParams,
   TFetchMorePostTagsParams,
   TFetchPostTaggersParams,
   TFileAttachmentsParams,
   TNormalizeTagsParams,
+  TUpdateCollectionItemParams,
 } from '@/controllers/post/post.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
-import { ClientErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { toAppError } from '@/libs/error/error.utils';
+import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
+import { Logger } from '@/libs/logger/logger';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
+import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { inferPostKindForCreate, resolveTagTargetCompositeIdForPostCreate } from '@/pipes/post/post.kind';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { PostValidators } from '@/pipes/post/post.validators';
@@ -41,6 +51,18 @@ export class PostController {
    */
   static async getDetails({ compositeId }: TCompositeId): Promise<EnrichedPostDetails | null> {
     return await PostApplication.getDetails({ compositeId });
+  }
+
+  /**
+   * Bulk read post details for multiple posts from the local database, preserving input order.
+   * @param params - Parameters object
+   * @param params.compositeIds - Composite post IDs in format "authorId:postId"
+   * @returns Array of post details aligned to `compositeIds` (undefined for missing posts)
+   */
+  static async getDetailsByIds({
+    compositeIds,
+  }: TGetDetailsByIdsParams): Promise<(PostDetailsModelSchema | undefined)[]> {
+    return await PostApplication.getDetailsByIds({ compositeIds });
   }
 
   /**
@@ -105,6 +127,14 @@ export class PostController {
    */
   static async fetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
     return await PostApplication.fetch(params);
+  }
+
+  static async getAuthoredCollections(params: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
+    return await PostApplication.getAuthoredCollections(params);
+  }
+
+  static async fetchAuthoredCollections(params: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
+    return await PostApplication.fetchAuthoredCollections(params);
   }
 
   /**
@@ -211,6 +241,230 @@ export class PostController {
     return compositePostId;
   }
 
+  static async commitCreateCollection({
+    authorId,
+    name,
+    description,
+    items,
+    coverImage,
+  }: TCreateCollectionParams): Promise<string> {
+    // Upload cover image to homeserver first when a File is supplied. We do this
+    // before normalization so the resulting `pubky://` URL participates in the
+    // envelope's max-length and protocol validation.
+    let coverImageUrl: string | null = null;
+    if (coverImage instanceof File) {
+      try {
+        const fileAttachment = await FileApplication.toFileAttachment({ file: coverImage, pubky: authorId });
+        await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
+        coverImageUrl = fileAttachment.fileResult.meta.url;
+      } catch (error) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
+          service: ErrorService.Local,
+          operation: 'commitCreateCollection',
+          cause: error,
+        });
+      }
+    } else if (typeof coverImage === 'string') {
+      coverImageUrl = coverImage;
+    }
+
+    const { post, meta } = await PostNormalizer.toCollection(
+      {
+        name,
+        description,
+        items,
+        coverImage: coverImageUrl,
+      },
+      authorId,
+    );
+
+    const { id: postId } = meta;
+    const compositePostId = buildCompositeId({ pubky: authorId, id: postId });
+
+    await PostApplication.commitCreate({
+      compositePostId,
+      post,
+      postUrl: meta.url,
+    });
+
+    return compositePostId;
+  }
+
+  /**
+   * Edit a collection's name, description, and cover image.
+   *
+   * `coverImage` is required: pass a `File` to replace, the current cover URL
+   * string to keep it, or `null` to clear. Callers must not omit it.
+   *
+   * Cover cleanup: after the envelope is persisted, if the previous `cover_image`
+   * was a homeserver file URI and is no longer referenced (replaced or cleared),
+   * that file is deleted from the homeserver. Failures during that delete are
+   * logged and swallowed — the edit already succeeded, so a cleanup failure must
+   * not surface as an edit failure (the old file may remain orphaned). External
+   * http(s) covers are never deleted.
+   *
+   * If a new cover File was uploaded and then edit normalization or `commitEdit`
+   * fails, the new file is deleted before rethrowing so the failed edit does not
+   * leave an unreferenced upload.
+   */
+  static async commitEditCollection({
+    compositeCollectionId,
+    name,
+    description,
+    coverImage,
+  }: TEditCollectionParams): Promise<void> {
+    // Reject non-authors up front, before any side effects: the cover File
+    // upload below would otherwise hit the homeserver (and `PostNormalizer.toEdit`
+    // only enforces the author check later). Mirrors the explicit guard in
+    // `commitDelete`.
+    const { pubky: authorId } = parseCompositeId(compositeCollectionId);
+    const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
+    if (authorId !== currentUserPubky) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Current user is not the author of this post', {
+        service: ErrorService.Local,
+        operation: 'commitEditCollection',
+        context: { compositeCollectionId, currentUserPubky },
+      });
+    }
+
+    const collection = await PostApplication.getDetails({ compositeId: compositeCollectionId });
+
+    // Tombstoned collections (`content === '[DELETED]'`) are treated as
+    // not-found here. Pre-tombstone refactor `!collection` caught hard-deleted
+    // rows; now they stick around as tombstones, and falling through would
+    // surface a misleading "Collection content is invalid" error.
+    if (!collection || isPostDeleted(collection.content)) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
+        service: ErrorService.Local,
+        operation: 'commitEditCollection',
+        context: { compositeCollectionId },
+      });
+    }
+
+    const currentContent = CollectionPostContent.parse(collection.content);
+    if (!currentContent) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Collection content is invalid', {
+        service: ErrorService.Local,
+        operation: 'commitEditCollection',
+        context: { compositeCollectionId },
+      });
+    }
+
+    const previousCover = currentContent.cover_image;
+    let coverImageUrl: string | null = null;
+    let uploadedCoverUri: string | null = null;
+    if (coverImage instanceof File) {
+      try {
+        const fileAttachment = await FileApplication.toFileAttachment({ file: coverImage, pubky: authorId });
+        await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
+        coverImageUrl = fileAttachment.fileResult.meta.url;
+        uploadedCoverUri = coverImageUrl;
+      } catch (error) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
+          service: ErrorService.Local,
+          operation: 'commitEditCollection',
+          cause: error,
+        });
+      }
+    } else if (typeof coverImage === 'string') {
+      coverImageUrl = coverImage;
+    }
+
+    try {
+      const nextContent = CollectionPostContent.toJson({
+        name,
+        description,
+        items: currentContent.items ?? [],
+        coverImage: coverImageUrl,
+      });
+
+      const { post, meta } = await PostNormalizer.toEdit({
+        compositePostId: compositeCollectionId,
+        content: nextContent,
+        currentUserPubky,
+      });
+
+      await PostApplication.commitEdit({
+        compositePostId: compositeCollectionId,
+        post,
+        postUrl: meta.url,
+      });
+    } catch (error) {
+      // Roll back the newly uploaded cover so a failed edit does not orphan it.
+      // If rollback itself fails, log and still rethrow the original edit error.
+      if (uploadedCoverUri) {
+        await FileApplication.commitDelete([uploadedCoverUri]).catch((cleanupError) => {
+          Logger.warn('[PostController.commitEditCollection] Failed to rollback newly uploaded cover', {
+            compositeCollectionId,
+            uploadedCoverUri,
+            cleanupError,
+          });
+        });
+      }
+      throw toAppError(error, ErrorService.Local, 'commitEditCollection');
+    }
+
+    // Previous cover is no longer referenced by the envelope (replaced or cleared).
+    // Delete it after a successful persist; if delete fails, the edit still stands.
+    if (isHomeserverFileUri(previousCover) && previousCover !== coverImageUrl) {
+      await FileApplication.commitDelete([previousCover]).catch((cleanupError) => {
+        Logger.warn('[PostController.commitEditCollection] Failed to cleanup previous collection cover', {
+          compositeCollectionId,
+          previousCover,
+          cleanupError,
+        });
+      });
+    }
+  }
+
+  static async commitUpdateCollectionItem({
+    collectionId,
+    postId,
+    shouldAdd,
+  }: TUpdateCollectionItemParams): Promise<void> {
+    const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
+    const collection = await PostApplication.getDetails({ compositeId: collectionId });
+
+    // Tombstoned collections are not-found. See `commitEditCollection` above
+    // for the rationale.
+    if (!collection || isPostDeleted(collection.content)) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
+        service: ErrorService.Local,
+        operation: 'commitUpdateCollectionItem',
+        context: { collectionId },
+      });
+    }
+
+    const currentContent = CollectionPostContent.parse(collection.content);
+    if (!currentContent) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Collection content is invalid', {
+        service: ErrorService.Local,
+        operation: 'commitUpdateCollectionItem',
+        context: { collectionId },
+      });
+    }
+
+    const { pubky: postAuthorId, id: rawPostId } = parseCompositeId(postId);
+    const itemUri = postUriBuilder(postAuthorId, rawPostId);
+    const nextContent = shouldAdd
+      ? CollectionPostContent.addItem(currentContent, itemUri)
+      : CollectionPostContent.removeItem(currentContent, itemUri);
+
+    if (nextContent.items === currentContent.items) return;
+
+    const { post, meta } = await PostNormalizer.toEdit({
+      compositePostId: collectionId,
+      content: JSON.stringify(nextContent),
+      currentUserPubky,
+    });
+
+    await PostApplication.commitEdit({
+      compositePostId: collectionId,
+      post,
+      postUrl: meta.url,
+    });
+  }
+
   /**
    * Delete a post
    * @param params - Parameters object
@@ -249,11 +503,13 @@ export class PostController {
     attachments,
     pubky,
   }: TFileAttachmentsParams): Promise<TFileAttachmentResult[]> {
-    return await Promise.all(
-      attachments.map(async (attachment) => {
-        return await FileApplication.toFileAttachment({ file: attachment, pubky });
-      }),
-    );
+    const fileAttachments: TFileAttachmentResult[] = [];
+
+    for (const attachment of attachments) {
+      fileAttachments.push(await FileApplication.toFileAttachment({ file: attachment, pubky }));
+    }
+
+    return fileAttachments;
   }
 
   /**

@@ -170,6 +170,20 @@ function detectNetworkErrorCode(error: unknown): NetworkErrorCode {
   return NetworkErrorCode.CONNECTION_FAILED;
 }
 
+function findAppError(error: unknown): AppError | null {
+  const seen = new Set<unknown>();
+  let current = error;
+
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    if (current instanceof AppError) return current;
+
+    seen.add(current);
+    current = 'cause' in current ? current.cause : undefined;
+  }
+
+  return null;
+}
+
 /**
  * Wraps fetch() to convert network-level errors into AppError.
  * Use this instead of raw fetch() in service layers to ensure
@@ -199,10 +213,9 @@ export async function safeFetch(
   try {
     return await fetch(url, options);
   } catch (error) {
-    // Already an AppError - re-throw as-is
-    if (error instanceof AppError) {
-      throw error;
-    }
+    // Fetch implementations such as Undici may wrap connection-hook errors in TypeError.cause.
+    const appError = findAppError(error);
+    if (appError) throw appError;
 
     // Aborted requests (user cancellation or signal timeout)
     if (error instanceof DOMException && error.name === 'AbortError') {

@@ -11,25 +11,129 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with add button 1`] = 
       data-testid="container"
     >
       <button
-        data-count="5"
-        data-selected="true"
-        data-testid="post-tag-bitcoin"
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="bitcoin tag (5 posts)"
+        aria-pressed="true"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="bitcoin"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+        type="button"
       >
-        bitcoin
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="bitcoin"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            bitcoin
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            5
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+        />
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+          style="border-color: rgb(255, 153, 0);"
+        />
       </button>
       <button
-        data-count="3"
-        data-selected="false"
-        data-testid="post-tag-ethereum"
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="ethereum tag (3 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="ethereum"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+        type="button"
       >
-        ethereum
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="ethereum"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            ethereum
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            3
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+        />
       </button>
       <button
-        data-count="10"
-        data-selected="false"
-        data-testid="post-tag-web3"
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="web3 tag (10 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="web3"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+        type="button"
       >
-        web3
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="web3"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            web3
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            10
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+        />
       </button>
       <div
         data-testid="tag-input-toggle"
@@ -57,40 +161,207 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with close buttons 1`]
       data-testid="container"
     >
       <button
-        data-count="5"
-        data-selected="true"
-        data-testid="post-tag-bitcoin"
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="bitcoin tag (5 posts)"
+        aria-pressed="true"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="bitcoin"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+        type="button"
       >
-        bitcoin
-        <span
-          data-testid="close-bitcoin"
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="bitcoin"
         >
-          ×
+          <span
+            class="truncate font-bold"
+          >
+            bitcoin
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            5
+          </span>
+        </div>
+        <span
+          aria-label="Remove bitcoin tag"
+          class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
+          role="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-x size-3"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 6 6 18"
+            />
+            <path
+              d="m6 6 12 12"
+            />
+          </svg>
         </span>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+        />
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+          style="border-color: rgb(255, 153, 0);"
+        />
       </button>
       <button
-        data-count="3"
-        data-selected="false"
-        data-testid="post-tag-ethereum"
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="ethereum tag (3 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="ethereum"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+        type="button"
       >
-        ethereum
-        <span
-          data-testid="close-ethereum"
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="ethereum"
         >
-          ×
+          <span
+            class="truncate font-bold"
+          >
+            ethereum
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            3
+          </span>
+        </div>
+        <span
+          aria-label="Remove ethereum tag"
+          class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
+          role="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-x size-3"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 6 6 18"
+            />
+            <path
+              d="m6 6 12 12"
+            />
+          </svg>
         </span>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+        />
       </button>
       <button
-        data-count="10"
-        data-selected="false"
-        data-testid="post-tag-web3"
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="web3 tag (10 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="web3"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+        type="button"
       >
-        web3
-        <span
-          data-testid="close-web3"
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="web3"
         >
-          ×
+          <span
+            class="truncate font-bold"
+          >
+            web3
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            10
+          </span>
+        </div>
+        <span
+          aria-label="Remove web3 tag"
+          class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
+          role="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-x size-3"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 6 6 18"
+            />
+            <path
+              d="m6 6 12 12"
+            />
+          </svg>
         </span>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+        />
       </button>
     </div>
   </div>
@@ -108,25 +379,129 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with input visible 1`]
       data-testid="container"
     >
       <button
-        data-count="5"
-        data-selected="true"
-        data-testid="post-tag-bitcoin"
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="bitcoin tag (5 posts)"
+        aria-pressed="true"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="bitcoin"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+        type="button"
       >
-        bitcoin
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="bitcoin"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            bitcoin
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            5
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+        />
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+          style="border-color: rgb(255, 153, 0);"
+        />
       </button>
       <button
-        data-count="3"
-        data-selected="false"
-        data-testid="post-tag-ethereum"
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="ethereum tag (3 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="ethereum"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+        type="button"
       >
-        ethereum
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="ethereum"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            ethereum
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            3
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+        />
       </button>
       <button
-        data-count="10"
-        data-selected="false"
-        data-testid="post-tag-web3"
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="web3 tag (10 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="web3"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+        type="button"
       >
-        web3
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="web3"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            web3
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            10
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+        />
       </button>
       <div
         data-testid="tag-input-toggle"
@@ -140,7 +515,7 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with input visible 1`]
 </div>
 `;
 
-exports[`ClickableTagsList > Snapshots > matches snapshot with tags and count 1`] = `
+exports[`ClickableTagsList - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div>
   <div
     class="flex flex-col gap-1"
@@ -151,25 +526,251 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with tags and count 1`
       data-testid="container"
     >
       <button
-        data-count="5"
-        data-selected="true"
-        data-testid="post-tag-bitcoin"
+        aria-label="bitcoin tag (5 posts)"
+        aria-pressed="true"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-cy="post-tag"
+        data-state="on"
+        data-tag-label="bitcoin"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+        type="button"
       >
-        bitcoin
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="bitcoin"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            bitcoin
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            5
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+        />
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+          style="border-color: rgb(255, 153, 0);"
+        />
       </button>
       <button
-        data-count="3"
-        data-selected="false"
-        data-testid="post-tag-ethereum"
+        aria-label="ethereum tag (3 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-cy="post-tag"
+        data-state="off"
+        data-tag-label="ethereum"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+        type="button"
       >
-        ethereum
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="ethereum"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            ethereum
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            3
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+        />
       </button>
       <button
-        data-count="10"
-        data-selected="false"
-        data-testid="post-tag-web3"
+        aria-label="web3 tag (10 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-cy="post-tag"
+        data-state="off"
+        data-tag-label="web3"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+        type="button"
       >
-        web3
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="web3"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            web3
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            10
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+        />
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ClickableTagsList - Snapshots > matches snapshot with tags and count 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-1"
+    data-testid="container"
+  >
+    <div
+      class="flex flex-wrap items-center gap-2"
+      data-testid="container"
+    >
+      <button
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="bitcoin tag (5 posts)"
+        aria-pressed="true"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="bitcoin"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%); box-shadow: inset 0 0 0 1px #FF9900;"
+        type="button"
+      >
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="bitcoin"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            bitcoin
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            5
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+        />
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md border border-solid"
+          style="border-color: rgb(255, 153, 0);"
+        />
+      </button>
+      <button
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="ethereum tag (3 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="ethereum"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 9, 0) 0%, rgb(255, 9, 0) 100%);"
+        type="button"
+      >
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="ethereum"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            ethereum
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            3
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF0900;"
+        />
+      </button>
+      <button
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-label="web3 tag (10 posts)"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-as-child="true"
+        data-cy="post-tag"
+        data-slot="popover-trigger"
+        data-state="closed"
+        data-tag-label="web3"
+        data-testid="popover-trigger"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(95, 0, 255) 0%, rgb(95, 0, 255) 100%);"
+        type="button"
+      >
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="web3"
+        >
+          <span
+            class="truncate font-bold"
+          >
+            web3
+          </span>
+          <span
+            class="ml-1.5 shrink-0 font-medium text-foreground/50"
+          >
+            10
+          </span>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #5f00FF;"
+        />
       </button>
     </div>
   </div>

@@ -19,7 +19,7 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-import { TELEGRAM_URL, TWITTER_URL } from '@/config/externalLinks';
+import { getTelegramLink, getTwitterLink } from '@/config/externalLinks';
 import { AuthController } from '@/controllers/auth/auth';
 import { Telegram, XTwitter } from '@/icons';
 import { Logger } from '@/libs/logger/logger';
@@ -121,10 +121,10 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
         </PageTitle>
         <Container className="flex-row items-center gap-3">
           <PageSubtitle>{t('subtitle')}</PageSubtitle>
-          <Link href={TWITTER_URL} target="_blank" className="text-muted-foreground hover:text-brand">
+          <Link href={getTwitterLink()} target="_blank" className="text-muted-foreground hover:text-brand">
             <XTwitter className="h-6 w-6" />
           </Link>
-          <Link href={TELEGRAM_URL} target="_blank" className="text-muted-foreground hover:text-brand">
+          <Link href={getTelegramLink()} target="_blank" className="text-muted-foreground hover:text-brand">
             <Telegram className="h-6 w-6" />
           </Link>
         </Container>

@@ -1,5 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { usePost } from './usePost';
 
 // Hoist mock data and functions
@@ -263,7 +266,6 @@ describe('usePost', () => {
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Reply posted',
-          description: 'Your reply has been posted successfully.',
           dismissButton: true,
         }),
       );
@@ -417,9 +419,8 @@ describe('usePost', () => {
 
       // Toast should be called directly in catch block
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Failed to post reply. Please try again.',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
+        variant: 'error',
+        description: 'Could not post reply. Try again.',
       });
 
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to submit reply:', mockError);
@@ -515,9 +516,7 @@ describe('usePost', () => {
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Post created',
-        description: 'Your post has been created successfully.',
-        dismissButton: true,
+        title: 'Post published',
       });
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(result.current.isSubmitting).toBe(false);
@@ -663,14 +662,41 @@ describe('usePost', () => {
 
       // Toast should be called directly in catch block
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Failed to create post. Please try again.',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
+        variant: 'error',
+        description: 'Could not create post. Try again.',
       });
 
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to create post:', mockError);
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.content).toBe('Post content'); // Content should not be cleared on error
+    });
+
+    it('should toast a localized size-limit message when an attachment exceeds the upload limit', async () => {
+      const { result } = renderHook(() => usePost());
+      mockPostControllerCreate.mockRejectedValueOnce(
+        Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
+          service: ErrorService.Local,
+          operation: 'toFileAttachment',
+          context: { imageUploadSizeLimitKind: 'gif' },
+          cause: new Error('IMAGE_UPLOAD_SIZE_LIMIT:gif'),
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('Post content');
+        result.current.setAttachments([new File(['x'], 'animated.gif', { type: 'image/gif' })]);
+      });
+
+      await act(async () => {
+        await result.current.post({
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
+      });
     });
 
     it('should set isSubmitting to true during post submission and set to false after submission', async () => {
@@ -756,9 +782,7 @@ describe('usePost', () => {
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Post created',
-        description: 'Your post has been created successfully.',
-        dismissButton: true,
+        title: 'Post published',
       });
       expect(mockOnSuccess).toHaveBeenCalled();
     });
@@ -1139,9 +1163,8 @@ describe('usePost', () => {
 
       // Toast should be called directly in catch block
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Failed to repost. Please try again.',
-        className: 'destructive border-destructive bg-destructive text-destructive-foreground',
+        variant: 'error',
+        description: 'Could not repost. Try again.',
       });
 
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to repost:', mockError);
@@ -1217,8 +1240,7 @@ describe('usePost', () => {
 
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Reposted!',
-          description: 'You successfully reposted a post by John Doe!',
+          title: "Reposted John Doe's post",
         }),
       );
     });
@@ -1236,8 +1258,27 @@ describe('usePost', () => {
 
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Reposted!',
-          description: 'Your repost has been created successfully.',
+          title: 'Reposted',
+        }),
+      );
+    });
+
+    it('should use successToastTitle override when provided, taking precedence over author name', async () => {
+      const { result } = renderHook(() => usePost());
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          originalAuthorName: 'John Doe',
+          successToastTitle: "You've shared the My Collection collection",
+          onSuccess: vi.fn(),
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "You've shared the My Collection collection",
         }),
       );
     });
@@ -1288,8 +1329,7 @@ describe('usePost', () => {
         });
         expect(mockOnSuccess).toHaveBeenCalled();
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Post edited',
-          description: 'Your post has been edited successfully.',
+          title: 'Post updated',
         });
       });
 
@@ -1383,9 +1423,8 @@ describe('usePost', () => {
         });
 
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
-          description: 'Failed to edit post. Please try again.',
-          className: 'destructive border-destructive bg-destructive text-destructive-foreground',
+          variant: 'error',
+          description: 'Could not update post. Try again.',
         });
         expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to edit post:', mockError);
       });
@@ -1465,8 +1504,7 @@ describe('usePost', () => {
         });
         expect(mockOnSuccess).toHaveBeenCalled();
         expect(mockToast).toHaveBeenCalledWith({
-          title: 'Post edited',
-          description: 'Your post has been edited successfully.',
+          title: 'Post updated',
         });
       });
 

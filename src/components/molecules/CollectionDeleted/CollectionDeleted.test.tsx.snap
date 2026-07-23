@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CollectionDeleted - Snapshots > matches snapshot with default props 1`] = `
+<div
+  class="relative block h-full w-full"
+  data-testid="container"
+>
+  <div
+    class="relative h-full gap-0 overflow-hidden rounded-md py-0"
+    data-testid="card"
+  >
+    <div
+      class="flex h-full flex-col items-center justify-center gap-3 p-6"
+      data-testid="card-content"
+    >
+      <p
+        class="text-center font-normal text-muted-foreground"
+        data-size="sm"
+        data-testid="typography"
+      >
+        This collection has been deleted by its author.
+      </p>
+    </div>
+  </div>
+</div>
+`;

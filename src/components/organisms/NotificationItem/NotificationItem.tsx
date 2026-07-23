@@ -7,10 +7,11 @@ import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { PostController } from '@/controllers/post/post';
-import type { ArticleJSON } from '@/hooks/usePostArticle/usePostArticle.types';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { Logger } from '@/libs/logger/logger';
+import { parseArticleContent } from '@/libs/post/articleContent';
+import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { formatNotificationTime, isPostDeleted } from '@/libs/utils/utils';
 import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationIcon } from '@/molecules/NotificationIcon/NotificationIcon';
@@ -34,7 +35,6 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');
   const tProfile = useTranslations('profile');
-  const tToast = useTranslations('toast');
   const tPostToast = useTranslations('toast.post');
   const tPost = useTranslations('post');
   const router = useRouter();
@@ -42,6 +42,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
 
   // Extract the user ID from the notification (the actor who triggered it)
   const actorUserId = getUserIdFromNotification(notification);
+  const postKind = 'post_kind' in notification ? notification.post_kind : undefined;
 
   // Extract post composite ID for notifications with post content (memoized to avoid recalculation)
   const postCompositeId = useMemo(() => {
@@ -74,14 +75,16 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
           if (isPostDeleted(post.content)) {
             setPostContent(tPost('deleted'));
           } else if (post.kind === 'long') {
-            try {
-              const parsed = JSON.parse(post.content) as ArticleJSON;
-              setPostContent(parsed.title || '');
-            } catch {
+            setPostContent(parseArticleContent(post.content)?.title || post.content);
+          } else if (post.kind === 'collection') {
+            const parsed = parseCollectionContent(post.content);
+            if (parsed) {
+              setPostContent(parsed.name);
+            } else {
               setPostContent(post.content);
               toast({
-                title: tToast('error'),
-                description: tPostToast('parseError'),
+                variant: 'error',
+                description: tPostToast('collectionParseError'),
               });
             }
           } else {
@@ -111,7 +114,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const actionText = t(actionKey);
 
   // Get post preview text
-  const previewText = hasPostPreview(notification.type) ? formatPreviewText(postContent) : null;
+  const previewText = hasPostPreview(notification.type, postKind) ? formatPreviewText(postContent) : null;
 
   // Format timestamps (short for mobile, long for desktop)
   const timestampShort = formatNotificationTime(notification.timestamp, false);
@@ -167,48 +170,54 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
         <Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
           <Typography
             as="p"
-            className="min-w-0 shrink truncate text-sm leading-none font-medium text-foreground lg:text-base lg:leading-normal"
+            className="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
           >
-            {/* Username - links to user profile without underline on hover */}
+            {/* Username - truncated independently so long names do not overlap timestamp/icon */}
             {userProfileLink ? (
-              <Link href={userProfileLink} className="no-underline hover:no-underline">
+              <Link
+                href={userProfileLink}
+                className="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
+              >
                 {userName}
               </Link>
             ) : (
-              userName
+              <span className="inline-block max-w-full min-w-0 truncate align-bottom">{userName}</span>
             )}{' '}
             {/* Action text - links to notification target (post or profile) */}
             {notificationLink ? (
-              <Link href={notificationLink} className="text-foreground hover:underline">
+              <Link href={notificationLink} className="text-foreground hover:underline lg:shrink-0">
                 {actionText}
               </Link>
             ) : (
-              <span className="text-foreground">{actionText}</span>
+              <span className="text-foreground lg:shrink-0">{actionText}</span>
             )}
           </Typography>
 
-          {/* Post preview text for desktop - dynamically fetched from database */}
+          {/* Post preview text - dynamically fetched from database */}
           {previewText &&
             (notificationLink ? (
               <Link
                 href={notificationLink}
-                className="hidden shrink-0 text-base font-medium text-muted-foreground hover:underline xl:inline"
+                className="hidden min-w-0 truncate text-sm font-medium text-muted-foreground hover:underline sm:block lg:text-base"
               >
                 {previewText}
               </Link>
             ) : (
-              <Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
+              <Typography
+                as="p"
+                className="hidden min-w-0 truncate text-sm font-medium text-muted-foreground sm:block lg:text-base"
+              >
                 {previewText}
               </Typography>
             ))}
 
-          {/* Tag badge for tagged notifications - click navigates to search */}
+          {/* Desktop tag badge for tagged notifications - click navigates to search */}
           {(notification.type === NotificationType.TagPost || notification.type === NotificationType.TagProfile) &&
             'tag_label' in notification && (
               <PostTag
                 label={notification.tag_label}
                 showClose={false}
-                className="shrink-0"
+                className="hidden shrink-0 lg:inline-flex"
                 onClick={handleTagClick(notification.tag_label)}
               />
             )}
@@ -237,7 +246,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             {timestampLong}
           </Typography>
 
-          <NotificationIcon type={notification.type} showBadge={isUnread} />
+          <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
         </Link>
       ) : (
         <Container overrideDefaults={true} className="flex items-center gap-2">
@@ -253,7 +262,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
             {timestampLong}
           </Typography>
 
-          <NotificationIcon type={notification.type} showBadge={isUnread} />
+          <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
         </Container>
       )}
     </Container>

@@ -5,7 +5,8 @@ import { Human } from './Human';
 
 const mockPush = vi.fn();
 const mockToast = vi.fn();
-const mockShowErrorToast = vi.fn();
+const mockResetOnboarding = vi.fn();
+const mockSetInviteCode = vi.fn();
 const mockVerifySignupToken = vi.fn<(inviteCode: string) => Promise<'valid' | 'used' | 'invalid'>>();
 
 const INVITE_CODE = 'YVB2-YFRN-GDY0';
@@ -13,19 +14,18 @@ const INVITE_CODE = 'YVB2-YFRN-GDY0';
 const INVITE_CODE_TOASTS = {
   valid: {
     title: 'Invite code applied',
-    description: `Your invite code ${INVITE_CODE} has been applied.`,
   },
   invalid: {
     title: 'Invalid invite code',
-    description: 'This invite code is not recognized. Please use a different invite code.',
+    variant: 'error',
   },
   used: {
     title: 'Invite code already used',
-    description: 'This invite code has already been used. Please use a different invite code.',
+    variant: 'error',
   },
   verificationFailed: {
+    variant: 'error',
     title: "Couldn't verify invite code",
-    description: "We couldn't verify your invite code right now. Please check your connection and try again.",
   },
 } as const;
 
@@ -41,8 +41,11 @@ vi.mock('@/molecules/Toaster/use-toast', () => ({
   }),
 }));
 
-vi.mock('@/molecules/Toaster/showErrorToast', () => ({
-  showErrorToast: (params: unknown) => mockShowErrorToast(params),
+vi.mock('@/stores/onboarding/onboarding.store', () => ({
+  useOnboardingStore: () => ({
+    reset: mockResetOnboarding,
+    setInviteCode: mockSetInviteCode,
+  }),
 }));
 
 vi.mock('@/controllers/auth/auth', () => ({
@@ -114,7 +117,8 @@ describe('Human template', () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockToast.mockClear();
-    mockShowErrorToast.mockClear();
+    mockResetOnboarding.mockClear();
+    mockSetInviteCode.mockClear();
     mockVerifySignupToken.mockReset();
     mockVerifySignupToken.mockResolvedValue('valid');
   });
@@ -137,10 +141,10 @@ describe('Human template', () => {
       });
       expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
       expect(mockToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.valid);
-      expect(mockShowErrorToast).not.toHaveBeenCalled();
+      expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
     });
 
-    it('shows a warning toast and stays on the invite step when the homeserver returns 404', async () => {
+    it('shows an error toast and stays on the invite step when the homeserver returns 404', async () => {
       mockVerifySignupToken.mockResolvedValue('invalid');
       render(<Human />);
 
@@ -150,12 +154,12 @@ describe('Human template', () => {
         expect(mockToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.invalid);
       });
       expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
-      expect(mockShowErrorToast).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
       expect(mockPush).not.toHaveBeenCalled();
       expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
     });
 
-    it('shows a warning toast and stays on the invite step when the homeserver returns 200 with status used', async () => {
+    it('shows an error toast and stays on the invite step when the homeserver returns 200 with status used', async () => {
       mockVerifySignupToken.mockResolvedValue('used');
       render(<Human />);
 
@@ -165,7 +169,7 @@ describe('Human template', () => {
         expect(mockToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.used);
       });
       expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
-      expect(mockShowErrorToast).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
       expect(mockPush).not.toHaveBeenCalled();
       expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
     });
@@ -177,10 +181,10 @@ describe('Human template', () => {
       goToInviteCodeAndVerify();
 
       await waitFor(() => {
-        expect(mockShowErrorToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.verificationFailed);
+        expect(mockToast).toHaveBeenCalledWith(INVITE_CODE_TOASTS.verificationFailed);
       });
       expect(mockVerifySignupToken).toHaveBeenCalledWith(INVITE_CODE);
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledTimes(1);
       expect(mockPush).not.toHaveBeenCalled();
       expect(screen.getByTestId('human-invite-code')).toBeInTheDocument();
     });

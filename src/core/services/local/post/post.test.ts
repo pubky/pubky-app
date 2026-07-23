@@ -12,7 +12,11 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import {
+  buildAuthorCollectionsStreamId,
+  type PostStreamId,
+  PostStreamTypes,
+} from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
@@ -60,13 +64,13 @@ const getPostTtl = async (postId: string) => {
   return await PostTtlModel.findById(postId);
 };
 
-const setupExistingPost = async (postId: string, content: string, parentUri?: string) => {
+const setupExistingPost = async (postId: string, content: string, parentUri?: string, kind: string = 'short') => {
   const { pubky, id: postIdPart } = parseCompositeId(postId);
   const postDetails: PostDetailsModelSchema = {
     id: postId,
     content,
     indexed_at: Date.now(),
-    kind: 'short',
+    kind,
     uri: `pubky://${pubky}/pub/pubky.app/posts/${postIdPart}`,
     attachments: null,
   };
@@ -103,6 +107,7 @@ const setupUserCounts = async (userId: Pubky) => {
     following: 0,
     followers: 0,
     friends: 0,
+    collections: 0,
     bookmarks: 0,
   };
   await UserCountsModel.table.add(userCounts);
@@ -167,7 +172,7 @@ describe('LocalPostService', () => {
       // Verify user count increment for root post (single update call)
       expect(userCountsSpy).toHaveBeenCalledWith({
         userId: testData.authorPubky,
-        countChanges: { posts: 1, replies: 0 },
+        countChanges: { posts: 1, replies: 0, collections: 0 },
       });
 
       userCountsSpy.mockRestore();
@@ -196,7 +201,29 @@ describe('LocalPostService', () => {
       // Verify user count increments for reply (single update call)
       expect(userCountsSpy).toHaveBeenCalledWith({
         userId: testData.authorPubky,
-        countChanges: { posts: 1, replies: 1 },
+        countChanges: { posts: 1, replies: 1, collections: 0 },
+      });
+
+      userCountsSpy.mockRestore();
+    });
+
+    it('should increment posts and collections counts when creating a collection', async () => {
+      await setupUserCounts(testData.authorPubky);
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+
+      const baseParams = createSaveParams('My collection');
+      const saveParams: TLocalSavePostParams = {
+        ...baseParams,
+        post: new PubkyAppPost(baseParams.post.content, PubkyAppPostKind.Collection, undefined, undefined, undefined),
+      };
+
+      await LocalPostService.create(saveParams);
+
+      // A collection bumps both the total `posts` count and the dedicated
+      // `collections` count (the sidebar subtracts collections back out).
+      expect(userCountsSpy).toHaveBeenCalledWith({
+        userId: testData.authorPubky,
+        countChanges: { posts: 1, replies: 0, collections: 1 },
       });
 
       userCountsSpy.mockRestore();
@@ -457,7 +484,11 @@ describe('LocalPostService', () => {
         getSavedTags(postId),
       ]);
 
-      expect(details).toBeUndefined();
+      // Hard-delete now leaves a `[DELETED]` tombstone in PostDetails so a
+      // concurrent Nexus refetch (cache-miss path) can't reanimate the post.
+      // All auxiliary records are still fully removed.
+      expect(details).toBeTruthy();
+      expect(details!.content).toBe(DELETED);
       expect(counts).toBeUndefined();
       expect(relationships).toBeUndefined();
       expect(tags).toBeUndefined();
@@ -465,7 +496,26 @@ describe('LocalPostService', () => {
       // Verify user count decrement for root post (single update call)
       expect(userCountsSpy).toHaveBeenCalledWith({
         userId: testData.authorPubky,
-        countChanges: { posts: -1, replies: 0 },
+        countChanges: { posts: -1, replies: 0, collections: 0 },
+      });
+
+      userCountsSpy.mockRestore();
+    });
+
+    it('should decrement posts and collections counts when deleting a collection', async () => {
+      const postId = testData.fullPostId1;
+
+      await setupExistingPost(postId, 'My collection', undefined, 'collection');
+      await setupUserCounts(testData.authorPubky);
+
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+
+      await LocalPostService.delete({ compositePostId: postId });
+
+      // Mirror the create path: a collection decrements both counts.
+      expect(userCountsSpy).toHaveBeenCalledWith({
+        userId: testData.authorPubky,
+        countChanges: { posts: -1, replies: 0, collections: -1 },
       });
 
       userCountsSpy.mockRestore();
@@ -485,7 +535,8 @@ describe('LocalPostService', () => {
       ).resolves.not.toThrow();
 
       const deletedPost = await getSavedPost(replyId);
-      expect(deletedPost).toBeUndefined();
+      expect(deletedPost).toBeTruthy();
+      expect(deletedPost!.content).toBe(DELETED);
     });
 
     it('should decrement parent reply count when deleting a reply', async () => {
@@ -514,7 +565,7 @@ describe('LocalPostService', () => {
       // Verify user count decrements for reply (single update call)
       expect(userCountsSpy).toHaveBeenCalledWith({
         userId: testData.authorPubky,
-        countChanges: { posts: -1, replies: -1 },
+        countChanges: { posts: -1, replies: -1, collections: 0 },
       });
 
       userCountsSpy.mockRestore();
@@ -647,8 +698,10 @@ describe('LocalPostService', () => {
       await PostCountsModel.update(parentPostId, { replies: 1 });
       await setupExistingPost(replyId, 'Reply post', parentUri);
 
-      // Spy to force failure during transaction
-      const spy = vi.spyOn(PostDetailsModel, 'deleteById').mockRejectedValueOnce(new Error('Simulated failure'));
+      // Spy to force failure during transaction. The hard-delete branch
+      // now tombstones via `PostDetailsModel.update` instead of `deleteById`,
+      // so the rejection has to target `update` to exercise the rollback.
+      const spy = vi.spyOn(PostDetailsModel, 'update').mockRejectedValueOnce(new Error('Simulated failure'));
 
       try {
         await expect(
@@ -742,18 +795,20 @@ describe('LocalPostService', () => {
       expect(postDetails!.content).toBe(DELETED);
     });
 
-    it('should hard delete post when it has no links and return false', async () => {
+    it('should hard delete post when it has no links and leave a tombstone', async () => {
       const postId = testData.fullPostId1;
       await setupExistingPost(postId, 'Test post');
       await setupUserCounts(testData.authorPubky);
 
-      // Delete should return false (hard delete)
+      // Delete should return false (hard delete branch)
       const result = await LocalPostService.delete({ compositePostId: postId });
       expect(result).toBe(false);
 
-      // Post should be completely removed
+      // Post should be tombstoned (content === DELETED) rather than fully
+      // removed, so a concurrent Nexus refetch can't reanimate it.
       const postDetails = await getSavedPost(postId);
-      expect(postDetails).toBeUndefined();
+      expect(postDetails).toBeTruthy();
+      expect(postDetails!.content).toBe(DELETED);
     });
 
     it('should handle deleting non-existent post gracefully (idempotent)', async () => {
@@ -762,6 +817,33 @@ describe('LocalPostService', () => {
       // Should not throw - delete is idempotent, returns false for hard delete path
       const result = await LocalPostService.delete({ compositePostId: nonExistentPostId });
       expect(result).toBe(false);
+    });
+
+    it('should short-circuit when the post is already tombstoned (no user-count drift)', async () => {
+      const postId = testData.fullPostId1;
+      await setupExistingPost(postId, 'Test post');
+      await setupUserCounts(testData.authorPubky);
+
+      // First delete: hard-delete path → tombstone, posts count decremented once.
+      const firstResult = await LocalPostService.delete({ compositePostId: postId });
+      expect(firstResult).toBe(false);
+      const tombstone = await getSavedPost(postId);
+      expect(tombstone!.content).toBe(DELETED);
+
+      const userCountsSpy = vi.spyOn(UserCountsModel, 'updateCounts');
+      try {
+        // Second delete on the same tombstone must be a no-op: no transaction,
+        // no further user-count decrement. Guards against double-decrementing
+        // the author's post count if a stale page somehow re-fires delete.
+        const secondResult = await LocalPostService.delete({ compositePostId: postId });
+        expect(secondResult).toBe(false);
+        expect(userCountsSpy).not.toHaveBeenCalled();
+
+        const stillTombstone = await getSavedPost(postId);
+        expect(stillTombstone!.content).toBe(DELETED);
+      } finally {
+        userCountsSpy.mockRestore();
+      }
     });
   });
 
@@ -853,6 +935,31 @@ describe('LocalPostService', () => {
         // Should also be in 'all' kind streams
         const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
         expect(timelineAllAll?.stream).toContain(postId);
+      });
+
+      it('should add collection posts to collection streams but not all-content streams', async () => {
+        const postId = testData.fullPostId1;
+        await setupUserCounts(testData.authorPubky);
+
+        await LocalPostService.create(createSaveParams('Collection content', undefined, PubkyAppPostKind.Collection));
+
+        const authorCollections = await PostStreamModel.table.get(buildAuthorCollectionsStreamId(testData.authorPubky));
+        const timelineAllCollection = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_COLLECTION);
+        const timelineFollowingCollection = await PostStreamModel.table.get(
+          PostStreamTypes.TIMELINE_FOLLOWING_COLLECTION,
+        );
+        const timelineFriendsCollection = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FRIENDS_COLLECTION);
+        const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
+        const timelineFollowingAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FOLLOWING_ALL);
+        const timelineFriendsAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FRIENDS_ALL);
+
+        expect(authorCollections?.stream).toContain(postId);
+        expect(timelineAllCollection?.stream).toContain(postId);
+        expect(timelineFollowingCollection?.stream).toContain(postId);
+        expect(timelineFriendsCollection?.stream).toContain(postId);
+        expect(timelineAllAll?.stream ?? []).not.toContain(postId);
+        expect(timelineFollowingAll?.stream ?? []).not.toContain(postId);
+        expect(timelineFriendsAll?.stream ?? []).not.toContain(postId);
       });
 
       it('should add reply to author_replies and post_replies streams only', async () => {
@@ -1085,6 +1192,48 @@ describe('LocalPostService', () => {
 
       await expect(LocalPostService.readRelationshipsByIds([postId])).rejects.toThrow(
         'Failed to read post relationships by ids',
+      );
+
+      bulkGetSpy.mockRestore();
+    });
+  });
+
+  describe('readDetailsByIds', () => {
+    it('should return post details aligned to input order', async () => {
+      const postId1 = testData.fullPostId1;
+      const postId2 = buildCompositeId({ pubky: testData.authorPubky, id: 'post-2' });
+      await setupExistingPost(postId1, 'Test post 1');
+      await setupExistingPost(postId2, 'Test post 2');
+
+      const details = await LocalPostService.readDetailsByIds([postId1, postId2]);
+
+      expect(details).toHaveLength(2);
+      expect(details[0]?.content).toBe('Test post 1');
+      expect(details[1]?.content).toBe('Test post 2');
+    });
+
+    it('should return undefined for posts that do not exist, preserving order', async () => {
+      const postId1 = testData.fullPostId1;
+      await setupExistingPost(postId1, 'Test post 1');
+
+      const details = await LocalPostService.readDetailsByIds(['nonexistent:post123', postId1]);
+
+      expect(details).toHaveLength(2);
+      expect(details[0]).toBeUndefined();
+      expect(details[1]?.id).toBe(postId1);
+    });
+
+    it('should return an empty array for empty input', async () => {
+      const details = await LocalPostService.readDetailsByIds([]);
+
+      expect(details).toEqual([]);
+    });
+
+    it('should handle database errors gracefully', async () => {
+      const bulkGetSpy = vi.spyOn(PostDetailsModel.table, 'bulkGet').mockRejectedValue(new Error('DB error'));
+
+      await expect(LocalPostService.readDetailsByIds([testData.fullPostId1])).rejects.toThrow(
+        'Failed to read post details by ids',
       );
 
       bulkGetSpy.mockRestore();

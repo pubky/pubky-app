@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { FileController } from '@/controllers/file/file';
+import { parseArticleContent } from '@/libs/post/articleContent';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';
-import type { ArticleJSON } from './usePostArticle.types';
 
 interface CoverImage {
   src: string;
@@ -48,7 +48,6 @@ export function usePostArticle({
   coverImageVariant,
 }: UsePostArticleParams): UsePostArticleResult {
   const { toast } = useToast();
-  const tToast = useTranslations('toast');
   const tPost = useTranslations('toast.post');
 
   const [title, setTitle] = useState('');
@@ -56,13 +55,16 @@ export function usePostArticle({
   const [coverImage, setCoverImage] = useState<CoverImage | null>(null);
 
   useEffect(() => {
-    try {
-      const parsed = JSON.parse(content) as ArticleJSON;
-      setTitle(parsed.title || '');
-      setBody(parsed.body || '');
-    } catch {
+    const parsed = parseArticleContent(content);
+
+    if (parsed) {
+      setTitle(parsed.title);
+      setBody(parsed.body);
+    } else {
+      setTitle('');
+      setBody('');
       toast({
-        title: tToast('error'),
+        variant: 'error',
         description: tPost('parseError'),
       });
     }
@@ -89,7 +91,7 @@ export function usePostArticle({
         if (cancelled) return;
 
         toast({
-          title: tToast('error'),
+          variant: 'error',
           description: tPost('coverImageError'),
         });
       }

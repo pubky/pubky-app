@@ -162,6 +162,37 @@ describe('PostPageHeader', () => {
     expect(within(title).getByText(longName)).toHaveClass('min-w-0', 'flex-1', 'truncate');
   });
 
+  it('constrains breadcrumb wrapper so long ancestor names can truncate', () => {
+    const longName = 'This is an extremely long profile name that should truncate in the breadcrumb trail';
+
+    mockAncestors.mockReturnValue({
+      ancestors: [
+        { postId: 'user1:post1', userId: 'user1' },
+        { postId: 'user2:post2', userId: 'user2' },
+        { postId: 'user3:post3', userId: 'user3' },
+      ],
+      isLoading: false,
+      hasError: false,
+    });
+    mockUsers.mockReturnValue({
+      users: [
+        { id: 'user1', name: 'John', avatarUrl: undefined },
+        { id: 'user2', name: 'Satoshi', avatarUrl: undefined },
+        { id: 'user3', name: longName, avatarUrl: undefined },
+      ],
+      isLoading: false,
+    });
+
+    render(<PostPageHeader postId={mockPostId} />);
+
+    const wrapper = screen.getByTestId('post-page-breadcrumb-wrapper');
+    expect(wrapper).toHaveClass('w-full', 'min-w-0', 'md:ml-auto', 'md:w-full', 'md:max-w-[50%]', 'md:min-w-0');
+
+    const breadcrumb = screen.getByTestId('post-breadcrumb');
+    expect(breadcrumb).toHaveClass('w-full', 'min-w-0');
+    expect(within(breadcrumb).getByText(longName)).toHaveClass('truncate');
+  });
+
   it('matches snapshot for root post', () => {
     mockAncestors.mockReturnValue({
       ancestors: [{ postId: 'user1:post1', userId: 'user1' }],

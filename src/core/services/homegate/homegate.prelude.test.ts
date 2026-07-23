@@ -1,22 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetRuntimeConfigForTests, RUNTIME_CONFIG_WINDOW_KEY } from '@/libs/runtime-config/runtime-config';
+import { NETWORK_RUNTIME_DEFAULTS } from '@/libs/runtime-config/runtime-config.schema';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 const mockDispatchSignals = vi.fn();
 vi.mock('@prelude.so/js-sdk/signals', () => ({
   dispatchSignals: mockDispatchSignals,
 }));
-
-vi.mock('@/libs/env/env', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/libs/env/env')>();
-  return {
-    ...actual,
-    Env: {
-      ...actual.Env,
-      NEXT_PUBLIC_PRELUDE_SDK_KEY: 'test-sdk-key',
-      NEXT_PUBLIC_PRELUDE_SDK_TIMEOUT_MS: 50,
-    },
-  };
-});
 
 const mockFetch = vi.fn();
 global.fetch = asOpaque<typeof global.fetch>(mockFetch);
@@ -25,6 +15,12 @@ describe('HomegateService Prelude integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    resetRuntimeConfigForTests();
+    window[RUNTIME_CONFIG_WINDOW_KEY] = {
+      ...NETWORK_RUNTIME_DEFAULTS,
+      preludeSdkKey: 'test-sdk-key',
+      preludeSdkTimeoutMs: 50,
+    };
   });
 
   it('sends SMS code with Prelude dispatchId when available', async () => {

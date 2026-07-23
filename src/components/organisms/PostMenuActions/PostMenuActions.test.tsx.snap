@@ -1,54 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostMenuActions - Snapshots > matches snapshot for desktop dropdown 1`] = `
-<div
-  data-open="false"
-  data-testid="dropdown-menu"
->
-  <button
-    data-testid="dropdown-open-trigger"
-  />
-  <div
-    data-testid="dropdown-trigger"
-  >
-    <button>
-      Menu
-    </button>
-  </div>
-  <div
-    class="flex w-56 flex-col gap-2.5"
-    data-align="end"
-    data-testid="dropdown-content"
-  >
-    <div
-      data-post-id="pk:test123:post456"
-      data-testid="post-menu-actions-content"
-      data-variant="dropdown"
-    >
-      <button>
-        Close
-      </button>
-      <button
-        data-testid="report-button"
-      >
-        Report
-      </button>
-      <button
-        data-testid="edit-button"
-      >
-        Edit
-      </button>
-      <button
-        data-testid="delete-button"
-      >
-        Delete
-      </button>
-    </div>
-  </div>
-</div>
-`;
-
-exports[`PostMenuActions - Snapshots > matches snapshot for mobile sheet 1`] = `
+exports[`PostMenuActions - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div
   data-open="false"
   data-testid="sheet"
@@ -102,6 +54,54 @@ exports[`PostMenuActions - Snapshots > matches snapshot for mobile sheet 1`] = `
           Delete
         </button>
       </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostMenuActions - Snapshots > matches snapshot for desktop dropdown 1`] = `
+<div
+  data-open="false"
+  data-testid="dropdown-menu"
+>
+  <button
+    data-testid="dropdown-open-trigger"
+  />
+  <div
+    data-testid="dropdown-trigger"
+  >
+    <button>
+      Menu
+    </button>
+  </div>
+  <div
+    class="flex w-56 flex-col gap-2.5"
+    data-align="end"
+    data-testid="dropdown-content"
+  >
+    <div
+      data-post-id="pk:test123:post456"
+      data-testid="post-menu-actions-content"
+      data-variant="dropdown"
+    >
+      <button>
+        Close
+      </button>
+      <button
+        data-testid="report-button"
+      >
+        Report
+      </button>
+      <button
+        data-testid="edit-button"
+      >
+        Edit
+      </button>
+      <button
+        data-testid="delete-button"
+      >
+        Delete
+      </button>
     </div>
   </div>
 </div>

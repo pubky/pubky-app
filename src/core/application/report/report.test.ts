@@ -228,7 +228,7 @@ describe('ReportApplication', () => {
       const unexpectedError = new Error('Unexpected error');
       vi.spyOn(ChatwootService, 'createOrFindContact').mockRejectedValue(unexpectedError);
 
-      await expect(ReportApplication.submit(input)).rejects.toThrow('Failed to submit report');
+      await expect(ReportApplication.submit(input)).rejects.toThrow('Could not submit report. Try again.');
 
       expect(Logger.error).toHaveBeenCalledWith('Unexpected error during report submission', {
         error: unexpectedError,

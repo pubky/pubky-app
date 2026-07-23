@@ -71,8 +71,10 @@ exports[`FollowersEmpty - Snapshots > matches snapshot with default props 1`] = 
   </div>
   <button
     class="gap-2"
+    data-cy="profile-followers-empty-create-post"
     data-testid="button"
     data-variant="default"
+    type="button"
   >
     <svg
       aria-hidden="true"

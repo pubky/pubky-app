@@ -45,12 +45,14 @@ export function ClickableTagsList({
   taggedKind,
   tags: providedTags,
   maxTags,
+  maxVisibleTags,
   maxTagLength = CLICKABLE_TAGS_DEFAULT_MAX_LENGTH,
   maxTotalChars = CLICKABLE_TAGS_DEFAULT_MAX_TOTAL_CHARS,
   showCount = true,
   showInput = false,
   showAddButton = false,
   addMode = false,
+  readOnly = false,
   showTagClose = false,
   className,
   onTagClick,
@@ -99,6 +101,11 @@ export function ClickableTagsList({
 
   // Handle tag click with auth requirement (toggle or custom handler)
   const handleTagClick = (tag: (typeof enrichedTags)[number], index: number, e: React.MouseEvent) => {
+    if (readOnly) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     requireAuth(() => {
       if (onTagClick) {
         onTagClick(tag, index, e);
@@ -122,13 +129,13 @@ export function ClickableTagsList({
   const displayLabels = getDisplayTags(tagLabels, {
     maxTagLength,
     maxTotalChars,
-    maxCount: maxTags,
+    maxCount: maxVisibleTags ?? maxTags,
   });
   const visibleTags = enrichedTags.filter((tag) => displayLabels.includes(tag.label));
 
   // Check if we should render anything
   const hasVisibleTags = visibleTags.length > 0;
-  const hasAddButton = showAddButton && !showInput && !isAdding;
+  const hasAddButton = !readOnly && showAddButton && !showInput && !isAdding;
 
   if (!hasVisibleTags && !hasInput && !hasAddButton) return null;
 

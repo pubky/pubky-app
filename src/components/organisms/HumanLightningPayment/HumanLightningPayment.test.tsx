@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HomegateController } from '@/controllers/homegate/homegate';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { HumanLightningPayment } from './HumanLightningPayment';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 
@@ -146,7 +147,7 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-invoice' });
-      expect(mockToast).toHaveBeenCalledWith({ title: 'Invoice copied to clipboard' });
+      expect(mockToast).toHaveBeenCalledWith({ variant: 'info', title: 'Invoice copied to clipboard' });
     });
   });
 
@@ -162,7 +163,10 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-invoice' });
-      expect(mockToast).toHaveBeenCalledWith({ title: 'Failed to copy invoice' });
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not copy invoice.',
+      });
     });
   });
 
@@ -172,8 +176,8 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Failed to request lightning invoice',
-        description: 'Please try again later. If the problem persists, please contact support.',
+        variant: 'error',
+        description: 'Could not request Lightning invoice. Try again later.',
       });
     });
 
@@ -208,8 +212,8 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Please try again later. If the problem persists, please contact support.',
+        variant: 'error',
+        description: 'Could not request Lightning invoice. Try again later.',
       });
     });
 
@@ -228,15 +232,42 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Please try again later. If the problem persists, please contact support.',
+        variant: 'error',
+        description: 'Could not request Lightning invoice. Try again later.',
       });
     });
 
     createSpy.mockRestore();
   });
+});
+
+describe('HumanLightningPayment - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseIsMobile.mockReturnValue(false);
+  });
 
   it('matches snapshot', async () => {
+    const { container } = render(<HumanLightningPayment onBack={() => {}} onSuccess={() => {}} />);
+    await waitFor(() => {
+      expect(HomegateController.createLnVerification).toHaveBeenCalledTimes(1);
+    });
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('HumanLightningPayment - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', async () => {
     const { container } = render(<HumanLightningPayment onBack={() => {}} onSuccess={() => {}} />);
     await waitFor(() => {
       expect(HomegateController.createLnVerification).toHaveBeenCalledTimes(1);

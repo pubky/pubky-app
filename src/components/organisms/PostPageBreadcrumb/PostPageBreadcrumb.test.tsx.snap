@@ -4,22 +4,22 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
 <div>
   <nav
     aria-label="breadcrumb"
-    class="inline-flex"
+    class="flex max-w-full w-full min-w-0"
     data-testid="post-breadcrumb"
   >
     <ol
-      class="flex flex-wrap items-center gap-2.5"
+      class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
     >
       <li
-        class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        class="flex items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer min-w-0 shrink overflow-hidden"
         data-testid="breadcrumb-item-0"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             John
           </span>
@@ -49,15 +49,15 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
         </svg>
       </li>
       <li
-        class="flex items-center justify-center gap-2.5 text-foreground"
+        class="flex items-center justify-start gap-2.5 text-foreground max-w-[50%] min-w-0 shrink-0 overflow-hidden"
         data-testid="breadcrumb-item-1"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             Satoshi
           </span>
@@ -72,22 +72,22 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
 <div>
   <nav
     aria-label="breadcrumb"
-    class="inline-flex"
+    class="flex max-w-full w-full min-w-0"
     data-testid="post-breadcrumb"
   >
     <ol
-      class="flex flex-wrap items-center gap-2.5"
+      class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
     >
       <li
-        class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        class="flex items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer min-w-0 shrink overflow-hidden"
         data-testid="breadcrumb-item-0"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             John
           </span>
@@ -117,15 +117,15 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
         </svg>
       </li>
       <li
-        class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        class="flex items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer min-w-0 shrink overflow-hidden"
         data-testid="breadcrumb-item-1"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             Satoshi
           </span>
@@ -155,15 +155,15 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for non-truncated sta
         </svg>
       </li>
       <li
-        class="flex items-center justify-center gap-2.5 text-foreground"
+        class="flex items-center justify-start gap-2.5 text-foreground max-w-[50%] min-w-0 shrink-0 overflow-hidden"
         data-testid="breadcrumb-item-2"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             Anna
           </span>
@@ -178,22 +178,22 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
 <div>
   <nav
     aria-label="breadcrumb"
-    class="inline-flex"
+    class="flex max-w-full w-full min-w-0"
     data-testid="post-breadcrumb"
   >
     <ol
-      class="flex flex-wrap items-center gap-2.5"
+      class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
     >
       <li
-        class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        class="flex items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer min-w-0 shrink overflow-hidden"
         data-testid="breadcrumb-item-0"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             John
           </span>
@@ -223,7 +223,7 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         </svg>
       </li>
       <li
-        class="flex items-center justify-center gap-2.5 text-muted-foreground"
+        class="flex shrink-0 items-center justify-center gap-2.5 text-muted-foreground"
       >
         <button
           aria-expanded="false"
@@ -300,15 +300,15 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         </svg>
       </li>
       <li
-        class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        class="flex items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer min-w-0 shrink overflow-hidden"
         data-testid="breadcrumb-item-3"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             Alice
           </span>
@@ -338,15 +338,15 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         </svg>
       </li>
       <li
-        class="flex items-center justify-center gap-2.5 text-foreground"
+        class="flex items-center justify-start gap-2.5 text-foreground max-w-[50%] min-w-0 shrink-0 overflow-hidden"
         data-testid="breadcrumb-item-4"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             Bob
           </span>
@@ -361,22 +361,22 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
 <div>
   <nav
     aria-label="breadcrumb"
-    class="inline-flex"
+    class="flex max-w-full w-full min-w-0"
     data-testid="post-breadcrumb"
   >
     <ol
-      class="flex flex-wrap items-center gap-2.5"
+      class="flex min-w-0 w-full max-w-full flex-nowrap items-center justify-end overflow-hidden gap-2.5"
     >
       <li
-        class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        class="flex items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer min-w-0 shrink overflow-hidden"
         data-testid="breadcrumb-item-0"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             John
           </span>
@@ -406,7 +406,7 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         </svg>
       </li>
       <li
-        class="flex items-center justify-center gap-2.5 text-muted-foreground"
+        class="flex shrink-0 items-center justify-center gap-2.5 text-muted-foreground"
       >
         <button
           aria-expanded="false"
@@ -483,15 +483,15 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         </svg>
       </li>
       <li
-        class="flex items-center justify-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        class="flex items-center justify-start gap-2.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer min-w-0 shrink overflow-hidden"
         data-testid="breadcrumb-item-4"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             Bob
           </span>
@@ -521,15 +521,15 @@ exports[`PostPageBreadcrumb - Snapshots > matches snapshot for truncated state (
         </svg>
       </li>
       <li
-        class="flex items-center justify-center gap-2.5 text-foreground"
+        class="flex items-center justify-start gap-2.5 text-foreground max-w-[50%] min-w-0 shrink-0 overflow-hidden"
         data-testid="breadcrumb-item-5"
       >
         <button
-          class="flex items-center gap-1"
+          class="flex max-w-full min-w-0 items-center gap-1 overflow-hidden"
           type="button"
         >
           <span
-            class="font-sans text-sm leading-5 font-bold"
+            class="block max-w-full truncate font-sans text-sm leading-5 font-bold"
           >
             Charlie
           </span>

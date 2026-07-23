@@ -10,8 +10,10 @@ export interface ClickableTagsListProps {
   taggedKind: TagKind;
   /** Optional: pre-loaded tags (if not provided, will fetch from IndexedDB) */
   tags?: NexusTag[];
-  /** Maximum number of tags to display */
+  /** Maximum tag count shared by the display list and add-tag input. */
   maxTags?: number;
+  /** Optional display-only cap that does not constrain the add-tag input. */
+  maxVisibleTags?: number;
   /** Maximum character length per tag */
   maxTagLength?: number;
   /** Maximum total characters across all tags */
@@ -30,6 +32,8 @@ export interface ClickableTagsListProps {
   showAddButton?: boolean;
   /** Start in add button mode and open input on click (used with showAddButton) */
   addMode?: boolean;
+  /** When true, tags render without toggle/add interactions (display only). */
+  readOnly?: boolean;
   /** Show close button on tags */
   showTagClose?: boolean;
   /** Custom className */

@@ -4,6 +4,7 @@ import { Dispatch, SetStateAction } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { isArticleContent } from '@/libs/post/articleContent';
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
@@ -24,12 +25,12 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
 
   if (!postDetails) return null;
 
-  const isArticle = postDetails.kind === 'long';
+  const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const title = isArticle ? 'Edit Article' : 'Edit Post';
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-3xl" hiddenTitle={title}>
+      <DialogContent avoidKeyboard className="w-3xl" hiddenTitle={title}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
 

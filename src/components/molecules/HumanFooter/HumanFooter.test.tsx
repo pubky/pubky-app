@@ -24,6 +24,7 @@ vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
 // Mock config
 vi.mock('@/config/externalLinks', () => ({
   PUBKY_CORE_URL: 'https://pubky.core',
+  getPubkyCoreLink: () => 'https://pubky.core',
 }));
 
 // Mock atoms

@@ -1,15 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import {
+  APP_ROUTES,
   AUTH_ROUTES,
+  AUTHENTICATED_ROUTES,
+  getCollectionRoute,
   getProfileRoute,
+  getUserProfileUrl,
+  isCollectionsOverviewRoute,
   isCoreExploreRoute,
   isDynamicPublicRoute,
   isLogoLandingRoute,
+  isNavItemActive,
   isPostRoute,
   isPublicExploreRoute,
   LOGO_LANDING_ROUTES,
+  matchesAllowedRoute,
+  matchSingleCollectionRoute,
   ONBOARDING_ROUTES,
   PROFILE_ROUTES,
+  SETTINGS_ROUTES,
+  UNAUTHENTICATED_ROUTES,
 } from './routes';
 
 describe('isDynamicPublicRoute', () => {
@@ -107,6 +117,23 @@ describe('isDynamicPublicRoute', () => {
     });
   });
 
+  describe('collection routes', () => {
+    const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    const postId = '0034BBBDFK83G';
+
+    it('returns true for a single collection detail route', () => {
+      expect(isDynamicPublicRoute(`/collections/${pubky}/${postId}`)).toBe(true);
+    });
+
+    it('returns false for the collections overview route', () => {
+      expect(isDynamicPublicRoute('/collections')).toBe(false);
+    });
+
+    it('returns false for the bookmarks pseudo-collection route', () => {
+      expect(isDynamicPublicRoute('/collections/bookmarks')).toBe(false);
+    });
+  });
+
   describe('other routes', () => {
     it('returns false for home route', () => {
       expect(isDynamicPublicRoute('/home')).toBe(false);
@@ -135,6 +162,59 @@ describe('isDynamicPublicRoute', () => {
   });
 });
 
+describe('matchesAllowedRoute', () => {
+  it('allows explore sub-routes when explore prefix restriction is disabled', () => {
+    expect(
+      matchesAllowedRoute('/collections/bookmarks', APP_ROUTES.COLLECTIONS, { restrictExploreSubRoutes: false }),
+    ).toBe(true);
+    expect(matchesAllowedRoute('/home/trending', APP_ROUTES.HOME, { restrictExploreSubRoutes: false })).toBe(true);
+  });
+
+  it('blocks explore sub-routes when explore prefix restriction is enabled', () => {
+    expect(matchesAllowedRoute('/collections', APP_ROUTES.COLLECTIONS, { restrictExploreSubRoutes: true })).toBe(true);
+    expect(
+      matchesAllowedRoute('/collections/bookmarks', APP_ROUTES.COLLECTIONS, { restrictExploreSubRoutes: true }),
+    ).toBe(false);
+    expect(matchesAllowedRoute('/home/trending', APP_ROUTES.HOME, { restrictExploreSubRoutes: true })).toBe(false);
+  });
+
+  it('keeps prefix matching for non-explore allowed routes when explore prefix restriction is enabled', () => {
+    expect(
+      matchesAllowedRoute('/onboarding/profile', ONBOARDING_ROUTES.PROFILE, { restrictExploreSubRoutes: true }),
+    ).toBe(true);
+    expect(matchesAllowedRoute('/onboarding', ONBOARDING_ROUTES.INSTALL, { restrictExploreSubRoutes: true })).toBe(
+      false,
+    );
+  });
+});
+
+function isRouteAccessible(
+  pathname: string,
+  allowedRoutes: readonly string[],
+  restrictExploreSubRoutes: boolean,
+): boolean {
+  return allowedRoutes.some((route) => matchesAllowedRoute(pathname, route, { restrictExploreSubRoutes }));
+}
+
+describe('route access matrix', () => {
+  it('allows authenticated users to reach collections bookmarks via prefix matching', () => {
+    expect(isRouteAccessible('/collections/bookmarks', AUTHENTICATED_ROUTES.allowedRoutes, false)).toBe(true);
+  });
+
+  it('blocks guests from collections bookmarks while allowing the overview', () => {
+    expect(isRouteAccessible('/collections', UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(true);
+    expect(isRouteAccessible('/collections/bookmarks', UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(false);
+  });
+
+  it('allows guests to reach single collection pages via dynamic public route, not allowedRoutes prefix', () => {
+    const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+    const pathname = `/collections/${pubky}/0034BBBDFK83G`;
+
+    expect(isDynamicPublicRoute(pathname)).toBe(true);
+    expect(isRouteAccessible(pathname, UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(false);
+  });
+});
+
 describe('getProfileRoute', () => {
   const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
@@ -159,6 +239,107 @@ describe('getProfileRoute', () => {
   });
 });
 
+describe('getCollectionRoute', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const postId = '0034BBBDFK83G';
+
+  it('joins the collections base route, author pubky, and post id', () => {
+    expect(getCollectionRoute(pubky, postId)).toBe(`/collections/${pubky}/${postId}`);
+  });
+
+  it('is anchored on APP_ROUTES.COLLECTIONS', () => {
+    expect(getCollectionRoute(pubky, postId).startsWith(`${APP_ROUTES.COLLECTIONS}/`)).toBe(true);
+  });
+});
+
+describe('isCollectionsOverviewRoute', () => {
+  it('returns true only for the exact /collections path', () => {
+    expect(isCollectionsOverviewRoute(APP_ROUTES.COLLECTIONS)).toBe(true);
+    expect(isCollectionsOverviewRoute('/collections')).toBe(true);
+  });
+
+  it('returns false for bookmarks, single collections, and unrelated paths', () => {
+    const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+
+    expect(isCollectionsOverviewRoute('/collections/bookmarks')).toBe(false);
+    expect(isCollectionsOverviewRoute(`/collections/${pubky}/0034BBBDFK83G`)).toBe(false);
+    expect(isCollectionsOverviewRoute('/collections/')).toBe(false);
+    expect(isCollectionsOverviewRoute('/home')).toBe(false);
+  });
+});
+
+describe('matchSingleCollectionRoute', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const postId = '0034BBBDFK83G';
+
+  it('extracts userId and postId from a single collection route', () => {
+    expect(matchSingleCollectionRoute(`/collections/${pubky}/${postId}`)).toEqual({ userId: pubky, postId });
+  });
+
+  it('returns null for the bookmarks pseudo-collection route', () => {
+    expect(matchSingleCollectionRoute('/collections/bookmarks')).toBeNull();
+    expect(matchSingleCollectionRoute('/collections/bookmarks/extra')).toBeNull();
+  });
+
+  it('returns null for the overview route and wrong segment counts', () => {
+    expect(matchSingleCollectionRoute('/collections')).toBeNull();
+    expect(matchSingleCollectionRoute(`/collections/${pubky}`)).toBeNull();
+    expect(matchSingleCollectionRoute(`/collections/${pubky}/${postId}/extra`)).toBeNull();
+  });
+
+  it('returns null for unrelated routes', () => {
+    expect(matchSingleCollectionRoute('/home')).toBeNull();
+    expect(matchSingleCollectionRoute(`/post/${pubky}/${postId}`)).toBeNull();
+  });
+});
+
+describe('isNavItemActive', () => {
+  it('matches exact href when activePrefix is omitted', () => {
+    expect(isNavItemActive('/home', { href: APP_ROUTES.HOME })).toBe(true);
+    expect(isNavItemActive('/hot', { href: APP_ROUTES.HOT })).toBe(true);
+    expect(isNavItemActive('/search', { href: APP_ROUTES.HOT })).toBe(false);
+  });
+
+  it('matches sub-routes under href when activePrefix is omitted', () => {
+    expect(isNavItemActive('/hot/trending', { href: APP_ROUTES.HOT })).toBe(true);
+  });
+
+  it('matches exact and nested routes under activePrefix', () => {
+    const collectionsItem = { href: APP_ROUTES.COLLECTIONS, activePrefix: APP_ROUTES.COLLECTIONS };
+
+    expect(isNavItemActive('/collections', collectionsItem)).toBe(true);
+    expect(isNavItemActive('/collections/bookmarks', collectionsItem)).toBe(true);
+    expect(isNavItemActive('/collections/other', collectionsItem)).toBe(true);
+  });
+
+  it('highlights settings from default account href using settings prefix', () => {
+    const settingsItem = { href: SETTINGS_ROUTES.ACCOUNT, activePrefix: APP_ROUTES.SETTINGS };
+
+    expect(isNavItemActive('/settings/account', settingsItem)).toBe(true);
+    expect(isNavItemActive('/settings/notifications', settingsItem)).toBe(true);
+    expect(isNavItemActive('/settings/edit', settingsItem)).toBe(true);
+    expect(isNavItemActive('/home', settingsItem)).toBe(false);
+  });
+});
+
+describe('getUserProfileUrl', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const otherPubky = 'gujx6qd8ksydh1makdphd3bxu351d9b8waqka8hfg6q7hnqkxexo';
+
+  it('returns the static own-profile route when the pubky is the current user', () => {
+    expect(getUserProfileUrl(pubky, pubky)).toBe('/profile');
+  });
+
+  it('returns the dynamic profile route for another user', () => {
+    expect(getUserProfileUrl(otherPubky, pubky)).toBe(`/profile/${otherPubky}`);
+  });
+
+  it('returns the dynamic profile route when there is no current user', () => {
+    expect(getUserProfileUrl(pubky)).toBe(`/profile/${pubky}`);
+    expect(getUserProfileUrl(pubky, null)).toBe(`/profile/${pubky}`);
+  });
+});
+
 describe('isPostRoute', () => {
   it('returns true for single post pages', () => {
     const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
@@ -177,6 +358,7 @@ describe('isCoreExploreRoute', () => {
     expect(isCoreExploreRoute('/home')).toBe(true);
     expect(isCoreExploreRoute('/hot')).toBe(true);
     expect(isCoreExploreRoute('/search')).toBe(true);
+    expect(isCoreExploreRoute('/collections')).toBe(true);
   });
 
   it('returns false for dynamic public and protected routes', () => {
@@ -184,6 +366,8 @@ describe('isCoreExploreRoute', () => {
 
     expect(isCoreExploreRoute(`/post/${pubky}/0034BBBDFK83G`)).toBe(false);
     expect(isCoreExploreRoute(`/profile/${pubky}`)).toBe(false);
+    expect(isCoreExploreRoute(`/collections/${pubky}/0034BBBDFK83G`)).toBe(false);
+    expect(isCoreExploreRoute('/collections/bookmarks')).toBe(false);
     expect(isCoreExploreRoute('/bookmarks')).toBe(false);
     expect(isCoreExploreRoute('/feed/custom-feed')).toBe(false);
     expect(isCoreExploreRoute('/settings/account')).toBe(false);
@@ -191,18 +375,21 @@ describe('isCoreExploreRoute', () => {
 });
 
 describe('isPublicExploreRoute', () => {
-  it('returns true for core explore routes and dynamic post/profile pages', () => {
+  it('returns true for core explore routes and dynamic post/profile/collection pages', () => {
     const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
     expect(isPublicExploreRoute('/home')).toBe(true);
     expect(isPublicExploreRoute('/hot')).toBe(true);
     expect(isPublicExploreRoute('/search')).toBe(true);
+    expect(isPublicExploreRoute('/collections')).toBe(true);
     expect(isPublicExploreRoute(`/post/${pubky}/0034BBBDFK83G`)).toBe(true);
     expect(isPublicExploreRoute(`/profile/${pubky}`)).toBe(true);
+    expect(isPublicExploreRoute(`/collections/${pubky}/0034BBBDFK83G`)).toBe(true);
   });
 
   it('returns false for protected routes', () => {
     expect(isPublicExploreRoute('/bookmarks')).toBe(false);
+    expect(isPublicExploreRoute('/collections/bookmarks')).toBe(false);
     expect(isPublicExploreRoute('/feed/custom-feed')).toBe(false);
     expect(isPublicExploreRoute('/settings/account')).toBe(false);
     expect(isPublicExploreRoute('/profile/posts')).toBe(false);

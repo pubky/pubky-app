@@ -35,11 +35,30 @@ export class BookmarkModel extends RecordModelBase<string, BookmarkModelSchema> 
   }
 
   /**
-   * Get bookmarks sorted by creation time (most recent first)
+   * Get bookmarks sorted by creation time (most recent first).
+   *
+   * Implementation note: uses a full table scan + JS sort instead of
+   * `orderBy('created_at').reverse()`. IndexedDB index cursors silently
+   * exclude records whose indexed key is `undefined`, which means any
+   * historically-bad write that left `created_at` unset would become
+   * invisible to the previous index-based query (the root cause of the
+   * "FollowedCollections empty while Discover shows Unfollow" bug).
+   *
+   * Rows missing a numeric `created_at` are treated as oldest so they
+   * still surface; new writes go through the persist path which now
+   * guarantees a numeric value.
+   *
+   * The bookmarks table is per-user and small, so the O(n log n) JS sort
+   * is a non-issue at our scale.
    */
   static async findAllSorted(): Promise<BookmarkModelSchema[]> {
     try {
-      return await this.table.orderBy('created_at').reverse().toArray();
+      const all = await this.table.toArray();
+      return all.sort((a, b) => {
+        const aAt = typeof a.created_at === 'number' ? a.created_at : 0;
+        const bAt = typeof b.created_at === 'number' ? b.created_at : 0;
+        return bAt - aAt;
+      });
     } catch (error) {
       throw Err.database(DatabaseErrorCode.QUERY_FAILED, `Failed to read sorted records from ${this.table.name}`, {
         service: ErrorService.Local,

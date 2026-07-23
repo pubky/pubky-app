@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { postJson } from '@/libs/api/client-request';
 import { Logger } from '@/libs/logger/logger';
-import { showErrorToast as showErrorToastMessage } from '@/molecules/Toaster/showErrorToast';
+import { toast } from '@/molecules/Toaster/use-toast';
 
 /**
  * Hook to handle feedback submission.
@@ -28,10 +28,6 @@ export function useFeedback() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const showErrorToast = useCallback((description: string) => {
-    showErrorToastMessage({ description });
-  }, []);
-
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setFeedback(e.target.value);
   }, []);
@@ -43,7 +39,7 @@ export function useFeedback() {
     if (isSubmitting) return;
 
     if (!currentUserPubky || !userDetails?.name) {
-      showErrorToast(tFeedback('userNotLoaded'));
+      toast({ variant: 'error', description: tFeedback('userNotLoaded') });
       return;
     }
 
@@ -59,11 +55,14 @@ export function useFeedback() {
       // Note: feedback is cleared by reset() when dialog closes, no need to clear here
     } catch (error) {
       Logger.error('Error submitting feedback:', error);
-      showErrorToast(error instanceof Error ? error.message : tFeedback('submitFailedDesc'));
+      toast({
+        variant: 'error',
+        description: error instanceof Error ? error.message : tFeedback('submitFailedDesc'),
+      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [feedback, isSubmitting, currentUserPubky, userDetails?.name, showErrorToast, tFeedback]);
+  }, [feedback, isSubmitting, currentUserPubky, userDetails?.name, tFeedback]);
 
   const reset = useCallback(() => {
     setFeedback('');

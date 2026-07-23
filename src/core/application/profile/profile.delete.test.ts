@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalProfileService } from '@/services/local/profile/profile';
@@ -12,7 +13,7 @@ vi.mock('pubky-app-specs', () => ({
 // Mock HomeserverService methods
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
-    list: vi.fn(),
+    listAll: vi.fn(),
     delete: vi.fn(),
   },
 }));
@@ -25,12 +26,19 @@ vi.mock('@/services/local/profile/profile', () => ({
 }));
 
 let ProfileApplication: typeof import('./profile').ProfileApplication;
+let httpStatusCodeToError: typeof import('@/libs/error/error.http').httpStatusCodeToError;
 
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.resetModules();
 
   ({ ProfileApplication } = await import('./profile'));
+  // Import from the same (reset) module graph as ./profile so AppError instanceof checks match
+  ({ httpStatusCodeToError } = await import('@/libs/error/error.http'));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('ProfileApplication.commitDelete', () => {
@@ -47,13 +55,13 @@ describe('ProfileApplication.commitDelete', () => {
     ];
 
     const localDeleteSpy = vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
     expect(localDeleteSpy).toHaveBeenCalledTimes(1);
-    expect(listSpy).toHaveBeenCalledWith({ baseDirectory, cursor: undefined, reverse: false, limit: Infinity });
+    expect(listSpy).toHaveBeenCalledWith({ baseDirectory });
     expect(deleteSpy).toHaveBeenCalledTimes(4);
 
     expect(deleteSpy).toHaveBeenNthCalledWith(1, `${baseDirectory}tags/tag1`);
@@ -66,7 +74,7 @@ describe('ProfileApplication.commitDelete', () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
     vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     const setProgress = vi.fn();
@@ -81,7 +89,7 @@ describe('ProfileApplication.commitDelete', () => {
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
@@ -93,13 +101,12 @@ describe('ProfileApplication.commitDelete', () => {
     const fileList = [`${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
-    // TODO: Using undefined, false, and Infinity here as a temporary workaround since
-    // homeserver.list does not yet support pagination. This ensures all files are deleted.
-    expect(listSpy).toHaveBeenCalledWith({ baseDirectory, cursor: undefined, reverse: false, limit: Infinity });
+
+    expect(listSpy).toHaveBeenCalledWith({ baseDirectory });
     expect(deleteSpy).toHaveBeenCalledTimes(1);
     expect(deleteSpy).toHaveBeenCalledWith(profileUrl);
   });
@@ -108,7 +115,7 @@ describe('ProfileApplication.commitDelete', () => {
     const localDeleteSpy = vi
       .spyOn(LocalProfileService, 'deleteAll')
       .mockRejectedValue(new Error('local delete failed'));
-    const listSpy = vi.spyOn(HomeserverService, 'list');
+    const listSpy = vi.spyOn(HomeserverService, 'listAll');
     const deleteSpy = vi.spyOn(HomeserverService, 'delete');
 
     await expect(ProfileApplication.commitDelete({ pubky })).rejects.toThrow('local delete failed');
@@ -120,7 +127,7 @@ describe('ProfileApplication.commitDelete', () => {
 
   it('propagates errors when list fails', async () => {
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(HomeserverService, 'list').mockRejectedValue(new Error('list failed'));
+    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockRejectedValue(new Error('list failed'));
     const deleteSpy = vi.spyOn(HomeserverService, 'delete');
 
     await expect(ProfileApplication.commitDelete({ pubky })).rejects.toThrow('list failed');
@@ -129,16 +136,66 @@ describe('ProfileApplication.commitDelete', () => {
     expect(deleteSpy).not.toHaveBeenCalled();
   });
 
-  it('propagates errors when delete fails', async () => {
+  it('propagates errors when delete keeps failing after exhausting retries', async () => {
+    vi.useFakeTimers();
     const fileList = [`${baseDirectory}file1`, `${baseDirectory}profile.json`];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
-    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockRejectedValueOnce(new Error('delete failed'));
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockRejectedValue(new Error('delete failed'));
 
-    await expect(ProfileApplication.commitDelete({ pubky })).rejects.toThrow('delete failed');
+    const commit = ProfileApplication.commitDelete({ pubky });
+    const expectation = expect(commit).rejects.toThrow('delete failed');
+    await vi.runAllTimersAsync();
+    await expectation;
 
-    expect(deleteSpy).toHaveBeenCalledTimes(1);
+    // All attempts spent on the first file, then the flow aborts
+    expect(deleteSpy).toHaveBeenCalledTimes(3);
+    expect(deleteSpy).toHaveBeenCalledWith(`${baseDirectory}file1`);
+  });
+
+  it('retries a transient delete failure and completes the deletion', async () => {
+    vi.useFakeTimers();
+    const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
+
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    const deleteSpy = vi
+      .spyOn(HomeserverService, 'delete')
+      .mockRejectedValueOnce(new Error('HTTP transport error: error sending request'))
+      .mockResolvedValue(undefined);
+
+    const commit = ProfileApplication.commitDelete({ pubky });
+    await vi.runAllTimersAsync();
+    await commit;
+
+    // 3 files + 1 retry for the transient failure
+    expect(deleteSpy).toHaveBeenCalledTimes(4);
+    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl);
+  });
+
+  it('treats a 404 during delete as already removed and continues', async () => {
+    const fileList = [`${baseDirectory}file1`, `${baseDirectory}file2`, `${baseDirectory}profile.json`];
+
+    vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
+    const notFound = httpStatusCodeToError(
+      404,
+      'Not Found',
+      ErrorService.Homeserver,
+      'request',
+      `${baseDirectory}file2`,
+    );
+    const deleteSpy = vi
+      .spyOn(HomeserverService, 'delete')
+      .mockRejectedValueOnce(notFound)
+      .mockResolvedValue(undefined);
+
+    await ProfileApplication.commitDelete({ pubky });
+
+    // No retry for the missing file; remaining files still deleted
+    expect(deleteSpy).toHaveBeenCalledTimes(3);
+    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl);
   });
 
   it('sorts files correctly before deletion', async () => {
@@ -150,7 +207,7 @@ describe('ProfileApplication.commitDelete', () => {
     ];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    vi.spyOn(HomeserverService, 'list').mockResolvedValue(fileList);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(fileList);
     const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
@@ -161,20 +218,21 @@ describe('ProfileApplication.commitDelete', () => {
     expect(deleteSpy).toHaveBeenNthCalledWith(4, profileUrl);
   });
 
-  it('passes Infinity limit to ensure all files are listed regardless of count', async () => {
-    // Simulate a user with more than 500 files
+  it('deletes every file when the account has more than one listing page', async () => {
+    // listAll handles pagination internally; commitDelete must delete the full result
     const largeFileList = [
       ...Array.from({ length: 600 }, (_, i) => `${baseDirectory}posts/post${i}`),
       `${baseDirectory}profile.json`,
     ];
 
     vi.spyOn(LocalProfileService, 'deleteAll').mockResolvedValue(undefined);
-    const listSpy = vi.spyOn(HomeserverService, 'list').mockResolvedValue(largeFileList);
-    vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
+    const listSpy = vi.spyOn(HomeserverService, 'listAll').mockResolvedValue(largeFileList);
+    const deleteSpy = vi.spyOn(HomeserverService, 'delete').mockResolvedValue(undefined);
 
     await ProfileApplication.commitDelete({ pubky });
 
-    // Verify that list was called with Infinity to get all files
-    expect(listSpy).toHaveBeenCalledWith({ baseDirectory, cursor: undefined, reverse: false, limit: Infinity });
+    expect(listSpy).toHaveBeenCalledWith({ baseDirectory });
+    expect(deleteSpy).toHaveBeenCalledTimes(601);
+    expect(deleteSpy).toHaveBeenLastCalledWith(profileUrl);
   });
 });

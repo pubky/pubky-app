@@ -1,0 +1,78 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProfileMenuActions - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-open="false"
+  data-testid="sheet"
+>
+  <div
+    data-testid="sheet-trigger"
+  >
+    <button>
+      Menu
+    </button>
+  </div>
+  <div
+    data-side="bottom"
+    data-testid="sheet-content"
+  >
+    <div
+      data-testid="sheet-header"
+    >
+      <div
+        class="sr-only"
+        data-testid="sheet-title"
+      >
+        Profile Actions
+      </div>
+    </div>
+    <div
+      class="flex flex-col gap-2"
+      data-testid="container"
+    >
+      <div
+        data-testid="profile-menu-actions-content"
+        data-user-id="pk:test123"
+        data-variant="sheet"
+      >
+        <button>
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ProfileMenuActions - Snapshots > matches snapshot for desktop dropdown 1`] = `
+<div
+  data-open="false"
+  data-testid="dropdown-menu"
+>
+  <button
+    data-testid="dropdown-open-trigger"
+  />
+  <div
+    data-testid="dropdown-trigger"
+  >
+    <button>
+      Menu
+    </button>
+  </div>
+  <div
+    class="flex w-56 flex-col gap-2.5"
+    data-align="end"
+    data-testid="dropdown-content"
+  >
+    <div
+      data-testid="profile-menu-actions-content"
+      data-user-id="pk:test123"
+      data-variant="dropdown"
+    >
+      <button>
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+`;

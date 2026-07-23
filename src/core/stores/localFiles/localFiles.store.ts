@@ -46,12 +46,35 @@ export const useLocalFilesStore = create<LocalFilesStore>()(
         }
       },
 
+      setCollectionCover: (collectionId, blobUrl) => {
+        const prev = get().collections[collectionId];
+        revokeBlobUrl(prev);
+
+        if (blobUrl === null) {
+          set(
+            (state) => {
+              const { [collectionId]: _, ...rest } = state.collections;
+              return { collections: rest };
+            },
+            false,
+            LocalFilesActionTypes.SET_COLLECTION_COVER,
+          );
+        } else {
+          set(
+            (state) => ({ collections: { ...state.collections, [collectionId]: blobUrl } }),
+            false,
+            LocalFilesActionTypes.SET_COLLECTION_COVER,
+          );
+        }
+      },
+
       reset: () => {
         const state = get();
         revokeBlobUrl(state.profile);
         Object.values(state.posts)
           .flat()
           .forEach((a) => revokeBlobUrl(a?.urls.main));
+        Object.values(state.collections).forEach((url) => revokeBlobUrl(url));
         set(localFilesInitialState, false, LocalFilesActionTypes.RESET);
       },
     }),

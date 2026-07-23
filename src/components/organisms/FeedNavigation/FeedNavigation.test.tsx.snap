@@ -14,7 +14,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
     Feed
   </div>
   <a
-    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-border text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/home"
@@ -95,7 +95,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
     data-testid="custom-feed-dialog-create"
   >
     <button
-      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
+      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-border text-muted-foreground transition-colors hover:text-white lg:justify-center"
       data-override-defaults="true"
       data-testid="button"
     >
@@ -184,7 +184,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     </span>
   </a>
   <a
-    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-border text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-1"
@@ -218,7 +218,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     </span>
   </a>
   <a
-    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-border text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-2"
@@ -255,7 +255,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     data-testid="custom-feed-dialog-create"
   >
     <button
-      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
+      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-border text-muted-foreground transition-colors hover:text-white lg:justify-center"
       data-override-defaults="true"
       data-testid="button"
     >
@@ -310,7 +310,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     Feed
   </div>
   <a
-    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-border text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/home"
@@ -344,7 +344,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     </span>
   </a>
   <a
-    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-border text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-1"
@@ -422,7 +422,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     </span>
   </a>
   <a
-    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-muted-foreground text-muted-foreground"
+    class="flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center border-border text-muted-foreground"
     data-override-defaults="true"
     data-testid="link"
     href="/feed/feed-3"
@@ -459,7 +459,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     data-testid="custom-feed-dialog-create"
   >
     <button
-      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
+      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-border text-muted-foreground transition-colors hover:text-white lg:justify-center"
       data-override-defaults="true"
       data-testid="button"
     >
@@ -551,7 +551,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
     data-testid="custom-feed-dialog-create"
   >
     <button
-      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-muted-foreground text-muted-foreground transition-colors hover:text-white lg:justify-center"
+      class="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-border text-muted-foreground transition-colors hover:text-white lg:justify-center"
       data-override-defaults="true"
       data-testid="button"
     >

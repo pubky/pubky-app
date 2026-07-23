@@ -252,7 +252,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   data-cy="profile-follow-toggle-btn"
                   variant="secondary"
                   size="sm"
-                  className={cn('group justify-center lg:w-[110px]', ACTION_BUTTON_GRID_CELL)}
+                  className={cn('group justify-center lg:w-27.5', ACTION_BUTTON_GRID_CELL)}
                   onClick={onFollowToggle}
                   disabled={isFollowLoading}
                 >

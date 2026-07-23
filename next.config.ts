@@ -8,9 +8,17 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   env: {
-    NEXT_PUBLIC_APP_VERSION: packageJson.version,
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION ?? packageJson.version,
   },
   reactCompiler: true,
+  // Source maps are generated for every build (browser + server), but the Sentry plugin upload
+  // is disabled below. Docker builds inject Debug IDs and optionally upload maps when Sentry
+  // build credentials are provided; public builds without those credentials skip upload.
+  // See docs/sentry.md + ADR 0018.
+  productionBrowserSourceMaps: true,
+  experimental: {
+    serverSourceMaps: true,
+  },
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
   ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
   async redirects() {
@@ -56,16 +64,19 @@ const withSerwist = withSerwistInit({
 const composedConfig = withNextIntl(withSerwist(nextConfig));
 
 export default withSentryConfig(composedConfig, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
   silent: !process.env.CI,
-  widenClientFileUpload: true,
   disableLogger: true,
-  // Skip the source-map upload step entirely when no auth token is configured
-  // (local builds, forks without secrets) so the build doesn't fail.
+  // Disable the Sentry plugin upload. Docker builds handle Debug-ID injection and optional
+  // source-map upload via sentry-cli, while public builds without Sentry credentials skip upload.
   sourcemaps: {
-    disable: !process.env.SENTRY_AUTH_TOKEN,
+    disable: true,
+  },
+  // Release identification comes from Sentry.init({ release }) at runtime. Local builds use the
+  // package version; Docker CI overrides NEXT_PUBLIC_APP_VERSION with the commit SHA so events
+  // and uploaded maps share one release value. Disable release creation here so the plugin never
+  // attempts Sentry API calls.
+  release: {
+    create: false,
   },
   // tunnelRoute deferred — adopting it requires creating middleware.ts to exclude
   // the /monitoring path. Revisit if Sentry shows ad-blocker drops.

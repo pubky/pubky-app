@@ -1,8 +1,71 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`PostMain - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  data-class-name="relative flex min-w-0 @max-xl/grid:h-full cursor-pointer"
+  data-override-defaults="true"
+  data-testid="container"
+>
+  <div
+    data-class-name="min-w-0 flex-1 gap-0 rounded-md py-0"
+    data-testid="card"
+  >
+    <div
+      data-class-name="flex min-w-0 flex-col @max-xl/grid:flex-1 gap-4 p-6"
+      data-testid="card-content"
+    >
+      <div
+        data-testid="post-header"
+      >
+        PostHeader 
+        post-123
+      </div>
+      <div
+        data-testid="post-content"
+      >
+        PostContent 
+        post-123
+      </div>
+      <div
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
+        data-testid="container"
+      >
+        <div
+          data-show-add-button="true"
+          data-tagged-id="post-123"
+          data-tagged-kind="post"
+          data-testid="clickable-tags-list"
+        >
+          ClickableTagsList 
+          post-123
+        </div>
+        <div
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
+          data-testid="post-actions"
+        >
+          Actions 
+          post-123
+          <button
+            data-testid="tag-button"
+          >
+            Tag
+          </button>
+          <button>
+            Reply
+          </button>
+          <button>
+            Repost
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`PostMain - Snapshots > matches snapshot for quote repost by current user (with content) 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0 @max-xl/grid:h-full cursor-pointer"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -16,7 +79,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
       You reposted
     </div>
     <div
-      data-class-name="flex min-w-0 flex-col gap-4 p-6"
+      data-class-name="flex min-w-0 flex-col @max-xl/grid:flex-1 gap-4 p-6"
       data-testid="card-content"
     >
       <div
@@ -32,7 +95,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
         me:quote-repost-1
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -45,7 +108,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
           me:quote-repost-1
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
           data-testid="post-actions"
         >
           Actions 
@@ -70,7 +133,7 @@ exports[`PostMain - Snapshots > matches snapshot for quote repost by current use
 
 exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0 @max-xl/grid:h-full cursor-pointer"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -79,7 +142,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
     data-testid="card"
   >
     <div
-      data-class-name="flex min-w-0 flex-col gap-4 p-6"
+      data-class-name="flex min-w-0 flex-col @max-xl/grid:flex-1 gap-4 p-6"
       data-testid="card-content"
     >
       <div
@@ -95,7 +158,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
         other-user:repost-1
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -108,7 +171,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
           other-user:repost-1
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
           data-testid="post-actions"
         >
           Actions 
@@ -133,7 +196,7 @@ exports[`PostMain - Snapshots > matches snapshot for repost by another user 1`] 
 
 exports[`PostMain - Snapshots > matches snapshot for simple repost by current user (no content) 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0 @max-xl/grid:h-full cursor-pointer"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -147,7 +210,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
       You reposted
     </div>
     <div
-      data-class-name="flex min-w-0 flex-col gap-4 p-6"
+      data-class-name="flex min-w-0 flex-col @max-xl/grid:flex-1 gap-4 p-6"
       data-testid="card-content"
     >
       <div
@@ -157,7 +220,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
         me:simple-repost-1
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -170,7 +233,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
           me:simple-repost-1
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
           data-testid="post-actions"
         >
           Actions 
@@ -195,7 +258,7 @@ exports[`PostMain - Snapshots > matches snapshot for simple repost by current us
 
 exports[`PostMain - Snapshots > matches snapshot with default state 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0 @max-xl/grid:h-full cursor-pointer"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -204,51 +267,75 @@ exports[`PostMain - Snapshots > matches snapshot with default state 1`] = `
     data-testid="card"
   >
     <div
-      data-class-name="flex min-w-0 flex-col gap-4 p-6"
+      data-class-name="flex min-w-0 flex-col @max-xl/grid:flex-1 p-0"
       data-testid="card-content"
     >
       <div
-        data-testid="post-header"
-      >
-        PostHeader 
-        post-123
-      </div>
-      <div
-        data-testid="post-content"
-      >
-        PostContent 
-        post-123
-      </div>
-      <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex min-w-0 flex-col lg:flex-row"
         data-testid="container"
       >
         <div
-          data-show-add-button="true"
-          data-tagged-id="post-123"
-          data-tagged-kind="post"
-          data-testid="clickable-tags-list"
+          data-class-name="flex min-w-0 flex-col gap-4 p-12 lg:flex-1"
+          data-testid="container"
         >
-          ClickableTagsList 
-          post-123
+          <div
+            data-testid="post-header"
+          >
+            PostHeader 
+            post-123
+          </div>
+          <div
+            data-testid="post-content"
+            data-text-class-name="text-xl leading-7"
+          >
+            PostContent 
+            post-123
+          </div>
+          <div
+            data-class-name="flex flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
+          >
+            <div
+              data-class-name="lg:hidden"
+              data-post-id="post-123"
+              data-testid="post-tags-panel"
+            >
+              PostTagsPanel 
+              post-123
+            </div>
+            <div
+              data-testid="post-actions"
+            >
+              Actions 
+              post-123
+              <button
+                data-testid="tag-button"
+              >
+                Tag
+              </button>
+              <button>
+                Reply
+              </button>
+              <button>
+                Repost
+              </button>
+            </div>
+          </div>
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
-          data-testid="post-actions"
+          data-class-name="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
+          data-override-defaults="true"
+          data-testid="container"
         >
-          Actions 
-          post-123
-          <button
-            data-testid="tag-button"
+          <div
+            data-class-name="w-full"
+            data-post-id="post-123"
+            data-testid="post-tags-panel"
           >
-            Tag
-          </button>
-          <button>
-            Reply
-          </button>
-          <button>
-            Repost
-          </button>
+            PostTagsPanel 
+            post-123
+          </div>
         </div>
       </div>
     </div>
@@ -258,7 +345,7 @@ exports[`PostMain - Snapshots > matches snapshot with default state 1`] = `
 
 exports[`PostMain - Snapshots > matches snapshot with deleted post 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0 @max-xl/grid:h-full cursor-pointer"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -277,7 +364,7 @@ exports[`PostMain - Snapshots > matches snapshot with deleted post 1`] = `
 
 exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer"
+  data-class-name="relative flex min-w-0 @max-xl/grid:h-full cursor-pointer"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -286,7 +373,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
     data-testid="card"
   >
     <div
-      data-class-name="flex min-w-0 flex-col gap-4 p-6"
+      data-class-name="flex min-w-0 flex-col @max-xl/grid:flex-1 gap-4 p-6"
       data-testid="card-content"
     >
       <div
@@ -302,7 +389,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
         post-no-reply-456
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -315,7 +402,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
           post-no-reply-456
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
           data-testid="post-actions"
         >
           Actions 
@@ -340,7 +427,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply false 1`] = `
 
 exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
 <div
-  data-class-name="relative flex min-w-0 cursor-pointer pl-3"
+  data-class-name="relative flex min-w-0 @max-xl/grid:h-full cursor-pointer pl-3"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -362,7 +449,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
     data-testid="card"
   >
     <div
-      data-class-name="flex min-w-0 flex-col gap-4 p-6"
+      data-class-name="flex min-w-0 flex-col @max-xl/grid:flex-1 gap-4 p-6"
       data-testid="card-content"
     >
       <div
@@ -378,7 +465,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
         post-reply-123
       </div>
       <div
-        data-class-name="flex-col items-start gap-2 md:flex-row md:justify-between md:gap-4 md:items-start"
+        data-class-name="flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4 @max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3! md:items-start"
         data-testid="container"
       >
         <div
@@ -391,7 +478,7 @@ exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
           post-reply-123
         </div>
         <div
-          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end"
+          data-class-name="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
           data-testid="post-actions"
         >
           Actions 

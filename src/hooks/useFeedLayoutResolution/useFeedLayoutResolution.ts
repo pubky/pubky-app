@@ -1,6 +1,6 @@
 'use client';
 
-import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
+import { GRID_LAYOUT_VARIANTS, TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -18,12 +18,16 @@ export interface FeedLayoutResolution {
   effectiveLayout: LayoutType;
   isVisualRequested: boolean;
   isVisualActive: boolean;
+  /**
+   * Whether this variant renders its posts in a fixed card grid (decision D5).
+   * Orthogonal to `effectiveLayout` — grid is variant-driven, not a `LayoutType`.
+   */
+  isGridActive: boolean;
   isPhoneViewport: boolean;
 }
 
 const RICH_LAYOUT_SUPPORTED_FEED_VARIANTS = new Set<TimelineFeedVariant>([
   TIMELINE_FEED_VARIANT.HOME,
-  TIMELINE_FEED_VARIANT.BOOKMARKS,
   TIMELINE_FEED_VARIANT.CUSTOM,
   TIMELINE_FEED_VARIANT.SEARCH,
 ]);
@@ -36,9 +40,10 @@ export function resolveFeedLayout({
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
   const isVisualSupported = !isPhoneViewport && RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
   const isWideRequested = requestedLayout === LAYOUT.WIDE;
-  const isWideSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
+  const isListRequested = requestedLayout === LAYOUT.LIST;
+  const isRichLayoutSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
   const effectiveLayout =
-    (isVisualRequested && !isVisualSupported) || (isWideRequested && !isWideSupported)
+    (isVisualRequested && !isVisualSupported) || ((isWideRequested || isListRequested) && !isRichLayoutSupported)
       ? LAYOUT.COLUMNS
       : requestedLayout;
 
@@ -47,6 +52,7 @@ export function resolveFeedLayout({
     effectiveLayout,
     isVisualRequested,
     isVisualActive: effectiveLayout === LAYOUT.VISUAL,
+    isGridActive: GRID_LAYOUT_VARIANTS.has(variant),
     isPhoneViewport,
   };
 }
