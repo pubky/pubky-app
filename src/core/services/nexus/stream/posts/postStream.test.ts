@@ -45,6 +45,8 @@ function callStreamEndpoint(
       return postStreamApi.followers(params as TStreamWithObserverParams);
     case 'friends':
       return postStreamApi.friends(params as TStreamWithObserverParams);
+    case 'wot':
+      return postStreamApi.wot(params as TStreamWithObserverParams);
     case 'bookmarks':
       return postStreamApi.bookmarks(params as TStreamWithObserverParams);
     case 'post_replies':
@@ -110,6 +112,12 @@ describe('Stream API URL Generation', () => {
         endpoint: 'friends' as const,
         params: { observer_id: mockObserverId, tags: 'dev,opensource', kind: StreamKind.SHORT },
         expectedInUrl: ['source=friends', `observer_id=${mockObserverId}`, 'tags=dev%2Copensource', 'kind=short'],
+      },
+      {
+        name: 'wot',
+        endpoint: 'wot' as const,
+        params: { observer_id: mockObserverId, depth: 2 as const, sorting: StreamSorting.TIMELINE },
+        expectedInUrl: ['source=wot', `observer_id=${mockObserverId}`, 'depth=2', 'sorting=timeline'],
       },
       {
         name: 'bookmarks',
@@ -362,6 +370,8 @@ describe('Stream API URL Generation', () => {
         'following',
         'followers',
         'friends',
+        'wot',
+        'wot_domain',
         'bookmarks',
         'post_replies',
         'author',
@@ -397,6 +407,42 @@ describe('createPostStreamParams', () => {
       expect(result.params.viewer_id).toBe(mockViewerId);
       expect(result.params.limit).toBe(20);
       expect(result.invokeEndpoint).toBe(StreamSource.BOOKMARKS);
+    });
+  });
+
+  describe('WoT domain streams', () => {
+    it('maps depth and profile tags while preserving sorting and content kind', () => {
+      const result = createPostStreamParams({
+        streamId: 'total_engagement:wot_domain:2:image:artist,bitcoin' as PostStreamId,
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.invokeEndpoint).toBe(StreamSource.WOT_DOMAIN);
+      expect(result.params.sorting).toBe(StreamSorting.ENGAGEMENT);
+      expect(result.params.kind).toBe(StreamKind.IMAGE);
+      expect(result.params.depth).toBe(2);
+      expect(result.params.domain_tags).toBe('artist,bitcoin');
+      expect(result.params.viewer_id).toBe(mockViewerId);
+    });
+  });
+
+  describe('WoT streams', () => {
+    it('uses the Nexus Network depth for a plain WoT stream', () => {
+      const result = createPostStreamParams({
+        streamId: 'timeline:wot:all',
+        streamTail: 0,
+        streamHead: 0,
+        limit: 20,
+        viewerId: mockViewerId,
+      });
+
+      expect(result.invokeEndpoint).toBe(StreamSource.WOT);
+      expect(result.params.sorting).toBe(StreamSorting.TIMELINE);
+      expect(result.params.depth).toBe(2);
+      expect(result.params.viewer_id).toBe(mockViewerId);
     });
   });
 
@@ -713,6 +759,21 @@ describe('createPostStreamParams', () => {
 });
 
 describe('breakDownStreamId', () => {
+  describe('WoT domain pattern', () => {
+    it('parses sorting, depth, kind, and profile tags', () => {
+      const result = breakDownStreamId('timeline:wot_domain:1:long:bitcoin,writer' as PostStreamId);
+
+      expect(result).toEqual(['timeline', StreamSource.WOT_DOMAIN, 'long', undefined, 1, 'bitcoin,writer']);
+    });
+
+    it('supports the depth-zero Me trust set', () => {
+      const result = breakDownStreamId('timeline:wot_domain:0:all:developer' as PostStreamId);
+
+      expect(result[4]).toBe(0);
+      expect(result[5]).toBe('developer');
+    });
+  });
+
   describe('Timeline pattern', () => {
     it('should parse timeline:endpoint:kind:tags', () => {
       const result = breakDownStreamId('timeline:bookmarks:all:tech,ai' as PostStreamId);
@@ -823,6 +884,32 @@ describe('NexusPostStreamService', () => {
         expectedInUrl: ['source=friends', 'observer_id=viewer-pubky-id', 'tags=tech%2Cdev'],
       },
       {
+        name: 'WOT',
+        invokeEndpoint: StreamSource.WOT,
+        params: { limit: 15, viewer_id: mockViewerId, depth: 2 as const },
+        extraParams: {},
+        expectedInUrl: ['source=wot', 'observer_id=viewer-pubky-id', 'depth=2'],
+      },
+      {
+        name: 'WOT_DOMAIN',
+        invokeEndpoint: StreamSource.WOT_DOMAIN,
+        params: {
+          limit: 15,
+          viewer_id: mockViewerId,
+          depth: 2 as const,
+          domain_tags: 'artist,bitcoin',
+          kind: StreamKind.IMAGE,
+        },
+        extraParams: {},
+        expectedInUrl: [
+          'source=wot_domain',
+          'observer_id=viewer-pubky-id',
+          'depth=2',
+          'domain_tags=artist%2Cbitcoin',
+          'kind=image',
+        ],
+      },
+      {
         name: 'BOOKMARKS',
         invokeEndpoint: StreamSource.BOOKMARKS,
         params: { limit: 25, viewer_id: mockViewerId, sorting: StreamSorting.TIMELINE },
@@ -899,6 +986,13 @@ describe('NexusPostStreamService', () => {
         name: 'FRIENDS requires viewer_id',
         invokeEndpoint: StreamSource.FRIENDS,
         params: { limit: 10 }, // Missing viewer_id
+        extraParams: {},
+        expectedError: 'Viewer ID is required',
+      },
+      {
+        name: 'WOT requires viewer_id',
+        invokeEndpoint: StreamSource.WOT,
+        params: { limit: 10 },
         extraParams: {},
         expectedError: 'Viewer ID is required',
       },

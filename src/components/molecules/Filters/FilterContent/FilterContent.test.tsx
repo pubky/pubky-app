@@ -1,31 +1,45 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { VISUAL_DISABLED_CONTENT } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
-import { CONTENT, type ContentType } from '@/stores/home/home.types';
+import { CONTENT } from '@/stores/home/home.types';
 import { FilterContent } from './FilterContent';
 
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.hasPointerCapture = vi.fn();
+  Element.prototype.releasePointerCapture = vi.fn();
+  Element.prototype.setPointerCapture = vi.fn();
+});
+
+async function selectContentOption(label: string) {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('combobox', { name: 'Content' }));
+  await user.click(screen.getByRole('option', { name: label }));
+}
+
 describe('FilterContent', () => {
-  it('renders with default selected tab', () => {
+  it('renders the current option in a dropdown trigger', () => {
     render(<FilterContent />);
 
     expect(screen.getByText('Content')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Content' })).toHaveTextContent('All');
   });
 
-  it('calls onTabChange when tab is clicked', () => {
+  it('calls onTabChange when an option is selected', async () => {
     const onTabChange = vi.fn();
     render(<FilterContent onTabChange={onTabChange} />);
 
-    fireEvent.click(screen.getByText('Images'));
-    expect(onTabChange).toHaveBeenCalledWith('images');
+    await selectContentOption('Images');
+
+    expect(onTabChange).toHaveBeenCalledWith(CONTENT.IMAGES);
   });
 
-  it('handles all tab types correctly', () => {
+  it('supports all content options', async () => {
     const onTabChange = vi.fn();
     render(<FilterContent onTabChange={onTabChange} />);
 
-    // Map of tab values to their display labels
-    const tabsToTest: Array<{ value: ContentType; label: string }> = [
-      { value: CONTENT.ALL, label: 'All' },
+    const options = [
       { value: CONTENT.SHORT, label: 'Posts' },
       { value: CONTENT.LONG, label: 'Articles' },
       { value: CONTENT.COLLECTIONS, label: 'Collections' },
@@ -33,78 +47,78 @@ describe('FilterContent', () => {
       { value: CONTENT.VIDEOS, label: 'Videos' },
       { value: CONTENT.LINKS, label: 'Links' },
       { value: CONTENT.FILES, label: 'Files' },
+      { value: CONTENT.ALL, label: 'All' },
     ];
 
-    tabsToTest.forEach(({ value, label }) => {
-      fireEvent.click(screen.getByText(label));
-      expect(onTabChange).toHaveBeenCalledWith(value);
+    for (const { label } of options) {
+      await selectContentOption(label);
+    }
+
+    options.forEach(({ value }, index) => {
+      expect(onTabChange).toHaveBeenNthCalledWith(index + 1, value);
     });
+  }, 10_000);
+
+  it('updates the trigger when the controlled selection changes', () => {
+    const { rerender } = render(<FilterContent selectedTab={CONTENT.ALL} />);
+
+    expect(screen.getByRole('combobox', { name: 'Content' })).toHaveTextContent('All');
+
+    rerender(<FilterContent selectedTab={CONTENT.LONG} />);
+
+    expect(screen.getByRole('combobox', { name: 'Content' })).toHaveTextContent('Articles');
   });
 
-  it('handles tab switching correctly', () => {
-    const onTabChange = vi.fn();
-    render(<FilterContent selectedTab={CONTENT.ALL} onTabChange={onTabChange} />);
-
-    // Click on articles tab
-    fireEvent.click(screen.getByText('Articles'));
-    expect(onTabChange).toHaveBeenCalledWith(CONTENT.LONG); // 'long' is the value
-    expect(onTabChange).toHaveBeenCalledTimes(1);
-  });
-
-  it('handles multiple tab clicks', () => {
+  it('handles multiple option selections', async () => {
     const onTabChange = vi.fn();
     render(<FilterContent onTabChange={onTabChange} />);
 
-    fireEvent.click(screen.getByText('Images'));
-    fireEvent.click(screen.getByText('Videos'));
-    fireEvent.click(screen.getByText('Files'));
+    await selectContentOption('Images');
+    await selectContentOption('Videos');
+    await selectContentOption('Files');
 
-    expect(onTabChange).toHaveBeenCalledTimes(3);
-    expect(onTabChange).toHaveBeenNthCalledWith(1, 'images');
-    expect(onTabChange).toHaveBeenNthCalledWith(2, 'videos');
-    expect(onTabChange).toHaveBeenNthCalledWith(3, 'files');
+    expect(onTabChange).toHaveBeenNthCalledWith(1, CONTENT.IMAGES);
+    expect(onTabChange).toHaveBeenNthCalledWith(2, CONTENT.VIDEOS);
+    expect(onTabChange).toHaveBeenNthCalledWith(3, CONTENT.FILES);
   });
 
-  it('renders all items as disabled when disabled prop is true', () => {
-    render(<FilterContent disabled />);
-
-    const labels = ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files'];
-    labels.forEach((label) => {
-      expect(screen.getByLabelText(label)).toHaveAttribute('aria-disabled', 'true');
-    });
-  });
-
-  it('does not call onTabChange when disabled', () => {
+  it('disables the dropdown when the filter is disabled', async () => {
     const onTabChange = vi.fn();
+    const user = userEvent.setup();
     render(<FilterContent disabled onTabChange={onTabChange} />);
 
-    fireEvent.click(screen.getByText('Images'));
-    fireEvent.click(screen.getByText('Videos'));
-    fireEvent.click(screen.getByText('Files'));
+    const trigger = screen.getByRole('combobox', { name: 'Content' });
+    expect(trigger).toBeDisabled();
 
+    await user.click(trigger);
+
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
     expect(onTabChange).not.toHaveBeenCalled();
   });
 
-  it('items are not disabled by default', () => {
+  it('renders enabled options by default', async () => {
+    const user = userEvent.setup();
     render(<FilterContent />);
 
-    const labels = ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files'];
-    labels.forEach((label) => {
-      expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
-    });
+    await user.click(screen.getByRole('combobox', { name: 'Content' }));
+
+    for (const label of ['All', 'Posts', 'Articles', 'Collections', 'Images', 'Videos', 'Links', 'Files']) {
+      expect(screen.getByRole('option', { name: label })).not.toHaveAttribute('aria-disabled', 'true');
+    }
   });
 
-  it('disables only the requested tabs', () => {
+  it('disables only the requested options', async () => {
+    const user = userEvent.setup();
     render(<FilterContent disabledTabs={VISUAL_DISABLED_CONTENT} />);
 
-    expect(screen.getByLabelText('Posts')).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByLabelText('Articles')).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByLabelText('Collections')).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByLabelText('Links')).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByLabelText('Files')).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByLabelText('All')).not.toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByLabelText('Images')).not.toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByLabelText('Videos')).not.toHaveAttribute('aria-disabled', 'true');
+    await user.click(screen.getByRole('combobox', { name: 'Content' }));
+
+    for (const label of ['Posts', 'Articles', 'Collections', 'Links', 'Files']) {
+      expect(screen.getByRole('option', { name: label })).toHaveAttribute('aria-disabled', 'true');
+    }
+    for (const label of ['All', 'Images', 'Videos']) {
+      expect(screen.getByRole('option', { name: label })).not.toHaveAttribute('aria-disabled', 'true');
+    }
   });
 });
 

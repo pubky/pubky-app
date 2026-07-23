@@ -1,3 +1,6 @@
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { NexusPostsKeyStream, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
@@ -46,10 +49,20 @@ export class NexusPostStreamService {
         break;
       case StreamSource.FOLLOWING:
       case StreamSource.FRIENDS:
+      case StreamSource.WOT:
+      case StreamSource.WOT_DOMAIN:
       case StreamSource.BOOKMARKS:
         // TODO: from now, always is going to be
         if (!params.viewer_id) {
-          throw new Error('Viewer ID is required for friends stream');
+          throw Err.validation(
+            ValidationErrorCode.MISSING_FIELD,
+            `Viewer ID is required for ${invokeEndpoint} stream`,
+            {
+              service: ErrorService.Nexus,
+              operation: 'fetchPostStream',
+              context: { invokeEndpoint },
+            },
+          );
         }
         nexusEndpoint = postStreamApi[invokeEndpoint]({ ...params, observer_id: params.viewer_id });
         break;
@@ -67,7 +80,11 @@ export class NexusPostStreamService {
         nexusEndpoint = postStreamApi.collection({ ...params, ...extraParams } as TStreamCollectionParams);
         break;
       default:
-        throw new Error(`Invalid stream type: ${invokeEndpoint}`);
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, `Invalid stream type: ${invokeEndpoint}`, {
+          service: ErrorService.Nexus,
+          operation: 'fetchPostStream',
+          context: { invokeEndpoint },
+        });
     }
     return await queryNexus<NexusPostsKeyStream>({ url: nexusEndpoint });
   }

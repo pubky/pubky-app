@@ -21,7 +21,8 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-house size-5 shrink-0"
+      class="lucide lucide-radio size-5 shrink-0"
+      data-reach-icon="all"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -33,10 +34,21 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"
+        d="M16.247 7.761a6 6 0 0 1 0 8.478"
       />
       <path
-        d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+        d="M19.075 4.933a10 10 0 0 1 0 14.134"
+      />
+      <path
+        d="M4.925 19.067a10 10 0 0 1 0-14.134"
+      />
+      <path
+        d="M7.753 16.239a6 6 0 0 1 0-8.478"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="2"
       />
     </svg>
     <span
@@ -44,7 +56,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
       data-override-defaults="true"
       data-testid="typography"
     >
-      Home
+      All
     </span>
   </a>
   <a
@@ -157,7 +169,8 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-house size-5 shrink-0"
+      class="lucide lucide-radio size-5 shrink-0"
+      data-reach-icon="all"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -169,10 +182,21 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"
+        d="M16.247 7.761a6 6 0 0 1 0 8.478"
       />
       <path
-        d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+        d="M19.075 4.933a10 10 0 0 1 0 14.134"
+      />
+      <path
+        d="M4.925 19.067a10 10 0 0 1 0-14.134"
+      />
+      <path
+        d="M7.753 16.239a6 6 0 0 1 0-8.478"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="2"
       />
     </svg>
     <span
@@ -180,7 +204,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       data-override-defaults="true"
       data-testid="typography"
     >
-      Home
+      All
     </span>
   </a>
   <a
@@ -317,7 +341,8 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-house size-5 shrink-0"
+      class="lucide lucide-radio size-5 shrink-0"
+      data-reach-icon="all"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -329,10 +354,21 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"
+        d="M16.247 7.761a6 6 0 0 1 0 8.478"
       />
       <path
-        d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+        d="M19.075 4.933a10 10 0 0 1 0 14.134"
+      />
+      <path
+        d="M4.925 19.067a10 10 0 0 1 0-14.134"
+      />
+      <path
+        d="M7.753 16.239a6 6 0 0 1 0-8.478"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="2"
       />
     </svg>
     <span
@@ -340,7 +376,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       data-override-defaults="true"
       data-testid="typography"
     >
-      Home
+      All
     </span>
   </a>
   <a
@@ -521,7 +557,8 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-house size-5 shrink-0"
+      class="lucide lucide-radio size-5 shrink-0"
+      data-reach-icon="all"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -533,10 +570,21 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"
+        d="M16.247 7.761a6 6 0 0 1 0 8.478"
       />
       <path
-        d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+        d="M19.075 4.933a10 10 0 0 1 0 14.134"
+      />
+      <path
+        d="M4.925 19.067a10 10 0 0 1 0-14.134"
+      />
+      <path
+        d="M7.753 16.239a6 6 0 0 1 0-8.478"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="2"
       />
     </svg>
     <span
@@ -544,7 +592,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
       data-override-defaults="true"
       data-testid="typography"
     >
-      Home
+      All
     </span>
   </a>
   <div

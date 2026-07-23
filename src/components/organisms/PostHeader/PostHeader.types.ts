@@ -8,4 +8,5 @@ export interface PostHeaderProps {
   showPopover?: boolean;
   size?: 'normal' | 'large';
   timeAgoPlacement?: 'top-right' | 'bottom-left';
+  avatarOnly?: boolean;
 }

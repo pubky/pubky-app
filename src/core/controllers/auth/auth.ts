@@ -4,6 +4,7 @@ import { BootstrapApplication, type BootstrapProgressCallback } from '@/applicat
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { TagApplication } from '@/application/tag/tag';
+import { UserApplication } from '@/application/user/user';
 import type {
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
@@ -28,6 +29,7 @@ import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import type { TGenerateAuthUrlResult, THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
+import { HOME_NETWORK_REACH_MIN_FOLLOWING, REACH } from '@/stores/home/home.types';
 import { useHotStore } from '@/stores/hot/hot.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
@@ -139,6 +141,17 @@ export class AuthController {
     }
   }
 
+  private static async setDefaultHomeReach(pubky: Pubky) {
+    try {
+      const counts = await UserApplication.getOrFetchCounts({ userId: pubky });
+      const reach = (counts?.following ?? 0) >= HOME_NETWORK_REACH_MIN_FOLLOWING ? REACH.NETWORK : REACH.ALL;
+      useHomeStore.getState().setReach(reach);
+    } catch (error) {
+      Logger.warn('Failed to resolve default Reach after sign in', { pubky, error });
+      useHomeStore.getState().setReach(REACH.ALL);
+    }
+  }
+
   /**
    * Initializes the authenticated session and checks if the user is signed up (profile.json in homeserver).
    * @param params - Object containing session data from authentication
@@ -162,6 +175,7 @@ export class AuthController {
 
       if (isSignedUp) {
         await this.hydrateMeImAlive({ pubky });
+        await this.setDefaultHomeReach(pubky);
       }
 
       // Update hasProfile after bootstrap completes - triggers redirect via useAuthStatus

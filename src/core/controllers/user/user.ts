@@ -6,7 +6,7 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
-import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
@@ -195,7 +195,7 @@ export class UserController {
    *
    * @returns The active stream ID, or null if not on /home route or if retrieval fails
    */
-  private static getActiveStreamId(): PostStreamTypes | null {
+  private static getActiveStreamId(): PostStreamId | null {
     if (typeof window === 'undefined' || window.location.pathname !== '/home') {
       return null;
     }

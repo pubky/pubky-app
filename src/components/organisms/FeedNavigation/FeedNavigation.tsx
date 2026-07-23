@@ -2,10 +2,9 @@
 
 import { usePathname } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-// Module-level cache: survives remounts within the session so that
-// navigating between /home and /feed/[id] doesn't flash empty tabs.
-import { Home, Pencil, PlusCircle } from 'lucide-react';
+import { HeartHandshake, type LucideProps, Pencil, PlusCircle, Radio, UserRound, Waypoints } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import type { ComponentType } from 'react';
 import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -14,21 +13,45 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FeedController } from '@/controllers/feed/feed';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { UsersRound2 } from '@/icons';
 import { Logger } from '@/libs/logger/logger';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { useHomeStore } from '@/stores/home/home.store';
+import { REACH, type ReachType } from '@/stores/home/home.types';
 import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
 
+// Module-level cache: survives remounts within the session so that
+// navigating between /home and /feed/[id] doesn't flash empty tabs.
 let cachedFeeds: FeedModelSchema[] = [];
+const HOME_FEED_REACH: Record<
+  ReachType,
+  {
+    icon: ComponentType<LucideProps>;
+    labelKey: 'all' | 'myNetwork' | 'following' | 'friends' | 'me';
+  }
+> = {
+  [REACH.ALL]: { icon: Radio, labelKey: 'all' },
+  [REACH.NETWORK]: { icon: Waypoints, labelKey: 'myNetwork' },
+  [REACH.FOLLOWING]: { icon: UsersRound2, labelKey: 'following' },
+  [REACH.FRIENDS]: { icon: HeartHandshake, labelKey: 'friends' },
+  [REACH.ME]: { icon: UserRound, labelKey: 'me' },
+};
+
 interface FeedNavigationProps {
   className?: string;
 }
 export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const pathname = usePathname();
   const tHeader = useTranslations('header');
+  const tReach = useTranslations('filters.reach');
   const tDialog = useTranslations('dialogs.customFeed');
   const { isAuthenticated, requireAuth } = useRequireAuth();
+  const reach = useHomeStore((state) => state.reach);
+  const effectiveReach = isAuthenticated || reach === REACH.NETWORK ? reach : REACH.ALL;
+  const homeFeedReach = HOME_FEED_REACH[effectiveReach];
+  const HomeFeedReachIcon = homeFeedReach.icon;
   const customFeeds = useLiveQuery(
     async () => {
       try {
@@ -56,8 +79,8 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   }));
   const feeds = [
     {
-      name: tHeader('home'),
-      icon: <Home className="size-5 shrink-0" />,
+      name: tReach(homeFeedReach.labelKey),
+      icon: <HomeFeedReachIcon className="size-5 shrink-0" data-reach-icon={effectiveReach} />,
       href: APP_ROUTES.HOME,
     },
     ...customFeedsMapped,

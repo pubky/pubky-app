@@ -1,8 +1,9 @@
-import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import type { AuthorStreamCompositeId, PostStreamId } from '@/models/stream/post/postStream.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { type ContentType, REACH } from '@/stores/home/home.types';
-import { getStreamId } from '@/stores/home/home.utils';
+import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 
 /**
  * Custom hook that returns the current streamId based on global filter state
@@ -10,9 +11,10 @@ import { getStreamId } from '@/stores/home/home.utils';
  * This hook reads the current filter state from the filters store and
  * generates the appropriate streamId following the pattern: sorting:source:kind
  *
- * All valid filter combinations map to PostStreamTypes enum values.
+ * Standard reaches map to Nexus post streams. ME reuses the existing
+ * author/profile stream, while NETWORK resolves through the WoT stream.
  *
- * @returns The current streamId as PostStreamTypes enum
+ * @returns The current post stream ID
  *
  * @example
  * ```tsx
@@ -28,13 +30,18 @@ import { getStreamId } from '@/stores/home/home.utils';
  * }
  * ```
  */
-export function useStreamIdFromFilters(contentOverride?: ContentType): PostStreamTypes {
+export function useStreamIdFromFilters(contentOverride?: ContentType): PostStreamId {
   const sort = useHomeStore((state) => state.sort);
   const reach = useHomeStore((state) => state.reach);
   const content = useHomeStore((state) => state.content);
+  const profileTags = useHomeStore((state) => state.profileTags);
+  const profileTagScope = useHomeStore((state) => state.profileTagScope);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const effectiveReach = currentUserPubky ? reach : REACH.ALL;
   const effectiveContent = contentOverride ?? content;
 
-  return getStreamId(sort, effectiveReach, effectiveContent);
+  if (reach === REACH.ME && currentUserPubky) {
+    return `${StreamSource.AUTHOR}:${currentUserPubky}` as AuthorStreamCompositeId;
+  }
+
+  return getHomeStreamIdFromFilters(sort, reach, effectiveContent, currentUserPubky, profileTags, profileTagScope);
 }

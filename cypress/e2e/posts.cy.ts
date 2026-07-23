@@ -392,6 +392,7 @@ describe('posts', () => {
     cy.location('pathname').should('contain', '/post/');
 
     // switch to wide layout
+    cy.get('[data-cy="filter-layout-dropdown"]').filter(':visible').click();
     cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').click();
 
     // add three tags to post

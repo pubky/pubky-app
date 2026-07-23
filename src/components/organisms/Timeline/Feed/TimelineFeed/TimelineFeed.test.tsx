@@ -15,7 +15,7 @@ import {
 } from '@/models/stream/post/postStream.types';
 import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
+import { CONTENT, type ContentType, LAYOUT, PROFILE_TAG_SCOPE, REACH, SORT } from '@/stores/home/home.types';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
@@ -266,6 +266,8 @@ describe('TimelineFeed', () => {
       sort: SORT.TIMELINE,
       reach: REACH.ALL,
       content: CONTENT.ALL,
+      profileTags: [],
+      profileTagScope: PROFILE_TAG_SCOPE.NETWORK,
     });
 
     // Default mock implementations
@@ -327,6 +329,90 @@ describe('TimelineFeed', () => {
 
       expect(screen.getByTestId('child-component')).toBeInTheDocument();
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+    });
+
+    it.each([
+      {
+        reach: REACH.ALL,
+        summary: 'Posts from anyone tagged as ‘bitcoiner’ by my network',
+      },
+      {
+        reach: REACH.FRIENDS,
+        summary: 'Posts from friends tagged as ‘bitcoiner’ by my network',
+      },
+      {
+        reach: REACH.FOLLOWING,
+        summary: 'Posts from people I follow tagged as ‘bitcoiner’ by my network',
+      },
+      {
+        reach: REACH.NETWORK,
+        summary: 'Posts from people in my network tagged as ‘bitcoiner’ by my network',
+      },
+    ])('shows the profile-tag summary for $reach Reach', ({ reach, summary }) => {
+      useHomeStore.setState({ reach, profileTags: ['bitcoiner'] });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      const heading = screen.getByRole('heading', { level: 2, name: summary });
+      expect(heading).toBeInTheDocument();
+      expect(heading).toHaveClass('text-2xl');
+      expect(
+        heading.compareDocumentPosition(screen.getByTestId('timeline-posts')) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it.each([
+      {
+        profileTagScope: PROFILE_TAG_SCOPE.NETWORK,
+        summary: 'Posts from friends tagged as ‘bitcoiner’ by my network',
+      },
+      {
+        profileTagScope: PROFILE_TAG_SCOPE.FOLLOWING,
+        summary: 'Posts from friends tagged as ‘bitcoiner’ by people I follow',
+      },
+      {
+        profileTagScope: PROFILE_TAG_SCOPE.ME,
+        summary: 'Posts from friends tagged as ‘bitcoiner’ by me',
+      },
+    ])('reflects the $profileTagScope profile-tag curator', ({ profileTagScope, summary }) => {
+      useHomeStore.setState({
+        reach: REACH.FRIENDS,
+        profileTags: ['bitcoiner'],
+        profileTagScope,
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(screen.getByRole('heading', { level: 2, name: summary })).toBeInTheDocument();
+    });
+
+    it('summarizes multiple profile tags with OR semantics', () => {
+      useHomeStore.setState({ reach: REACH.NETWORK, profileTags: ['bitcoiner', 'developer'] });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(
+        screen.getByRole('heading', {
+          level: 2,
+          name: 'Posts from people in my network tagged as ‘bitcoiner’ or ‘developer’ by my network',
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it('does not show a profile-tag summary for Me Reach', () => {
+      useHomeStore.setState({ reach: REACH.ME, profileTags: ['bitcoiner'] });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(screen.queryByText(/tagged as/)).not.toBeInTheDocument();
+    });
+
+    it('does not show a profile-tag summary without an applied tag', () => {
+      useHomeStore.setState({ reach: REACH.NETWORK, profileTags: [] });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(screen.queryByText(/Posts from people/)).not.toBeInTheDocument();
     });
 
     it('should render the visual renderer when visual layout is active', () => {

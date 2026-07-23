@@ -1156,10 +1156,30 @@
   },
   "filters": {
     "reach": {
-      "title": "范围",
+      "title": "帖子来源",
       "all": "全部",
+      "network": "网络",
+      "myNetwork": "我的网络",
       "following": "关注",
-      "friends": "好友"
+      "friends": "好友",
+      "me": "我",
+      "profileTag": "个人资料标签",
+      "profileTagLimitReached": "最多 {max} 个标签",
+      "taggedBy": "由{reach}标记",
+      "taggedByLabel": "选择谁标记了这些个人资料",
+      "profileTagSummary": {
+        "reach": {
+          "all": "{curator}标记为 {tags} 的任何人的帖子",
+          "friends": "{curator}标记为 {tags} 的好友帖子",
+          "following": "{curator}标记为 {tags} 的我关注的人的帖子",
+          "network": "{curator}标记为 {tags} 的我网络中的人的帖子"
+        },
+        "curator": {
+          "me": "我",
+          "following": "我关注的人",
+          "network": "我的网络"
+        }
+      }
     },
     "sort": {
       "title": "排序",

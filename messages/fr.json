@@ -1162,10 +1162,30 @@
   },
   "filters": {
     "reach": {
-      "title": "Portee",
+      "title": "Publications de",
       "all": "Tous",
+      "network": "Réseau",
+      "myNetwork": "Mon réseau",
       "following": "Abonnements",
-      "friends": "Amis"
+      "friends": "Amis",
+      "me": "Moi",
+      "profileTag": "tag de profil",
+      "profileTagLimitReached": "{max} tags maximum",
+      "taggedBy": "par {reach}",
+      "taggedByLabel": "Choisissez qui a tagué ces profils",
+      "profileTagSummary": {
+        "reach": {
+          "all": "Publications de toute personne taguée comme {tags} par {curator}",
+          "friends": "Publications d’amis tagués comme {tags} par {curator}",
+          "following": "Publications de personnes que je suis taguées comme {tags} par {curator}",
+          "network": "Publications de personnes de mon réseau taguées comme {tags} par {curator}"
+        },
+        "curator": {
+          "me": "moi",
+          "following": "les personnes que je suis",
+          "network": "mon réseau"
+        }
+      }
     },
     "sort": {
       "title": "Trier",

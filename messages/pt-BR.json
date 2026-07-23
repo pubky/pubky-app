@@ -1162,10 +1162,30 @@
   },
   "filters": {
     "reach": {
-      "title": "Alcance",
+      "title": "Posts de",
       "all": "Todos",
+      "network": "Rede",
+      "myNetwork": "Minha rede",
       "following": "Seguindo",
-      "friends": "Amigos"
+      "friends": "Amigos",
+      "me": "Eu",
+      "profileTag": "tag de perfil",
+      "profileTagLimitReached": "máximo de {max} tags",
+      "taggedBy": "por {reach}",
+      "taggedByLabel": "Escolha quem marcou estes perfis",
+      "profileTagSummary": {
+        "reach": {
+          "all": "Posts de qualquer pessoa marcada como {tags} por {curator}",
+          "friends": "Posts de amigos marcados como {tags} por {curator}",
+          "following": "Posts de pessoas que sigo marcadas como {tags} por {curator}",
+          "network": "Posts de pessoas da minha rede marcadas como {tags} por {curator}"
+        },
+        "curator": {
+          "me": "mim",
+          "following": "pessoas que sigo",
+          "network": "minha rede"
+        }
+      }
     },
     "sort": {
       "title": "Ordenar",

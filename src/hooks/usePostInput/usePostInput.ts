@@ -170,6 +170,12 @@ export function usePostInput({
     }
   }, [isExpanded]);
 
+  useEffect(() => {
+    if (isExpanded && !isArticle) {
+      textareaRef.current?.focus();
+    }
+  }, [isExpanded, isArticle]);
+
   const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;

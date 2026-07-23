@@ -88,13 +88,13 @@ export function FilterTimeframe({ selectedTab = TIMEFRAME.THIS_MONTH, onTabChang
 /**
  * useGatedReachChange
  *
- * "All" reach is public; "Following"/"Friends" require an account, so prompt
+ * "All" and its temporary "Network" alias are public; personalized reaches prompt
  * Join Pubky in Explore mode (logged out) instead of changing the reach.
  */
 function useGatedReachChange(setReach: (reach: ReachType) => void) {
   const { requireAuth } = useRequireAuth();
   return (value: ReachType) => {
-    if (value === REACH.ALL) {
+    if (value === REACH.ALL || value === REACH.NETWORK) {
       setReach(value);
       return;
     }
@@ -113,7 +113,7 @@ export function HotFeedSidebar() {
   const { reach, setReach, timeframe, setTimeframe } = useHotStore();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isAuthenticated = Boolean(currentUserPubky);
-  const effectiveReach = isAuthenticated ? reach : REACH.ALL;
+  const effectiveReach = isAuthenticated || reach === REACH.NETWORK ? reach : REACH.ALL;
 
   const handleReachChange = useGatedReachChange(setReach);
 
@@ -137,7 +137,7 @@ export function HotFeedDrawer() {
   const { reach, setReach, timeframe, setTimeframe } = useHotStore();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isAuthenticated = Boolean(currentUserPubky);
-  const effectiveReach = isAuthenticated ? reach : REACH.ALL;
+  const effectiveReach = isAuthenticated || reach === REACH.NETWORK ? reach : REACH.ALL;
 
   const handleReachChange = useGatedReachChange(setReach);
 

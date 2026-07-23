@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
+import { CONTENT, PROFILE_TAG_SCOPE, REACH, SORT } from '@/stores/home/home.types';
 import { useStreamIdFromFilters } from './useStreamIdFromFilters';
 
 let mockCurrentUserPubky: string | null = 'viewer-pubky';
@@ -11,6 +11,8 @@ const mockHomeStore = vi.hoisted(() => {
     sort: 'timeline',
     reach: 'all',
     content: 'all',
+    profileTags: [] as string[],
+    profileTagScope: 'network',
   };
   const state = {
     ...initialState,
@@ -23,10 +25,18 @@ const mockHomeStore = vi.hoisted(() => {
     setContent: (content: string) => {
       state.content = content;
     },
+    setProfileTags: (profileTags: string[]) => {
+      state.profileTags = profileTags;
+    },
+    setProfileTagScope: (profileTagScope: string) => {
+      state.profileTagScope = profileTagScope;
+    },
     reset: () => {
       state.sort = initialState.sort;
       state.reach = initialState.reach;
       state.content = initialState.content;
+      state.profileTags = [];
+      state.profileTagScope = initialState.profileTagScope;
     },
   };
 
@@ -92,6 +102,80 @@ describe('useStreamIdFromFilters', () => {
 
     expect(result.current).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
     expect(result.current).toBe('timeline:all:all');
+  });
+
+  it('should use the signed-in user profile stream for Me reach', () => {
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    setReach.current(REACH.ME);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+
+    expect(result.current).toBe('author:viewer-pubky');
+  });
+
+  it('keeps the profile stream for Me even when profile tags are preserved in state', () => {
+    const { result: homeStore } = renderHook(() => useHomeStore());
+
+    homeStore.current.setReach(REACH.ME);
+    homeStore.current.setProfileTags(['developer']);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+    expect(result.current).toBe('author:viewer-pubky');
+  });
+
+  it('should use the WoT stream for Network reach', () => {
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    setReach.current(REACH.NETWORK);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+
+    expect(result.current).toBe('timeline:wot:all');
+  });
+
+  it('uses WoT scope depth, Sort, Content, and profile tags while Nexus applies its default Reach', () => {
+    const { result: homeStore } = renderHook(() => useHomeStore());
+
+    homeStore.current.setReach(REACH.NETWORK);
+    homeStore.current.setSort(SORT.ENGAGEMENT);
+    homeStore.current.setContent(CONTENT.LONG);
+    homeStore.current.setProfileTags(['writer', 'bitcoin']);
+    homeStore.current.setProfileTagScope(PROFILE_TAG_SCOPE.NETWORK);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+    expect(result.current).toBe('total_engagement:wot_domain:2:long:bitcoin,writer');
+  });
+
+  it('keeps Reach unchanged while the independent WoT scope changes', () => {
+    const { result: homeStore } = renderHook(() => useHomeStore());
+
+    homeStore.current.setReach(REACH.ALL);
+    homeStore.current.setProfileTagScope(PROFILE_TAG_SCOPE.ME);
+    homeStore.current.setProfileTags(['bitcoiner']);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+    expect(homeStore.current.reach).toBe(REACH.ALL);
+    expect(result.current).toBe('timeline:wot_domain:0:all:bitcoiner');
+  });
+
+  it('does not activate a WoT-domain stream without an authenticated viewer', () => {
+    mockCurrentUserPubky = null;
+    const { result: homeStore } = renderHook(() => useHomeStore());
+
+    homeStore.current.setReach(REACH.NETWORK);
+    homeStore.current.setProfileTags(['bitcoin']);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+    expect(result.current).toBe('timeline:all:all');
+  });
+
+  it('should fall back to All for Me reach when no user is authenticated', () => {
+    mockCurrentUserPubky = null;
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    setReach.current(REACH.ME);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+
+    expect(result.current).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
   });
 
   it('should update when content filter changes', () => {
@@ -182,9 +266,11 @@ describe('useStreamIdFromFilters', () => {
 
     // Test each reach option
     const reachOptions = [
-      { reach: REACH.ALL, expected: 'timeline:all:all' },
-      { reach: REACH.FOLLOWING, expected: 'timeline:following:all' },
+      { reach: REACH.ME, expected: 'author:viewer-pubky' },
       { reach: REACH.FRIENDS, expected: 'timeline:friends:all' },
+      { reach: REACH.FOLLOWING, expected: 'timeline:following:all' },
+      { reach: REACH.NETWORK, expected: 'timeline:wot:all' },
+      { reach: REACH.ALL, expected: 'timeline:all:all' },
     ];
 
     reachOptions.forEach(({ reach, expected }) => {

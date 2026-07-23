@@ -266,6 +266,22 @@ describe('usePostInput', () => {
       expect(result.current.isExpanded).toBe(true);
     });
 
+    it('focuses the textarea when the input expands', async () => {
+      const focus = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      result.current.textareaRef.current = asOpaque<HTMLTextAreaElement>({ focus });
+
+      act(() => {
+        result.current.handleExpand();
+      });
+
+      await waitFor(() => expect(focus).toHaveBeenCalled());
+    });
+
     it('does not change state when already expanded', () => {
       const { result } = renderHook(() =>
         usePostInput({

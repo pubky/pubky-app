@@ -1162,10 +1162,30 @@
   },
   "filters": {
     "reach": {
-      "title": "範囲",
+      "title": "投稿元",
       "all": "すべて",
+      "network": "ネットワーク",
+      "myNetwork": "自分のネットワーク",
       "following": "フォロー中",
-      "friends": "友達"
+      "friends": "友達",
+      "me": "自分",
+      "profileTag": "プロフィールタグ",
+      "profileTagLimitReached": "最大{max}個のタグ",
+      "taggedBy": "{reach}による",
+      "taggedByLabel": "これらのプロフィールをタグ付けした範囲を選択",
+      "profileTagSummary": {
+        "reach": {
+          "all": "{curator}が {tags} とタグ付けした人の投稿",
+          "friends": "{curator}が {tags} とタグ付けした友達の投稿",
+          "following": "{curator}が {tags} とタグ付けしたフォロー中の人の投稿",
+          "network": "{curator}が {tags} とタグ付けした自分のネットワーク内の人の投稿"
+        },
+        "curator": {
+          "me": "私",
+          "following": "フォロー中の人",
+          "network": "自分のネットワーク"
+        }
+      }
     },
     "sort": {
       "title": "並べ替え",

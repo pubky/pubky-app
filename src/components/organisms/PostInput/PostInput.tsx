@@ -197,6 +197,14 @@ export function PostInput({
   const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
   const isWideLayout = usesWidePostInput(useEffectiveTagsLayout());
+  const isMinimalNewPost =
+    variant === POST_INPUT_VARIANT.POST &&
+    !isExpanded &&
+    !isArticle &&
+    !isDragging &&
+    content.trim().length === 0 &&
+    attachments.length === 0 &&
+    tags.length === 0;
 
   return (
     <Container
@@ -206,8 +214,7 @@ export function PostInput({
       className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
         'max-w-full min-w-0',
-        isWideLayout ? 'p-12' : 'p-4',
-        !isAuthenticated ? 'px-6' : '',
+        isWideLayout ? 'p-12' : 'p-6',
         isDragging ? 'border-brand' : 'border-input',
       )}
       onClick={handleExpandWithAuth}
@@ -227,7 +234,7 @@ export function PostInput({
       )}
 
       {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
-      <Container className="min-w-0 gap-4 contain-inline-size">
+      <Container className={cn('min-w-0 gap-4 contain-inline-size', isMinimalNewPost && 'flex-row items-center')}>
         {isArticle && (
           <Input
             placeholder={t('articleTitle')}
@@ -246,6 +253,7 @@ export function PostInput({
             characterLimit={characterLimit}
             showPopover={false}
             size={isWideLayout ? 'large' : 'normal'}
+            avatarOnly={isMinimalNewPost}
           />
         )}
 

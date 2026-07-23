@@ -7,10 +7,23 @@ exports[`HomeFeedDrawer - Snapshots > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
-      data-selected-tab="following"
-      data-testid="filter-reach"
+      class="flex flex-col transition-[gap] duration-100 gap-6"
+      data-testid="container"
     >
-      FilterReach
+      <div
+        data-selected-tab="following"
+        data-testid="filter-reach"
+      >
+        FilterReach
+      </div>
+      <div
+        data-hidden="false"
+        data-input-disabled="false"
+        data-scope="network"
+        data-testid="filter-profile-tags"
+      >
+        FilterProfileTags
+      </div>
     </div>
     <div
       data-testid="filter-sort"
@@ -40,10 +53,23 @@ exports[`HomeFeedDrawerMobile - Snapshots > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
-      data-selected-tab="following"
-      data-testid="filter-reach"
+      class="flex flex-col transition-[gap] duration-100 gap-6"
+      data-testid="container"
     >
-      FilterReach
+      <div
+        data-selected-tab="following"
+        data-testid="filter-reach"
+      >
+        FilterReach
+      </div>
+      <div
+        data-hidden="false"
+        data-input-disabled="false"
+        data-scope="network"
+        data-testid="filter-profile-tags"
+      >
+        FilterProfileTags
+      </div>
     </div>
     <div
       data-testid="filter-sort"
@@ -67,10 +93,23 @@ exports[`HomeFeedSidebar - Snapshots > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
-      data-selected-tab="following"
-      data-testid="filter-reach"
+      class="flex flex-col transition-[gap] duration-100 gap-6"
+      data-testid="container"
     >
-      FilterReach
+      <div
+        data-selected-tab="following"
+        data-testid="filter-reach"
+      >
+        FilterReach
+      </div>
+      <div
+        data-hidden="false"
+        data-input-disabled="false"
+        data-scope="network"
+        data-testid="filter-profile-tags"
+      >
+        FilterProfileTags
+      </div>
     </div>
     <div
       data-testid="filter-sort"

@@ -10,11 +10,6 @@ type BaseFilterMockProps = {
   disabled?: boolean;
   onTabChange?: (tab: string) => void;
 };
-const mockFilterReach = vi.fn(({ disabled }: BaseFilterMockProps) => (
-  <div data-testid="filter-reach" data-disabled={disabled ? 'true' : 'false'}>
-    FilterReach
-  </div>
-));
 const mockFilterSort = vi.fn(({ disabled }: BaseFilterMockProps) => (
   <div data-testid="filter-sort" data-disabled={disabled ? 'true' : 'false'}>
     FilterSort
@@ -50,10 +45,6 @@ vi.mock('@/atoms/Container/Container', () => ({
   ),
 }));
 
-vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => ({
-  FilterReach: (props: BaseFilterMockProps) => mockFilterReach(props),
-}));
-
 vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => ({
   FilterSort: (props: BaseFilterMockProps) => mockFilterSort(props),
 }));
@@ -70,7 +61,6 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockSetLayout.mockClear();
-  mockFilterReach.mockClear();
   mockFilterSort.mockClear();
   mockFilterContent.mockClear();
   mockFilterLayout.mockClear();
@@ -81,14 +71,13 @@ beforeEach(() => {
 });
 
 describe('SinglePostLeftSidebar', () => {
-  it('renders only the layout filter', () => {
+  it('renders the remaining filters without Reach', () => {
     render(<SinglePostLeftSidebar />);
 
     expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
-    expect(screen.queryByTestId('filter-reach')).toBeInTheDocument();
+    expect(screen.queryByTestId('filter-reach')).not.toBeInTheDocument();
     expect(screen.queryByTestId('filter-sort')).toBeInTheDocument();
     expect(screen.queryByTestId('filter-content')).toBeInTheDocument();
-    expect(mockFilterReach).toHaveBeenCalled();
     expect(mockFilterSort).toHaveBeenCalled();
     expect(mockFilterContent).toHaveBeenCalled();
   });
@@ -119,10 +108,9 @@ describe('SinglePostLeftDrawer', () => {
     render(<SinglePostLeftDrawer />);
 
     expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
-    expect(screen.queryByTestId('filter-reach')).toBeInTheDocument();
+    expect(screen.queryByTestId('filter-reach')).not.toBeInTheDocument();
     expect(screen.queryByTestId('filter-sort')).toBeInTheDocument();
     expect(screen.queryByTestId('filter-content')).toBeInTheDocument();
-    expect(mockFilterReach).toHaveBeenCalled();
     expect(mockFilterSort).toHaveBeenCalled();
     expect(mockFilterContent).toHaveBeenCalled();
   });
@@ -152,11 +140,10 @@ describe('SinglePostLeftDrawerMobile', () => {
     render(<SinglePostLeftDrawerMobile />);
 
     expect(screen.queryByTestId('filter-layout')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('filter-reach')).toBeInTheDocument();
+    expect(screen.queryByTestId('filter-reach')).not.toBeInTheDocument();
     expect(screen.queryByTestId('filter-sort')).toBeInTheDocument();
     expect(screen.queryByTestId('filter-content')).toBeInTheDocument();
     expect(mockFilterLayout).not.toHaveBeenCalled();
-    expect(mockFilterReach).toHaveBeenCalled();
     expect(mockFilterSort).toHaveBeenCalled();
     expect(mockFilterContent).toHaveBeenCalled();
   });

@@ -1,12 +1,15 @@
 import type { TFetchStreamParams } from '@/application/stream/posts/post.types';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import type { PostStreamId, WotDomainDepth } from '@/models/stream/post/postStream.types';
 import type {
   THandleNotCommonStreamParamsParams,
   TSetStreamPaginationParams,
 } from '@/services/local/stream/posts/post.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
-import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
+import {
+  POST_STREAM_TAG_DELIMITER,
+  POST_STREAM_WOT_DEFAULT_DEPTH,
+} from '@/services/nexus/stream/posts/postStream.constants';
 import {
   StreamKind,
   StreamOrder,
@@ -33,12 +36,19 @@ export function createPostStreamParams({
   viewerId,
   order,
 }: TFetchStreamParams): TPostStreamFetchParams {
-  const [sorting, invokeEndpoint, content, tags] = breakDownStreamId(streamId);
+  const [sorting, invokeEndpoint, content, tags, wotDepth, domainTags] = breakDownStreamId(streamId);
 
   const params: TStreamBase = {};
   params.viewer_id = viewerId ?? undefined;
   params.sorting = parseSorting(sorting);
   params.tags = tags;
+  if (invokeEndpoint === StreamSource.WOT_DOMAIN) {
+    params.depth = wotDepth;
+    params.domain_tags = domainTags;
+  }
+  if (invokeEndpoint === StreamSource.WOT) {
+    params.depth = POST_STREAM_WOT_DEFAULT_DEPTH;
+  }
   // REPLIES and COLLECTION use the third segment for an entity id (postId), not a kind.
   if (content && invokeEndpoint !== StreamSource.REPLIES && invokeEndpoint !== StreamSource.COLLECTION) {
     params.kind = parseContent(content);
@@ -124,27 +134,35 @@ function toStreamSource({ value }: TStreamSource): StreamSource {
  * @param streamId - The stream ID to break down
  */
 export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
-  const [sorting, invokeEndpoint, kind, tags] = streamId.split(':');
+  const [sorting, invokeEndpoint, kind, tags, fifthSegment] = streamId.split(':');
   // Tags are separated by ',' character. Only the first MAX_STREAM_TAGS are considered.
-  const limitTags = tags
-    ? tags.split(POST_STREAM_TAG_DELIMITER).slice(0, getMaxStreamTags()).join(POST_STREAM_TAG_DELIMITER)
-    : undefined;
+  const limitTags = (value: string | undefined) =>
+    value
+      ? value.split(POST_STREAM_TAG_DELIMITER).slice(0, getMaxStreamTags()).join(POST_STREAM_TAG_DELIMITER)
+      : undefined;
+
+  if (invokeEndpoint === StreamSource.WOT_DOMAIN) {
+    const depth = kind === '0' || kind === '1' || kind === '2' ? (Number(kind) as WotDomainDepth) : undefined;
+    return [sorting, StreamSource.WOT_DOMAIN, tags, undefined, depth, limitTags(fifthSegment)];
+  }
+
+  const limitedTags = limitTags(tags);
 
   if (kind) {
     if (sorting === StreamSource.REPLIES || sorting === StreamSource.COLLECTION) {
       // Source-first composite formats:
       // - post_replies:<pubky>:<postId>
       // - collection:<pubky>:<postId>
-      return [invokeEndpoint, toStreamSource({ value: sorting }), kind, limitTags];
+      return [invokeEndpoint, toStreamSource({ value: sorting }), kind, limitedTags];
     }
     // Applies to timeline pattern (sorting:source:kind[:tags]) and to the
     // author-with-kind shape (<pubky>:author:<kind>) where parseSorting falls
     // through to undefined.
-    return [sorting, toStreamSource({ value: invokeEndpoint }), kind, limitTags];
+    return [sorting, toStreamSource({ value: invokeEndpoint }), kind, limitedTags];
   }
   // That case covers StreamSource.AUTHOR_REPLIES and StreamSource.AUTHOR
   // i.e. [pubky, author_replies | author, undefined]
-  return [invokeEndpoint, toStreamSource({ value: sorting }), undefined, limitTags];
+  return [invokeEndpoint, toStreamSource({ value: sorting }), undefined, limitedTags];
 }
 
 /**

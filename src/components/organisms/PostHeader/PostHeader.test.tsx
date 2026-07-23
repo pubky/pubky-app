@@ -113,6 +113,12 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
   };
 });
 
+vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
+  AvatarWithFallback: vi.fn(({ fallbackSeed, size, 'data-testid': dataTestId }) => (
+    <div data-testid={dataTestId} data-fallback-seed={fallbackSeed} data-size={size} />
+  )),
+}));
+
 // Use real libs - use actual implementations
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
@@ -190,6 +196,18 @@ describe('PostHeader', () => {
     renderPostHeader(<PostHeader postId="userpubkykey:post456" isReplyInput={true} />);
 
     expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
+  });
+
+  it('renders only an avatar for the minimal new-post header state', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
+    mockUseAvatarUrl.mockReturnValue(undefined);
+
+    renderPostHeader(<PostHeader postId="userpubkykey" isReplyInput avatarOnly />);
+
+    expect(screen.getByTestId('post-header-avatar')).toHaveAttribute('data-fallback-seed', 'userpubkykey');
+    expect(screen.queryByTestId('post-header-user-info')).not.toBeInTheDocument();
+    expect(screen.queryByText('Test User')).not.toBeInTheDocument();
   });
 
   it('passes size prop to PostHeaderUserInfo', () => {

@@ -7,6 +7,7 @@ import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
+import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { PostHeaderSkeleton } from './PostHeader.skeleton';
 import type { PostHeaderProps } from './PostHeader.types';
 
@@ -17,6 +18,7 @@ export function PostHeader({
   showPopover = true,
   size = 'normal',
   timeAgoPlacement = 'top-right',
+  avatarOnly = false,
 }: PostHeaderProps) {
   // Extract userId from postId (format: userId:postId or just userId if isReplyInput is true)
   const userId = isReplyInput ? postId : postId.split(':')[0];
@@ -33,6 +35,18 @@ export function PostHeader({
   const { formatRelativeTime } = useRelativeTime();
 
   const isLoading = !userDetails || (!isReplyInput && !postDetails);
+
+  if (avatarOnly) {
+    return (
+      <AvatarWithFallback
+        avatarUrl={avatarUrl}
+        name={userDetails?.name ?? ''}
+        fallbackSeed={userId}
+        size={size === 'large' ? 'xl' : 'default'}
+        data-testid="post-header-avatar"
+      />
+    );
+  }
 
   if (isLoading) {
     return <PostHeaderSkeleton />;

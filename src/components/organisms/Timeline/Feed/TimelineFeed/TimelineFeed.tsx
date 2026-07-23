@@ -1,6 +1,8 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
+import { Heading } from '@/atoms/Heading/Heading';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -20,6 +22,7 @@ import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayo
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
+import { REACH } from '@/stores/home/home.types';
 import { TimelineFeedWithStream } from '../TimelineFeedContent/TimelineFeedContent';
 import type { TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
@@ -91,9 +94,35 @@ function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children
       variant={TIMELINE_FEED_VARIANT.HOME}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      feedHeader={<HomeProfileTagSummary />}
     >
       {children}
     </TimelineFeedWithStream>
+  );
+}
+
+function HomeProfileTagSummary() {
+  const locale = useLocale();
+  const t = useTranslations('filters.reach.profileTagSummary');
+  const reach = useHomeStore((state) => state.reach);
+  const profileTags = useHomeStore((state) => state.profileTags);
+  const profileTagScope = useHomeStore((state) => state.profileTagScope);
+
+  if (profileTags.length === 0 || reach === REACH.ME) {
+    return null;
+  }
+
+  const tags = new Intl.ListFormat(locale, { style: 'long', type: 'disjunction' }).format(
+    profileTags.map((tag) => `‘${tag}’`),
+  );
+
+  return (
+    <Heading level={2} size="sm" className="text-2xl font-light text-muted-foreground">
+      {t(`reach.${reach}`, {
+        curator: t(`curator.${profileTagScope}`),
+        tags,
+      })}
+    </Heading>
   );
 }
 

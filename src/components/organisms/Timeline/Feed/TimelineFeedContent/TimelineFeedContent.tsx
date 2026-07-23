@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -37,6 +37,7 @@ interface TimelineFeedContentProps {
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
   gridTrailingSlot?: TimelineFeedGridTrailingSlot;
+  feedHeader?: ReactNode;
 }
 
 interface TimelineFeedWithStreamProps {
@@ -49,6 +50,7 @@ interface TimelineFeedWithStreamProps {
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
   gridTrailingSlot?: TimelineFeedGridTrailingSlot;
+  feedHeader?: ReactNode;
 }
 
 /**
@@ -67,6 +69,7 @@ export function TimelineFeedWithStream({
   collectionId,
   pullToRefreshContainerRef,
   gridTrailingSlot,
+  feedHeader,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
     return <TimelineLoading />;
@@ -82,6 +85,7 @@ export function TimelineFeedWithStream({
       collectionId={collectionId}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
       gridTrailingSlot={gridTrailingSlot}
+      feedHeader={feedHeader}
     >
       {children}
     </TimelineFeedContent>
@@ -111,6 +115,7 @@ function TimelineFeedContent({
   collectionId,
   pullToRefreshContainerRef,
   gridTrailingSlot,
+  feedHeader,
 }: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const refreshContainerRef = pullToRefreshContainerRef ?? containerRef;
@@ -212,6 +217,7 @@ function TimelineFeedContent({
         <Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
           {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
           {shouldRenderChildren ? children : null}
+          {feedHeader}
           <NewPostsSection
             streamId={streamId}
             variant={variant}

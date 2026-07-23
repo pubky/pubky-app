@@ -1162,10 +1162,30 @@
   },
   "filters": {
     "reach": {
-      "title": "Portata",
+      "title": "Post di",
       "all": "Tutti",
+      "network": "Rete",
+      "myNetwork": "La mia rete",
       "following": "Seguiti",
-      "friends": "Amici"
+      "friends": "Amici",
+      "me": "Io",
+      "profileTag": "tag profilo",
+      "profileTagLimitReached": "massimo {max} tag",
+      "taggedBy": "da {reach}",
+      "taggedByLabel": "Scegli chi ha taggato questi profili",
+      "profileTagSummary": {
+        "reach": {
+          "all": "Post di chiunque sia stato taggato come {tags} da {curator}",
+          "friends": "Post di amici taggati come {tags} da {curator}",
+          "following": "Post di persone che seguo taggate come {tags} da {curator}",
+          "network": "Post di persone nella mia rete taggate come {tags} da {curator}"
+        },
+        "curator": {
+          "me": "me",
+          "following": "persone che seguo",
+          "network": "la mia rete"
+        }
+      }
     },
     "sort": {
       "title": "Ordina",

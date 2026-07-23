@@ -1158,10 +1158,30 @@
   },
   "filters": {
     "reach": {
-      "title": "النطاق",
+      "title": "منشورات من",
       "all": "الكل",
+      "network": "الشبكة",
+      "myNetwork": "شبكتي",
       "following": "المتابَعون",
-      "friends": "الاصدقاء"
+      "friends": "الاصدقاء",
+      "me": "انا",
+      "profileTag": "وسم الملف الشخصي",
+      "profileTagLimitReached": "{max} وسوم كحد أقصى",
+      "taggedBy": "بواسطة {reach}",
+      "taggedByLabel": "اختر من قام بوسم هذه الملفات الشخصية",
+      "profileTagSummary": {
+        "reach": {
+          "all": "منشورات من أي شخص وسمه {curator} كـ {tags}",
+          "friends": "منشورات من الأصدقاء الذين وسمهم {curator} كـ {tags}",
+          "following": "منشورات من الأشخاص الذين أتابعهم ووسمهم {curator} كـ {tags}",
+          "network": "منشورات من أشخاص في شبكتي وسمهم {curator} كـ {tags}"
+        },
+        "curator": {
+          "me": "أنا",
+          "following": "الأشخاص الذين أتابعهم",
+          "network": "شبكتي"
+        }
+      }
     },
     "sort": {
       "title": "الترتيب",

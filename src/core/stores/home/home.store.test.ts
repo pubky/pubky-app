@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useHomeStore } from './home.store';
-import { CONTENT, homeInitialState, LAYOUT, REACH, SORT } from './home.types';
+import { CONTENT, homeInitialState, LAYOUT, PROFILE_TAG_SCOPE, REACH, SORT } from './home.types';
 
 describe('HomeStore', () => {
   beforeEach(() => {
@@ -16,6 +16,8 @@ describe('HomeStore', () => {
       expect(state.sort).toBe(SORT.TIMELINE);
       expect(state.reach).toBe(REACH.ALL);
       expect(state.content).toBe(CONTENT.ALL);
+      expect(state.profileTags).toEqual([]);
+      expect(state.profileTagScope).toBe(PROFILE_TAG_SCOPE.NETWORK);
     });
 
     it('should match homeInitialState', () => {
@@ -120,6 +122,48 @@ describe('HomeStore', () => {
 
       store.setReach(REACH.ALL);
       expect(useHomeStore.getState().reach).toBe(REACH.ALL);
+    });
+
+    it('preserves profile tags while Reach changes independently', () => {
+      const store = useHomeStore.getState();
+
+      store.setReach(REACH.NETWORK);
+      store.addProfileTag('bitcoin');
+      store.setReach(REACH.ALL);
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin']);
+    });
+  });
+
+  describe('Profile Tag Management', () => {
+    it('normalizes and deduplicates profile tags', () => {
+      const store = useHomeStore.getState();
+
+      store.setProfileTags([' Bitcoin ', 'bitcoin', 'Nostr']);
+
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'nostr']);
+    });
+
+    it('limits profile tags to five and removes them by normalized label', () => {
+      const store = useHomeStore.getState();
+
+      for (const tag of ['one', 'two', 'three', 'four', 'five', 'six']) {
+        store.addProfileTag(tag);
+      }
+      expect(useHomeStore.getState().profileTags).toEqual(['one', 'two', 'three', 'four', 'five']);
+
+      store.removeProfileTag(' TWO ');
+      expect(useHomeStore.getState().profileTags).toEqual(['one', 'three', 'four', 'five']);
+    });
+
+    it('changes WoT scope without changing Reach', () => {
+      const store = useHomeStore.getState();
+
+      store.setReach(REACH.ALL);
+      store.setProfileTagScope(PROFILE_TAG_SCOPE.NETWORK);
+
+      expect(useHomeStore.getState().reach).toBe(REACH.ALL);
+      expect(useHomeStore.getState().profileTagScope).toBe(PROFILE_TAG_SCOPE.NETWORK);
     });
   });
 

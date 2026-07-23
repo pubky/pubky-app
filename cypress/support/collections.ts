@@ -182,7 +182,8 @@ export const deleteCollectionFromHero = () => {
 
 // apply a content filter (e.g. 'All', 'Collections') from the home feed sidebar
 export const applyContentFilter = (label: string) => {
-  cy.get('[data-testid="filter-content-radiogroup"]').find(`[aria-label="${label}"]`).click();
+  cy.get('[data-testid="filter-content-dropdown"]').click();
+  cy.get(`[role="option"][aria-label="${label}"]`).click();
   waitForFeedToLoad();
 };
 

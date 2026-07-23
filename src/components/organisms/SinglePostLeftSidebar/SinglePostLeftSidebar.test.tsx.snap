@@ -8,12 +8,6 @@ exports[`SinglePostLeftDrawer > matches snapshot 1`] = `
   >
     <div
       data-disabled="true"
-      data-testid="filter-reach"
-    >
-      FilterReach
-    </div>
-    <div
-      data-disabled="true"
       data-testid="filter-sort"
     >
       FilterSort
@@ -46,12 +40,6 @@ exports[`SinglePostLeftDrawerMobile > matches snapshot 1`] = `
   >
     <div
       data-disabled="true"
-      data-testid="filter-reach"
-    >
-      FilterReach
-    </div>
-    <div
-      data-disabled="true"
       data-testid="filter-sort"
     >
       FilterSort
@@ -72,12 +60,6 @@ exports[`SinglePostLeftSidebar > matches snapshot 1`] = `
     class="flex flex-col gap-6"
     data-testid="container"
   >
-    <div
-      data-disabled="true"
-      data-testid="filter-reach"
-    >
-      FilterReach
-    </div>
     <div
       data-disabled="true"
       data-testid="filter-sort"

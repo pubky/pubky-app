@@ -1,10 +1,9 @@
 'use client';
 
-import * as React from 'react';
 import { Columns3, LayoutGrid, Rows2, Rows4 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
-import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
+import { FilterDropdown } from '../FilterDropdown/FilterDropdown';
 import { BaseFilterProps, FilterListItem } from '../Filters.types';
 
 interface FilterLayoutProps extends BaseFilterProps<LayoutType> {
@@ -19,49 +18,48 @@ export function FilterLayout({
 }: FilterLayoutProps) {
   const t = useTranslations('filters.layout');
   const displaySelectedTab = !showVisual && selectedTab === LAYOUT.VISUAL ? LAYOUT.COLUMNS : selectedTab;
-  const items = React.useMemo(
-    () =>
-      [
-        {
-          key: LAYOUT.COLUMNS,
-          label: t('columns'),
-          icon: Columns3,
+  const items = [
+    {
+      key: LAYOUT.COLUMNS,
+      label: t('columns'),
+      icon: Columns3,
+      disabled,
+      dataCy: 'columns-layout-toggle',
+    },
+    {
+      key: LAYOUT.WIDE,
+      label: t('wide'),
+      icon: Rows2,
+      disabled,
+      dataCy: 'wide-layout-toggle',
+    },
+    {
+      key: LAYOUT.LIST,
+      label: t('list'),
+      icon: Rows4,
+      disabled,
+      dataCy: 'list-layout-toggle',
+    },
+    showVisual
+      ? {
+          key: LAYOUT.VISUAL,
+          label: t('visual'),
+          icon: LayoutGrid,
           disabled,
-          dataCy: 'columns-layout-toggle',
-        },
-        {
-          key: LAYOUT.WIDE,
-          label: t('wide'),
-          icon: Rows2,
-          disabled,
-          dataCy: 'wide-layout-toggle',
-        },
-        {
-          key: LAYOUT.LIST,
-          label: t('list'),
-          icon: Rows4,
-          disabled,
-          dataCy: 'list-layout-toggle',
-        },
-        showVisual
-          ? {
-              key: LAYOUT.VISUAL,
-              label: t('visual'),
-              icon: LayoutGrid,
-              disabled,
-              dataCy: 'visual-layout-toggle',
-            }
-          : null,
-      ].filter(Boolean) as FilterListItem<LayoutType>[],
-    [t, disabled, showVisual],
-  );
+          dataCy: 'visual-layout-toggle',
+        }
+      : null,
+  ].filter(Boolean) as FilterListItem<LayoutType>[];
+
   return (
-    <FilterRadioGroup
+    <FilterDropdown
       title={t('title')}
       items={items}
       selectedValue={displaySelectedTab}
       defaultValue={defaultSelectedTab}
       onChange={onTabChange}
+      dataCy="filter-layout-dropdown"
+      testId="filter-layout-dropdown"
     />
   );
 }

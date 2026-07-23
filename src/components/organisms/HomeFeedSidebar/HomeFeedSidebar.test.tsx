@@ -3,35 +3,60 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
-const { mockSetContent, mockUseHomeStore, mockFilterContent, mockUseFeedLayoutResolution, mockCurrentUserPubky } =
-  vi.hoisted(() => ({
-    mockSetContent: vi.fn(),
-    mockUseHomeStore: vi.fn(),
-    mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
+const {
+  mockSetContent,
+  mockUseHomeStore,
+  mockFilterContent,
+  mockFilterProfileTags,
+  mockUseFeedLayoutResolution,
+  mockCurrentUserPubky,
+  mockSetReach,
+  mockSetProfileTagScope,
+} = vi.hoisted(() => ({
+  mockSetContent: vi.fn(),
+  mockUseHomeStore: vi.fn(),
+  mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
+    <div
+      data-testid="filter-content"
+      data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+      data-selected-tab={selectedTab}
+    >
+      FilterContent
+    </div>
+  )),
+  mockFilterProfileTags: vi.fn(
+    ({ hidden, inputDisabled, scope }: { hidden?: boolean; inputDisabled?: boolean; scope?: string }) => (
       <div
-        data-testid="filter-content"
-        data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
-        data-selected-tab={selectedTab}
+        data-testid="filter-profile-tags"
+        data-hidden={hidden ? 'true' : 'false'}
+        data-input-disabled={inputDisabled ? 'true' : 'false'}
+        data-scope={scope}
       >
-        FilterContent
+        FilterProfileTags
       </div>
-    )),
-    mockUseFeedLayoutResolution: vi.fn(() => ({
-      requestedLayout: 'columns',
-      effectiveLayout: 'columns',
-      isVisualRequested: false,
-      isVisualActive: false,
-      isPhoneViewport: false,
-    })),
-    mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
-  }));
+    ),
+  ),
+  mockUseFeedLayoutResolution: vi.fn(() => ({
+    requestedLayout: 'columns',
+    effectiveLayout: 'columns',
+    isVisualRequested: false,
+    isVisualActive: false,
+    isPhoneViewport: false,
+  })),
+  mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
+  mockSetReach: vi.fn(),
+  mockSetProfileTagScope: vi.fn(),
+}));
 
 // Mock useHomeStore
 vi.mock('@/stores/home/home.types', () => ({
+  HOME_PROFILE_TAGS_MAX_SELECTED: 5,
   REACH: {
-    ALL: 'all',
-    FOLLOWING: 'following',
+    ME: 'me',
     FRIENDS: 'friends',
+    FOLLOWING: 'following',
+    NETWORK: 'network',
+    ALL: 'all',
   },
   CONTENT: {
     ALL: 'all',
@@ -94,6 +119,11 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   };
 });
 
+vi.mock('@/molecules/Filters/FilterProfileTags/FilterProfileTags', () => ({
+  FilterProfileTags: (props: { hidden?: boolean; inputDisabled?: boolean; scope?: string }) =>
+    mockFilterProfileTags(props),
+}));
+
 vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
   return {
     FilterSort: () => <div data-testid="filter-sort">FilterSort</div>,
@@ -102,18 +132,26 @@ vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
 
 beforeEach(() => {
   mockSetContent.mockClear();
+  mockSetReach.mockClear();
+  mockSetProfileTagScope.mockClear();
   mockCurrentUserPubky.value = 'viewer-pubky';
   mockUseHomeStore.mockReturnValue({
     layout: 'columns',
     setLayout: vi.fn(),
     reach: 'following',
-    setReach: vi.fn(),
+    setReach: mockSetReach,
     sort: 'timeline',
     setSort: vi.fn(),
     content: 'all',
     setContent: mockSetContent,
+    profileTags: [],
+    profileTagScope: 'network',
+    addProfileTag: vi.fn(),
+    removeProfileTag: vi.fn(),
+    setProfileTagScope: mockSetProfileTagScope,
   });
   mockFilterContent.mockClear();
+  mockFilterProfileTags.mockClear();
   mockUseFeedLayoutResolution.mockReturnValue({
     requestedLayout: 'columns',
     effectiveLayout: 'columns',
@@ -128,6 +166,8 @@ describe('HomeFeedSidebar', () => {
     render(<HomeFeedSidebar />);
 
     expect(screen.getByTestId('filter-reach')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-profile-tags')).toHaveAttribute('data-hidden', 'false');
+    expect(screen.getByTestId('filter-profile-tags')).toHaveAttribute('data-scope', 'network');
     expect(screen.getByTestId('filter-sort')).toBeInTheDocument();
     expect(screen.getByTestId('filter-content')).toBeInTheDocument();
     expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
@@ -161,11 +201,16 @@ describe('HomeFeedSidebar', () => {
       layout: 'visual',
       setLayout: vi.fn(),
       reach: 'following',
-      setReach: vi.fn(),
+      setReach: mockSetReach,
       sort: 'timeline',
       setSort: vi.fn(),
       content: 'short',
       setContent: mockSetContent,
+      profileTags: [],
+      profileTagScope: 'network',
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+      setProfileTagScope: mockSetProfileTagScope,
     });
     mockUseFeedLayoutResolution.mockReturnValue({
       requestedLayout: 'visual',
@@ -187,6 +232,56 @@ describe('HomeFeedSidebar', () => {
     render(<HomeFeedSidebar />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
+    expect(screen.getByTestId('filter-profile-tags')).toHaveAttribute('data-hidden', 'false');
+    expect(screen.getByTestId('filter-profile-tags')).toHaveAttribute('data-input-disabled', 'true');
+  });
+
+  it('falls back to All when logged out with Network persisted', () => {
+    mockCurrentUserPubky.value = null;
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'network',
+      setReach: mockSetReach,
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: [],
+      profileTagScope: 'network',
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+      setProfileTagScope: mockSetProfileTagScope,
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
+    expect(screen.getByTestId('filter-profile-tags')).toHaveAttribute('data-hidden', 'false');
+    expect(screen.getByTestId('filter-profile-tags')).toHaveAttribute('data-input-disabled', 'true');
+  });
+
+  it('hides Tagged as only for Me reach', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'me',
+      setReach: mockSetReach,
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: ['bitcoiner'],
+      profileTagScope: 'following',
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+      setProfileTagScope: mockSetProfileTagScope,
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-profile-tags')).toHaveAttribute('data-hidden', 'true');
+    expect(screen.getByTestId('filter-profile-tags')).toHaveAttribute('data-scope', 'following');
   });
 });
 

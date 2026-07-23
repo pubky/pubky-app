@@ -2,21 +2,19 @@
 import { Container } from '@/atoms/Container/Container';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
-import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { useHomeStore } from '@/stores/home/home.store';
 
 /**
  * SinglePostFilters
  *
- * Base filter set for SinglePost page left panels (reach, sort, content).
+ * Base filter set for SinglePost page left panels (sort and content).
  * Layout-aware variants render the layout filter via a separate child so this
  * shared shell stays free of any store subscription.
  */
 function SinglePostFilters({ children }: { children?: React.ReactNode }) {
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
-      <FilterReach selectedTab={undefined} defaultSelectedTab={undefined} disabled />
       <FilterSort selectedTab={undefined} defaultSelectedTab={undefined} disabled />
       {children}
       <FilterContent selectedTab={undefined} defaultSelectedTab={undefined} disabled />

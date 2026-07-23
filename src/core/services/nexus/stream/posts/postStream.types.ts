@@ -1,4 +1,5 @@
 import type { Pubky } from '@/models/models.types';
+import type { WotDomainDepth } from '@/models/stream/post/postStream.types';
 import type { StreamSorting, TPaginationParams, TPaginationRangeParams } from '@/services/nexus/nexus.types';
 
 export enum STREAM_PREFIX {
@@ -12,6 +13,8 @@ export enum StreamSource {
   FOLLOWING = 'following',
   FOLLOWERS = 'followers',
   FRIENDS = 'friends',
+  WOT = 'wot',
+  WOT_DOMAIN = 'wot_domain',
   BOOKMARKS = 'bookmarks',
   REPLIES = 'post_replies',
   AUTHOR = 'author',
@@ -51,6 +54,8 @@ export type TStreamBase = TPaginationParams &
     kind?: StreamKind;
     order?: StreamOrder;
     tags?: string; // Max 5 tags
+    depth?: WotDomainDepth;
+    domain_tags?: string; // Max 5 profile tags
   };
 
 // Specific parameter types for each source
@@ -114,4 +119,6 @@ export type TStreamIdBreakdown = [
   invokeEndpoint: StreamSource,
   kind: string | undefined,
   tags: string | undefined,
+  wotDepth?: WotDomainDepth,
+  domainTags?: string,
 ];

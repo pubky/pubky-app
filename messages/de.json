@@ -1164,10 +1164,30 @@
   },
   "filters": {
     "reach": {
-      "title": "Reichweite",
+      "title": "Beiträge von",
       "all": "Alle",
+      "network": "Netzwerk",
+      "myNetwork": "Mein Netzwerk",
       "following": "Folge ich",
-      "friends": "Freunde"
+      "friends": "Freunde",
+      "me": "Ich",
+      "profileTag": "Profil-Tag",
+      "profileTagLimitReached": "max. {max} Tags",
+      "taggedBy": "von {reach}",
+      "taggedByLabel": "Auswählen, wer diese Profile markiert hat",
+      "profileTagSummary": {
+        "reach": {
+          "all": "Beiträge von allen, die von {curator} als {tags} markiert wurden",
+          "friends": "Beiträge von Freunden, die von {curator} als {tags} markiert wurden",
+          "following": "Beiträge von Personen, denen ich folge und die von {curator} als {tags} markiert wurden",
+          "network": "Beiträge von Personen in meinem Netzwerk, die von {curator} als {tags} markiert wurden"
+        },
+        "curator": {
+          "me": "mir",
+          "following": "Personen, denen ich folge",
+          "network": "meinem Netzwerk"
+        }
+      }
     },
     "sort": {
       "title": "Sortieren",

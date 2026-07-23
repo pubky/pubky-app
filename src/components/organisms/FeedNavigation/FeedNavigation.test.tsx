@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { useHomeStore } from '@/stores/home/home.store';
+import { REACH } from '@/stores/home/home.types';
 import { FeedNavigation } from './FeedNavigation';
 
 // Mock next/navigation
@@ -185,6 +187,7 @@ describe('FeedNavigation', () => {
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);
+    useHomeStore.setState({ reach: REACH.ALL });
   });
 
   // ── Sanity ───────────────────────────────────────────────────────────────
@@ -195,8 +198,8 @@ describe('FeedNavigation', () => {
     const container = screen.getByTestId('container');
     expect(container).toBeInTheDocument();
 
-    // Home link should always be present
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    // The home-route link reflects the selected Reach.
+    expect(screen.getByText('All')).toBeInTheDocument();
 
     // Create Feed button should always be present
     expect(screen.getByText('Create Feed')).toBeInTheDocument();
@@ -204,13 +207,40 @@ describe('FeedNavigation', () => {
 
   // ── Home feed link ──────────────────────────────────────────────────────
 
-  it('renders the Home feed link with correct href', () => {
+  it('renders the home-route feed link with correct href', () => {
     render(<FeedNavigation />);
 
     const links = screen.getAllByTestId('link');
     const homeLink = links.find((link) => link.getAttribute('href') === '/home');
     expect(homeLink).toBeInTheDocument();
-    expect(homeLink).toHaveTextContent('Home');
+    expect(homeLink).toHaveTextContent('All');
+  });
+
+  it.each([
+    { reach: REACH.ALL, label: 'All' },
+    { reach: REACH.NETWORK, label: 'My Network' },
+    { reach: REACH.FOLLOWING, label: 'Following' },
+    { reach: REACH.FRIENDS, label: 'Friends' },
+    { reach: REACH.ME, label: 'Me' },
+  ])('reflects $label Reach in the home-route feed tab', ({ reach, label }) => {
+    useHomeStore.setState({ reach });
+
+    render(<FeedNavigation />);
+
+    const homeLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/home');
+    expect(homeLink).toHaveTextContent(label);
+    expect(homeLink?.querySelector(`[data-reach-icon="${reach}"]`)).toBeInTheDocument();
+  });
+
+  it('falls back to All in the home-route feed tab when a guest has a personalized Reach stored', () => {
+    mockIsAuthenticated = false;
+    useHomeStore.setState({ reach: REACH.FRIENDS });
+
+    render(<FeedNavigation />);
+
+    const homeLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/home');
+    expect(homeLink).toHaveTextContent('All');
+    expect(homeLink?.querySelector('[data-reach-icon="all"]')).toBeInTheDocument();
   });
 
   it('applies active styling to Home link when pathname is /home', () => {
@@ -270,8 +300,8 @@ describe('FeedNavigation', () => {
     const typographies = screen.getAllByTestId('typography');
     const feedNames = typographies.map((t) => t.textContent);
 
-    // Home is first, then custom feeds, then Create Feed
-    expect(feedNames).toEqual(['Home', 'Alpha Feed', 'Beta Feed', 'Gamma Feed', 'Create Feed']);
+    // The Reach tab is first, then custom feeds, then Create Feed.
+    expect(feedNames).toEqual(['All', 'Alpha Feed', 'Beta Feed', 'Gamma Feed', 'Create Feed']);
   });
 
   // ── Active / Inactive custom feed styling ───────────────────────────────
@@ -358,7 +388,7 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('All')).toBeInTheDocument();
     expect(screen.queryByText('Private Feed')).not.toBeInTheDocument();
     expect(screen.queryByTestId('custom-feed-dialog-create')).not.toBeInTheDocument();
     expect(mockGetList).not.toHaveBeenCalled();
@@ -383,8 +413,8 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    // Should still render Home and Create Feed even when getList fails
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    // Should still render the Reach tab and Create Feed even when getList fails.
+    expect(screen.getByText('All')).toBeInTheDocument();
     expect(screen.getByText('Create Feed')).toBeInTheDocument();
   });
 
@@ -422,6 +452,7 @@ describe('FeedNavigation - Snapshots', () => {
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);
+    useHomeStore.setState({ reach: REACH.ALL });
   });
 
   it('matches snapshot with no custom feeds and Home active', () => {

@@ -1,88 +1,106 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { LAYOUT } from '@/stores/home/home.types';
 import { FilterLayout } from './FilterLayout';
 
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.hasPointerCapture = vi.fn();
+  Element.prototype.releasePointerCapture = vi.fn();
+  Element.prototype.setPointerCapture = vi.fn();
+});
+
+async function selectLayoutOption(label: string) {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('combobox', { name: 'Layout' }));
+  await user.click(screen.getByRole('option', { name: label }));
+}
+
 describe('FilterLayout', () => {
-  it('renders with default selected tab', () => {
+  it('renders the current option in a dropdown trigger', () => {
     render(<FilterLayout />);
 
     expect(screen.getByText('Layout')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Layout' })).toHaveTextContent('Columns');
   });
 
-  it('calls onTabChange when tab is clicked', () => {
-    const onTabChange = vi.fn();
-    render(<FilterLayout onTabChange={onTabChange} />);
-    fireEvent.click(screen.getByText('Wide'));
-    expect(onTabChange).toHaveBeenCalledWith('wide');
-  });
-
-  it('handles all tab types correctly', () => {
+  it('calls onTabChange when an option is selected', async () => {
     const onTabChange = vi.fn();
     render(<FilterLayout onTabChange={onTabChange} />);
 
-    ([LAYOUT.COLUMNS, LAYOUT.WIDE, LAYOUT.LIST] as LayoutType[]).forEach((tab) => {
-      const label = tab === LAYOUT.COLUMNS ? 'Columns' : tab === LAYOUT.WIDE ? 'Wide' : 'List';
-      fireEvent.click(screen.getByText(label));
-      expect(onTabChange).toHaveBeenCalledWith(tab);
-    });
+    await selectLayoutOption('Wide');
+
+    expect(onTabChange).toHaveBeenCalledWith(LAYOUT.WIDE);
   });
 
-  it('rerenders with different selected tabs', () => {
+  it('supports all layout options', async () => {
+    const onTabChange = vi.fn();
+    render(<FilterLayout onTabChange={onTabChange} />);
+
+    await selectLayoutOption('Wide');
+    await selectLayoutOption('List');
+    await selectLayoutOption('Columns');
+
+    expect(onTabChange).toHaveBeenNthCalledWith(1, LAYOUT.WIDE);
+    expect(onTabChange).toHaveBeenNthCalledWith(2, LAYOUT.LIST);
+    expect(onTabChange).toHaveBeenNthCalledWith(3, LAYOUT.COLUMNS);
+  });
+
+  it('updates the trigger when the controlled selection changes', () => {
     const { rerender } = render(<FilterLayout selectedTab={LAYOUT.COLUMNS} />);
 
-    let columnsItem = screen.getByText('Columns').closest('[data-testid="filter-item"]');
-    const wideItem = screen.getByText('Wide').closest('[data-testid="filter-item"]');
-    expect(columnsItem).toBeInTheDocument();
-    expect(wideItem).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Layout' })).toHaveTextContent('Columns');
 
     rerender(<FilterLayout selectedTab={LAYOUT.WIDE} />);
-    columnsItem = screen.getByText('Columns').closest('[data-testid="filter-item"]');
-    const wideItem2 = screen.getByText('Wide').closest('[data-testid="filter-item"]');
-    expect(columnsItem).toBeInTheDocument();
-    expect(wideItem2).toBeInTheDocument();
+
+    expect(screen.getByRole('combobox', { name: 'Layout' })).toHaveTextContent('Wide');
   });
 
-  it('renders all items as disabled when disabled prop is true', () => {
-    render(<FilterLayout disabled />);
-
-    const labels = ['Columns', 'Wide', 'List'];
-    labels.forEach((label) => {
-      expect(screen.getByLabelText(label)).toHaveAttribute('aria-disabled', 'true');
-    });
-  });
-
-  it('does not call onTabChange when disabled', () => {
+  it('disables the dropdown when the filter is disabled', async () => {
     const onTabChange = vi.fn();
+    const user = userEvent.setup();
     render(<FilterLayout disabled onTabChange={onTabChange} />);
 
-    fireEvent.click(screen.getByText('Columns'));
-    fireEvent.click(screen.getByText('Wide'));
-    fireEvent.click(screen.getByText('List'));
+    const trigger = screen.getByRole('combobox', { name: 'Layout' });
+    expect(trigger).toBeDisabled();
 
+    await user.click(trigger);
+
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
     expect(onTabChange).not.toHaveBeenCalled();
   });
 
-  it('items are not disabled by default', () => {
+  it('renders enabled options by default', async () => {
+    const user = userEvent.setup();
     render(<FilterLayout />);
 
-    const labels = ['Columns', 'Wide', 'List'];
-    labels.forEach((label) => {
-      expect(screen.getByLabelText(label)).not.toHaveAttribute('aria-disabled', 'true');
-    });
+    await user.click(screen.getByRole('combobox', { name: 'Layout' }));
+
+    for (const label of ['Columns', 'Wide', 'List']) {
+      expect(screen.getByRole('option', { name: label })).not.toHaveAttribute('aria-disabled', 'true');
+    }
   });
 
-  it('renders visual layout when enabled', () => {
+  it('renders visual layout when enabled', async () => {
+    const user = userEvent.setup();
     render(<FilterLayout showVisual />);
 
-    expect(screen.getByText('Visual')).toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'Layout' }));
+
+    expect(screen.getByRole('option', { name: 'Visual' })).toBeInTheDocument();
   });
 
-  it('falls back to columns for display when visual is selected but hidden', () => {
+  it('falls back to columns for display when visual is selected but hidden', async () => {
+    const user = userEvent.setup();
     render(<FilterLayout selectedTab={LAYOUT.VISUAL} showVisual={false} />);
 
-    expect(screen.getByLabelText('Columns')).toHaveAttribute('aria-checked', 'true');
-    expect(screen.queryByText('Visual')).not.toBeInTheDocument();
+    const trigger = screen.getByRole('combobox', { name: 'Layout' });
+    expect(trigger).toHaveTextContent('Columns');
+
+    await user.click(trigger);
+
+    expect(screen.queryByRole('option', { name: 'Visual' })).not.toBeInTheDocument();
   });
 });
 

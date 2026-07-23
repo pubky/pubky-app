@@ -87,13 +87,33 @@ describe('useHotStreamId', () => {
     expect(result.current).toBe('total_engagement:all:all');
   });
 
+  it('should use the signed-in user profile stream for Me reach', () => {
+    const { result: setReach } = renderHook(() => useHotStore((state) => state.setReach));
+    setReach.current(REACH.ME);
+
+    const { result } = renderHook(() => useHotStreamId());
+
+    expect(result.current).toBe('author:viewer-pubky');
+  });
+
+  it('should use the All stream for Network reach', () => {
+    const { result: setReach } = renderHook(() => useHotStore((state) => state.setReach));
+    setReach.current(REACH.NETWORK);
+
+    const { result } = renderHook(() => useHotStreamId());
+
+    expect(result.current).toBe(PostStreamTypes.POPULARITY_ALL_ALL);
+  });
+
   it('should handle all reach options', () => {
     const { result: setReach } = renderHook(() => useHotStore((state) => state.setReach));
 
     const reachOptions = [
-      { reach: REACH.ALL, expected: PostStreamTypes.POPULARITY_ALL_ALL },
-      { reach: REACH.FOLLOWING, expected: PostStreamTypes.POPULARITY_FOLLOWING_ALL },
+      { reach: REACH.ME, expected: 'author:viewer-pubky' },
       { reach: REACH.FRIENDS, expected: PostStreamTypes.POPULARITY_FRIENDS_ALL },
+      { reach: REACH.FOLLOWING, expected: PostStreamTypes.POPULARITY_FOLLOWING_ALL },
+      { reach: REACH.NETWORK, expected: PostStreamTypes.POPULARITY_ALL_ALL },
+      { reach: REACH.ALL, expected: PostStreamTypes.POPULARITY_ALL_ALL },
     ];
 
     reachOptions.forEach(({ reach, expected }) => {

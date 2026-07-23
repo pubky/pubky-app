@@ -297,7 +297,8 @@ describe('feed and filters', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Following"]').click();
     waitForFeedToLoad();
-    cy.get('[data-cy="filter-sort-radiogroup"]').find('[aria-label="Popularity"]').click();
+    cy.get('[data-cy="filter-sort-radiogroup"]').click();
+    cy.get('[role="option"][aria-label="Popularity"]').click();
     waitForFeedToLoad();
 
     // * check the posts are in the correct order

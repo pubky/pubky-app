@@ -4,6 +4,7 @@ import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
+import { UserApplication } from '@/application/user/user';
 import { MUTE_SYNC_CURSOR_STORAGE_PREFIX } from '@/config/mute-sync';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
@@ -23,6 +24,7 @@ import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { useHomeStore } from '@/stores/home/home.store';
+import { REACH } from '@/stores/home/home.types';
 import { useHotStore } from '@/stores/hot/hot.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
@@ -151,6 +153,7 @@ const storeMocks = vi.hoisted(() => {
   const resetSearchStore = vi.fn();
   const resetNotificationStore = vi.fn();
   const resetSettingsStore = vi.fn();
+  const setHomeReach = vi.fn();
   const notificationInit = vi.fn();
   const initAuthStore = vi.fn();
   const setAuthUrlResolved = vi.fn();
@@ -190,7 +193,7 @@ const storeMocks = vi.hoisted(() => {
     error: null,
   });
   const localFilesStateFactory = () => ({ reset: resetLocalFilesStore });
-  const homeStateFactory = () => ({ reset: resetHomeStore });
+  const homeStateFactory = () => ({ reset: resetHomeStore, setReach: setHomeReach });
   const hotStateFactory = () => ({ reset: resetHotStore });
   const searchStateFactory = () => ({ reset: resetSearchStore });
   const settingsStateFactory = () => ({ reset: resetSettingsStore });
@@ -205,6 +208,7 @@ const storeMocks = vi.hoisted(() => {
     resetSearchStore,
     resetNotificationStore,
     resetSettingsStore,
+    setHomeReach,
     notificationInit,
     initAuthStore,
     setAuthUrlResolved,
@@ -336,6 +340,7 @@ describe('AuthController', () => {
         wasDbReset: false,
       }),
     );
+    vi.spyOn(UserApplication, 'getOrFetchCounts').mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -1093,6 +1098,56 @@ describe('AuthController', () => {
       expect(authStore.setHasProfile).toHaveBeenCalledWith(true);
     });
 
+    it.each([
+      { following: 2, expectedReach: REACH.ALL },
+      { following: 3, expectedReach: REACH.NETWORK },
+      { following: 4, expectedReach: REACH.NETWORK },
+    ])(
+      'should default Reach to $expectedReach when the signed-in user follows $following people',
+      async ({ following, expectedReach }) => {
+        const mockSession = buildMockSession();
+        const mockPubky = TEST_PUBKY as Pubky;
+
+        vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+        vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
+        vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue({
+          unread: 0,
+          lastRead: 0,
+          lastPolledTimestamp: 0,
+        });
+        vi.mocked(UserApplication.getOrFetchCounts).mockResolvedValue(asOpaque({ following }));
+
+        await AuthController.initializeAuthenticatedSession({ session: mockSession });
+
+        expect(UserApplication.getOrFetchCounts).toHaveBeenCalledWith({ userId: mockPubky });
+        expect(storeMocks.setHomeReach).toHaveBeenCalledWith(expectedReach);
+      },
+    );
+
+    it('should default Reach to All without blocking sign-in when user counts fail', async () => {
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const countsError = new Error('Local counts unavailable');
+      const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
+      vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue({
+        unread: 0,
+        lastRead: 0,
+        lastPolledTimestamp: 0,
+      });
+      vi.mocked(UserApplication.getOrFetchCounts).mockRejectedValue(countsError);
+
+      await expect(AuthController.initializeAuthenticatedSession({ session: mockSession })).resolves.toBeUndefined();
+
+      expect(storeMocks.setHomeReach).toHaveBeenCalledWith(REACH.ALL);
+      expect(warnSpy).toHaveBeenCalledWith('Failed to resolve default Reach after sign in', {
+        pubky: mockPubky,
+        error: countsError,
+      });
+    });
+
     it('should initialize session without bootstrap if user is not signed up', async () => {
       const mockSession = buildMockSession();
       const mockPubky = TEST_PUBKY as Pubky;
@@ -1114,6 +1169,7 @@ describe('AuthController', () => {
       expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: mockPubky });
       expect(signInStore.setProfileChecked).toHaveBeenCalledWith(true);
       expect(initializeSpy).not.toHaveBeenCalled();
+      expect(UserApplication.getOrFetchCounts).not.toHaveBeenCalled();
       // Session stored early with hasProfile: null, then setHasProfile called after check
       expect(authStore.init).toHaveBeenCalledWith({
         session: mockSession,

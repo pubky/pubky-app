@@ -1,4 +1,5 @@
-import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import type { AuthorStreamCompositeId, PostStreamId } from '@/models/stream/post/postStream.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
 import { getStreamId } from '@/stores/home/home.utils';
@@ -8,7 +9,8 @@ import { useHotStore } from '@/stores/hot/hot.store';
  * useHotStreamId
  *
  * Hook that returns the stream ID for hot/trending posts based on the hot store's reach filter.
- * Uses engagement sorting (total_engagement) and all content types.
+ * Standard reaches use engagement sorting and all content types. ME reuses the
+ * current user's author/profile stream; NETWORK resolves through the ALL mapping.
  *
  * @returns The stream ID for trending posts
  *
@@ -20,10 +22,15 @@ import { useHotStore } from '@/stores/hot/hot.store';
  * // Returns PostStreamTypes.POPULARITY_FRIENDS_ALL when reach is 'friends'
  * ```
  */
-export function useHotStreamId(): PostStreamTypes {
+export function useHotStreamId(): PostStreamId {
   const reach = useHotStore((state) => state.reach);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const effectiveReach = currentUserPubky ? reach : REACH.ALL;
+
+  if (reach === REACH.ME && currentUserPubky) {
+    return `${StreamSource.AUTHOR}:${currentUserPubky}` as AuthorStreamCompositeId;
+  }
+
+  const effectiveReach = currentUserPubky || reach === REACH.NETWORK ? reach : REACH.ALL;
 
   // Hot/Trending posts use engagement sorting (POPULARITY)
   // Content is always 'all' for hot posts

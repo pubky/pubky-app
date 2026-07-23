@@ -1162,10 +1162,30 @@
   },
   "filters": {
     "reach": {
-      "title": "Reach",
+      "title": "Posts from",
       "all": "All",
+      "network": "Network",
+      "myNetwork": "My Network",
       "following": "Following",
-      "friends": "Friends"
+      "friends": "Friends",
+      "me": "Me",
+      "profileTag": "profile tag",
+      "profileTagLimitReached": "{max} tags max",
+      "taggedBy": "by {reach}",
+      "taggedByLabel": "Choose who tagged these profiles",
+      "profileTagSummary": {
+        "reach": {
+          "all": "Posts from anyone tagged as {tags} by {curator}",
+          "friends": "Posts from friends tagged as {tags} by {curator}",
+          "following": "Posts from people I follow tagged as {tags} by {curator}",
+          "network": "Posts from people in my network tagged as {tags} by {curator}"
+        },
+        "curator": {
+          "me": "me",
+          "following": "people I follow",
+          "network": "my network"
+        }
+      }
     },
     "sort": {
       "title": "Sort",

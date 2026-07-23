@@ -19,357 +19,78 @@ exports[`FilterContent - Snapshots > matches snapshot with All content selected 
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="true"
-        aria-label="All"
-        aria-pressed="true"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-layers size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+            />
+            <path
+              d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
+            />
+            <path
+              d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
+            />
+          </svg>
+        </span>
+        <span>
           All
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Posts"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Posts
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Articles"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Articles
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Collections"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Collections
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Images"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Images
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Videos"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Videos
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Links"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Links
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Files"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Files
-        </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -392,357 +113,85 @@ exports[`FilterContent - Snapshots > matches snapshot with Articles content sele
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="false"
-        aria-label="All"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
-          All
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-newspaper size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15 18h-5"
+            />
+            <path
+              d="M18 14h-8"
+            />
+            <path
+              d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+            />
+            <rect
+              height="4"
+              rx="1"
+              width="8"
+              x="10"
+              y="6"
+            />
+          </svg>
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Posts"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Posts
-        </span>
-      </button>
-      <button
-        aria-checked="true"
-        aria-label="Articles"
-        aria-pressed="true"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
+        <span>
           Articles
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Collections"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Collections
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Images"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Images
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Videos"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Videos
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Links"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Links
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Files"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Files
-        </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -765,357 +214,81 @@ exports[`FilterContent - Snapshots > matches snapshot with Collections content s
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="false"
-        aria-label="All"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
-          All
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-library size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m16 6 4 14"
+            />
+            <path
+              d="M12 6v14"
+            />
+            <path
+              d="M8 8v12"
+            />
+            <path
+              d="M4 4v16"
+            />
+          </svg>
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Posts"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Posts
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Articles"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Articles
-        </span>
-      </button>
-      <button
-        aria-checked="true"
-        aria-label="Collections"
-        aria-pressed="true"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
+        <span>
           Collections
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Images"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Images
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Videos"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Videos
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Links"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Links
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Files"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Files
-        </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -1138,357 +311,78 @@ exports[`FilterContent - Snapshots > matches snapshot with Files content selecte
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="false"
-        aria-label="All"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
-          All
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-download size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 15V3"
+            />
+            <path
+              d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+            />
+            <path
+              d="m7 10 5 5 5-5"
+            />
+          </svg>
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Posts"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Posts
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Articles"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Articles
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Collections"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Collections
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Images"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Images
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Videos"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Videos
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Links"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Links
-        </span>
-      </button>
-      <button
-        aria-checked="true"
-        aria-label="Files"
-        aria-pressed="true"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
+        <span>
           Files
         </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -1511,357 +405,85 @@ exports[`FilterContent - Snapshots > matches snapshot with Images content select
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="false"
-        aria-label="All"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
-          All
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-image size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              height="18"
+              rx="2"
+              ry="2"
+              width="18"
+              x="3"
+              y="3"
+            />
+            <circle
+              cx="9"
+              cy="9"
+              r="2"
+            />
+            <path
+              d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+            />
+          </svg>
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Posts"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Posts
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Articles"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Articles
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Collections"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Collections
-        </span>
-      </button>
-      <button
-        aria-checked="true"
-        aria-label="Images"
-        aria-pressed="true"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
+        <span>
           Images
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Videos"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Videos
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Links"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Links
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Files"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Files
-        </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -1884,357 +506,75 @@ exports[`FilterContent - Snapshots > matches snapshot with Links content selecte
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="false"
-        aria-label="All"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
-          All
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-link size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+            />
+            <path
+              d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+            />
+          </svg>
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Posts"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Posts
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Articles"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Articles
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Collections"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Collections
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Images"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Images
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Videos"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Videos
-        </span>
-      </button>
-      <button
-        aria-checked="true"
-        aria-label="Links"
-        aria-pressed="true"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
+        <span>
           Links
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Files"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Files
-        </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -2257,357 +597,75 @@ exports[`FilterContent - Snapshots > matches snapshot with Posts content selecte
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="false"
-        aria-label="All"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
-          All
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-sticky-note size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+            />
+            <path
+              d="M15 3v5a1 1 0 0 0 1 1h5"
+            />
+          </svg>
         </span>
-      </button>
-      <button
-        aria-checked="true"
-        aria-label="Posts"
-        aria-pressed="true"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
+        <span>
           Posts
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Articles"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Articles
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Collections"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Collections
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Images"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Images
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Videos"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Videos
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Links"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Links
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Files"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Files
-        </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -2630,357 +688,77 @@ exports[`FilterContent - Snapshots > matches snapshot with Videos content select
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="false"
-        aria-label="All"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
-          All
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-circle-play size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+          </svg>
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Posts"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Posts
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Articles"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Articles
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Collections"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Collections
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Images"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Images
-        </span>
-      </button>
-      <button
-        aria-checked="true"
-        aria-label="Videos"
-        aria-pressed="true"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
+        <span>
           Videos
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Links"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Links
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Files"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Files
-        </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -3003,357 +781,78 @@ exports[`FilterContent - Snapshots > matches snapshot with default props 1`] = `
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="true"
-        aria-label="All"
-        aria-pressed="true"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-layers size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+            />
+            <path
+              d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
+            />
+            <path
+              d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
+            />
+          </svg>
+        </span>
+        <span>
           All
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Posts"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Posts
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Articles"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Articles
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Collections"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Collections
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Images"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Images
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Videos"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Videos
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Links"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Links
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-label="Files"
-        aria-pressed="false"
-        class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Files
-        </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;
 
@@ -3376,364 +875,79 @@ exports[`FilterContent - Snapshots > matches snapshot with disabled state 1`] = 
       Content
     </h2>
   </div>
-  <div
+  <button
+    aria-autocomplete="none"
+    aria-controls="radix-normalized"
+    aria-expanded="false"
     aria-labelledby="radix-normalized"
-    class=""
-    data-testid="filter-content-radiogroup"
-    role="radiogroup"
+    class="flex w-fit cursor-pointer items-center justify-between rounded-md bg-transparent text-base font-bold whitespace-nowrap text-foreground outline-none select-none focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 gap-1 border-transparent py-0 transition-opacity hover:opacity-80 focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:[&>svg:last-child]:rotate-180 [&>svg:last-child]:size-6 [&>svg:last-child]:transition-transform [&>svg:last-child]:duration-300"
+    data-cy="filter-content-dropdown"
+    data-disabled=""
+    data-size="default"
+    data-slot="select-trigger"
+    data-state="closed"
+    data-testid="filter-content-dropdown"
+    dir="ltr"
+    disabled=""
+    role="combobox"
+    type="button"
   >
-    <div
-      class="mx-auto w-full flex-col flex"
-      data-slot="filter-list"
-      data-testid="filter-list"
+    <span
+      data-slot="select-value"
+      style="pointer-events: none;"
     >
-      <button
-        aria-checked="true"
-        aria-disabled="true"
-        aria-label="All"
-        aria-pressed="true"
-        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1 cursor-default opacity-40"
-        data-selected="true"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="0"
-        type="button"
+      <span
+        class="flex items-center gap-2"
       >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-layers h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
-          />
-          <path
-            d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
-          />
-          <path
-            d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
-          />
-        </svg>
         <span
-          class=""
+          class="flex size-5 shrink-0 items-center justify-center [&>svg]:size-full"
         >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-layers size-5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+            />
+            <path
+              d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"
+            />
+            <path
+              d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"
+            />
+          </svg>
+        </span>
+        <span>
           All
         </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-disabled="true"
-        aria-label="Posts"
-        aria-pressed="false"
-        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1 cursor-default opacity-40"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-sticky-note h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
-          />
-          <path
-            d="M15 3v5a1 1 0 0 0 1 1h5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Posts
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-disabled="true"
-        aria-label="Articles"
-        aria-pressed="false"
-        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1 cursor-default opacity-40"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-newspaper h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18h-5"
-          />
-          <path
-            d="M18 14h-8"
-          />
-          <path
-            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
-          />
-          <rect
-            height="4"
-            rx="1"
-            width="8"
-            x="10"
-            y="6"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Articles
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-disabled="true"
-        aria-label="Collections"
-        aria-pressed="false"
-        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1 cursor-default opacity-40"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-library h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="m16 6 4 14"
-          />
-          <path
-            d="M12 6v14"
-          />
-          <path
-            d="M8 8v12"
-          />
-          <path
-            d="M4 4v16"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Collections
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-disabled="true"
-        aria-label="Images"
-        aria-pressed="false"
-        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1 cursor-default opacity-40"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-image h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect
-            height="18"
-            rx="2"
-            ry="2"
-            width="18"
-            x="3"
-            y="3"
-          />
-          <circle
-            cx="9"
-            cy="9"
-            r="2"
-          />
-          <path
-            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Images
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-disabled="true"
-        aria-label="Videos"
-        aria-pressed="false"
-        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1 cursor-default opacity-40"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-circle-play h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Videos
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-disabled="true"
-        aria-label="Links"
-        aria-pressed="false"
-        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1 cursor-default opacity-40"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-link h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          />
-          <path
-            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Links
-        </span>
-      </button>
-      <button
-        aria-checked="false"
-        aria-disabled="true"
-        aria-label="Files"
-        aria-pressed="false"
-        class="flex gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1 cursor-default opacity-40"
-        data-selected="false"
-        data-slot="filter-item"
-        data-testid="filter-item"
-        role="radio"
-        tabindex="-1"
-        type="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-download h-5 w-5"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 15V3"
-          />
-          <path
-            d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-          />
-          <path
-            d="m7 10 5 5 5-5"
-          />
-        </svg>
-        <span
-          class=""
-        >
-          Files
-        </span>
-      </button>
-    </div>
-  </div>
+      </span>
+    </span>
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-chevron-down pointer-events-none size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m6 9 6 6 6-6"
+      />
+    </svg>
+  </button>
 </div>
 `;

@@ -153,7 +153,7 @@ vi.mock('@/atoms/Typography/Typography', () => {
 
 vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
-    PostHeader: vi.fn(({ postId, isReplyInput, characterLimit, size }) => (
+    PostHeader: vi.fn(({ postId, isReplyInput, characterLimit, size, avatarOnly }) => (
       <div
         data-testid="post-header"
         data-post-id={postId}
@@ -161,6 +161,7 @@ vi.mock('@/organisms/PostHeader/PostHeader', () => {
         data-count={characterLimit?.count}
         data-max={characterLimit?.max}
         data-size={size}
+        data-avatar-only={avatarOnly ? 'true' : 'false'}
       />
     )),
   };
@@ -540,8 +541,23 @@ describe('PostInput', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
+    expect(screen.getByTestId('post-header')).toHaveAttribute('data-avatar-only', 'false');
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText("What's on your mind?")).toBeInTheDocument();
+  });
+
+  it('uses the minimal avatar and prompt layout for a collapsed new post', () => {
+    mockUsePostInput.mockImplementationOnce((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { isExpanded: false }),
+    );
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(screen.getByTestId('post-header')).toHaveAttribute('data-avatar-only', 'true');
+    expect(screen.getByPlaceholderText("What's on your mind?")).toBeInTheDocument();
+    expect(
+      screen.getAllByTestId('container').find((container) => container.className.includes('contain-inline-size')),
+    ).toHaveClass('flex-row', 'items-center');
   });
 
   it('passes characterLimit to header and action bar for non-article mode', () => {
@@ -912,7 +928,7 @@ describe('PostInput', () => {
       render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
 
       const postHeader = screen.getByTestId('post-header');
@@ -930,7 +946,7 @@ describe('PostInput', () => {
 
       const outerContainer = screen.getAllByTestId('container')[0];
       expect(outerContainer.className).toContain('p-12');
-      expect(outerContainer.className).not.toContain('p-4');
+      expect(outerContainer.className).not.toContain('p-6');
 
       const postHeader = screen.getByTestId('post-header');
       expect(postHeader).toHaveAttribute('data-size', 'large');
@@ -961,7 +977,7 @@ describe('PostInput', () => {
       );
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
 
       const postHeader = screen.getByTestId('post-header');

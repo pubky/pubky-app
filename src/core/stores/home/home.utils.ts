@@ -1,5 +1,22 @@
-import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
-import { CONTENT, type ContentType, REACH, type ReachType, SORT, type SortType } from './home.types';
+import type { Pubky } from '@/models/models.types';
+import {
+  buildWotDomainStreamId,
+  type PostStreamId,
+  type PostStreamKindSegment,
+  type WotDomainDepth,
+} from '@/models/stream/post/postStream.types';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import {
+  CONTENT,
+  type ContentType,
+  PROFILE_TAG_SCOPE,
+  type ProfileTagScopeType,
+  REACH,
+  type ReachType,
+  SORT,
+  type SortType,
+} from './home.types';
 
 // ============================================
 // Bidirectional Mappings (DRY principle)
@@ -25,9 +42,20 @@ const SORTING_TO_SORT = reverseMapping(SORT_TO_SORTING);
 /** Maps REACH filter to streamId SOURCE part */
 const REACH_TO_SOURCE = {
   [REACH.ALL]: 'all',
+  [REACH.NETWORK]: 'wot',
   [REACH.FOLLOWING]: 'following',
   [REACH.FRIENDS]: 'friends',
-} as const satisfies Record<ReachType, string>;
+} as const;
+
+type NexusReachType = keyof typeof REACH_TO_SOURCE;
+
+/**
+ * ME is resolved to an author stream by the feed hooks; callers without an
+ * authenticated author safely fall back to ALL.
+ */
+function toNexusReach(reach: ReachType): NexusReachType {
+  return reach === REACH.ME ? REACH.ALL : reach;
+}
 
 /** Maps streamId SOURCE part to REACH filter (auto-generated) */
 const SOURCE_TO_REACH = reverseMapping(REACH_TO_SOURCE);
@@ -44,6 +72,12 @@ const CONTENT_TO_KIND = {
   [CONTENT.FILES]: 'file',
 } as const satisfies Record<ContentType, string>;
 
+const WOT_DOMAIN_DEPTH_BY_SCOPE = {
+  [PROFILE_TAG_SCOPE.NETWORK]: 2,
+  [PROFILE_TAG_SCOPE.FOLLOWING]: 1,
+  [PROFILE_TAG_SCOPE.ME]: 0,
+} as const satisfies Record<ProfileTagScopeType, WotDomainDepth>;
+
 /** Maps streamId KIND part to CONTENT filter (auto-generated) */
 const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
 
@@ -52,7 +86,7 @@ const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
  *
  * Pattern breakdown:
  * - SORTING: timeline (recent), total_engagement (popularity)
- * - SOURCE: all, following, friends, me
+ * - SOURCE: all, wot, following, friends (unresolved ME normalizes to all)
  * - KIND: all, short (posts), long (articles), collection, image, video, link, file
  *
  * @example
@@ -62,27 +96,49 @@ const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
  */
 export function getStreamIdFromFilters(sort: SortType, reach: ReachType, content: ContentType): string {
   const sorting = SORT_TO_SORTING[sort];
-  const source = REACH_TO_SOURCE[reach];
+  const source = REACH_TO_SOURCE[toNexusReach(reach)];
   const kind = CONTENT_TO_KIND[content];
 
   return `${sorting}:${source}:${kind}`;
 }
 
 /**
- * Type-safe version that returns PostStreamTypes enum for all valid filter combinations
- *
- * Since PostStreamTypes enum values are the actual streamId strings, we can cast directly.
+ * Type-safe version that returns a supported post stream ID.
  *
  * @example
  * getStreamId('recent', 'all', 'all') // => PostStreamTypes.TIMELINE_ALL_ALL
  * getStreamId('recent', 'following', 'images') // => PostStreamTypes.TIMELINE_FOLLOWING_IMAGE
  * getStreamId('popularity', 'friends', 'videos') // => PostStreamTypes.POPULARITY_FRIENDS_VIDEO
  */
-export function getStreamId(sort: SortType, reach: ReachType, content: ContentType): PostStreamTypes {
+export function getStreamId(sort: SortType, reach: ReachType, content: ContentType): PostStreamId {
   const streamId = getStreamIdFromFilters(sort, reach, content);
 
-  // The streamId string matches the enum value exactly, so we can cast directly
-  return streamId as PostStreamTypes;
+  return streamId as PostStreamId;
+}
+
+export function getHomeStreamIdFromFilters(
+  sort: SortType,
+  reach: ReachType,
+  content: ContentType,
+  currentUserPubky?: Pubky | null,
+  profileTags: string[] = [],
+  profileTagScope: ProfileTagScopeType = PROFILE_TAG_SCOPE.NETWORK,
+) {
+  // Nexus currently applies its own default Reach (Network) to `wot_domain`.
+  // Keep the ring's selected Reach in UI state for future Nexus support, but
+  // intentionally do not encode it in this request yet.
+  if (currentUserPubky && profileTags.length > 0 && reach !== REACH.ME) {
+    const depth = WOT_DOMAIN_DEPTH_BY_SCOPE[profileTagScope];
+    return buildWotDomainStreamId(
+      SORT_TO_SORTING[sort] as StreamSorting,
+      depth,
+      CONTENT_TO_KIND[content] as PostStreamKindSegment,
+      profileTags,
+    );
+  }
+
+  const effectiveReach = currentUserPubky ? reach : REACH.ALL;
+  return getStreamId(sort, effectiveReach, content);
 }
 
 /**
@@ -144,8 +200,15 @@ const POST_KIND_TO_CONTENT = {
  * Unparseable stream ids (profile, author collections, etc.) accept all kinds.
  */
 export function postKindBelongsToStream(postKind: string, streamId: string): boolean {
+  const streamParts = streamId.split(':');
+  const wotDomainContent =
+    streamParts[1] === StreamSource.WOT_DOMAIN
+      ? KIND_TO_CONTENT[streamParts[3] as keyof typeof KIND_TO_CONTENT]
+      : undefined;
   const parsed = parseStreamId(streamId);
-  if (!parsed || parsed.content === CONTENT.ALL) {
+  const streamContent = wotDomainContent ?? parsed?.content;
+
+  if (!streamContent || streamContent === CONTENT.ALL) {
     return true;
   }
 
@@ -154,5 +217,5 @@ export function postKindBelongsToStream(postKind: string, streamId: string): boo
     return false;
   }
 
-  return postContent === parsed.content;
+  return postContent === streamContent;
 }

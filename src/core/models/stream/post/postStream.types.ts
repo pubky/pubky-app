@@ -100,6 +100,11 @@ export enum PostStreamTypes {
 export type ReplyStreamCompositeId = `${StreamSource.REPLIES}:${string}`;
 export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
+export type PostStreamKindSegment = 'all' | StreamKind;
+export type WotDomainDepth = 0 | 1 | 2;
+export type WotStreamCompositeId = `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}`;
+export type WotDomainStreamCompositeId =
+  `${StreamSorting}:${StreamSource.WOT_DOMAIN}:${WotDomainDepth}:${PostStreamKindSegment}:${string}`;
 
 // Collections feature (see `.plans/2026/may/collections-feature-foundation.md`).
 //
@@ -123,6 +128,16 @@ export type CollectionItemsStreamCompositeId = `${StreamSource.COLLECTION}:${str
 
 export function buildPostReplyStreamId(compositePostId: string): ReplyStreamCompositeId {
   return `${StreamSource.REPLIES}:${compositePostId}`;
+}
+
+export function buildWotDomainStreamId(
+  sorting: StreamSorting,
+  depth: WotDomainDepth,
+  kind: PostStreamKindSegment,
+  domainTags: string[],
+): WotDomainStreamCompositeId {
+  const canonicalDomainTags = [...domainTags].sort().join(',');
+  return `${sorting}:${StreamSource.WOT_DOMAIN}:${depth}:${kind}:${canonicalDomainTags}`;
 }
 
 export function buildAuthorCollectionsStreamId(authorPubky: Pubky): AuthorCollectionsStreamId {
@@ -179,6 +194,8 @@ export function isDeletedRetainingStream(streamId: string): boolean {
 
 export type PostStreamId =
   | PostStreamTypes
+  | WotStreamCompositeId
+  | WotDomainStreamCompositeId
   | ReplyStreamCompositeId
   | AuthorStreamCompositeId
   | AuthorRepliesStreamCompositeId

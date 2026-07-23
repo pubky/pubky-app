@@ -1164,10 +1164,30 @@
   },
   "filters": {
     "reach": {
-      "title": "Alcance",
+      "title": "Publicaciones de",
       "all": "Todos",
+      "network": "Red",
+      "myNetwork": "Mi red",
       "following": "Siguiendo",
-      "friends": "Amigos"
+      "friends": "Amigos",
+      "me": "Yo",
+      "profileTag": "etiqueta de perfil",
+      "profileTagLimitReached": "máximo {max} etiquetas",
+      "taggedBy": "por {reach}",
+      "taggedByLabel": "Elige quién etiquetó estos perfiles",
+      "profileTagSummary": {
+        "reach": {
+          "all": "Publicaciones de cualquiera etiquetado como {tags} por {curator}",
+          "friends": "Publicaciones de amigos etiquetados como {tags} por {curator}",
+          "following": "Publicaciones de personas que sigo etiquetadas como {tags} por {curator}",
+          "network": "Publicaciones de personas de mi red etiquetadas como {tags} por {curator}"
+        },
+        "curator": {
+          "me": "mí",
+          "following": "personas que sigo",
+          "network": "mi red"
+        }
+      }
     },
     "sort": {
       "title": "Ordenar",
