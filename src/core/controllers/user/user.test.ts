@@ -33,6 +33,8 @@ const createMockHomeState = () =>
     reach: REACH.ALL,
     content: CONTENT.ALL,
     profileTags: [],
+    taggedAsActive: false,
+    hasHydrated: true,
   });
 
 // Valid 52-character z-base32 encoded pubky IDs for testing
@@ -47,6 +49,7 @@ describe('UserController', () => {
     mockUseHomeStore.mockReset();
     mockUseHomeStoreGetState.mockReset();
     useAuthStore.getState().reset();
+    useAuthStore.getState().setHasHydrated(true);
   });
 
   afterEach(() => {
@@ -544,6 +547,8 @@ describe('UserController', () => {
           reach: REACH.NETWORK,
           content: CONTENT.ALL,
           profileTags: ['bitcoin'],
+          taggedAsActive: true,
+          hasHydrated: true,
         }),
       );
       useAuthStore.getState().setCurrentUserPubky(follower);

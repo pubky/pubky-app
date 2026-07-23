@@ -1,11 +1,9 @@
-import { isProfileTagReachSupported } from '@/config/feed';
 import type { Pubky } from '@/models/models.types';
 import {
   buildWotDomainStreamId,
   getPostStreamKind,
   type PostStreamId,
   type PostStreamKindSegment,
-  type WotDomainDepth,
 } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -57,19 +55,12 @@ const CONTENT_TO_KIND = {
   [CONTENT.FILES]: StreamKind.FILE,
 } as const satisfies Record<ContentType, PostStreamKindSegment>;
 
-type WotDomainReachType = typeof REACH.NETWORK | typeof REACH.FOLLOWING | typeof REACH.FRIENDS | typeof REACH.ME;
-
 /**
- * Per-reach wot_domain depth for Home filters.
- * Counterpart: WOT_DOMAIN_DEPTH_BY_SUPPORTED_REACH in feed.helpers.ts maps the
- * config-owned supported-reach strings to the same depths — retune together.
+ * Tagged as is a standalone depth-2 Home feed in the V1 UI. Depth 0/1 domain
+ * paths remain supported by custom-feed models for foreign/legacy feed
+ * interoperability and the post-V1 ideal state.
  */
-const WOT_DOMAIN_DEPTH_BY_REACH = {
-  [REACH.NETWORK]: 2,
-  [REACH.FOLLOWING]: 1,
-  [REACH.FRIENDS]: 1,
-  [REACH.ME]: 0,
-} as const satisfies Record<WotDomainReachType, WotDomainDepth>;
+const TAGGED_AS_WOT_DOMAIN_DEPTH = 2;
 
 /** Maps streamId KIND part to CONTENT filter (auto-generated) */
 const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
@@ -121,13 +112,13 @@ export function getHomeStreamIdFromFilters(
   content: ContentType,
   currentUserPubky?: Pubky | null,
   profileTags: string[] = [],
+  taggedAsActive = false,
 ): PostStreamId {
   const effectiveReach = currentUserPubky ? reach : REACH.ALL;
   const kind = CONTENT_TO_KIND[content];
 
-  if (currentUserPubky && profileTags.length > 0 && isProfileTagReachSupported(effectiveReach)) {
-    const depth = WOT_DOMAIN_DEPTH_BY_REACH[effectiveReach];
-    return buildWotDomainStreamId(SORT_TO_SORTING[sort], depth, kind, profileTags);
+  if (currentUserPubky && taggedAsActive && profileTags.length > 0) {
+    return buildWotDomainStreamId(SORT_TO_SORTING[sort], TAGGED_AS_WOT_DOMAIN_DEPTH, kind, profileTags);
   }
 
   if (effectiveReach === REACH.ME) {

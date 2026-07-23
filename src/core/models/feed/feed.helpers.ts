@@ -96,13 +96,10 @@ export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKin
 /**
  * Exhaustive per-reach wot_domain depth, keyed by the config-owned supported
  * set: adding a reach to PROFILE_TAG_SUPPORTED_REACHES without an explicit
- * depth decision fails compilation here. 'network' and 'wot' are the same
- * reach in Home and pubky-app-specs vocabulary respectively, so both carry
- * depth 2. Plain string keys mean no pubky-app-specs enum access at module
- * scope (test suites partially mock that package).
- *
- * Counterpart: WOT_DOMAIN_DEPTH_BY_REACH in home.utils.ts maps Home REACH
- * filters to the same depths — retune them together.
+ * depth decision fails compilation here. WoT V1 creates only wot/depth-2
+ * Tagged-as feeds; the remaining depths are preserved for foreign and legacy
+ * feed compatibility and future authoring. Plain string keys avoid accessing
+ * pubky-app-specs enums at module scope because some tests partially mock it.
  */
 const WOT_DOMAIN_DEPTH_BY_SUPPORTED_REACH = {
   network: 2,

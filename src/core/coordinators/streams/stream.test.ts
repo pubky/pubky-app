@@ -41,6 +41,8 @@ interface HomeStoreOptions {
   reach?: ReachType;
   content?: ContentType;
   profileTags?: string[];
+  taggedAsActive?: boolean;
+  hasHydrated?: boolean;
 }
 
 /**
@@ -65,6 +67,7 @@ interface HomeStoreSetup {
 
 /** Sets up authentication for a user */
 function setupAuth(userId = 'user123'): string {
+  useAuthStore.getState().setHasHydrated(true);
   useAuthStore.getState().init({
     session: mockSession(),
     currentUserPubky: userId as Pubky,
@@ -81,12 +84,21 @@ function setupHomeStore(options: HomeStoreOptions = {}): HomeStoreSetup {
     reach: options.reach ?? REACH.ALL,
     content: options.content ?? CONTENT.ALL,
     profileTags: options.profileTags ?? [],
+    taggedAsActive: options.taggedAsActive ?? false,
+    hasUserSetReach: false,
+    hasHydrated: options.hasHydrated ?? true,
     layout: LAYOUT.COLUMNS,
     setLayout: vi.fn(),
     setSort: vi.fn(),
     setReach: vi.fn(),
+    setTaggedAsActive: vi.fn(),
+    applyDefaultReach: vi.fn(),
     setContent: vi.fn(),
     setProfileTags: vi.fn(),
+    addProfileTag: vi.fn(),
+    removeProfileTag: vi.fn(),
+    clearProfileTags: vi.fn(),
+    setHasHydrated: vi.fn(),
     reset: vi.fn(),
   });
 
@@ -649,6 +661,54 @@ describe('StreamCoordinator', () => {
   });
 
   describe('Home Store Integration', () => {
+    it('does not poll Home until auth hydration completes', async () => {
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      useAuthStore.getState().setHasHydrated(false);
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute(APP_ROUTES.HOME);
+      coordinator.start();
+
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+
+      useAuthStore.getState().setHasHydrated(true);
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith(expect.objectContaining({ streamId: 'timeline:all:all' }));
+    });
+
+    it('does not poll Home until persisted Home state hydrates', async () => {
+      setupAuth();
+      const { homeStoreState } = setupHomeStore({ hasHydrated: false });
+      const { getOrFetchStreamSliceSpy } = setupControllerSpies();
+      type HomeStoreSubscriber = (state: HomeStore, prevState: HomeStore) => void;
+      let subscriptionCallback: HomeStoreSubscriber | null = null;
+      vi.spyOn(useHomeStore, 'subscribe').mockImplementation((callback) => {
+        subscriptionCallback = callback as HomeStoreSubscriber;
+        return vi.fn();
+      });
+      const coordinator = StreamCoordinator.getInstance();
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute(APP_ROUTES.HOME);
+      coordinator.start();
+
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+
+      const hydratedHomeState = { ...homeStoreState, hasHydrated: true };
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(hydratedHomeState);
+      if (subscriptionCallback) {
+        (subscriptionCallback as HomeStoreSubscriber)(hydratedHomeState, homeStoreState);
+      }
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith(expect.objectContaining({ streamId: 'timeline:all:all' }));
+    });
+
     it('switches to new stream when user changes sort filter', async () => {
       const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
       coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
@@ -727,7 +787,7 @@ describe('StreamCoordinator', () => {
       expect(getOrFetchStreamSliceSpy.mock.calls.length).toBeGreaterThanOrEqual(initialCallCount);
     });
 
-    it('re-evaluates polling when home store profile tags change', async () => {
+    it('re-evaluates polling when Tagged as activates with profile tags', async () => {
       const { getOrFetchStreamSliceSpy, homeStoreState } = setupIntegrationTest({
         homeStore: { reach: REACH.NETWORK },
       });
@@ -759,6 +819,7 @@ describe('StreamCoordinator', () => {
       const updatedHomeState = {
         ...homeStoreState,
         profileTags: ['bitcoin'],
+        taggedAsActive: true,
       };
       vi.spyOn(useHomeStore, 'getState').mockReturnValue(updatedHomeState);
 

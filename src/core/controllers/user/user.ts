@@ -203,13 +203,18 @@ export class UserController {
 
     try {
       const homeState = useHomeStore.getState();
-      const currentUserPubky = useAuthStore.getState().currentUserPubky;
+      const authState = useAuthStore.getState();
+      if (!homeState.hasHydrated || !authState.hasHydrated) {
+        return null;
+      }
+
       return getHomeStreamIdFromFilters(
         homeState.sort,
         homeState.reach,
         homeState.content,
-        currentUserPubky,
+        authState.currentUserPubky,
         homeState.profileTags,
+        homeState.taggedAsActive,
       );
     } catch (error) {
       Logger.warn('Failed to get active stream ID', { error });
