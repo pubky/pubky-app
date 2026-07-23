@@ -9,13 +9,14 @@
 // `src/libs/env/env.ts` are set here — everything else falls through to the
 // schema default and stays in sync automatically. Do not paste real config
 // values here; this file is committed.
-(globalThis as { process?: { env: Record<string, string | undefined> } }).process ??= {
+(globalThis as { process?: { env: Record<string, string | undefined> }; __VRT__?: boolean }).process ??= {
   env: {
     NODE_ENV: 'test',
     VITEST: 'true',
     NEXT_PUBLIC_APP_VERSION: '0.0.0-test',
   },
 };
+(globalThis as { __VRT__?: boolean }).__VRT__ = true;
 
 // Load Tailwind + design tokens. Without this, every screenshot collapses to an
 // unstyled blank page and the baseline is useless.
@@ -29,11 +30,21 @@ import { vi } from 'vitest';
 // 1. Disable animations, transitions, and caret blinking — these are the
 //    most common causes of flaky pixel diffs.
 // 2. Hide the and document scrollbars (OS-dependent gutter)
+// 3. Freeze facehash avatars — disable 3D tilt, blink, and hover transitions
+//    (see FacehashAvatar `__VRT__` props) so GPU rasterisation is identical
+//    across local runs and CI.
 const stabilizerCss = `
   *, *::before, *::after {
     transition: none !important;
     animation: none !important;
     caret-color: transparent !important;
+  }
+
+  [data-facehash],
+  [data-facehash-face] {
+    perspective: none !important;
+    transform: none !important;
+    transform-style: flat !important;
   }
 
   html,
@@ -64,6 +75,39 @@ vi.mock('next/font/google', () => ({
     variable: '--font-geist-sans',
     className: 'inter-tight',
   })),
+}));
+
+// 2b. Mock next/image with a plain <img>. next/image rewrites `src` to the
+//     `/_next/image?url=...` optimizer endpoint, which has no server in the
+//     vitest browser runtime, so every image 404s and renders as a broken-image
+//     box (cross-OS-flaky glyph + wrong layout). A plain <img> lets Vite serve
+//     the asset straight from `public/` (string src) or the bundled module
+//     (static import), so screenshots show the real artwork deterministically.
+//     Mocking next/image to a plain <img> is the pattern Vercel recommends for
+//     tests: https://github.com/vercel/next.js/discussions/32325
+import { createElement } from 'react';
+
+vi.mock('next/image', () => ({
+  __esModule: true,
+  // Forward only the props a plain <img> understands; next-specific props
+  // (priority, quality, loader, placeholder, sizes, unoptimized, …) are
+  // intentionally dropped so React doesn't warn about unknown DOM attributes.
+  default: ({ src, alt, width, height, fill, className, style }: Record<string, unknown>) => {
+    // Static imports resolve to `{ src, width, height }`; string srcs pass through.
+    const resolvedSrc = typeof src === 'object' && src !== null ? (src as { src: string }).src : src;
+    // `fill` makes next/image absolutely cover its positioned parent.
+    const fillStyle = fill
+      ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }
+      : undefined;
+    return createElement('img', {
+      src: resolvedSrc,
+      alt: alt ?? '',
+      width: fill ? undefined : width,
+      height: fill ? undefined : height,
+      className,
+      style: { ...(fillStyle ?? {}), ...((style as object) ?? {}) },
+    });
+  },
 }));
 
 // 3. Load Inter Tight from `@fontsource-variable/inter-tight` (committed npm

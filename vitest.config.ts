@@ -74,6 +74,22 @@ export default defineConfig({
             enabled: true,
             provider: playwright(),
             headless: true,
+            // Shared by comparison (`npm run test:vrt`) and regeneration
+            // (`--update`). A capture within this ratio of the committed
+            // baseline is treated as unchanged, so `--update` only rewrites
+            // baselines that changed beyond sub-pixel/anti-aliasing noise.
+            // Trade-off: visual diffs under this ratio won't be flagged.
+            expect: {
+              toMatchScreenshot: {
+                comparatorName: 'pixelmatch',
+                comparatorOptions: {
+                  allowedMismatchedPixelRatio: 0.001,
+                },
+                // Home feed desktop (WebKit/Linux) needs extra headroom for
+                // layout to settle after fonts/images decode.
+                timeout: 10_000,
+              },
+            },
             // `viewport` below is the INITIAL browser size only. Each test
             // resizes the page per-call via `page.viewport(w, h)` inside
             // `renderForVRT` (see `src/test-utils/vrt.tsx`), so mobile
