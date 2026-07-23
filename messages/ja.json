@@ -282,6 +282,7 @@
       "subtitle": "6桁の確認コードを{phoneNumber}に送信しました。",
       "label": "確認コード",
       "hint": "{phoneNumber}で受信したコードを入力してください。",
+      "hintChannels": "SMS、WhatsApp、またはTelegramで送信された可能性が高いです。",
       "resend": "コードを再送信",
       "resendTimer": "コードを再送信（{seconds}秒）",
       "verify": "コードを確認",

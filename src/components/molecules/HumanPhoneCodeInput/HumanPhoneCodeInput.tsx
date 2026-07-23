@@ -92,7 +92,7 @@ export const HumanPhoneCodeInput = ({ value, onChange, onEnter = () => {} }: Hum
   );
 
   return (
-    <Container className={cn('flex-row flex-wrap gap-3')} data-testid="code-input-container">
+    <Container className={cn('mx-0 flex-row flex-wrap justify-start gap-3')} data-testid="code-input-container">
       {value.map((digit, index) => (
         <Container
           key={index}

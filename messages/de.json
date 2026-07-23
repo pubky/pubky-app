@@ -284,6 +284,7 @@
       "subtitle": "Wir haben einen 6-stelligen Verifizierungscode an {phoneNumber} gesendet.",
       "label": "Verifizierungscode",
       "hint": "Geben Sie den Code ein, den Sie auf {phoneNumber} erhalten haben.",
+      "hintChannels": "Er wurde wahrscheinlich per SMS, WhatsApp oder Telegram gesendet.",
       "resend": "Code erneut senden",
       "resendTimer": "Code erneut senden ({seconds}s)",
       "verify": "Code verifizieren",

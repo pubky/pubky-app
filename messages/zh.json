@@ -282,6 +282,7 @@
       "subtitle": "我们已向 {phoneNumber} 发送了6位验证码。",
       "label": "验证码",
       "hint": "输入您在 {phoneNumber} 收到的验证码。",
+      "hintChannels": "该验证码很可能通过短信、WhatsApp 或 Telegram 发送。",
       "resend": "重新发送验证码",
       "resendTimer": "重新发送验证码 ({seconds}秒)",
       "verify": "验证",

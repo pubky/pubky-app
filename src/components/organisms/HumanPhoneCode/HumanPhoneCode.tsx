@@ -92,16 +92,21 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
             />
           </Container>
 
-          <Container className="mx-0 w-full flex-col gap-6 lg:max-w-xl lg:flex-1">
-            <Container className="mx-0 flex-col gap-3">
+          <Container className="mx-0 w-full flex-col items-start gap-6 text-left lg:max-w-xl lg:flex-1">
+            <Container className="mx-0 w-full flex-col items-start gap-3 text-left">
               <Typography as="h3" className="text-2xl leading-[32px] font-semibold text-foreground">
                 {t('label')}
               </Typography>
-              <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-                {t('hint', {
-                  phoneNumber,
-                })}
-              </Typography>
+              <div className="w-full text-base leading-6 font-medium text-secondary-foreground/80">
+                <Typography as="p" overrideDefaults className="leading-6">
+                  {t('hint', {
+                    phoneNumber,
+                  })}
+                </Typography>
+                <Typography as="p" overrideDefaults className="leading-6">
+                  {t('hintChannels')}
+                </Typography>
+              </div>
             </Container>
 
             <HumanPhoneCodeInput

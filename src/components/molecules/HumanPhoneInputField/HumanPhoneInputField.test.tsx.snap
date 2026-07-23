@@ -7,11 +7,11 @@ exports[`HumanPhoneInputField > matches snapshot 1`] = `
   data-testid="human-phone-input-card"
 >
   <div
-    class="mx-auto flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
+    class="flex mx-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
     data-testid="container"
   >
     <div
-      class="mx-auto flex-col hidden w-48 shrink-0 lg:block"
+      class="flex-col mx-0 hidden w-48 shrink-0 lg:block"
       data-testid="container"
     >
       <img
@@ -26,11 +26,11 @@ exports[`HumanPhoneInputField > matches snapshot 1`] = `
       />
     </div>
     <div
-      class="mx-auto flex w-full flex-col gap-6 lg:max-w-xl lg:flex-1"
+      class="flex mx-0 w-full flex-col gap-6 lg:max-w-xl lg:flex-1"
       data-testid="container"
     >
       <div
-        class="mx-auto w-full flex flex-col gap-3"
+        class="w-full flex mx-0 flex-col gap-3"
         data-testid="container"
       >
         <h3

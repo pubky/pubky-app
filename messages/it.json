@@ -282,6 +282,7 @@
       "subtitle": "Abbiamo inviato un codice di verifica a 6 cifre a {phoneNumber}.",
       "label": "Codice di verifica",
       "hint": "Inserisci il codice che hai ricevuto su {phoneNumber}.",
+      "hintChannels": "È stato probabilmente inviato via SMS, WhatsApp o Telegram.",
       "resend": "Reinvia codice",
       "resendTimer": "Reinvia codice ({seconds}s)",
       "verify": "Verifica codice",

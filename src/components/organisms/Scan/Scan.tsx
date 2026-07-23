@@ -7,6 +7,7 @@ import { Key, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
+import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Link } from '@/atoms/Link/Link';
@@ -21,6 +22,8 @@ import { ContentCard } from '@/molecules/Content/Content';
 import { PageTitle } from '@/molecules/Page/Page';
 import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
+const SCAN_QR_SIZE = 176;
 
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
@@ -65,28 +68,41 @@ export const ScanContent = () => {
   );
   return (
     <>
-      {/** Desktop view */}
+      {/** Desktop view — Figma: scan plate + live QR + spacer, centered in card */}
       <Container size="container" className="hidden md:flex">
         <ScanHeader isMobile={false} />
-        <ContentCard layout="column">
-          <Container className="items-center justify-center gap-4">
-            <div className="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4">
+        <Card
+          data-testid="scan-qr-card"
+          className="w-full flex-row items-center justify-center gap-12 overflow-hidden rounded-md p-6 lg:p-12"
+        >
+          <Container className="mx-0 hidden w-48 shrink-0 lg:block">
+            <Image
+              priority
+              src="/images/scan.webp"
+              alt="Pubky Ring phone scanning a QR code"
+              width={192}
+              height={192}
+              className="size-48"
+            />
+          </Container>
+
+          <Container className="mx-0 w-48 shrink-0 items-center justify-center">
+            <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2">
               <QrCodeSlot
                 isLoading={isLoading}
                 isExpired={isExpired}
                 url={url}
+                size={SCAN_QR_SIZE}
                 generatingLabel={t('generating')}
                 clickToReloadLabel={t('clickToReload')}
                 expiredReloadAction={{ onClick: fetchUrl, ariaLabel: 'Reload sign-up QR code' }}
               />
             </div>
-            {inviteCode && (
-              <Typography as="p" className="text-lg font-semibold tracking-widest text-brand">
-                {inviteCode}
-              </Typography>
-            )}
           </Container>
-        </ContentCard>
+
+          {/* Empty column balances the illustration so the QR stays centered */}
+          <Container className="mx-0 hidden w-48 shrink-0 lg:block" aria-hidden="true" />
+        </Card>
       </Container>
 
       {/** Mobile view */}

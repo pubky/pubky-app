@@ -3,13 +3,13 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
-import { UserRoundPlus } from 'lucide-react';
+import { BookOpen, Eye, UserRoundPlus } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
-import { ONBOARDING_ROUTES } from '@/app/routes';
+import { APP_ROUTES, AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { LANDING_HERO_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
+import { LANDING_HERO_SECTION_ID, LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
 import { HeaderSocialLinks } from '../Header/Header';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 
@@ -20,6 +20,7 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
   const [showJoinButton, setShowJoinButton] = React.useState(false);
 
   const isLandingPage = pathname === '/';
+  const isLogoutPage = pathname === AUTH_ROUTES.LOGOUT;
 
   React.useEffect(() => {
     setShowJoinButton(false);
@@ -55,6 +56,42 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
   const handleJoin = () => {
     router.push(ONBOARDING_ROUTES.HUMAN);
   };
+
+  const handleLearn = () => {
+    router.push(`/#${LANDING_NEXT_SECTION_ID}`);
+  };
+
+  const handleExplore = () => {
+    router.push(APP_ROUTES.HOME);
+  };
+
+  if (isLogoutPage) {
+    return (
+      <Container className="flex-1 flex-row items-center justify-end gap-3" {...props}>
+        <Button
+          id="header-learn-btn"
+          data-testid="header-learn-btn"
+          variant="outline"
+          onClick={handleLearn}
+          className="hidden gap-2 md:inline-flex"
+        >
+          <BookOpen className="size-4" />
+          {t('learn')}
+        </Button>
+        <Button
+          id="header-explore-btn"
+          data-testid="header-explore-btn"
+          variant="outline"
+          onClick={handleExplore}
+          className="hidden gap-2 md:inline-flex"
+        >
+          <Eye className="size-4" />
+          {t('explore')}
+        </Button>
+        <HeaderButtonSignIn />
+      </Container>
+    );
+  }
 
   return (
     <Container className="flex-1 flex-row items-center justify-end" {...props}>
