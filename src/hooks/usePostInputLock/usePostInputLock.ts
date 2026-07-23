@@ -130,10 +130,10 @@ export function usePostInputLock({
     // Defensive: the switch is disabled while empty, but never wrap an empty body in a lock.
     if (!canEnable) return;
 
-    // The composer currently holds the content to be locked. Stash it and hand back an empty composer
-    // for the announcement teaser.
+    // The composer currently holds the content to be locked. Snapshot it, but leave it on screen so the
+    // creator still sees their draft behind the auth/unlock-method dialogs — it is only swapped for the
+    // empty announcement composer once the lock is applied (see `handleLockApplied`).
     setLockDraft(captureComposer());
-    clearComposer();
     setLockEnabled(true);
     // Seed the card's title with the default so it reads as real, editable text (not a placeholder).
     setLockTitle(tLock('defaultTitle'));
@@ -169,6 +169,8 @@ export function usePostInputLock({
   const handleLockApplied = (_password: string) => {
     setIsLockDialogOpen(false);
     setIsLockConfigured(true);
+    // Only now swap the still-visible locked draft for the empty announcement composer.
+    clearComposer();
   };
 
   // Dismissing the unlock-method dialog without applying abandons the lock.
@@ -213,6 +215,7 @@ export function usePostInputLock({
         ? { checked: lockEnabled, onCheckedChange, disabled: !lockEnabled && !canEnable }
         : undefined,
     isLockEnabled: lockEnabled,
+    isLockConfigured,
     lockServerPubky,
     isAuthDialogOpen,
     closeAuthDialog,

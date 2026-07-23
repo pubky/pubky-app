@@ -46,6 +46,8 @@ export interface UsePostInputLockReturn {
   };
   /** The lock switch is on: this post must never be published as a normal, public post. */
   isLockEnabled: boolean;
+  /** The unlock method was applied (Apply Lock): the announcement form and its "Locked post" card show. */
+  isLockConfigured: boolean;
   /** Lock Server the auth modal signs into; empty when unconfigured. */
   lockServerPubky: string;
   /** Whether the Locks sign-in modal is open (shown when the switch is on but not authenticated). */

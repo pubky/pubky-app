@@ -110,15 +110,21 @@ describe('usePostInputLock', () => {
   });
 
   describe('switching on', () => {
-    it('captures the composer as the content to lock and empties it for the teaser', () => {
+    it('captures the composer to lock, and only empties it once the lock is applied', () => {
       mocks.isAuthed = true;
       const { result, captureComposer, clearComposer } = setup();
 
       act(() => result.current.lockSwitch?.onCheckedChange(true));
 
+      // Draft snapshotted, but the locked content stays on screen behind the unlock-method dialog.
       expect(captureComposer).toHaveBeenCalledTimes(1);
-      expect(clearComposer).toHaveBeenCalledTimes(1);
+      expect(clearComposer).not.toHaveBeenCalled();
       expect(result.current.isLockDialogOpen).toBe(true);
+
+      act(() => result.current.handleLockApplied('Secret12!'));
+
+      // Applying the lock swaps the draft for the empty announcement composer.
+      expect(clearComposer).toHaveBeenCalledTimes(1);
     });
 
     it('opens the sign-in modal first when there is no Locks session', () => {
@@ -266,7 +272,7 @@ describe('usePostInputLock', () => {
       const { result, clearComposer, onPublished } = setup();
 
       configureLock(result);
-      clearComposer.mockClear(); // switching on already cleared the composer once; only watch the publish step
+      clearComposer.mockClear(); // applying the lock already cleared the composer once; only watch the publish step
       await act(async () => result.current.submitOrPublish());
 
       expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));

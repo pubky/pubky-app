@@ -160,6 +160,7 @@ export function PostInput({
   const {
     lockSwitch,
     isLockEnabled,
+    isLockConfigured,
     lockServerPubky,
     isAuthDialogOpen,
     closeAuthDialog,
@@ -389,7 +390,7 @@ export function PostInput({
             characterLimit={characterLimit}
             lockSwitch={lockSwitch}
             lockCard={
-              isLockEnabled ? (
+              isLockConfigured ? (
                 <LockedPostCard
                   editableTitle={{ value: lockTitle, onChange: setLockTitle, disabled: isPublishingLock }}
                 />

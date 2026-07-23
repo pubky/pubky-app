@@ -387,13 +387,15 @@ describe('PostInput lock flow (integration)', () => {
     renderComposer();
     act(() => mocks.composer.setContent('secret body'));
 
-    fireEvent.click(lockSwitch()); // not signed in → sign-in modal opens, body already captured
+    fireEvent.click(lockSwitch()); // not signed in → sign-in modal opens, body stays in the composer
 
     expect(screen.getByTestId('auth-dialog')).toBeInTheDocument();
-    expect(postButton()).toBeDisabled(); // the teaser composer is empty — nothing to publish
+    // The locked draft is still on screen (composer not emptied until Apply Lock), so the Post button is
+    // live — but publishing is gated on the lock being configured, so a click does nothing yet.
+    fireEvent.click(postButton());
     expect(mocks.createLockContent).not.toHaveBeenCalled();
     expect(mocks.commitCreate).not.toHaveBeenCalled();
-    expect(mocks.handleSubmit).not.toHaveBeenCalled();
+    expect(mocks.handleSubmit).not.toHaveBeenCalled(); // never leaks the to-be-locked body as a normal post
   });
 
   it('renders no lock switch when no Lock Server is configured', () => {
