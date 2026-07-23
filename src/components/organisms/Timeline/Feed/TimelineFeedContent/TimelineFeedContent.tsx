@@ -33,6 +33,7 @@ interface TimelineFeedContentProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
+  persistentHeader?: TimelineFeedProps['persistentHeader'];
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
@@ -45,6 +46,7 @@ interface TimelineFeedWithStreamProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
+  persistentHeader?: TimelineFeedProps['persistentHeader'];
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
@@ -63,6 +65,7 @@ export function TimelineFeedWithStream({
   tagsLayout,
   layoutResolution,
   children,
+  persistentHeader,
   emptyState,
   collectionId,
   pullToRefreshContainerRef,
@@ -82,6 +85,7 @@ export function TimelineFeedWithStream({
       collectionId={collectionId}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
       gridTrailingSlot={gridTrailingSlot}
+      persistentHeader={persistentHeader}
     >
       {children}
     </TimelineFeedContent>
@@ -107,6 +111,7 @@ function TimelineFeedContent({
   tagsLayout,
   layoutResolution,
   children,
+  persistentHeader,
   emptyState,
   collectionId,
   pullToRefreshContainerRef,
@@ -212,6 +217,7 @@ function TimelineFeedContent({
         <Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
           {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
           {shouldRenderChildren ? children : null}
+          {persistentHeader}
           <NewPostsSection
             streamId={streamId}
             variant={variant}

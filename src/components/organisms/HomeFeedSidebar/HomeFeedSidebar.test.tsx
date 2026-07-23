@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
 const {
   mockSetContent,
+  mockSetReach,
+  mockSetTaggedAsActive,
   mockUseHomeStore,
   mockFilterContent,
   mockFilterReach,
@@ -12,6 +14,8 @@ const {
   mockCurrentUserPubky,
 } = vi.hoisted(() => ({
   mockSetContent: vi.fn(),
+  mockSetReach: vi.fn(),
+  mockSetTaggedAsActive: vi.fn(),
   mockUseHomeStore: vi.fn(),
   mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
     <div
@@ -27,22 +31,28 @@ const {
       selectedTab,
       showNetwork,
       showMe,
+      showTaggedAs,
       profileTags,
       profileTagsDisabled,
+      onTabChange,
     }: {
       selectedTab?: string;
       showNetwork?: boolean;
       showMe?: boolean;
+      showTaggedAs?: boolean;
       profileTags?: string[];
       profileTagsDisabled?: boolean;
+      onTabChange?: (value: string) => void;
     }) => (
       <div
         data-testid="filter-reach"
         data-selected-tab={selectedTab}
         data-show-network={showNetwork ? 'true' : undefined}
         data-show-me={showMe ? 'true' : undefined}
+        data-show-tagged-as={showTaggedAs ? 'true' : undefined}
         data-profile-tags={(profileTags ?? []).join(',')}
         data-profile-tags-disabled={profileTagsDisabled ? 'true' : undefined}
+        onClick={() => onTabChange?.('tagged_as')}
       >
         FilterReach
       </div>
@@ -90,6 +100,13 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
   useFeedLayoutResolution: () => mockUseFeedLayoutResolution(),
 }));
 
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    requireAuth: (action: () => unknown) => action(),
+    isAuthenticated: true,
+  }),
+}));
+
 // Mock Atoms
 vi.mock('@/atoms/Container/Container', () => {
   return {
@@ -120,12 +137,15 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
 
 vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
+    TAGGED_AS_FILTER_KEY: 'tagged_as',
     FilterReach: (props: {
       selectedTab?: string;
       showNetwork?: boolean;
       showMe?: boolean;
+      showTaggedAs?: boolean;
       profileTags?: string[];
       profileTagsDisabled?: boolean;
+      onTabChange?: (value: string) => void;
     }) => mockFilterReach(props),
   };
 });
@@ -138,12 +158,16 @@ vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
 
 beforeEach(() => {
   mockSetContent.mockClear();
+  mockSetReach.mockClear();
+  mockSetTaggedAsActive.mockClear();
   mockCurrentUserPubky.value = 'viewer-pubky';
   mockUseHomeStore.mockReturnValue({
     layout: 'columns',
     setLayout: vi.fn(),
     reach: 'following',
-    setReach: vi.fn(),
+    setReach: mockSetReach,
+    taggedAsActive: false,
+    setTaggedAsActive: mockSetTaggedAsActive,
     sort: 'timeline',
     setSort: vi.fn(),
     content: 'all',
@@ -201,7 +225,9 @@ describe('HomeFeedSidebar', () => {
       layout: 'visual',
       setLayout: vi.fn(),
       reach: 'following',
-      setReach: vi.fn(),
+      setReach: mockSetReach,
+      taggedAsActive: false,
+      setTaggedAsActive: mockSetTaggedAsActive,
       sort: 'timeline',
       setSort: vi.fn(),
       content: 'short',
@@ -229,12 +255,14 @@ describe('HomeFeedSidebar', () => {
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
   });
 
-  it('opts Home reach into V1 Network, Me, and profile tag controls', () => {
+  it('opts Home into the standalone Tagged-as reach controls', () => {
     mockUseHomeStore.mockReturnValue({
       layout: 'columns',
       setLayout: vi.fn(),
       reach: 'network',
-      setReach: vi.fn(),
+      setReach: mockSetReach,
+      taggedAsActive: false,
+      setTaggedAsActive: mockSetTaggedAsActive,
       sort: 'timeline',
       setSort: vi.fn(),
       content: 'all',
@@ -246,17 +274,19 @@ describe('HomeFeedSidebar', () => {
 
     render(<HomeFeedSidebar />);
 
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-network', 'true');
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-me', 'true');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-tagged-as', 'true');
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', 'bitcoin,dev');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags-disabled', 'true');
   });
 
-  it('hides and disables profile tags while effective reach is all', () => {
+  it('parks and disables profile tags while a base reach is selected', () => {
     mockUseHomeStore.mockReturnValue({
       layout: 'columns',
       setLayout: vi.fn(),
       reach: 'all',
-      setReach: vi.fn(),
+      setReach: mockSetReach,
+      taggedAsActive: false,
+      setTaggedAsActive: mockSetTaggedAsActive,
       sort: 'timeline',
       setSort: vi.fn(),
       content: 'all',
@@ -268,16 +298,18 @@ describe('HomeFeedSidebar', () => {
 
     render(<HomeFeedSidebar />);
 
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', '');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', 'bitcoin');
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags-disabled', 'true');
   });
 
-  it('enables profile tags while effective reach is me (depth-0 domain feeds, #2150)', () => {
+  it('selects Tagged as and enables its editor while retaining the base reach', () => {
     mockUseHomeStore.mockReturnValue({
       layout: 'columns',
       setLayout: vi.fn(),
       reach: 'me',
-      setReach: vi.fn(),
+      setReach: mockSetReach,
+      taggedAsActive: true,
+      setTaggedAsActive: mockSetTaggedAsActive,
       sort: 'timeline',
       setSort: vi.fn(),
       content: 'all',
@@ -289,9 +321,20 @@ describe('HomeFeedSidebar', () => {
 
     render(<HomeFeedSidebar />);
 
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'me');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'tagged_as');
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', 'bitcoin');
     expect(screen.getByTestId('filter-reach')).not.toHaveAttribute('data-profile-tags-disabled');
+  });
+
+  it('activates Tagged as without changing the parked base reach', () => {
+    render(<HomeFeedSidebar />);
+
+    act(() => {
+      screen.getByTestId('filter-reach').click();
+    });
+
+    expect(mockSetTaggedAsActive).toHaveBeenCalledWith(true);
+    expect(mockSetReach).not.toHaveBeenCalled();
   });
 });
 

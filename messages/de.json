@@ -1170,12 +1170,14 @@
     "reach": {
       "title": "Reichweite",
       "all": "Alle",
-      "network": "Netzwerk",
+      "network": "Mein Netzwerk",
+      "taggedAs": "Markiert als",
       "following": "Folge ich",
       "friends": "Freunde",
       "me": "Ich",
       "profileTag": "Profil-Tag",
-      "profileTagLimitReached": "Max. {max} Tags"
+      "profileTagLimitReached": "Max. {max} Tags",
+      "taggedAsHeadline": "Beiträge von Personen, die mein Netzwerk als {tags} markiert hat"
     },
     "sort": {
       "title": "Sortieren",

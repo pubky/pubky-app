@@ -1,12 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { PubkyAppFeedReach } from 'pubky-app-specs';
 import { Container } from '@/atoms/Container/Container';
 import { Label } from '@/atoms/Label/Label';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
-import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+import { FilterReach, type ReachFilterValue, TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { CONTENT } from '@/stores/home/home.types';
@@ -25,7 +26,12 @@ export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
   const customFeed = useCustomFeed();
   const tDialog = useTranslations('dialogs.customFeed');
   const tReach = useTranslations('filters.reach');
-  const reach = customFeed?.reach !== undefined ? pubkyReachToHomeReach(customFeed.reach) : undefined;
+  const reach: ReachFilterValue | undefined =
+    customFeed?.reach === PubkyAppFeedReach.Wot && customFeed.domain_tags.length > 0
+      ? TAGGED_AS_FILTER_KEY
+      : customFeed?.reach !== undefined
+        ? pubkyReachToHomeReach(customFeed.reach)
+        : undefined;
   const sort = customFeed?.sort !== undefined ? pubkySortToHomeSort(customFeed.sort) : undefined;
   const layout = customFeed?.layout !== undefined ? pubkyLayoutToHomeLayout(customFeed.layout) : undefined;
   const content =
@@ -37,7 +43,7 @@ export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
 
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
-      <FilterReach selectedTab={reach} defaultSelectedTab={undefined} disabled showNetwork showMe />
+      <FilterReach selectedTab={reach} defaultSelectedTab={undefined} disabled showTaggedAs />
 
       {customFeed?.tags.length ? (
         <Container overrideDefaults className="flex flex-col gap-2" data-testid="custom-feed-post-tags">

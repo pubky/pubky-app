@@ -35,13 +35,14 @@ export { useTimelineFeedContext } from './TimelineFeedContext';
 export function TimelineFeed({
   variant,
   children,
+  persistentHeader,
   emptyState,
   pullToRefreshContainerRef,
   gridTrailingSlot,
 }: TimelineFeedProps) {
   switch (variant) {
     case TIMELINE_FEED_VARIANT.HOME:
-      return <HomeTimelineFeed>{children}</HomeTimelineFeed>;
+      return <HomeTimelineFeed persistentHeader={persistentHeader}>{children}</HomeTimelineFeed>;
     case TIMELINE_FEED_VARIANT.CUSTOM:
       return <CustomTimelineFeed>{children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
@@ -73,7 +74,13 @@ export function TimelineFeed({
   }
 }
 
-function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
+function HomeTimelineFeed({
+  children,
+  persistentHeader,
+}: {
+  children?: TimelineFeedProps['children'];
+  persistentHeader?: TimelineFeedProps['persistentHeader'];
+}) {
   const content = useHomeStore((state) => state.content);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.HOME);
   const resolvedContent = resolveVisualFeedContent({
@@ -91,6 +98,7 @@ function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children
       variant={TIMELINE_FEED_VARIANT.HOME}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      persistentHeader={persistentHeader}
     >
       {children}
     </TimelineFeedWithStream>

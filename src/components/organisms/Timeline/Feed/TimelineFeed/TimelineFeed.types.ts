@@ -19,6 +19,11 @@ interface TimelineFeedPropsBase {
    * Children can access prependPosts via TimelineFeedContext
    */
   children?: ReactNode;
+  /**
+   * Optional header rendered after ordinary children and before timeline
+   * content. Unlike children, it stays visible in Visual layout.
+   */
+  persistentHeader?: ReactNode;
 }
 
 type TimelineFeedPullToRefreshContainerRef = RefObject<HTMLElement | null>;

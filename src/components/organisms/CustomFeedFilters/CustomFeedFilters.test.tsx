@@ -118,18 +118,21 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
 
 vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
+    TAGGED_AS_FILTER_KEY: 'tagged_as',
     FilterReach: ({
       selectedTab,
       defaultSelectedTab,
       disabled,
       showNetwork,
       showMe,
+      showTaggedAs,
     }: {
       selectedTab?: string;
       defaultSelectedTab?: string;
       disabled?: boolean;
       showNetwork?: boolean;
       showMe?: boolean;
+      showTaggedAs?: boolean;
     }) => (
       <div
         data-testid="filter-reach"
@@ -138,6 +141,7 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
         data-disabled={disabled}
         data-show-network={showNetwork}
         data-show-me={showMe}
+        data-show-tagged-as={showTaggedAs}
       >
         FilterReach
       </div>
@@ -249,13 +253,12 @@ describe('CustomFeedFilters', () => {
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'following');
   });
 
-  it('maps Network and Me reach values and exposes both read-only options', () => {
+  it('maps My network and Me reach values and exposes the standalone read-only options', () => {
     mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Wot }));
     const { rerender } = render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'network');
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-network', 'true');
-    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-me', 'true');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-tagged-as', 'true');
 
     mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Me }));
     rerender(<CustomFeedFilters variant="sidebar" />);
@@ -269,6 +272,7 @@ describe('CustomFeedFilters', () => {
 
     render(<CustomFeedFilters variant="sidebar" />);
 
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'tagged_as');
     expect(screen.getByTestId('custom-feed-post-tags')).toHaveTextContent('Filter on Content Tags');
     expect(screen.getByTestId('custom-feed-profile-tags')).toHaveTextContent('profile tag');
     expect(screen.getByTestId('readonly-tag-bitcoin')).toBeInTheDocument();
@@ -276,7 +280,7 @@ describe('CustomFeedFilters', () => {
     expect(screen.getByTestId('readonly-tag-🔥')).toBeInTheDocument();
   });
 
-  it('renders profile tags for a Me feed (depth-0 domain feeds, #2150)', () => {
+  it('renders profile tags for a legacy Me feed without reinterpreting its reach', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({ tags: [], domain_tags: ['bitcoiner'], reach: PubkyAppFeedReach.Me }),
     );

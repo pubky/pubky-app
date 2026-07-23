@@ -3,6 +3,7 @@ import { within } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
 import { CustomFeedDialog } from './CustomFeedDialog';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -469,7 +470,7 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('feed-profile-tag-input')).toBeInTheDocument();
   });
 
-  it('renders Network and Me reach options', () => {
+  it('renders the standalone Tagged-as reach order', () => {
     render(
       <CustomFeedDialog mode="create">
         <button>Create Feed</button>
@@ -477,8 +478,16 @@ describe('CustomFeedDialog', () => {
     );
 
     const reachSection = within(screen.getByTestId('reach-filter-section'));
-    expect(reachSection.getByTestId(`select-item-${PubkyAppFeedReach.Wot}`)).toHaveTextContent('Network');
-    expect(reachSection.getByTestId(`select-item-${PubkyAppFeedReach.Me}`)).toHaveTextContent('Me');
+    expect(reachSection.getAllByTestId(/^select-item-/).map((item) => item.getAttribute('data-value'))).toEqual([
+      String(PubkyAppFeedReach.Wot),
+      TAGGED_AS_FILTER_KEY,
+      String(PubkyAppFeedReach.Following),
+      String(PubkyAppFeedReach.Friends),
+      String(PubkyAppFeedReach.Me),
+      String(PubkyAppFeedReach.All),
+    ]);
+    expect(reachSection.getByTestId(`select-item-${PubkyAppFeedReach.Wot}`)).toHaveTextContent('My network');
+    expect(reachSection.getByTestId(`select-item-${TAGGED_AS_FILTER_KEY}`)).toHaveTextContent('Tagged as');
   });
 
   it('renders Save Feed button', () => {
@@ -604,6 +613,24 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('save-feed-button')).toBeDisabled();
   });
 
+  it('requires a profile tag before saving an explicitly selected Tagged-as feed', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'Tagged people' } });
+    fireEvent.change(screen.getByTestId('tag-input-field'), { target: { value: 'bitcoin' } });
+    changeSelectValue('reach-select', TAGGED_AS_FILTER_KEY);
+
+    expect(screen.getByTestId('save-feed-button')).toBeDisabled();
+
+    fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: 'developer' } });
+
+    expect(screen.getByTestId('save-feed-button')).not.toBeDisabled();
+  });
+
   it('disables Save Feed button in edit mode when customFeed is undefined', () => {
     mockUseCustomFeed.mockReturnValue(undefined);
 
@@ -691,7 +718,7 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('post-tag-🔥')).toBeInTheDocument();
   });
 
-  it('hydrates Me profile tags in edit mode (depth-0 domain feeds, #2150)', () => {
+  it('preserves legacy Me profile tags while keeping the editor disabled', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({ reach: PubkyAppFeedReach.Me, tags: [], domain_tags: ['bitcoiner'] }),
     );
@@ -702,13 +729,14 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
-    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'false');
+    expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', String(PubkyAppFeedReach.Me));
+    expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
   });
 
-  it('clears unsupported profile tags while hydrating an edit', () => {
+  it('preserves legacy Following profile tags while keeping the editor disabled', () => {
     mockUseCustomFeed.mockReturnValue(
-      createMockFeed({ reach: PubkyAppFeedReach.All, tags: ['bitcoin'], domain_tags: ['bitcoiner'] }),
+      createMockFeed({ reach: PubkyAppFeedReach.Following, tags: ['bitcoin'], domain_tags: ['bitcoiner'] }),
     );
 
     render(
@@ -721,21 +749,21 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
   });
 
-  it('keeps profile tags enabled when switching to Me (#2150)', () => {
+  it('clears profile tags on every explicit non-Tagged-as selection', () => {
     render(
       <CustomFeedDialog mode="create">
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
 
-    changeSelectValue('reach-select', PubkyAppFeedReach.Wot);
+    changeSelectValue('reach-select', TAGGED_AS_FILTER_KEY);
     fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: 'bitcoiner' } });
     expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
 
     changeSelectValue('reach-select', PubkyAppFeedReach.Me);
 
-    expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
-    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'false');
+    expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
+    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
   });
 
   it('clears and disables profile tags when switching to All', () => {
@@ -745,7 +773,7 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    changeSelectValue('reach-select', PubkyAppFeedReach.Wot);
+    changeSelectValue('reach-select', TAGGED_AS_FILTER_KEY);
     fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: 'bitcoiner' } });
     expect(screen.getByTestId('post-tag-bitcoiner')).toBeInTheDocument();
 
@@ -762,7 +790,7 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    changeSelectValue('reach-select', PubkyAppFeedReach.Wot);
+    changeSelectValue('reach-select', TAGGED_AS_FILTER_KEY);
     const profileTagInput = screen.getByTestId('profile-tag-input-field');
     for (const tag of ['one', 'two', 'three', 'four', 'five', 'six']) {
       fireEvent.change(profileTagInput, { target: { value: tag } });
@@ -1047,7 +1075,7 @@ describe('CustomFeedDialog', () => {
     });
   });
 
-  it('creates a profile-only Network feed', async () => {
+  it('creates a profile-only Tagged-as feed as Wot plus domain tags', async () => {
     mockCommitCreate.mockResolvedValue(
       createMockFeed({ id: 'profile-feed', reach: PubkyAppFeedReach.Wot, tags: [], domain_tags: ['🔥'] }),
     );
@@ -1059,7 +1087,7 @@ describe('CustomFeedDialog', () => {
     );
 
     fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'Emoji Network' } });
-    changeSelectValue('reach-select', PubkyAppFeedReach.Wot);
+    changeSelectValue('reach-select', TAGGED_AS_FILTER_KEY);
     fireEvent.change(screen.getByTestId('profile-tag-input-field'), { target: { value: '🔥' } });
     fireEvent.click(screen.getByTestId('save-feed-button'));
 
@@ -1207,6 +1235,65 @@ describe('CustomFeedDialog', () => {
           tags: ['bitcoin', 'lightning', 'crypto'],
           domain_tags: [],
         },
+      });
+    });
+  });
+
+  it('preserves a legacy Me domain feed during a rename-only edit', async () => {
+    const mockFeed = createMockFeed({
+      reach: PubkyAppFeedReach.Me,
+      tags: ['bitcoin'],
+      domain_tags: ['developer'],
+    });
+    mockUseCustomFeed.mockReturnValue(mockFeed);
+    mockCommitUpdate.mockResolvedValue({ ...mockFeed, name: 'Renamed legacy feed' });
+
+    render(
+      <CustomFeedDialog mode="edit">
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    fireEvent.change(screen.getByTestId('feed-name-input'), { target: { value: 'Renamed legacy feed' } });
+    fireEvent.click(screen.getByTestId('save-feed-button'));
+
+    await waitFor(() => {
+      expect(mockCommitUpdate).toHaveBeenCalledWith({
+        feedId: mockFeed.id,
+        changes: expect.objectContaining({
+          name: 'Renamed legacy feed',
+          reach: PubkyAppFeedReach.Me,
+          domain_tags: ['developer'],
+        }),
+      });
+    });
+  });
+
+  it('clears a legacy domain tag list on an explicit Following to Friends change', async () => {
+    const mockFeed = createMockFeed({
+      reach: PubkyAppFeedReach.Following,
+      tags: ['bitcoin'],
+      domain_tags: ['developer'],
+    });
+    mockUseCustomFeed.mockReturnValue(mockFeed);
+    mockCommitUpdate.mockResolvedValue({ ...mockFeed, reach: PubkyAppFeedReach.Friends, domain_tags: [] });
+
+    render(
+      <CustomFeedDialog mode="edit">
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    changeSelectValue('reach-select', PubkyAppFeedReach.Friends);
+    fireEvent.click(screen.getByTestId('save-feed-button'));
+
+    await waitFor(() => {
+      expect(mockCommitUpdate).toHaveBeenCalledWith({
+        feedId: mockFeed.id,
+        changes: expect.objectContaining({
+          reach: PubkyAppFeedReach.Friends,
+          domain_tags: [],
+        }),
       });
     });
   });

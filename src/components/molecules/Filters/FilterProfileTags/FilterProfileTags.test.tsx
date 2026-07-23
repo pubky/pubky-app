@@ -64,19 +64,12 @@ describe('FilterProfileTags', () => {
     expect(wrapper).not.toHaveClass('pointer-events-none');
   });
 
-  it('keeps rendering the last selected tags while disabled so they collapse with the block', () => {
+  it('renders only the current parked tag state while collapsed', () => {
     const { rerender } = render(
       <FilterProfileTags selectedTags={['bitcoin', 'nostr']} onTagAdd={vi.fn()} onTagRemove={vi.fn()} />,
     );
 
-    // Parent clears tags and disables at the same time (e.g. switching reach to All/Me).
     rerender(<FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} disabled />);
-
-    expect(screen.getByText('bitcoin')).toBeInTheDocument();
-    expect(screen.getByText('nostr')).toBeInTheDocument();
-
-    // Re-enabling syncs back to the real (cleared) selection.
-    rerender(<FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} />);
 
     expect(screen.queryByText('bitcoin')).not.toBeInTheDocument();
     expect(screen.queryByText('nostr')).not.toBeInTheDocument();

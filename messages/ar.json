@@ -1164,12 +1164,14 @@
     "reach": {
       "title": "النطاق",
       "all": "الكل",
-      "network": "الشبكة",
+      "network": "شبكتي",
+      "taggedAs": "موسوم كـ",
       "following": "المتابَعون",
       "friends": "الاصدقاء",
       "me": "انا",
       "profileTag": "وسم الملف الشخصي",
-      "profileTagLimitReached": "{max} وسوم كحد اقصى"
+      "profileTagLimitReached": "{max} وسوم كحد اقصى",
+      "taggedAsHeadline": "منشورات من أشخاص وسمتهم شبكتي كـ {tags}"
     },
     "sort": {
       "title": "الترتيب",

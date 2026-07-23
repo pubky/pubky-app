@@ -1170,12 +1170,14 @@
     "reach": {
       "title": "Alcance",
       "all": "Todos",
-      "network": "Red",
+      "network": "Mi red",
+      "taggedAs": "Etiquetado como",
       "following": "Siguiendo",
       "friends": "Amigos",
       "me": "Yo",
       "profileTag": "etiqueta de perfil",
-      "profileTagLimitReached": "máximo {max} etiquetas"
+      "profileTagLimitReached": "máximo {max} etiquetas",
+      "taggedAsHeadline": "Publicaciones de personas que mi red etiquetó como {tags}"
     },
     "sort": {
       "title": "Ordenar",
