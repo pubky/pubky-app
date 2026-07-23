@@ -395,7 +395,7 @@ describe('CustomFeedDialog', () => {
     expect(input).toHaveAttribute('placeholder', 'Not your keys...');
   });
 
-  it('renders the post and profile tag section copy from the design', () => {
+  it('renders the post-tag copy and reveals the profile-tag copy for Tagged as', () => {
     render(
       <CustomFeedDialog mode="create">
         <button>Create Feed</button>
@@ -404,6 +404,10 @@ describe('CustomFeedDialog', () => {
 
     expect(screen.getByText('Post Tags')).toBeInTheDocument();
     expect(screen.getByText('Filter by what posts are about.')).toBeInTheDocument();
+    expect(screen.queryByText('Profile Tags')).not.toBeInTheDocument();
+
+    changeSelectValue('reach-select', TAGGED_AS_FILTER_KEY);
+
     expect(screen.getByText('Profile Tags')).toBeInTheDocument();
     expect(screen.getByText('Filter by how people are tagged.')).toBeInTheDocument();
   });
@@ -459,7 +463,7 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('content-filter-section')).toBeInTheDocument();
   });
 
-  it('renders tag input component', () => {
+  it('renders the post-tag input and hides profile tags until Tagged as is selected', () => {
     render(
       <CustomFeedDialog mode="create">
         <button>Create Feed</button>
@@ -467,6 +471,12 @@ describe('CustomFeedDialog', () => {
     );
 
     expect(screen.getByTestId('feed-tag-input')).toBeInTheDocument();
+    expect(screen.queryByTestId('profile-tags-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('feed-profile-tag-input')).not.toBeInTheDocument();
+
+    changeSelectValue('reach-select', TAGGED_AS_FILTER_KEY);
+
+    expect(screen.getByTestId('profile-tags-section')).toBeInTheDocument();
     expect(screen.getByTestId('feed-profile-tag-input')).toBeInTheDocument();
   });
 
@@ -718,7 +728,7 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('post-tag-🔥')).toBeInTheDocument();
   });
 
-  it('preserves legacy Me profile tags while keeping the editor disabled', () => {
+  it('preserves legacy Me profile tags while keeping the editor hidden', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({ reach: PubkyAppFeedReach.Me, tags: [], domain_tags: ['bitcoiner'] }),
     );
@@ -731,10 +741,11 @@ describe('CustomFeedDialog', () => {
 
     expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', String(PubkyAppFeedReach.Me));
     expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
-    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.queryByTestId('profile-tags-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('feed-profile-tag-input')).not.toBeInTheDocument();
   });
 
-  it('preserves legacy Following profile tags while keeping the editor disabled', () => {
+  it('preserves legacy Following profile tags while keeping the editor hidden', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({ reach: PubkyAppFeedReach.Following, tags: ['bitcoin'], domain_tags: ['bitcoiner'] }),
     );
@@ -746,7 +757,8 @@ describe('CustomFeedDialog', () => {
     );
 
     expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
-    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.queryByTestId('profile-tags-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('feed-profile-tag-input')).not.toBeInTheDocument();
   });
 
   it('clears profile tags on every explicit non-Tagged-as selection', () => {
@@ -763,7 +775,8 @@ describe('CustomFeedDialog', () => {
     changeSelectValue('reach-select', PubkyAppFeedReach.Me);
 
     expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
-    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.queryByTestId('profile-tags-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('feed-profile-tag-input')).not.toBeInTheDocument();
   });
 
   it('clears and disables profile tags when switching to All', () => {
@@ -780,7 +793,8 @@ describe('CustomFeedDialog', () => {
     changeSelectValue('reach-select', PubkyAppFeedReach.All);
 
     expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
-    expect(screen.getByTestId('feed-profile-tag-input')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.queryByTestId('profile-tags-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('feed-profile-tag-input')).not.toBeInTheDocument();
   });
 
   it('caps profile tags at five and hides the emoji selector at the limit', () => {

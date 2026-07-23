@@ -17,7 +17,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 vi.mock('next-intl', () => ({
   useFormatter: () => ({ list: mockList }),
   useTranslations: () => (key: string, values?: { tags?: string }) =>
-    key === 'taggedAsHeadline' ? `Posts from people my network tagged as ${values?.tags}` : key,
+    key === 'taggedAsHeadline' ? `Posts from people tagged as ${values?.tags} by my network` : key,
 }));
 
 describe('TaggedAsHeadline', () => {
@@ -33,9 +33,9 @@ describe('TaggedAsHeadline', () => {
     render(<TaggedAsHeadline />);
 
     const headline = screen.getByTestId('tagged-as-headline');
-    expect(headline).toHaveTextContent("Posts from people my network tagged as 'bitcoiner'");
+    expect(headline).toHaveTextContent('Posts from people tagged as ‘bitcoiner’ by my network');
     expect(headline).toHaveClass('text-muted-foreground');
-    expect(mockList).toHaveBeenCalledWith(["'bitcoiner'"], { type: 'disjunction', style: 'long' });
+    expect(mockList).toHaveBeenCalledWith(['‘bitcoiner’'], { type: 'disjunction', style: 'long' });
   });
 
   it('uses localized disjunction formatting for multiple tags', () => {
@@ -44,9 +44,9 @@ describe('TaggedAsHeadline', () => {
     render(<TaggedAsHeadline />);
 
     expect(screen.getByTestId('tagged-as-headline')).toHaveTextContent(
-      "Posts from people my network tagged as 'bitcoin' or 'developer'",
+      'Posts from people tagged as ‘bitcoin’ or ‘developer’ by my network',
     );
-    expect(mockList).toHaveBeenCalledWith(["'bitcoin'", "'developer'"], {
+    expect(mockList).toHaveBeenCalledWith(['‘bitcoin’', '‘developer’'], {
       type: 'disjunction',
       style: 'long',
     });

@@ -1175,7 +1175,7 @@
       "me": "Me",
       "profileTag": "profile tag",
       "profileTagLimitReached": "{max} tags max",
-      "taggedAsHeadline": "Posts from people my network tagged as {tags}"
+      "taggedAsHeadline": "Posts from people tagged as {tags} by my network"
     },
     "sort": {
       "title": "Sort",

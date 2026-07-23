@@ -252,7 +252,6 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
     setDomainTags([...domainTags, normalizedTag]);
   };
   const isTaggedAsReach = reach === TAGGED_AS_FILTER_KEY;
-  const areProfileTagsDisabled = !isTaggedAsReach;
   const isAtProfileTagLimit = domainTags.length >= HOME_PROFILE_TAGS_MAX_SELECTED;
   const canSave =
     name.trim().length > 0 && (tags.length > 0 || domainTags.length > 0) && (!isTaggedAsReach || domainTags.length > 0);
@@ -497,45 +496,47 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           )}
         </Container>
 
-        <Container className="gap-y-2">
-          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('profileTags')}</Label>
+        {isTaggedAsReach && (
+          <Container className="gap-y-2" data-testid="profile-tags-section">
+            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('profileTags')}</Label>
 
-          <Typography overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
-            {tDialog('profileTagsDescription')}
-          </Typography>
+            <Typography overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+              {tDialog('profileTagsDescription')}
+            </Typography>
 
-          <TagInput
-            onTagAdd={handleDomainTagAdd}
-            placeholder={tFilter('reach.profileTag')}
-            existingTags={domainTags.map((label) => ({ label }))}
-            viewerTags={domainTags.map((label) => ({ label }))}
-            disabled={disabled || areProfileTagsDisabled}
-            maxTags={HOME_PROFILE_TAGS_MAX_SELECTED}
-            currentTagsCount={domainTags.length}
-            limitReachedPlaceholder={tFilter('reach.profileTagLimitReached', {
-              max: HOME_PROFILE_TAGS_MAX_SELECTED,
-            })}
-            showEmojiButton={!isAtProfileTagLimit}
-            enableApiSuggestions
-            excludeFromApiSuggestions={domainTags}
-            addOnSuggestionClick
-            className="w-48"
-            data-testid="feed-profile-tag-input"
-          />
+            <TagInput
+              onTagAdd={handleDomainTagAdd}
+              placeholder={tFilter('reach.profileTag')}
+              existingTags={domainTags.map((label) => ({ label }))}
+              viewerTags={domainTags.map((label) => ({ label }))}
+              disabled={disabled}
+              maxTags={HOME_PROFILE_TAGS_MAX_SELECTED}
+              currentTagsCount={domainTags.length}
+              limitReachedPlaceholder={tFilter('reach.profileTagLimitReached', {
+                max: HOME_PROFILE_TAGS_MAX_SELECTED,
+              })}
+              showEmojiButton={!isAtProfileTagLimit}
+              enableApiSuggestions
+              excludeFromApiSuggestions={domainTags}
+              addOnSuggestionClick
+              className="w-48"
+              data-testid="feed-profile-tag-input"
+            />
 
-          {isTaggedAsReach && domainTags.length > 0 && (
-            <Container className="flex-row flex-wrap gap-2">
-              {domainTags.map((tag, index) => (
-                <PostTag
-                  key={`${tag}-${index}`}
-                  label={tag}
-                  showClose={!disabled && !areProfileTagsDisabled}
-                  onClose={() => setDomainTags((currentTags) => currentTags.filter((_, i) => i !== index))}
-                />
-              ))}
-            </Container>
-          )}
-        </Container>
+            {domainTags.length > 0 && (
+              <Container className="flex-row flex-wrap gap-2">
+                {domainTags.map((tag, index) => (
+                  <PostTag
+                    key={`${tag}-${index}`}
+                    label={tag}
+                    showClose={!disabled}
+                    onClose={() => setDomainTags((currentTags) => currentTags.filter((_, i) => i !== index))}
+                  />
+                ))}
+              </Container>
+            )}
+          </Container>
+        )}
 
         <DialogFooter>
           <Button

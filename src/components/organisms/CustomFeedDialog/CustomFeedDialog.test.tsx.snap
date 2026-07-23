@@ -888,36 +888,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
       </div>
     </div>
     <div
-      class="gap-y-2"
-      data-testid="container"
-    >
-      <label
-        class="text-xs tracking-wide text-muted-foreground uppercase"
-        data-testid="label"
-      >
-        Profile Tags
-      </label>
-      <span
-        class="text-base leading-6 font-medium text-secondary-foreground"
-        data-override-defaults="true"
-        data-testid="typography"
-      >
-        Filter by how people are tagged.
-      </span>
-      <div
-        class="w-48"
-        data-current-tags-count="0"
-        data-disabled="true"
-        data-max-tags="5"
-        data-show-emoji-button="true"
-        data-testid="feed-profile-tag-input"
-      >
-        <input
-          data-testid="profile-tag-input-field"
-        />
-      </div>
-    </div>
-    <div
       data-testid="dialog-footer"
     >
       <button
@@ -1837,36 +1807,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
       >
         <input
           data-testid="tag-input-field"
-        />
-      </div>
-    </div>
-    <div
-      class="gap-y-2"
-      data-testid="container"
-    >
-      <label
-        class="text-xs tracking-wide text-muted-foreground uppercase"
-        data-testid="label"
-      >
-        Profile Tags
-      </label>
-      <span
-        class="text-base leading-6 font-medium text-secondary-foreground"
-        data-override-defaults="true"
-        data-testid="typography"
-      >
-        Filter by how people are tagged.
-      </span>
-      <div
-        class="w-48"
-        data-current-tags-count="0"
-        data-disabled="true"
-        data-max-tags="5"
-        data-show-emoji-button="true"
-        data-testid="feed-profile-tag-input"
-      >
-        <input
-          data-testid="profile-tag-input-field"
         />
       </div>
     </div>
@@ -2826,36 +2766,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
             ×
           </button>
         </span>
-      </div>
-    </div>
-    <div
-      class="gap-y-2"
-      data-testid="container"
-    >
-      <label
-        class="text-xs tracking-wide text-muted-foreground uppercase"
-        data-testid="label"
-      >
-        Profile Tags
-      </label>
-      <span
-        class="text-base leading-6 font-medium text-secondary-foreground"
-        data-override-defaults="true"
-        data-testid="typography"
-      >
-        Filter by how people are tagged.
-      </span>
-      <div
-        class="w-48"
-        data-current-tags-count="0"
-        data-disabled="true"
-        data-max-tags="5"
-        data-show-emoji-button="true"
-        data-testid="feed-profile-tag-input"
-      >
-        <input
-          data-testid="profile-tag-input-field"
-        />
       </div>
     </div>
     <div
@@ -3831,36 +3741,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
       </div>
     </div>
     <div
-      class="gap-y-2"
-      data-testid="container"
-    >
-      <label
-        class="text-xs tracking-wide text-muted-foreground uppercase"
-        data-testid="label"
-      >
-        Profile Tags
-      </label>
-      <span
-        class="text-base leading-6 font-medium text-secondary-foreground"
-        data-override-defaults="true"
-        data-testid="typography"
-      >
-        Filter by how people are tagged.
-      </span>
-      <div
-        class="w-48"
-        data-current-tags-count="0"
-        data-disabled="true"
-        data-max-tags="5"
-        data-show-emoji-button="true"
-        data-testid="feed-profile-tag-input"
-      >
-        <input
-          data-testid="profile-tag-input-field"
-        />
-      </div>
-    </div>
-    <div
       data-testid="dialog-footer"
     >
       <button
@@ -4805,36 +4685,6 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode without c
       >
         <input
           data-testid="tag-input-field"
-        />
-      </div>
-    </div>
-    <div
-      class="gap-y-2"
-      data-testid="container"
-    >
-      <label
-        class="text-xs tracking-wide text-muted-foreground uppercase"
-        data-testid="label"
-      >
-        Profile Tags
-      </label>
-      <span
-        class="text-base leading-6 font-medium text-secondary-foreground"
-        data-override-defaults="true"
-        data-testid="typography"
-      >
-        Filter by how people are tagged.
-      </span>
-      <div
-        class="w-48"
-        data-current-tags-count="0"
-        data-disabled="true"
-        data-max-tags="5"
-        data-show-emoji-button="true"
-        data-testid="feed-profile-tag-input"
-      >
-        <input
-          data-testid="profile-tag-input-field"
         />
       </div>
     </div>

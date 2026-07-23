@@ -17,7 +17,7 @@ export function TaggedAsHeadline() {
   }
 
   const formattedTags = format.list(
-    profileTags.map((tag) => `'${tag}'`),
+    profileTags.map((tag) => `‘${tag}’`),
     { type: 'disjunction', style: 'long' },
   );
 
