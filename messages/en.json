@@ -357,7 +357,7 @@
     },
     "signIn": {
       "title": "Sign in to <highlight>Pubky.</highlight>",
-      "subtitle": "Authorize with Pubky Ring to sign in.",
+      "subtitle": "Authorize with <highlight>Pubky Ring</highlight> to sign in.",
       "progressTitle": "Signing in.",
       "progressSubtitle": "Please wait while your Pubky experience loads.",
       "generating": "Generating QR Code...",
