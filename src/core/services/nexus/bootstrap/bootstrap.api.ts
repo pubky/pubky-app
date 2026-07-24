@@ -12,6 +12,7 @@ export const bootstrapApi = {
     const encodedPubky = encodePathSegment(pubky);
     return buildNexusUrl(`${PREFIX}/${encodedPubky}`);
   },
+  ingest: (pubky: string) => buildNexusUrl(`v0/ingest/${encodePathSegment(pubky)}`),
 };
 
 export type BootstrapApiEndpoint = keyof typeof bootstrapApi;

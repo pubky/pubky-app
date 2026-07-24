@@ -2,31 +2,43 @@
 
 exports[`DialogCheckLink - Snapshots > matches snapshot for default DialogCheckLink 1`] = `
 <div
-  data-on-open-change="true"
-  data-open="true"
-  data-testid="dialog"
+  class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
 >
   <div
-    class="w-2xl"
-    data-hidden-title="Double-check this link"
+    aria-labelledby="radix-normalized"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 w-2xl"
+    data-cy="dialog-content"
+    data-slot="dialog-content"
+    data-state="open"
     data-testid="dialog-content"
+    id="radix-normalized"
+    role="dialog"
+    style="pointer-events: auto;"
+    tabindex="-1"
   >
     <h2
       class="sr-only"
-      data-testid="dialog-hidden-title"
+      id="radix-normalized"
     >
       Double-check this link
     </h2>
     <div
+      class="flex flex-col gap-1.5 pr-6"
+      data-slot="dialog-header"
       data-testid="dialog-header"
     >
       <h2
+        class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+        data-slot="dialog-title"
         data-testid="dialog-title"
+        id="radix-normalized"
       >
         Double-check this link
       </h2>
       <p
-        data-testid="dialog-description"
+        class="text-sm leading-normal font-medium text-muted-foreground"
+        data-slot="dialog-description"
+        id="radix-normalized"
       >
         The link is taking you to another site:
       </p>
@@ -64,7 +76,8 @@ exports[`DialogCheckLink - Snapshots > matches snapshot for default DialogCheckL
       </div>
     </div>
     <div
-      data-testid="dialog-footer"
+      class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+      data-slot="dialog-footer"
     >
       <button
         data-size="lg"
@@ -103,144 +116,83 @@ exports[`DialogCheckLink - Snapshots > matches snapshot for default DialogCheckL
         Continue
       </button>
     </div>
+    <button
+      class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+      data-slot="dialog-close"
+      data-testid="dialog-close"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Close
+      </span>
+    </button>
   </div>
 </div>
 `;
 
-exports[`DialogCheckLink - Snapshots > matches snapshot when closed 1`] = `
-<div
-  data-on-open-change="true"
-  data-open="false"
-  data-testid="dialog"
->
-  <div
-    class="w-2xl"
-    data-hidden-title="Double-check this link"
-    data-testid="dialog-content"
-  >
-    <h2
-      class="sr-only"
-      data-testid="dialog-hidden-title"
-    >
-      Double-check this link
-    </h2>
-    <div
-      data-testid="dialog-header"
-    >
-      <h2
-        data-testid="dialog-title"
-      >
-        Double-check this link
-      </h2>
-      <p
-        data-testid="dialog-description"
-      >
-        The link is taking you to another site:
-      </p>
-    </div>
-    <div
-      class="gap-3"
-      data-testid="container"
-    >
-      <p
-        class="text-sm font-bold break-all text-foreground"
-        data-testid="typography"
-      >
-        https://example.com/some/path
-      </p>
-      <p
-        class="text-sm text-muted-foreground"
-        data-testid="typography"
-      >
-        Are you sure you want to continue?
-      </p>
-      <div
-        data-testid="checkbox-wrapper"
-      >
-        <input
-          data-testid="checkbox"
-          id="dont-show-again"
-          type="checkbox"
-        />
-        <label
-          data-testid="checkbox-label"
-          for="dont-show-again"
-        >
-          Don't show this again
-        </label>
-      </div>
-    </div>
-    <div
-      data-testid="dialog-footer"
-    >
-      <button
-        data-size="lg"
-        data-testid="button-outline"
-        data-variant="outline"
-      >
-        Cancel
-      </button>
-      <button
-        data-size="lg"
-        data-testid="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-external-link h-4 w-4"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 3h6v6"
-          />
-          <path
-            d="M10 14 21 3"
-          />
-          <path
-            d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-          />
-        </svg>
-        Continue
-      </button>
-    </div>
-  </div>
-</div>
-`;
+exports[`DialogCheckLink - Snapshots > matches snapshot when closed 1`] = `<div />`;
 
 exports[`DialogCheckLink - Snapshots > matches snapshot with long URL 1`] = `
 <div
-  data-on-open-change="true"
-  data-open="true"
-  data-testid="dialog"
+  class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
 >
   <div
-    class="w-2xl"
-    data-hidden-title="Double-check this link"
+    aria-labelledby="radix-normalized"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 w-2xl"
+    data-cy="dialog-content"
+    data-slot="dialog-content"
+    data-state="open"
     data-testid="dialog-content"
+    id="radix-normalized"
+    role="dialog"
+    style="pointer-events: auto;"
+    tabindex="-1"
   >
     <h2
       class="sr-only"
-      data-testid="dialog-hidden-title"
+      id="radix-normalized"
     >
       Double-check this link
     </h2>
     <div
+      class="flex flex-col gap-1.5 pr-6"
+      data-slot="dialog-header"
       data-testid="dialog-header"
     >
       <h2
+        class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+        data-slot="dialog-title"
         data-testid="dialog-title"
+        id="radix-normalized"
       >
         Double-check this link
       </h2>
       <p
-        data-testid="dialog-description"
+        class="text-sm leading-normal font-medium text-muted-foreground"
+        data-slot="dialog-description"
+        id="radix-normalized"
       >
         The link is taking you to another site:
       </p>
@@ -278,7 +230,8 @@ exports[`DialogCheckLink - Snapshots > matches snapshot with long URL 1`] = `
       </div>
     </div>
     <div
-      data-testid="dialog-footer"
+      class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+      data-slot="dialog-footer"
     >
       <button
         data-size="lg"
@@ -317,37 +270,81 @@ exports[`DialogCheckLink - Snapshots > matches snapshot with long URL 1`] = `
         Continue
       </button>
     </div>
+    <button
+      class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+      data-slot="dialog-close"
+      data-testid="dialog-close"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Close
+      </span>
+    </button>
   </div>
 </div>
 `;
 
 exports[`DialogCheckLink - Snapshots > matches snapshot with short URL 1`] = `
 <div
-  data-on-open-change="true"
-  data-open="true"
-  data-testid="dialog"
+  class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
 >
   <div
-    class="w-2xl"
-    data-hidden-title="Double-check this link"
+    aria-labelledby="radix-normalized"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 w-2xl"
+    data-cy="dialog-content"
+    data-slot="dialog-content"
+    data-state="open"
     data-testid="dialog-content"
+    id="radix-normalized"
+    role="dialog"
+    style="pointer-events: auto;"
+    tabindex="-1"
   >
     <h2
       class="sr-only"
-      data-testid="dialog-hidden-title"
+      id="radix-normalized"
     >
       Double-check this link
     </h2>
     <div
+      class="flex flex-col gap-1.5 pr-6"
+      data-slot="dialog-header"
       data-testid="dialog-header"
     >
       <h2
+        class="text-xl/[1.4] font-bold text-foreground sm:text-2xl/[1.333]"
+        data-slot="dialog-title"
         data-testid="dialog-title"
+        id="radix-normalized"
       >
         Double-check this link
       </h2>
       <p
-        data-testid="dialog-description"
+        class="text-sm leading-normal font-medium text-muted-foreground"
+        data-slot="dialog-description"
+        id="radix-normalized"
       >
         The link is taking you to another site:
       </p>
@@ -385,7 +382,8 @@ exports[`DialogCheckLink - Snapshots > matches snapshot with short URL 1`] = `
       </div>
     </div>
     <div
-      data-testid="dialog-footer"
+      class="flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-4 md:justify-between [&>*]:w-full sm:[&>*]:flex-1"
+      data-slot="dialog-footer"
     >
       <button
         data-size="lg"
@@ -424,6 +422,38 @@ exports[`DialogCheckLink - Snapshots > matches snapshot with short URL 1`] = `
         Continue
       </button>
     </div>
+    <button
+      class="absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+      data-slot="dialog-close"
+      data-testid="dialog-close"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Close
+      </span>
+    </button>
   </div>
 </div>
 `;
