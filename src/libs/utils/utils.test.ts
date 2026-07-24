@@ -1093,6 +1093,16 @@ describe('Utils', () => {
       expect(isSameDomain('')).toBe(false);
     });
 
+    it('should return false for a same-domain URL with an unsafe protocol', () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { hostname: 'example.com' },
+      });
+
+      expect(isSameDomain('ftp://example.com/file')).toBe(false);
+      expect(isSameDomain('javascript://example.com/alert(1)')).toBe(false);
+    });
+
     it('should handle case-insensitive domain comparison', () => {
       Object.defineProperty(window, 'location', {
         writable: true,
@@ -1183,6 +1193,16 @@ describe('Utils', () => {
 
       expect(shouldBypassLinkConfirmation('not-a-valid-url')).toBe(false);
       expect(shouldBypassLinkConfirmation('')).toBe(false);
+    });
+
+    it('should return false for unsupported protocols even when the hostname matches', () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { hostname: 'example.com' },
+      });
+
+      expect(shouldBypassLinkConfirmation('ftp://example.com/file')).toBe(false);
+      expect(shouldBypassLinkConfirmation('javascript://example.com/alert(1)')).toBe(false);
     });
 
     it('should prioritize protocol bypass over domain check', () => {

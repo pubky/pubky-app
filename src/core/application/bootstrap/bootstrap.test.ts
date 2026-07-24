@@ -633,6 +633,7 @@ describe('BootstrapApplication', () => {
 
       const mocks = setupMocks({ bootstrapData });
 
+      const ingestSpy = vi.spyOn(NexusBootstrapService, 'ingest').mockResolvedValue(undefined);
       const upsertTtlSpy = vi.spyOn(LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
       const mockSubscribeUser = vi.fn();
       const mockGetInstance = vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
@@ -644,6 +645,7 @@ describe('BootstrapApplication', () => {
 
       await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
+      expect(ingestSpy).toHaveBeenCalledWith(TEST_PUBKY);
       expect(loggerWarnSpy).toHaveBeenCalledWith('User is not indexed in Nexus. Scheduling TTL retry', {
         pubky: TEST_PUBKY,
         retryDelayMs: getTtlRetryDelayMs(),
@@ -661,6 +663,7 @@ describe('BootstrapApplication', () => {
 
       setupMocks({ bootstrapData });
 
+      const ingestSpy = vi.spyOn(NexusBootstrapService, 'ingest').mockResolvedValue(undefined);
       const upsertTtlSpy = vi.spyOn(LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
       const mockSubscribeUser = vi.fn();
       vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
@@ -672,6 +675,7 @@ describe('BootstrapApplication', () => {
 
       await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
 
+      expect(ingestSpy).not.toHaveBeenCalled();
       expect(loggerWarnSpy).not.toHaveBeenCalled();
       expect(upsertTtlSpy).not.toHaveBeenCalled();
       expect(mockSubscribeUser).not.toHaveBeenCalled();

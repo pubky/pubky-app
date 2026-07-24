@@ -2,64 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogCheckLink } from './DialogCheckLink';
 
-vi.mock('@/atoms/Dialog/Dialog', () => {
-  return {
-    Dialog: ({
-      children,
-      open,
-      onOpenChange,
-    }: {
-      children: React.ReactNode;
-      open?: boolean;
-      onOpenChange?: (open: boolean) => void;
-    }) => (
-      <div data-testid="dialog" data-open={open} data-on-open-change={!!onOpenChange}>
-        {children}
-      </div>
-    ),
-    DialogContent: ({
-      children,
-      className,
-      hiddenTitle,
-      onClick,
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      hiddenTitle?: string;
-      onClick?: (e: React.MouseEvent) => void;
-    }) => (
-      <div data-testid="dialog-content" className={className} data-hidden-title={hiddenTitle} onClick={onClick}>
-        {hiddenTitle && (
-          <h2 className="sr-only" data-testid="dialog-hidden-title">
-            {hiddenTitle}
-          </h2>
-        )}
-        {children}
-      </div>
-    ),
-    DialogHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="dialog-header" className={className}>
-        {children}
-      </div>
-    ),
-    DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <h2 data-testid="dialog-title" className={className}>
-        {children}
-      </h2>
-    ),
-    DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <p data-testid="dialog-description" className={className}>
-        {children}
-      </p>
-    ),
-    DialogFooter: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="dialog-footer" className={className}>
-        {children}
-      </div>
-    ),
-  };
-});
-
 // Mock atoms
 vi.mock('@/atoms/Button/Button', () => {
   return {
@@ -191,12 +133,10 @@ describe('DialogCheckLink', () => {
   it('renders with default props', () => {
     render(<DialogCheckLink {...defaultProps} />);
 
-    const dialog = screen.getByTestId('dialog');
-    const content = screen.getByTestId('dialog-content');
+    const content = screen.getByRole('dialog');
     const header = screen.getByTestId('dialog-header');
     const title = screen.getByTestId('dialog-title');
 
-    expect(dialog).toBeInTheDocument();
     expect(content).toBeInTheDocument();
     expect(header).toBeInTheDocument();
     expect(title).toBeInTheDocument();
@@ -228,6 +168,23 @@ describe('DialogCheckLink', () => {
     fireEvent.click(continueButton);
 
     expect(mockWindowOpen).toHaveBeenCalledWith(defaultProps.linkUrl, '_blank', 'noopener,noreferrer');
+    expect(onOpenChangeAction).toHaveBeenCalledWith(false);
+  });
+
+  it('refuses to open an unsafe URL when Continue is clicked', () => {
+    const onOpenChangeAction = vi.fn();
+    render(
+      <DialogCheckLink
+        {...defaultProps}
+        linkUrl={' \u0000java\tscript:alert(1)'}
+        onOpenChangeAction={onOpenChangeAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Continue'));
+
+    expect(mockWindowOpen).not.toHaveBeenCalled();
+    expect(mockSetShowConfirm).not.toHaveBeenCalled();
     expect(onOpenChangeAction).toHaveBeenCalledWith(false);
   });
 
@@ -273,24 +230,27 @@ describe('DialogCheckLink - Snapshots', () => {
   });
 
   it('matches snapshot for default DialogCheckLink', () => {
-    const { container } = render(<DialogCheckLink {...defaultProps} />);
-    expect(container.firstChild).toMatchSnapshot();
+    render(<DialogCheckLink {...defaultProps} />);
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot when closed', () => {
     const { container } = render(<DialogCheckLink {...defaultProps} open={false} />);
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with long URL', () => {
     const longUrl = 'https://example.com/this/is/a/very/long/path/that/needs/to/be/truncated/properly';
-    const { container } = render(<DialogCheckLink {...defaultProps} linkUrl={longUrl} />);
-    expect(container.firstChild).toMatchSnapshot();
+    render(<DialogCheckLink {...defaultProps} linkUrl={longUrl} />);
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot with short URL', () => {
     const shortUrl = 'https://x.com';
-    const { container } = render(<DialogCheckLink {...defaultProps} linkUrl={shortUrl} />);
-    expect(container.firstChild).toMatchSnapshot();
+    render(<DialogCheckLink {...defaultProps} linkUrl={shortUrl} />);
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent.parentElement).toMatchSnapshot();
   });
 });
