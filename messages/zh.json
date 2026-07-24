@@ -1348,6 +1348,9 @@
       "descriptionLabel": "描述",
       "descriptionPlaceholder": "人们会在这里找到什么？",
       "backgroundLabel": "背景",
+      "layoutLabel": "布局",
+      "layoutGrid": "网格",
+      "layoutList": "列表",
       "addImage": "添加图片",
       "removeImage": "移除图片",
       "coverImageInvalid": "封面图片必须是图片文件。",
@@ -1370,6 +1373,7 @@
     "edit": {
       "title": "编辑收藏集",
       "save": "保存更改",
+      "defaultLayoutLabel": "默认布局",
       "updated": "收藏集已更新",
       "updateFailed": "更新收藏集失败。"
     },
@@ -1409,6 +1413,9 @@
       "unfollow": "取消关注",
       "content": "添加帖子",
       "addContent": "添加帖子",
+      "layout": "布局",
+      "layoutGrid": "网格",
+      "layoutList": "列表",
       "empty": "此收藏为空。",
       "notFound": {
         "title": "未找到收藏",

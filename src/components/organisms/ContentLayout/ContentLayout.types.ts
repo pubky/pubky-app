@@ -1,4 +1,5 @@
 import type { TimelineFeedVariant } from '@/config/feed';
+import type { LayoutType } from '@/stores/home/home.types';
 
 export interface ContentLayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,8 @@ export interface ContentLayoutProps {
   classNameWrapperContent?: string;
   classNameMobileHeader?: string;
   feedVariant?: TimelineFeedVariant;
+  /** Temporary page-level layout that takes precedence over persisted feed preferences. */
+  layoutOverride?: LayoutType;
   /** Render page-local chrome as columns even when the persisted feed preference is wide. */
   disableWideShellLayout?: boolean;
 }

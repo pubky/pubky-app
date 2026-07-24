@@ -25,6 +25,7 @@ vi.mock('@/stores/home/home.types', () => ({
   LAYOUT: {
     COLUMNS: 'columns',
     WIDE: 'wide',
+    LIST: 'list',
     VISUAL: 'visual',
   },
 }));
@@ -345,6 +346,27 @@ describe('ContentLayout', () => {
     expect(screen.getByText('Inline Right Sidebar')).toBeInTheDocument();
     expect(screen.queryByTestId('button-filters-left')).not.toBeInTheDocument();
     expect(screen.queryByTestId('button-filters-right')).not.toBeInTheDocument();
+  });
+
+  it('uses an explicit List layout override for the wide shell', () => {
+    render(
+      <ContentLayout
+        layoutOverride="list"
+        showLeftSidebar
+        showRightSidebar
+        leftSidebarContent={<div>Left Sidebar</div>}
+        rightSidebarContent={<div>Right Sidebar</div>}
+        leftDrawerContent={<div>Left Drawer</div>}
+        rightDrawerContent={<div>Right Drawer</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.queryByText('Left Sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Right Sidebar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('button-filters-left')).toBeInTheDocument();
+    expect(screen.getByTestId('button-filters-right')).toBeInTheDocument();
   });
 });
 

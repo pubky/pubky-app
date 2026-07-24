@@ -1,7 +1,10 @@
 import { createRef, type ReactNode, type RefObject } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
+import { CollectionHeroSkeleton } from '@/organisms/Collections/CollectionHero/CollectionHero.skeleton';
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { CollectionItems } from './CollectionItems';
 
@@ -28,18 +31,30 @@ vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
     authorPubky,
     postId,
     postDetails,
+    layout,
+    onLayoutChange,
   }: {
     authorPubky: string;
     postId: string;
     postDetails?: EnrichedPostDetails | null;
-  }) => (
-    <div
-      data-testid="collection-hero"
-      data-author-pubky={authorPubky}
-      data-post-id={postId}
-      data-has-post-details={String(postDetails != null)}
-    />
-  ),
+    layout: CollectionLayout;
+    onLayoutChange: (layout: CollectionLayout) => void;
+  }) =>
+    postDetails ? (
+      <div
+        data-testid="collection-hero"
+        data-author-pubky={authorPubky}
+        data-post-id={postId}
+        data-has-post-details="true"
+        data-layout={layout}
+      >
+        <button type="button" onClick={() => onLayoutChange(COLLECTION_LAYOUT.GRID)}>
+          Switch to Grid
+        </button>
+      </div>
+    ) : (
+      <CollectionHeroSkeleton />
+    ),
 }));
 
 vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
@@ -54,20 +69,22 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
     children?: ReactNode;
     emptyState?: ReactNode;
     pullToRefreshContainerRef?: RefObject<HTMLElement | null>;
-    gridTrailingSlot?: ReactNode;
+    trailingSlot?: ReactNode;
+    requestedLayout?: LayoutType;
   }) => {
-    const { variant, children, emptyState, pullToRefreshContainerRef, gridTrailingSlot } = props;
-    mockTimelineFeedProps({ pullToRefreshContainerRef, gridTrailingSlot });
+    const { variant, children, emptyState, pullToRefreshContainerRef, trailingSlot, requestedLayout } = props;
+    mockTimelineFeedProps({ pullToRefreshContainerRef, trailingSlot, requestedLayout });
 
     return (
       <div
         data-testid="timeline-feed"
         data-variant={variant}
         data-has-empty-state={String(Boolean(emptyState))}
-        data-has-grid-trailing-slot={String(Boolean(gridTrailingSlot))}
+        data-has-trailing-slot={String(Boolean(trailingSlot))}
+        data-requested-layout={requestedLayout}
       >
         {children}
-        {gridTrailingSlot}
+        {trailingSlot}
       </div>
     );
   },
@@ -112,13 +129,15 @@ function setAuthStore(currentUserPubky: string | null) {
   );
 }
 
-function renderCollectionItems({
-  postDetails = buildPostDetails(COLLECTION_CONTENT),
-  pullToRefreshContainerRef,
-}: {
+type RenderCollectionItemsOptions = {
   postDetails?: EnrichedPostDetails | null;
   pullToRefreshContainerRef?: RefObject<HTMLElement | null>;
-} = {}) {
+};
+
+function renderCollectionItems(options: RenderCollectionItemsOptions = {}) {
+  const postDetails = 'postDetails' in options ? options.postDetails : buildPostDetails(COLLECTION_CONTENT);
+  const { pullToRefreshContainerRef } = options;
+
   return render(
     <CollectionItems
       authorPubky={AUTHOR_PUBKY}
@@ -161,7 +180,7 @@ describe('CollectionItems', () => {
 
     renderCollectionItems({ pullToRefreshContainerRef });
 
-    expect(mockTimelineFeedProps).toHaveBeenCalledWith({ pullToRefreshContainerRef });
+    expect(mockTimelineFeedProps).toHaveBeenCalledWith(expect.objectContaining({ pullToRefreshContainerRef }));
   });
 
   it('renders the feed for an owner non-empty envelope with the hero inside the feed', () => {
@@ -174,12 +193,88 @@ describe('CollectionItems', () => {
     expect(screen.queryByTestId('collection-items-empty')).not.toBeInTheDocument();
   });
 
-  it('renders the feed (never the empty state) while the envelope is still loading', () => {
+  it('uses the creator List default and lets the viewer override it locally', () => {
+    renderCollectionItems({
+      postDetails: buildPostDetails(
+        JSON.stringify({
+          name: 'Reading',
+          items: ['pubky://author/pub/pubky.app/posts/a'],
+          layout: COLLECTION_LAYOUT.LIST,
+        }),
+      ),
+    });
+
+    expect(screen.getByTestId('collection-hero')).toHaveAttribute('data-layout', COLLECTION_LAYOUT.LIST);
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.LIST);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to Grid' }));
+
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.COLUMNS);
+  });
+
+  it('provides the collection empty state and owner CTA for an empty List collection', () => {
+    setAuthStore(AUTHOR_PUBKY);
+
+    renderCollectionItems({
+      postDetails: buildPostDetails(
+        JSON.stringify({
+          name: 'Reading',
+          items: [],
+          layout: COLLECTION_LAYOUT.LIST,
+        }),
+      ),
+    });
+
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.LIST);
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-empty-state', 'true');
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-cy', 'collection-add-content-list');
+    expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-trigger-variant', 'list');
+  });
+
+  it('provides the owner CTA after posts in a populated List collection', () => {
+    setAuthStore(AUTHOR_PUBKY);
+
+    renderCollectionItems({
+      postDetails: buildPostDetails(
+        JSON.stringify({
+          name: 'Reading',
+          items: ['pubky://author/pub/pubky.app/posts/a'],
+          layout: COLLECTION_LAYOUT.LIST,
+        }),
+      ),
+    });
+
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.LIST);
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-cy', 'collection-add-content-list');
+    expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-trigger-variant', 'list');
+  });
+
+  it('renders only the hero skeleton while the envelope is still loading', () => {
     renderCollectionItems({ postDetails: undefined });
 
-    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-variant', 'collection');
-    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-empty-state', 'true');
-    expect(screen.queryByTestId('collection-items-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('collection-hero-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
+    expect(mockTimelineFeedProps).not.toHaveBeenCalled();
+  });
+
+  it('mounts the feed directly in List layout once the envelope resolves', () => {
+    const { rerender } = renderCollectionItems({ postDetails: undefined });
+    const listPostDetails = buildPostDetails(
+      JSON.stringify({
+        name: 'Reading',
+        items: ['pubky://author/pub/pubky.app/posts/a'],
+        layout: COLLECTION_LAYOUT.LIST,
+      }),
+    );
+
+    rerender(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} postDetails={listPostDetails} />);
+
+    expect(screen.queryByTestId('collection-hero-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.LIST);
+    expect(mockTimelineFeedProps).toHaveBeenCalledTimes(1);
+    expect(mockTimelineFeedProps).toHaveBeenCalledWith(expect.objectContaining({ requestedLayout: LAYOUT.LIST }));
   });
 
   it('renders the feed and passes empty state for an empty envelope owned by the viewer', () => {
@@ -189,7 +284,7 @@ describe('CollectionItems', () => {
 
     expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-variant', 'collection');
     expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-empty-state', 'true');
-    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-grid-trailing-slot', 'true');
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-trailing-slot', 'true');
     expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-cy', 'collection-add-content-grid');
     expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-trigger-variant', 'grid');
   });
@@ -199,7 +294,7 @@ describe('CollectionItems', () => {
 
     renderCollectionItems();
 
-    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-grid-trailing-slot', 'false');
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-trailing-slot', 'false');
     expect(screen.queryByTestId('add-content-dialog')).not.toBeInTheDocument();
   });
 

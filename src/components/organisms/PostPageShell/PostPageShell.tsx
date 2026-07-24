@@ -2,6 +2,7 @@
 
 import type { PropsWithChildren } from 'react';
 import { usePostMissing } from '@/hooks/usePostMissing/usePostMissing';
+import { usePostRouteLayout } from '@/hooks/usePostRouteLayout/usePostRouteLayout';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { HotDiscoveryContentLayout } from '@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout';
 import {
@@ -31,6 +32,7 @@ export interface PostPageShellProps extends PropsWithChildren {
  */
 export function PostPageShell({ postId, children }: PostPageShellProps) {
   const { postMissing } = usePostMissing(postId);
+  const routeLayout = usePostRouteLayout();
 
   if (postMissing) {
     return <HotDiscoveryContentLayout>{children}</HotDiscoveryContentLayout>;
@@ -39,6 +41,7 @@ export function PostPageShell({ postId, children }: PostPageShellProps) {
   return (
     <ContentLayout
       classNameWrapperContent="gap-0"
+      layoutOverride={routeLayout}
       leftSidebarContent={<SinglePostLeftSidebar />}
       rightSidebarContent={<SinglePostRightPanel postId={postId} />}
       leftDrawerContent={<SinglePostLeftDrawer />}

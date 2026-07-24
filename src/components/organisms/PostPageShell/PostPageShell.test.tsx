@@ -1,13 +1,19 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostMissing } from '@/hooks/usePostMissing/usePostMissing';
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { PostPageShell } from './PostPageShell';
 
 const VALID_COMPOSITE_POST_ID = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
+let mockPostRouteLayout: LayoutType | undefined;
 
 vi.mock('@/hooks/usePostMissing/usePostMissing', () => ({
   usePostMissing: vi.fn(),
+}));
+
+vi.mock('@/hooks/usePostRouteLayout/usePostRouteLayout', () => ({
+  usePostRouteLayout: () => mockPostRouteLayout,
 }));
 
 vi.mock('@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout', () => ({
@@ -25,6 +31,7 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
     leftDrawerContentMobile,
     rightDrawerContent,
     classNameWrapperContent,
+    layoutOverride,
   }: {
     children: React.ReactNode;
     leftSidebarContent?: React.ReactNode;
@@ -33,8 +40,13 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
     leftDrawerContentMobile?: React.ReactNode;
     rightDrawerContent?: React.ReactNode;
     classNameWrapperContent?: string;
+    layoutOverride?: LayoutType;
   }) => (
-    <div data-testid="content-layout" data-wrapper-class-name={classNameWrapperContent}>
+    <div
+      data-testid="content-layout"
+      data-wrapper-class-name={classNameWrapperContent}
+      data-layout-override={layoutOverride}
+    >
       {leftSidebarContent && <div data-testid="left-sidebar">{leftSidebarContent}</div>}
       {rightSidebarContent && <div data-testid="right-sidebar">{rightSidebarContent}</div>}
       {leftDrawerContent && <div data-testid="left-drawer">{leftDrawerContent}</div>}
@@ -62,6 +74,7 @@ vi.mock('@/organisms/SinglePostRightPanel/SinglePostRightPanel', () => ({
 describe('PostPageShell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPostRouteLayout = undefined;
     vi.mocked(usePostMissing).mockReturnValue({
       postMissing: false,
       postDetails: undefined,
@@ -115,6 +128,18 @@ describe('PostPageShell', () => {
 
     expect(rightPanel).toHaveAttribute('data-post-id', VALID_COMPOSITE_POST_ID);
     expect(rightPanel).toHaveAttribute('data-show-feedback', 'true');
+  });
+
+  it('passes the List route override to the page shell', () => {
+    mockPostRouteLayout = LAYOUT.LIST;
+
+    render(
+      <PostPageShell postId={VALID_COMPOSITE_POST_ID}>
+        <div>body</div>
+      </PostPageShell>,
+    );
+
+    expect(screen.getByTestId('content-layout')).toHaveAttribute('data-layout-override', LAYOUT.LIST);
   });
 
   it('swaps to discovery layout without post sidebars when the post is missing', () => {

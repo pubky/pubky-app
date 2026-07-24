@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogContent } from '@/atoms/Dialog/Dialog';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { PostInput } from '../PostInput/PostInput';
 import { DialogRepost } from './DialogRepost';
 
@@ -118,13 +119,14 @@ vi.mock('@/atoms/Container/Container', () => {
 });
 
 vi.mock('../PostInput/PostInput', () => ({
-  PostInput: vi.fn(({ onSuccess, onContentChange, variant, originalPostId, showThreadConnector }) => (
+  PostInput: vi.fn(({ onSuccess, onContentChange, variant, originalPostId, showThreadConnector, layoutOverride }) => (
     <div
       data-testid="post-input"
       data-variant={variant}
       data-original-post-id={originalPostId}
       data-show-thread={String(showThreadConnector)}
       data-has-content-change={String(Boolean(onContentChange))}
+      data-layout-override={layoutOverride}
     >
       <button data-testid="mock-success-btn" onClick={() => onSuccess?.('repost-id')}>
         Success
@@ -181,6 +183,16 @@ describe('DialogRepost', () => {
     expect(screen.getByTestId('post-input')).toBeInTheDocument();
   });
 
+  it('uses inline post styling when rendered inside a List feed', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <DialogRepost postId="test-post-123" open onOpenChangeAction={vi.fn()} />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-input')).toHaveAttribute('data-layout-override', 'inline');
+  });
+
   it('renders PostInput with correct props', () => {
     const onOpenChangeAction = vi.fn();
     render(<DialogRepost postId="test-post-123" open={false} onOpenChangeAction={onOpenChangeAction} />);
@@ -194,6 +206,7 @@ describe('DialogRepost', () => {
         showThreadConnector: false,
         expanded: true,
         onContentChange: mockHandleContentChange,
+        layoutOverride: 'inline',
       },
       undefined,
     );

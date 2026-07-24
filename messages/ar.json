@@ -1350,6 +1350,9 @@
       "descriptionLabel": "الوصف",
       "descriptionPlaceholder": "ماذا سيجد الناس هنا؟",
       "backgroundLabel": "الخلفية",
+      "layoutLabel": "التخطيط",
+      "layoutGrid": "شبكة",
+      "layoutList": "قائمة",
       "addImage": "إضافة صورة",
       "removeImage": "إزالة الصورة",
       "coverImageInvalid": "يجب أن تكون صورة الغلاف ملف صورة.",
@@ -1372,6 +1375,7 @@
     "edit": {
       "title": "تعديل المجموعة",
       "save": "حفظ التغييرات",
+      "defaultLayoutLabel": "التخطيط الافتراضي",
       "updated": "تم تحديث المجموعة",
       "updateFailed": "فشل تحديث المجموعة."
     },
@@ -1411,6 +1415,9 @@
       "unfollow": "إلغاء المتابعة",
       "content": "إضافة منشور",
       "addContent": "إضافة منشور",
+      "layout": "التخطيط",
+      "layoutGrid": "شبكة",
+      "layoutList": "قائمة",
       "empty": "هذه المجموعة فارغة.",
       "notFound": {
         "title": "المجموعة غير موجودة",

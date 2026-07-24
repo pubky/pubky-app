@@ -1354,6 +1354,9 @@
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "What will people find here?",
       "backgroundLabel": "Background",
+      "layoutLabel": "Layout",
+      "layoutGrid": "Grid",
+      "layoutList": "List",
       "addImage": "Add image",
       "removeImage": "Remove image",
       "coverImageInvalid": "Cover image must be an image file.",
@@ -1376,6 +1379,7 @@
     "edit": {
       "title": "Edit Collection",
       "save": "Save changes",
+      "defaultLayoutLabel": "Default layout",
       "updated": "Collection updated",
       "updateFailed": "Failed to update collection."
     },
@@ -1415,6 +1419,9 @@
       "unfollow": "Unfollow",
       "content": "Add Post",
       "addContent": "Add Post",
+      "layout": "Layout",
+      "layoutGrid": "Grid",
+      "layoutList": "List",
       "empty": "This collection is empty.",
       "notFound": {
         "title": "Collection Not Found",

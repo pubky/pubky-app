@@ -7,8 +7,10 @@ import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import { useHomeStore } from '@/stores/home/home.store';
-import { LAYOUT } from '@/stores/home/home.types';
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { SinglePostContent } from './SinglePostContent';
+
+let mockPostRouteLayout: LayoutType | undefined;
 
 const mockHomeStore = vi.hoisted(() => {
   const state = {
@@ -31,6 +33,10 @@ vi.mock('@/stores/home/home.store', () => ({
       getState: () => mockHomeStore.state,
     },
   ),
+}));
+
+vi.mock('@/hooks/usePostRouteLayout/usePostRouteLayout', () => ({
+  usePostRouteLayout: () => mockPostRouteLayout,
 }));
 
 // Mock hooks
@@ -277,6 +283,7 @@ describe('SinglePostContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useHomeStore.getState().reset();
+    mockPostRouteLayout = undefined;
     vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
     vi.mocked(usePostAncestors).mockReturnValue(mockUsePostAncestors());
     vi.mocked(useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
@@ -301,6 +308,15 @@ describe('SinglePostContent', () => {
       render(<SinglePostContent postId={mockPostId} postDetails={SHORT_POST_DETAILS} />);
 
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'side');
+    });
+
+    it('uses the List route override without changing the persisted home layout', () => {
+      mockPostRouteLayout = LAYOUT.LIST;
+
+      render(<SinglePostContent postId={mockPostId} postDetails={SHORT_POST_DETAILS} />);
+
+      expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'list');
+      expect(useHomeStore.getState().layout).toBe(LAYOUT.COLUMNS);
     });
 
     it('renders PostArticleDetail for long posts', () => {

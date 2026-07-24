@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Button } from '@/atoms/Button/Button';
+import { COLLECTION_LAYOUT } from '@/config/collections';
 import { DialogNewCollection } from './DialogNewCollection';
 
 const mocks = vi.hoisted(() => ({
@@ -17,6 +18,9 @@ const translations: Record<string, string> = {
   'collections.new.descriptionLabel': 'Description',
   'collections.new.descriptionPlaceholder': 'What will people find here?',
   'collections.new.backgroundLabel': 'Background',
+  'collections.new.layoutLabel': 'Layout',
+  'collections.new.layoutGrid': 'Grid',
+  'collections.new.layoutList': 'List',
   'collections.new.addImage': 'Add image',
   'collections.new.removeImage': 'Remove image',
   'collections.new.coverImageInvalid': 'Cover image must be an image file.',
@@ -203,6 +207,7 @@ describe('DialogNewCollection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open dialog' }));
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Proof of Work' } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Bitcoin writing' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'List' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save collection' }));
 
     await waitFor(() => {
@@ -211,6 +216,7 @@ describe('DialogNewCollection', () => {
         name: 'Proof of Work',
         description: 'Bitcoin writing',
         coverImage: null,
+        layout: COLLECTION_LAYOUT.LIST,
       });
     });
     expect(mocks.toast).toHaveBeenCalledWith({
@@ -251,6 +257,7 @@ describe('DialogNewCollection', () => {
         name: 'Cover collection',
         description: '',
         coverImage: file,
+        layout: COLLECTION_LAYOUT.GRID,
       });
     });
 

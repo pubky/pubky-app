@@ -1358,6 +1358,9 @@
       "descriptionLabel": "Descripción",
       "descriptionPlaceholder": "¿Qué encontrará la gente aquí?",
       "backgroundLabel": "Fondo",
+      "layoutLabel": "Diseño",
+      "layoutGrid": "Cuadrícula",
+      "layoutList": "Lista",
       "addImage": "Añadir imagen",
       "removeImage": "Quitar imagen",
       "coverImageInvalid": "La imagen de portada debe ser un archivo de imagen.",
@@ -1380,6 +1383,7 @@
     "edit": {
       "title": "Editar colección",
       "save": "Guardar cambios",
+      "defaultLayoutLabel": "Diseño predeterminado",
       "updated": "Colección actualizada",
       "updateFailed": "No se pudo actualizar la colección."
     },
@@ -1419,6 +1423,9 @@
       "unfollow": "Dejar de seguir",
       "content": "Añadir publicación",
       "addContent": "Añadir publicación",
+      "layout": "Diseño",
+      "layoutGrid": "Cuadrícula",
+      "layoutList": "Lista",
       "empty": "Esta colección está vacía.",
       "notFound": {
         "title": "Colección no encontrada",

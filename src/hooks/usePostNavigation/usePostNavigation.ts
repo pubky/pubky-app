@@ -3,7 +3,9 @@
 import { useRouter } from 'next/navigation';
 import type React from 'react';
 import { getCollectionRoute, POST_ROUTES } from '@/app/routes';
+import { POST_LAYOUT_QUERY_PARAM } from '@/config/posts';
 import { parseCompositeId } from '@/models/models.utils';
+import { usePostMainLayout } from '@/organisms/PostMain/PostMainLayoutContext';
 import type { UsePostNavigationResult } from './usePostNavigation.types';
 
 const INTERACTIVE_SELECTOR = 'a,button,input,textarea,select,label,[role="button"],[role="link"]';
@@ -31,10 +33,13 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
  */
 export function usePostNavigation(): UsePostNavigationResult {
   const router = useRouter();
+  const tagsLayout = usePostMainLayout();
 
   const getPostHref = (postId: string) => {
     const { pubky: userId, id: pId } = parseCompositeId(postId);
-    return `${POST_ROUTES.POST}/${userId}/${pId}`;
+    const postRoute = `${POST_ROUTES.POST}/${userId}/${pId}`;
+
+    return tagsLayout === 'list' ? `${postRoute}?${POST_LAYOUT_QUERY_PARAM}=list` : postRoute;
   };
 
   const navigateToPost = (postId: string) => {

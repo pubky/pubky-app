@@ -1356,6 +1356,9 @@
       "descriptionLabel": "Beschreibung",
       "descriptionPlaceholder": "Was werden Menschen hier finden?",
       "backgroundLabel": "Hintergrund",
+      "layoutLabel": "Layout",
+      "layoutGrid": "Raster",
+      "layoutList": "Liste",
       "addImage": "Bild hinzufügen",
       "removeImage": "Bild entfernen",
       "coverImageInvalid": "Das Coverbild muss eine Bilddatei sein.",
@@ -1378,6 +1381,7 @@
     "edit": {
       "title": "Sammlung bearbeiten",
       "save": "Änderungen speichern",
+      "defaultLayoutLabel": "Standardlayout",
       "updated": "Sammlung aktualisiert",
       "updateFailed": "Sammlung konnte nicht aktualisiert werden."
     },
@@ -1417,6 +1421,9 @@
       "unfollow": "Entfolgen",
       "content": "Beitrag hinzufügen",
       "addContent": "Beitrag hinzufügen",
+      "layout": "Layout",
+      "layoutGrid": "Raster",
+      "layoutList": "Liste",
       "empty": "Diese Sammlung ist leer.",
       "notFound": {
         "title": "Sammlung nicht gefunden",

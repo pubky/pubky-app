@@ -247,6 +247,7 @@ export class PostController {
     description,
     items,
     coverImage,
+    layout,
   }: TCreateCollectionParams): Promise<string> {
     // Upload cover image to homeserver first when a File is supplied. We do this
     // before normalization so the resulting `pubky://` URL participates in the
@@ -274,6 +275,7 @@ export class PostController {
         description,
         items,
         coverImage: coverImageUrl,
+        layout,
       },
       authorId,
     );
@@ -312,6 +314,7 @@ export class PostController {
     name,
     description,
     coverImage,
+    layout,
   }: TEditCollectionParams): Promise<void> {
     // Reject non-authors up front, before any side effects: the cover File
     // upload below would otherwise hit the homeserver (and `PostNormalizer.toEdit`
@@ -376,6 +379,7 @@ export class PostController {
         description,
         items: currentContent.items ?? [],
         coverImage: coverImageUrl,
+        layout: layout ?? currentContent.layout,
       });
 
       const { post, meta } = await PostNormalizer.toEdit({

@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { usePostRouteLayout } from '@/hooks/usePostRouteLayout/usePostRouteLayout';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
@@ -26,7 +27,9 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  */
 export function SinglePostContent({ postId, postDetails }: SinglePostContentProps) {
   const t = useTranslations('post');
-  const layout = useHomeStore((state) => state.layout);
+  const homeLayout = useHomeStore((state) => state.layout);
+  const routeLayout = usePostRouteLayout();
+  const layout = routeLayout ?? homeLayout;
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
   // Check if parent post is deleted to determine replyability

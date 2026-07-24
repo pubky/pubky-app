@@ -1354,6 +1354,9 @@
       "descriptionLabel": "Descrizione",
       "descriptionPlaceholder": "Cosa troveranno le persone qui?",
       "backgroundLabel": "Sfondo",
+      "layoutLabel": "Layout",
+      "layoutGrid": "Griglia",
+      "layoutList": "Elenco",
       "addImage": "Aggiungi immagine",
       "removeImage": "Rimuovi immagine",
       "coverImageInvalid": "L'immagine di copertina deve essere un file immagine.",
@@ -1376,6 +1379,7 @@
     "edit": {
       "title": "Modifica collezione",
       "save": "Salva modifiche",
+      "defaultLayoutLabel": "Layout predefinito",
       "updated": "Collezione aggiornata",
       "updateFailed": "Impossibile aggiornare la collezione."
     },
@@ -1415,6 +1419,9 @@
       "unfollow": "Smetti di seguire",
       "content": "Aggiungi post",
       "addContent": "Aggiungi post",
+      "layout": "Layout",
+      "layoutGrid": "Griglia",
+      "layoutList": "Elenco",
       "empty": "Questa raccolta è vuota.",
       "notFound": {
         "title": "Raccolta non trovata",

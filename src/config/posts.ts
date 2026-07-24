@@ -4,6 +4,9 @@ import validationLimits from 'pubky-app-specs/validationLimits.json';
 /** Public key display length */
 export const DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH = 8;
 
+/** Query parameter used to preserve collection List layout on post routes. */
+export const POST_LAYOUT_QUERY_PARAM = 'layout';
+
 /**
  * Post-related configuration constants
  */

@@ -1354,6 +1354,9 @@
       "descriptionLabel": "説明",
       "descriptionPlaceholder": "ここで何が見つかりますか？",
       "backgroundLabel": "背景",
+      "layoutLabel": "レイアウト",
+      "layoutGrid": "グリッド",
+      "layoutList": "リスト",
       "addImage": "画像を追加",
       "removeImage": "画像を削除",
       "coverImageInvalid": "カバー画像は画像ファイルである必要があります。",
@@ -1376,6 +1379,7 @@
     "edit": {
       "title": "コレクションを編集",
       "save": "変更を保存",
+      "defaultLayoutLabel": "デフォルトのレイアウト",
       "updated": "コレクションを更新しました",
       "updateFailed": "コレクションの更新に失敗しました。"
     },
@@ -1415,6 +1419,9 @@
       "unfollow": "フォロー解除",
       "content": "投稿を追加",
       "addContent": "投稿を追加",
+      "layout": "レイアウト",
+      "layoutGrid": "グリッド",
+      "layoutList": "リスト",
       "empty": "このコレクションは空です。",
       "notFound": {
         "title": "コレクションが見つかりません",
