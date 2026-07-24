@@ -6,14 +6,14 @@ import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/
 import { PostPageShell } from './PostPageShell';
 
 const VALID_COMPOSITE_POST_ID = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
-let mockPostRouteLayout: LayoutType | undefined;
+let mockPostRouteLayout: LayoutType;
 
 vi.mock('@/hooks/usePostMissing/usePostMissing', () => ({
   usePostMissing: vi.fn(),
 }));
 
 vi.mock('@/hooks/usePostRouteLayout/usePostRouteLayout', () => ({
-  usePostRouteLayout: () => mockPostRouteLayout,
+  usePostRouteLayout: () => ({ layout: mockPostRouteLayout, setLayout: vi.fn() }),
 }));
 
 vi.mock('@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout', () => ({
@@ -74,7 +74,7 @@ vi.mock('@/organisms/SinglePostRightPanel/SinglePostRightPanel', () => ({
 describe('PostPageShell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPostRouteLayout = undefined;
+    mockPostRouteLayout = LAYOUT.COLUMNS;
     vi.mocked(usePostMissing).mockReturnValue({
       postMissing: false,
       postDetails: undefined,
@@ -130,7 +130,7 @@ describe('PostPageShell', () => {
     expect(rightPanel).toHaveAttribute('data-show-feedback', 'true');
   });
 
-  it('passes the List route override to the page shell', () => {
+  it('passes the resolved post layout to the page shell', () => {
     mockPostRouteLayout = LAYOUT.LIST;
 
     render(

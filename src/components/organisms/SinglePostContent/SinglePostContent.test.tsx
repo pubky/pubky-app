@@ -6,37 +6,13 @@ import { usePostAncestors } from '@/hooks/usePostAncestors/usePostAncestors';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
-import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { SinglePostContent } from './SinglePostContent';
 
-let mockPostRouteLayout: LayoutType | undefined;
-
-const mockHomeStore = vi.hoisted(() => {
-  const state = {
-    layout: 'columns',
-    setLayout: (layout: string) => {
-      state.layout = layout;
-    },
-    reset: () => {
-      state.layout = 'columns';
-    },
-  };
-
-  return { state };
-});
-
-vi.mock('@/stores/home/home.store', () => ({
-  useHomeStore: Object.assign(
-    (selector: (state: typeof mockHomeStore.state) => unknown) => selector(mockHomeStore.state),
-    {
-      getState: () => mockHomeStore.state,
-    },
-  ),
-}));
+let mockPostRouteLayout: LayoutType;
 
 vi.mock('@/hooks/usePostRouteLayout/usePostRouteLayout', () => ({
-  usePostRouteLayout: () => mockPostRouteLayout,
+  usePostRouteLayout: () => ({ layout: mockPostRouteLayout, setLayout: vi.fn() }),
 }));
 
 // Mock hooks
@@ -282,8 +258,7 @@ describe('SinglePostContent', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    useHomeStore.getState().reset();
-    mockPostRouteLayout = undefined;
+    mockPostRouteLayout = LAYOUT.COLUMNS;
     vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
     vi.mocked(usePostAncestors).mockReturnValue(mockUsePostAncestors());
     vi.mocked(useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());
@@ -303,20 +278,19 @@ describe('SinglePostContent', () => {
     });
 
     it('derives side tags layout for the single-post surface when the app is in wide mode', () => {
-      useHomeStore.getState().setLayout(LAYOUT.WIDE);
+      mockPostRouteLayout = LAYOUT.WIDE;
 
       render(<SinglePostContent postId={mockPostId} postDetails={SHORT_POST_DETAILS} />);
 
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'side');
     });
 
-    it('uses the List route override without changing the persisted home layout', () => {
+    it('uses the List layout resolved by the post route controller', () => {
       mockPostRouteLayout = LAYOUT.LIST;
 
       render(<SinglePostContent postId={mockPostId} postDetails={SHORT_POST_DETAILS} />);
 
       expect(screen.getByTestId('post-main')).toHaveAttribute('data-tags-layout', 'list');
-      expect(useHomeStore.getState().layout).toBe(LAYOUT.COLUMNS);
     });
 
     it('renders PostArticleDetail for long posts', () => {
@@ -404,7 +378,7 @@ describe('SinglePostContent', () => {
 
     beforeEach(() => {
       vi.clearAllMocks();
-      useHomeStore.getState().reset();
+      mockPostRouteLayout = LAYOUT.COLUMNS;
       vi.mocked(usePostCounts).mockReturnValue(mockUsePostCounts());
       vi.mocked(usePostAncestors).mockReturnValue(mockUsePostAncestors());
       vi.mocked(useUserDetailsFromIds).mockReturnValue(mockUseUserDetailsFromIds());

@@ -32,7 +32,7 @@ export interface PostPageShellProps extends PropsWithChildren {
  */
 export function PostPageShell({ postId, children }: PostPageShellProps) {
   const { postMissing } = usePostMissing(postId);
-  const routeLayout = usePostRouteLayout();
+  const { layout } = usePostRouteLayout();
 
   if (postMissing) {
     return <HotDiscoveryContentLayout>{children}</HotDiscoveryContentLayout>;
@@ -41,7 +41,7 @@ export function PostPageShell({ postId, children }: PostPageShellProps) {
   return (
     <ContentLayout
       classNameWrapperContent="gap-0"
-      layoutOverride={routeLayout}
+      layoutOverride={layout}
       leftSidebarContent={<SinglePostLeftSidebar />}
       rightSidebarContent={<SinglePostRightPanel postId={postId} />}
       leftDrawerContent={<SinglePostLeftDrawer />}

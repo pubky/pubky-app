@@ -286,6 +286,12 @@ describe('collections', () => {
     cy.location('search').should('eq', '?layout=list');
     cy.get('[data-cy="single-post-card"]').should('contain.text', postContent);
     cy.contains(replyContent).should('be.visible');
+    cy.get('[data-cy="list-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
+
+    // * changing the post layout stays temporary and does not add another Back step
+    cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').click();
+    cy.location('search').should('eq', '?layout=wide');
+    cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
     cy.go('back');
     cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', replyContent);

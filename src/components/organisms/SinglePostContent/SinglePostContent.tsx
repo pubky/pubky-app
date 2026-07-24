@@ -12,7 +12,6 @@ import { PostArticleDetail } from '@/organisms/PostArticleDetail/PostArticleDeta
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
-import { useHomeStore } from '@/stores/home/home.store';
 import { PostPageHeader } from '../PostPageHeader/PostPageHeader';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import type { SinglePostContentProps } from './SinglePostContent.types';
@@ -27,9 +26,7 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  */
 export function SinglePostContent({ postId, postDetails }: SinglePostContentProps) {
   const t = useTranslations('post');
-  const homeLayout = useHomeStore((state) => state.layout);
-  const routeLayout = usePostRouteLayout();
-  const layout = routeLayout ?? homeLayout;
+  const { layout } = usePostRouteLayout();
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
   // Check if parent post is deleted to determine replyability
