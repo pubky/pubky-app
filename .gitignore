@@ -79,3 +79,6 @@ public/sw.js.map
 
 # Serena
 .serena
+
+# AI PR Descriptions
+.prs

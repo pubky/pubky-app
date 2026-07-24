@@ -6,7 +6,8 @@ import type { ReactNode } from 'react';
  */
 export type EmbedData =
   | { type: 'url'; value: string } // YouTube, Vimeo, Generic (embed URLs)
-  | { type: 'id'; value: string }; // Twitter (tweet ID)
+  | { type: 'id'; value: string } // Twitter (tweet ID)
+  | { type: 'post'; value: string }; // InApp (composite `author:postId`)
 
 /**
  * Standard interface that all embed providers must implement

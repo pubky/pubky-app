@@ -15,6 +15,7 @@ import {
   isPublicExploreRoute,
   LOGO_LANDING_ROUTES,
   matchesAllowedRoute,
+  matchPostRoute,
   matchSingleCollectionRoute,
   ONBOARDING_ROUTES,
   PROFILE_ROUTES,
@@ -290,6 +291,30 @@ describe('matchSingleCollectionRoute', () => {
   it('returns null for unrelated routes', () => {
     expect(matchSingleCollectionRoute('/home')).toBeNull();
     expect(matchSingleCollectionRoute(`/post/${pubky}/${postId}`)).toBeNull();
+  });
+});
+
+describe('matchPostRoute', () => {
+  const pubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+  const postId = '0034BBBDFK83G';
+
+  it('extracts userId and postId from a single post route', () => {
+    expect(matchPostRoute(`/post/${pubky}/${postId}`)).toEqual({ userId: pubky, postId });
+  });
+
+  it('handles trailing slashes', () => {
+    expect(matchPostRoute(`/post/${pubky}/${postId}/`)).toEqual({ userId: pubky, postId });
+  });
+
+  it('returns null for wrong segment counts', () => {
+    expect(matchPostRoute('/post')).toBeNull();
+    expect(matchPostRoute(`/post/${pubky}`)).toBeNull();
+    expect(matchPostRoute(`/post/${pubky}/${postId}/extra`)).toBeNull();
+  });
+
+  it('returns null for unrelated routes', () => {
+    expect(matchPostRoute('/home')).toBeNull();
+    expect(matchPostRoute(`/collections/${pubky}/${postId}`)).toBeNull();
   });
 });
 
