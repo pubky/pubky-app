@@ -91,6 +91,14 @@ export async function fetchNexus<T>({ url, method = HttpMethod.GET, body = null 
   return parseResponseOrThrow<T>(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
 }
 
+/** Like fetchNexus but for endpoints that return no body (e.g. PUT v0/ingest); throws on non-ok. */
+export async function fetchNexusNoContent({ url, method }: Pick<TFetchNexusParams, 'url' | 'method'>): Promise<void> {
+  const response = await safeFetch(url, createFetchOptions({ method }), ErrorService.Nexus, FETCH_NEXUS_OPERATION);
+  if (!response.ok) {
+    throw httpResponseToError(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
+  }
+}
+
 /**
  * Queries Nexus API with automatic retry logic via TanStack Query.
  * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
