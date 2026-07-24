@@ -1,0 +1,166 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SignInContent - Snapshots > matches snapshot for the QR sign-in layout 1`] = `
+<div>
+  <div
+    class="hidden md:flex"
+    data-testid="container"
+  >
+    <div
+      data-testid="page-header"
+    >
+      <h1
+        data-size="large"
+        data-testid="page-title"
+      >
+        Sign in to 
+        <span
+          class="text-brand"
+        >
+          Pubky.
+        </span>
+      </h1>
+      <div
+        data-testid="page-subtitle"
+      >
+        Authorize with 
+        <span
+          class="text-brand"
+        >
+          Pubky Ring
+        </span>
+         to sign in.
+      </div>
+    </div>
+    <div
+      class="flex bg-card text-card-foreground shadow-sm w-full flex-row items-center justify-center gap-12 overflow-hidden rounded-md p-6 lg:p-12"
+      data-slot="card"
+      data-testid="sign-in-qr-card"
+    >
+      <div
+        class="hidden w-48 shrink-0 lg:block"
+        data-slot="balanced-qr-illustration"
+      >
+        <img
+          alt="Pubky Ring phone scanning a QR code"
+          data-testid="next-image"
+          height="192"
+          src="/images/scan.webp"
+          width="192"
+        />
+      </div>
+      <div
+        class="flex w-48 shrink-0 items-center justify-center"
+        data-slot="balanced-qr-content"
+      >
+        <button
+          aria-label="Copy authentication link"
+          class="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2"
+          type="button"
+        >
+          <img
+            alt="Pubky Ring"
+            data-testid="next-image"
+            height="176"
+            src="/images/pubky-ring-qr-example.webp"
+            width="176"
+          />
+          <img
+            alt="Pubky Ring"
+            data-testid="next-image"
+            height="48"
+            src="/images/ring-logo.svg"
+            width="48"
+          />
+        </button>
+      </div>
+      <div
+        aria-hidden="true"
+        class="hidden w-48 shrink-0 lg:block"
+        data-slot="balanced-qr-spacer"
+      />
+    </div>
+  </div>
+  <div
+    class="md:hidden"
+    data-testid="container"
+  >
+    <div
+      data-testid="page-header"
+    >
+      <h1
+        data-size="large"
+        data-testid="page-title"
+      >
+        Sign in to 
+        <span
+          class="text-brand"
+        >
+          Pubky.
+        </span>
+      </h1>
+      <div
+        data-testid="page-subtitle"
+      >
+        Authorize with 
+        <span
+          class="text-brand"
+        >
+          Pubky Ring
+        </span>
+         to sign in.
+      </div>
+    </div>
+    <div
+      data-layout="column"
+      data-testid="content-card"
+    >
+      <div
+        class="flex-col items-center justify-center gap-6"
+        data-testid="container"
+      >
+        <img
+          alt="Pubky Ring"
+          data-testid="next-image"
+          height="30"
+          src="/images/logo-pubky-ring.svg"
+          width="137"
+        />
+        <button
+          aria-busy="false"
+          class="w-full"
+          data-size="lg"
+          data-testid="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-key mr-2 size-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"
+            />
+            <path
+              d="m21 2-9.6 9.6"
+            />
+            <circle
+              cx="7.5"
+              cy="15.5"
+              r="5.5"
+            />
+          </svg>
+          Authorize with Pubky Ring
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;

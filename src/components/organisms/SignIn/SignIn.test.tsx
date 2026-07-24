@@ -92,6 +92,18 @@ vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
   })),
 }));
 
+const resetMobileAuthMock = () => {
+  vi.mocked(useMobileAuth).mockReturnValue({
+    url: 'mock-auth-url',
+    isLoading: false,
+    isExpired: false,
+    fetchUrl: mockFetchUrl,
+    copyAuthUrl: mockCopyAuthUrl,
+    isOpeningRing: false,
+    onAuthorizeClick: mockOnAuthorizeClick,
+  });
+};
+
 // Mock molecules used by SignInContent
 vi.mock('@/molecules/Content/Content', () => {
   return {
@@ -251,6 +263,7 @@ describe('SignInContent', () => {
     mockCopyToClipboard.mockClear();
     mockCopyAuthUrl.mockClear();
     resetMockSignInState();
+    resetMobileAuthMock();
   });
 
   afterAll(() => {
@@ -488,6 +501,20 @@ describe('SignInContent', () => {
   });
 });
 
+describe('SignInContent - Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetMockSignInState();
+    resetMobileAuthMock();
+  });
+
+  it('matches snapshot for the QR sign-in layout', () => {
+    const { container } = render(<SignInContent />);
+
+    expect(container).toMatchSnapshot();
+  });
+});
+
 describe('SignInContent - Progress View', () => {
   const clipboardMock = { writeText: vi.fn().mockResolvedValue(undefined) };
 
@@ -501,6 +528,7 @@ describe('SignInContent - Progress View', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetMockSignInState();
+    resetMobileAuthMock();
   });
 
   it('renders progress view when authUrlResolved is true', async () => {

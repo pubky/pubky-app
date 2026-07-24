@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { CheckCircle, Circle, Key, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
-import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Link } from '@/atoms/Link/Link';
@@ -15,6 +14,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
+import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
 import { ContentCard } from '@/molecules/Content/Content';
 import { Logo } from '@/molecules/Logo/Logo';
 import { PageTitle } from '@/molecules/Page/Page';
@@ -23,8 +23,6 @@ import { toast } from '@/molecules/Toaster/use-toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 import type { SignInState } from '@/stores/signIn/signIn.types';
-
-const SIGN_IN_QR_SIZE = 176;
 
 // Step configuration for the progress display (labels are translation keys)
 const SIGN_IN_STEPS = [
@@ -152,14 +150,11 @@ export const SignInContent = () => {
   }
   return (
     <>
-      {/** Desktop view — Figma: scan plate + live QR + spacer, centered in card */}
       <Container size="container" className="hidden md:flex">
         <SignInHeader />
-        <Card
+        <BalancedQrCard
           data-testid="sign-in-qr-card"
-          className="w-full flex-row items-center justify-center gap-12 overflow-hidden rounded-md p-6 lg:p-12"
-        >
-          <Container className="mx-0 hidden w-48 shrink-0 lg:block">
+          illustration={
             <Image
               priority
               src="/images/scan.webp"
@@ -168,38 +163,32 @@ export const SignInContent = () => {
               height={192}
               className="size-48"
             />
-          </Container>
-
-          <Container className="mx-0 w-48 shrink-0 items-center justify-center">
-            <button
-              type="button"
-              className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2"
-              onClick={isExpired ? fetchUrl : handleQRClick}
-              disabled={isLoading || (!url && !isExpired)}
-              aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
-            >
-              <QrCodeSlot
-                isLoading={isLoading}
-                isExpired={isExpired}
-                url={url}
-                size={SIGN_IN_QR_SIZE}
-                generatingLabel={t('generating')}
-                clickToReloadLabel={t('clickToReload')}
-                activeQrHasHoverEffect
-              />
-            </button>
-          </Container>
-
-          {/* Empty column balances the illustration so the QR stays centered */}
-          <Container className="mx-0 hidden w-48 shrink-0 lg:block" aria-hidden="true" />
-        </Card>
+          }
+        >
+          <button
+            type="button"
+            className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2"
+            onClick={isExpired ? fetchUrl : handleQRClick}
+            disabled={isLoading || (!url && !isExpired)}
+            aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
+          >
+            <QrCodeSlot
+              isLoading={isLoading}
+              isExpired={isExpired}
+              url={url}
+              generatingLabel={t('generating')}
+              clickToReloadLabel={t('clickToReload')}
+              activeQrHasHoverEffect
+            />
+          </button>
+        </BalancedQrCard>
       </Container>
 
       {/** Mobile view */}
       <Container size="container" className="md:hidden">
         <SignInHeader />
         <ContentCard layout="column">
-          <Container className="mx-0 flex-col items-center justify-center gap-6">
+          <Container className="flex-col items-center justify-center gap-6">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
             <Button
               className="w-full"

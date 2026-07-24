@@ -10,11 +10,11 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
       class="font-bold text-foreground text-5xl lg:text-6xl"
       data-testid="heading-1"
     >
-      Prove you're 
+      Use 
       <span
         class="text-brand"
       >
-        not a Robot.
+        Invite.
       </span>
     </h1>
     <div
@@ -24,7 +24,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
       <h2
         class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
       >
-        SMS or payment verification not available. Ask us for an invite code.
+        Phone or payment verification not available? Ask us for an invite code.
       </h2>
       <a
         class="cursor-pointer transition-colors text-sm text-muted-foreground hover:text-brand"
@@ -88,17 +88,17 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
     </div>
   </div>
   <div
-    class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm gap-0 overflow-hidden p-6 lg:p-12"
+    class="flex flex-col bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12 overflow-hidden rounded-md"
     data-slot="card"
     data-testid="human-invite-code-card"
   >
     <div
-      class="flex mx-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
-      data-testid="container"
+      class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+      data-slot="card-content"
     >
       <div
-        class="flex-col mx-0 hidden w-48 shrink-0 lg:block"
-        data-testid="container"
+        class="hidden w-48 shrink-0 flex-col lg:flex"
+        data-slot="illustrated-card-visual"
       >
         <img
           alt="Gift"
@@ -113,22 +113,22 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
         />
       </div>
       <div
-        class="flex mx-0 w-full min-w-0 flex-col gap-6 lg:max-w-xl lg:flex-1"
-        data-testid="container"
+        class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+        data-slot="illustrated-card-content"
       >
         <div
-          class="w-full flex mx-0 flex-col gap-3"
+          class="mx-auto w-full flex flex-col gap-3"
           data-testid="container"
         >
           <div
-            class="w-full flex mx-0 flex-row items-center gap-1"
+            class="mx-auto w-full flex flex-row items-center gap-1"
             data-testid="container"
           >
             <h3
               class="text-2xl leading-8 font-bold text-foreground"
               data-testid="typography"
             >
-              Invite code for homeserver
+              Enter invite code
             </h3>
             <button
               aria-controls="radix-normalized"
@@ -179,11 +179,11 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
           </p>
         </div>
         <div
-          class="w-full flex mx-0 flex-col gap-6"
+          class="mx-auto w-full flex flex-col gap-6"
           data-testid="container"
         >
           <div
-            class="w-full flex mx-0 flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs border-brand"
+            class="mx-auto w-full flex flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-6 py-4 shadow-xs border-brand"
             data-testid="human-invite-code-input-field"
           >
             <input
@@ -219,7 +219,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
             </svg>
           </div>
           <div
-            class="w-full flex mx-0 flex-col items-center gap-4 sm:flex-row"
+            class="mx-auto w-full flex flex-col items-center gap-4 sm:flex-row"
             data-testid="container"
           >
             <button
@@ -366,11 +366,11 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
       class="font-bold text-foreground text-5xl lg:text-6xl"
       data-testid="heading-1"
     >
-      Prove you're 
+      Use 
       <span
         class="text-brand"
       >
-        not a Robot.
+        Invite.
       </span>
     </h1>
     <div
@@ -380,7 +380,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
       <h2
         class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
       >
-        SMS or payment verification not available. Ask us for an invite code.
+        Phone or payment verification not available? Ask us for an invite code.
       </h2>
       <a
         class="cursor-pointer transition-colors text-sm text-muted-foreground hover:text-brand"
@@ -444,17 +444,17 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
     </div>
   </div>
   <div
-    class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm gap-0 overflow-hidden p-6 lg:p-12"
+    class="flex flex-col bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12 overflow-hidden rounded-md"
     data-slot="card"
     data-testid="human-invite-code-card"
   >
     <div
-      class="flex mx-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
-      data-testid="container"
+      class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+      data-slot="card-content"
     >
       <div
-        class="flex-col mx-0 hidden w-48 shrink-0 lg:block"
-        data-testid="container"
+        class="hidden w-48 shrink-0 flex-col lg:flex"
+        data-slot="illustrated-card-visual"
       >
         <img
           alt="Gift"
@@ -469,22 +469,22 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
         />
       </div>
       <div
-        class="flex mx-0 w-full min-w-0 flex-col gap-6 lg:max-w-xl lg:flex-1"
-        data-testid="container"
+        class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+        data-slot="illustrated-card-content"
       >
         <div
-          class="w-full flex mx-0 flex-col gap-3"
+          class="mx-auto w-full flex flex-col gap-3"
           data-testid="container"
         >
           <div
-            class="w-full flex mx-0 flex-row items-center gap-1"
+            class="mx-auto w-full flex flex-row items-center gap-1"
             data-testid="container"
           >
             <h3
               class="text-2xl leading-8 font-bold text-foreground"
               data-testid="typography"
             >
-              Invite code for homeserver
+              Enter invite code
             </h3>
             <button
               aria-controls="radix-normalized"
@@ -535,11 +535,11 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
           </p>
         </div>
         <div
-          class="w-full flex mx-0 flex-col gap-6"
+          class="mx-auto w-full flex flex-col gap-6"
           data-testid="container"
         >
           <div
-            class="w-full flex mx-0 flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs border-input"
+            class="mx-auto w-full flex flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-6 py-4 shadow-xs border-input"
             data-testid="human-invite-code-input-field"
           >
             <input
@@ -553,7 +553,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
             />
           </div>
           <div
-            class="w-full flex mx-0 flex-col items-center gap-4 sm:flex-row"
+            class="mx-auto w-full flex flex-col items-center gap-4 sm:flex-row"
             data-testid="container"
           >
             <button

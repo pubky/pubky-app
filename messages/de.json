@@ -312,9 +312,9 @@
       "copyFailed": "Rechnung konnte nicht kopiert werden."
     },
     "inviteCode": {
-      "title": "Beweisen Sie, dass Sie <highlight>kein Roboter sind.</highlight>",
-      "subtitle": "SMS- oder Zahlungsverifizierung nicht verfügbar. Fragen Sie uns nach einem Einladungscode.",
-      "label": "Einladungscode für Homeserver",
+      "title": "Einladung <highlight>verwenden.</highlight>",
+      "subtitle": "Telefon- oder Zahlungsverifizierung nicht verfügbar? Fragen Sie uns nach einem Einladungscode.",
+      "label": "Einladungscode eingeben",
       "hint": "Sie erhalten 1GB Speicherplatz für Ihre Beiträge, Fotos, Videos und Ihr Profil.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "Benutzerdefinierter Homeserver",

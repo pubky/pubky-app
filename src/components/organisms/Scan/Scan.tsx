@@ -7,7 +7,6 @@ import { Key, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
-import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Link } from '@/atoms/Link/Link';
@@ -17,13 +16,12 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { getPubkyCoreLink, getPubkyRingLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { Logger } from '@/libs/logger/logger';
+import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { PageTitle } from '@/molecules/Page/Page';
 import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
-
-const SCAN_QR_SIZE = 176;
 
 export const ScanContent = () => {
   const t = useTranslations('onboarding.scan');
@@ -68,14 +66,11 @@ export const ScanContent = () => {
   );
   return (
     <>
-      {/** Desktop view — Figma: scan plate + live QR + spacer, centered in card */}
       <Container size="container" className="hidden md:flex">
         <ScanHeader isMobile={false} />
-        <Card
+        <BalancedQrCard
           data-testid="scan-qr-card"
-          className="w-full flex-row items-center justify-center gap-12 overflow-hidden rounded-md p-6 lg:p-12"
-        >
-          <Container className="mx-0 hidden w-48 shrink-0 lg:block">
+          illustration={
             <Image
               priority
               src="/images/scan.webp"
@@ -84,25 +79,19 @@ export const ScanContent = () => {
               height={192}
               className="size-48"
             />
-          </Container>
-
-          <Container className="mx-0 w-48 shrink-0 items-center justify-center">
-            <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2">
-              <QrCodeSlot
-                isLoading={isLoading}
-                isExpired={isExpired}
-                url={url}
-                size={SCAN_QR_SIZE}
-                generatingLabel={t('generating')}
-                clickToReloadLabel={t('clickToReload')}
-                expiredReloadAction={{ onClick: fetchUrl, ariaLabel: 'Reload sign-up QR code' }}
-              />
-            </div>
-          </Container>
-
-          {/* Empty column balances the illustration so the QR stays centered */}
-          <Container className="mx-0 hidden w-48 shrink-0 lg:block" aria-hidden="true" />
-        </Card>
+          }
+        >
+          <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2">
+            <QrCodeSlot
+              isLoading={isLoading}
+              isExpired={isExpired}
+              url={url}
+              generatingLabel={t('generating')}
+              clickToReloadLabel={t('clickToReload')}
+              expiredReloadAction={{ onClick: fetchUrl, ariaLabel: 'Reload sign-up QR code' }}
+            />
+          </div>
+        </BalancedQrCard>
       </Container>
 
       {/** Mobile view */}

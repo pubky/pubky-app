@@ -135,3 +135,11 @@ describe('LogoutNavigation', () => {
     expect(mockPush).toHaveBeenCalledWith(AUTH_ROUTES.SIGN_IN);
   });
 });
+
+describe('LogoutContent - Snapshots', () => {
+  it('matches the signed-out illustration layout', () => {
+    const { container } = render(<LogoutContent />);
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

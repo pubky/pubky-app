@@ -38,6 +38,20 @@ describe('HumanInviteCode', () => {
     expect(screen.getByPlaceholderText('XXXX-XXXX-XXXX')).toBeInTheDocument();
   });
 
+  it('renders the Figma copy while keeping the invite helper', () => {
+    renderHumanInviteCode();
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Use Invite.');
+    expect(
+      screen.getByRole('heading', {
+        level: 2,
+        name: 'Phone or payment verification not available? Ask us for an invite code.',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Enter invite code' })).toBeInTheDocument();
+    expect(screen.getByTestId('circle-help-icon')).toBeInTheDocument();
+  });
+
   // Functional tests
   it('calls onBack when back button is clicked', () => {
     const handleBack = vi.fn();

@@ -310,9 +310,9 @@
       "copyFailed": "請求書をコピーできませんでした。"
     },
     "inviteCode": {
-      "title": "ロボットではないことを<highlight>証明してください。</highlight>",
-      "subtitle": "SMSまたは支払い確認が利用できません。招待コードをお問い合わせください。",
-      "label": "ホームサーバーの招待コード",
+      "title": "<highlight>招待コード</highlight>を使う。",
+      "subtitle": "電話または支払いによる確認を利用できませんか？招待コードをお問い合わせください。",
+      "label": "招待コードを入力",
       "hint": "投稿、写真、動画、プロフィール用に1GBのストレージを取得できます。",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "カスタムホームサーバー",

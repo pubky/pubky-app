@@ -6,7 +6,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
 import type { QrCodeSlotProps } from './QrCodeSlot.types';
 
-const DEFAULT_QR_SIZE = 220;
+const DEFAULT_QR_SIZE = 176;
 const DEFAULT_RING_LOGO_SIZE = 48;
 const HOVER_OPACITY = 'transition-opacity group-hover:opacity-90 group-active:opacity-80';
 

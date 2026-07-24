@@ -205,7 +205,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
         </Container>
 
         {/* Description */}
-        <Container className="mx-0 w-full flex-col gap-3 lg:max-w-xl lg:flex-1">
+        <div className="flex w-full min-w-0 flex-col gap-3 lg:max-w-xl lg:flex-1">
           <Typography as="h3" className="text-2xl leading-[32px] font-semibold text-foreground">
             {t('qrLabel')}
           </Typography>
@@ -221,7 +221,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           ) : (
             <PriceSkeleton />
           )}
-        </Container>
+        </div>
       </Card>
 
       {/* Buttons container */}

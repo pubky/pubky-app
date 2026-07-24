@@ -310,9 +310,9 @@
       "copyFailed": "Could not copy invoice."
     },
     "inviteCode": {
-      "title": "Prove you're <highlight>not a Robot.</highlight>",
-      "subtitle": "SMS or payment verification not available. Ask us for an invite code.",
-      "label": "Invite code for homeserver",
+      "title": "Use\u00a0<highlight>Invite.</highlight>",
+      "subtitle": "Phone or payment verification not available? Ask us for an invite code.",
+      "label": "Enter invite code",
       "hint": "You get 1GB of storage, used for your posts, photos, videos, and your profile.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "Custom homeserver",

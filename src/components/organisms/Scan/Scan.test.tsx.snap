@@ -31,8 +31,8 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
     data-testid="scan-qr-card"
   >
     <div
-      class="mx-0 hidden w-48 shrink-0 lg:block"
-      data-testid="container"
+      class="hidden w-48 shrink-0 lg:block"
+      data-slot="balanced-qr-illustration"
     >
       <img
         alt="Pubky Ring phone scanning a QR code"
@@ -43,8 +43,8 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
       />
     </div>
     <div
-      class="mx-0 w-48 shrink-0 items-center justify-center"
-      data-testid="container"
+      class="flex w-48 shrink-0 items-center justify-center"
+      data-slot="balanced-qr-content"
     >
       <div
         class="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2"
@@ -59,15 +59,16 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
         <img
           alt="Pubky Ring"
           data-testid="next-image"
-          height="38"
+          height="48"
           src="/images/ring-logo.svg"
-          width="38"
+          width="48"
         />
       </div>
     </div>
     <div
-      class="mx-0 hidden w-48 shrink-0 lg:block"
-      data-testid="container"
+      aria-hidden="true"
+      class="hidden w-48 shrink-0 lg:block"
+      data-slot="balanced-qr-spacer"
     />
   </div>
 </div>

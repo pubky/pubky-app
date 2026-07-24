@@ -310,9 +310,9 @@
       "copyFailed": "Impossibile copiare la fattura."
     },
     "inviteCode": {
-      "title": "Dimostra di <highlight>non essere un robot.</highlight>",
-      "subtitle": "Verifica SMS o pagamento non disponibile. Chiedici un codice invito.",
-      "label": "Codice invito per homeserver",
+      "title": "Usa un <highlight>invito.</highlight>",
+      "subtitle": "La verifica tramite telefono o pagamento non è disponibile? Chiedici un codice invito.",
+      "label": "Inserisci il codice invito",
       "hint": "Ottieni 1GB di spazio, usato per i tuoi post, foto, video e il tuo profilo.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "Homeserver personalizzato",
