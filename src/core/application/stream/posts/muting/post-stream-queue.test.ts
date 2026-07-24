@@ -702,6 +702,56 @@ describe('PostStreamQueue', () => {
   });
 
   // ============================================================================
+  // End-of-stream with buffered overflow (stranded-post regression)
+  // ============================================================================
+
+  describe('reachedEnd with buffered overflow', () => {
+    it('holds reachedEnd until the overflow buffer is drained, so the final posts are not stranded', async () => {
+      // Nexus's LAST page can overflow past `limit`: 4 survivors banked, then a final
+      // 2-post page lands -> 6 accumulated, 5 returned, 1 buffered. Reporting
+      // reachedEnd:true here would make consumers hide "Show more" / stop the
+      // sentinel with a post still queued — stranded until a full reload.
+      let call = 0;
+      const mockFetch = vi.fn(async () => {
+        call++;
+        if (call === 1) {
+          return {
+            nextPageIds: ['muted:x', 'a:1', 'a:2', 'a:3', 'a:4'],
+            cacheMissPostIds: [],
+            nextCursor: BASE_TIMESTAMP + 5,
+            reachedEnd: false,
+          };
+        }
+        if (call === 2) {
+          return {
+            nextPageIds: ['a:5', 'a:6'], // final short page
+            cacheMissPostIds: [],
+            nextCursor: BASE_TIMESTAMP + 7,
+            reachedEnd: true,
+          };
+        }
+        return { nextPageIds: [], cacheMissPostIds: [], nextCursor: undefined, reachedEnd: true };
+      });
+      const filter = (posts: string[]) => posts.filter((p) => !p.startsWith('muted:'));
+
+      const first = await queue.collect(streamId, { limit: 5, cursor: 0, filter, fetch: mockFetch });
+
+      expect(first.posts).toEqual(['a:1', 'a:2', 'a:3', 'a:4', 'a:5']);
+      expect(queue.get(streamId)?.posts).toEqual(['a:6']);
+      // The fix: Nexus ended, but a post is still buffered -> NOT exhausted yet.
+      expect(first.reachedEnd).toBe(false);
+
+      // Follow-up load drains the buffer, re-fetches once at the end cursor (empty
+      // page), and only then reports the stream exhausted.
+      const second = await queue.collect(streamId, { limit: 5, cursor: BASE_TIMESTAMP + 7, filter, fetch: mockFetch });
+
+      expect(second.posts).toEqual(['a:6']);
+      expect(second.reachedEnd).toBe(true);
+      expect(queue.get(streamId)).toBeUndefined();
+    });
+  });
+
+  // ============================================================================
   // Per-call fetch cap (maxIterations)
   // ============================================================================
 

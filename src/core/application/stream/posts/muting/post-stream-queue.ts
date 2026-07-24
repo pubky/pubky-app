@@ -173,7 +173,12 @@ export class PostStreamQueue {
       posts: toReturn,
       cacheMissIds,
       nextCursor,
-      reachedEnd,
+      // Nexus hitting its end does NOT mean the caller has seen everything: the final
+      // page can overflow past `limit` into the buffer. Report exhausted only once the
+      // buffer is drained too, so the last few posts can't be stranded behind a hidden
+      // "Show more" / dead sentinel. The follow-up load serves the buffer, re-fetches
+      // at the end cursor (one cheap short/empty page), and then reachedEnd propagates.
+      reachedEnd: reachedEnd && toSave.length === 0,
     };
   }
 }
