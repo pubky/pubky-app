@@ -29,6 +29,7 @@ import {
   isValidTagLabel,
   minutesAgo,
   radixIdSerializer,
+  resolveDisplayName,
   sanitizeTagInput,
   shouldBypassLinkConfirmation,
   stripPubkyPrefix,
@@ -219,6 +220,21 @@ describe('Utils', () => {
       const result = formatPublicKey({ key, length: 1 });
       // With length 1, only the last character of the key is shown.
       expect(result).toBe('...j');
+    });
+  });
+
+  describe('resolveDisplayName', () => {
+    const PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+
+    it('returns the name when present', () => {
+      expect(resolveDisplayName({ name: 'Alice', id: PUBKY })).toBe('Alice');
+    });
+
+    it('falls back to a shortened public key when the name is empty', () => {
+      const result = resolveDisplayName({ name: '', id: PUBKY });
+      expect(result).toBe(formatPublicKey({ key: PUBKY }));
+      expect(result).toContain('...');
+      expect(result).not.toBe(PUBKY);
     });
   });
 
@@ -904,6 +920,16 @@ describe('Utils', () => {
       expect(isSameDomain('')).toBe(false);
     });
 
+    it('should return false for a same-domain URL with an unsafe protocol', () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { hostname: 'example.com' },
+      });
+
+      expect(isSameDomain('ftp://example.com/file')).toBe(false);
+      expect(isSameDomain('javascript://example.com/alert(1)')).toBe(false);
+    });
+
     it('should handle case-insensitive domain comparison', () => {
       Object.defineProperty(window, 'location', {
         writable: true,
@@ -994,6 +1020,16 @@ describe('Utils', () => {
 
       expect(shouldBypassLinkConfirmation('not-a-valid-url')).toBe(false);
       expect(shouldBypassLinkConfirmation('')).toBe(false);
+    });
+
+    it('should return false for unsupported protocols even when the hostname matches', () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { hostname: 'example.com' },
+      });
+
+      expect(shouldBypassLinkConfirmation('ftp://example.com/file')).toBe(false);
+      expect(shouldBypassLinkConfirmation('javascript://example.com/alert(1)')).toBe(false);
     });
 
     it('should prioritize protocol bypass over domain check', () => {

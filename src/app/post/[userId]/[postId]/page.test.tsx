@@ -11,6 +11,8 @@ vi.mock('@/templates/Post/SinglePost/SinglePostPage', () => ({
   SinglePostPage: ({ postId }: { postId: string }) => <div data-testid="single-post-page" data-post-id={postId} />,
 }));
 
+// Preserve the rest of next/navigation; only stub permanentRedirect (which
+// normally throws NEXT_REDIRECT) so we can assert the redirect target.
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
   permanentRedirect: vi.fn(() => {
@@ -44,10 +46,12 @@ describe('generateMetadata', () => {
     expect(loggerErrorSpy).not.toHaveBeenCalled();
   });
 
+  const jsonResponse = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
   it('canonicalizes collection-kind posts to /collections', async () => {
-    const jsonResponse = (body: unknown) =>
-      new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    vi.spyOn(globalThis, 'fetch')
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    fetchMock
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
       .mockResolvedValueOnce(jsonResponse({ kind: 'collection', content: '{"name":"Art"}' }));
 
@@ -56,6 +60,42 @@ describe('generateMetadata', () => {
     });
 
     expect(metadata).toEqual({ alternates: { canonical: '/collections/user-1/post-1' } });
+  });
+
+  it('builds title/description and omits static images for a normal post', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hello world' }));
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: 'user-1', postId: 'post-1' }),
+    });
+
+    expect(metadata.title).toBe('Alice on Pubky');
+    expect(metadata.description).toBe('hello world');
+    // Dynamic opengraph-image/twitter-image supply the image; no static one here.
+    expect(metadata.openGraph).not.toHaveProperty('images');
+    expect(metadata.twitter).not.toHaveProperty('images');
+  });
+
+  it('still emits title (no parent fallback) for a content-less post like a simple repost', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: '' }));
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: 'user-1', postId: 'post-1' }),
+    });
+
+    // Title is present (not an empty {} that would fall back to parent metadata),
+    // description is suppressed (null, not the parent's generic one), and the
+    // dynamic OG image still applies via the file convention.
+    expect(metadata.title).toBe('Alice on Pubky');
+    expect(metadata.description).toBeNull();
+    expect(metadata.openGraph?.title).toBe('Alice on Pubky');
+    expect(metadata.openGraph?.description).toBe('');
   });
 });
 
@@ -82,7 +122,7 @@ describe('PostPage (collection redirect)', () => {
     expect(permanentRedirect).toHaveBeenCalledWith('/collections/user-1/post-1');
   });
 
-  it('renders the post without redirecting for a non-collection post', async () => {
+  it('renders the post (no redirect) for a non-collection post', async () => {
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
       .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hi' }));
@@ -93,7 +133,7 @@ describe('PostPage (collection redirect)', () => {
     expect(element.props.postId).toBe('user-1:post-1');
   });
 
-  it('renders the post without redirecting when the kind lookup fails', async () => {
+  it('renders the post (no redirect) when the kind lookup fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('nexus down'));
 
     const element = await PostPage({ params: Promise.resolve({ userId: 'user-1', postId: 'post-1' }) });

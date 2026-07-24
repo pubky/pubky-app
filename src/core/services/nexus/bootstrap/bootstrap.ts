@@ -1,8 +1,9 @@
+import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { bootstrapApi } from '@/services/nexus/bootstrap/bootstrap.api';
 import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
-import { queryNexus } from '@/services/nexus/nexus.utils';
+import { fetchNexusNoContent, queryNexus } from '@/services/nexus/nexus.utils';
 
 /**
  * Nexus Bootstrap Service
@@ -21,5 +22,19 @@ export class NexusBootstrapService {
     const data = await queryNexus<NexusBootstrapResponse>({ url });
     Logger.debug('Bootstrap data fetched successfully', { data });
     return data;
+  }
+
+  /**
+   * Asks Nexus to ingest a user: resolves their homeserver and starts indexing them.
+   * Idempotent server-side (no-op if the user is already known).
+   *
+   * Best-effort: never rejects. Nexus being down must not block onboarding or
+   * sign-in; the indexed:false gate in bootstrap retries on the next sign-in.
+   * Errors are already logged by the Err factories.
+   *
+   * @param pubky - User's public key
+   */
+  static async ingest(pubky: Pubky): Promise<void> {
+    await fetchNexusNoContent({ url: bootstrapApi.ingest(pubky), method: HttpMethod.PUT }).catch(() => {});
   }
 }

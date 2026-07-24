@@ -3,6 +3,7 @@
 exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the snapshot for the exhausted-empty state 1`] = `
 <div
   class="flex w-full flex-col gap-4"
+  data-cy="discover-collections-section"
   data-testid="container"
 >
   <div
@@ -32,6 +33,7 @@ exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the sna
 exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the snapshot for the populated state (post-filter cards + Show More) 1`] = `
 <div
   class="flex w-full flex-col gap-4"
+  data-cy="discover-collections-section"
   data-testid="container"
 >
   <div
@@ -85,6 +87,7 @@ exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the sna
 exports[`DiscoverCollections > DiscoverCollections - Snapshots > matches the snapshot for the pre-hydration skeleton state 1`] = `
 <div
   class="flex w-full flex-col gap-4"
+  data-cy="discover-collections-section"
   data-testid="container"
 >
   <div

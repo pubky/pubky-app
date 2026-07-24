@@ -174,6 +174,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
           </div>
           <div
             class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
+            data-cy="post-save-collection-option"
             data-orientation="vertical"
             data-radix-collection-item=""
             role="menuitem"
@@ -231,6 +232,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
           </div>
           <div
             class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
+            data-cy="post-save-collection-option"
             data-orientation="vertical"
             data-radix-collection-item=""
             role="menuitem"
@@ -291,6 +293,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
           >
             <input
               class="flex w-full min-w-0 rounded-md border border-input bg-transparent text-base transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto border-none p-0 shadow-none"
+              data-cy="post-save-new-collection-input"
               data-testid="input"
               maxlength="100"
               placeholder="Collection name"
@@ -299,6 +302,7 @@ exports[`PostSavePicker > matches desktop picker snapshot when open 1`] = `
             <button
               aria-label="Create collection"
               class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-6"
+              data-cy="post-save-new-collection-create-btn"
               data-size="icon"
               data-slot="button"
               data-variant="secondary"

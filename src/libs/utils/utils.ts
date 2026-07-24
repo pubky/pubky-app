@@ -4,6 +4,7 @@ import type { SnapshotSerializer } from 'vitest';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
+import { getSafeExternalUrl } from './safeExternalUrl';
 import { RADIX_ID_REGEX, RADIX_ID_TEST_REGEX, TAG_BANNED_CHARS } from './utils.constants';
 import type {
   CopyToClipboardProps,
@@ -47,6 +48,15 @@ export function formatPublicKey({
   const prefix = rawKey.slice(0, Math.floor(length / 2));
   const suffix = rawKey.slice(-(length - prefix.length));
   return `${prefixLabel}${prefix}...${suffix}`;
+}
+
+/**
+ * Resolves a user's display name, falling back to a shortened public key when
+ * the profile has no `name` set. Mirrors the app's UI convention
+ * (`user.name || formatPublicKey(...)`, e.g. in `UserListItem`).
+ */
+export function resolveDisplayName(user: { name: string; id: string }): string {
+  return user.name || formatPublicKey({ key: user.id });
 }
 
 /**
@@ -473,8 +483,9 @@ export function getDisplayTags(tags: string[], options: GetDisplayTagsOptions = 
 const BYPASS_PROTOCOLS = ['mailto:', 'tel:'];
 
 /**
- * Checks if a URL is on the same domain as the current page.
+ * Checks if a safe external URL is on the same domain as the current page.
  * Compares hostnames while ignoring the 'www.' prefix.
+ * Unsupported URL schemes always return false.
  *
  * @param url - The URL to check
  * @returns true if the URL is on the same domain, false otherwise
@@ -489,8 +500,11 @@ const BYPASS_PROTOCOLS = ['mailto:', 'tel:'];
  */
 export function isSameDomain(url: string): boolean {
   try {
-    // Parse the URL to check
-    const urlObj = new URL(url);
+    const safeUrl = getSafeExternalUrl(url);
+    if (!safeUrl) return false;
+
+    // Parse the validated URL to check
+    const urlObj = new URL(safeUrl);
     const urlHostname = urlObj.hostname.toLowerCase().replace(/^www\./, '');
 
     // Get current page hostname
@@ -506,6 +520,7 @@ export function isSameDomain(url: string): boolean {
 
 /**
  * Determines if a link should bypass the confirmation dialog and open directly.
+ * Unsupported or malformed URLs never bypass confirmation.
  * Returns true if:
  * - The URL uses a bypass protocol (mailto, tel, etc.)
  * - The URL is on the same domain as the current page
@@ -523,13 +538,17 @@ export function isSameDomain(url: string): boolean {
  * ```
  */
 export function shouldBypassLinkConfirmation(url: string): boolean {
+  const safeUrl = getSafeExternalUrl(url);
+  if (!safeUrl) return false;
+
   // Check if URL uses a bypass protocol (mailto, tel, etc.)
-  if (BYPASS_PROTOCOLS.some((protocol) => url.startsWith(protocol))) {
+  const protocol = new URL(safeUrl).protocol;
+  if (BYPASS_PROTOCOLS.includes(protocol)) {
     return true;
   }
 
   // Check if URL is on the same domain
-  return isSameDomain(url);
+  return isSameDomain(safeUrl);
 }
 
 /**

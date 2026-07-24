@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import CollectionPage from './page';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import CollectionPage, { generateMetadata } from './page';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -32,5 +32,42 @@ describe('CollectionPage (route)', () => {
     render(result);
 
     expect(screen.getByTestId('collection-template')).toHaveAttribute('data-post-id', `${AUTHOR_PUBKY}:${POST_ID}`);
+  });
+});
+
+describe('generateMetadata (collection route)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const jsonResponse = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+  it('builds title/description and omits static images for a collection post', async () => {
+    // First fetch = user details, second = post details.
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'collection', content: '{"name":"Art"}' }));
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: AUTHOR_PUBKY, postId: POST_ID }),
+    });
+
+    expect(metadata.title).toBe('Alice on Pubky');
+    expect(metadata.description).toBe('Art');
+    expect(metadata.openGraph).not.toHaveProperty('images');
+    expect(metadata.twitter).not.toHaveProperty('images');
+  });
+
+  it('returns empty metadata for a non-collection post', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hi' }));
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: AUTHOR_PUBKY, postId: POST_ID }),
+    });
+
+    expect(metadata).toEqual({});
   });
 });

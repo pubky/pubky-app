@@ -363,6 +363,7 @@ function CollectionCardContent({
                       onClick={handleDelete}
                       disabled={isDeleting}
                       aria-label={t('delete')}
+                      data-cy="collection-card-delete-btn"
                       className={embeddedMutedActionClass}
                     >
                       <Trash2 className="size-4" />
@@ -375,6 +376,7 @@ function CollectionCardContent({
                       onClick={handleFollowToggle}
                       disabled={isToggling}
                       aria-label={isBookmarked ? t('unfollow') : t('follow')}
+                      data-cy="collection-card-follow-btn"
                       className={embeddedMutedActionClass}
                     >
                       {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
