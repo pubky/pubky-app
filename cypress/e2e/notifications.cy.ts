@@ -14,6 +14,7 @@ import { searchAndFollowProfile, searchForProfileByPubky } from '../support/cont
 import {
   clickFollowButton,
   checkLatestNotification,
+  checkNotificationAt,
   addProfileTags,
   causeNotificationsToBeRead,
 } from '../support/profile';
@@ -37,7 +38,8 @@ import { goToCollectionsPage, goToProfilePageFromHeader } from '../support/heade
 const uniqueSuffix = String(Date.now()).slice(-5);
 
 // profile 1 and 2 are used for enabled notifications, profile 3 is used for disabled notifications
-const profile1 = { username: 'Notif #1', pubkyAlias: 'pubky_1' };
+// todo: use space in username after bug fixed https://github.com/pubky/pubky-app/issues/1638
+const profile1 = { username: 'Notif#1', pubkyAlias: 'pubky_1' };
 // profile 2 and 3 have a unique suffix to avoid conflicts when mentioning profile 2 and 3 in new posts across test runs
 // todo: use space in username after bug fixed https://github.com/pubky/pubky-app/issues/1638
 const profile2 = { username: `Notif#2${uniqueSuffix}`, pubkyAlias: 'pubky_2' };
@@ -114,14 +116,6 @@ describe('notifications', () => {
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
     checkLatestNotification([profile2.username, 'is now your friend'], LatestNotificationReadState.Read);
-
-    // TODO: add checks for disabled notifications
-    // * profile 1 disables follow notifications
-    // * profile 2 disables friend notifications
-    // * profile 2 follows profile 1
-    // * profile 1 checks absence of notifications
-    // * profile 1 follows profile 2
-    // * profile 2 checks for follow notification? and absence of friend notification
   });
 
   it('can be notified for tagged post and profile', () => {
@@ -204,15 +198,6 @@ describe('notifications', () => {
       cy.location('pathname').should('eq', '/search');
       cy.location('search').should('eq', '?tags=first-world-problem');
     }
-
-    // TODO: add checks for disabled notifications
-    // * profile 1 disables notifications for tagged profile
-    // * profile 2 disables notifications for tagged post
-    // * profile 2 creates a post
-    // * profile 2 tags profile 1's profile
-    // * profile 1 checks for absence of notifications
-    // * profile 1 tags profile 2's post
-    // * profile 2 checks for absence of notifications
   });
 
   it('can be notified for profile being mentioned in a post', () => {
@@ -280,12 +265,6 @@ describe('notifications', () => {
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
     checkLatestNotification([profile2.username, 'replied to your post'], LatestNotificationReadState.Read);
-
-    // TODO: add checks for disabled notifications
-    // * profile 1 disables notifications for being replied to
-    // * profile 1 creates a post (2)
-    // * profile 2 replies to profile 1's post (2)
-    // * profile 1 checks for absence of notifications
   });
 
   it('can be notified for your post being reposted', () => {
@@ -312,12 +291,6 @@ describe('notifications', () => {
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
     checkLatestNotification([profile2.username, 'reposted your post'], LatestNotificationReadState.Read);
-
-    // TODO: add checks for disabled notifications
-    // * profile 1 disables notifications for being reposted
-    // * profile 1 creates a post (2)
-    // * profile 2 reposts profile 1's post (2)
-    // * profile 1 checks for absence of notifications
   });
 
   it('can be notified for a post being deleted that you replied to', () => {
@@ -352,13 +325,6 @@ describe('notifications', () => {
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
     checkLatestNotification([profile1.username, 'deleted a post'], LatestNotificationReadState.Read);
-
-    // TODO: add checks for disabled notifications
-    // * profile 2 disables notifications for being replied to
-    // * profile 1 creates a post that will be replied to and then deleted
-    // * profile 2 replies to profile 1's post
-    // * profile 1 deletes own post
-    // * profile 2 checks for absence of notifications
   });
 
   it('can be notified for a post being deleted that you reposted', () => {
@@ -393,13 +359,6 @@ describe('notifications', () => {
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
     checkLatestNotification([profile1.username, 'deleted a post'], LatestNotificationReadState.Read);
-
-    // TODO: add checks for disabled notifications
-    // * profile 2 disables notifications for post being deleted that you reposted
-    // * profile 1 creates a post (2) that will be reposted and then deleted
-    // * profile 2 reposts profile 1's post (2)
-    // * profile 1 deletes own post (2)
-    // * profile 2 checks for absence of notifications
   });
 
   it('can be notified for a post being edited that you replied to', () => {
@@ -521,5 +480,29 @@ describe('notifications', () => {
     deleteCollectionFromHero();
   });
 
-  it('can display counter for multiple new notifications');
+  it('can display counter for multiple new notifications', () => {
+    // * profile 1 creates a post
+    const postContent = `I will get three notifications about this post! ${Date.now()}`;
+    createQuickPost(postContent);
+
+    // * profile 2 tags the post, replies to it, and creates a post mentioning profile 1
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.Yes);
+    fastTagPostInFeed(['multi-notif'], postContent);
+    replyToPost({ replyContent: 'Replying for a second notification!', filterText: postContent });
+    createQuickPostWithMention(profile1.username);
+
+    // * profile 1 checks the counter shows 3 and all three notifications are listed
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
+    verifyNotificationCounter(3);
+    goToProfilePageFromHeader();
+    verifyNotificationCounter(0);
+    cy.get('[data-cy="notifications-list"]').children().should('have.length.at.least', 3);
+    // newest first: mention, then reply, then tag
+    checkNotificationAt(0, [profile2.username, 'mentioned you in post'], LatestNotificationReadState.Unread);
+    checkNotificationAt(1, [profile2.username, 'replied to your post'], LatestNotificationReadState.Unread);
+    checkNotificationAt(2, [profile2.username, 'tagged your post'], LatestNotificationReadState.Unread);
+  });
 });
