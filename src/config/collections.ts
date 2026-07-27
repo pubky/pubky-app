@@ -9,18 +9,21 @@
 export const COLLECTIONS_SECTION_PAGE_SIZE = 20;
 
 /**
- * Safety cap for Discover's dedupe backfill loop — max number of additional
- * slices we pull per user-initiated action (initial mount or "Show more"
- * click) when post-filter visible count is below page size, before giving up
- * and rendering whatever we have.
+ * Max raw pages the stream layer fetches per Discover slice request (initial
+ * load or one "Show more" click) while client-side filtering (own / followed /
+ * deleted / empty) empties them. Deliberately far below the shared queue
+ * default (`MAX_FETCH_ITERATIONS = 20`): Discover is a discovery surface, not
+ * a primary feed, and every scanned page also costs detail fetches for its
+ * cache-miss posts — even filtered-out ones — so deep scans multiply data
+ * usage and latency for users on slow connections. When the cap hits with
+ * nothing new to show, the UI surfaces a "no new results" toast and the next
+ * click resumes from the advanced cursor.
  *
- * Why this exists: each Discover slice may have many items that get hidden
- * by the per-card filter (own collection, already bookmarked). Without
- * backfill, an unlucky page could render zero visible cards. The cap
- * prevents runaway fetching when most of the user's social graph already
- * follows everything on the feed.
+ * Value: 5 — a deliberate, marginal raise over the component-level cap of 3
+ * that preceded the stream-layer refactor, buying extra headroom in filtered
+ * regions while staying far under the shared default.
  */
-export const COLLECTIONS_DISCOVER_BACKFILL_MAX_ROUNDS = 3;
+export const COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD = 5;
 
 /**
  * Max number of unique author avatars to show in a section header's stacked

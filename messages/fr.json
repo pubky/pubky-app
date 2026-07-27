@@ -1390,7 +1390,8 @@
     },
     "discover": {
       "title": "Découvrir des collections",
-      "empty": "Aucune collection à découvrir pour le moment."
+      "empty": "Aucune collection à découvrir pour le moment.",
+      "noNewResults": "Aucune nouvelle collection trouvée pour le moment. Réessayez plus tard."
     },
     "bookmarks": {
       "title": "Signets",

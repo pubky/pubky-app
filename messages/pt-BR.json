@@ -1390,7 +1390,8 @@
     },
     "discover": {
       "title": "Descobrir coleções",
-      "empty": "Sem coleções para descobrir no momento."
+      "empty": "Sem coleções para descobrir no momento.",
+      "noNewResults": "Nenhuma coleção nova encontrada no momento. Tente novamente mais tarde."
     },
     "bookmarks": {
       "title": "Favoritos",
