@@ -35,7 +35,7 @@ describe('useStreamPagination', () => {
     vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
     vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
       nextPageIds: mockPostIds,
-      timestamp: Date.now(),
+      nextCursor: Date.now(),
     });
     // Mock PostDetailsModel to return posts with timestamps that preserve input order
     // (newer posts first = higher timestamps)
@@ -49,6 +49,45 @@ describe('useStreamPagination', () => {
     // Mock sortPostIdsByTimestamp to preserve input order by default
     // (simulates already-sorted posts)
     vi.mocked(sortPostIdsByTimestamp).mockImplementation(async (ids: string[]) => ids);
+  });
+
+  describe('Cursor advances on empty-after-filter pages', () => {
+    it('advances streamTail from nextCursor on an empty page so the next loadMore resumes past it', async () => {
+      const streamId = 'timeline:all:all' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      // Initial load: a full page, cursor 20.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p1', 'p2'],
+        nextCursor: 20,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      // loadMore #1: a fully-filtered (empty) page that isn't the end; cursor advances to 40.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: [],
+        reachedEnd: false,
+        nextCursor: 40,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(result.current.hasMore).toBe(true); // empty-but-not-ended keeps loading
+
+      // loadMore #2 must resume from the advanced cursor (40), not the stale 20.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p3'],
+        nextCursor: 41,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId, streamTail: 40 }),
+      );
+    });
   });
 
   describe('Initialization', () => {
@@ -117,7 +156,7 @@ describe('useStreamPagination', () => {
     it('should set hasMore to false when no posts are returned', async () => {
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: [],
-        timestamp: Date.now(),
+        nextCursor: Date.now(),
         reachedEnd: true, // Actual end of stream
       });
 
@@ -138,7 +177,7 @@ describe('useStreamPagination', () => {
     it('should keep hasMore true when empty results but not reached end', async () => {
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: [],
-        timestamp: Date.now(),
+        nextCursor: Date.now(),
         reachedEnd: false, // Filters removed all posts, but more exist
       });
 
@@ -160,7 +199,7 @@ describe('useStreamPagination', () => {
       const limit = 30;
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: Array(25).fill('post'),
-        timestamp: Date.now(),
+        nextCursor: Date.now(),
         reachedEnd: true, // Less than limit (30) means end of stream
       });
 
@@ -218,7 +257,7 @@ describe('useStreamPagination', () => {
     it('should not load more when hasMore is false', async () => {
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['post1', 'post2'],
-        timestamp: Date.now(),
+        nextCursor: Date.now(),
         reachedEnd: true, // Less than limit (10) means end of stream
       });
 
@@ -358,7 +397,7 @@ describe('useStreamPagination', () => {
 
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['post1', 'post2', 'post3'],
-        timestamp: undefined, // Engagement streams don't use timestamp
+        nextCursor: undefined, // Engagement streams don't use timestamp
       });
 
       const { result } = renderHook(() =>
@@ -382,15 +421,16 @@ describe('useStreamPagination', () => {
 
   describe('Skip-paginated streams (collection items)', () => {
     // collection:<author>:<postId> pages by offset (`skip`); Nexus returns no timestamp/score
-    // cursor, so the cursor is the count of already-loaded items. Regression guard for the
-    // infinite-scroll flicker where a stuck null timestamp cursor re-served page 1 forever.
+    // cursor, so the resume cursor is a raw offset advanced by the controller and threaded
+    // back via `nextCursor`. Regression guard for the infinite-scroll flicker where a stuck
+    // cursor re-served page 1 forever, and for deriving the offset from the visible count.
     const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
 
     it('starts the initial load at offset 0, ignoring any cached timestamp cursor', async () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(9999);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c1', 'c2', 'c3'],
-        timestamp: undefined, // skip-paginated streams carry no timestamp cursor
+        nextCursor: 3,
       });
 
       const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
@@ -408,11 +448,11 @@ describe('useStreamPagination', () => {
       );
     });
 
-    it('paginates by the number of already-loaded items on loadMore (offset cursor)', async () => {
+    it('paginates by the offset cursor returned from the previous page on loadMore', async () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c1', 'c2', 'c3'],
-        timestamp: undefined,
+        nextCursor: 3,
       });
 
       const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
@@ -425,7 +465,7 @@ describe('useStreamPagination', () => {
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c4', 'c5'],
-        timestamp: undefined,
+        nextCursor: 5,
       });
 
       await act(async () => {
@@ -435,7 +475,7 @@ describe('useStreamPagination', () => {
       expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
         expect.objectContaining({
           streamId: collectionStreamId,
-          streamTail: 3, // count of already-loaded items, not a timestamp
+          streamTail: 3, // resume offset threaded from the previous page
         }),
       );
     });
@@ -444,7 +484,7 @@ describe('useStreamPagination', () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c1', 'c2', 'c3'],
-        timestamp: undefined,
+        nextCursor: 3,
       });
 
       const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
@@ -462,7 +502,7 @@ describe('useStreamPagination', () => {
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c4', 'c5'],
-        timestamp: undefined,
+        nextCursor: 5,
       });
 
       await act(async () => {
@@ -482,7 +522,7 @@ describe('useStreamPagination', () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c1', 'c2'],
-        timestamp: undefined,
+        nextCursor: 2,
       });
 
       const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
@@ -500,7 +540,7 @@ describe('useStreamPagination', () => {
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c1', 'c2'],
-        timestamp: undefined,
+        nextCursor: 2,
       });
 
       await act(async () => {
@@ -519,7 +559,7 @@ describe('useStreamPagination', () => {
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: ['c3'],
-        timestamp: undefined,
+        nextCursor: 3,
       });
 
       await act(async () => {
@@ -576,7 +616,7 @@ describe('useStreamPagination', () => {
       const limit = 30;
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: Array(limit).fill('post'),
-        timestamp: Date.now(),
+        nextCursor: Date.now(),
       });
 
       const { result } = renderHook(() =>
@@ -607,7 +647,7 @@ describe('useStreamPagination', () => {
     it('should handle empty results with reachedEnd true', async () => {
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: [],
-        timestamp: Date.now(),
+        nextCursor: Date.now(),
         reachedEnd: true,
       });
 
@@ -628,7 +668,7 @@ describe('useStreamPagination', () => {
     it('should handle empty results with reachedEnd false', async () => {
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
         nextPageIds: [],
-        timestamp: Date.now(),
+        nextCursor: Date.now(),
         reachedEnd: false,
       });
 
@@ -689,7 +729,7 @@ describe('useStreamPagination', () => {
     it('invokes onError on loadMore failures too', async () => {
       // First (initial) call succeeds, second (loadMore) call throws.
       vi.mocked(StreamPostsController.getOrFetchStreamSlice)
-        .mockResolvedValueOnce({ nextPageIds: mockPostIds, timestamp: Date.now() })
+        .mockResolvedValueOnce({ nextPageIds: mockPostIds, nextCursor: Date.now() })
         .mockRejectedValueOnce(new Error('boom'));
       const onError = vi.fn();
 

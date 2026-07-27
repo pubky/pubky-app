@@ -107,13 +107,13 @@ const mockGetDetailsByIds = vi.mocked(PostController.getDetailsByIds);
 function makeSlice({
   nextPageIds = [],
   reachedEnd = true,
-  timestamp = 0,
+  nextCursor = 0,
 }: {
   nextPageIds?: string[];
   reachedEnd?: boolean;
-  timestamp?: number;
+  nextCursor?: number;
 } = {}) {
-  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, timestamp });
+  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor });
 }
 
 beforeEach(() => {
@@ -150,7 +150,9 @@ describe('FollowedCollections', () => {
 
   it('post-hydration: seeds the followed-collections stream and persists slice via the controller', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
-    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:p1'], reachedEnd: true, timestamp: 123 }));
+    mockGetOrFetchStreamSlice.mockResolvedValue(
+      makeSlice({ nextPageIds: ['a:p1'], reachedEnd: true, nextCursor: 123 }),
+    );
 
     await act(async () => {
       render(<FollowedCollections />);
@@ -294,10 +296,12 @@ describe('FollowedCollections', () => {
     });
   });
 
-  it('shows Show More when reachedEnd is false; clicking fetches another slice', async () => {
+  it('shows Show More when reachedEnd is false; clicking resumes from the threaded nextCursor', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockUseLiveQuery.mockReturnValue(['a:p1']);
-    mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, timestamp: 42 }));
+    mockGetOrFetchStreamSlice.mockResolvedValue(
+      makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, nextCursor: 42 }),
+    );
 
     await act(async () => {
       render(<FollowedCollections />);
@@ -313,6 +317,9 @@ describe('FollowedCollections', () => {
     await waitFor(() => {
       expect(mockGetOrFetchStreamSlice.mock.calls.length).toBeGreaterThan(callsBefore);
     });
+    // The follow-up fetch must resume from the cursor threaded back by the first page (42),
+    // proving the timestamp->nextCursor rename actually feeds pagination.
+    expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 42 });
   });
 
   it('on seed-fetch failure: logs an error, fires the load-failed toast, and hides Show More (reachedEnd flips true)', async () => {
@@ -348,7 +355,7 @@ describe('FollowedCollections', () => {
       mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
       mockUseLiveQuery.mockReturnValue(['authorA:p1', 'authorB:p2']);
       mockGetOrFetchStreamSlice.mockResolvedValue(
-        makeSlice({ nextPageIds: ['authorA:p1', 'authorB:p2'], reachedEnd: false, timestamp: 100 }),
+        makeSlice({ nextPageIds: ['authorA:p1', 'authorB:p2'], reachedEnd: false, nextCursor: 100 }),
       );
 
       const { container } = await act(async () => render(<FollowedCollections />));
@@ -362,7 +369,7 @@ describe('FollowedCollections', () => {
     it('matches the snapshot for the empty state (live query empty, seed resolved)', async () => {
       mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
       mockUseLiveQuery.mockReturnValue([]);
-      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true, timestamp: 0 }));
+      mockGetOrFetchStreamSlice.mockResolvedValue(makeSlice({ nextPageIds: [], reachedEnd: true, nextCursor: 0 }));
 
       const { container } = await act(async () => render(<FollowedCollections />));
       await waitFor(() => {

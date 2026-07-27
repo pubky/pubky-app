@@ -89,7 +89,7 @@ export function FollowedCollections() {
       const nextLastId = result.nextPageIds[result.nextPageIds.length - 1];
       cursorRef.current = {
         lastPostId: nextLastId ?? cursorRef.current.lastPostId,
-        streamTail: result.timestamp ?? cursorRef.current.streamTail,
+        streamTail: result.nextCursor ?? cursorRef.current.streamTail,
       };
       setReachedEnd(result.reachedEnd === true);
     } catch (error) {

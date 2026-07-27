@@ -1394,7 +1394,8 @@
     },
     "discover": {
       "title": "Descubrir colecciones",
-      "empty": "No hay colecciones para descubrir en este momento."
+      "empty": "No hay colecciones para descubrir en este momento.",
+      "noNewResults": "No se encontraron colecciones nuevas en este momento. Inténtalo de nuevo más tarde."
     },
     "bookmarks": {
       "title": "Marcadores",

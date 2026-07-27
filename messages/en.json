@@ -1390,7 +1390,8 @@
     },
     "discover": {
       "title": "Discover Collections",
-      "empty": "No collections to discover right now."
+      "empty": "No collections to discover right now.",
+      "noNewResults": "No new collections found right now. Try again later."
     },
     "bookmarks": {
       "title": "Bookmarks",
