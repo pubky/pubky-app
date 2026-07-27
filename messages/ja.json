@@ -5,7 +5,8 @@
     "hoursShort": "{count}時間",
     "daysShort": "{count}日",
     "weeksShort": "{count}週",
-    "monthsShort": "{count}か月"
+    "monthsShort": "{count}か月",
+    "yearsShort": "{count}年"
   },
   "landing": {
     "title": "ウェブを<highlight>解放</highlight>する。",
@@ -1355,6 +1356,9 @@
       "descriptionLabel": "説明",
       "descriptionPlaceholder": "ここで何が見つかりますか？",
       "backgroundLabel": "背景",
+      "layoutLabel": "レイアウト",
+      "layoutGrid": "グリッド",
+      "layoutList": "リスト",
       "addImage": "画像を追加",
       "removeImage": "画像を削除",
       "coverImageInvalid": "カバー画像は画像ファイルである必要があります。",
@@ -1377,6 +1381,7 @@
     "edit": {
       "title": "コレクションを編集",
       "save": "変更を保存",
+      "defaultLayoutLabel": "デフォルトのレイアウト",
       "updated": "コレクションを更新しました",
       "updateFailed": "コレクションの更新に失敗しました。"
     },
@@ -1391,7 +1396,8 @@
     },
     "discover": {
       "title": "コレクションを見つける",
-      "empty": "現在見つけられるコレクションはありません。"
+      "empty": "現在見つけられるコレクションはありません。",
+      "noNewResults": "現在、新しいコレクションは見つかりませんでした。後でもう一度お試しください。"
     },
     "bookmarks": {
       "title": "ブックマーク",
@@ -1416,6 +1422,9 @@
       "unfollow": "フォロー解除",
       "content": "投稿を追加",
       "addContent": "投稿を追加",
+      "layout": "レイアウト",
+      "layoutGrid": "グリッド",
+      "layoutList": "リスト",
       "empty": "このコレクションは空です。",
       "notFound": {
         "title": "コレクションが見つかりません",

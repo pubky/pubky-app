@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}T",
     "weeksShort": "{count}W",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}J"
   },
   "landing": {
     "title": "<highlight>Entsperre</highlight> das Web.",
@@ -1357,6 +1358,9 @@
       "descriptionLabel": "Beschreibung",
       "descriptionPlaceholder": "Was werden Menschen hier finden?",
       "backgroundLabel": "Hintergrund",
+      "layoutLabel": "Layout",
+      "layoutGrid": "Raster",
+      "layoutList": "Liste",
       "addImage": "Bild hinzufügen",
       "removeImage": "Bild entfernen",
       "coverImageInvalid": "Das Coverbild muss eine Bilddatei sein.",
@@ -1379,6 +1383,7 @@
     "edit": {
       "title": "Sammlung bearbeiten",
       "save": "Änderungen speichern",
+      "defaultLayoutLabel": "Standardlayout",
       "updated": "Sammlung aktualisiert",
       "updateFailed": "Sammlung konnte nicht aktualisiert werden."
     },
@@ -1393,7 +1398,8 @@
     },
     "discover": {
       "title": "Sammlungen entdecken",
-      "empty": "Im Moment gibt es keine Sammlungen zu entdecken."
+      "empty": "Im Moment gibt es keine Sammlungen zu entdecken.",
+      "noNewResults": "Gerade wurden keine neuen Sammlungen gefunden. Versuche es später erneut."
     },
     "bookmarks": {
       "title": "Lesezeichen",
@@ -1418,6 +1424,9 @@
       "unfollow": "Entfolgen",
       "content": "Beitrag hinzufügen",
       "addContent": "Beitrag hinzufügen",
+      "layout": "Layout",
+      "layoutGrid": "Raster",
+      "layoutList": "Liste",
       "empty": "Diese Sammlung ist leer.",
       "notFound": {
         "title": "Sammlung nicht gefunden",

@@ -22,10 +22,10 @@ import type { TimelineFeedContextValue, TimelineFeedProps } from '../TimelineFee
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { VisualTimelinePosts } from '../TimelineFeed/VisualTimelinePosts';
 
-type TimelineFeedGridTrailingSlot = Extract<
+type TimelineFeedTrailingSlot = Extract<
   TimelineFeedProps,
   { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION }
->['gridTrailingSlot'];
+>['trailingSlot'];
 
 interface TimelineFeedContentProps {
   streamId: PostStreamId;
@@ -36,7 +36,7 @@ interface TimelineFeedContentProps {
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
-  gridTrailingSlot?: TimelineFeedGridTrailingSlot;
+  trailingSlot?: TimelineFeedTrailingSlot;
 }
 
 interface TimelineFeedWithStreamProps {
@@ -48,7 +48,7 @@ interface TimelineFeedWithStreamProps {
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
-  gridTrailingSlot?: TimelineFeedGridTrailingSlot;
+  trailingSlot?: TimelineFeedTrailingSlot;
 }
 
 /**
@@ -66,7 +66,7 @@ export function TimelineFeedWithStream({
   emptyState,
   collectionId,
   pullToRefreshContainerRef,
-  gridTrailingSlot,
+  trailingSlot,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
     return <TimelineLoading />;
@@ -81,7 +81,7 @@ export function TimelineFeedWithStream({
       emptyState={emptyState}
       collectionId={collectionId}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
-      gridTrailingSlot={gridTrailingSlot}
+      trailingSlot={trailingSlot}
     >
       {children}
     </TimelineFeedContent>
@@ -110,7 +110,7 @@ function TimelineFeedContent({
   emptyState,
   collectionId,
   pullToRefreshContainerRef,
-  gridTrailingSlot,
+  trailingSlot,
 }: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const refreshContainerRef = pullToRefreshContainerRef ?? containerRef;
@@ -202,8 +202,7 @@ function TimelineFeedContent({
     prependOptimisticPosts,
     removePosts,
   };
-  const showGridEndMessage =
-    variant !== TIMELINE_FEED_VARIANT.COLLECTION && variant !== TIMELINE_FEED_VARIANT.BOOKMARKS;
+  const showEndMessage = variant !== TIMELINE_FEED_VARIANT.COLLECTION && variant !== TIMELINE_FEED_VARIANT.BOOKMARKS;
   const shouldRenderChildren = !isVisualActive || isGridActive;
 
   return (
@@ -228,9 +227,9 @@ function TimelineFeedContent({
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
-              showEndMessage={showGridEndMessage}
+              showEndMessage={showEndMessage}
               emptyState={emptyState}
-              trailingSlot={gridTrailingSlot}
+              trailingSlot={trailingSlot}
             />
           ) : isVisualActive ? (
             <VisualTimelinePosts
@@ -249,6 +248,9 @@ function TimelineFeedContent({
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
+              emptyState={emptyState}
+              trailingSlot={trailingSlot}
+              showEndMessage={showEndMessage}
             />
           )}
         </Container>

@@ -57,12 +57,12 @@ describe('useThreadReplies', () => {
       .spyOn(StreamPostsController, 'getOrFetchStreamSlice')
       .mockResolvedValueOnce({
         nextPageIds: Array.from({ length: 10 }, (_, index) => `author:reply-${index + 3}`),
-        timestamp: 11,
+        nextCursor: 11,
         reachedEnd: false,
       })
       .mockResolvedValueOnce({
         nextPageIds: ['author:reply-4'],
-        timestamp: 12,
+        nextCursor: 12,
         reachedEnd: true,
       });
 
@@ -90,7 +90,7 @@ describe('useThreadReplies', () => {
 
     const getOrFetchSpy = vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: Array.from({ length: 10 }, (_, index) => `author:reply-${index + 3}`),
-      timestamp: 0,
+      nextCursor: 0,
       reachedEnd: false,
     });
 

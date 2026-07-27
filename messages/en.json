@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}d",
     "weeksShort": "{count}w",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}Y"
   },
   "landing": {
     "title": "<highlight>Unlock</highlight> the web.",
@@ -1355,6 +1356,9 @@
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "What will people find here?",
       "backgroundLabel": "Background",
+      "layoutLabel": "Layout",
+      "layoutGrid": "Grid",
+      "layoutList": "List",
       "addImage": "Add image",
       "removeImage": "Remove image",
       "coverImageInvalid": "Cover image must be an image file.",
@@ -1377,6 +1381,7 @@
     "edit": {
       "title": "Edit Collection",
       "save": "Save changes",
+      "defaultLayoutLabel": "Default layout",
       "updated": "Collection updated",
       "updateFailed": "Failed to update collection."
     },
@@ -1391,7 +1396,8 @@
     },
     "discover": {
       "title": "Discover Collections",
-      "empty": "No collections to discover right now."
+      "empty": "No collections to discover right now.",
+      "noNewResults": "No new collections found right now. Try again later."
     },
     "bookmarks": {
       "title": "Bookmarks",
@@ -1416,6 +1422,9 @@
       "unfollow": "Unfollow",
       "content": "Add Post",
       "addContent": "Add Post",
+      "layout": "Layout",
+      "layoutGrid": "Grid",
+      "layoutList": "List",
       "empty": "This collection is empty.",
       "notFound": {
         "title": "Collection Not Found",

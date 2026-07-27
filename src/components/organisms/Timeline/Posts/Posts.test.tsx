@@ -58,15 +58,17 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
       error,
       hasItems,
       children,
+      emptyComponent,
     }: {
       loading: boolean;
       error: string | null;
       hasItems: boolean;
       children: React.ReactNode;
+      emptyComponent?: React.ReactNode;
     }) => {
       if (loading) return <div data-testid="timeline-loading">Loading...</div>;
       if (error && !hasItems) return <div data-testid="timeline-initial-error">Error: {error}</div>;
-      if (!hasItems) return <div data-testid="timeline-empty">No posts</div>;
+      if (!hasItems) return <>{emptyComponent ?? <div data-testid="timeline-empty">No posts</div>}</>;
       return <>{children}</>;
     },
   };
@@ -188,6 +190,41 @@ describe('TimelinePosts', () => {
         expect(screen.queryByTestId('timeline-loading')).not.toBeInTheDocument();
         expect(screen.queryByTestId('timeline-loading-more')).not.toBeInTheDocument();
       });
+    });
+
+    it('renders a supplied empty state when no posts are returned', () => {
+      render(
+        <TimelinePosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          emptyState={<div data-testid="custom-empty">Collection is empty</div>}
+        />,
+      );
+
+      expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
+      expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    });
+
+    it('renders the custom empty state followed by a trailing CTA', () => {
+      render(
+        <TimelinePosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          emptyState={<div data-testid="custom-empty">Collection is empty</div>}
+          trailingSlot={<button data-testid="trailing-cta">Add content</button>}
+        />,
+      );
+
+      expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
+      expect(screen.getByTestId('trailing-cta')).toBeInTheDocument();
     });
 
     it('should render end message when no more posts to load', async () => {
@@ -406,6 +443,24 @@ describe('TimelinePosts', () => {
       await waitFor(() => {
         expect(screen.getByTestId('timeline-loading-more')).toBeInTheDocument();
       });
+    });
+
+    it('renders a trailing CTA after populated List posts without an end message', () => {
+      render(
+        <TimelinePosts
+          postIds={mockPostIds}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          trailingSlot={<button data-testid="trailing-cta">Add content</button>}
+          showEndMessage={false}
+        />,
+      );
+
+      expect(screen.getByTestId('trailing-cta')).toBeInTheDocument();
+      expect(screen.queryByTestId('timeline-end-message')).not.toBeInTheDocument();
     });
   });
 

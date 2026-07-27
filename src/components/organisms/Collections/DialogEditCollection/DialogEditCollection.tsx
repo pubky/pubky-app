@@ -46,6 +46,7 @@ export function DialogEditCollection({ open, onOpenChange, compositeCollectionId
       onOpenChange={handleOpenChange}
       title={t('title')}
       submitLabel={t('save')}
+      layoutLabel={t('defaultLayoutLabel')}
       form={form}
       cover={cover}
       onSubmit={handleSave}

@@ -47,6 +47,7 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
               showThreadConnector={true}
               expanded={true}
               onContentChange={handleContentChange}
+              layoutOverride="inline"
             />
           </Container>
         </Container>

@@ -1,12 +1,18 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { NotificationsList } from './NotificationsList';
 
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: mockUseIsMobile,
+}));
+
 // Mock NotificationItem
 vi.mock('@/organisms/NotificationItem/NotificationItem', () => ({
-  NotificationItem: ({ notification }: { notification: FlatNotification }) => (
-    <div data-testid="notification-item" data-type={notification.type}>
+  NotificationItem: ({ notification, isMobile }: { notification: FlatNotification; isMobile: boolean }) => (
+    <div data-testid="notification-item" data-type={notification.type} data-mobile={isMobile ? 'true' : undefined}>
       {notification.type}
     </div>
   ),
@@ -21,6 +27,11 @@ vi.mock('@/atoms/Container/Container', () => {
       </div>
     ),
   };
+});
+
+beforeEach(() => {
+  mockUseIsMobile.mockReset();
+  mockUseIsMobile.mockReturnValue(false);
 });
 
 describe('NotificationsList', () => {
@@ -67,6 +78,15 @@ describe('NotificationsList', () => {
     expect(items[0]).toHaveAttribute('data-type', NotificationType.Follow);
     expect(items[1]).toHaveAttribute('data-type', NotificationType.Reply);
     expect(items[2]).toHaveAttribute('data-type', NotificationType.TagPost);
+  });
+
+  it('detects the viewport once and shares the result with every notification', () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    render(<NotificationsList notifications={mockNotifications} unreadNotifications={[]} />);
+
+    expect(mockUseIsMobile).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByTestId('notification-item').every((item) => item.dataset.mobile === 'true')).toBe(true);
   });
 });
 

@@ -4,6 +4,7 @@ import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { buildCompositeId } from '@/models/models.utils';
 import { buildCollectionItemsStreamId } from '@/models/stream/post/postStream.types';
+import { LAYOUT } from '@/stores/home/home.types';
 import { TimelineFeed } from './TimelineFeed';
 
 // Isolated test for the COLLECTION variant wrapper (`CollectionTimelineFeed`),
@@ -13,23 +14,24 @@ import { TimelineFeed } from './TimelineFeed';
 // lives in its own file where we can drive the params per-test.
 
 const mockUseParams = vi.hoisted(() => vi.fn());
+const mockUseFeedLayoutResolution = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
   useParams: mockUseParams,
 }));
 
 vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
-  useFeedLayoutResolution: vi.fn(
-    (): FeedLayoutResolution => ({
-      requestedLayout: 'columns',
-      effectiveLayout: 'columns',
-      isVisualRequested: false,
-      isVisualActive: false,
-      isGridActive: true,
-      isPhoneViewport: false,
-    }),
-  ),
+  useFeedLayoutResolution: mockUseFeedLayoutResolution,
 }));
+
+const gridLayoutResolution = (): FeedLayoutResolution => ({
+  requestedLayout: LAYOUT.COLUMNS,
+  effectiveLayout: LAYOUT.COLUMNS,
+  isVisualRequested: false,
+  isVisualActive: false,
+  isGridActive: true,
+  isPhoneViewport: false,
+});
 
 interface CapturedStreamProps {
   streamId: string | undefined;
@@ -53,6 +55,7 @@ const lastProps = () => capturedProps[capturedProps.length - 1];
 describe('CollectionTimelineFeed (COLLECTION variant)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseFeedLayoutResolution.mockReturnValue(gridLayoutResolution());
     capturedProps.length = 0;
   });
 
@@ -83,5 +86,21 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
 
     expect(lastProps().streamId).toBeUndefined();
+  });
+
+  it('forwards the collection-scoped List selection and uses List post styling', () => {
+    mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+    mockUseFeedLayoutResolution.mockReturnValue({
+      ...gridLayoutResolution(),
+      requestedLayout: LAYOUT.LIST,
+      effectiveLayout: LAYOUT.LIST,
+      isGridActive: false,
+    });
+
+    render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.LIST} />);
+
+    expect(mockUseFeedLayoutResolution).toHaveBeenCalledWith(TIMELINE_FEED_VARIANT.COLLECTION, LAYOUT.LIST);
+    expect(lastProps().tagsLayout).toBe('list');
+    expect(lastProps().layoutResolution?.isGridActive).toBe(false);
   });
 });

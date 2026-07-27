@@ -1,4 +1,4 @@
-import type { PubkyAppCollectionContent } from 'pubky-app-specs';
+import { DEFAULT_COLLECTION_LAYOUT, isCollectionLayout } from '@/config/collections';
 import {
   COLLECTION_CONTENT_MAX_LENGTH,
   COLLECTION_COVER_IMAGE_ALLOWED_PROTOCOLS,
@@ -11,7 +11,7 @@ import {
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { CollectionContentInput } from '@/models/post/collection/collectionPost.types';
+import type { CollectionContent, CollectionContentInput } from '@/models/post/collection/collectionPost.types';
 
 const ALLOWED_COLLECTION_URL_PROTOCOLS = new Set(
   COLLECTION_COVER_IMAGE_ALLOWED_PROTOCOLS.map((scheme) => `${scheme}:`),
@@ -114,11 +114,12 @@ function isNullableString(value: unknown): value is string | null | undefined {
 export class CollectionPostContent {
   private constructor() {}
 
-  static normalize(input: CollectionContentInput): PubkyAppCollectionContent {
+  static normalize(input: CollectionContentInput): CollectionContent {
     const name = input.name.trim();
     const description = (input.description ?? '').trim();
     const items = normalizeCollectionItemUris(input.items ?? []);
     const cover_image = normalizeCoverImage(input.coverImage);
+    const layout = isCollectionLayout(input.layout) ? input.layout : DEFAULT_COLLECTION_LAYOUT;
 
     if (!name) {
       throwCollectionValidation('Collection name is required', { field: 'name' });
@@ -146,7 +147,7 @@ export class CollectionPostContent {
       });
     }
 
-    const collection: PubkyAppCollectionContent = { name, description, items, cover_image };
+    const collection: CollectionContent = { name, description, items, cover_image, layout };
     if (JSON.stringify(collection).length > COLLECTION_CONTENT_MAX_LENGTH) {
       throwCollectionValidation('Collection content is too long', {
         field: 'content',
@@ -169,7 +170,7 @@ export class CollectionPostContent {
    * side goes through `PubkySpecsBuilder.createCollectionPost(...)` which builds
    * and serializes the envelope itself.
    */
-  static parse(content: string): PubkyAppCollectionContent | null {
+  static parse(content: string): CollectionContent | null {
     let parsed: unknown;
     try {
       parsed = JSON.parse(content);
@@ -179,7 +180,7 @@ export class CollectionPostContent {
 
     if (!isRecord(parsed)) return null;
 
-    const { name, description, items, cover_image } = parsed;
+    const { name, description, items, cover_image, layout } = parsed;
 
     if (typeof name !== 'string') return null;
     if (!isOptionalString(description)) return null;
@@ -192,13 +193,14 @@ export class CollectionPostContent {
         description: description ?? '',
         items: items ?? [],
         coverImage: cover_image ?? undefined,
+        layout: isCollectionLayout(layout) ? layout : DEFAULT_COLLECTION_LAYOUT,
       });
     } catch {
       return null;
     }
   }
 
-  static addItem(collection: PubkyAppCollectionContent, itemUri: string): PubkyAppCollectionContent {
+  static addItem(collection: CollectionContent, itemUri: string): CollectionContent {
     const trimmedUri = itemUri.trim();
     const items = collection.items ?? [];
 
@@ -213,7 +215,7 @@ export class CollectionPostContent {
     });
   }
 
-  static removeItem(collection: PubkyAppCollectionContent, itemUri: string): PubkyAppCollectionContent {
+  static removeItem(collection: CollectionContent, itemUri: string): CollectionContent {
     const trimmedUri = itemUri.trim();
     const items = collection.items ?? [];
 

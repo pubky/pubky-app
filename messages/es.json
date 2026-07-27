@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}d",
     "weeksShort": "{count}sem",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}a"
   },
   "landing": {
     "title": "<highlight>Desbloquea</highlight> la web.",
@@ -1359,6 +1360,9 @@
       "descriptionLabel": "Descripción",
       "descriptionPlaceholder": "¿Qué encontrará la gente aquí?",
       "backgroundLabel": "Fondo",
+      "layoutLabel": "Diseño",
+      "layoutGrid": "Cuadrícula",
+      "layoutList": "Lista",
       "addImage": "Añadir imagen",
       "removeImage": "Quitar imagen",
       "coverImageInvalid": "La imagen de portada debe ser un archivo de imagen.",
@@ -1381,6 +1385,7 @@
     "edit": {
       "title": "Editar colección",
       "save": "Guardar cambios",
+      "defaultLayoutLabel": "Diseño predeterminado",
       "updated": "Colección actualizada",
       "updateFailed": "No se pudo actualizar la colección."
     },
@@ -1395,7 +1400,8 @@
     },
     "discover": {
       "title": "Descubrir colecciones",
-      "empty": "No hay colecciones para descubrir en este momento."
+      "empty": "No hay colecciones para descubrir en este momento.",
+      "noNewResults": "No se encontraron colecciones nuevas en este momento. Inténtalo de nuevo más tarde."
     },
     "bookmarks": {
       "title": "Marcadores",
@@ -1420,6 +1426,9 @@
       "unfollow": "Dejar de seguir",
       "content": "Añadir publicación",
       "addContent": "Añadir publicación",
+      "layout": "Diseño",
+      "layoutGrid": "Cuadrícula",
+      "layoutList": "Lista",
       "empty": "Esta colección está vacía.",
       "notFound": {
         "title": "Colección no encontrada",

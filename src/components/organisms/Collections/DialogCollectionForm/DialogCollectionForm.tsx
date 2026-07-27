@@ -1,14 +1,15 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { Image as ImageIcon, Trash2 } from 'lucide-react';
+import { Grip, Image as ImageIcon, Rows4, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { type UseFormReturn, useWatch } from 'react-hook-form';
+import { Controller, type UseFormReturn, useWatch } from 'react-hook-form';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/atoms/Dialog/Dialog';
 import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
+import { COLLECTION_LAYOUT } from '@/config/collections';
 import { FORM_LABEL_CLASSES } from '@/config/forms';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import { COLLECTION_DESCRIPTION_MAX_CHARACTER_LENGTH, COLLECTION_NAME_MAX_CHARACTER_LENGTH } from '@/config/posts';
@@ -17,6 +18,7 @@ import {
   CREATE_COLLECTION_FORM_FIELDS,
   type CreateCollectionFormData,
 } from '@/hooks/useCreateCollection/useCreateCollection.types';
+import { cn } from '@/libs/utils/utils';
 import { ControlledInputField } from '@/molecules/ControlledInputField/ControlledInputField';
 
 /** Truncates long placeholder/value text with an ellipsis (matches Figma dashed inputs). */
@@ -32,6 +34,8 @@ type DialogCollectionFormProps = {
   title: string;
   /** Submit button label when idle (`t('save')`). */
   submitLabel: string;
+  /** Label above the Grid/List selector. */
+  layoutLabel: string;
   /** RHF form + cover picker from a `use{Create,Edit}Collection` hook. */
   form: UseFormReturn<CreateCollectionFormData>;
   cover: UseCoverImagePickerResult;
@@ -79,6 +83,7 @@ export function DialogCollectionForm({
   onOpenChange,
   title,
   submitLabel,
+  layoutLabel,
   form,
   cover,
   onSubmit,
@@ -104,6 +109,10 @@ export function DialogCollectionForm({
   // never made it into form state, so saving would commit unchanged content
   // while the user is still staring at a validation error.
   const canSubmit = !!watchedName.trim() && !areInputsDisabled && !coverError;
+  const layoutOptions = [
+    { value: COLLECTION_LAYOUT.GRID, label: t('layoutGrid'), icon: Grip },
+    { value: COLLECTION_LAYOUT.LIST, label: t('layoutList'), icon: Rows4 },
+  ];
 
   const coverErrorMessage =
     coverError === 'invalid-type'
@@ -151,6 +160,48 @@ export function DialogCollectionForm({
             inputClassName={COLLECTION_FORM_INPUT_CLASS}
             dataCy="collection-form-description-input"
           />
+
+          <Container overrideDefaults className="flex flex-col gap-2">
+            <Label id="collection-layout-label" className={FORM_LABEL_CLASSES}>
+              {layoutLabel}
+            </Label>
+            <Controller
+              name={CREATE_COLLECTION_FORM_FIELDS.LAYOUT}
+              control={form.control}
+              render={({ field }) => (
+                <Container
+                  overrideDefaults
+                  role="radiogroup"
+                  aria-labelledby="collection-layout-label"
+                  className="flex w-full border-b border-border"
+                >
+                  {layoutOptions.map(({ value, label, icon: Icon }) => {
+                    const selected = field.value === value;
+
+                    return (
+                      <Button
+                        key={value}
+                        type="button"
+                        variant="ghost"
+                        role="radio"
+                        aria-checked={selected}
+                        aria-label={label}
+                        disabled={areInputsDisabled}
+                        onClick={() => field.onChange(value)}
+                        className={cn(
+                          '-mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none',
+                          selected ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground',
+                        )}
+                        data-cy={`collection-layout-${value}`}
+                      >
+                        <Icon className="size-5" />
+                      </Button>
+                    );
+                  })}
+                </Container>
+              )}
+            />
+          </Container>
 
           <Container overrideDefaults className="flex flex-col gap-2">
             <Label htmlFor={coverInputId} className={FORM_LABEL_CLASSES}>

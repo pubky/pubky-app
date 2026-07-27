@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}j",
     "weeksShort": "{count}sem",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}a"
   },
   "landing": {
     "title": "<highlight>Libérez</highlight> le web.",
@@ -1355,6 +1356,9 @@
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Que trouveront les gens ici ?",
       "backgroundLabel": "Arrière-plan",
+      "layoutLabel": "Mise en page",
+      "layoutGrid": "Grille",
+      "layoutList": "Liste",
       "addImage": "Ajouter une image",
       "removeImage": "Supprimer l'image",
       "coverImageInvalid": "L'image de couverture doit être un fichier image.",
@@ -1377,6 +1381,7 @@
     "edit": {
       "title": "Modifier la collection",
       "save": "Enregistrer les modifications",
+      "defaultLayoutLabel": "Mise en page par défaut",
       "updated": "Collection mise à jour",
       "updateFailed": "Échec de la mise à jour de la collection."
     },
@@ -1391,7 +1396,8 @@
     },
     "discover": {
       "title": "Découvrir des collections",
-      "empty": "Aucune collection à découvrir pour le moment."
+      "empty": "Aucune collection à découvrir pour le moment.",
+      "noNewResults": "Aucune nouvelle collection trouvée pour le moment. Réessayez plus tard."
     },
     "bookmarks": {
       "title": "Signets",
@@ -1416,6 +1422,9 @@
       "unfollow": "Ne plus suivre",
       "content": "Ajouter une publication",
       "addContent": "Ajouter une publication",
+      "layout": "Mise en page",
+      "layoutGrid": "Grille",
+      "layoutList": "Liste",
       "empty": "Cette collection est vide.",
       "notFound": {
         "title": "Collection introuvable",
