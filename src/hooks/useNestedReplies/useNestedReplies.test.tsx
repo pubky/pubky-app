@@ -73,12 +73,12 @@ describe('useNestedReplies', () => {
       .spyOn(StreamPostsController, 'getOrFetchStreamSlice')
       .mockResolvedValueOnce({
         nextPageIds: Array.from({ length: 10 }, (_, index) => `author:nested-${index + 3}`),
-        timestamp: 11,
+        nextCursor: 11,
         reachedEnd: false,
       })
       .mockResolvedValueOnce({
         nextPageIds: ['author:nested-13'],
-        timestamp: 12,
+        nextCursor: 12,
         reachedEnd: true,
       });
 
@@ -106,7 +106,7 @@ describe('useNestedReplies', () => {
 
     const getOrFetchSpy = vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: Array.from({ length: 10 }, (_, index) => `author:nested-${index + 3}`),
-      timestamp: 0,
+      nextCursor: 0,
       reachedEnd: false,
     });
 

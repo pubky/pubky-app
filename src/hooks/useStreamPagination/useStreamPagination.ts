@@ -64,12 +64,9 @@ export function useStreamPagination({
       setLoadingState(isInitialLoad, true);
       setError(null);
 
-      // Offset-paginated streams (engagement + single-collection items) carry the count of
-      // already-loaded posts as their cursor; Nexus returns no timestamp/score cursor for them.
-      const isSkipStream = isSkipPaginatedStream(streamId);
-
       try {
         let result: TReadPostStreamChunkResponse;
+        // Always resume from `streamTail`; never recompute the cursor from the visible count.
 
         if (isInitialLoad) {
           // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
@@ -81,38 +78,33 @@ export function useStreamPagination({
           result = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId: undefined,
-            // Skip-paginated streams start at offset 0; timestamp streams seed from the cached tail.
-            streamTail: isSkipStream ? 0 : cachedLastPostTimestamp,
+            // Skip streams always start at offset 0; score streams seed from the cached tail.
+            streamTail: isSkipPaginatedStream(streamId) ? 0 : cachedLastPostTimestamp,
             limit,
           });
         } else {
-          const cursorValue = isSkipStream ? postIdsRef.current.length : streamTail;
-
           result = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId,
-            streamTail: cursorValue,
+            streamTail,
             limit,
           });
         }
 
-        // Handle empty results
+        // Advance from the response, even on a fully-filtered (empty) page.
+        if (result.nextCursor != null) {
+          setStreamTail(result.nextCursor);
+        }
+
+        // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
+        // keeps hasMore so the advanced cursor is re-requested. This can't spin IN PLACE (the
+        // cursor always advances by raw count, and a short raw page forces reachedEnd), but an
+        // auto-loading caller (useInfiniteScroll) will chain rounds through a filtered region
+        // until the true stream end, with no per-user-action bound or feedback. Known
+        // limitation, deliberately unchanged here — any remedy (toast + backoff, manual
+        // load-more) is a product-visible UX change tracked as follow-up.
         if (result.nextPageIds.length === 0) {
-          // Update cursor even on empty results so subsequent loads can progress
-          if (result.timestamp !== undefined) {
-            setStreamTail(result.timestamp);
-          }
-
-          // Respect reachedEnd flag - only set hasMore to false if we actually
-          // reached the end of stream, not just because filters removed all posts
-          if (result.reachedEnd) {
-            Logger.debug('[useStreamPagination] Empty result, reached end of stream');
-            setHasMore(false);
-          } else {
-            Logger.debug('[useStreamPagination] Empty result after filtering, more posts may exist');
-            setHasMore(true);
-          }
-
+          setHasMore(!result.reachedEnd);
           setLoadingState(isInitialLoad, false);
           return;
         }
@@ -121,20 +113,10 @@ export function useStreamPagination({
         const existingIds = new Set(postIdsRef.current);
         const newUniquePostIds = result.nextPageIds.filter((id) => !existingIds.has(id));
 
-        // Update pagination cursors even if all posts are duplicates
-        // (we need to move forward in the stream)
+        // Update last-returned id even if all posts are duplicates (we need to move forward)
         const lastId = result.nextPageIds[result.nextPageIds.length - 1];
         setLastPostId(lastId);
-
-        if (result.timestamp !== undefined) {
-          setStreamTail(result.timestamp);
-        }
-
-        // Check hasMore based on reachedEnd flag from the response
-        // This correctly handles cases where we hit MAX_FETCH_ITERATIONS due to mute filtering
-        // vs actually reaching the end of the stream
-        const hasMorePosts = result.reachedEnd !== true;
-        setHasMore(hasMorePosts);
+        setHasMore(result.reachedEnd !== true);
 
         // If all posts were duplicates, don't update the UI but keep hasMore state
         if (newUniquePostIds.length === 0) {

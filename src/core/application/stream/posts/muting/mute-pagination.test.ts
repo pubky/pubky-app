@@ -155,13 +155,13 @@ describe('Mute filtering with stream pagination', () => {
               `${mutedUserId}:post-9`,
             ],
             cacheMissPostIds: [],
-            timestamp: undefined,
+            nextCursor: undefined,
           };
         } else {
           return {
             nextPageIds: Array.from({ length: 10 }, (_, i) => `${validUserId}:post-${10 + i}`),
             cacheMissPostIds: [],
-            timestamp: BASE_TIMESTAMP + 19,
+            nextCursor: BASE_TIMESTAMP + 19,
           };
         }
       });
@@ -181,7 +181,7 @@ describe('Mute filtering with stream pagination', () => {
       });
 
       expect(result.posts).toHaveLength(10);
-      expect(result.timestamp).toBeDefined();
+      expect(result.nextCursor).toBeDefined();
 
       // Verify posts are in order and include expected posts
       const validPostNumbers = result.posts.map((id) => {
@@ -222,7 +222,7 @@ describe('Mute filtering with stream pagination', () => {
 
       expect(mockFetch).not.toHaveBeenCalled();
       expect(result.posts).toHaveLength(10);
-      expect(result.timestamp).toBe(BASE_TIMESTAMP + 9);
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 9);
     });
   });
 
@@ -245,7 +245,7 @@ describe('Mute filtering with stream pagination', () => {
             ...Array.from({ length: 9 }, (_, i) => `${mutedUserId}:post-${fetchCount * 10 + i}`),
           ],
           cacheMissPostIds: [],
-          timestamp: BASE_TIMESTAMP + fetchCount * 10,
+          nextCursor: BASE_TIMESTAMP + fetchCount * 10,
         };
       });
 
@@ -274,11 +274,11 @@ describe('Mute filtering with stream pagination', () => {
           return {
             nextPageIds: ['author:post-1', 'author:post-2', 'author:post-3'],
             cacheMissPostIds: [],
-            timestamp: BASE_TIMESTAMP + 3,
+            nextCursor: BASE_TIMESTAMP + 3,
             reachedEnd: true, // Nexus returned 3 posts when we asked for 10
           };
         }
-        return { nextPageIds: [], cacheMissPostIds: [], timestamp: undefined, reachedEnd: true };
+        return { nextPageIds: [], cacheMissPostIds: [], nextCursor: undefined, reachedEnd: true };
       });
 
       const result = await queue.collect(streamId, {
@@ -297,7 +297,7 @@ describe('Mute filtering with stream pagination', () => {
       const mockFetch = vi.fn(async () => ({
         nextPageIds: Array.from({ length: 10 }, (_, i) => `author:post-${i}`),
         cacheMissPostIds: [],
-        timestamp: BASE_TIMESTAMP + 10,
+        nextCursor: BASE_TIMESTAMP + 10,
         reachedEnd: false, // Returned exactly limit, more posts may exist
       }));
 
@@ -350,7 +350,7 @@ describe('Mute filtering with stream pagination', () => {
         return {
           nextPageIds: posts,
           cacheMissPostIds: [],
-          timestamp: BASE_TIMESTAMP + globalPostIndex,
+          nextCursor: BASE_TIMESTAMP + globalPostIndex,
         };
       });
 
@@ -365,7 +365,7 @@ describe('Mute filtering with stream pagination', () => {
       });
 
       expect(result1.posts.length).toBeGreaterThanOrEqual(10);
-      expect(result1.timestamp).toBeDefined();
+      expect(result1.nextCursor).toBeDefined();
 
       if (result1.posts.length < 10) {
         expect(result1.reachedEnd).toBe(false);
@@ -374,12 +374,12 @@ describe('Mute filtering with stream pagination', () => {
       // Second page
       const result2 = await queue.collect(streamId, {
         limit: 10,
-        cursor: result1.timestamp!,
+        cursor: result1.nextCursor!,
         filter: muteFilter,
         fetch: mockFetch,
       });
 
-      expect(result2.timestamp).toBeDefined();
+      expect(result2.nextCursor).toBeDefined();
 
       // Verify no duplicate posts between pages
       const allPosts = [...result1.posts, ...result2.posts];
@@ -399,13 +399,13 @@ describe('Mute filtering with stream pagination', () => {
           return {
             nextPageIds: Array.from({ length: 10 }, (_, i) => `${mutedUserId}:post-${fetchCount * 10 + i}`),
             cacheMissPostIds: [],
-            timestamp: BASE_TIMESTAMP + fetchCount * 10,
+            nextCursor: BASE_TIMESTAMP + fetchCount * 10,
           };
         }
         return {
           nextPageIds: Array.from({ length: 10 }, (_, i) => `${validUserId}:post-${fetchCount * 10 + i}`),
           cacheMissPostIds: [],
-          timestamp: BASE_TIMESTAMP + fetchCount * 10,
+          nextCursor: BASE_TIMESTAMP + fetchCount * 10,
         };
       });
 
@@ -475,8 +475,8 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
 
       expect(result.nextPageIds).toHaveLength(10);
       // KEY FIX: timestamp should be defined for full cache hits
-      expect(result.timestamp).toBeDefined();
-      expect(result.timestamp).toBe(BASE_TIMESTAMP + 9); // indexed_at of post-10
+      expect(result.nextCursor).toBeDefined();
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 9); // indexed_at of post-10
     });
 
     it('should allow cursor to advance correctly after full cache hit', async () => {
@@ -502,14 +502,14 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       });
 
       expect(result1.nextPageIds).toHaveLength(10);
-      expect(result1.timestamp).toBeDefined();
+      expect(result1.nextCursor).toBeDefined();
 
       // Second page should use the timestamp as cursor
       const result2 = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
         streamHead: 0,
-        streamTail: result1.timestamp!,
+        streamTail: result1.nextCursor!,
         lastPostId: result1.nextPageIds[result1.nextPageIds.length - 1],
         viewerId: 'user-viewer' as Pubky,
       });
@@ -544,7 +544,7 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       });
 
       expect(result.nextPageIds).toHaveLength(10);
-      expect(result.timestamp).toBe(BASE_TIMESTAMP + 9);
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 9);
       expect(NexusPostStreamService.fetch).toHaveBeenCalled();
     });
 
@@ -627,7 +627,7 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
         streamId,
         limit: 10,
         streamHead: 0,
-        streamTail: result1.timestamp!,
+        streamTail: result1.nextCursor!,
         lastPostId: result1.nextPageIds[result1.nextPageIds.length - 1],
         viewerId: 'user-viewer' as Pubky,
       });
@@ -681,7 +681,7 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
 
       // Should have filtered out muted posts
       expect(result.nextPageIds.every((id) => !id.startsWith(MUTED_AUTHOR))).toBe(true);
-      expect(result.timestamp).toBeDefined();
+      expect(result.nextCursor).toBeDefined();
     });
   });
 
@@ -774,7 +774,7 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       });
 
       expect(result1.nextPageIds.every((id) => !id.startsWith(MUTED_AUTHOR))).toBe(true);
-      expect(result1.timestamp).toBeDefined();
+      expect(result1.nextCursor).toBeDefined();
 
       // Unmute mid-scroll
       await clearMutedUsers();
@@ -785,14 +785,14 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
         streamId,
         limit: 5,
         streamHead: 0,
-        streamTail: result1.timestamp!,
+        streamTail: result1.nextCursor!,
         lastPostId: result1.nextPageIds[result1.nextPageIds.length - 1],
         viewerId: 'user-viewer' as Pubky,
       });
 
       // Key assertions: pagination continues correctly after unmuting
       expect(result2.nextPageIds.length).toBeGreaterThan(0);
-      expect(result2.timestamp).toBeDefined();
+      expect(result2.nextCursor).toBeDefined();
 
       // Note: Some overlap is acceptable when unmuting mid-scroll because
       // previously filtered posts become visible. The important thing is

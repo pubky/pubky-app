@@ -28,15 +28,15 @@ export class StreamPostsController {
    * Retrieves or fetches a slice of posts from a stream.
    *
    * @param params - Parameters for the stream slice request
-   * @param params.streamId - Unique identifier for the stream (e.g., 'timeline:all:all', 'engagement:all:images')
+   * @param params.streamId - Unique identifier for the stream (e.g., 'timeline:all:all', 'total_engagement:all:all')
    * @param params.streamHead - Identifier of the newest post in the current page for pagination.
-   * @param params.streamTail - Identifier of the last post in the current page for pagination. timestamp (timeline mode) or skip (engagement mode)
+   * @param params.streamTail - Resume cursor for the current page: last_post_score (timeline mode) or skip offset (engagement mode).
    * @param params.lastPostId - Post ID of the last post in the current page. We use to get the chunk of the stream from the cache.
    * @param params.limit - Limit of posts to fetch. Default is NEXUS_POSTS_PER_PAGE.
    *
    * @returns Promise resolving to stream slice response containing:
    * - nextPageIds: Array of post IDs for the current page
-   * - timestamp: Timestamp for pagination of the next page
+   * - nextCursor: opaque resume cursor for the next page (score for timeline, skip offset for engagement)
    *
    * // Get next page using the last post ID
    * const nextPage = await StreamPostsController.getOrFetchStreamSlice({
@@ -46,7 +46,7 @@ export class StreamPostsController {
    * });
    * // Get next page (5th page) of engagement stream
    * const nextPage = await StreamPostsController.getOrFetchStreamSlice({
-   *   streamId: 'engagement:all:images',
+   *   streamId: 'total_engagement:all:all',
    *   streamTail: 40
    * });
    * ```
@@ -62,15 +62,17 @@ export class StreamPostsController {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile posts)
     const viewerId = useAuthStore.getState().currentUserPubky;
-    const { nextPageIds, cacheMissPostIds, timestamp, reachedEnd } = await PostStreamApplication.getOrFetchStreamSlice({
-      streamId,
-      limit,
-      streamHead,
-      streamTail,
-      lastPostId,
-      viewerId,
-      order,
-    });
+    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd } = await PostStreamApplication.getOrFetchStreamSlice(
+      {
+        streamId,
+        limit,
+        streamHead,
+        streamTail,
+        lastPostId,
+        viewerId,
+        order,
+      },
+    );
     // Query nexus to get the cacheMissPostIds
     if (cacheMissPostIds.length > 0) {
       // TODO: When TTL is implemented, we can return to void
@@ -81,9 +83,9 @@ export class StreamPostsController {
       // Second-pass: cache-miss details are now resolved,
       // re-filter to catch posts that were fail-open in the first pass.
       const validIds = await PostStreamApplication.filterStreamPosts({ streamId, postIds: nextPageIds });
-      return { nextPageIds: validIds, timestamp, reachedEnd };
+      return { nextPageIds: validIds, nextCursor, reachedEnd };
     }
-    return { nextPageIds, timestamp, reachedEnd };
+    return { nextPageIds, nextCursor, reachedEnd };
   }
 
   /**

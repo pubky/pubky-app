@@ -178,9 +178,10 @@ export function useReplyStream(
           break;
         }
 
-        // Advance cursor using the timestamp from this page
-        if (result.timestamp && result.timestamp !== cursor) {
-          cursor = result.timestamp;
+        // Advance cursor using the resume cursor from this page. `!= null` (not
+        // truthiness) so a legitimate cursor of 0 cannot read as "no advancement".
+        if (result.nextCursor != null && result.nextCursor !== cursor) {
+          cursor = result.nextCursor;
         } else {
           reachedEnd = true;
           break; // No cursor advancement — stop to avoid infinite loop

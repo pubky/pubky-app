@@ -24,7 +24,9 @@ export interface TInitialStreamParams {
 export interface TPostStreamChunkResponse {
   nextPageIds: string[];
   cacheMissPostIds: string[];
-  timestamp: number | undefined;
+  /** Opaque resume cursor: raw `skip` offset for skip streams, `last_post_score` for score
+   * streams. Advanced only by raw backend data, never by the visible count. */
+  nextCursor: number | undefined;
   /** True only if we've reached the actual end of the stream (Nexus returned fewer posts than limit).
    * False if we hit MAX_FETCH_ITERATIONS or filled the limit. */
   reachedEnd?: boolean;
