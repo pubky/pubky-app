@@ -125,7 +125,7 @@ export function NotificationItem({ notification, isUnread, isMobile = false }: N
       timeAgo={formatRelativeTime(timestampDate)}
       date={timestampDate}
       isMobile={isMobile}
-      className="text-xs font-medium tracking-[1.2px] text-muted-foreground"
+      className="text-xs font-medium tracking-widest text-muted-foreground"
     />
   );
 

@@ -2,6 +2,11 @@
 
 import { useTranslations } from 'next-intl';
 
+const DAYS_PER_WEEK = 7;
+const WEEKS_PER_MONTH = 4;
+const DAYS_PER_YEAR = 365;
+const MAX_REMAINDER_MONTHS = 11;
+
 /**
  * Hook to format relative time with localization support.
  *
@@ -23,19 +28,23 @@ export function useRelativeTime() {
     const diffMins = Math.floor(diffSeconds / 60);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = Math.floor(diffWeeks / 4);
+    const diffWeeks = Math.floor(diffDays / DAYS_PER_WEEK);
+    const diffMonths = Math.floor(diffWeeks / WEEKS_PER_MONTH);
 
     if (diffSeconds < 60) return t('secondsShort', { count: diffSeconds });
     if (diffMins < 60) return t('minutesShort', { count: diffMins });
     if (diffHours < 24) return t('hoursShort', { count: diffHours });
     if (diffDays < 7) return t('daysShort', { count: diffDays });
     if (diffWeeks < 8) return t('weeksShort', { count: diffWeeks });
-    // ponytail: switch to real-day years here (not diffMonths/12) so a year stays 365 days, not 336 (12 * 28-day "weeks/4" months)
-    if (diffDays < 365) return t('monthsShort', { count: Math.min(diffMonths, 11) });
+    // Keep years at 365 days while using the same four-week month approximation
+    // on both sides of the year boundary.
+    if (diffDays < DAYS_PER_YEAR) {
+      return t('monthsShort', { count: Math.min(diffMonths, MAX_REMAINDER_MONTHS) });
+    }
 
-    const diffYears = Math.floor(diffDays / 365);
-    const remainderMonths = Math.min(Math.floor((diffDays % 365) / 30), 11);
+    const diffYears = Math.floor(diffDays / DAYS_PER_YEAR);
+    const remainderWeeks = Math.floor((diffDays % DAYS_PER_YEAR) / DAYS_PER_WEEK);
+    const remainderMonths = Math.min(Math.floor(remainderWeeks / WEEKS_PER_MONTH), MAX_REMAINDER_MONTHS);
     if (remainderMonths === 0) return t('yearsShort', { count: diffYears });
     return `${t('yearsShort', { count: diffYears })} ${t('monthsShort', { count: remainderMonths })}`;
   }

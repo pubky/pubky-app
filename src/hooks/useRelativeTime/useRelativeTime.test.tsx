@@ -50,6 +50,7 @@ describe('useRelativeTime', () => {
     ['6d', 6 * DAY, '1w', 7 * DAY],
     ['7w', 55 * DAY, '2M', 56 * DAY],
     ['11M', 364 * DAY, '1Y', 365 * DAY],
+    ['1Y', (365 + 27) * DAY, '1Y 1M', (365 + 28) * DAY],
   ])('does not skip or go backwards across the %s / %s boundary', (belowExpected, belowMs, atExpected, atMs) => {
     const { result } = renderHook(() => useRelativeTime());
 

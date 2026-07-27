@@ -52,7 +52,7 @@ exports[`NotificationItem - Mobile Snapshots > matches snapshot on mobile viewpo
     href="/profile/user1"
   >
     <span
-      class="text-xs font-medium tracking-[1.2px] text-muted-foreground"
+      class="text-xs font-medium tracking-widest text-muted-foreground"
       data-testid="typography"
     >
       30m
@@ -124,7 +124,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
       data-state="closed"
     >
       <span
-        class="text-xs font-medium tracking-[1.2px] text-muted-foreground"
+        class="text-xs font-medium tracking-widest text-muted-foreground"
         data-testid="typography"
       >
         30m
@@ -197,7 +197,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
       data-state="closed"
     >
       <span
-        class="text-xs font-medium tracking-[1.2px] text-muted-foreground"
+        class="text-xs font-medium tracking-widest text-muted-foreground"
         data-testid="typography"
       >
         30m
@@ -276,7 +276,7 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
       data-state="closed"
     >
       <span
-        class="text-xs font-medium tracking-[1.2px] text-muted-foreground"
+        class="text-xs font-medium tracking-widest text-muted-foreground"
         data-testid="typography"
       >
         30m

@@ -20,7 +20,7 @@ export function PostHeaderTimestamp({ timeAgo, indexedAt }: PostHeaderTimestampP
         timeAgo={timeAgo}
         date={indexedAt}
         isMobile={isMobile}
-        className="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
+        className="text-xs leading-4 font-medium tracking-widest whitespace-nowrap text-muted-foreground"
         overrideDefaults
         leading={<Clock className="size-4 text-muted-foreground" />}
         triggerClassName="flex flex-shrink-0 items-center gap-1"
