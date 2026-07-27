@@ -1,9 +1,14 @@
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+
+type StreamBackedFeedReach = Exclude<PubkyAppFeedReach, PubkyAppFeedReach.Wot | PubkyAppFeedReach.Me>;
 
 export function reachToString(reach: PubkyAppFeedReach): string {
   const map: Record<PubkyAppFeedReach, string> = {
@@ -11,6 +16,8 @@ export function reachToString(reach: PubkyAppFeedReach): string {
     [PubkyAppFeedReach.Followers]: 'followers',
     [PubkyAppFeedReach.Friends]: 'friends',
     [PubkyAppFeedReach.All]: 'all',
+    [PubkyAppFeedReach.Wot]: 'wot',
+    [PubkyAppFeedReach.Me]: 'me',
   };
   return map[reach];
 }
@@ -47,8 +54,8 @@ export function postKindToString(kind: PubkyAppPostKind): string {
   return map[kind];
 }
 
-export function reachToStreamSource(reach: PubkyAppFeedReach): StreamSource {
-  const map: Record<PubkyAppFeedReach, StreamSource> = {
+export function reachToStreamSource(reach: StreamBackedFeedReach): StreamSource {
+  const map: Record<StreamBackedFeedReach, StreamSource> = {
     [PubkyAppFeedReach.All]: StreamSource.ALL,
     [PubkyAppFeedReach.Following]: StreamSource.FOLLOWING,
     [PubkyAppFeedReach.Friends]: StreamSource.FRIENDS,
@@ -82,6 +89,17 @@ export function contentToStreamKind(content: PubkyAppPostKind | null): StreamKin
 
 export function buildFeedStreamId(feed: FeedModelSchema): PostStreamId {
   const sorting = sortToStreamSorting(feed.sort);
+  if (feed.reach === PubkyAppFeedReach.Wot || feed.reach === PubkyAppFeedReach.Me) {
+    throw Err.validation(
+      ValidationErrorCode.INVALID_INPUT,
+      'Feed reach is not supported by this stream implementation',
+      {
+        service: ErrorService.Local,
+        operation: 'buildFeedStreamId',
+        context: { reach: reachToString(feed.reach) },
+      },
+    );
+  }
   const source = reachToStreamSource(feed.reach);
   const kind = contentToStreamKind(feed.content) ?? 'all';
   const tags = feed.tags.join(POST_STREAM_TAG_DELIMITER);

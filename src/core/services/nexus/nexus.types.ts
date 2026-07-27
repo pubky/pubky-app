@@ -241,8 +241,9 @@ export type NexusPost = {
 /** Paginated post stream response with cursor for pagination */
 export type NexusPostsKeyStream = {
   post_keys: string[];
-  /** Score of the last post, used as cursor for next page */
-  last_post_score: number;
+  /** Score of the last post, used as cursor for next page. Null for skip-paginated streams
+   * (engagement, single-collection), which page by offset instead. */
+  last_post_score: number | null;
 };
 
 /** Post with attachment metadata */

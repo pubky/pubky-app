@@ -18,7 +18,7 @@ export function BookmarksItems({ header }: BookmarksItemsProps) {
     <TimelineFeed
       variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
       emptyState={emptyState}
-      gridTrailingSlot={
+      trailingSlot={
         <DialogAddContent triggerVariant="grid" target={{ type: 'bookmarks' }} dataCy="bookmarks-add-content-grid" />
       }
     >

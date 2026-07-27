@@ -42,8 +42,11 @@ export function resolveFeedLayout({
   const isWideRequested = requestedLayout === LAYOUT.WIDE;
   const isListRequested = requestedLayout === LAYOUT.LIST;
   const isRichLayoutSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
+  const isListSupported = isRichLayoutSupported || variant === TIMELINE_FEED_VARIANT.COLLECTION;
   const effectiveLayout =
-    (isVisualRequested && !isVisualSupported) || ((isWideRequested || isListRequested) && !isRichLayoutSupported)
+    (isVisualRequested && !isVisualSupported) ||
+    (isWideRequested && !isRichLayoutSupported) ||
+    (isListRequested && !isListSupported)
       ? LAYOUT.COLUMNS
       : requestedLayout;
 
@@ -52,12 +55,17 @@ export function resolveFeedLayout({
     effectiveLayout,
     isVisualRequested,
     isVisualActive: effectiveLayout === LAYOUT.VISUAL,
-    isGridActive: GRID_LAYOUT_VARIANTS.has(variant),
+    isGridActive:
+      GRID_LAYOUT_VARIANTS.has(variant) ||
+      (variant === TIMELINE_FEED_VARIANT.COLLECTION && effectiveLayout === LAYOUT.COLUMNS),
     isPhoneViewport,
   };
 }
 
-export function useFeedLayoutResolution(variant: TimelineFeedVariant): FeedLayoutResolution {
+export function useFeedLayoutResolution(
+  variant: TimelineFeedVariant,
+  requestedLayoutOverride?: LayoutType,
+): FeedLayoutResolution {
   const homeLayout = useHomeStore((state) => state.layout);
   const customFeed = useCustomFeed();
   const isPhoneViewport = useIsMobile({ breakpoint: 'md' });
@@ -66,7 +74,7 @@ export function useFeedLayoutResolution(variant: TimelineFeedVariant): FeedLayou
       ? pubkyLayoutToHomeLayout(customFeed.layout)
       : undefined;
 
-  const requestedLayout = customFeedLayout ?? homeLayout;
+  const requestedLayout = requestedLayoutOverride ?? customFeedLayout ?? homeLayout;
 
   return resolveFeedLayout({
     requestedLayout,

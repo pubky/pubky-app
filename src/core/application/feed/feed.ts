@@ -212,9 +212,10 @@ export class FeedApplication {
 
     const builder = PubkySpecsSingleton.get(userId);
 
-    const { tags, reach, layout, sort, content } = remoteFeed.feed;
+    const { tags, domain_tags, reach, layout, sort, content } = remoteFeed.feed;
     const normalizedTags = Array.isArray(tags) ? tags : [];
-    return builder.createFeed(normalizedTags, reach, layout, sort, content, remoteFeed.name);
+    const normalizedDomainTags = Array.isArray(domain_tags) ? domain_tags : undefined;
+    return builder.createFeed(normalizedTags, reach, layout, sort, content, remoteFeed.name, normalizedDomainTags);
   }
 
   /**

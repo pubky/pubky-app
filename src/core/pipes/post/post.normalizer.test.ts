@@ -1,5 +1,6 @@
 import { type FileResult, PostResult, PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { COLLECTION_LAYOUT } from '@/config/collections';
 import { Logger } from '@/libs/logger/logger';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -68,7 +69,7 @@ describe('PostNormalizer', () => {
         meta: { url: buildPubkyUri(TEST_PUBKY.USER_1, `posts/${TEST_POST_IDS.POST_1}`) },
       }),
     ),
-    createCollectionPost: vi.fn((name, description, items, cover_image) =>
+    createCollectionPost: vi.fn((name, description, items, cover_image, layout) =>
       asOpaque<PostResult>({
         post: {
           content: JSON.stringify({
@@ -76,6 +77,7 @@ describe('PostNormalizer', () => {
             description: description ?? '',
             items: items ?? [],
             cover_image: cover_image ?? null,
+            layout: layout ?? null,
           }),
           kind: 'collection',
           parent: undefined,
@@ -477,6 +479,7 @@ describe('PostNormalizer', () => {
         'Bitcoin writing',
         [buildPubkyUri(TEST_PUBKY.USER_2, 'posts/post-1')],
         undefined,
+        COLLECTION_LAYOUT.GRID,
       );
     });
 
@@ -485,6 +488,7 @@ describe('PostNormalizer', () => {
         {
           name: 'Proof of Work',
           coverImage: 'https://cdn.example.com/cover.png',
+          layout: COLLECTION_LAYOUT.LIST,
         },
         TEST_PUBKY.USER_1,
       );
@@ -494,6 +498,7 @@ describe('PostNormalizer', () => {
         '',
         [],
         'https://cdn.example.com/cover.png',
+        COLLECTION_LAYOUT.LIST,
       );
     });
 

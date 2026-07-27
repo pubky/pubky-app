@@ -47,6 +47,7 @@ export class PostNormalizer {
         normalized.description,
         normalized.items,
         normalized.cover_image,
+        normalized.layout,
       );
     } catch (error) {
       if (error instanceof AppError) {

@@ -20,6 +20,7 @@ import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayo
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
+import { LAYOUT } from '@/stores/home/home.types';
 import { TimelineFeedWithStream } from '../TimelineFeedContent/TimelineFeedContent';
 import type { TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
@@ -37,7 +38,8 @@ export function TimelineFeed({
   children,
   emptyState,
   pullToRefreshContainerRef,
-  gridTrailingSlot,
+  trailingSlot,
+  requestedLayout,
 }: TimelineFeedProps) {
   switch (variant) {
     case TIMELINE_FEED_VARIANT.HOME:
@@ -46,7 +48,7 @@ export function TimelineFeed({
       return <CustomTimelineFeed>{children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
       return (
-        <BookmarksTimelineFeed emptyState={emptyState} gridTrailingSlot={gridTrailingSlot}>
+        <BookmarksTimelineFeed emptyState={emptyState} trailingSlot={trailingSlot}>
           {children}
         </BookmarksTimelineFeed>
       );
@@ -63,7 +65,8 @@ export function TimelineFeed({
         <CollectionTimelineFeed
           emptyState={emptyState}
           pullToRefreshContainerRef={pullToRefreshContainerRef}
-          gridTrailingSlot={gridTrailingSlot}
+          trailingSlot={trailingSlot}
+          requestedLayout={requestedLayout}
         >
           {children}
         </CollectionTimelineFeed>
@@ -117,14 +120,11 @@ function CustomTimelineFeed({ children }: { children?: TimelineFeedProps['childr
 function BookmarksTimelineFeed({
   children,
   emptyState,
-  gridTrailingSlot,
+  trailingSlot,
 }: {
   children?: TimelineFeedProps['children'];
   emptyState?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }>['emptyState'];
-  gridTrailingSlot?: Extract<
-    TimelineFeedProps,
-    { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }
-  >['gridTrailingSlot'];
+  trailingSlot?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS }>['trailingSlot'];
 }) {
   // The bookmarks route exposes no filter UI and shows collections in their own
   // section below, so the feed is always the fixed all-bookmarks stream. It must
@@ -142,7 +142,7 @@ function BookmarksTimelineFeed({
       tagsLayout="inline"
       layoutResolution={layoutResolution}
       emptyState={emptyState}
-      gridTrailingSlot={gridTrailingSlot}
+      trailingSlot={trailingSlot}
     >
       {children}
     </TimelineFeedWithStream>
@@ -189,7 +189,8 @@ function CollectionTimelineFeed({
   children,
   emptyState,
   pullToRefreshContainerRef,
-  gridTrailingSlot,
+  trailingSlot,
+  requestedLayout,
 }: {
   children?: TimelineFeedProps['children'];
   emptyState?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }>['emptyState'];
@@ -197,10 +198,8 @@ function CollectionTimelineFeed({
     TimelineFeedProps,
     { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
   >['pullToRefreshContainerRef'];
-  gridTrailingSlot?: Extract<
-    TimelineFeedProps,
-    { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
-  >['gridTrailingSlot'];
+  trailingSlot?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }>['trailingSlot'];
+  requestedLayout: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }>['requestedLayout'];
 }) {
   // The single-collection route owns these params (`/collections/[userId]/[postId]`).
   // Reading them here mirrors how `ProfileTimelineFeed` resolves its stream from context.
@@ -209,18 +208,19 @@ function CollectionTimelineFeed({
   const postId = params?.postId;
   const streamId = userId && postId ? buildCollectionItemsStreamId(userId, postId) : undefined;
   const collectionId = userId && postId ? buildCompositeId({ pubky: userId, id: postId }) : undefined;
-  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION);
+  const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION, requestedLayout ?? LAYOUT.COLUMNS);
+  const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
   return (
     <TimelineFeedWithStream
       streamId={streamId}
       variant={TIMELINE_FEED_VARIANT.COLLECTION}
-      tagsLayout="inline"
+      tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
       emptyState={emptyState}
       collectionId={collectionId}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
-      gridTrailingSlot={gridTrailingSlot}
+      trailingSlot={trailingSlot}
     >
       {children}
     </TimelineFeedWithStream>

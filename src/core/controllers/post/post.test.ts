@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostApplication } from '@/application/post/post';
+import { COLLECTION_LAYOUT } from '@/config/collections';
 import type { TCreatePostParams, TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
@@ -753,6 +754,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [targetPostUri],
+            layout: COLLECTION_LAYOUT.GRID,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -791,6 +793,7 @@ describe('PostController', () => {
             name: 'Saved posts',
             description: '',
             items: [targetPostUri, existingItemUri],
+            layout: COLLECTION_LAYOUT.GRID,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -818,7 +821,12 @@ describe('PostController', () => {
 
         expect(toEditSpy).toHaveBeenCalledWith({
           compositePostId: collectionPostId,
-          content: JSON.stringify({ name: 'Saved posts', description: '', items: [] }),
+          content: JSON.stringify({
+            name: 'Saved posts',
+            description: '',
+            items: [],
+            layout: COLLECTION_LAYOUT.GRID,
+          }),
           currentUserPubky: testData.authorPubky,
         });
       } finally {
@@ -986,6 +994,7 @@ describe('PostController', () => {
             description: 'Updated description',
             items: [existingItemUri],
             cover_image: 'pubky://author/pub/pubky.app/files/oldcover',
+            layout: COLLECTION_LAYOUT.GRID,
           }),
           currentUserPubky: testData.authorPubky,
         });
@@ -1033,6 +1042,7 @@ describe('PostController', () => {
             description: 'Updated description',
             items: [existingItemUri],
             cover_image: 'pubky://author/pub/pubky.app/files/newcover',
+            layout: COLLECTION_LAYOUT.GRID,
           }),
           currentUserPubky: testData.authorPubky,
         });

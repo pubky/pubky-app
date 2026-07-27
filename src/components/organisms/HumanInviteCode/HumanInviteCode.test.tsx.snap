@@ -10,11 +10,11 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
       class="font-bold text-foreground text-5xl lg:text-6xl"
       data-testid="heading-1"
     >
-      Prove you're 
+      Use 
       <span
         class="text-brand"
       >
-        not a Robot.
+        Invite.
       </span>
     </h1>
     <div
@@ -24,7 +24,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
       <h2
         class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
       >
-        SMS or payment verification not available. Ask us for an invite code.
+        Phone or payment verification not available? Ask us for an invite code.
       </h2>
       <a
         class="cursor-pointer transition-colors text-sm text-muted-foreground hover:text-brand"
@@ -88,61 +88,116 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
     </div>
   </div>
   <div
-    class="flex rounded-xl bg-card text-card-foreground shadow-sm flex-row items-start gap-12 overflow-hidden p-12"
+    class="flex flex-col bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12 overflow-hidden rounded-md"
     data-slot="card"
     data-testid="human-invite-code-card"
   >
     <div
-      class="mx-auto w-full flex-col hidden shrink-0 lg:flex lg:h-48 lg:w-48"
-      data-testid="container"
-    >
-      <img
-        alt="Gift"
-        class="max-w-full h-full w-full object-cover"
-        data-nimg="1"
-        decoding="async"
-        height="192"
-        loading="lazy"
-        src="/images/gift.webp"
-        style="color: transparent;"
-        width="192"
-      />
-    </div>
-    <div
-      class="mx-auto w-full flex max-w-xl min-w-0 flex-1 flex-col gap-6"
-      data-testid="container"
+      class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+      data-slot="card-content"
     >
       <div
-        class="mx-auto w-full flex-col flex gap-3"
-        data-testid="container"
+        class="hidden w-48 shrink-0 flex-col lg:flex"
+        data-slot="illustrated-card-visual"
+      >
+        <img
+          alt="Gift"
+          class="max-w-full size-48 object-cover"
+          data-nimg="1"
+          decoding="async"
+          height="192"
+          loading="lazy"
+          src="/images/gift.webp"
+          style="color: transparent;"
+          width="192"
+        />
+      </div>
+      <div
+        class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+        data-slot="illustrated-card-content"
       >
         <div
-          class="mx-auto w-full flex flex-row items-center gap-1"
+          class="mx-auto w-full flex flex-col gap-3"
           data-testid="container"
         >
-          <h3
-            class="text-2xl leading-8 font-bold text-foreground"
+          <div
+            class="mx-auto w-full flex flex-row items-center gap-1"
+            data-testid="container"
+          >
+            <h3
+              class="text-2xl leading-8 font-bold text-foreground"
+              data-testid="typography"
+            >
+              Enter invite code
+            </h3>
+            <button
+              aria-controls="radix-normalized"
+              aria-expanded="false"
+              aria-haspopup="dialog"
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 h-6 w-6 opacity-80"
+              data-as-child="true"
+              data-size="icon"
+              data-slot="popover-trigger"
+              data-state="closed"
+              data-testid="popover-trigger"
+              data-variant="ghost"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-circle-question-mark h-4 w-4 text-white"
+                data-testid="circle-help-icon"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                />
+                <path
+                  d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+                />
+                <path
+                  d="M12 17h.01"
+                />
+              </svg>
+            </button>
+          </div>
+          <p
+            class="text-base leading-6 font-medium text-secondary-foreground/80"
             data-testid="typography"
           >
-            Invite code for homeserver
-          </h3>
-          <button
-            aria-controls="radix-normalized"
-            aria-expanded="false"
-            aria-haspopup="dialog"
-            class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 h-6 w-6 opacity-80"
-            data-as-child="true"
-            data-size="icon"
-            data-slot="popover-trigger"
-            data-state="closed"
-            data-testid="popover-trigger"
-            data-variant="ghost"
-            type="button"
+            You get 1GB of storage, used for your posts, photos, videos, and your profile.
+          </p>
+        </div>
+        <div
+          class="mx-auto w-full flex flex-col gap-6"
+          data-testid="container"
+        >
+          <div
+            class="mx-auto w-full flex flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-6 py-4 shadow-xs border-brand"
+            data-testid="human-invite-code-input-field"
           >
+            <input
+              class="flex w-full min-w-0 rounded-md border border-input shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent p-0 text-base placeholder:text-muted-foreground focus:ring-0 focus:outline-none font-bold text-brand"
+              data-cy="human-invite-code-input"
+              data-testid="human-invite-code-input"
+              maxlength="14"
+              placeholder="XXXX-XXXX-XXXX"
+              type="text"
+              value="N76Q-G32N-C0RG"
+            />
             <svg
               aria-hidden="true"
-              class="lucide lucide-circle-question-mark h-4 w-4 text-white"
-              data-testid="circle-help-icon"
+              class="lucide lucide-circle-check h-6 w-6 shrink-0 text-brand"
               fill="none"
               height="24"
               stroke="currentColor"
@@ -159,122 +214,72 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
                 r="10"
               />
               <path
-                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-              />
-              <path
-                d="M12 17h.01"
+                d="m9 12 2 2 4-4"
               />
             </svg>
-          </button>
-        </div>
-        <p
-          class="text-base leading-6 font-medium text-secondary-foreground/80"
-          data-testid="typography"
-        >
-          You get 1GB of storage, used for your posts, photos, videos, and your profile.
-        </p>
-      </div>
-      <div
-        class="mx-auto w-full flex-col flex gap-6"
-        data-testid="container"
-      >
-        <div
-          class="mx-auto w-full flex flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs border-brand"
-          data-testid="human-invite-code-input-field"
-        >
-          <input
-            class="flex w-full min-w-0 rounded-md border border-input shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent p-0 text-base placeholder:text-muted-foreground focus:ring-0 focus:outline-none font-bold text-brand"
-            data-cy="human-invite-code-input"
-            data-testid="human-invite-code-input"
-            maxlength="14"
-            placeholder="XXXX-XXXX-XXXX"
-            type="text"
-            value="N76Q-G32N-C0RG"
-          />
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-circle-check h-6 w-6 shrink-0 text-brand"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
+          </div>
+          <div
+            class="mx-auto w-full flex flex-col items-center gap-4 sm:flex-row"
+            data-testid="container"
           >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-            />
-            <path
-              d="m9 12 2 2 4-4"
-            />
-          </svg>
-        </div>
-        <div
-          class="mx-auto w-full flex flex-col items-center gap-4 sm:flex-row"
-          data-testid="container"
-        >
-          <button
-            aria-label="Custom homeserver"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4 shrink-0 rounded-full opacity-40"
-            data-slot="button"
-            data-variant="secondary"
-            disabled=""
-          >
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-server mr-2 h-4 w-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <button
+              aria-label="Custom homeserver"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4 shrink-0 rounded-full opacity-40"
+              data-slot="button"
+              data-variant="secondary"
+              disabled=""
             >
-              <rect
-                height="8"
-                rx="2"
-                ry="2"
-                width="20"
-                x="2"
-                y="2"
-              />
-              <rect
-                height="8"
-                rx="2"
-                ry="2"
-                width="20"
-                x="2"
-                y="14"
-              />
-              <line
-                x1="6"
-                x2="6.01"
-                y1="6"
-                y2="6"
-              />
-              <line
-                x1="6"
-                x2="6.01"
-                y1="18"
-                y2="18"
-              />
-            </svg>
-            Custom homeserver
-          </button>
-          <p
-            class="text-base leading-6 font-medium text-secondary-foreground"
-            data-testid="typography"
-          >
-            Using a different homeserver will be possible soon.
-          </p>
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-server mr-2 h-4 w-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="8"
+                  rx="2"
+                  ry="2"
+                  width="20"
+                  x="2"
+                  y="2"
+                />
+                <rect
+                  height="8"
+                  rx="2"
+                  ry="2"
+                  width="20"
+                  x="2"
+                  y="14"
+                />
+                <line
+                  x1="6"
+                  x2="6.01"
+                  y1="6"
+                  y2="6"
+                />
+                <line
+                  x1="6"
+                  x2="6.01"
+                  y1="18"
+                  y2="18"
+                />
+              </svg>
+              Custom homeserver
+            </button>
+            <p
+              class="text-base leading-6 font-medium text-secondary-foreground"
+              data-testid="typography"
+            >
+              Using a different homeserver will be possible soon.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -361,11 +366,11 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
       class="font-bold text-foreground text-5xl lg:text-6xl"
       data-testid="heading-1"
     >
-      Prove you're 
+      Use 
       <span
         class="text-brand"
       >
-        not a Robot.
+        Invite.
       </span>
     </h1>
     <div
@@ -375,7 +380,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
       <h2
         class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
       >
-        SMS or payment verification not available. Ask us for an invite code.
+        Phone or payment verification not available? Ask us for an invite code.
       </h2>
       <a
         class="cursor-pointer transition-colors text-sm text-muted-foreground hover:text-brand"
@@ -439,171 +444,176 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
     </div>
   </div>
   <div
-    class="flex rounded-xl bg-card text-card-foreground shadow-sm flex-row items-start gap-12 overflow-hidden p-12"
+    class="flex flex-col bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12 overflow-hidden rounded-md"
     data-slot="card"
     data-testid="human-invite-code-card"
   >
     <div
-      class="mx-auto w-full flex-col hidden shrink-0 lg:flex lg:h-48 lg:w-48"
-      data-testid="container"
-    >
-      <img
-        alt="Gift"
-        class="max-w-full h-full w-full object-cover"
-        data-nimg="1"
-        decoding="async"
-        height="192"
-        loading="lazy"
-        src="/images/gift.webp"
-        style="color: transparent;"
-        width="192"
-      />
-    </div>
-    <div
-      class="mx-auto w-full flex max-w-xl min-w-0 flex-1 flex-col gap-6"
-      data-testid="container"
+      class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+      data-slot="card-content"
     >
       <div
-        class="mx-auto w-full flex-col flex gap-3"
-        data-testid="container"
+        class="hidden w-48 shrink-0 flex-col lg:flex"
+        data-slot="illustrated-card-visual"
       >
-        <div
-          class="mx-auto w-full flex flex-row items-center gap-1"
-          data-testid="container"
-        >
-          <h3
-            class="text-2xl leading-8 font-bold text-foreground"
-            data-testid="typography"
-          >
-            Invite code for homeserver
-          </h3>
-          <button
-            aria-controls="radix-normalized"
-            aria-expanded="false"
-            aria-haspopup="dialog"
-            class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 h-6 w-6 opacity-80"
-            data-as-child="true"
-            data-size="icon"
-            data-slot="popover-trigger"
-            data-state="closed"
-            data-testid="popover-trigger"
-            data-variant="ghost"
-            type="button"
-          >
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-circle-question-mark h-4 w-4 text-white"
-              data-testid="circle-help-icon"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-              />
-              <path
-                d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-              />
-              <path
-                d="M12 17h.01"
-              />
-            </svg>
-          </button>
-        </div>
-        <p
-          class="text-base leading-6 font-medium text-secondary-foreground/80"
-          data-testid="typography"
-        >
-          You get 1GB of storage, used for your posts, photos, videos, and your profile.
-        </p>
+        <img
+          alt="Gift"
+          class="max-w-full size-48 object-cover"
+          data-nimg="1"
+          decoding="async"
+          height="192"
+          loading="lazy"
+          src="/images/gift.webp"
+          style="color: transparent;"
+          width="192"
+        />
       </div>
       <div
-        class="mx-auto w-full flex-col flex gap-6"
-        data-testid="container"
+        class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+        data-slot="illustrated-card-content"
       >
         <div
-          class="mx-auto w-full flex flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs border-input"
-          data-testid="human-invite-code-input-field"
-        >
-          <input
-            class="flex w-full min-w-0 rounded-md border border-input shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none text-foreground"
-            data-cy="human-invite-code-input"
-            data-testid="human-invite-code-input"
-            maxlength="14"
-            placeholder="XXXX-XXXX-XXXX"
-            type="text"
-            value=""
-          />
-        </div>
-        <div
-          class="mx-auto w-full flex flex-col items-center gap-4 sm:flex-row"
+          class="mx-auto w-full flex flex-col gap-3"
           data-testid="container"
         >
-          <button
-            aria-label="Custom homeserver"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4 shrink-0 rounded-full opacity-40"
-            data-slot="button"
-            data-variant="secondary"
-            disabled=""
+          <div
+            class="mx-auto w-full flex flex-row items-center gap-1"
+            data-testid="container"
           >
-            <svg
-              aria-hidden="true"
-              class="lucide lucide-server mr-2 h-4 w-4"
-              fill="none"
-              height="24"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="24"
-              xmlns="http://www.w3.org/2000/svg"
+            <h3
+              class="text-2xl leading-8 font-bold text-foreground"
+              data-testid="typography"
             >
-              <rect
-                height="8"
-                rx="2"
-                ry="2"
-                width="20"
-                x="2"
-                y="2"
-              />
-              <rect
-                height="8"
-                rx="2"
-                ry="2"
-                width="20"
-                x="2"
-                y="14"
-              />
-              <line
-                x1="6"
-                x2="6.01"
-                y1="6"
-                y2="6"
-              />
-              <line
-                x1="6"
-                x2="6.01"
-                y1="18"
-                y2="18"
-              />
-            </svg>
-            Custom homeserver
-          </button>
+              Enter invite code
+            </h3>
+            <button
+              aria-controls="radix-normalized"
+              aria-expanded="false"
+              aria-haspopup="dialog"
+              class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 h-6 w-6 opacity-80"
+              data-as-child="true"
+              data-size="icon"
+              data-slot="popover-trigger"
+              data-state="closed"
+              data-testid="popover-trigger"
+              data-variant="ghost"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-circle-question-mark h-4 w-4 text-white"
+                data-testid="circle-help-icon"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                />
+                <path
+                  d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+                />
+                <path
+                  d="M12 17h.01"
+                />
+              </svg>
+            </button>
+          </div>
           <p
-            class="text-base leading-6 font-medium text-secondary-foreground"
+            class="text-base leading-6 font-medium text-secondary-foreground/80"
             data-testid="typography"
           >
-            Using a different homeserver will be possible soon.
+            You get 1GB of storage, used for your posts, photos, videos, and your profile.
           </p>
+        </div>
+        <div
+          class="mx-auto w-full flex flex-col gap-6"
+          data-testid="container"
+        >
+          <div
+            class="mx-auto w-full flex flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-6 py-4 shadow-xs border-input"
+            data-testid="human-invite-code-input-field"
+          >
+            <input
+              class="flex w-full min-w-0 rounded-md border border-input shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none text-foreground"
+              data-cy="human-invite-code-input"
+              data-testid="human-invite-code-input"
+              maxlength="14"
+              placeholder="XXXX-XXXX-XXXX"
+              type="text"
+              value=""
+            />
+          </div>
+          <div
+            class="mx-auto w-full flex flex-col items-center gap-4 sm:flex-row"
+            data-testid="container"
+          >
+            <button
+              aria-label="Custom homeserver"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4 shrink-0 rounded-full opacity-40"
+              data-slot="button"
+              data-variant="secondary"
+              disabled=""
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-server mr-2 h-4 w-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="8"
+                  rx="2"
+                  ry="2"
+                  width="20"
+                  x="2"
+                  y="2"
+                />
+                <rect
+                  height="8"
+                  rx="2"
+                  ry="2"
+                  width="20"
+                  x="2"
+                  y="14"
+                />
+                <line
+                  x1="6"
+                  x2="6.01"
+                  y1="6"
+                  y2="6"
+                />
+                <line
+                  x1="6"
+                  x2="6.01"
+                  y1="18"
+                  y2="18"
+                />
+              </svg>
+              Custom homeserver
+            </button>
+            <p
+              class="text-base leading-6 font-medium text-secondary-foreground"
+              data-testid="typography"
+            >
+              Using a different homeserver will be possible soon.
+            </p>
+          </div>
         </div>
       </div>
     </div>

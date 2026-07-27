@@ -70,7 +70,8 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
             decoding="async"
             height="202"
             loading="lazy"
-            src="/images/new-here.svg"
+            src="/_next/image?url=%2Fimages%2Fnew-here.webp&w=640&q=75"
+            srcset="/_next/image?url=%2Fimages%2Fnew-here.webp&w=256&q=75 1x, /_next/image?url=%2Fimages%2Fnew-here.webp&w=640&q=75 2x"
             style="color: transparent;"
             width="202"
           />
@@ -142,7 +143,8 @@ exports[`DialogSignIn - Snapshots > matches snapshot when open 1`] = `
             decoding="async"
             height="202"
             loading="lazy"
-            src="/images/sign-in.svg"
+            src="/_next/image?url=%2Fimages%2Fsign-in.webp&w=640&q=75"
+            srcset="/_next/image?url=%2Fimages%2Fsign-in.webp&w=256&q=75 1x, /_next/image?url=%2Fimages%2Fsign-in.webp&w=640&q=75 2x"
             style="color: transparent;"
             width="202"
           />

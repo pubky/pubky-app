@@ -285,31 +285,6 @@ export const hoursAgo = (hours: number): number => Date.now() - hours * 60 * 60 
 export const daysAgo = (days: number): number => Date.now() - days * 24 * 60 * 60 * 1000;
 
 /**
- * Formats a timestamp for notifications display - SHORT format for mobile
- * Returns format: "now", "15m", "1h", "2d", etc.
- */
-export function formatNotificationTime(timestamp: number, longFormat = false): string {
-  const diffMs = Date.now() - timestamp;
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (longFormat) {
-    // Long format for desktop: "15 MINUTES AGO", "1 HOUR AGO", etc.
-    if (diffMins < 1) return 'NOW';
-    if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? 'MINUTE' : 'MINUTES'} AGO`;
-    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'HOUR' : 'HOURS'} AGO`;
-    return `${diffDays} ${diffDays === 1 ? 'DAY' : 'DAYS'} AGO`;
-  }
-
-  // Short format for mobile: "now", "15m", "1h", "2d", etc.
-  if (diffMins < 1) return 'now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  return `${diffDays}d`;
-}
-
-/**
  * Formats a filename by truncating it if it exceeds the max length,
  * preserving the file extension
  * @param filename - The filename to format

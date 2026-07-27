@@ -199,13 +199,13 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
 
         <Container
           overrideDefaults={true}
-          className="flex h-full w-full flex-col items-center justify-center lg:w-auto"
+          className="flex h-full w-full shrink-0 flex-col items-center justify-center lg:w-auto"
         >
           {renderPaymentAction()}
         </Container>
 
         {/* Description */}
-        <Container className="w-full flex-col gap-3">
+        <div className="flex w-full min-w-0 flex-col gap-3 lg:max-w-xl lg:flex-1">
           <Typography as="h3" className="text-2xl leading-[32px] font-semibold text-foreground">
             {t('qrLabel')}
           </Typography>
@@ -221,7 +221,7 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
           ) : (
             <PriceSkeleton />
           )}
-        </Container>
+        </div>
       </Card>
 
       {/* Buttons container */}

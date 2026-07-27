@@ -7,31 +7,30 @@ exports[`HumanPhoneInputField > matches snapshot 1`] = `
   data-testid="human-phone-input-card"
 >
   <div
-    class="mx-auto w-full flex flex-col gap-8 lg:flex-row lg:items-center"
-    data-testid="container"
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
   >
     <div
-      class="mx-auto flex-col hidden h-full w-full flex-1 items-center lg:block lg:w-auto"
-      data-testid="container"
+      class="hidden w-48 shrink-0 flex-col lg:flex"
+      data-slot="illustrated-card-visual"
     >
       <img
-        alt="Pubky phone representing phone number verification"
-        class="h-auto w-[192px] max-w-full"
+        alt="Pubky phone representing phone number entry"
+        class="max-w-full size-48"
         data-nimg="1"
         decoding="async"
         height="600"
-        src="/images/sms-verification-phone.webp"
+        src="/images/phone-number.webp"
         style="color: transparent;"
         width="800"
       />
     </div>
     <div
-      class="mx-auto flex-col flex mr-6 w-full flex-3 gap-6"
-      data-testid="container"
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+      data-slot="illustrated-card-content"
     >
       <div
-        class="mx-auto w-full flex-col flex gap-3"
-        data-testid="container"
+        class="flex flex-col gap-3"
       >
         <h3
           class="text-2xl leading-[32px] font-semibold text-foreground sm:text-[28px]"
@@ -47,21 +46,16 @@ exports[`HumanPhoneInputField > matches snapshot 1`] = `
         </p>
       </div>
       <div
-        class="mx-auto w-full flex-col flex gap-2"
-        data-testid="container"
+        class="flex w-full max-w-128 flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
+        data-testid="human-phone-input-wrapper"
       >
-        <div
-          class="mx-auto w-full ml-0 flex max-w-128 flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
-          data-testid="human-phone-input-wrapper"
-        >
-          <input
-            class="flex h-9 w-full min-w-0 rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
-            data-testid="human-phone-input"
-            placeholder="+316XXXXXXXX"
-            type="tel"
-            value=""
-          />
-        </div>
+        <input
+          class="flex h-9 w-full min-w-0 rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
+          data-testid="human-phone-input"
+          placeholder="+316XXXXXXXX"
+          type="tel"
+          value=""
+        />
       </div>
     </div>
   </div>

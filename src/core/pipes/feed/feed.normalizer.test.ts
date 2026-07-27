@@ -84,6 +84,7 @@ describe('FeedNormalizer', () => {
         'recent',
         null,
         testData.feedName,
+        undefined,
       );
       expect(result).toBeTruthy();
     });
@@ -101,6 +102,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -117,6 +119,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -133,6 +136,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -149,6 +153,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         'Bitcoin News',
+        undefined,
       );
     });
 
@@ -165,6 +170,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -181,6 +187,7 @@ describe('FeedNormalizer', () => {
         'popularity',
         expect.any(Object),
         expect.any(String),
+        undefined,
       );
     });
 
@@ -197,6 +204,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         'image',
         expect.any(String),
+        undefined,
       );
     });
 
@@ -213,6 +221,7 @@ describe('FeedNormalizer', () => {
         expect.any(String),
         null,
         expect.any(String),
+        undefined,
       );
     });
 
@@ -223,7 +232,15 @@ describe('FeedNormalizer', () => {
 
         const result = FeedNormalizer.to({ params, userId: testData.userPubky });
 
-        expect(mockBuilder.createFeed).toHaveBeenCalledWith([], 'all', 'columns', 'recent', null, testData.feedName);
+        expect(mockBuilder.createFeed).toHaveBeenCalledWith(
+          [],
+          'all',
+          'columns',
+          'recent',
+          null,
+          testData.feedName,
+          undefined,
+        );
         expect(result).toBeTruthy();
       });
 
@@ -240,6 +257,7 @@ describe('FeedNormalizer', () => {
           'recent',
           null,
           testData.feedName,
+          undefined,
         );
       });
 
@@ -256,6 +274,7 @@ describe('FeedNormalizer', () => {
           'recent',
           null,
           testData.feedName,
+          undefined,
         );
       });
 
@@ -272,6 +291,7 @@ describe('FeedNormalizer', () => {
           'recent',
           null,
           testData.feedName,
+          undefined,
         );
       });
     });

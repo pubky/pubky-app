@@ -2,7 +2,7 @@
 
 exports[`HumanPhoneCodeInput > matches snapshot 1`] = `
 <div
-  class="mx-auto w-full flex flex-row flex-wrap gap-3"
+  class="flex w-full flex-row flex-wrap justify-start gap-3"
   data-testid="code-input-container"
 >
   <div

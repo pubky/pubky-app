@@ -19,6 +19,23 @@ exports[`TimelineFeedItem - Snapshots > matches snapshot for a collection timeli
 </div>
 `;
 
+exports[`TimelineFeedItem - Snapshots > matches snapshot for a regular post in a collection feed 1`] = `
+<div
+  aria-posinset="1"
+  aria-setsize="1"
+  class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  data-cy="post-card"
+  data-testid="container"
+  role="article"
+  tabindex="0"
+>
+  <div
+    data-is-reply="false"
+    data-testid="post-author:post123"
+  />
+</div>
+`;
+
 exports[`TimelineFeedItem - Snapshots > matches snapshot for a regular timeline feed item 1`] = `
 <div
   aria-posinset="1"

@@ -1,0 +1,83 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`IllustratedCard - Snapshots > matches snapshot for intrinsic visual sizing 1`] = `
+<div
+  class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12"
+  data-slot="card"
+  data-testid="card"
+>
+  <div
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
+  >
+    <div
+      class="contents"
+      data-slot="illustrated-card-visual"
+    >
+      <span>
+        Intrinsic illustration
+      </span>
+    </div>
+    <div
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+      data-slot="illustrated-card-content"
+    >
+      <span>
+        Intrinsic content
+      </span>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`IllustratedCard - Snapshots > matches snapshot for the column layout 1`] = `
+<div
+  class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12"
+  data-slot="card"
+  data-testid="card"
+>
+  <div
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col p-0"
+    data-slot="card-content"
+  >
+    <div
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+      data-slot="illustrated-card-content"
+    >
+      <span>
+        Column content
+      </span>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`IllustratedCard - Snapshots > matches snapshot for the default row layout 1`] = `
+<div
+  class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12"
+  data-slot="card"
+  data-testid="card"
+>
+  <div
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
+  >
+    <div
+      class="hidden w-48 shrink-0 flex-col lg:flex"
+      data-slot="illustrated-card-visual"
+    >
+      <span>
+        Illustration
+      </span>
+    </div>
+    <div
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+      data-slot="illustrated-card-content"
+    >
+      <span>
+        Content
+      </span>
+    </div>
+  </div>
+</div>
+`;
