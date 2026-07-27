@@ -51,7 +51,7 @@ exports[`PostHeader - Mobile Snapshots > matches snapshot on mobile viewport 1`]
       />
     </svg>
     <span
-      class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
+      class="text-xs leading-4 font-medium tracking-widest whitespace-nowrap text-muted-foreground"
       data-testid="typography"
     >
       2h
@@ -115,7 +115,7 @@ exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
         />
       </svg>
       <span
-        class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground"
+        class="text-xs leading-4 font-medium tracking-widest whitespace-nowrap text-muted-foreground"
         data-testid="typography"
       >
         2h

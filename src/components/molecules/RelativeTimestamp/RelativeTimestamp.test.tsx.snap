@@ -1,0 +1,27 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RelativeTimestamp - Snapshots > matches snapshot with leading content 1`] = `
+<div>
+  <span
+    data-testid="leading"
+  >
+    icon
+  </span>
+  <span
+    data-testid="typography"
+  >
+    5m
+  </span>
+</div>
+`;
+
+exports[`RelativeTimestamp - Snapshots > matches snapshot without tooltip 1`] = `
+<div>
+  <span
+    class="text-xs"
+    data-testid="typography"
+  >
+    2h
+  </span>
+</div>
+`;
