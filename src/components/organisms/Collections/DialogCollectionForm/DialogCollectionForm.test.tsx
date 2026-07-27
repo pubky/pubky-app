@@ -110,6 +110,7 @@ describe('DialogCollectionForm', () => {
     const layoutLabel = screen.getByText('Default layout');
     const backgroundLabel = screen.getByText('collections.new.backgroundLabel');
 
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
     expect(grid).toHaveAttribute('aria-checked', 'true');
     expect(list).toHaveAttribute('aria-checked', 'false');
     expect(list.querySelector('.lucide-rows-4')).toBeInTheDocument();

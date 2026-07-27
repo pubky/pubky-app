@@ -14,19 +14,24 @@ import {
 import { Typography } from '@/atoms/Typography/Typography';
 import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
 
-type CollectionLayoutPickerProps = {
+interface CollectionLayoutPickerProps {
   layout: CollectionLayout;
   onLayoutChange: (layout: CollectionLayout) => void;
-};
+}
 
-type CollectionLayoutOptionProps = {
+interface CollectionLayoutOptionProps {
   value: CollectionLayout;
   label: string;
   icon: LucideIcon;
   isSelected: boolean;
   dataCy: string;
   onSelect: (layout: CollectionLayout) => void;
-};
+}
+
+interface CollectionLayoutPickerContentProps {
+  layout: CollectionLayout;
+  onSelect: (layout: CollectionLayout) => void;
+}
 
 function CollectionLayoutOption({
   value,
@@ -57,13 +62,7 @@ function CollectionLayoutOption({
   );
 }
 
-function CollectionLayoutPickerContent({
-  layout,
-  onSelect,
-}: {
-  layout: CollectionLayout;
-  onSelect: (layout: CollectionLayout) => void;
-}) {
+function CollectionLayoutPickerContent({ layout, onSelect }: CollectionLayoutPickerContentProps) {
   const t = useTranslations('collections.single');
 
   return (

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { COLLECTION_LAYOUT } from '@/config/collections';
+import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
 import { CollectionLayoutPicker } from './CollectionLayoutPicker';
 
 const translations: Record<string, string> = {
@@ -20,8 +20,8 @@ function renderPicker({
   layout = COLLECTION_LAYOUT.GRID,
   onLayoutChange = vi.fn(),
 }: {
-  layout?: typeof COLLECTION_LAYOUT.GRID | typeof COLLECTION_LAYOUT.LIST;
-  onLayoutChange?: (layout: typeof COLLECTION_LAYOUT.GRID | typeof COLLECTION_LAYOUT.LIST) => void;
+  layout?: CollectionLayout;
+  onLayoutChange?: (layout: CollectionLayout) => void;
 } = {}) {
   const result = render(<CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />);
   return { ...result, onLayoutChange };

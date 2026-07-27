@@ -109,6 +109,10 @@ export function DialogCollectionForm({
   // never made it into form state, so saving would commit unchanged content
   // while the user is still staring at a validation error.
   const canSubmit = !!watchedName.trim() && !areInputsDisabled && !coverError;
+  const layoutOptions = [
+    { value: COLLECTION_LAYOUT.GRID, label: t('layoutGrid'), icon: Grip },
+    { value: COLLECTION_LAYOUT.LIST, label: t('layoutList'), icon: Rows4 },
+  ];
 
   const coverErrorMessage =
     coverError === 'invalid-type'
@@ -171,10 +175,7 @@ export function DialogCollectionForm({
                   aria-labelledby="collection-layout-label"
                   className="flex w-full border-b border-border"
                 >
-                  {[
-                    { value: COLLECTION_LAYOUT.GRID, label: t('layoutGrid'), icon: Grip },
-                    { value: COLLECTION_LAYOUT.LIST, label: t('layoutList'), icon: Rows4 },
-                  ].map(({ value, label, icon: Icon }) => {
+                  {layoutOptions.map(({ value, label, icon: Icon }) => {
                     const selected = field.value === value;
 
                     return (
