@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import {
+  advanceCursor,
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
   buildDiscoverCollectionsStreamId,
@@ -109,5 +110,37 @@ describe('isAuthorStreamSkippingMuteFilter', () => {
     expect(isAuthorStreamSkippingMuteFilter('timeline:all:all')).toBe(false);
     expect(isAuthorStreamSkippingMuteFilter(buildDiscoverCollectionsStreamId())).toBe(false);
     expect(isAuthorStreamSkippingMuteFilter(buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(false);
+  });
+});
+
+describe('advanceCursor', () => {
+  const discover = buildDiscoverCollectionsStreamId(); // total_engagement:all:collection (skip)
+  const hot = 'total_engagement:all:all'; // engagement (skip)
+  const items = buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID); // collection:… (skip)
+  const timeline = 'timeline:all:all'; // score-cursor stream
+
+  it('advances skip streams by the RAW page size, ignoring how many survive filtering', () => {
+    // A page of 10 raw ids advances the offset by 10 even if all 10 are filtered out.
+    expect(advanceCursor(hot, 0, { ids: Array.from({ length: 10 }, (_, i) => `p${i}`), lastScore: null })).toBe(10);
+    expect(advanceCursor(discover, 40, { ids: ['a', 'b', 'c'], lastScore: null })).toBe(43);
+    expect(advanceCursor(items, 5, { ids: [], lastScore: null })).toBe(5);
+  });
+
+  it('never uses lastScore for skip streams (Nexus returns null for them)', () => {
+    // Even if a score leaks in, skip streams advance purely by raw count.
+    expect(advanceCursor(hot, 0, { ids: ['a', 'b'], lastScore: 999 })).toBe(2);
+  });
+
+  it('advances score streams to the last raw postscore', () => {
+    expect(advanceCursor(timeline, 100, { ids: ['a', 'b'], lastScore: 1717171717 })).toBe(1717171717);
+  });
+
+  it('holds position for score streams when no score is present (empty/last page)', () => {
+    expect(advanceCursor(timeline, 1717171717, { ids: [], lastScore: null })).toBe(1717171717);
+    expect(advanceCursor(timeline, 1717171717, { ids: [], lastScore: undefined })).toBe(1717171717);
+  });
+
+  it('keeps a falsy-but-valid score of 0 (guards `??` vs `||`)', () => {
+    expect(advanceCursor(timeline, 100, { ids: ['a'], lastScore: 0 })).toBe(0);
   });
 });

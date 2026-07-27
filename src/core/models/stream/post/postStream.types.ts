@@ -151,6 +151,11 @@ export function buildDiscoverCollectionsStreamId(): DiscoverCollectionsStreamId 
   return `${StreamSorting.ENGAGEMENT}:${StreamSource.ALL}:${StreamKind.COLLECTION}`;
 }
 
+/** The global "Discover Collections" stream (engagement-sorted, all sources, collection kind). */
+export function isDiscoverCollectionsStream(streamId: string): boolean {
+  return streamId === buildDiscoverCollectionsStreamId();
+}
+
 export function buildCollectionItemsStreamId(authorPubky: Pubky, postId: string): CollectionItemsStreamCompositeId {
   return `${StreamSource.COLLECTION}:${authorPubky}:${postId}`;
 }
@@ -199,6 +204,23 @@ export type PostStreamId =
 export function isSkipPaginatedStream(streamId: string): boolean {
   const head = streamId.split(':')[0];
   return head === StreamSorting.ENGAGEMENT || isCollectionItemsStream(streamId);
+}
+
+/**
+ * Advance a stream's pagination cursor by RAW backend data only, never by the post-filter
+ * visible count - so a fully-filtered page still moves forward and never re-requests posts.
+ * Skip streams: advance the `skip` offset by the raw page size. Score streams: resume from
+ * the last raw `last_post_score` (hold position when it's absent, e.g. an empty page).
+ */
+export function advanceCursor(
+  streamId: string,
+  prevCursor: number,
+  rawPage: { ids: string[]; lastScore: number | null | undefined },
+): number {
+  if (isSkipPaginatedStream(streamId)) {
+    return prevCursor + rawPage.ids.length;
+  }
+  return rawPage.lastScore ?? prevCursor;
 }
 
 /**

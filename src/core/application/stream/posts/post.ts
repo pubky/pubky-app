@@ -8,6 +8,7 @@ import type {
   TPersistUnreadNewStreamChunkParams,
   TPostStreamChunkResponse,
 } from '@/application/stream/posts/post.types';
+import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
 import {
   FORCE_FETCH_NEW_POSTS,
@@ -16,15 +17,17 @@ import {
 } from '@/controllers/stream/posts/post.constants';
 import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
+import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeId, buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import {
   isAuthorStreamSkippingMuteFilter,
   isBookmarkStream,
   isDeletedRetainingStream,
+  isDiscoverCollectionsStream,
   isSkipPaginatedStream,
   type PostStreamId,
 } from '@/models/stream/post/postStream.types';
@@ -131,7 +134,48 @@ export class PostStreamApplication {
     const visiblePostIds = isDeletedRetainingStream(streamId)
       ? postIds
       : await LocalPostService.filterDeletedPosts(postIds);
-    return await this.filterCollectionsFromStream({ streamId, postIds: visiblePostIds });
+    const afterCollections = await this.filterCollectionsFromStream({ streamId, postIds: visiblePostIds });
+    // Discover drops empty collections (nothing to discover). Lives here so it is re-applied by
+    // the controller's post-hydration second pass, catching ids that were fail-open on details.
+    return isDiscoverCollectionsStream(streamId) ? this.filterEmptyCollections(afterCollections) : afterCollections;
+  }
+
+  /** Drop collections with zero items. Fail-open when local details are missing. */
+  private static async filterEmptyCollections(postIds: string[]): Promise<string[]> {
+    if (postIds.length === 0) return postIds;
+    const details = await PostDetailsModel.findByIdsPreserveOrder(postIds);
+    return postIds.filter((_id, index) => {
+      const detail = details[index];
+      if (!detail) return true;
+      return (parseCollectionContent(detail.content)?.items?.length ?? 0) > 0;
+    });
+  }
+
+  /**
+   * Discover-only, id-based filters that need no post details: drop the viewer's own collections
+   * and ones they have already bookmarked. Deterministic, so it runs once in the fetch loop and
+   * never needs the post-hydration second pass.
+   */
+  static filterDiscoverOwnAndBookmarked(
+    postIds: string[],
+    viewerId: Pubky | null,
+    bookmarkedIds: Set<string>,
+  ): string[] {
+    return postIds.filter((id) => {
+      if (bookmarkedIds.has(id)) return false;
+      if (viewerId) {
+        // A malformed id parses to null and is treated as not-own (kept), so one bad id from
+        // Nexus can't throw out of this filter and fail the whole fetch.
+        let ownerPubky: Pubky | null = null;
+        try {
+          ownerPubky = parseCompositeId(id).pubky;
+        } catch {
+          ownerPubky = null;
+        }
+        if (ownerPubky === viewerId) return false;
+      }
+      return true;
+    });
   }
 
   /**
@@ -269,17 +313,34 @@ export class PostStreamApplication {
       ? new Set((await LocalStreamUsersService.findById(UserStreamTypes.MUTED))?.stream ?? [])
       : new Set<Pubky>();
 
+    // Discover Collections filters out the viewer's own and already-bookmarked collections in the
+    // shared stream layer (like mute/deleted), so the section paginates like any other feed.
+    const isDiscover = isDiscoverCollectionsStream(streamId);
+    const bookmarkedIds = isDiscover ? new Set(await BookmarkModel.findAll()) : new Set<string>();
+
     let isFirstFetch = true;
     let lastReturnedPostId: string | undefined = lastPostId;
 
-    const { posts, cacheMissIds, timestamp, reachedEnd } = await postStreamQueue.collect(streamId, {
+    const { posts, cacheMissIds, nextCursor, reachedEnd } = await postStreamQueue.collect(streamId, {
       limit,
       cursor: streamTail,
+      // Discover bounds its per-load scan tighter than the shared default: it is a
+      // secondary surface, so we cap the data/latency cost of digging through a
+      // heavily-filtered region and let the no-new-results toast + cursor advance
+      // handle the give-up case instead.
+      maxIterations: isDiscover ? COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD : undefined,
       filter: async (posts) => {
-        // First filter muted users (sync), then filter deleted posts (async)
+        // Muted users (sync), then deleted/kind/empty (async), then Discover's own/bookmarked.
         const afterMuteFilter = MuteFilter.filterPosts(posts, mutedUserIds);
-        return PostStreamApplication.filterStreamPosts({ streamId, postIds: afterMuteFilter });
+        const standard = await PostStreamApplication.filterStreamPosts({ streamId, postIds: afterMuteFilter });
+        return isDiscover
+          ? PostStreamApplication.filterDiscoverOwnAndBookmarked(standard, viewerId, bookmarkedIds)
+          : standard;
       },
+      // Overflow-buffer early returns resolve score cursors stream-aware: bookmark
+      // streams resume by bookmark time, everything else by the post's `indexed_at`.
+      // Without this, the buffered path re-introduces the #2100 pagination seam.
+      cursorForPost: (postId) => PostStreamApplication.getStreamCursorTimestamp(streamId, postId),
       fetch: async (cursor) => {
         // Continue reading from cache using lastReturnedPostId to track position
         // This ensures we exhaust cache before going to Nexus
@@ -318,7 +379,7 @@ export class PostStreamApplication {
     return {
       nextPageIds: posts,
       cacheMissPostIds: cacheMissIds,
-      timestamp,
+      nextCursor,
       reachedEnd,
     };
   }
@@ -403,11 +464,11 @@ export class PostStreamApplication {
       if (cachedStream) {
         const cachedStreamChunk = await this.getStreamFromCache({ lastPostId, limit, cachedStream });
 
-        // Full cache hit, return with proper timestamp for pagination
+        // Full cache hit, return with proper cursor for pagination
         if (cachedStreamChunk.length === limit) {
           const lastCachedPostId = cachedStreamChunk[cachedStreamChunk.length - 1];
-          const timestamp = await this.getStreamCursorTimestamp(streamId, lastCachedPostId);
-          return { nextPageIds: cachedStreamChunk, cacheMissPostIds: [], timestamp, reachedEnd: false };
+          const nextCursor = await this.getStreamCursorTimestamp(streamId, lastCachedPostId);
+          return { nextPageIds: cachedStreamChunk, cacheMissPostIds: [], nextCursor, reachedEnd: false };
         }
 
         // Partial cache hit, fetch missing posts from Nexus and combine
@@ -534,7 +595,7 @@ export class PostStreamApplication {
     const nextStreamTail = (await this.getStreamCursorTimestamp(streamId, lastCachedPostId)) ?? streamTail;
 
     // Fetch remaining posts from Nexus
-    const { nextPageIds, cacheMissPostIds, timestamp, reachedEnd } = await this.fetchStreamFromNexus({
+    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd } = await this.fetchStreamFromNexus({
       streamId,
       limit: remainingLimit,
       streamTail: nextStreamTail,
@@ -549,7 +610,7 @@ export class PostStreamApplication {
     return {
       nextPageIds: uniquePostIds,
       cacheMissPostIds,
-      timestamp,
+      nextCursor,
       // Propagate reachedEnd from Nexus - don't recalculate from deduped length
       reachedEnd: reachedEnd ?? false,
     };
@@ -583,7 +644,9 @@ export class PostStreamApplication {
       order,
     });
     const postStreamChunk = await NexusPostStreamService.fetch({ invokeEndpoint, params, extraParams });
-    const { last_post_score: timestamp, post_keys: compositePostIds } = postStreamChunk;
+    // `last_post_score` is null for skip streams; normalize to undefined (advanceCursor derives
+    // their offset from the raw page instead).
+    const { last_post_score: rawScore, post_keys: compositePostIds } = postStreamChunk;
 
     // Do not persist skip-paginated streams (engagement + single-collection items) to the
     // timestamp-keyed local stream cache; they always page from Nexus by offset.
@@ -604,7 +667,12 @@ export class PostStreamApplication {
     const cacheMissPostIds = await this.getNotPersistedPostsInCache(compositePostIds);
 
     // reachedEnd is true when Nexus returned fewer posts than requested (actual end of stream)
-    return { nextPageIds: compositePostIds, cacheMissPostIds, timestamp, reachedEnd: compositePostIds.length < limit };
+    return {
+      nextPageIds: compositePostIds,
+      cacheMissPostIds,
+      nextCursor: rawScore ?? undefined,
+      reachedEnd: compositePostIds.length < limit,
+    };
   }
 
   // Delegate to service for cache miss detection
