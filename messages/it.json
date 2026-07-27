@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}g",
     "weeksShort": "{count}sett",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}a"
   },
   "landing": {
     "title": "<highlight>Sblocca</highlight> il web.",
