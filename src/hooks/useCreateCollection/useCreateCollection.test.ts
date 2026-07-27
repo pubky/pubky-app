@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { COLLECTION_LAYOUT } from '@/config/collections';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -83,6 +84,7 @@ describe('useCreateCollection', () => {
     expect(result.current.form.getValues()).toEqual({
       [CREATE_COLLECTION_FORM_FIELDS.NAME]: '',
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: '',
+      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
     });
     expect(result.current.cover.file).toBeNull();
     expect(result.current.form.formState.isSubmitting).toBe(false);
@@ -118,6 +120,7 @@ describe('useCreateCollection', () => {
 
     act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, '  Proof of Work  '));
     act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION, 'Bitcoin writing'));
+    act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.LAYOUT, COLLECTION_LAYOUT.LIST));
 
     let saved: string | null = null;
     await act(async () => {
@@ -130,6 +133,7 @@ describe('useCreateCollection', () => {
       name: '  Proof of Work  ',
       description: 'Bitcoin writing',
       coverImage: file,
+      layout: COLLECTION_LAYOUT.LIST,
     });
     expect(mocks.toast).toHaveBeenCalledWith({
       title: 'Collection created',
@@ -243,6 +247,7 @@ describe('useCreateCollection', () => {
     expect(result.current.form.getValues()).toEqual({
       [CREATE_COLLECTION_FORM_FIELDS.NAME]: '',
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: '',
+      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
     });
     expect(mocks.cover.reset).toHaveBeenCalledTimes(1);
   });

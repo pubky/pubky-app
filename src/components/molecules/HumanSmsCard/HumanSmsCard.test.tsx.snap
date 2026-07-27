@@ -6,17 +6,17 @@ exports[`SmsVerificationCard > matches snapshot 1`] = `
   data-testid="container"
 >
   <div
-    class="flex flex-col bg-card text-card-foreground shadow-sm flex-1 gap-0 rounded-md p-6 lg:p-12"
+    class="flex flex-col bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12 flex-1 rounded-md"
     data-slot="card"
     data-testid="sms-verification-card"
   >
     <div
-      class="mx-auto flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
-      data-testid="container"
+      class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+      data-slot="card-content"
     >
       <div
-        class="mx-auto flex-col hidden w-48 shrink-0 lg:block"
-        data-testid="container"
+        class="hidden w-48 shrink-0 flex-col lg:flex"
+        data-slot="illustrated-card-visual"
       >
         <img
           alt="Lime Pubky phone representing SMS verification"
@@ -27,11 +27,11 @@ exports[`SmsVerificationCard > matches snapshot 1`] = `
         />
       </div>
       <div
-        class="mx-auto flex w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6"
-        data-testid="container"
+        class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-4 lg:gap-6"
+        data-slot="illustrated-card-content"
       >
         <div
-          class="mx-auto flex w-full flex-col gap-3"
+          class="mx-auto w-full flex flex-col gap-3"
           data-testid="container"
         >
           <div
@@ -188,17 +188,17 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
   data-testid="container"
 >
   <div
-    class="flex flex-col bg-card text-card-foreground shadow-sm flex-1 gap-0 rounded-md p-6 lg:p-12 pointer-events-none opacity-60 blur-[5px]"
+    class="flex flex-col bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12 flex-1 rounded-md pointer-events-none opacity-60 blur-[5px]"
     data-slot="card"
     data-testid="sms-verification-card"
   >
     <div
-      class="mx-auto flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
-      data-testid="container"
+      class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+      data-slot="card-content"
     >
       <div
-        class="mx-auto flex-col hidden w-48 shrink-0 lg:block"
-        data-testid="container"
+        class="hidden w-48 shrink-0 flex-col lg:flex"
+        data-slot="illustrated-card-visual"
       >
         <img
           alt="Lime Pubky phone representing SMS verification"
@@ -209,11 +209,11 @@ exports[`SmsVerificationCard > matches snapshot when geoblocked 1`] = `
         />
       </div>
       <div
-        class="mx-auto flex w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6"
-        data-testid="container"
+        class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-4 lg:gap-6"
+        data-slot="illustrated-card-content"
       >
         <div
-          class="mx-auto flex w-full flex-col gap-3"
+          class="mx-auto w-full flex flex-col gap-3"
           data-testid="container"
         >
           <div
@@ -410,17 +410,17 @@ exports[`SmsVerificationCard > matches snapshot when loading 1`] = `
   data-testid="container"
 >
   <div
-    class="flex flex-col bg-card text-card-foreground shadow-sm flex-1 gap-0 rounded-md p-6 lg:p-12"
+    class="flex flex-col bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12 flex-1 rounded-md"
     data-slot="card"
     data-testid="sms-verification-card-skeleton"
   >
     <div
-      class="mx-auto flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:gap-12"
-      data-testid="container"
+      class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+      data-slot="card-content"
     >
       <div
-        class="mx-auto flex-col hidden w-48 shrink-0 lg:block"
-        data-testid="container"
+        class="hidden w-48 shrink-0 flex-col lg:flex"
+        data-slot="illustrated-card-visual"
       >
         <div
           class="animate-pulse bg-muted size-48 rounded"
@@ -428,11 +428,11 @@ exports[`SmsVerificationCard > matches snapshot when loading 1`] = `
         />
       </div>
       <div
-        class="mx-auto flex w-full flex-col gap-4 lg:max-w-xl lg:flex-1 lg:gap-6"
-        data-testid="container"
+        class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-4 lg:gap-6"
+        data-slot="illustrated-card-content"
       >
         <div
-          class="mx-auto flex w-full flex-col gap-3"
+          class="mx-auto w-full flex flex-col gap-3"
           data-testid="container"
         >
           <div

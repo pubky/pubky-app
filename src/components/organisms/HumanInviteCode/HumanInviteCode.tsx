@@ -11,7 +11,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CircleCheck, Loader2, Server } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
-import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Input } from '@/atoms/Input/Input';
@@ -25,6 +24,7 @@ import { Telegram, XTwitter } from '@/icons';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
 import { HumanFooter } from '@/molecules/HumanFooter/HumanFooter';
+import { IllustratedCard } from '@/molecules/IllustratedCard/IllustratedCard';
 import { PageTitle } from '@/molecules/Page/Page';
 import { PopoverInviteHomeserver } from '@/molecules/PopoverInviteHomeserver/PopoverInviteHomeserver';
 import type { HumanInviteCodeProps, InviteCodeVerificationResult } from './HumanInviteCode.types';
@@ -130,82 +130,74 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
         </Container>
       </PageHeader>
 
-      <Card data-testid="human-invite-code-card" className="flex-row items-start gap-12 overflow-hidden p-12">
-        {/* Gift Image */}
-        <Container className="hidden shrink-0 lg:flex lg:h-48 lg:w-48">
-          <Image src="/images/gift.webp" alt="Gift" width={192} height={192} className="h-full w-full object-cover" />
+      <IllustratedCard
+        data-testid="human-invite-code-card"
+        className="overflow-hidden rounded-md"
+        visual={<Image src="/images/gift.webp" alt="Gift" width={192} height={192} className="size-48 object-cover" />}
+      >
+        <Container className="flex-col gap-3">
+          <Container className="flex-row items-center gap-1">
+            <Typography as="h3" className="text-2xl leading-8 font-bold text-foreground">
+              {t('label')}
+            </Typography>
+            <PopoverInviteHomeserver className="h-6 w-6 opacity-80" />
+          </Container>
+          <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
+            {t('hint')}
+          </Typography>
         </Container>
 
-        {/* Content */}
-        <Container className="flex max-w-xl min-w-0 flex-1 flex-col gap-6">
-          {/* Header */}
-          <Container className="gap-3">
-            <Container className="flex-row items-center gap-1">
-              <Typography as="h3" className="text-2xl leading-8 font-bold text-foreground">
-                {t('label')}
-              </Typography>
-              <PopoverInviteHomeserver className="h-6 w-6 opacity-80" />
-            </Container>
-            <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {t('hint')}
+        <Container className="flex-col gap-6">
+          <Container
+            data-testid="human-invite-code-input-field"
+            className={cn(
+              'flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-6 py-4 shadow-xs',
+              isVerified && !isVerifying
+                ? 'border-brand'
+                : showDestructiveBorder
+                  ? 'border-destructive'
+                  : 'border-input',
+            )}
+          >
+            <Input
+              data-testid="human-invite-code-input"
+              data-cy="human-invite-code-input"
+              type="text"
+              autoFocus
+              value={inviteCode}
+              onChange={(e) => setInviteCode(formatInviteCode(e.target.value))}
+              placeholder={t('placeholder')}
+              maxLength={14}
+              className={cn(
+                'h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none',
+                isVerified && !isVerifying ? 'font-bold text-brand' : 'text-foreground',
+              )}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && isVerified && !isVerifying) {
+                  handleSubmit();
+                }
+              }}
+            />
+            {isVerifying && <Loader2 className="h-6 w-6 shrink-0 animate-spin text-brand" />}
+            {isVerified && !isVerifying && <CircleCheck className="h-6 w-6 shrink-0 text-brand" />}
+          </Container>
+
+          <Container className="flex-col items-center gap-4 sm:flex-row">
+            <Button
+              variant="secondary"
+              className="shrink-0 rounded-full opacity-40"
+              disabled
+              aria-label={t('customHomeserver')}
+            >
+              <Server className="mr-2 h-4 w-4" />
+              {t('customHomeserver')}
+            </Button>
+            <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground">
+              {t('customHomeserverHint')}
             </Typography>
           </Container>
-
-          {/* Form */}
-          <Container className="gap-6">
-            {/* Input */}
-            <Container
-              data-testid="human-invite-code-input-field"
-              className={cn(
-                'flex-row items-center gap-3 rounded-md border border-dashed bg-background/10 px-5 py-4 shadow-xs',
-                isVerified && !isVerifying
-                  ? 'border-brand'
-                  : showDestructiveBorder
-                    ? 'border-destructive'
-                    : 'border-input',
-              )}
-            >
-              <Input
-                data-testid="human-invite-code-input"
-                data-cy="human-invite-code-input"
-                type="text"
-                autoFocus
-                value={inviteCode}
-                onChange={(e) => setInviteCode(formatInviteCode(e.target.value))}
-                placeholder={t('placeholder')}
-                maxLength={14}
-                className={cn(
-                  'h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none',
-                  isVerified && !isVerifying ? 'font-bold text-brand' : 'text-foreground',
-                )}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && isVerified && !isVerifying) {
-                    handleSubmit();
-                  }
-                }}
-              />
-              {isVerifying && <Loader2 className="h-6 w-6 shrink-0 animate-spin text-brand" />}
-              {isVerified && !isVerifying && <CircleCheck className="h-6 w-6 shrink-0 text-brand" />}
-            </Container>
-
-            {/* Custom homeserver row */}
-            <Container className="flex-col items-center gap-4 sm:flex-row">
-              <Button
-                variant="secondary"
-                className="shrink-0 rounded-full opacity-40"
-                disabled
-                aria-label={t('customHomeserver')}
-              >
-                <Server className="mr-2 h-4 w-4" />
-                {t('customHomeserver')}
-              </Button>
-              <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground">
-                {t('customHomeserverHint')}
-              </Typography>
-            </Container>
-          </Container>
         </Container>
-      </Card>
+      </IllustratedCard>
 
       <HumanFooter />
 

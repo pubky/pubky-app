@@ -89,7 +89,7 @@ export function FollowedCollections() {
       const nextLastId = result.nextPageIds[result.nextPageIds.length - 1];
       cursorRef.current = {
         lastPostId: nextLastId ?? cursorRef.current.lastPostId,
-        streamTail: result.timestamp ?? cursorRef.current.streamTail,
+        streamTail: result.nextCursor ?? cursorRef.current.streamTail,
       };
       setReachedEnd(result.reachedEnd === true);
     } catch (error) {
@@ -174,7 +174,7 @@ export function FollowedCollections() {
   }
 
   return (
-    <Container overrideDefaults className="flex w-full flex-col gap-4">
+    <Container overrideDefaults data-cy="followed-collections-section" className="flex w-full flex-col gap-4">
       <Container overrideDefaults className="flex items-center gap-3">
         <Heading level={2} size="lg" className="font-light text-muted-foreground">
           {t('followed.title')}

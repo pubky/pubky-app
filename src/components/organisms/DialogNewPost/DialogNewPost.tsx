@@ -50,6 +50,7 @@ export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: Dialo
             expanded={true}
             onContentChange={handleContentChange}
             onArticleModeChange={setIsArticle}
+            layoutOverride="inline"
           />
         </Container>
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}

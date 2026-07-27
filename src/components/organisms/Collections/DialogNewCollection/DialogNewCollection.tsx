@@ -93,6 +93,7 @@ export function DialogNewCollection({
         onOpenChange={handleDismiss}
         title={t('title')}
         submitLabel={t('save')}
+        layoutLabel={t('layoutLabel')}
         form={form}
         cover={cover}
         onSubmit={handleSave}

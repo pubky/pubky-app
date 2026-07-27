@@ -56,6 +56,9 @@ export class BootstrapApplication {
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
     if (!bootstrapData.indexed) {
+      // Tell Nexus this user exists (best-effort, never rejects; see NexusBootstrapService.ingest).
+      void NexusBootstrapService.ingest(pubky);
+
       const retryDelayMs = getTtlRetryDelayMs();
       Logger.warn('User is not indexed in Nexus. Scheduling TTL retry', {
         pubky,

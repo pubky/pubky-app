@@ -1,7 +1,8 @@
 import type { Metadata as NextMetadata } from 'next';
+import { getCollectionRoute } from '@/app/routes';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
-import { isPostDeleted } from '@/libs/utils/utils';
+import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { Metadata } from '@/molecules/Metadata/Metadata';
 import { Collection } from '@/templates/Collection/Collection';
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
     const { user, post } = result;
     if (post.kind !== 'collection') return {};
 
-    const username = user.name;
+    const username = resolveDisplayName(user);
     const { content } = post;
 
     const description = isPostDeleted(content)
@@ -32,9 +33,15 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
 
     const title = `${username} on Pubky`;
 
-    const { openGraph, twitter } = Metadata({
+    // Static OG/Twitter images are omitted so the dynamic `opengraph-image` /
+    // `twitter-image` route is the single source of truth for the preview image.
+    // `alternates` carries the canonical built from `url` — without it the page
+    // would inherit the root layout's site-wide canonical (https://pubky.app).
+    const { openGraph, twitter, alternates } = Metadata({
       title,
       description,
+      url: getCollectionRoute(userId, postId),
+      omitImages: true,
     });
 
     return username && description
@@ -43,6 +50,7 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
           description,
           openGraph,
           twitter,
+          alternates,
         }
       : {};
   } catch {

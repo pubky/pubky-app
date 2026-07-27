@@ -32,6 +32,13 @@ vi.mock('@/services/homeserver/homeserver', () => ({
   },
 }));
 
+// Mock Nexus bootstrap service (fire-and-forget ingest call in commitCreate)
+vi.mock('@/services/nexus/bootstrap/bootstrap', () => ({
+  NexusBootstrapService: {
+    ingest: vi.fn(() => Promise.resolve()),
+  },
+}));
+
 // Mock auth store used by application layer
 let mockAuthState: { setCurrentUserPubky: ReturnType<typeof vi.fn>; setHasProfile: ReturnType<typeof vi.fn> };
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -42,6 +49,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 let ProfileApplication: typeof import('./profile').ProfileApplication;
 let UserNormalizer: typeof import('@/pipes/user/user.normalizer').UserNormalizer;
+let NexusBootstrapService: typeof import('@/services/nexus/bootstrap/bootstrap').NexusBootstrapService;
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -55,6 +63,7 @@ beforeEach(async () => {
   // Re-import after resetModules
   ({ UserNormalizer } = await import('@/pipes/user/user.normalizer'));
   ({ ProfileApplication } = await import('./profile'));
+  ({ NexusBootstrapService } = await import('@/services/nexus/bootstrap/bootstrap'));
 
   // Mock Logger to prevent AppError from logging during tests
   vi.spyOn(Logger, 'error').mockImplementation(() => {});
@@ -77,6 +86,7 @@ describe('ProfileApplication', () => {
 
       expect(profile.toJson).toHaveBeenCalledTimes(1);
       expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url, bodyJson: profileJson });
+      expect(NexusBootstrapService.ingest).toHaveBeenCalledWith(pubky);
       expect(mockAuthState.setCurrentUserPubky).toHaveBeenCalledWith(pubky);
       expect(mockAuthState.setHasProfile).toHaveBeenCalledWith(true);
     });
@@ -94,6 +104,8 @@ describe('ProfileApplication', () => {
       // Auth state should not be modified on error (see TODO in profile.ts)
       expect(mockAuthState.setHasProfile).not.toHaveBeenCalled();
       expect(mockAuthState.setCurrentUserPubky).not.toHaveBeenCalled();
+      // Ingest only fires after profile.json is actually saved
+      expect(NexusBootstrapService.ingest).not.toHaveBeenCalled();
     });
   });
 

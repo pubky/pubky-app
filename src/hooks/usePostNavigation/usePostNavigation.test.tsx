@@ -1,5 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
+import type { PropsWithChildren } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { mockKeyboardEvent, mockMouseEvent } from '@/test-utils/react-events';
 import { usePostNavigation } from './usePostNavigation';
 
@@ -11,6 +13,10 @@ vi.mock('next/navigation', () => ({
     push: mockPush,
   }),
 }));
+
+function ListLayoutWrapper({ children }: PropsWithChildren) {
+  return <PostMainLayoutProvider tagsLayout="list">{children}</PostMainLayoutProvider>;
+}
 
 describe('usePostNavigation', () => {
   beforeEach(() => {
@@ -35,6 +41,18 @@ describe('usePostNavigation', () => {
 
       expect(mockPush).toHaveBeenCalledWith('/post/author123/post456');
       expect(mockPush).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not carry List feed layout into post hrefs or navigation', () => {
+      const { result } = renderHook(() => usePostNavigation(), { wrapper: ListLayoutWrapper });
+
+      expect(result.current.getPostHref('author123:post456')).toBe('/post/author123/post456');
+
+      act(() => {
+        result.current.navigateToPost('author123:post456');
+      });
+
+      expect(mockPush).toHaveBeenCalledWith('/post/author123/post456');
     });
 
     it('should handle multiple navigation calls', () => {

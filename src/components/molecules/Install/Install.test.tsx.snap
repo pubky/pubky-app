@@ -2,31 +2,36 @@
 
 exports[`InstallCard - Snapshots > matches snapshot 1`] = `
 <div
-  class="flex flex-col gap-6 rounded-xl bg-card text-card-foreground shadow-sm p-6 md:p-12"
+  class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm gap-0 p-6 md:p-12"
   data-slot="card"
   data-testid="card"
 >
   <div
-    class="mx-auto w-full flex gap-12 flex-col lg:flex-row"
-    data-testid="container"
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
   >
     <div
-      class="hidden lg:flex"
-      style="width: 192px; height: 192px;"
+      class="contents"
+      data-slot="illustrated-card-visual"
     >
-      <img
-        alt="Keyring"
-        class=""
-        data-testid="content-image"
-        height="192"
-        src="/images/keyring.webp"
-        style="object-fit: contain;"
-        width="192"
-      />
+      <div
+        class="hidden lg:flex"
+        style="width: 192px; height: 192px;"
+      >
+        <img
+          alt="Keyring"
+          class=""
+          data-testid="content-image"
+          height="192"
+          src="/images/keyring.webp"
+          style="object-fit: contain;"
+          width="192"
+        />
+      </div>
     </div>
     <div
-      class="mx-auto flex-col flex w-full justify-start gap-4"
-      data-testid="container"
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col justify-start gap-4"
+      data-slot="illustrated-card-content"
     >
       <div
         class="mx-auto w-full flex-col flex gap-3"

@@ -26,22 +26,35 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
     </div>
   </div>
   <div
-    data-layout="column"
-    data-testid="content-card"
+    class="flex bg-card text-card-foreground shadow-sm w-full flex-row items-center justify-center gap-12 overflow-hidden rounded-md p-6 lg:p-12"
+    data-slot="card"
+    data-testid="scan-qr-card"
   >
     <div
-      class="items-center justify-center gap-4"
-      data-testid="container"
+      class="hidden w-48 shrink-0 lg:block"
+      data-slot="balanced-qr-illustration"
+    >
+      <img
+        alt="Pubky Ring phone scanning a QR code"
+        data-testid="next-image"
+        height="192"
+        src="/images/scan.webp"
+        width="192"
+      />
+    </div>
+    <div
+      class="flex w-48 shrink-0 items-center justify-center"
+      data-slot="balanced-qr-content"
     >
       <div
-        class="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4"
+        class="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2"
       >
         <img
           alt="Pubky Ring"
           data-testid="next-image"
-          height="220"
+          height="176"
           src="/images/pubky-ring-qr-example.webp"
-          width="220"
+          width="176"
         />
         <img
           alt="Pubky Ring"
@@ -51,13 +64,12 @@ exports[`Scan Components - Snapshots > ScanContent - Snapshots > matches snapsho
           width="48"
         />
       </div>
-      <p
-        class="text-lg font-semibold tracking-widest text-brand"
-        data-testid="typography"
-      >
-        A9KM-7MJP-ERM9
-      </p>
     </div>
+    <div
+      aria-hidden="true"
+      class="hidden w-48 shrink-0 lg:block"
+      data-slot="balanced-qr-spacer"
+    />
   </div>
 </div>
 `;

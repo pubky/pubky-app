@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
 export type PostInputVariant =
@@ -38,6 +39,8 @@ interface PostInputBaseProps {
   dataCy?: string;
   /** ID to access the post input */
   id?: string;
+  /** Overrides the inherited feed layout for surface-specific presentation such as dialogs. */
+  layoutOverride?: TagsLayout;
   /**
    * Whether to auto-focus textarea element on mount.
    *

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { shouldBypassLinkConfirmation } from '@/libs/utils/utils';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 
@@ -21,6 +22,8 @@ interface UseLinkConfirmationReturn {
  * Reads the `privacy.showConfirm` setting from the settings store and
  * provides a click handler that either opens links directly or shows a
  * confirmation dialog for external links.
+ *
+ * Unsafe or malformed URLs are always blocked before either path.
  *
  * Links that use bypass protocols (mailto:, tel:) or point to the same
  * domain always open directly regardless of the setting.
@@ -48,14 +51,17 @@ export function useLinkConfirmation(): UseLinkConfirmationReturn {
     e.stopPropagation();
     e.preventDefault();
 
+    const safeUrl = getSafeExternalUrl(url);
+    if (!safeUrl) return;
+
     // If link should bypass confirmation or setting is disabled, open directly
-    if (shouldBypassLinkConfirmation(url) || !checkLinkEnabled) {
-      window.open(url, '_blank', 'noopener,noreferrer');
+    if (shouldBypassLinkConfirmation(safeUrl) || !checkLinkEnabled) {
+      window.open(safeUrl, '_blank', 'noopener,noreferrer');
       return;
     }
 
     // Show confirmation dialog for external links
-    setClickedLink(url);
+    setClickedLink(safeUrl);
     setDialogOpen(true);
   };
 

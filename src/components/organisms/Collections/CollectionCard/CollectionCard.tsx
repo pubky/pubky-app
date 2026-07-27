@@ -17,7 +17,8 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import { parseCollectionContent, resolveCollectionCoverImage } from '@/libs/post/collectionContent';
+import { parseCollectionContent } from '@/libs/post/collectionContent';
+import { resolveCollectionCoverImage } from '@/libs/post/collectionCoverImage';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
@@ -363,6 +364,7 @@ function CollectionCardContent({
                       onClick={handleDelete}
                       disabled={isDeleting}
                       aria-label={t('delete')}
+                      data-cy="collection-card-delete-btn"
                       className={embeddedMutedActionClass}
                     >
                       <Trash2 className="size-4" />
@@ -375,6 +377,7 @@ function CollectionCardContent({
                       onClick={handleFollowToggle}
                       disabled={isToggling}
                       aria-label={isBookmarked ? t('unfollow') : t('follow')}
+                      data-cy="collection-card-follow-btn"
                       className={embeddedMutedActionClass}
                     >
                       {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}

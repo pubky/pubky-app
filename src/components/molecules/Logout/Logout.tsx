@@ -4,22 +4,20 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { AUTH_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
-import { ContentCard } from '../Content/Content';
 import { PageTitle } from '../Page/Page';
 
 export const LogoutContent = () => {
   return (
     <Container size="container" className="mb-6">
       <LogoutHeader />
-      <ContentCard layout="column">
-        <Container className="items-center justify-center">
-          <Image src="/images/tag.webp" alt="Pubky Ring" width={192} height={192} />
-        </Container>
-      </ContentCard>
+      <Card data-testid="logout-image-card" className="w-full items-center justify-center rounded-md p-6 lg:p-12">
+        <Image src="/images/tag.webp" alt="Pubky tag" width={192} height={192} className="size-48" priority />
+      </Card>
     </Container>
   );
 };

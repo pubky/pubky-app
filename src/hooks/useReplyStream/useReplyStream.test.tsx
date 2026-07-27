@@ -74,12 +74,12 @@ describe('useReplyStream', () => {
       .spyOn(StreamPostsController, 'getOrFetchStreamSlice')
       .mockResolvedValueOnce({
         nextPageIds: Array.from({ length: 10 }, (_, i) => `author:reply-${i + 3}`),
-        timestamp: 11,
+        nextCursor: 11,
         reachedEnd: false,
       })
       .mockResolvedValueOnce({
         nextPageIds: ['author:reply-last'],
-        timestamp: 12,
+        nextCursor: 12,
         reachedEnd: true,
       });
 
@@ -108,7 +108,7 @@ describe('useReplyStream', () => {
 
     const getOrFetchSpy = vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: ['author:reply-4'],
-      timestamp: 1,
+      nextCursor: 1,
       reachedEnd: true,
     });
 
@@ -139,7 +139,7 @@ describe('useReplyStream', () => {
 
     const getOrFetchSpy = vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
       nextPageIds: [],
-      timestamp: 1,
+      nextCursor: 1,
       reachedEnd: true,
     });
 
@@ -175,7 +175,7 @@ describe('useReplyStream', () => {
       callCount++;
       return {
         nextPageIds: Array.from({ length: 10 }, (_, i) => `author:reply-${callCount * 10 + i}`),
-        timestamp: callCount * 10,
+        nextCursor: callCount * 10,
         reachedEnd: false,
       };
     });

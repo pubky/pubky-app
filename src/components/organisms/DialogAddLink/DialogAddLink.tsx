@@ -17,6 +17,7 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { Label } from '@/atoms/Label/Label';
 import { USER_LINK_LABEL_MAX_LENGTH, USER_LINK_URL_MAX_LENGTH } from '@/config/user';
+import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { InputField } from '@/molecules/InputField/InputField';
 
@@ -26,11 +27,9 @@ const labelSchema = z
   .min(1, 'Label is required')
   .max(USER_LINK_LABEL_MAX_LENGTH, `Max ${USER_LINK_LABEL_MAX_LENGTH} characters`)
   .regex(/^[a-zA-Z0-9]+$/, 'Alphanumeric only');
-const urlSchema = z
-  .string()
-  .trim()
-  .url('Invalid URL')
-  .max(USER_LINK_URL_MAX_LENGTH, `Max ${USER_LINK_URL_MAX_LENGTH} characters`);
+const urlSchema = safeExternalUrlSchema.refine((url) => url.length <= USER_LINK_URL_MAX_LENGTH, {
+  message: `Max ${USER_LINK_URL_MAX_LENGTH} characters`,
+});
 interface DialogAddLinkProps {
   onSave: (label: string, url: string) => void;
   disabled?: boolean;
@@ -86,7 +85,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
           <span>{t('title')}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent avoidKeyboard className="w-full max-w-xl" hiddenTitle={t('title')}>
+      <DialogContent avoidKeyboard className="w-xl max-w-xl" hiddenTitle={t('title')}>
         <DialogHeader className="pr-6">
           <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>

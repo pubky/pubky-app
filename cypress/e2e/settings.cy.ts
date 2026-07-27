@@ -1,5 +1,6 @@
 import { latestPostInFeedContentEq, createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { searchForProfileByPubky } from '../support/contacts';
+import { goToHomePage } from '../support/header';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
@@ -109,7 +110,7 @@ describe('settings', () => {
     cy.get('[data-cy="profile-menu-action-mute"]').click();
 
     // Check user 1's post is no longer seen in feed
-    cy.get('[data-cy="header-home-btn"]').click();
+    goToHomePage();
     cy.get('[data-cy="timeline-container"]').should('not.contain.text', postContent);
 
     // Confirm user 1 is now muted in settings page and unmute them
@@ -122,7 +123,7 @@ describe('settings', () => {
     });
 
     // Check user 1's post is seen in feed again
-    cy.get('[data-cy="header-home-btn"]').click();
+    goToHomePage();
     latestPostInFeedContentEq(postContent);
   });
 

@@ -135,8 +135,8 @@ describe('resolveFeedLayout', () => {
     expect(result.isVisualActive).toBe(false);
   });
 
-  describe('isGridActive (grid-layout variants, decision D5)', () => {
-    it('marks the collection variant as grid-active', () => {
+  describe('isGridActive', () => {
+    it('marks the collection variant as grid-active when Grid is requested', () => {
       const result = resolveFeedLayout({
         requestedLayout: LAYOUT.COLUMNS,
         variant: TIMELINE_FEED_VARIANT.COLLECTION,
@@ -144,6 +144,17 @@ describe('resolveFeedLayout', () => {
       });
 
       expect(result.isGridActive).toBe(true);
+    });
+
+    it('allows the collection variant to use the existing List renderer', () => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.LIST,
+        variant: TIMELINE_FEED_VARIANT.COLLECTION,
+        isPhoneViewport: false,
+      });
+
+      expect(result.effectiveLayout).toBe(LAYOUT.LIST);
+      expect(result.isGridActive).toBe(false);
     });
 
     it('marks the bookmarks variant as grid-active', () => {

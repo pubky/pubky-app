@@ -31,6 +31,14 @@ describe('Feed Helpers', () => {
     it('should convert All to "all"', () => {
       expect(reachToString(PubkyAppFeedReach.All)).toBe('all');
     });
+
+    it('should convert Wot to "wot"', () => {
+      expect(reachToString(PubkyAppFeedReach.Wot)).toBe('wot');
+    });
+
+    it('should convert Me to "me"', () => {
+      expect(reachToString(PubkyAppFeedReach.Me)).toBe('me');
+    });
   });
 
   describe('layoutToString', () => {
@@ -240,5 +248,14 @@ describe('Feed Helpers', () => {
 
       expect(buildFeedStreamId(feed)).toBe('total_engagement:following:video:crypto,news');
     });
+
+    it.each([PubkyAppFeedReach.Wot, PubkyAppFeedReach.Me])(
+      'rejects reach %s until its stream implementation is available',
+      (reach) => {
+        const feed = createFeed({ reach });
+
+        expect(() => buildFeedStreamId(feed)).toThrow('Feed reach is not supported by this stream implementation');
+      },
+    );
   });
 });

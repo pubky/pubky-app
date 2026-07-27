@@ -69,3 +69,41 @@ describe('Metadata - Snapshots', () => {
     expect(result).toMatchSnapshot();
   });
 });
+
+describe('Metadata - omitImages', () => {
+  it('includes static openGraph/twitter images by default', () => {
+    const result = Metadata({ title: 'T', description: 'D' });
+    expect(result.openGraph.images).toBeDefined();
+    expect(result.twitter.images).toBeDefined();
+  });
+
+  it('omits openGraph/twitter images when omitImages is true', () => {
+    const result = Metadata({ title: 'T', description: 'D', omitImages: true });
+    expect(result.openGraph).not.toHaveProperty('images');
+    expect(result.twitter).not.toHaveProperty('images');
+    // Other fields are still present.
+    expect(result.openGraph.title).toBe('T');
+    expect(result.twitter.card).toBe('summary_large_image');
+  });
+});
+
+describe('Metadata - optional description', () => {
+  it('includes description everywhere when provided', () => {
+    const result = Metadata({ title: 'T', description: 'D' });
+    expect(result.description).toBe('D');
+    expect(result.openGraph.description).toBe('D');
+    expect(result.twitter.description).toBe('D');
+  });
+
+  it('suppresses description (does not inherit parent) when absent/empty, keeping title', () => {
+    const result = Metadata({ title: 'T', description: '' });
+    // Top-level uses `null` (Next opt-out); og/twitter use '' — both override the
+    // parent's generic description rather than inheriting it.
+    expect(result.description).toBeNull();
+    expect(result.openGraph.description).toBe('');
+    expect(result.twitter.description).toBe('');
+    // Title is still emitted so the page doesn't fall back to parent metadata.
+    expect(result.title).toBe('T');
+    expect(result.openGraph.title).toBe('T');
+  });
+});

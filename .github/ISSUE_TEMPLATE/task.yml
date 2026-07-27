@@ -27,24 +27,6 @@ body:
       required: true
 
   - type: dropdown
-    id: type
-    attributes:
-      label: Task Type
-      description: What kind of task is this?
-      options:
-        - Refactoring
-        - Tech Debt
-        - Testing
-        - Documentation
-        - Performance
-        - Security
-        - Infrastructure / CI
-        - Dependency Update
-        - Architecture Change
-    validations:
-      required: true
-
-  - type: dropdown
     id: layer
     attributes:
       label: Affected Layer(s)
@@ -52,18 +34,33 @@ body:
       multiple: true
       options:
         - UI / Components
+        - Hooks
         - Controllers
         - Coordinators
         - Application
         - Services (Local)
         - Services (Homeserver)
         - Services (Nexus)
+        - Services (Homegate)
+        - Services (Chatwoot)
+        - Services (Exchange Rate)
+        - Services (Next.js)
         - Pipes
         - Models
         - Stores
         - Database
+        - Config
+        - Libs / Utilities
+        - Runtime Config / Environment
+        - App / Routes
+        - Providers
+        - i18n
+        - PWA / Service Worker
+        - Tests
+        - CI / Tooling
+        - Documentation
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: domain
@@ -73,15 +70,32 @@ body:
       multiple: true
       options:
         - Posts
+        - Collections
         - Users
+        - Profile
         - Auth
+        - Onboarding
         - Notifications
+        - Feeds
+        - Hot
         - Streams
         - Tags
         - Bookmarks
+        - Follows
+        - Mutes
+        - Moderation
         - Files / Media
         - Search
         - Settings
+        - Homegate
+        - Bootstrap
+        - Copyright
+        - Feedback
+        - Report
+        - OG Metadata
+        - Migration
+        - TTL
+        - Share
         - Cross-domain
     validations:
       required: false
@@ -97,7 +111,7 @@ body:
         - [ ] No TypeScript errors
         - [ ] PR review approved
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: technical
@@ -131,24 +145,3 @@ body:
         - [ ] Check offline behavior
     validations:
       required: false
-
-  - type: input
-    id: related
-    attributes:
-      label: Related Issues / PRs
-      description: Link to related issues or pull requests
-      placeholder: "Closes #123, Related to #456"
-    validations:
-      required: false
-
-  - type: dropdown
-    id: breaking
-    attributes:
-      label: Breaking Change?
-      description: Will this require changes in other parts of the codebase?
-      options:
-        - "No"
-        - "Yes - minor (same team can handle)"
-        - "Yes - major (needs coordination)"
-    validations:
-      required: true
