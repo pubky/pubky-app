@@ -1,10 +1,9 @@
 import { Locks, LocksOptions, type Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { getHomeserver, getLockServer, getPkarrRelays, getTestnet } from '@/config/network';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
-import { Logger } from '@/libs/logger/logger';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 
 /**
@@ -51,15 +50,16 @@ export function ensureLocksSdkReady(): Promise<void> {
 }
 
 /**
- * The runtime-configured Lock Server pubky. Locks is a feature that can simply be off (no config),
- * and every Locks entry point is gated on the config, so this never fires in a healthy build —
- * a warning is enough; no typed error, no Sentry noise for a disabled feature.
+ * No Lock Server configured means Locks is off: the composer never renders the lock switch and
+ * session restore returns early.
  */
 export function getLockServerPubky(): string {
   const lockServerPubky = getLockServer();
   if (!lockServerPubky) {
-    Logger.warn('[LocksService] No Lock Server configured (Locks disabled); call should be unreachable');
-    throw new Error('No Lock Server configured');
+    throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'No Lock Server configured (Locks disabled)', {
+      service: ErrorService.Locks,
+      operation: 'getLockServerPubky',
+    });
   }
   return lockServerPubky;
 }

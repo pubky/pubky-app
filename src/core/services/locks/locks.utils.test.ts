@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorCategory } from '@/libs/error/error.types';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
 import { ensureLocksSdkReady, getLockServerPubky, getLockSession, initLockClient, toLocksError } from './locks.utils';
 
@@ -56,6 +58,14 @@ describe('locks.utils', () => {
       expect(isAppError(error)).toBe(true);
       expect((error as { category: ErrorCategory }).category).not.toBe(ErrorCategory.Auth);
     });
+
+    it('returns an already-typed AppError unchanged', () => {
+      const original = Err.validation(ValidationErrorCode.MISSING_FIELD, 'already typed', {
+        service: ErrorService.Locks,
+        operation: 'op',
+      });
+      expect(toLocksError(original, 'other-op')).toBe(original);
+    });
   });
 
   describe('getLockServerPubky', () => {
@@ -63,9 +73,40 @@ describe('locks.utils', () => {
       expect(getLockServerPubky()).toBe('lockserverpubky');
     });
 
-    it('throws when no Lock Server is configured (Locks disabled)', () => {
+    it('throws a typed validation error when no Lock Server is configured (Locks disabled)', () => {
       mocks.getLockServer.mockReturnValue(undefined);
-      expect(() => getLockServerPubky()).toThrow();
+      let thrown: unknown;
+      try {
+        getLockServerPubky();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(isAppError(thrown)).toBe(true);
+      expect((thrown as { category: ErrorCategory }).category).toBe(ErrorCategory.Validation);
+    });
+
+    it('reports to Sentry exactly once — the service catch must not re-wrap and report again', async () => {
+      const captureAppError = vi.fn();
+      vi.doMock('@/libs/observability/sentry', () => ({ captureAppError }));
+      vi.resetModules();
+      // The import at the top of this file was resolved before the mock existed and still uses the
+      // real `captureAppError`. Only a fresh import sees the mocked one.
+      const locksUtils = await import('./locks.utils');
+      mocks.getLockServer.mockReturnValue(undefined);
+
+      let thrown: unknown;
+      try {
+        locksUtils.getLockServerPubky();
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(captureAppError).toHaveBeenCalledTimes(1);
+      expect(locksUtils.toLocksError(thrown, 'LocksService.setLockServiceConfig')).toBe(thrown);
+      expect(captureAppError).toHaveBeenCalledTimes(1);
+
+      vi.doUnmock('@/libs/observability/sentry');
+      vi.resetModules();
     });
   });
 
