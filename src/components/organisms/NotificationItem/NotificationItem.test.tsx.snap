@@ -51,12 +51,12 @@ exports[`NotificationItem - Mobile Snapshots > matches snapshot on mobile viewpo
     class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
     href="/profile/user1"
   >
-    <p
-      class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+    <span
+      class="text-xs font-medium tracking-[1.2px] text-muted-foreground"
       data-testid="typography"
     >
       30m
-    </p>
+    </span>
     <div
       data-badge="false"
       data-testid="notification-icon"
@@ -123,12 +123,12 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
       class=""
       data-state="closed"
     >
-      <p
-        class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+      <span
+        class="text-xs font-medium tracking-[1.2px] text-muted-foreground"
         data-testid="typography"
       >
         30m
-      </p>
+      </span>
     </span>
     <div
       data-badge="false"
@@ -196,12 +196,12 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
       class=""
       data-state="closed"
     >
-      <p
-        class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+      <span
+        class="text-xs font-medium tracking-[1.2px] text-muted-foreground"
         data-testid="typography"
       >
         30m
-      </p>
+      </span>
     </span>
     <div
       data-badge="false"
@@ -275,12 +275,12 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
       class=""
       data-state="closed"
     >
-      <p
-        class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+      <span
+        class="text-xs font-medium tracking-[1.2px] text-muted-foreground"
         data-testid="typography"
       >
         30m
-      </p>
+      </span>
     </span>
     <div
       data-badge="false"

@@ -9,12 +9,6 @@ import { type FlatNotification, NotificationType, PostChangedSource } from '@/mo
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationItem } from './NotificationItem';
 
-const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
-
-vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
-  useIsMobile: mockUseIsMobile,
-}));
-
 function render(ui: ReactElement) {
   return rtlRender(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
 }
@@ -194,7 +188,6 @@ describe('NotificationItem', () => {
     mockToast.mockClear();
     mockGetOrFetch.mockClear();
     mockGetOrFetch.mockResolvedValue(null);
-    mockUseIsMobile.mockReturnValue(false);
     vi.mocked(useUserProfile).mockReturnValue({
       profile: { name: 'User', avatarUrl: undefined },
       isLoading: false,
@@ -243,9 +236,8 @@ describe('NotificationItem', () => {
   });
 
   it('does not show tooltip on mobile after hover', async () => {
-    mockUseIsMobile.mockReturnValue(true);
     const user = userEvent.setup();
-    render(<NotificationItem notification={baseNotification} isUnread={false} />);
+    render(<NotificationItem notification={baseNotification} isUnread={false} isMobile />);
 
     await user.hover(screen.getByText('30m'));
 
@@ -795,7 +787,6 @@ describe('NotificationItem', () => {
 
 describe('NotificationItem - Snapshots', () => {
   beforeEach(() => {
-    mockUseIsMobile.mockReturnValue(false);
     vi.clearAllMocks();
     mockGetOrFetch.mockResolvedValue(null);
     vi.useFakeTimers();
@@ -869,7 +860,6 @@ describe('NotificationItem - Snapshots', () => {
 
 describe('NotificationItem - Mobile Snapshots', () => {
   beforeEach(() => {
-    mockUseIsMobile.mockReturnValue(true);
     setMobileViewport();
   });
 
@@ -884,7 +874,7 @@ describe('NotificationItem - Mobile Snapshots', () => {
       timestamp: Date.now() - 1000 * 60 * 30,
       followed_by: 'user1',
     } as FlatNotification;
-    const { container } = render(<NotificationItem notification={notification} isUnread={false} />);
+    const { container } = render(<NotificationItem notification={notification} isUnread={false} isMobile />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

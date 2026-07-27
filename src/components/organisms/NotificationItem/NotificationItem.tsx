@@ -33,7 +33,7 @@ import {
   pubkyUriToCompositeId,
 } from './NotificationItem.utils';
 
-export function NotificationItem({ notification, isUnread }: NotificationItemProps) {
+export function NotificationItem({ notification, isUnread, isMobile = false }: NotificationItemProps) {
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');
   const tProfile = useTranslations('profile');
@@ -124,8 +124,8 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
     <RelativeTimestamp
       timeAgo={formatRelativeTime(timestampDate)}
       date={timestampDate}
-      as="p"
-      className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase"
+      isMobile={isMobile}
+      className="text-xs font-medium tracking-[1.2px] text-muted-foreground"
     />
   );
 

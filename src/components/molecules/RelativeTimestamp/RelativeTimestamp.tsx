@@ -1,16 +1,16 @@
 'use client';
 
-import type { ComponentProps, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
-import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 interface RelativeTimestampProps {
   timeAgo: string;
   /** When provided, shows exact date/time in a tooltip on hover (desktop only) */
   date?: Date | null;
+  /** Viewport state supplied by the owning component */
+  isMobile: boolean;
   className?: string;
-  as?: ComponentProps<typeof Typography>['as'];
   overrideDefaults?: boolean;
   /** Optional content rendered before the time label (e.g. Clock icon) */
   leading?: ReactNode;
@@ -21,17 +21,16 @@ interface RelativeTimestampProps {
 export function RelativeTimestamp({
   timeAgo,
   date,
+  isMobile,
   className,
-  as = 'span',
   overrideDefaults,
   leading,
   triggerClassName,
 }: RelativeTimestampProps) {
-  const isMobile = useIsMobile();
   const label = (
     <>
       {leading}
-      <Typography as={as} className={className} overrideDefaults={overrideDefaults}>
+      <Typography as={'span'} className={className} overrideDefaults={overrideDefaults}>
         {timeAgo}
       </Typography>
     </>

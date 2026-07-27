@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { RelativeTimestamp } from './RelativeTimestamp';
 
@@ -10,12 +10,6 @@ const EXPECTED_EXACT_LABEL = TEST_DATE.toLocaleString(undefined, {
   dateStyle: 'medium',
   timeStyle: 'medium',
 });
-
-const mockUseIsMobile = vi.hoisted(() => vi.fn(() => true));
-
-vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
-  useIsMobile: mockUseIsMobile,
-}));
 
 vi.mock('@/atoms/Typography/Typography', () => {
   return {
@@ -40,28 +34,24 @@ function renderWithTooltip(ui: ReactElement) {
 }
 
 describe('RelativeTimestamp', () => {
-  beforeEach(() => {
-    mockUseIsMobile.mockReset();
-    mockUseIsMobile.mockReturnValue(true);
-  });
-
   it('renders timeAgo text', () => {
-    render(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} />);
+    render(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} isMobile />);
 
     expect(screen.getByText('2h')).toBeInTheDocument();
   });
 
   it('renders leading content', () => {
-    render(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} leading={<span data-testid="leading">clock</span>} />);
+    render(
+      <RelativeTimestamp timeAgo="2h" date={TEST_DATE} isMobile leading={<span data-testid="leading">clock</span>} />,
+    );
 
     expect(screen.getByTestId('leading')).toBeInTheDocument();
   });
 
   it('does not show tooltip on mobile after hover', async () => {
-    mockUseIsMobile.mockReturnValue(true);
     const user = userEvent.setup();
 
-    renderWithTooltip(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} />);
+    renderWithTooltip(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} isMobile />);
 
     await user.hover(screen.getByText('2h'));
 
@@ -69,10 +59,9 @@ describe('RelativeTimestamp', () => {
   });
 
   it('shows exact date in tooltip on desktop after hover', async () => {
-    mockUseIsMobile.mockReturnValue(false);
     const user = userEvent.setup();
 
-    renderWithTooltip(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} />);
+    renderWithTooltip(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} isMobile={false} />);
 
     await user.hover(screen.getByText('2h'));
 
@@ -82,10 +71,9 @@ describe('RelativeTimestamp', () => {
   });
 
   it('does not show tooltip when date is missing', async () => {
-    mockUseIsMobile.mockReturnValue(false);
     const user = userEvent.setup();
 
-    renderWithTooltip(<RelativeTimestamp timeAgo="2h" />);
+    renderWithTooltip(<RelativeTimestamp timeAgo="2h" isMobile={false} />);
 
     await user.hover(screen.getByText('2h'));
 
@@ -94,19 +82,14 @@ describe('RelativeTimestamp', () => {
 });
 
 describe('RelativeTimestamp - Snapshots', () => {
-  beforeEach(() => {
-    mockUseIsMobile.mockReset();
-    mockUseIsMobile.mockReturnValue(true);
-  });
-
   it('matches snapshot without tooltip', () => {
-    const { container } = render(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} className="text-xs" />);
+    const { container } = render(<RelativeTimestamp timeAgo="2h" date={TEST_DATE} isMobile className="text-xs" />);
     expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with leading content', () => {
     const { container } = render(
-      <RelativeTimestamp timeAgo="5m" date={TEST_DATE} leading={<span data-testid="leading">icon</span>} />,
+      <RelativeTimestamp timeAgo="5m" date={TEST_DATE} isMobile leading={<span data-testid="leading">icon</span>} />,
     );
     expect(container).toMatchSnapshot();
   });
