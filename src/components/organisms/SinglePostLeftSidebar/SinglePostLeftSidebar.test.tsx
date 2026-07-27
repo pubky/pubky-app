@@ -1,11 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useHomeStore } from '@/stores/home/home.store';
+import { LAYOUT } from '@/stores/home/home.types';
 import { SinglePostLeftDrawer, SinglePostLeftDrawerMobile, SinglePostLeftSidebar } from './SinglePostLeftSidebar';
 
-const mockPostRouteLayout = vi.hoisted(() => ({
-  layout: 'columns',
-  setLayout: vi.fn(),
-}));
 type BaseFilterMockProps = {
   selectedTab?: string;
   defaultSelectedTab?: string;
@@ -37,10 +35,6 @@ const mockFilterLayout = vi.fn(
   ),
 );
 
-vi.mock('@/hooks/usePostRouteLayout/usePostRouteLayout', () => ({
-  usePostRouteLayout: () => mockPostRouteLayout,
-}));
-
 vi.mock('@/atoms/Container/Container', () => ({
   Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="container" className={className}>
@@ -68,8 +62,7 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockPostRouteLayout.layout = 'columns';
-  mockPostRouteLayout.setLayout.mockClear();
+  useHomeStore.setState({ layout: LAYOUT.COLUMNS });
   mockFilterReach.mockClear();
   mockFilterSort.mockClear();
   mockFilterContent.mockClear();
@@ -89,21 +82,19 @@ describe('SinglePostLeftSidebar', () => {
     expect(mockFilterContent).toHaveBeenCalled();
   });
 
-  it('passes the resolved post layout to FilterLayout', () => {
-    mockPostRouteLayout.layout = 'list';
-
+  it('passes home layout state to FilterLayout', () => {
     render(<SinglePostLeftSidebar />);
 
-    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'list');
+    expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'columns');
     expect(screen.getByTestId('container')).toHaveClass('flex', 'flex-col', 'gap-6');
   });
 
-  it('delegates layout changes to the post route controller', () => {
+  it('updates home layout when filter tab changes', () => {
     render(<SinglePostLeftSidebar />);
 
     fireEvent.click(screen.getByTestId('change-layout'));
 
-    expect(mockPostRouteLayout.setLayout).toHaveBeenCalledWith('wide');
+    expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
   });
 
   it('matches snapshot', () => {
@@ -125,18 +116,18 @@ describe('SinglePostLeftDrawer', () => {
     expect(mockFilterContent).toHaveBeenCalled();
   });
 
-  it('passes the resolved post layout to FilterLayout', () => {
+  it('passes home layout state to FilterLayout', () => {
     render(<SinglePostLeftDrawer />);
 
     expect(screen.getByTestId('filter-layout')).toHaveAttribute('data-selected-tab', 'columns');
   });
 
-  it('delegates layout changes to the post route controller', () => {
+  it('updates home layout when filter tab changes', () => {
     render(<SinglePostLeftDrawer />);
 
     fireEvent.click(screen.getByTestId('change-layout'));
 
-    expect(mockPostRouteLayout.setLayout).toHaveBeenCalledWith('wide');
+    expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
   });
 
   it('matches snapshot', () => {
@@ -163,7 +154,7 @@ describe('SinglePostLeftDrawerMobile', () => {
     render(<SinglePostLeftDrawerMobile />);
 
     expect(screen.queryByTestId('change-layout')).not.toBeInTheDocument();
-    expect(mockPostRouteLayout.setLayout).not.toHaveBeenCalled();
+    expect(useHomeStore.getState().layout).toBe(LAYOUT.COLUMNS);
   });
 
   it('matches snapshot', () => {

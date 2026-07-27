@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { usePostRouteLayout } from '@/hooks/usePostRouteLayout/usePostRouteLayout';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
@@ -12,6 +11,7 @@ import { PostArticleDetail } from '@/organisms/PostArticleDetail/PostArticleDeta
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
+import { useHomeStore } from '@/stores/home/home.store';
 import { PostPageHeader } from '../PostPageHeader/PostPageHeader';
 import { ThreadTree } from '../ThreadTree/ThreadTree';
 import type { SinglePostContentProps } from './SinglePostContent.types';
@@ -26,7 +26,7 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  */
 export function SinglePostContent({ postId, postDetails }: SinglePostContentProps) {
   const t = useTranslations('post');
-  const { layout } = usePostRouteLayout();
+  const layout = useHomeStore((state) => state.layout);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
   // Check if parent post is deleted to determine replyability

@@ -1,10 +1,10 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
-import { usePostRouteLayout } from '@/hooks/usePostRouteLayout/usePostRouteLayout';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
 import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
+import { useHomeStore } from '@/stores/home/home.store';
 
 /**
  * SinglePostFilters
@@ -27,11 +27,12 @@ function SinglePostFilters({ children }: { children?: React.ReactNode }) {
 /**
  * SinglePostLayoutFilter
  *
- * Layout filter bound to the post route controller. A route override remains
- * temporary; direct post navigation keeps using the persisted home layout.
+ * Layout filter bound to the home store. Isolated in its own component so the
+ * store subscription only exists where the layout filter is actually rendered.
  */
 function SinglePostLayoutFilter() {
-  const { layout, setLayout } = usePostRouteLayout();
+  const layout = useHomeStore((state) => state.layout);
+  const setLayout = useHomeStore((state) => state.setLayout);
 
   return <FilterLayout selectedTab={layout} onTabChange={setLayout} />;
 }

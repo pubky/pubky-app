@@ -1,19 +1,13 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostMissing } from '@/hooks/usePostMissing/usePostMissing';
-import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { PostPageShell } from './PostPageShell';
 
 const VALID_COMPOSITE_POST_ID = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
-let mockPostRouteLayout: LayoutType;
 
 vi.mock('@/hooks/usePostMissing/usePostMissing', () => ({
   usePostMissing: vi.fn(),
-}));
-
-vi.mock('@/hooks/usePostRouteLayout/usePostRouteLayout', () => ({
-  usePostRouteLayout: () => ({ layout: mockPostRouteLayout, setLayout: vi.fn() }),
 }));
 
 vi.mock('@/organisms/HotDiscoveryContentLayout/HotDiscoveryContentLayout', () => ({
@@ -40,7 +34,7 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
     leftDrawerContentMobile?: React.ReactNode;
     rightDrawerContent?: React.ReactNode;
     classNameWrapperContent?: string;
-    layoutOverride?: LayoutType;
+    layoutOverride?: string;
   }) => (
     <div
       data-testid="content-layout"
@@ -74,7 +68,6 @@ vi.mock('@/organisms/SinglePostRightPanel/SinglePostRightPanel', () => ({
 describe('PostPageShell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPostRouteLayout = LAYOUT.COLUMNS;
     vi.mocked(usePostMissing).mockReturnValue({
       postMissing: false,
       postDetails: undefined,
@@ -130,16 +123,14 @@ describe('PostPageShell', () => {
     expect(rightPanel).toHaveAttribute('data-show-feedback', 'true');
   });
 
-  it('passes the resolved post layout to the page shell', () => {
-    mockPostRouteLayout = LAYOUT.LIST;
-
+  it('lets ContentLayout resolve the persisted Home layout', () => {
     render(
       <PostPageShell postId={VALID_COMPOSITE_POST_ID}>
         <div>body</div>
       </PostPageShell>,
     );
 
-    expect(screen.getByTestId('content-layout')).toHaveAttribute('data-layout-override', LAYOUT.LIST);
+    expect(screen.getByTestId('content-layout')).not.toHaveAttribute('data-layout-override');
   });
 
   it('swaps to discovery layout without post sidebars when the post is missing', () => {

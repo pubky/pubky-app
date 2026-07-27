@@ -43,16 +43,16 @@ describe('usePostNavigation', () => {
       expect(mockPush).toHaveBeenCalledTimes(1);
     });
 
-    it('preserves List layout in post hrefs and navigation', () => {
+    it('does not carry List feed layout into post hrefs or navigation', () => {
       const { result } = renderHook(() => usePostNavigation(), { wrapper: ListLayoutWrapper });
 
-      expect(result.current.getPostHref('author123:post456')).toBe('/post/author123/post456?layout=list');
+      expect(result.current.getPostHref('author123:post456')).toBe('/post/author123/post456');
 
       act(() => {
         result.current.navigateToPost('author123:post456');
       });
 
-      expect(mockPush).toHaveBeenCalledWith('/post/author123/post456?layout=list');
+      expect(mockPush).toHaveBeenCalledWith('/post/author123/post456');
     });
 
     it('should handle multiple navigation calls', () => {
@@ -165,24 +165,6 @@ describe('usePostNavigation', () => {
   });
 
   describe('handlePostAuxClick', () => {
-    it('preserves List layout for middle-click navigation', () => {
-      const { result } = renderHook(() => usePostNavigation(), { wrapper: ListLayoutWrapper });
-      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-
-      act(() => {
-        result.current.handlePostAuxClick(
-          'author1:post1',
-          mockMouseEvent({
-            button: 1,
-            preventDefault: vi.fn(),
-            target: document.createElement('div'),
-          }),
-        );
-      });
-
-      expect(openSpy).toHaveBeenCalledWith('/post/author1/post1?layout=list', '_blank', 'noopener,noreferrer');
-    });
-
     it('opens post in a new tab for middle-click on non-interactive areas', () => {
       const { result } = renderHook(() => usePostNavigation());
       const preventDefault = vi.fn();
@@ -256,23 +238,6 @@ describe('usePostNavigation', () => {
   });
 
   describe('handlePostClick', () => {
-    it('preserves List layout for modifier-click navigation', () => {
-      const { result } = renderHook(() => usePostNavigation(), { wrapper: ListLayoutWrapper });
-      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-
-      act(() => {
-        result.current.handlePostClick(
-          'author1:post1',
-          mockMouseEvent({
-            target: document.createElement('div'),
-            metaKey: true,
-          }),
-        );
-      });
-
-      expect(openSpy).toHaveBeenCalledWith('/post/author1/post1?layout=list', '_blank', 'noopener,noreferrer');
-    });
-
     it('navigates on plain post-card click', () => {
       const { result } = renderHook(() => usePostNavigation());
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
@@ -373,25 +338,6 @@ describe('usePostNavigation', () => {
   });
 
   describe('handlePostKeyDown', () => {
-    it('preserves List layout for keyboard navigation', () => {
-      const { result } = renderHook(() => usePostNavigation(), { wrapper: ListLayoutWrapper });
-      const wrapper = document.createElement('article');
-
-      act(() => {
-        result.current.handlePostKeyDown(
-          'author1:post1',
-          mockKeyboardEvent({
-            key: 'Enter',
-            target: wrapper,
-            currentTarget: wrapper,
-            preventDefault: vi.fn(),
-          }),
-        );
-      });
-
-      expect(mockPush).toHaveBeenCalledWith('/post/author1/post1?layout=list');
-    });
-
     it('navigates on Enter when post wrapper has focus', () => {
       const { result } = renderHook(() => usePostNavigation());
       const preventDefault = vi.fn();

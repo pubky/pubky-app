@@ -270,6 +270,8 @@ describe('collections', () => {
     const postContent = `A post in List layout ${Date.now()}`;
     const replyContent = `A reply hidden from the collection ${Date.now()}`;
 
+    goToHomePage();
+    cy.get('[data-cy="columns-layout-toggle"]').filter(':visible').click();
     goToCollectionsPage();
     createCollection(collectionName, 'List by default.', { layout: 'list' });
     createPostInCollection(postContent);
@@ -280,17 +282,17 @@ describe('collections', () => {
     cy.get('[data-cy="timeline-posts-grid"]').should('not.exist');
     cy.get('[data-cy="collection-layout-menu"]').should('not.exist');
 
-    // * posts opened from List collections keep the List route context and reveal their replies
+    // * posts opened from List collections use the Home layout and reveal their replies
     cy.get('[data-cy="timeline-posts"]').contains(postContent).click();
     cy.location('pathname').should('match', /^\/post\/[^/]+\/[^/]+$/);
-    cy.location('search').should('eq', '?layout=list');
+    cy.location('search').should('eq', '');
     cy.get('[data-cy="single-post-card"]').should('contain.text', postContent);
     cy.contains(replyContent).should('be.visible');
-    cy.get('[data-cy="list-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
+    cy.get('[data-cy="columns-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
 
-    // * changing the post layout stays temporary and does not add another Back step
+    // * changing the post layout updates Home state without adding another Back step
     cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').click();
-    cy.location('search').should('eq', '?layout=wide');
+    cy.location('search').should('eq', '');
     cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
     cy.go('back');
     cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
