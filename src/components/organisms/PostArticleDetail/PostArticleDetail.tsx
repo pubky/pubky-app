@@ -7,6 +7,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { cn } from '@/libs/utils/utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostText } from '@/molecules/PostText/PostText';
 import { FileVariant } from '@/services/nexus/file/file.types';
@@ -29,7 +30,7 @@ interface PostArticleDetailProps {
 
 /**
  * Displays an article post detail page with tags always visible on mobile and desktop.
- * Columns layout uses a stacked header/tags design; wide/visual keep the side tags grid.
+ * Columns places desktop tags under the header (max-w-2/4); other layouts use a side tags column.
  */
 export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: PostArticleDetailProps) => {
   const layout = useHomeStore((state) => state.layout);
@@ -91,11 +92,11 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
 
   return (
     <>
-      {isColumnsLayout ? (
-        <Container className="mb-6 gap-6">
-          <Container className="lg:col-span-2">
-            <Container>{articleHeader}</Container>
-            <Container overrideDefaults className="mx-0 max-w-2/4">
+      <Container className={cn('mb-6 gap-6', !isColumnsLayout && 'grid grid-cols-1 lg:grid-cols-3')}>
+        <Container className={cn(!isColumnsLayout && 'lg:col-span-2')}>
+          {articleHeader}
+          {isColumnsLayout && (
+            <Container overrideDefaults className="mx-0 mb-6 max-w-2/4">
               <PostTagsPanel
                 ref={desktopTagsPanelRef}
                 postId={postId}
@@ -103,23 +104,15 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
                 className="mx-0 hidden lg:flex"
               />
             </Container>
-          </Container>
-          <Container>
-            {articleBody}
-            <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
-          </Container>
+          )}
+          {articleBody}
+          <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
         </Container>
-      ) : (
-        <Container className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Container className="lg:col-span-2">
-            {articleHeader}
-            {articleBody}
-            <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
-          </Container>
 
+        {!isColumnsLayout && (
           <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="hidden lg:flex" />
-        </Container>
-      )}
+        )}
+      </Container>
 
       {dialogs}
       <DialogCheckLink open={dialogOpen} onOpenChangeAction={setDialogOpen} linkUrl={clickedLink} />
