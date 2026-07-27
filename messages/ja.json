@@ -5,7 +5,8 @@
     "hoursShort": "{count}時間",
     "daysShort": "{count}日",
     "weeksShort": "{count}週",
-    "monthsShort": "{count}か月"
+    "monthsShort": "{count}か月",
+    "yearsShort": "{count}年"
   },
   "landing": {
     "title": "ウェブを<highlight>解放</highlight>する。",

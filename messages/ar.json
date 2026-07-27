@@ -5,7 +5,8 @@
     "hoursShort": "{count}س",
     "daysShort": "{count}ي",
     "weeksShort": "{count}أ",
-    "monthsShort": "{count}ش"
+    "monthsShort": "{count}ش",
+    "yearsShort": "{count}ع"
   },
   "landing": {
     "title": "<highlight>افتح</highlight> الويب.",

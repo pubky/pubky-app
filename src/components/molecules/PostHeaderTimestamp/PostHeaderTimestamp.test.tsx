@@ -84,13 +84,17 @@ describe('PostHeaderTimestamp', () => {
   it('shows exact time in tooltip on non-mobile after hover', async () => {
     mockUseIsMobile.mockReturnValue(false);
     const user = userEvent.setup();
+    const expectedExactLabel = TEST_DATE.toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'medium',
+    });
 
     renderWithTooltip(<PostHeaderTimestamp timeAgo="2h" indexedAt={TEST_DATE} />);
 
     await user.hover(screen.getByText('2h'));
 
     await waitFor(() => {
-      expect(screen.getByRole('tooltip')).toBeInTheDocument();
+      expect(screen.getByRole('tooltip')).toHaveTextContent(expectedExactLabel);
     });
   });
 });

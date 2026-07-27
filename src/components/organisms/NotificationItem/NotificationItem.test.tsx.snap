@@ -1,5 +1,73 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`NotificationItem - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="flex w-full min-w-0 items-center justify-between gap-2 cursor-pointer"
+  data-testid="container"
+>
+  <div
+    class="flex min-w-0 flex-1 items-center gap-2"
+    data-testid="container"
+  >
+    <a
+      class="shrink-0 transition-opacity hover:opacity-80"
+      href="/profile/user1"
+    >
+      <div
+        class="lg:size-8"
+        data-name="User"
+        data-testid="avatar-with-fallback"
+      >
+        <span>
+          U
+        </span>
+      </div>
+    </a>
+    <div
+      class="flex min-w-0 flex-1 items-center gap-2"
+      data-testid="container"
+    >
+      <p
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
+        data-testid="typography"
+      >
+        <a
+          class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
+          href="/profile/user1"
+        >
+          User
+        </a>
+         
+        <a
+          class="text-foreground hover:underline lg:shrink-0"
+          href="/profile/user1"
+        >
+          followed you
+        </a>
+      </p>
+    </div>
+  </div>
+  <a
+    class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
+    href="/profile/user1"
+  >
+    <span
+      class="text-xs font-medium tracking-widest text-muted-foreground"
+      data-testid="typography"
+    >
+      30m
+    </span>
+    <div
+      data-badge="false"
+      data-testid="notification-icon"
+      data-type="follow"
+    >
+      Icon
+    </div>
+  </a>
+</div>
+`;
+
 exports[`NotificationItem - Snapshots > matches snapshot for Follow notification 1`] = `
 <div
   class="flex w-full min-w-0 items-center justify-between gap-2 cursor-pointer"
@@ -51,18 +119,17 @@ exports[`NotificationItem - Snapshots > matches snapshot for Follow notification
     class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
     href="/profile/user1"
   >
-    <p
-      class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-      data-testid="typography"
+    <span
+      class=""
+      data-state="closed"
     >
-      30m
-    </p>
-    <p
-      class="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
-      data-testid="typography"
-    >
-      30 MINUTES AGO
-    </p>
+      <span
+        class="text-xs font-medium tracking-widest text-muted-foreground"
+        data-testid="typography"
+      >
+        30m
+      </span>
+    </span>
     <div
       data-badge="false"
       data-testid="notification-icon"
@@ -125,18 +192,17 @@ exports[`NotificationItem - Snapshots > matches snapshot for Mention notificatio
     class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
     href="/post/user1/post123"
   >
-    <p
-      class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-      data-testid="typography"
+    <span
+      class=""
+      data-state="closed"
     >
-      30m
-    </p>
-    <p
-      class="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
-      data-testid="typography"
-    >
-      30 MINUTES AGO
-    </p>
+      <span
+        class="text-xs font-medium tracking-widest text-muted-foreground"
+        data-testid="typography"
+      >
+        30m
+      </span>
+    </span>
     <div
       data-badge="false"
       data-testid="notification-icon"
@@ -205,18 +271,17 @@ exports[`NotificationItem - Snapshots > matches snapshot for TagPost notificatio
     class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
     href="/post/user1/post123"
   >
-    <p
-      class="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden"
-      data-testid="typography"
+    <span
+      class=""
+      data-state="closed"
     >
-      30m
-    </p>
-    <p
-      class="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
-      data-testid="typography"
-    >
-      30 MINUTES AGO
-    </p>
+      <span
+        class="text-xs font-medium tracking-widest text-muted-foreground"
+        data-testid="typography"
+      >
+        30m
+      </span>
+    </span>
     <div
       data-badge="false"
       data-testid="notification-icon"

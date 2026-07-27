@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}T",
     "weeksShort": "{count}W",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}J"
   },
   "landing": {
     "title": "<highlight>Entsperre</highlight> das Web.",

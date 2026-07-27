@@ -7,15 +7,17 @@ import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { PostController } from '@/controllers/post/post';
+import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
-import { formatNotificationTime, isPostDeleted } from '@/libs/utils/utils';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationIcon } from '@/molecules/NotificationIcon/NotificationIcon';
 import { PostTag } from '@/molecules/PostTag/PostTag';
+import { RelativeTimestamp } from '@/molecules/RelativeTimestamp/RelativeTimestamp';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
@@ -31,7 +33,7 @@ import {
   pubkyUriToCompositeId,
 } from './NotificationItem.utils';
 
-export function NotificationItem({ notification, isUnread }: NotificationItemProps) {
+export function NotificationItem({ notification, isUnread, isMobile = false }: NotificationItemProps) {
   const t = useTranslations('notifications.actions');
   const tCommon = useTranslations('common');
   const tProfile = useTranslations('profile');
@@ -39,6 +41,7 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   const tPost = useTranslations('post');
   const router = useRouter();
   const { toast } = useToast();
+  const { formatRelativeTime } = useRelativeTime();
 
   // Extract the user ID from the notification (the actor who triggered it)
   const actorUserId = getUserIdFromNotification(notification);
@@ -116,9 +119,15 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
   // Get post preview text
   const previewText = hasPostPreview(notification.type, postKind) ? formatPreviewText(postContent) : null;
 
-  // Format timestamps (short for mobile, long for desktop)
-  const timestampShort = formatNotificationTime(notification.timestamp, false);
-  const timestampLong = formatNotificationTime(notification.timestamp, true);
+  const timestampDate = new Date(notification.timestamp);
+  const timestampElement = (
+    <RelativeTimestamp
+      timeAgo={formatRelativeTime(timestampDate)}
+      date={timestampDate}
+      isMobile={isMobile}
+      className="text-xs font-medium tracking-widest text-muted-foreground"
+    />
+  );
 
   // Calculate notification links (business logic separated in pure function)
   const { notificationLink, userProfileLink } = getNotificationLink(notification);
@@ -234,33 +243,13 @@ export function NotificationItem({ notification, isUnread }: NotificationItemPro
       {/* Timestamp and icon - links to notification target */}
       {notificationLink ? (
         <Link href={notificationLink} className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80">
-          {/* Short timestamp for mobile and medium screens */}
-          <Typography as="p" className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden">
-            {timestampShort}
-          </Typography>
-          {/* Long timestamp for large desktop */}
-          <Typography
-            as="p"
-            className="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
-          >
-            {timestampLong}
-          </Typography>
+          {timestampElement}
 
           <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
         </Link>
       ) : (
         <Container overrideDefaults={true} className="flex items-center gap-2">
-          {/* Short timestamp for mobile and medium screens */}
-          <Typography as="p" className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:hidden">
-            {timestampShort}
-          </Typography>
-          {/* Long timestamp for large desktop */}
-          <Typography
-            as="p"
-            className="hidden text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase xl:block"
-          >
-            {timestampLong}
-          </Typography>
+          {timestampElement}
 
           <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
         </Container>
