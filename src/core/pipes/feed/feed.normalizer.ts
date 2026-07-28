@@ -31,6 +31,7 @@ export class FeedNormalizer {
         sortToString(params.sort),
         content,
         params.name.trim(),
+        undefined,
       );
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { useForm, type UseFormReturn } from 'react-hook-form';
+import { DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { PostController } from '@/controllers/post/post';
 import { useCoverImagePicker, type UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useCoverImagePicker';
 import {
@@ -59,6 +60,7 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
 
   const originalName = collection?.name ?? '';
   const originalDescription = collection?.description ?? '';
+  const originalLayout = collection?.layout ?? DEFAULT_COLLECTION_LAYOUT;
   // Preserve the raw envelope value so we can pass it back unchanged when the
   // user leaves the cover alone (avoids re-uploading and avoids storing the
   // CDN-resolved URL back into the envelope).
@@ -95,9 +97,10 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
     form.reset({
       [CREATE_COLLECTION_FORM_FIELDS.NAME]: originalName,
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: originalDescription,
+      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: originalLayout,
     });
     hasPrefilledRef.current = true;
-  }, [form, originalName, originalDescription]);
+  }, [form, originalDescription, originalLayout, originalName]);
 
   const submit = async (): Promise<boolean> => {
     if (!collection) return false;
@@ -106,6 +109,7 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
     await form.handleSubmit(async (data) => {
       const name = data[CREATE_COLLECTION_FORM_FIELDS.NAME];
       const description = data[CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION];
+      const layout = data[CREATE_COLLECTION_FORM_FIELDS.LAYOUT];
 
       // Resolve the cover argument: new file > cleared > unchanged.
       let coverArg: File | string | null;
@@ -123,6 +127,7 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
           name,
           description,
           coverImage: coverArg,
+          layout,
         });
 
         // Mirror the post-attachment / avatar pattern: stash a blob URL in the
@@ -156,6 +161,7 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
     form.reset({
       [CREATE_COLLECTION_FORM_FIELDS.NAME]: originalName,
       [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: originalDescription,
+      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: originalLayout,
     });
     cover.reset();
     // Allow the prefill effect to re-run on the next render. Right after a

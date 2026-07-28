@@ -1,0 +1,37 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`LogoutContent - Snapshots > matches the signed-out illustration layout 1`] = `
+<div
+  class="mb-6"
+  data-size="container"
+>
+  <header>
+    <h1
+      data-size="large"
+    >
+      See you 
+      <span
+        class="text-brand"
+      >
+        soon!
+      </span>
+    </h1>
+    <h2>
+      You have securely signed out.
+    </h2>
+  </header>
+  <div
+    class="flex flex-col gap-6 bg-card text-card-foreground shadow-sm w-full items-center justify-center rounded-md p-6 lg:p-12"
+    data-slot="card"
+    data-testid="logout-image-card"
+  >
+    <img
+      alt="Pubky tag"
+      data-testid="next-image"
+      height="192"
+      src="/images/tag.webp"
+      width="192"
+    />
+  </div>
+</div>
+`;

@@ -88,6 +88,9 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       postIds,
       loading,
       hasMore,
+      emptyState,
+      trailingSlot,
+      showEndMessage,
     }: {
       postIds: string[];
       loading: boolean;
@@ -96,11 +99,20 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       hasMore: boolean;
       loadMore: () => void;
       tagsLayout: string;
+      emptyState?: ReactNode;
+      trailingSlot?: ReactNode;
+      showEndMessage?: boolean;
     }) => (
-      <div data-testid="timeline-posts">
+      <div
+        data-testid="timeline-posts"
+        data-has-trailing-slot={trailingSlot ? 'true' : undefined}
+        data-show-end-message={showEndMessage === undefined ? undefined : String(showEndMessage)}
+      >
         <span data-testid="post-count">{postIds.length}</span>
         <span data-testid="loading">{loading.toString()}</span>
         <span data-testid="has-more">{hasMore.toString()}</span>
+        {postIds.length === 0 ? emptyState : null}
+        {trailingSlot}
       </div>
     ),
   };
@@ -149,6 +161,13 @@ const visualGridLayoutResolution: FeedLayoutResolution = {
   effectiveLayout: LAYOUT.VISUAL,
   isVisualRequested: true,
   isVisualActive: true,
+};
+
+const listLayoutResolution: FeedLayoutResolution = {
+  ...gridLayoutResolution,
+  requestedLayout: LAYOUT.LIST,
+  effectiveLayout: LAYOUT.LIST,
+  isGridActive: false,
 };
 
 const mockLoadMore = vi.fn();
@@ -655,19 +674,42 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
   });
 
-  it('forwards gridTrailingSlot to the grid renderer', () => {
+  it('forwards trailingSlot to the grid renderer', () => {
     render(
       <TimelineFeedWithStream
         streamId={COLLECTION_STREAM_ID}
         variant={TIMELINE_FEED_VARIANT.COLLECTION}
         tagsLayout="inline"
         layoutResolution={gridLayoutResolution}
-        gridTrailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
+        trailingSlot={<div data-testid="grid-trailing-slot">Add content</div>}
       />,
     );
 
     expect(screen.getByTestId('timeline-grid-posts')).toHaveAttribute('data-has-trailing-slot', 'true');
     expect(screen.getByTestId('grid-trailing-slot')).toBeInTheDocument();
+  });
+
+  it('forwards the custom empty state and trailing slot to the List renderer', () => {
+    mockUseStreamPagination.mockReturnValue({
+      ...defaultPaginationResult,
+      postIds: [],
+    });
+
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="list"
+        layoutResolution={listLayoutResolution}
+        emptyState={<div data-testid="custom-list-empty">Collection is empty</div>}
+        trailingSlot={<div data-testid="list-trailing-slot">Add content</div>}
+      />,
+    );
+
+    expect(screen.getByTestId('custom-list-empty')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-show-end-message', 'false');
+    expect(screen.getByTestId('list-trailing-slot')).toBeInTheDocument();
   });
 
   it('renders the bookmarks variant in the grid and suppresses the end-of-feed message', () => {

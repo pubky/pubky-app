@@ -192,6 +192,15 @@ describe('DialogAddContent', () => {
     expect(screen.getByRole('button', { name: 'collections.single.addContent' })).toBeDisabled();
   });
 
+  it('renders a compact full-width Add Content row when triggerVariant is list', () => {
+    render(<DialogAddContent triggerVariant="list" dataCy="collection-add-content-list" />);
+
+    const trigger = screen.getByRole('button', { name: 'collections.single.addContent' });
+    expect(trigger).toHaveAttribute('data-cy', 'collection-add-content-list');
+    expect(trigger).toHaveClass('h-16', 'w-full');
+    expect(trigger).not.toHaveClass('h-full');
+  });
+
   it('opens the desktop dialog with feed, URL, and create-post options', () => {
     render(<DialogAddContent />);
 
@@ -408,6 +417,12 @@ describe('DialogAddContent - Snapshots', () => {
 
   it('matches the closed grid trigger snapshot', () => {
     const { container } = render(<DialogAddContent triggerVariant="grid" />);
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches the closed list trigger snapshot', () => {
+    const { container } = render(<DialogAddContent triggerVariant="list" />);
 
     expect(container.firstChild).toMatchSnapshot();
   });

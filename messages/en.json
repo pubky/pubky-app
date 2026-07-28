@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}d",
     "weeksShort": "{count}w",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}Y"
   },
   "landing": {
     "title": "<highlight>Unlock</highlight> the web.",
@@ -258,8 +259,8 @@
       "enterInviteCode": "Enter invite code"
     },
     "phone": {
-      "title": "Proof of <highlight>Phone.</highlight>",
-      "subtitle": "We will send you a verification code via SMS to your phone number.",
+      "title": "Enter <highlight>Phone.</highlight>",
+      "subtitle": "We will send you a verification code.",
       "sendCode": "Send Code",
       "phoneNumber": "Phone number",
       "phoneHint": "Enter your phone number, including country code (e.g. +1 for US).",
@@ -282,6 +283,7 @@
       "subtitle": "We sent a 6-digit verification code to {phoneNumber}.",
       "label": "Verification code",
       "hint": "Enter the code you received on {phoneNumber}.",
+      "hintChannels": "It was likely sent by SMS, WhatsApp, or Telegram.",
       "resend": "Resend Code",
       "resendTimer": "Resend Code ({seconds}s)",
       "verify": "Verify Code",
@@ -309,9 +311,9 @@
       "copyFailed": "Could not copy invoice."
     },
     "inviteCode": {
-      "title": "Prove you're <highlight>not a Robot.</highlight>",
-      "subtitle": "SMS or payment verification not available. Ask us for an invite code.",
-      "label": "Invite code for homeserver",
+      "title": "Use\u00a0<highlight>Invite.</highlight>",
+      "subtitle": "Phone or payment verification not available? Ask us for an invite code.",
+      "label": "Enter invite code",
       "hint": "You get 1GB of storage, used for your posts, photos, videos, and your profile.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "Custom homeserver",
@@ -357,7 +359,7 @@
     },
     "signIn": {
       "title": "Sign in to <highlight>Pubky.</highlight>",
-      "subtitle": "Authorize with Pubky Ring to sign in.",
+      "subtitle": "Authorize with <highlight>Pubky Ring</highlight> to sign in.",
       "progressTitle": "Signing in.",
       "progressSubtitle": "Please wait while your Pubky experience loads.",
       "generating": "Generating QR Code...",
@@ -1354,6 +1356,9 @@
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "What will people find here?",
       "backgroundLabel": "Background",
+      "layoutLabel": "Layout",
+      "layoutGrid": "Grid",
+      "layoutList": "List",
       "addImage": "Add image",
       "removeImage": "Remove image",
       "coverImageInvalid": "Cover image must be an image file.",
@@ -1376,6 +1381,7 @@
     "edit": {
       "title": "Edit Collection",
       "save": "Save changes",
+      "defaultLayoutLabel": "Default layout",
       "updated": "Collection updated",
       "updateFailed": "Failed to update collection."
     },
@@ -1416,6 +1422,9 @@
       "unfollow": "Unfollow",
       "content": "Add Post",
       "addContent": "Add Post",
+      "layout": "Layout",
+      "layoutGrid": "Grid",
+      "layoutList": "List",
       "empty": "This collection is empty.",
       "notFound": {
         "title": "Collection Not Found",

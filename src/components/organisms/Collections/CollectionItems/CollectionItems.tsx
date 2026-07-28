@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { COLLECTION_LAYOUT, type CollectionLayout, DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { buildCompositeId } from '@/models/models.utils';
@@ -9,6 +11,7 @@ import { CollectionItemsEmpty } from '@/organisms/Collections/CollectionItemsEmp
 import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { LAYOUT } from '@/stores/home/home.types';
 import type { CollectionItemsProps } from './CollectionItems.types';
 
 /**
@@ -31,15 +34,37 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
 
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
 
-  const hero = <CollectionHero authorPubky={authorPubky} postId={postId} postDetails={postDetails} />;
-
   // Not-found / deleted collections are gated out upstream by the `Collection`
   // template (which renders `CollectionNotFound` instead), so by the time this
   // renders `postDetails` is a resolved collection envelope. The `null` branch
   // here stays as a defensive fall-through to the feed's own empty/error state.
   const collection = postDetails ? parseCollectionContent(postDetails.content) : null;
+  const creatorLayout = collection?.layout ?? DEFAULT_COLLECTION_LAYOUT;
+  const [viewerLayoutOverride, setViewerLayoutOverride] = useState<CollectionLayout | null>(null);
+  const viewerLayout = viewerLayoutOverride ?? creatorLayout;
+
+  const hero = (
+    <CollectionHero
+      authorPubky={authorPubky}
+      postId={postId}
+      postDetails={postDetails}
+      layout={viewerLayout}
+      onLayoutChange={setViewerLayoutOverride}
+    />
+  );
+
+  if (postDetails === undefined) {
+    return (
+      <Container overrideDefaults className="w-full">
+        {hero}
+      </Container>
+    );
+  }
+
   const isConfirmedEmpty = postDetails != null && (collection?.items?.length ?? 0) === 0;
   const emptyState = <CollectionItemsEmpty />;
+  const isListLayout = viewerLayout === COLLECTION_LAYOUT.LIST;
+  const requestedLayout = isListLayout ? LAYOUT.LIST : LAYOUT.COLUMNS;
 
   if (!isOwn && isConfirmedEmpty) {
     // gap-6 mirrors the hero → grid/empty spacing the feed-driven paths get from
@@ -56,14 +81,15 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
   return (
     <TimelineFeed
       variant={TIMELINE_FEED_VARIANT.COLLECTION}
+      requestedLayout={requestedLayout}
       emptyState={emptyState}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
-      gridTrailingSlot={
+      trailingSlot={
         isOwn ? (
           <DialogAddContent
-            triggerVariant="grid"
+            triggerVariant={isListLayout ? 'list' : 'grid'}
             target={{ type: 'collection', collectionId: compositeId }}
-            dataCy="collection-add-content-grid"
+            dataCy={isListLayout ? 'collection-add-content-list' : 'collection-add-content-grid'}
           />
         ) : undefined
       }

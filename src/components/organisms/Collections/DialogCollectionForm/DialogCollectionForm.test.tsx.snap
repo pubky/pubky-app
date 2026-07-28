@@ -122,6 +122,136 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
           <label
             class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
             data-slot="label"
+            id="collection-layout-label"
+          >
+            Layout
+          </label>
+          <div
+            aria-labelledby="collection-layout-label"
+            class="flex w-full border-b border-border"
+            data-testid="container"
+            role="radiogroup"
+          >
+            <button
+              aria-checked="true"
+              aria-label="collections.new.layoutGrid"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-foreground text-foreground"
+              data-cy="collection-layout-grid"
+              data-slot="button"
+              data-variant="ghost"
+              role="radio"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-grip size-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="5"
+                  r="1"
+                />
+                <circle
+                  cx="19"
+                  cy="5"
+                  r="1"
+                />
+                <circle
+                  cx="5"
+                  cy="5"
+                  r="1"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="1"
+                />
+                <circle
+                  cx="19"
+                  cy="12"
+                  r="1"
+                />
+                <circle
+                  cx="5"
+                  cy="12"
+                  r="1"
+                />
+                <circle
+                  cx="12"
+                  cy="19"
+                  r="1"
+                />
+                <circle
+                  cx="19"
+                  cy="19"
+                  r="1"
+                />
+                <circle
+                  cx="5"
+                  cy="19"
+                  r="1"
+                />
+              </svg>
+            </button>
+            <button
+              aria-checked="false"
+              aria-label="collections.new.layoutList"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
+              data-cy="collection-layout-list"
+              data-slot="button"
+              data-variant="ghost"
+              role="radio"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-rows4 lucide-rows-4 size-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M21 7.5H3"
+                />
+                <path
+                  d="M21 12H3"
+                />
+                <path
+                  d="M21 16.5H3"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div
+          class="flex flex-col gap-2"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            data-slot="label"
             for="test-collection-cover-image"
           >
             collections.new.backgroundLabel
@@ -364,6 +494,138 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
               type="text"
               value=""
             />
+          </div>
+        </div>
+        <div
+          class="flex flex-col gap-2"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            data-slot="label"
+            id="collection-layout-label"
+          >
+            Layout
+          </label>
+          <div
+            aria-labelledby="collection-layout-label"
+            class="flex w-full border-b border-border"
+            data-testid="container"
+            role="radiogroup"
+          >
+            <button
+              aria-checked="true"
+              aria-label="collections.new.layoutGrid"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-foreground text-foreground"
+              data-cy="collection-layout-grid"
+              data-slot="button"
+              data-variant="ghost"
+              disabled=""
+              role="radio"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-grip size-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="5"
+                  r="1"
+                />
+                <circle
+                  cx="19"
+                  cy="5"
+                  r="1"
+                />
+                <circle
+                  cx="5"
+                  cy="5"
+                  r="1"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="1"
+                />
+                <circle
+                  cx="19"
+                  cy="12"
+                  r="1"
+                />
+                <circle
+                  cx="5"
+                  cy="12"
+                  r="1"
+                />
+                <circle
+                  cx="12"
+                  cy="19"
+                  r="1"
+                />
+                <circle
+                  cx="19"
+                  cy="19"
+                  r="1"
+                />
+                <circle
+                  cx="5"
+                  cy="19"
+                  r="1"
+                />
+              </svg>
+            </button>
+            <button
+              aria-checked="false"
+              aria-label="collections.new.layoutList"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
+              data-cy="collection-layout-list"
+              data-slot="button"
+              data-variant="ghost"
+              disabled=""
+              role="radio"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-rows4 lucide-rows-4 size-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M21 7.5H3"
+                />
+                <path
+                  d="M21 12H3"
+                />
+                <path
+                  d="M21 16.5H3"
+                />
+              </svg>
+            </button>
           </div>
         </div>
         <div
@@ -616,6 +878,136 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
               type="text"
               value=""
             />
+          </div>
+        </div>
+        <div
+          class="flex flex-col gap-2"
+          data-testid="container"
+        >
+          <label
+            class="flex items-center gap-2 select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+            data-slot="label"
+            id="collection-layout-label"
+          >
+            Layout
+          </label>
+          <div
+            aria-labelledby="collection-layout-label"
+            class="flex w-full border-b border-border"
+            data-testid="container"
+            role="radiogroup"
+          >
+            <button
+              aria-checked="true"
+              aria-label="collections.new.layoutGrid"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-foreground text-foreground"
+              data-cy="collection-layout-grid"
+              data-slot="button"
+              data-variant="ghost"
+              role="radio"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-grip size-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="5"
+                  r="1"
+                />
+                <circle
+                  cx="19"
+                  cy="5"
+                  r="1"
+                />
+                <circle
+                  cx="5"
+                  cy="5"
+                  r="1"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="1"
+                />
+                <circle
+                  cx="19"
+                  cy="12"
+                  r="1"
+                />
+                <circle
+                  cx="5"
+                  cy="12"
+                  r="1"
+                />
+                <circle
+                  cx="12"
+                  cy="19"
+                  r="1"
+                />
+                <circle
+                  cx="19"
+                  cy="19"
+                  r="1"
+                />
+                <circle
+                  cx="5"
+                  cy="19"
+                  r="1"
+                />
+              </svg>
+            </button>
+            <button
+              aria-checked="false"
+              aria-label="collections.new.layoutList"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
+              data-cy="collection-layout-list"
+              data-slot="button"
+              data-variant="ghost"
+              role="radio"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-rows4 lucide-rows-4 size-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="18"
+                  rx="2"
+                  width="18"
+                  x="3"
+                  y="3"
+                />
+                <path
+                  d="M21 7.5H3"
+                />
+                <path
+                  d="M21 12H3"
+                />
+                <path
+                  d="M21 16.5H3"
+                />
+              </svg>
+            </button>
           </div>
         </div>
         <div

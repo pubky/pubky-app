@@ -5,7 +5,8 @@
     "hoursShort": "{count}س",
     "daysShort": "{count}ي",
     "weeksShort": "{count}أ",
-    "monthsShort": "{count}ش"
+    "monthsShort": "{count}ش",
+    "yearsShort": "{count}ع"
   },
   "landing": {
     "title": "<highlight>افتح</highlight> الويب.",
@@ -260,8 +261,8 @@
       "enterInviteCode": "ادخل رمز الدعوة"
     },
     "phone": {
-      "title": "اثبات <highlight>الهاتف.</highlight>",
-      "subtitle": "سنرسل لك رمز تحقق عبر الرسائل القصيرة الى رقم هاتفك.",
+      "title": "ادخل <highlight>الهاتف.</highlight>",
+      "subtitle": "سنرسل لك رمز تحقق.",
       "sendCode": "ارسال الرمز",
       "phoneNumber": "رقم الهاتف",
       "phoneHint": "ادخل رقم هاتفك مع رمز الدولة (مثلا +966 للسعودية).",
@@ -284,6 +285,7 @@
       "subtitle": "ارسلنا رمز تحقق مكون من 6 ارقام الى {phoneNumber}.",
       "label": "رمز التحقق",
       "hint": "ادخل الرمز الذي تلقيته على {phoneNumber}.",
+      "hintChannels": "من المحتمل أنه أُرسل عبر الرسائل القصيرة أو واتساب أو تيليجرام.",
       "resend": "اعادة ارسال الرمز",
       "resendTimer": "اعادة ارسال الرمز ({seconds}ث)",
       "verify": "تحقق من الرمز",
@@ -311,9 +313,9 @@
       "copyFailed": "تعذر نسخ الفاتورة."
     },
     "inviteCode": {
-      "title": "اثبت انك <highlight>لست روبوتا.</highlight>",
-      "subtitle": "التحقق عبر الرسائل القصيرة او الدفع غير متاح. اطلب منا رمز دعوة.",
-      "label": "رمز دعوة للخادم الرئيسي",
+      "title": "استخدم <highlight>دعوة.</highlight>",
+      "subtitle": "التحقق عبر الهاتف او الدفع غير متاح؟ اطلب منا رمز دعوة.",
+      "label": "ادخل رمز الدعوة",
       "hint": "ستحصل على 1 جيجابايت من التخزين لمنشوراتك وصورك ومقاطع الفيديو وملفك الشخصي.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "خادم رئيسي مخصص",
@@ -359,7 +361,7 @@
     },
     "signIn": {
       "title": "تسجيل الدخول الى <highlight>Pubky.</highlight>",
-      "subtitle": "قم بالتفويض باستخدام Pubky Ring لتسجيل الدخول.",
+      "subtitle": "قم بالتفويض باستخدام <highlight>Pubky Ring</highlight> لتسجيل الدخول.",
       "progressTitle": "جارٍ تسجيل الدخول.",
       "progressSubtitle": "يرجى الانتظار بينما يتم تحميل تجربتك على Pubky.",
       "generating": "جاري انشاء رمز QR...",
@@ -1350,6 +1352,9 @@
       "descriptionLabel": "الوصف",
       "descriptionPlaceholder": "ماذا سيجد الناس هنا؟",
       "backgroundLabel": "الخلفية",
+      "layoutLabel": "التخطيط",
+      "layoutGrid": "شبكة",
+      "layoutList": "قائمة",
       "addImage": "إضافة صورة",
       "removeImage": "إزالة الصورة",
       "coverImageInvalid": "يجب أن تكون صورة الغلاف ملف صورة.",
@@ -1372,6 +1377,7 @@
     "edit": {
       "title": "تعديل المجموعة",
       "save": "حفظ التغييرات",
+      "defaultLayoutLabel": "التخطيط الافتراضي",
       "updated": "تم تحديث المجموعة",
       "updateFailed": "فشل تحديث المجموعة."
     },
@@ -1412,6 +1418,9 @@
       "unfollow": "إلغاء المتابعة",
       "content": "إضافة منشور",
       "addContent": "إضافة منشور",
+      "layout": "التخطيط",
+      "layoutGrid": "شبكة",
+      "layoutList": "قائمة",
       "empty": "هذه المجموعة فارغة.",
       "notFound": {
         "title": "المجموعة غير موجودة",

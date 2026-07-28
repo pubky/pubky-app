@@ -1,9 +1,26 @@
+import type { PubkyAppCollectionLayout } from 'pubky-app-specs';
+
 /**
  * Collections feature configuration.
  *
  * Section page sizes / avatar caps for the `/collections` landing and the
  * `/collections/[id]` bottom sections.
  */
+
+// Intentionally whitelist layouts implemented by this UI so future specs
+// layouts remain unsupported until their rendering and controls are added.
+export type CollectionLayout = Extract<PubkyAppCollectionLayout, 'grid' | 'list'>;
+
+export const COLLECTION_LAYOUT: Record<'GRID' | 'LIST', CollectionLayout> = {
+  GRID: 'grid',
+  LIST: 'list',
+};
+
+export const DEFAULT_COLLECTION_LAYOUT: CollectionLayout = COLLECTION_LAYOUT.GRID;
+
+export function isCollectionLayout(value: unknown): value is CollectionLayout {
+  return value === COLLECTION_LAYOUT.GRID || value === COLLECTION_LAYOUT.LIST;
+}
 
 /** Page size for each of the three sections (My / Followed / Discover). */
 export const COLLECTIONS_SECTION_PAGE_SIZE = 20;

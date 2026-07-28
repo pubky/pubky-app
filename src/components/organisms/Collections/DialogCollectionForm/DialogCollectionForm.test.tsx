@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
 import { describe, expect, it, vi } from 'vitest';
+import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
 import type { UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useCoverImagePicker';
 import type { CreateCollectionFormData } from '@/hooks/useCreateCollection/useCreateCollection.types';
 import { DialogCollectionForm } from './DialogCollectionForm';
@@ -15,11 +16,13 @@ const COVER_INPUT_ID = 'test-collection-cover-image';
 type Overrides = Partial<{
   title: string;
   submitLabel: string;
+  layoutLabel: string;
   isSaving: boolean;
   isLoading: boolean;
   disableOpenAutoFocus: boolean;
   initialName: string;
   initialDescription: string;
+  initialLayout: CollectionLayout;
   coverPreviewUrl: string | null;
   coverError: 'invalid-type' | 'too-large' | null;
   onSubmit: () => void | Promise<void>;
@@ -36,11 +39,13 @@ type Overrides = Partial<{
 function Harness({
   title = 'Test Title',
   submitLabel = 'Save',
+  layoutLabel = 'Layout',
   isSaving = false,
   isLoading = false,
   disableOpenAutoFocus,
   initialName = '',
   initialDescription = '',
+  initialLayout = COLLECTION_LAYOUT.GRID,
   coverPreviewUrl = null,
   coverError = null,
   onSubmit = () => {},
@@ -51,7 +56,7 @@ function Harness({
   const [open, setOpen] = useState(true);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const form = useForm<CreateCollectionFormData>({
-    defaultValues: { name: initialName, description: initialDescription },
+    defaultValues: { name: initialName, description: initialDescription, layout: initialLayout },
     mode: 'onChange',
   });
   const cover: UseCoverImagePickerResult = {
@@ -77,6 +82,7 @@ function Harness({
       onOpenChange={handleOpenChange}
       title={title}
       submitLabel={submitLabel}
+      layoutLabel={layoutLabel}
       form={form}
       cover={cover}
       onSubmit={onSubmit}
@@ -94,6 +100,29 @@ describe('DialogCollectionForm', () => {
 
     expect(screen.getByRole('heading', { name: 'Edit Collection' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+  });
+
+  it('defaults to Grid and lets the creator select List', () => {
+    render(<Harness layoutLabel="Default layout" />);
+
+    const grid = screen.getByRole('radio', { name: 'collections.new.layoutGrid' });
+    const list = screen.getByRole('radio', { name: 'collections.new.layoutList' });
+    const layoutLabel = screen.getByText('Default layout');
+    const backgroundLabel = screen.getByText('collections.new.backgroundLabel');
+
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
+    expect(grid).toHaveAttribute('aria-checked', 'true');
+    expect(list).toHaveAttribute('aria-checked', 'false');
+    expect(list.querySelector('.lucide-rows-4')).toBeInTheDocument();
+    expect(layoutLabel.compareDocumentPosition(backgroundLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(grid).toHaveClass('!border-x-0', '!border-t-0', '!border-b');
+    expect(layoutLabel).not.toHaveClass('-mb-2');
+    expect(layoutLabel.parentElement).toHaveClass('gap-2');
+
+    fireEvent.click(list);
+
+    expect(grid).toHaveAttribute('aria-checked', 'false');
+    expect(list).toHaveAttribute('aria-checked', 'true');
   });
 
   it('disables the save button while the name is empty', () => {

@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
@@ -17,6 +18,9 @@ interface TimelinePostsProps {
   error: string | null;
   hasMore: boolean;
   loadMore: () => Promise<void>;
+  emptyState?: ReactNode;
+  trailingSlot?: ReactNode;
+  showEndMessage?: boolean;
 }
 
 /**
@@ -28,7 +32,17 @@ interface TimelinePostsProps {
  * The surface (TimelineFeedContent) wraps this in PostMainLayoutProvider so each
  * PostMain / nested reply inherits the active tags layout via context.
  */
-export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, loadMore }: TimelinePostsProps) {
+export function TimelinePosts({
+  postIds,
+  loading,
+  loadingMore,
+  error,
+  hasMore,
+  loadMore,
+  emptyState,
+  trailingSlot,
+  showEndMessage = true,
+}: TimelinePostsProps) {
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
@@ -39,10 +53,17 @@ export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, l
 
   const { handlePostKeyDown } = usePostNavigation();
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
+  const hasListContent = postIds.length > 0 || trailingSlot != null;
+  const showEmptyMessageWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
 
   return (
-    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
-      <Container data-cy="timeline-container">
+    <TimelineStateWrapper loading={loading} error={error} hasItems={hasListContent} emptyComponent={emptyState}>
+      <Container
+        data-cy="timeline-container"
+        overrideDefaults={showEmptyMessageWithTrailingSlot}
+        className={showEmptyMessageWithTrailingSlot ? 'flex w-full flex-col gap-6' : undefined}
+      >
+        {showEmptyMessageWithTrailingSlot ? emptyState : null}
         <Container
           data-cy="timeline-posts"
           overrideDefaults
@@ -61,11 +82,13 @@ export function TimelinePosts({ postIds, loading, loadingMore, error, hasMore, l
             />
           ))}
 
+          {trailingSlot}
+
           {loadingMore && <TimelineLoadingMore />}
 
           {error && postIds.length > 0 && <TimelineError message={error} />}
 
-          {!hasMore && !loadingMore && postIds.length > 0 && <TimelineEndMessage />}
+          {showEndMessage && !hasMore && !loadingMore && postIds.length > 0 && <TimelineEndMessage />}
 
           <Container overrideDefaults className="h-5" ref={sentinelRef} />
         </Container>

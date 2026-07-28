@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { COLLECTION_LAYOUT } from '@/config/collections';
 import {
   COLLECTION_CONTENT_MAX_LENGTH,
   COLLECTION_ITEM_URI_MAX_LENGTH,
@@ -16,6 +17,7 @@ describe('CollectionPostContent', () => {
         description: 'Best stuff',
         items: [],
         cover_image: undefined,
+        layout: COLLECTION_LAYOUT.GRID,
       });
     });
 
@@ -96,6 +98,7 @@ describe('CollectionPostContent', () => {
         description: '',
         items: [VALID_ITEM_URI, 'https://example.com/post'],
         cover_image: undefined,
+        layout: COLLECTION_LAYOUT.GRID,
       });
     });
 
@@ -137,6 +140,7 @@ describe('CollectionPostContent', () => {
         description: 'Bitcoin writing',
         items: [VALID_ITEM_URI],
         cover_image: undefined,
+        layout: COLLECTION_LAYOUT.GRID,
       });
     });
 
@@ -156,6 +160,7 @@ describe('CollectionPostContent', () => {
         description: '',
         items: [],
         cover_image: 'https://cdn.example.com/cover.png',
+        layout: COLLECTION_LAYOUT.GRID,
       });
     });
 
@@ -167,6 +172,7 @@ describe('CollectionPostContent', () => {
         description: '',
         items: [],
         cover_image: undefined,
+        layout: COLLECTION_LAYOUT.GRID,
       });
     });
 
@@ -185,7 +191,21 @@ describe('CollectionPostContent', () => {
         description: '',
         items: [VALID_ITEM_URI],
         cover_image: undefined,
+        layout: COLLECTION_LAYOUT.GRID,
       });
+    });
+
+    it('round-trips List and falls back to Grid for missing or unknown layouts', () => {
+      const listJson = CollectionPostContent.toJson({
+        name: 'Reading',
+        layout: COLLECTION_LAYOUT.LIST,
+      });
+
+      expect(CollectionPostContent.parse(listJson)?.layout).toBe(COLLECTION_LAYOUT.LIST);
+      expect(CollectionPostContent.parse(JSON.stringify({ name: 'Legacy' }))?.layout).toBe(COLLECTION_LAYOUT.GRID);
+      expect(CollectionPostContent.parse(JSON.stringify({ name: 'Future', layout: 'spiral' }))?.layout).toBe(
+        COLLECTION_LAYOUT.GRID,
+      );
     });
 
     it('returns null for malformed envelopes', () => {

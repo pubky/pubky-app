@@ -73,12 +73,14 @@ export function useCreateCollection(): UseCreateCollectionResult {
     await form.handleSubmit(async (data) => {
       const name = data[CREATE_COLLECTION_FORM_FIELDS.NAME];
       const description = data[CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION];
+      const layout = data[CREATE_COLLECTION_FORM_FIELDS.LAYOUT];
       try {
         const compositeId = await PostController.commitCreateCollection({
           authorId: currentUserPubky,
           name,
           description,
           coverImage: cover.file,
+          layout,
         });
         // Mirror the post-attachment pattern: stash a blob URL so the cover
         // renders instantly while the homeserver / CDN catch up.

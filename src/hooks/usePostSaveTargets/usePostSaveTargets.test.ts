@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { COLLECTION_LAYOUT } from '@/config/collections';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -158,6 +159,7 @@ describe('usePostSaveTargets', () => {
       authorId: 'current-user',
       name: 'New collection',
       items: ['pubky://author/pub/pubky.app/posts/post1'],
+      layout: COLLECTION_LAYOUT.GRID,
     });
   });
 });
