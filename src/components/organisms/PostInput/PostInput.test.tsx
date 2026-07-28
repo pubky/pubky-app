@@ -960,7 +960,7 @@ describe('PostInput', () => {
       );
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
       expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'normal');
       expect(screen.getByTestId('textarea')).not.toHaveAttribute('data-class-name');
