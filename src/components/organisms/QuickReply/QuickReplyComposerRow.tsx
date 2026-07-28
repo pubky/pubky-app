@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
@@ -25,8 +24,6 @@ interface QuickReplyComposerRowProps extends Pick<
   | 'onMentionHover'
 > {
   textareaClassName?: string;
-  /** Optional content rendered at the end of the row */
-  trailing?: React.ReactNode;
 }
 
 /** Textarea (+ mention popover) row shared by every QuickReply layout. */
@@ -46,41 +43,36 @@ export function QuickReplyComposerRow({
   mentionSelectedIndex,
   onMentionSelect,
   onMentionHover,
-  trailing,
 }: QuickReplyComposerRowProps) {
   return (
-    <Container className="flex items-center gap-4" overrideDefaults>
-      <Container overrideDefaults className="relative flex-1">
-        <Textarea
-          ref={textareaRef}
-          aria-label="Reply"
-          placeholder={displayPlaceholder}
-          variant="inline"
-          className={textareaClassName}
-          value={content}
-          onChange={onChange}
-          onFocus={onFocus}
-          onKeyDown={onKeyDown}
-          onPaste={onPaste}
-          maxLength={POST_MAX_CHARACTER_LENGTH}
-          rows={1}
-          disabled={isSubmitting}
-          readOnly={!isAuthenticated}
-          data-testid="quick-reply-textarea"
-          aria-haspopup="listbox"
+    <Container overrideDefaults className="relative">
+      <Textarea
+        ref={textareaRef}
+        aria-label="Reply"
+        placeholder={displayPlaceholder}
+        variant="inline"
+        className={textareaClassName}
+        value={content}
+        onChange={onChange}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        onPaste={onPaste}
+        maxLength={POST_MAX_CHARACTER_LENGTH}
+        rows={1}
+        disabled={isSubmitting}
+        readOnly={!isAuthenticated}
+        data-testid="quick-reply-textarea"
+        aria-haspopup="listbox"
+      />
+
+      {mentionIsOpen && (
+        <MentionPopover
+          users={mentionUsers}
+          selectedIndex={mentionSelectedIndex}
+          onSelect={onMentionSelect}
+          onHover={onMentionHover}
         />
-
-        {mentionIsOpen && (
-          <MentionPopover
-            users={mentionUsers}
-            selectedIndex={mentionSelectedIndex}
-            onSelect={onMentionSelect}
-            onHover={onMentionHover}
-          />
-        )}
-      </Container>
-
-      {trailing}
+      )}
     </Container>
   );
 }

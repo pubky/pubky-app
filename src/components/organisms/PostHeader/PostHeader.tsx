@@ -26,14 +26,17 @@ export function PostHeader({
   const { postDetails } = usePostDetails(isReplyInput ? null : postId);
 
   // Fetch user details for avatar and name
-  const { userDetails } = useUserDetails(userId);
+  const { userDetails, isLoading: isLoadingUserDetails } = useUserDetails(userId);
 
   // Compute avatar URL from user details (only if the user has an image)
   const avatarUrl = useAvatarUrl(userDetails);
 
   const { formatRelativeTime } = useRelativeTime();
 
-  const isLoading = !userDetails || (!isReplyInput && !postDetails);
+  // once the query settles we render regardless of whether it found a
+  // profile — a missed local read + failed Nexus fetch must not hide the avatar,
+  // pubky and character counter behind a permanent skeleton.
+  const isLoading = isLoadingUserDetails || (!isReplyInput && !postDetails);
 
   if (isLoading) {
     return <PostHeaderSkeleton />;
@@ -50,7 +53,7 @@ export function PostHeader({
       <div className="w-full max-w-full min-w-0">
         <PostHeaderUserInfo
           userId={userId}
-          userName={userDetails.name || ''}
+          userName={userDetails?.name || ''}
           avatarUrl={avatarUrl}
           showPopover={showPopover}
           size={size}

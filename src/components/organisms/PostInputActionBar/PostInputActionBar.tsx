@@ -9,6 +9,8 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { cn } from '@/libs/utils/utils';
 import type { PostInputActionBarProps } from './PostInputActionBar.types';
 
+const COMMON_BUTTON_PROPS = { variant: 'secondary', size: 'sm' } as const;
+
 interface ActionButtonContentProps {
   Icon: React.ComponentType<{
     className?: string;
@@ -34,13 +36,6 @@ export function PostInputActionBar({
   isEdit,
 }: PostInputActionBarProps) {
   const isMobile = useIsMobile();
-  const commonButtonProps = React.useMemo(
-    () => ({
-      variant: 'secondary' as const,
-      size: 'sm' as const,
-    }),
-    [],
-  );
   const getButtonDataCy = (ariaLabel: string) => `post-input-action-bar-${ariaLabel.toLowerCase().replace(' ', '-')}`;
   const PostButtonIconComponent = isSubmitting ? Loader2 : (postButtonIcon ?? Send);
   const postButtonAriaText = isSubmitting ? 'Posting...' : postButtonAriaLabel;
@@ -52,7 +47,7 @@ export function PostInputActionBar({
         {!isArticle ? (
           <Button
             data-cy={getButtonDataCy('Add emoji')}
-            {...commonButtonProps}
+            {...COMMON_BUTTON_PROPS}
             onClick={onEmojiClick}
             disabled={!onEmojiClick || isSubmitting}
             aria-label="Add emoji"
@@ -63,7 +58,7 @@ export function PostInputActionBar({
         {!isArticle && !isEdit ? (
           <Button
             data-cy={getButtonDataCy('Add image')}
-            {...commonButtonProps}
+            {...COMMON_BUTTON_PROPS}
             onClick={onImageClick}
             disabled={!onImageClick || isSubmitting}
             aria-label="Add image"
@@ -74,7 +69,7 @@ export function PostInputActionBar({
         {!hideArticleButton ? (
           <Button
             data-cy={getButtonDataCy('Add article')}
-            {...commonButtonProps}
+            {...COMMON_BUTTON_PROPS}
             onClick={onArticleClick}
             disabled={!onArticleClick || isSubmitting}
             aria-label="Add article"
@@ -86,7 +81,7 @@ export function PostInputActionBar({
       <Container className="flex shrink-0 items-center justify-end gap-2" overrideDefaults>
         <Button
           data-cy={getButtonDataCy(postButtonAriaText)}
-          {...commonButtonProps}
+          {...COMMON_BUTTON_PROPS}
           onClick={onPostClick}
           disabled={isPostDisabled || !onPostClick}
           aria-label={postButtonAriaText}

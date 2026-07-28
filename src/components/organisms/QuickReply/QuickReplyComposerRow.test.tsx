@@ -63,7 +63,6 @@ const createProps = (overrides: Partial<QuickReplyComposerRowProps> = {}): Quick
   mentionSelectedIndex: null,
   onMentionSelect: vi.fn(),
   onMentionHover: vi.fn(),
-  trailing: undefined,
   ...overrides,
 });
 
@@ -110,7 +109,7 @@ describe('QuickReplyComposerRow', () => {
     expect(onPaste).toHaveBeenCalledTimes(1);
   });
 
-  it('renders mention suggestions and trailing actions when provided', () => {
+  it('renders mention suggestions when the popover is open', () => {
     const onMentionSelect = vi.fn();
     const onMentionHover = vi.fn();
     render(
@@ -121,13 +120,11 @@ describe('QuickReplyComposerRow', () => {
           mentionSelectedIndex: 0,
           onMentionSelect,
           onMentionHover,
-          trailing: <button type="button">Reply</button>,
         })}
       />,
     );
 
     expect(screen.getByTestId('mention-popover')).toHaveAttribute('data-selected-index', '0');
-    expect(screen.getByRole('button', { name: 'Reply' })).toBeInTheDocument();
 
     fireEvent.mouseEnter(screen.getByTestId('mention-0'));
     fireEvent.click(screen.getByTestId('mention-0'));

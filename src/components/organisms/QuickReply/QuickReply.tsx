@@ -16,8 +16,7 @@ import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
-import { QuickReplyDefaultContent } from './QuickReplyDefaultContent';
-import { QuickReplyListContent } from './QuickReplyListContent';
+import { QuickReplyContent } from './QuickReplyContent';
 
 export function QuickReply({
   parentPostId,
@@ -113,7 +112,6 @@ export function QuickReply({
 
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
-  const isListLayout = effectiveTagsLayout === 'list';
   const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
 
   const contentProps: QuickReplyContentProps = {
@@ -179,11 +177,7 @@ export function QuickReply({
         )}
 
         <Container ref={cardRef} className={cn(isWideLayout ? '' : 'flex flex-col gap-4')} overrideDefaults>
-          {isListLayout ? (
-            <QuickReplyListContent {...contentProps} />
-          ) : (
-            <QuickReplyDefaultContent {...contentProps} isWideLayout={isWideLayout} />
-          )}
+          <QuickReplyContent {...contentProps} layout={effectiveTagsLayout} />
         </Container>
       </Container>
     </Container>

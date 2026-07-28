@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
+import type { PostHeaderProps } from '../PostHeader/PostHeader.types';
 
 export interface QuickReplyProps {
   parentPostId: string;
@@ -9,11 +10,6 @@ export interface QuickReplyProps {
   /** Callback when reply is successfully submitted */
   onReplySubmitted?: (replyId: string) => void;
 }
-
-export type QuickReplyCharacterLimit = {
-  count: number;
-  max: number;
-};
 
 /** Props shared by the layout-specific QuickReply content subcomponents. */
 export interface QuickReplyContentProps {
@@ -54,5 +50,5 @@ export interface QuickReplyContentProps {
   onEmojiSelect: (emoji: { native: string }) => void;
   onImageClick: () => void;
   isPostDisabled: boolean;
-  characterLimit?: QuickReplyCharacterLimit;
+  characterLimit?: PostHeaderProps['characterLimit'];
 }

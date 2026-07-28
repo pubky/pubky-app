@@ -31,23 +31,18 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
         data-testid="post-header"
       />
       <div
-        class="flex items-center gap-4"
+        class="relative"
         data-testid="container"
       >
-        <div
-          class="relative flex-1"
-          data-testid="container"
-        >
-          <textarea
-            aria-haspopup="listbox"
-            aria-label="Reply"
-            data-testid="quick-reply-textarea"
-            maxlength="2000"
-            placeholder="What are your thoughts on this?"
-            rows="1"
-            variant="inline"
-          />
-        </div>
+        <textarea
+          aria-haspopup="listbox"
+          aria-label="Reply"
+          data-testid="quick-reply-textarea"
+          maxlength="2000"
+          placeholder="What are your thoughts on this?"
+          rows="1"
+          variant="inline"
+        />
       </div>
       <div
         attachments=""
@@ -105,24 +100,19 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
         data-testid="post-header"
       />
       <div
-        class="flex items-center gap-4"
+        class="relative"
         data-testid="container"
       >
-        <div
-          class="relative flex-1"
-          data-testid="container"
-        >
-          <textarea
-            aria-haspopup="listbox"
-            aria-label="Reply"
-            class="text-xl leading-7"
-            data-testid="quick-reply-textarea"
-            maxlength="2000"
-            placeholder="What are your thoughts on this?"
-            rows="1"
-            variant="inline"
-          />
-        </div>
+        <textarea
+          aria-haspopup="listbox"
+          aria-label="Reply"
+          class="text-xl leading-7"
+          data-testid="quick-reply-textarea"
+          maxlength="2000"
+          placeholder="What are your thoughts on this?"
+          rows="1"
+          variant="inline"
+        />
       </div>
       <div
         attachments=""
