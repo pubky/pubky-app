@@ -131,18 +131,19 @@ describe('locks.utils', () => {
   });
 
   describe('initLockClient', () => {
-    it('applies every pkarr relay + the testnet homeserver, then builds the client for the configured server', () => {
+    it('applies every pkarr relay, then builds the client for the configured server', () => {
       const client = initLockClient();
 
       expect(mocks.addPkarrRelay).toHaveBeenCalledTimes(2);
-      expect(mocks.setLocalTestnetHomeserver).toHaveBeenCalledWith('homeservertestpubky');
       expect(mocks.forServerWithOptions).toHaveBeenCalledWith('lockserverpubky', expect.anything());
       expect(client).toBe(mocks.forServerWithOptions.mock.results[0]?.value);
     });
 
-    it('skips the testnet homeserver on mainnet', () => {
-      mocks.getTestnet.mockReturnValue(false);
+    // The SDK falls back to this homeserver whenever creator pkarr resolution fails, which hides
+    // resolution bugs on testnet until they reach a deployed environment.
+    it('never sets the testnet homeserver fallback', () => {
       initLockClient();
+
       expect(mocks.setLocalTestnetHomeserver).not.toHaveBeenCalled();
     });
   });

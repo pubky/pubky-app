@@ -143,7 +143,7 @@ describe('LocksService (auth)', () => {
     expect(url).toBe('https://connect.url/?delivery=postmessage');
     expect(mocks.forServerWithOptions).toHaveBeenCalledWith('lockserverpubky', expect.anything());
     expect(mocks.addPkarrRelay).toHaveBeenCalledWith('https://pkarr.example/inbox');
-    expect(mocks.setLocalTestnetHomeserver).toHaveBeenCalledWith('homeservertestpubky'); // testnet=true
+    expect(mocks.setLocalTestnetHomeserver).not.toHaveBeenCalled();
     expect(mocks.fakeLocks.createConnectUrl).toHaveBeenCalledWith(
       expect.objectContaining({ return_to: 'https://staging.pubky.app', state: 'opaque-state' }),
     );

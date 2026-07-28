@@ -1,5 +1,5 @@
 import { Locks, LocksOptions, type Session as LocksSdkSession } from '@pubky/locks-sdk';
-import { getHomeserver, getLockServer, getPkarrRelays, getTestnet } from '@/config/network';
+import { getLockServer, getPkarrRelays } from '@/config/network';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -84,14 +84,13 @@ export function getLockSession(): LocksSdkSession {
   return session;
 }
 
-/** The app's network options (pkarr relays, testnet homeserver) for any SDK entry point. */
+/**
+ * The app's network options (pkarr relays) for any SDK entry point.
+ */
 export function buildLocksOptions(): LocksOptions {
   const options = new LocksOptions();
   for (const relay of getPkarrRelays()) {
     options.addPkarrRelay(relay);
-  }
-  if (getTestnet()) {
-    options.setLocalTestnetHomeserver(getHomeserver());
   }
   return options;
 }
