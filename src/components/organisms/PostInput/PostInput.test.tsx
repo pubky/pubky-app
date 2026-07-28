@@ -913,7 +913,7 @@ describe('PostInput', () => {
       render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
 
       const postHeader = screen.getByTestId('post-header');
@@ -931,7 +931,7 @@ describe('PostInput', () => {
 
       const outerContainer = screen.getAllByTestId('container')[0];
       expect(outerContainer.className).toContain('p-12');
-      expect(outerContainer.className).not.toContain('p-4');
+      expect(outerContainer.className).not.toContain('p-6');
 
       const postHeader = screen.getByTestId('post-header');
       expect(postHeader).toHaveAttribute('data-size', 'large');
@@ -962,7 +962,7 @@ describe('PostInput', () => {
       );
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
 
       const postHeader = screen.getByTestId('post-header');
