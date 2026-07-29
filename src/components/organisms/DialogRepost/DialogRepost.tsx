@@ -39,6 +39,7 @@ export function DialogRepost({ postId, open, onOpenChangeAction, config }: Dialo
             showThreadConnector={false}
             expanded={true}
             onContentChange={handleContentChange}
+            layoutOverride="inline"
           />
         </Container>
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}

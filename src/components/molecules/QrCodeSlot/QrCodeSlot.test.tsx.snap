@@ -1,13 +1,33 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`QrCodeSlot - Snapshots > matches snapshot for a non-default size 1`] = `
+<div>
+  <svg
+    class=""
+    data-testid="qrcode-svg"
+    data-value="auth-url"
+    height="220"
+    width="220"
+  />
+  <img
+    alt="Pubky Ring"
+    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+    data-testid="next-image"
+    height="60"
+    src="/images/ring-logo.svg"
+    width="60"
+  />
+</div>
+`;
+
 exports[`QrCodeSlot - Snapshots > matches snapshot for active QR with hover effect 1`] = `
 <div>
   <svg
     class="transition-opacity group-hover:opacity-90 group-active:opacity-80"
     data-testid="qrcode-svg"
     data-value="auth-url"
-    height="220"
-    width="220"
+    height="176"
+    width="176"
   />
   <img
     alt="Pubky Ring"
@@ -26,8 +46,8 @@ exports[`QrCodeSlot - Snapshots > matches snapshot for active QR without hover e
     class=""
     data-testid="qrcode-svg"
     data-value="auth-url"
-    height="220"
-    width="220"
+    height="176"
+    width="176"
   />
   <img
     alt="Pubky Ring"
@@ -51,9 +71,9 @@ exports[`QrCodeSlot - Snapshots > matches snapshot for expired state with inline
       alt=""
       class="rounded-md transition-opacity group-hover:opacity-90 group-active:opacity-80"
       data-testid="next-image"
-      height="220"
+      height="176"
       src="/images/qr-blurred.png"
-      width="220"
+      width="176"
     />
     <span
       class="absolute top-1/2 right-0 -translate-y-1/2 bg-card py-2 pr-4 pl-7 text-sm font-bold whitespace-nowrap text-foreground [clip-path:polygon(0%_0%,100%_0%,100%_100%,16px_100%)]"
@@ -70,9 +90,9 @@ exports[`QrCodeSlot - Snapshots > matches snapshot for expired state without inl
     alt=""
     class="rounded-md transition-opacity group-hover:opacity-90 group-active:opacity-80"
     data-testid="next-image"
-    height="220"
+    height="176"
     src="/images/qr-blurred.png"
-    width="220"
+    width="176"
   />
   <span
     class="absolute top-1/2 right-0 -translate-y-1/2 bg-card py-2 pr-4 pl-7 text-sm font-bold whitespace-nowrap text-foreground [clip-path:polygon(0%_0%,100%_0%,100%_100%,16px_100%)]"

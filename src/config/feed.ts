@@ -18,14 +18,11 @@ export type TimelineFeedVariant = (typeof TIMELINE_FEED_VARIANT)[keyof typeof TI
  * Feed variants that render their posts in a fixed card grid rather than the
  * default vertical timeline (decision D5).
  *
- * Grid is intrinsic to the variant — not a user-selectable layout — so membership
- * lives here in feed-domain config rather than in the home store's `LAYOUT` enum.
- * `useFeedLayoutResolution` derives `isGridActive` from this set.
+ * Grid is intrinsic to these variants rather than user-selectable. Collection
+ * feeds are intentionally excluded because their creator default/viewer
+ * override chooses between Grid and List.
  */
-export const GRID_LAYOUT_VARIANTS = new Set<TimelineFeedVariant>([
-  TIMELINE_FEED_VARIANT.BOOKMARKS,
-  TIMELINE_FEED_VARIANT.COLLECTION,
-]);
+export const GRID_LAYOUT_VARIANTS = new Set<TimelineFeedVariant>([TIMELINE_FEED_VARIANT.BOOKMARKS]);
 
 /**
  * Feed variants where a repost may be optimistically prepended via the active

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
+import { COLLECTION_LAYOUT } from '@/config/collections';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
@@ -59,9 +60,15 @@ const mockDeleteState = vi.hoisted(() => ({
   deletePost: vi.fn().mockResolvedValue(undefined),
   isDeleting: false,
 }));
+const mockViewportState = vi.hoisted(() => ({
+  isMobile: false,
+}));
 const mockDeletePost = mockDeleteState.deletePost;
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: () => ({ deletePost: mockDeleteState.deletePost, isDeleting: mockDeleteState.isDeleting }),
+}));
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => mockViewportState.isMobile,
 }));
 
 vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
@@ -263,14 +270,16 @@ function setPostDetails(content: string | null, { isBlurred = false }: { isBlurr
 }
 
 function renderHero(overrides: Partial<CollectionHeroProps> = {}) {
-  return render(
-    <CollectionHero
-      authorPubky={AUTHOR_PUBKY}
-      postId={POST_ID}
-      postDetails={overrides.postDetails ?? currentPostDetails}
-      {...overrides}
-    />,
-  );
+  const props: CollectionHeroProps = {
+    ...overrides,
+    authorPubky: overrides.authorPubky ?? AUTHOR_PUBKY,
+    postId: overrides.postId ?? POST_ID,
+    postDetails: 'postDetails' in overrides ? overrides.postDetails : currentPostDetails,
+    layout: overrides.layout ?? COLLECTION_LAYOUT.GRID,
+    onLayoutChange: overrides.onLayoutChange ?? vi.fn(),
+  };
+
+  return render(<CollectionHero {...props} />);
 }
 
 function setOwnerProfile(name: string | null, avatarUrl?: string) {
@@ -329,6 +338,7 @@ function setPostCounts(uniqueTags = 3) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockDeleteState.isDeleting = false;
+  mockViewportState.isMobile = false;
   for (const key of Object.keys(mockLocalCollections)) delete mockLocalCollections[key];
   setAuthStore(null);
   setPostDetails(COLLECTION_CONTENT);
@@ -407,6 +417,28 @@ describe('CollectionHero', () => {
 
     expect(screen.getByTestId('collection-hero-skeleton')).toBeInTheDocument();
     expect(screen.queryByText('Based Bitcoin')).not.toBeInTheDocument();
+  });
+
+  it('lets viewers temporarily switch the collection layout', async () => {
+    const onLayoutChange = vi.fn();
+    renderHero({ onLayoutChange });
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: /collections\.single\.layoutGrid/ }), {
+      button: 0,
+      ctrlKey: false,
+    });
+
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'collections.single.layoutList' }));
+
+    expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.LIST);
+  });
+
+  it('hides the temporary layout override from the collection owner', () => {
+    setAuthStore(AUTHOR_PUBKY);
+
+    renderHero();
+
+    expect(screen.queryByRole('button', { name: /collections\.single\.layoutGrid/ })).not.toBeInTheDocument();
   });
 
   it('shows a skeleton (not the raw pubky) for the owner name while the profile is null', () => {

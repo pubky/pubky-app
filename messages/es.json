@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}d",
     "weeksShort": "{count}sem",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}a"
   },
   "landing": {
     "title": "<highlight>Desbloquea</highlight> la web.",
@@ -258,8 +259,8 @@
       "enterInviteCode": "Ingresar código de invitacion"
     },
     "phone": {
-      "title": "Verificacion por <highlight>teléfono.</highlight>",
-      "subtitle": "Te enviaremos un código de verificación por SMS a tu número de teléfono.",
+      "title": "Introduce tu <highlight>teléfono.</highlight>",
+      "subtitle": "Te enviaremos un código de verificación.",
       "sendCode": "Enviar código",
       "phoneNumber": "Número de teléfono",
       "phoneHint": "Ingresa tu número de teléfono, incluyendo el código de pais (ej. +34 para España).",
@@ -282,6 +283,7 @@
       "subtitle": "Enviamos un código de verificación de 6 digitos a {phoneNumber}.",
       "label": "Código de verificación",
       "hint": "Ingresa el código que recibiste en {phoneNumber}.",
+      "hintChannels": "Probablemente se envió por SMS, WhatsApp o Telegram.",
       "resend": "Reenviar código",
       "resendTimer": "Reenviar código ({seconds}s)",
       "verify": "Verificar código",
@@ -309,9 +311,9 @@
       "copyFailed": "No se pudo copiar la factura."
     },
     "inviteCode": {
-      "title": "Demuestra que <highlight>no eres un robot.</highlight>",
-      "subtitle": "Verificacion por SMS o pago no disponible. Pidenos un código de invitacion.",
-      "label": "Código de invitacion para homeserver",
+      "title": "Usa una <highlight>invitación.</highlight>",
+      "subtitle": "¿La verificación por teléfono o pago no está disponible? Pídenos un código de invitación.",
+      "label": "Introduce el código de invitación",
       "hint": "Obtendras 1GB de almacenamiento, usado para tus publicaciónes, fotos, videos y tu perfil.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "Homeserver personalizado",
@@ -357,7 +359,7 @@
     },
     "signIn": {
       "title": "Inicia sesión en <highlight>Pubky.</highlight>",
-      "subtitle": "Autoriza con Pubky Ring para iniciar sesión.",
+      "subtitle": "Autoriza con <highlight>Pubky Ring</highlight> para iniciar sesión.",
       "progressTitle": "Iniciando sesión.",
       "progressSubtitle": "Espera mientras se carga tu experiencia en Pubky.",
       "generating": "Generando código QR...",
@@ -1368,6 +1370,9 @@
       "descriptionLabel": "Descripción",
       "descriptionPlaceholder": "¿Qué encontrará la gente aquí?",
       "backgroundLabel": "Fondo",
+      "layoutLabel": "Diseño",
+      "layoutGrid": "Cuadrícula",
+      "layoutList": "Lista",
       "addImage": "Añadir imagen",
       "removeImage": "Quitar imagen",
       "coverImageInvalid": "La imagen de portada debe ser un archivo de imagen.",
@@ -1390,6 +1395,7 @@
     "edit": {
       "title": "Editar colección",
       "save": "Guardar cambios",
+      "defaultLayoutLabel": "Diseño predeterminado",
       "updated": "Colección actualizada",
       "updateFailed": "No se pudo actualizar la colección."
     },
@@ -1404,7 +1410,8 @@
     },
     "discover": {
       "title": "Descubrir colecciones",
-      "empty": "No hay colecciones para descubrir en este momento."
+      "empty": "No hay colecciones para descubrir en este momento.",
+      "noNewResults": "No se encontraron colecciones nuevas en este momento. Inténtalo de nuevo más tarde."
     },
     "bookmarks": {
       "title": "Marcadores",
@@ -1429,6 +1436,9 @@
       "unfollow": "Dejar de seguir",
       "content": "Añadir publicación",
       "addContent": "Añadir publicación",
+      "layout": "Diseño",
+      "layoutGrid": "Cuadrícula",
+      "layoutList": "Lista",
       "empty": "Esta colección está vacía.",
       "notFound": {
         "title": "Colección no encontrada",

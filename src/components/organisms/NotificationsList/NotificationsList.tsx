@@ -2,11 +2,14 @@
 
 import { useMemo } from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { getBusinessKey } from '@/models/notification/notification.helpers';
 import { NotificationItem } from '../NotificationItem/NotificationItem';
 import type { NotificationsListProps } from './NotificationsList.types';
 
 export function NotificationsList({ notifications, unreadNotifications }: NotificationsListProps) {
+  const isMobile = useIsMobile();
+
   // Create a Set of unread notification business keys for O(1) lookup
   // Early return optimization for empty unread list
   const unreadKeys = useMemo(() => {
@@ -21,7 +24,9 @@ export function NotificationsList({ notifications, unreadNotifications }: Notifi
         const businessKey = getBusinessKey(notification);
         const isUnread = unreadKeys.has(businessKey);
 
-        return <NotificationItem key={businessKey} notification={notification} isUnread={isUnread} />;
+        return (
+          <NotificationItem key={businessKey} notification={notification} isUnread={isUnread} isMobile={isMobile} />
+        );
       })}
     </Container>
   );

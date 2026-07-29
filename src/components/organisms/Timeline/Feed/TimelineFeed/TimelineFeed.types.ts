@@ -1,6 +1,7 @@
 import type { ReactNode, RefObject } from 'react';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import type { LayoutType } from '@/stores/home/home.types';
 
 interface TimelineFeedPropsBase {
   /**
@@ -29,8 +30,9 @@ export type HomeTimelineFeedProps = TimelineFeedPropsBase & {
    */
   persistentHeader?: ReactNode;
   emptyState?: never;
-  gridTrailingSlot?: never;
+  trailingSlot?: never;
   pullToRefreshContainerRef?: never;
+  requestedLayout?: never;
 };
 
 type TimelineFeedPullToRefreshContainerRef = RefObject<HTMLElement | null>;
@@ -41,23 +43,22 @@ type BookmarksTimelineFeedProps = TimelineFeedPropsBase & {
    * Empty state for finite collection-like feeds.
    */
   emptyState?: ReactNode;
-  /**
-   * Last grid cell on the bookmarks feed (Add Content CTA for the signed-in user).
-   */
-  gridTrailingSlot?: ReactNode;
+  /** Add Content CTA rendered after bookmarked posts. */
+  trailingSlot?: ReactNode;
   pullToRefreshContainerRef?: never;
+  requestedLayout?: never;
 };
 
 type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
   variant: typeof TIMELINE_FEED_VARIANT.COLLECTION;
+  /** Collection-scoped Grid/List choice; never sourced from the persisted home store. */
+  requestedLayout?: LayoutType;
   /**
    * Empty state for finite collection-like feeds.
    */
   emptyState?: ReactNode;
-  /**
-   * Last grid cell on the collection feed (owner-only Add Content CTA).
-   */
-  gridTrailingSlot?: ReactNode;
+  /** Owner-only Add Content CTA rendered after collection posts. */
+  trailingSlot?: ReactNode;
   /**
    * Optional element that should own pull-to-refresh touch events. Defaults to
    * the feed container.
@@ -71,8 +72,9 @@ type StandardTimelineFeedProps = TimelineFeedPropsBase & {
     typeof TIMELINE_FEED_VARIANT.HOME | typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION
   >;
   emptyState?: never;
-  gridTrailingSlot?: never;
+  trailingSlot?: never;
   pullToRefreshContainerRef?: never;
+  requestedLayout?: never;
 };
 
 export type TimelineFeedProps =

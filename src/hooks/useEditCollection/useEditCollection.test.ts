@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
 import { CREATE_COLLECTION_FORM_FIELDS } from '@/hooks/useCreateCollection/useCreateCollection.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -77,12 +78,18 @@ vi.mock('next-intl', () => ({
       ),
 }));
 
-const collectionContent = (overrides?: { name?: string; description?: string; cover_image?: string | null }) =>
+const collectionContent = (overrides?: {
+  name?: string;
+  description?: string;
+  cover_image?: string | null;
+  layout?: CollectionLayout;
+}) =>
   JSON.stringify({
     name: overrides?.name ?? 'Reading list',
     description: overrides?.description ?? 'Top picks',
     items: [],
     cover_image: overrides?.cover_image ?? null,
+    layout: overrides?.layout,
   });
 
 const COMPOSITE_ID = 'pk:author/posts/c1';
@@ -98,12 +105,14 @@ describe('useEditCollection', () => {
   });
 
   it('prefills the form once the collection envelope loads', async () => {
+    mocks.postDetails = { content: collectionContent({ layout: COLLECTION_LAYOUT.LIST }) };
     const { result } = renderHook(() => useEditCollection({ compositeCollectionId: COMPOSITE_ID }));
 
     await waitFor(() => {
       expect(result.current.form.getValues()).toEqual({
         [CREATE_COLLECTION_FORM_FIELDS.NAME]: 'Reading list',
         [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: 'Top picks',
+        [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.LIST,
       });
     });
     expect(result.current.isLoaded).toBe(true);
@@ -131,6 +140,7 @@ describe('useEditCollection', () => {
       name: 'New name',
       description: 'Top picks',
       coverImage: 'pubky://author/files/cover-1',
+      layout: COLLECTION_LAYOUT.GRID,
     });
     // No new file picked → store should NOT be touched (CDN already has it).
     expect(mocks.setCollectionCover).not.toHaveBeenCalled();
@@ -305,6 +315,7 @@ describe('useEditCollection', () => {
       expect(result.current.form.getValues()).toEqual({
         [CREATE_COLLECTION_FORM_FIELDS.NAME]: 'Old name',
         [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: 'Old description',
+        [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
       });
     });
 
@@ -323,6 +334,7 @@ describe('useEditCollection', () => {
       expect(result.current.form.getValues()).toEqual({
         [CREATE_COLLECTION_FORM_FIELDS.NAME]: 'New name',
         [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: 'New description',
+        [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: COLLECTION_LAYOUT.GRID,
       });
     });
   });

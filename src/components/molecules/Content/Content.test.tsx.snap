@@ -2,16 +2,16 @@
 
 exports[`Content - Snapshots > matches snapshot for ContentCard with column layout 1`] = `
 <div
-  class="p-6 md:p-12"
+  class="gap-0 p-6 md:p-12"
   data-testid="card"
 >
   <div
-    class="gap-12 flex-col"
-    data-testid="container"
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col p-0"
+    data-slot="card-content"
   >
     <div
-      class="w-full justify-start gap-4"
-      data-testid="container"
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col justify-start gap-4"
+      data-slot="illustrated-card-content"
     >
       <div>
         Column layout content
@@ -23,16 +23,16 @@ exports[`Content - Snapshots > matches snapshot for ContentCard with column layo
 
 exports[`Content - Snapshots > matches snapshot for ContentCard with custom className 1`] = `
 <div
-  class="p-6 md:p-12 custom-card"
+  class="gap-0 p-6 md:p-12 custom-card"
   data-testid="card"
 >
   <div
-    class="gap-12 flex-col lg:flex-row"
-    data-testid="container"
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
   >
     <div
-      class="w-full justify-start gap-4"
-      data-testid="container"
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col justify-start gap-4"
+      data-slot="illustrated-card-content"
     >
       <div>
         Custom content
@@ -44,16 +44,16 @@ exports[`Content - Snapshots > matches snapshot for ContentCard with custom clas
 
 exports[`Content - Snapshots > matches snapshot for ContentCard with default props 1`] = `
 <div
-  class="p-6 md:p-12"
+  class="gap-0 p-6 md:p-12"
   data-testid="card"
 >
   <div
-    class="gap-12 flex-col lg:flex-row"
-    data-testid="container"
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
   >
     <div
-      class="w-full justify-start gap-4"
-      data-testid="container"
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col justify-start gap-4"
+      data-slot="illustrated-card-content"
     >
       <div>
         Test content
@@ -65,30 +65,35 @@ exports[`Content - Snapshots > matches snapshot for ContentCard with default pro
 
 exports[`Content - Snapshots > matches snapshot for ContentCard with image 1`] = `
 <div
-  class="p-6 md:p-12"
+  class="gap-0 p-6 md:p-12"
   data-testid="card"
 >
   <div
-    class="gap-12 flex-col lg:flex-row"
-    data-testid="container"
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
   >
     <div
-      class="hidden lg:flex"
-      style="width: 200px; height: 200px;"
+      class="contents"
+      data-slot="illustrated-card-visual"
     >
-      <img
-        alt="Test image"
-        class=""
-        data-testid="content-image"
-        height="200"
-        src="/test.jpg"
-        style="object-fit: contain;"
-        width="200"
-      />
+      <div
+        class="hidden lg:flex"
+        style="width: 200px; height: 200px;"
+      >
+        <img
+          alt="Test image"
+          class=""
+          data-testid="content-image"
+          height="200"
+          src="/test.jpg"
+          style="object-fit: contain;"
+          width="200"
+        />
+      </div>
     </div>
     <div
-      class="w-full justify-start gap-4"
-      data-testid="container"
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col justify-start gap-4"
+      data-slot="illustrated-card-content"
     >
       <div>
         Content with image

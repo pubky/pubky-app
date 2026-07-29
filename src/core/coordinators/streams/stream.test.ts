@@ -114,7 +114,7 @@ function setupControllerSpies(streamHeadValue = 1_000_000_000): ControllerSpies 
 
   const getOrFetchStreamSliceSpy = vi
     .spyOn(StreamPostsController, 'getOrFetchStreamSlice')
-    .mockResolvedValue({ nextPageIds: [], timestamp: 0 });
+    .mockResolvedValue({ nextPageIds: [], nextCursor: 0 });
 
   return { getStreamHeadSpy, getOrFetchStreamSliceSpy };
 }
@@ -346,7 +346,7 @@ describe('StreamCoordinator', () => {
       vi.spyOn(StreamPostsController, 'getStreamHead').mockResolvedValue(1_000_000_000);
       vi.spyOn(StreamPostsController, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds: [],
-        timestamp: 0,
+        nextCursor: 0,
       });
 
       const homeStoreState = mockHomeStore({

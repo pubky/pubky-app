@@ -4,6 +4,7 @@ import { DialogContent } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { PostInput } from '../PostInput/PostInput';
 import { DialogEditPost } from './DialogEditPost';
 
@@ -104,7 +105,17 @@ vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
 
 vi.mock('../PostInput/PostInput', () => ({
   PostInput: vi.fn(
-    ({ onSuccess, onContentChange, variant, dataCy, editPostId, editContent, editIsArticle, expanded }) => (
+    ({
+      onSuccess,
+      onContentChange,
+      variant,
+      dataCy,
+      editPostId,
+      editContent,
+      editIsArticle,
+      expanded,
+      layoutOverride,
+    }) => (
       <div
         data-testid="post-input"
         data-variant={variant}
@@ -113,6 +124,7 @@ vi.mock('../PostInput/PostInput', () => ({
         data-edit-content={editContent}
         data-edit-is-article={String(editIsArticle)}
         data-expanded={String(expanded)}
+        data-layout-override={layoutOverride}
       >
         <button data-testid="mock-success-btn" onClick={() => onSuccess?.('edited-post-id')}>
           Success
@@ -151,6 +163,16 @@ describe('DialogEditPost', () => {
     expect(screen.getByTestId('dialog-content')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-title')).toHaveTextContent('Edit Post');
     expect(screen.getByTestId('post-input')).toBeInTheDocument();
+  });
+
+  it('uses inline post styling when rendered inside a List feed', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <DialogEditPost postId="test-post-123" open onOpenChangeAction={vi.fn()} />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-input')).toHaveAttribute('data-layout-override', 'inline');
   });
 
   it('renders with "Edit Article" title for long posts', () => {
@@ -196,6 +218,7 @@ describe('DialogEditPost', () => {
         editPostId: 'test-post-123',
         editContent: 'Test post content',
         editIsArticle: false,
+        layoutOverride: 'inline',
       }),
       undefined,
     );

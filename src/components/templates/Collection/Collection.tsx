@@ -77,6 +77,7 @@ function CollectionResolved({
   return (
     <Container ref={pullToRefreshContainerRef} overrideDefaults className="flex w-full flex-col gap-12">
       <CollectionItems
+        key={`${authorPubky}:${postId}`}
         authorPubky={authorPubky}
         postId={rawPostId}
         postDetails={postDetails}
