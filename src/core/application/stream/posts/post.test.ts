@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
+import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
@@ -11,6 +12,7 @@ import { DELETED } from '@/models/post/details/postDetails.constants';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import {
   buildAuthorCollectionsStreamId,
+  buildDiscoverCollectionsStreamId,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
@@ -382,7 +384,7 @@ describe('PostStreamApplication', () => {
       expect(result.nextPageIds).toHaveLength(10);
       expect(result.nextPageIds).toEqual(postIds.slice(0, 10));
       expect(result.cacheMissPostIds).toEqual([]);
-      expect(result.timestamp).toBeUndefined();
+      expect(result.nextCursor).toBeUndefined();
     });
 
     it('returns the bookmark-time cursor on a full cache hit for bookmark streams', async () => {
@@ -406,7 +408,53 @@ describe('PostStreamApplication', () => {
 
       expect(result.nextPageIds).toHaveLength(10);
       // 10th entry (index 9) → its bookmark time, NOT its post indexed_at (BASE + 9).
-      expect(result.timestamp).toBe(BASE_TIMESTAMP + 5000 + 9);
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 9);
+    });
+
+    it('overflow early-return on a bookmark stream resumes by bookmark time, not post indexed_at', async () => {
+      // The queue's buffered path is the fourth cursor-synthesis site missed by #2100:
+      // filtering (collections are dropped from the :all bookmarks feed) makes the queue
+      // over-fetch and buffer the surplus; a later smaller-limit call is then served
+      // entirely from that buffer and must still resume by bookmark time.
+      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+      const collectionIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:coll-${i + 1}`);
+      const postIds = Array.from({ length: 30 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      await PostStreamModel.create(bookmarkStreamId, [...collectionIds, ...postIds]);
+      for (const id of collectionIds) {
+        await createPostDetailWithKind(id, 'collection');
+        await BookmarkModel.create({ id, created_at: BASE_TIMESTAMP + 4000 });
+      }
+      for (let i = 0; i < postIds.length; i++) {
+        // Created long ago, bookmarked recently.
+        await createPostDetailWithTimestamp(postIds[i], BASE_TIMESTAMP + i);
+        await BookmarkModel.create({ id: postIds[i], created_at: BASE_TIMESTAMP + 5000 + i });
+      }
+
+      // First page: the collection filter empties part of the first cache chunk, so the
+      // queue pulls a second chunk and buffers the surplus regular posts.
+      const result1 = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: bookmarkStreamId,
+        limit: 20,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      expect(result1.nextPageIds).toEqual(postIds.slice(0, 20));
+
+      // Second page with a smaller limit is served entirely from the overflow buffer
+      // (the early-return path — no fetch happens).
+      const result2 = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: bookmarkStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: result1.nextCursor!,
+        lastPostId: result1.nextPageIds[result1.nextPageIds.length - 1],
+        viewerId: 'user-viewer' as Pubky,
+      });
+      expect(result2.nextPageIds).toEqual(postIds.slice(20, 30));
+      // post-30 was bookmarked at BASE + 5000 + 29 but created at BASE + 29 — the resume
+      // cursor must be its bookmark time or the next Nexus fetch skips the seam.
+      expect(result2.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 29);
     });
 
     it('should fetch from Nexus when cache is empty', async () => {
@@ -424,7 +472,7 @@ describe('PostStreamApplication', () => {
 
       expect(result.nextPageIds).toHaveLength(5);
       expectPostIds(result.nextPageIds, 1, 5);
-      expect(result.timestamp).toBe(BASE_TIMESTAMP + 4);
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 4);
       expect(result.cacheMissPostIds).toHaveLength(5);
       expect(result.cacheMissPostIds).toEqual(result.nextPageIds);
 
@@ -451,7 +499,7 @@ describe('PostStreamApplication', () => {
 
       expect(result.nextPageIds).toHaveLength(5);
       expectPostIds(result.nextPageIds, 6, 5);
-      expect(result.timestamp).toBe(BASE_TIMESTAMP + 9);
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 9);
 
       const cached = await PostStreamModel.findById(streamId);
       expect(cached?.stream).toHaveLength(10);
@@ -545,7 +593,7 @@ describe('PostStreamApplication', () => {
       expect(result.nextPageIds).toEqual(postIds);
       expect(result.cacheMissPostIds).toEqual([]);
       // Full cache hit returns timestamp of last post for pagination cursor advancement
-      expect(result.timestamp).toBe(BASE_TIMESTAMP + 9);
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 9);
       // Full cache hit should not fetch from Nexus
       expect(nexusFetchSpy).not.toHaveBeenCalled();
     });
@@ -675,7 +723,7 @@ describe('PostStreamApplication', () => {
 
       expect(result.nextPageIds).toHaveLength(0);
       expect(result.cacheMissPostIds).toEqual([]);
-      expect(result.timestamp).toBeUndefined();
+      expect(result.nextCursor).toBeUndefined();
       // Note: When limit is 0, getStreamFromCache returns empty immediately and doesn't fetch from Nexus
       expect(nexusFetchSpy).not.toHaveBeenCalled();
     });
@@ -3036,6 +3084,167 @@ describe('PostStreamApplication', () => {
       // Verify: Reply count should still be 1 (not double-counted)
       const parentCounts = await PostCountsModel.findById(parentPostCompositeId);
       expect(parentCounts?.replies).toBe(1);
+    });
+  });
+
+  describe('Discover Collections filtering', () => {
+    const DISCOVER = buildDiscoverCollectionsStreamId();
+    const VIEWER = 'viewer-pubky' as Pubky;
+    const EMPTY_KEY_STREAM = { post_keys: [], last_post_score: null };
+
+    const createCollectionDetail = async (postId: string, items: string[]) => {
+      await PostDetailsModel.create({
+        id: postId,
+        content: JSON.stringify({ name: 'Test', items, description: '', cover_image: '' }),
+        kind: 'collection',
+        indexed_at: BASE_TIMESTAMP,
+        uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${postId}`,
+        attachments: null,
+      });
+    };
+
+    it('filterStreamPosts drops empty collections on the discover stream', async () => {
+      const full = `${DEFAULT_AUTHOR}:full-collection`;
+      const empty = `${DEFAULT_AUTHOR}:empty-collection`;
+      const missing = `${DEFAULT_AUTHOR}:missing-collection`;
+      await createCollectionDetail(full, ['item:1']);
+      await createCollectionDetail(empty, []);
+      // `missing` has no cached details -> fail-open (kept so the cache miss can resolve).
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: DISCOVER,
+        postIds: [full, empty, missing],
+      });
+      expect(result).toEqual([full, missing]);
+    });
+
+    it('filterStreamPosts keeps empty collections on a non-discover collection stream', async () => {
+      const full = `${DEFAULT_AUTHOR}:full-collection`;
+      const empty = `${DEFAULT_AUTHOR}:empty-collection`;
+      await createCollectionDetail(full, ['item:1']);
+      await createCollectionDetail(empty, []);
+
+      // timeline:all:collection is a collection stream but not discover, so empties survive.
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: PostStreamTypes.TIMELINE_ALL_COLLECTION as PostStreamId,
+        postIds: [full, empty],
+      });
+      expect(result).toEqual([full, empty]);
+    });
+
+    it('filterStreamPosts drops a deleted collection on the discover stream', async () => {
+      const live = `${DEFAULT_AUTHOR}:live-collection`;
+      const deleted = `${DEFAULT_AUTHOR}:deleted-collection`;
+      await createCollectionDetail(live, ['item:1']);
+      await PostDetailsModel.create({
+        id: deleted,
+        content: DELETED,
+        kind: 'collection',
+        indexed_at: BASE_TIMESTAMP,
+        uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${deleted}`,
+        attachments: null,
+      });
+
+      const result = await PostStreamApplication.filterStreamPosts({ streamId: DISCOVER, postIds: [live, deleted] });
+      expect(result).toEqual([live]);
+    });
+
+    it('filterDiscoverOwnAndBookmarked drops the viewer own and already-bookmarked collections', () => {
+      const ids = [`${VIEWER}:c1`, 'other:c2', 'other:c3'];
+      const result = PostStreamApplication.filterDiscoverOwnAndBookmarked(ids, VIEWER, new Set(['other:c3']));
+      expect(result).toEqual(['other:c2']);
+    });
+
+    it('filterDiscoverOwnAndBookmarked keeps a not-owned, not-bookmarked collection for a real viewer', () => {
+      const ids = [`${VIEWER}:own`, 'other:keep', 'other:bookmarked'];
+      const result = PostStreamApplication.filterDiscoverOwnAndBookmarked(ids, VIEWER, new Set(['other:bookmarked']));
+      expect(result).toEqual(['other:keep']);
+    });
+
+    it('filterDiscoverOwnAndBookmarked keeps a malformed id instead of throwing out of the filter', () => {
+      // A junk id from Nexus (no delimiter) must be kept, not throw and fail the whole fetch.
+      const ids = ['malformed-no-delimiter', 'other:keep'];
+      expect(PostStreamApplication.filterDiscoverOwnAndBookmarked(ids, VIEWER, new Set())).toEqual(ids);
+    });
+
+    it('filterDiscoverOwnAndBookmarked keeps everything with no viewer and nothing bookmarked', () => {
+      const ids = ['a:c1', 'b:c2'];
+      expect(PostStreamApplication.filterDiscoverOwnAndBookmarked(ids, null, new Set())).toEqual(ids);
+    });
+
+    it('getOrFetchStreamSlice applies own/bookmarked/empty for the discover stream end-to-end', async () => {
+      const own = `${VIEWER}:own-collection`;
+      const bookmarked = 'other:bookmarked-collection';
+      const empty = 'other:empty-collection';
+      const keep = 'other:full-collection';
+      await createCollectionDetail(own, ['x']);
+      await createCollectionDetail(bookmarked, ['x']);
+      await createCollectionDetail(empty, []);
+      await createCollectionDetail(keep, ['x']);
+      await BookmarkModel.create({ id: bookmarked, created_at: BASE_TIMESTAMP });
+
+      vi.spyOn(NexusPostStreamService, 'fetch')
+        .mockResolvedValueOnce({ post_keys: [own, bookmarked, empty, keep], last_post_score: null })
+        .mockResolvedValue(EMPTY_KEY_STREAM);
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: DISCOVER,
+        limit: 20,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: VIEWER,
+      });
+
+      expect(result.nextPageIds).toEqual([keep]);
+    });
+
+    it('bounds the per-load scan at COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD when filtering empties every page', async () => {
+      // Nexus keeps returning full pages of the viewer's own collections (all filtered).
+      // Discover must give up after its per-load fetch cap — not the shared 20 — while
+      // still advancing the cursor and leaving the stream open for the next click.
+      let page = 0;
+      const fetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockImplementation(async () => {
+        page += 1;
+        return {
+          post_keys: Array.from({ length: 4 }, (_, i) => `${VIEWER}:own-${page}-${i}`),
+          last_post_score: null,
+        };
+      });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: DISCOVER,
+        limit: 4,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: VIEWER,
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD);
+      expect(result.nextPageIds).toEqual([]);
+      // Raw skip offset advanced by every page scanned; stream not marked ended.
+      expect(result.nextCursor).toBe(4 * COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD);
+      expect(result.reachedEnd).toBe(false);
+    });
+
+    it('does not apply own/bookmarked filtering to non-discover streams (no viewer-post data loss)', async () => {
+      const ownPost = `${VIEWER}:post-own`;
+      const bookmarkedPost = 'other:post-bookmarked';
+      await BookmarkModel.create({ id: bookmarkedPost, created_at: BASE_TIMESTAMP });
+      await createStreamWithPosts([]);
+
+      vi.spyOn(NexusPostStreamService, 'fetch')
+        .mockResolvedValueOnce({ post_keys: [ownPost, bookmarkedPost], last_post_score: BASE_TIMESTAMP })
+        .mockResolvedValue(EMPTY_KEY_STREAM);
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId,
+        limit: 20,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: VIEWER,
+      });
+
+      expect(result.nextPageIds).toEqual([ownPost, bookmarkedPost]);
     });
   });
 });

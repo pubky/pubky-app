@@ -951,6 +951,20 @@ describe('PostInput', () => {
       expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
     });
 
+    it('uses inline styling when an inline layout override is provided inside a List feed', () => {
+      render(
+        <PostMainLayoutProvider tagsLayout="list">
+          <PostInput variant={POST_INPUT_VARIANT.POST} layoutOverride="inline" />
+        </PostMainLayoutProvider>,
+      );
+
+      const outerContainer = screen.getAllByTestId('container')[0];
+      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).not.toContain('p-12');
+      expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'normal');
+      expect(screen.getByTestId('textarea')).not.toHaveAttribute('data-class-name');
+    });
+
     it('falls back to inline layout on mobile even when the inherited layout is side', () => {
       mockUseIsMobile.mockReturnValue(true);
 

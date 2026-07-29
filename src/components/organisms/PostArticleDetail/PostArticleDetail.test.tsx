@@ -32,7 +32,9 @@ vi.mock('@/atoms/Container/Container', () => ({
 }));
 
 vi.mock('@/atoms/Image/Image', () => ({
-  Image: ({ src, alt }: { src: string; alt: string }) => <img data-testid="cover-image" src={src} alt={alt} />,
+  Image: ({ src, alt, className }: { src: string; alt: string; className?: string }) => (
+    <img data-testid="cover-image" src={src} alt={alt} className={className} />
+  ),
 }));
 
 vi.mock('@/atoms/Typography/Typography', () => ({
@@ -229,6 +231,21 @@ describe('PostArticleDetail', () => {
 
     expect(screen.getByTestId('cover-image')).toHaveAttribute('src', 'https://example.com/image.jpg');
     expect(screen.getByTestId('cover-image')).toHaveAttribute('alt', 'Cover image');
+  });
+
+  it('renders the cover image at a 16:9 ratio filling the frame', () => {
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Title',
+      body: 'Test body',
+      coverImage: {
+        src: 'https://example.com/image.jpg',
+        alt: 'Cover image',
+      },
+    });
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    expect(screen.getByTestId('cover-image')).toHaveClass('aspect-video', 'w-full', 'object-cover', 'object-center');
   });
 
   it('does not render cover image when not available', () => {

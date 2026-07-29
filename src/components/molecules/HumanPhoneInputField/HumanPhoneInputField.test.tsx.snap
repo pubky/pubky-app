@@ -7,31 +7,30 @@ exports[`HumanPhoneInputField - Snapshots > matches snapshot 1`] = `
   data-testid="human-phone-input-card"
 >
   <div
-    class="mx-auto w-full flex flex-col gap-8 lg:flex-row lg:items-center"
-    data-testid="container"
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
   >
     <div
-      class="mx-auto flex-col hidden h-full w-full flex-1 items-center lg:block lg:w-auto"
-      data-testid="container"
+      class="hidden w-48 shrink-0 flex-col lg:flex"
+      data-slot="illustrated-card-visual"
     >
       <img
-        alt="Pubky phone representing phone number verification"
-        class="h-auto w-[192px] max-w-full"
+        alt="Pubky phone representing phone number entry"
+        class="max-w-full size-48"
         data-nimg="1"
         decoding="async"
         height="600"
-        src="/images/sms-verification-phone.webp"
+        src="/images/phone-number.webp"
         style="color: transparent;"
         width="800"
       />
     </div>
     <div
-      class="mx-auto flex-col flex mr-6 w-full flex-3 gap-6"
-      data-testid="container"
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+      data-slot="illustrated-card-content"
     >
       <div
-        class="mx-auto w-full flex-col flex gap-3"
-        data-testid="container"
+        class="flex flex-col gap-3"
       >
         <h3
           class="text-2xl leading-[32px] font-semibold text-foreground sm:text-[28px]"
@@ -47,11 +46,10 @@ exports[`HumanPhoneInputField - Snapshots > matches snapshot 1`] = `
         </p>
       </div>
       <div
-        class="mx-auto w-full flex-col flex gap-2"
-        data-testid="container"
+        class="flex w-full max-w-128 flex-col gap-2"
       >
         <div
-          class="mx-auto w-full ml-0 flex max-w-128 flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
+          class="flex w-full flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
           data-testid="human-phone-input-wrapper"
         >
           <input
@@ -76,31 +74,30 @@ exports[`HumanPhoneInputField - Snapshots > matches snapshot with error 1`] = `
   data-testid="human-phone-input-card"
 >
   <div
-    class="mx-auto w-full flex flex-col gap-8 lg:flex-row lg:items-center"
-    data-testid="container"
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
   >
     <div
-      class="mx-auto flex-col hidden h-full w-full flex-1 items-center lg:block lg:w-auto"
-      data-testid="container"
+      class="hidden w-48 shrink-0 flex-col lg:flex"
+      data-slot="illustrated-card-visual"
     >
       <img
-        alt="Pubky phone representing phone number verification"
-        class="h-auto w-[192px] max-w-full"
+        alt="Pubky phone representing phone number entry"
+        class="max-w-full size-48"
         data-nimg="1"
         decoding="async"
         height="600"
-        src="/images/sms-verification-phone.webp"
+        src="/images/phone-number.webp"
         style="color: transparent;"
         width="800"
       />
     </div>
     <div
-      class="mx-auto flex-col flex mr-6 w-full flex-3 gap-6"
-      data-testid="container"
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+      data-slot="illustrated-card-content"
     >
       <div
-        class="mx-auto w-full flex-col flex gap-3"
-        data-testid="container"
+        class="flex flex-col gap-3"
       >
         <h3
           class="text-2xl leading-[32px] font-semibold text-foreground sm:text-[28px]"
@@ -116,11 +113,10 @@ exports[`HumanPhoneInputField - Snapshots > matches snapshot with error 1`] = `
         </p>
       </div>
       <div
-        class="mx-auto w-full flex-col flex gap-2"
-        data-testid="container"
+        class="flex w-full max-w-128 flex-col gap-2"
       >
         <div
-          class="mx-auto w-full ml-0 flex max-w-128 flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
+          class="flex w-full flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
           data-testid="human-phone-input-wrapper"
         >
           <input

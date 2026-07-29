@@ -42,6 +42,7 @@ exports[`DialogNewPost - Snapshots > matches snapshot with open prop 1`] = `
       >
         <div
           data-expanded="true"
+          data-layout-override="inline"
           data-testid="post-input"
           data-variant="post"
         >

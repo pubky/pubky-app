@@ -121,26 +121,27 @@ export const waitForNotificationDotsToDisappear = () => {
   cy.get('[data-cy="notifications-list"]').find('[data-cy="notification-unread-dot"]').should('not.exist');
 };
 
-export const checkLatestNotification = (
+// assert the notification at `index` (0 = latest) contains the expected content and read state
+export const checkNotificationAt = (
+  index: number,
   expectedContent: string[],
   readState: LatestNotificationReadState,
   profileToNavigateTo?: string,
 ) => {
   cy.location('pathname').should('eq', '/profile');
   waitForNotificationsToLoad();
-  // assert that each expected string is present in the first notification listed
   cy.get('[data-cy="notifications-list"]')
     .should('be.visible')
     .children()
-    .should('have.length.at.least', 1)
-    .first()
-    .should(($firstNotif) => {
+    .should('have.length.at.least', index + 1)
+    .eq(index)
+    .should(($notif) => {
       expectedContent.forEach((content) => {
-        expect($firstNotif).to.contain(content);
+        expect($notif).to.contain(content);
       });
     })
-    .should(($firstNotif) => {
-      const dot = $firstNotif.find('[data-cy="notification-unread-dot"]');
+    .should(($notif) => {
+      const dot = $notif.find('[data-cy="notification-unread-dot"]');
       if (readState === LatestNotificationReadState.Unread) {
         expect(dot.length).to.be.greaterThan(0);
       } else {
@@ -152,12 +153,20 @@ export const checkLatestNotification = (
     cy.get('[data-cy="notifications-list"]')
       .should('be.visible')
       .children()
-      .should('have.length.at.least', 1)
-      .first()
-      .within(($firstNotif) => {
-        cy.wrap($firstNotif).get('a').should('contain.text', profileToNavigateTo).contains(profileToNavigateTo).click();
+      .should('have.length.at.least', index + 1)
+      .eq(index)
+      .within(($notif) => {
+        cy.wrap($notif).get('a').should('contain.text', profileToNavigateTo).contains(profileToNavigateTo).click();
       });
   }
+};
+
+export const checkLatestNotification = (
+  expectedContent: string[],
+  readState: LatestNotificationReadState,
+  profileToNavigateTo?: string,
+) => {
+  checkNotificationAt(0, expectedContent, readState, profileToNavigateTo);
 };
 
 // add tags to a profile using the profile tagged page

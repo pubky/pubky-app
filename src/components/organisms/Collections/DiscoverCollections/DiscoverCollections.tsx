@@ -8,11 +8,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
-import {
-  COLLECTIONS_DISCOVER_BACKFILL_MAX_ROUNDS,
-  COLLECTIONS_SECTION_PAGE_SIZE,
-  COLLECTIONS_SECTION_SKELETON_COUNT,
-} from '@/config/collections';
+import { COLLECTIONS_SECTION_PAGE_SIZE, COLLECTIONS_SECTION_SKELETON_COUNT } from '@/config/collections';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
@@ -32,14 +28,10 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 interface DiscoverCursor {
   lastPostId: string | undefined;
   // For the engagement-sorted Discover stream (`total_engagement:all:collection`)
-  // `streamTail` is a *skip offset* — the running count of raw post IDs already
-  // pulled from the stream — NOT a timestamp / engagement score. See
-  // `createPostStreamParams` (engagement sorting branch) and the equivalent
-  // engagement handling in `useStreamPagination` (`cursorValue =
-  // postIdsRef.current.length`). Using `result.timestamp` here (which is
-  // `last_post_score` for engagement streams) breaks Show More: Nexus skips
-  // by the engagement score, yielding overlap or empty pages, and the backfill
-  // loop can't make progress.
+  // `streamTail` is a *skip offset* — the raw count of post IDs already pulled
+  // from the backend — NOT a timestamp / engagement score. It is threaded back
+  // from each slice as `result.nextCursor`, advanced by the stream layer by raw
+  // backend count so heavy filtering can never stall pagination.
   streamTail: number;
 }
 
@@ -49,8 +41,8 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  * DiscoverCollections
  *
  * "Discover Collections" section. Pulls the global engagement-sorted
- * collection-kind post stream (`total_engagement:all:collection`) and
- * filters out:
+ * collection-kind post stream (`total_engagement:all:collection`), which
+ * excludes:
  *   - The current user's own collections.
  *   - Collections the current user has already bookmarked (followed).
  *   - Collections whose local PostDetails is tombstoned (`'[DELETED]'`).
@@ -58,35 +50,40 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  *
  * Filtering happens in two layers:
  *
- *   1. **Fetch-time filter** — read `BookmarkController.getAll()`
- *      synchronously after `getOrFetchStreamSlice` resolves and drop own
- *      + already-bookmarked ids before they ever enter `visibleIds`.
- *      This is the structural filter that prevents an unfiltered-flash on
- *      initial render (a `useLiveQuery`-driven id list would have that
- *      problem; ours doesn't).
+ *   1. **Stream-layer fetch-time filter** — own / bookmarked / deleted /
+ *      empty are dropped inside `getOrFetchStreamSlice` for this stream
+ *      (see `PostStreamApplication.filterDiscoverOwnAndBookmarked` and the
+ *      Discover branch of `filterStreamPosts`). The queue backfills to the
+ *      requested page size while advancing the skip cursor by the *raw*
+ *      backend count, so `result.nextPageIds` arrives already filtered and
+ *      a heavily-filtered region can never make Show More re-request the
+ *      same slice.
  *
  *   2. **Render-time subtractive overlay** — `useLiveQuery` subscribes
- *      to the local `bookmarks` table and yields a set of currently
- *      bookmarked composite ids. `displayIds` is `visibleIds` minus that
- *      set. The overlay is monotonically subtractive (it can only remove,
- *      never add unfiltered cards), so it cannot reintroduce the
- *      unfiltered-flash class of bug fixed in QA #1/#3. Its job is to
- *      keep Discover semantically honest: when the user follows a card
- *      — here, from another section, or from a future surface — the
- *      card disappears from Discover without a reload.
+ *      to the local `bookmarks` table (and `post_details` for deletions /
+ *      emptied collections) and yields sets of ids to hide. `displayIds`
+ *      is `visibleIds` minus those sets. The overlay is monotonically
+ *      subtractive (it can only remove, never add unfiltered cards), so it
+ *      cannot reintroduce the unfiltered-flash class of bug fixed in
+ *      QA #1/#3. Its job is to keep Discover semantically honest: when the
+ *      user follows a card — here, from another section, or from a future
+ *      surface — the card disappears from Discover without a reload.
  *
  * If the user follows every visible card mid-session, the grid empties
  * but Show More remains until `reachedEnd` (the global engagement stream
  * is exhausted). This is intentional: it reads as "you've followed
  * everything we showed you — click for more candidates."
  *
- * Backfill loop bounded by `COLLECTIONS_DISCOVER_BACKFILL_MAX_ROUNDS` —
- * each user-initiated action (initial mount or "Show more" click) will
- * pull up to that many slices if the fetch-time filter empties the page.
+ * When a Show More click yields nothing new even though the stream is not
+ * exhausted (the stream layer's bounded backfill scanned its cap worth of
+ * raw posts and filtering removed them all), we surface a toast so the
+ * click gets feedback instead of silently rendering nothing.
  */
 export function DiscoverCollections() {
   const t = useTranslations('collections');
   const { toast } = useToast();
+  // The stream layer filters own collections against the viewer read from the
+  // auth store, so a viewer switch must reset and refetch (effect dep below).
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   // Gate the initial fetch on auth hydration so we never fire a fetch under a
   // transient `currentUserPubky === null` and then re-fire it with the real
@@ -101,8 +98,8 @@ export function DiscoverCollections() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Ref of currently-visible IDs, read inside the async fetch loop so we
-  // don't have to re-create the function on every successful append.
+  // Ref of currently-visible IDs, read inside the async fetch so appends can
+  // dedup without re-creating the function on every successful append.
   const visibleIdsRef = useRef<string[]>([]);
   visibleIdsRef.current = visibleIds;
 
@@ -111,18 +108,15 @@ export function DiscoverCollections() {
   // fetch's closure sees `cancelled.current === true` and skips its state
   // writes — only the latest run wins. This is the React-recommended
   // pattern for fetch-in-effect (see https://react.dev/reference/react/useEffect
-  // "Fetching data with Effects"). It replaces an earlier ref-guard
-  // workaround that prevented the second fetch from running at all but
-  // fought StrictMode instead of cooperating with it.
+  // "Fetching data with Effects").
   const inFlightInitialRef = useRef<{ cancelled: boolean } | null>(null);
 
   /**
-   * One user-initiated action: pulls slices until we have at least one
-   * page-size of visible (post-filter) IDs, the stream is exhausted, or
-   * the backfill cap hits.
+   * One user-initiated action (initial mount or Show More click): pull one
+   * post-filter slice from the stream layer and append it.
    *
    * Optionally takes a `token` that the caller can flip to `cancelled` to
-   * make the run a no-op on its final state-write (used by the initial-load
+   * make the run a no-op on its state writes (used by the initial-load
    * effect to handle StrictMode double-invoke and real viewer-switch
    * re-fires).
    */
@@ -134,121 +128,50 @@ export function DiscoverCollections() {
       setLoadingMore(true);
     }
 
-    // Use a *local* cursor inside this run — don't trample `cursorRef`
-    // until we're sure we won the race. The ref is only committed at the
-    // end if the run wasn't cancelled. This keeps concurrent runs from
-    // corrupting each other's pagination state under StrictMode.
-    let localCursor: DiscoverCursor = isInitial ? EMPTY_CURSOR : cursorRef.current;
-
     try {
-      const collected: string[] = [];
-      let exhausted = false;
-
-      for (let round = 0; round < COLLECTIONS_DISCOVER_BACKFILL_MAX_ROUNDS; round += 1) {
-        if (isInitial && round === 0) {
-          // First mount: clear stale cache + sync any unread posts in case
-          // the engagement stream changed across sessions. Mirrors
-          // `useStreamPagination.fetchStreamSlice(isInitialLoad=true)`.
-          await StreamPostsController.prepareStreamForInitialLoad({ streamId });
-          if (token?.cancelled) return;
-          // Engagement streams aren't persisted to `posts_streams` (see
-          // `PostStreamApplication.fetchStreamFromNexus`), so the cached
-          // timestamp is always 0 here — but we keep the call for parity
-          // with `useStreamPagination.fetchStreamSlice(isInitialLoad=true)`
-          // in case the stream class ever changes. The skip cursor starts at 0.
-          await StreamPostsController.getCachedLastPostTimestamp({ streamId });
-          if (token?.cancelled) return;
-          localCursor = { lastPostId: undefined, streamTail: 0 };
-        }
-
-        const result = await StreamPostsController.getOrFetchStreamSlice({
-          streamId,
-          lastPostId: localCursor.lastPostId,
-          streamTail: localCursor.streamTail,
-          limit: COLLECTIONS_SECTION_PAGE_SIZE,
-        });
+      let cursor = cursorRef.current;
+      if (isInitial) {
+        // First mount: clear stale cache + sync any unread posts in case
+        // the engagement stream changed across sessions. Mirrors
+        // `useStreamPagination.fetchStreamSlice(isInitialLoad=true)`.
+        // Skip-paginated streams always start at offset 0.
+        await StreamPostsController.prepareStreamForInitialLoad({ streamId });
         if (token?.cancelled) return;
-
-        // Walk the raw slice and collect up to `COLLECTIONS_SECTION_PAGE_SIZE`
-        // post-filter IDs. We track how many raw IDs we actually walked
-        // through (`rawConsumed`) so the skip cursor advances only by what we
-        // consumed — candidates past the cap on the last round get re-fetched
-        // on the next Show More instead of being silently dropped.
-        //
-        // Discover is an engagement-sorted stream: `streamTail` is a skip
-        // offset (count of raw post IDs already pulled from the stream), not
-        // a timestamp. Do NOT use `result.timestamp` (= `last_post_score`,
-        // an engagement score) for this cursor.
-        let rawConsumed = 0;
-        let reachedPageCap = false;
-        if (result.nextPageIds.length > 0) {
-          // Read the local bookmark set after persist has committed.
-          // Filter own + already-bookmarked + deleted + empty collections.
-          const bookmarkedIds = new Set(await BookmarkController.getAll());
-          if (token?.cancelled) return;
-          // Slice post details to identify already-deleted and empty
-          // collections in this batch. Mirrors the timeline's `isPostDeleted`
-          // guard in `useVisualFeedTiles` and FollowedCollections' live-query
-          // filter; the empty-items check drops collections with nothing to
-          // discover.
-          const sliceDetails = await PostController.getDetailsByIds({ compositeIds: result.nextPageIds });
-          if (token?.cancelled) return;
-          const deletedIds = new Set<string>();
-          const emptyIds = new Set<string>();
-          for (let i = 0; i < result.nextPageIds.length; i += 1) {
-            const detail = sliceDetails[i];
-            if (!detail) continue;
-            if (isPostDeleted(detail.content)) {
-              deletedIds.add(result.nextPageIds[i]);
-              continue;
-            }
-            if ((parseCollectionContent(detail.content)?.items?.length ?? 0) === 0) {
-              emptyIds.add(result.nextPageIds[i]);
-            }
-          }
-          const alreadyVisible = new Set([...visibleIdsRef.current, ...collected]);
-
-          for (const id of result.nextPageIds) {
-            rawConsumed += 1;
-            if (alreadyVisible.has(id)) continue;
-            if (bookmarkedIds.has(id)) continue;
-            if (deletedIds.has(id)) continue;
-            if (emptyIds.has(id)) continue;
-            if (isOwnCollection(id, currentUserPubky)) continue;
-            collected.push(id);
-            alreadyVisible.add(id);
-            if (collected.length >= COLLECTIONS_SECTION_PAGE_SIZE) {
-              reachedPageCap = true;
-              break;
-            }
-          }
-        }
-
-        // Advance the cursor by raw posts actually walked. When the filter
-        // empties the slice (rawConsumed === result.nextPageIds.length, none
-        // collected), this still progresses so the next backfill round
-        // doesn't re-fetch the same slice.
-        const nextLastId = rawConsumed > 0 ? result.nextPageIds[rawConsumed - 1] : localCursor.lastPostId;
-        localCursor = {
-          lastPostId: nextLastId,
-          streamTail: localCursor.streamTail + rawConsumed,
-        };
-
-        if (result.reachedEnd) {
-          exhausted = true;
-          break;
-        }
-        if (reachedPageCap) {
-          break;
-        }
+        cursor = EMPTY_CURSOR;
       }
 
+      const result = await StreamPostsController.getOrFetchStreamSlice({
+        streamId,
+        lastPostId: cursor.lastPostId,
+        streamTail: cursor.streamTail,
+        limit: COLLECTIONS_SECTION_PAGE_SIZE,
+      });
       if (token?.cancelled) return;
 
-      // Commit cursor + state only after winning the race.
-      cursorRef.current = localCursor;
-      setReachedEnd(exhausted);
-      setVisibleIds((prev) => (isInitial ? collected : [...prev, ...collected]));
+      // `nextPageIds` is already post-filter; `nextCursor` is the raw skip
+      // offset the stream layer consumed to produce it. Dedup is defensive
+      // only — the stream layer's cursor accounting should prevent overlap.
+      const base = isInitial ? [] : visibleIdsRef.current;
+      const seen = new Set(base);
+      const fresh = result.nextPageIds.filter((id) => !seen.has(id));
+
+      const lastRawId = result.nextPageIds[result.nextPageIds.length - 1];
+      cursorRef.current = {
+        lastPostId: lastRawId ?? cursor.lastPostId,
+        streamTail: result.nextCursor ?? cursor.streamTail,
+      };
+      setReachedEnd(result.reachedEnd === true);
+      setVisibleIds([...base, ...fresh]);
+
+      // A Show More click that surfaces nothing new while the stream still
+      // has posts means the stream layer's bounded scan was fully filtered
+      // (cap hit). Give the click feedback instead of silently doing nothing.
+      if (!isInitial && fresh.length === 0 && result.reachedEnd !== true) {
+        toast({
+          variant: 'warning',
+          description: t('discover.noNewResults'),
+        });
+      }
     } catch (error) {
       Logger.error('[DiscoverCollections] Failed to fetch slice', { error });
       if (token?.cancelled) return;
@@ -270,8 +193,8 @@ export function DiscoverCollections() {
     }
   };
 
-  // Initial load — wait until the auth store has rehydrated so we filter
-  // against the *settled* `currentUserPubky` from the very first fetch.
+  // Initial load — wait until the auth store has rehydrated so the stream
+  // layer filters against the *settled* viewer from the very first fetch.
   //
   // Uses the cancellation-token pattern: on effect cleanup (StrictMode
   // re-run or real dep change) the previous run is flagged `cancelled` and
@@ -308,9 +231,9 @@ export function DiscoverCollections() {
   // section's Unfollow CTA being toggled back on, or from a future surface)
   // removes the corresponding card here without a reload. While the live
   // query is still resolving (`undefined`) we render `visibleIds` unfiltered
-  // — safe because the fetch-time filter has already excluded everything
-  // currently bookmarked, so there's nothing for the overlay to remove on
-  // first paint.
+  // — safe because the stream-layer fetch filter has already excluded
+  // everything bookmarked at fetch time, so there's nothing for the overlay
+  // to remove on first paint.
   const bookmarkedLive = useLiveQuery(() => BookmarkController.getAll(), []);
   const bookmarkedSet = bookmarkedLive ? new Set(bookmarkedLive) : null;
   // Live overlay for deletions + empty collections: subscribes to `post_details`
@@ -318,8 +241,8 @@ export function DiscoverCollections() {
   // whose content has flipped to '[DELETED]' OR whose item count has fallen to
   // zero. Catches mid-session changes — e.g. an author deletes a collection or
   // removes its last item on another device — so the card disappears from
-  // Discover without a reload. The fetch-time filter covers the cold path; this
-  // overlay covers the live path.
+  // Discover without a reload. The stream-layer fetch filter covers the cold
+  // path; this overlay covers the live path.
   const hideLive = useLiveQuery(async () => {
     if (visibleIds.length === 0) return new Set<string>();
     const details = await PostController.getDetailsByIds({ compositeIds: visibleIds });
@@ -349,7 +272,7 @@ export function DiscoverCollections() {
 
   const showShowMore = !reachedEnd && !loading;
   // Discover always starts empty (no live-query fast path) — show skeletons
-  // for the entire initial-load duration, including any backfill rounds.
+  // for the entire initial-load duration.
   const showSkeletons = loading && displayIds.length === 0;
   // Truly-exhausted empty state: stream reachedEnd AND nothing left to show
   // after the live overlay subtracts followed cards. If the user has
@@ -398,14 +321,4 @@ export function DiscoverCollections() {
       )}
     </Container>
   );
-}
-
-function isOwnCollection(compositeId: string, currentUserPubky: string | null): boolean {
-  if (!currentUserPubky) return false;
-  try {
-    const { pubky } = parseCompositeId(compositeId);
-    return pubky === currentUserPubky;
-  } catch {
-    return false;
-  }
 }

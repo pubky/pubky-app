@@ -16,6 +16,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { getPubkyCoreLink, getPubkyRingLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { Logger } from '@/libs/logger/logger';
+import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
 import { ContentCard } from '@/molecules/Content/Content';
 import { PageTitle } from '@/molecules/Page/Page';
@@ -65,28 +66,32 @@ export const ScanContent = () => {
   );
   return (
     <>
-      {/** Desktop view */}
       <Container size="container" className="hidden md:flex">
         <ScanHeader isMobile={false} />
-        <ContentCard layout="column">
-          <Container className="items-center justify-center gap-4">
-            <div className="relative flex h-[220px] w-[220px] items-center justify-center rounded-lg bg-foreground p-4">
-              <QrCodeSlot
-                isLoading={isLoading}
-                isExpired={isExpired}
-                url={url}
-                generatingLabel={t('generating')}
-                clickToReloadLabel={t('clickToReload')}
-                expiredReloadAction={{ onClick: fetchUrl, ariaLabel: 'Reload sign-up QR code' }}
-              />
-            </div>
-            {inviteCode && (
-              <Typography as="p" className="text-lg font-semibold tracking-widest text-brand">
-                {inviteCode}
-              </Typography>
-            )}
-          </Container>
-        </ContentCard>
+        <BalancedQrCard
+          data-testid="scan-qr-card"
+          illustration={
+            <Image
+              priority
+              src="/images/scan.webp"
+              alt="Pubky Ring phone scanning a QR code"
+              width={192}
+              height={192}
+              className="size-48"
+            />
+          }
+        >
+          <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2">
+            <QrCodeSlot
+              isLoading={isLoading}
+              isExpired={isExpired}
+              url={url}
+              generatingLabel={t('generating')}
+              clickToReloadLabel={t('clickToReload')}
+              expiredReloadAction={{ onClick: fetchUrl, ariaLabel: 'Reload sign-up QR code' }}
+            />
+          </div>
+        </BalancedQrCard>
       </Container>
 
       {/** Mobile view */}

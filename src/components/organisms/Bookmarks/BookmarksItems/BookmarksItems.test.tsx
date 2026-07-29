@@ -18,21 +18,21 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
     variant,
     children,
     emptyState,
-    gridTrailingSlot,
+    trailingSlot,
   }: {
     variant: string;
     children?: ReactNode;
     emptyState?: ReactNode;
-    gridTrailingSlot?: ReactNode;
+    trailingSlot?: ReactNode;
   }) => (
     <div
       data-testid="timeline-feed"
       data-variant={variant}
       data-has-empty-state={String(Boolean(emptyState))}
-      data-has-grid-trailing-slot={String(Boolean(gridTrailingSlot))}
+      data-has-trailing-slot={String(Boolean(trailingSlot))}
     >
       {children}
-      {gridTrailingSlot}
+      {trailingSlot}
     </div>
   ),
 }));
@@ -44,7 +44,7 @@ describe('BookmarksItems', () => {
     const feed = screen.getByTestId('timeline-feed');
     expect(feed).toHaveAttribute('data-variant', 'bookmarks');
     expect(feed).toHaveAttribute('data-has-empty-state', 'true');
-    expect(feed).toHaveAttribute('data-has-grid-trailing-slot', 'true');
+    expect(feed).toHaveAttribute('data-has-trailing-slot', 'true');
     expect(screen.getByTestId('bookmarks-header')).toBeInTheDocument();
     expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-cy', 'bookmarks-add-content-grid');
     expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-trigger-variant', 'grid');

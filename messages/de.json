@@ -5,7 +5,8 @@
     "hoursShort": "{count}h",
     "daysShort": "{count}T",
     "weeksShort": "{count}W",
-    "monthsShort": "{count}M"
+    "monthsShort": "{count}M",
+    "yearsShort": "{count}J"
   },
   "landing": {
     "title": "<highlight>Entsperre</highlight> das Web.",
@@ -260,8 +261,8 @@
       "enterInviteCode": "Einladungscode eingeben"
     },
     "phone": {
-      "title": "Telefon<highlight>nachweis.</highlight>",
-      "subtitle": "Wir senden Ihnen einen Verifizierungscode per SMS an Ihre Telefonnummer.",
+      "title": "Telefonnummer <highlight>eingeben.</highlight>",
+      "subtitle": "Wir senden Ihnen einen Verifizierungscode.",
       "sendCode": "Code senden",
       "phoneNumber": "Telefonnummer",
       "phoneHint": "Geben Sie Ihre Telefonnummer einschliesslich Landesvorwahl ein (z.B. +49 für Deutschland).",
@@ -285,6 +286,7 @@
       "subtitle": "Wir haben einen 6-stelligen Verifizierungscode an {phoneNumber} gesendet.",
       "label": "Verifizierungscode",
       "hint": "Geben Sie den Code ein, den Sie auf {phoneNumber} erhalten haben.",
+      "hintChannels": "Er wurde wahrscheinlich per SMS, WhatsApp oder Telegram gesendet.",
       "resend": "Code erneut senden",
       "resendTimer": "Code erneut senden ({seconds}s)",
       "verify": "Code verifizieren",
@@ -312,9 +314,9 @@
       "copyFailed": "Rechnung konnte nicht kopiert werden."
     },
     "inviteCode": {
-      "title": "Beweisen Sie, dass Sie <highlight>kein Roboter sind.</highlight>",
-      "subtitle": "SMS- oder Zahlungsverifizierung nicht verfügbar. Fragen Sie uns nach einem Einladungscode.",
-      "label": "Einladungscode für Homeserver",
+      "title": "Einladung <highlight>verwenden.</highlight>",
+      "subtitle": "Telefon- oder Zahlungsverifizierung nicht verfügbar? Fragen Sie uns nach einem Einladungscode.",
+      "label": "Einladungscode eingeben",
       "hint": "Sie erhalten 1GB Speicherplatz für Ihre Beiträge, Fotos, Videos und Ihr Profil.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "Benutzerdefinierter Homeserver",
@@ -360,7 +362,7 @@
     },
     "signIn": {
       "title": "Bei <highlight>Pubky</highlight> anmelden.",
-      "subtitle": "Autorisieren Sie mit Pubky Ring, um sich anzumelden.",
+      "subtitle": "Autorisieren Sie mit <highlight>Pubky Ring</highlight>, um sich anzumelden.",
       "progressTitle": "Anmeldung läuft.",
       "progressSubtitle": "Bitte warten Sie, während Ihr Pubky-Erlebnis geladen wird.",
       "generating": "QR-Code wird generiert...",
@@ -1357,6 +1359,9 @@
       "descriptionLabel": "Beschreibung",
       "descriptionPlaceholder": "Was werden Menschen hier finden?",
       "backgroundLabel": "Hintergrund",
+      "layoutLabel": "Layout",
+      "layoutGrid": "Raster",
+      "layoutList": "Liste",
       "addImage": "Bild hinzufügen",
       "removeImage": "Bild entfernen",
       "coverImageInvalid": "Das Coverbild muss eine Bilddatei sein.",
@@ -1379,6 +1384,7 @@
     "edit": {
       "title": "Sammlung bearbeiten",
       "save": "Änderungen speichern",
+      "defaultLayoutLabel": "Standardlayout",
       "updated": "Sammlung aktualisiert",
       "updateFailed": "Sammlung konnte nicht aktualisiert werden."
     },
@@ -1393,7 +1399,8 @@
     },
     "discover": {
       "title": "Sammlungen entdecken",
-      "empty": "Im Moment gibt es keine Sammlungen zu entdecken."
+      "empty": "Im Moment gibt es keine Sammlungen zu entdecken.",
+      "noNewResults": "Gerade wurden keine neuen Sammlungen gefunden. Versuche es später erneut."
     },
     "bookmarks": {
       "title": "Lesezeichen",
@@ -1418,6 +1425,9 @@
       "unfollow": "Entfolgen",
       "content": "Beitrag hinzufügen",
       "addContent": "Beitrag hinzufügen",
+      "layout": "Layout",
+      "layoutGrid": "Raster",
+      "layoutList": "Liste",
       "empty": "Diese Sammlung ist leer.",
       "notFound": {
         "title": "Sammlung nicht gefunden",

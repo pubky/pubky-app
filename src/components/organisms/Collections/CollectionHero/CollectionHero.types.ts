@@ -1,4 +1,5 @@
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import type { CollectionLayout } from '@/config/collections';
 import type { Pubky } from '@/models/models.types';
 
 export interface CollectionHeroProps {
@@ -8,6 +9,10 @@ export interface CollectionHeroProps {
   postId: string;
   /** Loaded collection envelope from the page shell (avoids a duplicate `usePostDetails` fetch). */
   postDetails: EnrichedPostDetails | null | undefined;
+  /** Collection-scoped viewer layout selection. */
+  layout: CollectionLayout;
+  /** Updates the temporary viewer selection without persisting it. */
+  onLayoutChange: (layout: CollectionLayout) => void;
   className?: string;
 }
 

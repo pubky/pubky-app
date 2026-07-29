@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useHomeStore } from '@/stores/home/home.store';
+import { LAYOUT } from '@/stores/home/home.types';
 import { SinglePostLeftDrawer, SinglePostLeftDrawerMobile, SinglePostLeftSidebar } from './SinglePostLeftSidebar';
 
-const mockSetLayout = vi.fn();
-const mockUseHomeStore = vi.fn();
 type BaseFilterMockProps = {
   selectedTab?: string;
   defaultSelectedTab?: string;
@@ -35,13 +35,6 @@ const mockFilterLayout = vi.fn(
   ),
 );
 
-vi.mock('@/stores/home/home.store', () => ({
-  useHomeStore: (selector?: (state: ReturnType<typeof mockUseHomeStore>) => unknown) => {
-    const state = mockUseHomeStore();
-    return selector ? selector(state) : state;
-  },
-}));
-
 vi.mock('@/atoms/Container/Container', () => ({
   Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="container" className={className}>
@@ -69,15 +62,11 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockSetLayout.mockClear();
+  useHomeStore.setState({ layout: LAYOUT.COLUMNS });
   mockFilterReach.mockClear();
   mockFilterSort.mockClear();
   mockFilterContent.mockClear();
   mockFilterLayout.mockClear();
-  mockUseHomeStore.mockReturnValue({
-    layout: 'columns',
-    setLayout: mockSetLayout,
-  });
 });
 
 describe('SinglePostLeftSidebar', () => {
@@ -105,7 +94,7 @@ describe('SinglePostLeftSidebar', () => {
 
     fireEvent.click(screen.getByTestId('change-layout'));
 
-    expect(mockSetLayout).toHaveBeenCalledWith('wide');
+    expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
   });
 
   it('matches snapshot', () => {
@@ -138,7 +127,7 @@ describe('SinglePostLeftDrawer', () => {
 
     fireEvent.click(screen.getByTestId('change-layout'));
 
-    expect(mockSetLayout).toHaveBeenCalledWith('wide');
+    expect(useHomeStore.getState().layout).toBe(LAYOUT.WIDE);
   });
 
   it('matches snapshot', () => {
@@ -165,7 +154,7 @@ describe('SinglePostLeftDrawerMobile', () => {
     render(<SinglePostLeftDrawerMobile />);
 
     expect(screen.queryByTestId('change-layout')).not.toBeInTheDocument();
-    expect(mockSetLayout).not.toHaveBeenCalled();
+    expect(useHomeStore.getState().layout).toBe(LAYOUT.COLUMNS);
   });
 
   it('matches snapshot', () => {

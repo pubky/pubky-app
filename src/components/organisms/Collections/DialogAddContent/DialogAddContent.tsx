@@ -28,7 +28,7 @@ import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFal
 import { GRID_DASHED_CTA_TRIGGER_CLASS } from '@/organisms/Collections/gridDashedCta.const';
 import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
-import type { DialogAddContentProps } from './DialogAddContent.types';
+import type { DialogAddContentProps, DialogAddContentTriggerVariant } from './DialogAddContent.types';
 
 type DialogAddContentTriggerProps = ComponentPropsWithoutRef<typeof Button> & Pick<DialogAddContentProps, 'dataCy'>;
 
@@ -78,6 +78,44 @@ const DialogAddContentGridTrigger = forwardRef<ComponentRef<typeof Button>, Dial
     );
   },
 );
+
+const DialogAddContentListTrigger = forwardRef<ComponentRef<typeof Button>, DialogAddContentTriggerProps>(
+  function DialogAddContentListTrigger({ dataCy, ...props }, ref) {
+    const t = useTranslations('collections.single');
+
+    return (
+      <Button
+        ref={ref}
+        overrideDefaults
+        type="button"
+        aria-label={t('addContent')}
+        data-cy={dataCy}
+        className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+        {...props}
+      >
+        <Plus className="size-3 shrink-0" />
+        <Typography as="span" overrideDefaults className="text-sm font-bold">
+          {t('addContent')}
+        </Typography>
+      </Button>
+    );
+  },
+);
+
+function renderDialogAddContentTrigger(variant: DialogAddContentTriggerVariant, props: DialogAddContentTriggerProps) {
+  switch (variant) {
+    case 'hero':
+      return <DialogAddContentHeroTrigger {...props} />;
+    case 'grid':
+      return <DialogAddContentGridTrigger {...props} />;
+    case 'list':
+      return <DialogAddContentListTrigger {...props} />;
+    default: {
+      const exhaustiveCheck: never = variant;
+      return exhaustiveCheck;
+    }
+  }
+}
 
 function ActionPill({
   icon: Icon,
@@ -290,12 +328,7 @@ export function DialogAddContent({
     });
   };
 
-  const trigger =
-    triggerVariant === 'grid' ? (
-      <DialogAddContentGridTrigger dataCy={dataCy} disabled={disabled} />
-    ) : (
-      <DialogAddContentHeroTrigger dataCy={dataCy} disabled={disabled} />
-    );
+  const trigger = renderDialogAddContentTrigger(triggerVariant, { dataCy, disabled });
 
   return (
     <>

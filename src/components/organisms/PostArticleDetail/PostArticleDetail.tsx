@@ -77,7 +77,11 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
           ) : (
             <>
               {finalCoverImage && (
-                <Image src={finalCoverImage.src} alt={finalCoverImage.alt} className="mb-6 w-full rounded-md" />
+                <Image
+                  src={finalCoverImage.src}
+                  alt={finalCoverImage.alt}
+                  className="mb-6 aspect-video w-full rounded-md object-cover object-center"
+                />
               )}
 
               <PostText content={body} isArticle onLinkClick={handleLinkClick} />

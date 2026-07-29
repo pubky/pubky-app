@@ -2,12 +2,14 @@
 
 import type React from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import type { UsePostListKeyboardResult } from '@/hooks/usePostListKeyboard/usePostListKeyboard.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import { TimelinePostReplies } from '@/organisms/Timeline/PostReplies/PostReplies';
+import { useTimelineFeedContext } from '../../Feed/TimelineFeed/TimelineFeedContext';
 
 interface TimelineFeedItemProps {
   postId: string;
@@ -31,10 +33,13 @@ interface TimelineFeedItemProps {
  * - `kind === 'collection'` — standalone `CollectionCard` (no replies). Once
  *   mounted, `CollectionCard` reads the same Dexie row and usually skips its
  *   skeleton because the cache is already warm.
- * - any other kind — `PostMain` + `TimelinePostReplies`.
+ * - any other kind — `PostMain`, plus `TimelinePostReplies` outside single
+ *   collection feeds.
  */
 function TimelineFeedItemBody({ postId }: { postId: string }) {
   const { postDetails } = usePostDetails(postId);
+  const timelineFeed = useTimelineFeedContext();
+  const shouldShowReplies = timelineFeed?.variant !== TIMELINE_FEED_VARIANT.COLLECTION;
 
   if (postDetails === undefined || postDetails === null) {
     return <PostMain postId={postId} isReply={false} />;
@@ -48,7 +53,7 @@ function TimelineFeedItemBody({ postId }: { postId: string }) {
   return (
     <>
       <PostMain postId={postId} isReply={false} />
-      <TimelinePostReplies postId={postId} />
+      {shouldShowReplies ? <TimelinePostReplies postId={postId} /> : null}
     </>
   );
 }
@@ -58,7 +63,8 @@ function TimelineFeedItemBody({ postId }: { postId: string }) {
  *
  * Accessible feed article (`role="article"`) with keyboard navigation.
  * Delegates body rendering to `TimelineFeedItemBody`, which routes between
- * `CollectionCard` (collections) and `PostMain` + replies (everything else).
+ * `CollectionCard` (collection posts) and `PostMain` (regular posts), with
+ * inline replies omitted when those regular posts are collection items.
  */
 export function TimelineFeedItem({ postId, index, totalCount, setCardRef, onPostKeyDown }: TimelineFeedItemProps) {
   return (
