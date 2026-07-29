@@ -533,7 +533,8 @@ export class HomeserverService {
    */
   static async getBytesIfExists(url: string): Promise<Uint8Array | null> {
     const owned = this.resolveOwnedSessionPath(url);
-    if (!owned) return new Uint8Array(await (await this.get(url)).arrayBuffer());
+    // Unreadable without a session — return null rather than fire an unauthenticated request.
+    if (!owned) return null;
     try {
       const response = await owned.session.storage.get(owned.path);
       return new Uint8Array(await response.arrayBuffer());

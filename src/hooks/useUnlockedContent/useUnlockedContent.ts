@@ -33,6 +33,9 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
   const [unlockedPost, setUnlockedPost] = useState<GuardedPost | null>(null);
   const [media, setMedia] = useState<AttachmentConstructed[]>([]);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  // Effects 1) and 2) below both read my own `/priv`, so they need the restored session.
+  // `currentUserPubky` alone is persisted and rehydrates first, which would run them too early.
+  const session = useAuthStore((state) => state.session);
 
   // Own lock when I posted it (author) AND I own the guarded storage (lock file creator == me, a == b).
   // `authorId === currentUserPubky` is required: lock.json is public, so anyone can point their own
@@ -50,7 +53,7 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
   // No `lockFile` dep on purpose: this read doesn't use it, and adding it would
   // re-run the effect (= duplicate request) once lock.json loads.
   useEffect(() => {
-    if (!lock || !currentUserPubky) return;
+    if (!lock || !currentUserPubky || !session) return;
     // My own post can't have a replicated copy (unlocking only happens on other people's posts).
     // Leans on the a == b policy: post author == lock creator. TODO:[Locks] #1998 — phase 2 (a != b)
     // breaks that inference; decide by lock ownership (e.g. a local unlock index), not authorship.
@@ -66,12 +69,12 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
       cancelled = true;
     };
     // applyContent omitted: it only touches stable setters, so it's not a real dependency.
-  }, [lock, currentUserPubky, authorId]);
+  }, [lock, currentUserPubky, session, authorId]);
 
   // 2) Is this my own content (a == b)? → read the original from my own HS /priv.
   // Needs lock.json to prove the guarded storage is mine.
   useEffect(() => {
-    if (!lock || !currentUserPubky || !lockFile) return;
+    if (!lock || !currentUserPubky || !session || !lockFile) return;
 
     if (!isOwnLock) {
       // a != b: I posted this but locked it with a different account, so the guarded original lives on
@@ -94,7 +97,7 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
     return () => {
       cancelled = true;
     };
-  }, [lock, currentUserPubky, lockFile, authorId, isOwnLock]);
+  }, [lock, currentUserPubky, session, lockFile, authorId, isOwnLock]);
 
   // Revoke a media set's object URLs when it's replaced or on unmount — after commit, so the DOM has
   // already swapped to the new URLs (revoking before commit could break an in-flight image load).

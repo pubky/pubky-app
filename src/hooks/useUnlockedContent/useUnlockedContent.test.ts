@@ -12,10 +12,11 @@ vi.mock('@/controllers/locks/locks', () => ({
     replicateUnlockedContent: vi.fn().mockResolvedValue(undefined),
   },
 }));
-// Mutable so a test can sign the user out; vi.hoisted beats the vi.mock hoist (plain const would be TDZ).
-const authState = vi.hoisted(() => ({ currentUserPubky: 'me' as string | null }));
+// Mutable so a test can sign the user out or hold the session restore; vi.hoisted beats the vi.mock
+// hoist (plain const would be TDZ).
+const authState = vi.hoisted(() => ({ currentUserPubky: 'me' as string | null, session: {} as object | null }));
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (s: { currentUserPubky: string | null }) => unknown) => selector(authState),
+  useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
 }));
 
 const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
@@ -27,6 +28,24 @@ describe('useUnlockedContent', () => {
     vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(null);
     vi.mocked(LocksController.replicateUnlockedContent).mockResolvedValue(undefined);
     authState.currentUserPubky = 'me';
+    authState.session = {};
+  });
+
+  it('waits for the restored session before reading from /priv', async () => {
+    // currentUserPubky is persisted and rehydrates first; the session restore is async. Reading now
+    // would hit /priv unauthenticated and leave an already-unlocked post rendered as locked.
+    authState.session = null;
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
+
+    const { rerender } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'author' }));
+
+    await Promise.resolve();
+    expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
+
+    authState.session = {};
+    rerender();
+
+    await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalledTimes(1));
   });
 
   it('reads nothing without a lock url', async () => {

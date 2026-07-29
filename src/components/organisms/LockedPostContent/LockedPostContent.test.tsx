@@ -24,8 +24,8 @@ vi.mock('@/controllers/locks/locks', () => ({
 }));
 vi.mock('@/molecules/Toaster/use-toast', () => ({ useToast: () => ({ toast: toastMock }) }));
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (s: { currentUserPubky: string | null }) => unknown) =>
-    selector({ currentUserPubky: 'pubkyreader' }),
+  useAuthStore: (selector: (s: { currentUserPubky: string | null; session: object | null }) => unknown) =>
+    selector({ currentUserPubky: 'pubkyreader', session: {} }),
 }));
 vi.mock('../PostBody/PostBody', () => ({
   PostBody: ({ content, localAttachments }: { content: string; localAttachments?: unknown[] }) => (
