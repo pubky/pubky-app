@@ -16,7 +16,7 @@ const GUARDED_CONTENT_PREFIX = '/priv/locks.app/content/';
 /** Where a reader keeps its own copy of content it has unlocked. */
 const UNLOCKED_PREFIX = '/priv/social/unlocked/';
 /** Uploaded last, so its presence proves every attachment before it succeeded. */
-export const UNLOCKED_POST_FILE = 'post.json';
+const UNLOCKED_POST_FILE = 'post.json';
 
 /**
  * Parses a lock post's `content` field (a JSON string) into its creator-authored

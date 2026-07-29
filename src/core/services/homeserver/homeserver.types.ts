@@ -46,7 +46,7 @@ export type CancelableAuthApproval = {
 export type PubPath<T extends string = string> = `/pub/${T}`;
 
 /** Private counterpart of {@link PubPath}: readable/writable only by the owning session. */
-export type PrivPath<T extends string = string> = `/priv/${T}`;
+type PrivPath<T extends string = string> = `/priv/${T}`;
 
 /** The only roots the homeserver accepts writes under — mirrors its `STORAGE_ROOTS`. */
 export type StoragePath<T extends string = string> = PubPath<T> | PrivPath<T>;

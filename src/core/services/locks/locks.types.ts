@@ -198,7 +198,7 @@ export const lockPostContentSchema = z.object({
 export type LockPostContent = z.infer<typeof lockPostContentSchema>;
 
 /** Serialized `PubkyAppPost.kind`. Invalid → reject the whole post, no fallback. */
-export const postKindSchema = z.enum(POST_KINDS);
+const postKindSchema = z.enum(POST_KINDS);
 
 /** The guarded primary — a `PubkyAppPost` — read back after unlock. Lenient: unknown fields ignored. */
 export const guardedPostSchema = z.object({
