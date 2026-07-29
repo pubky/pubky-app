@@ -51,6 +51,7 @@ export function PostInput({
   autoFocusTextarea = false,
   initialContent,
   initialAttachments,
+  layoutOverride,
 }: PostInputProps) {
   const t = useTranslations('post');
   const tToast = useTranslations('toast.post');
@@ -196,7 +197,8 @@ export function PostInput({
 
   const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
 
-  const isWideLayout = usesWidePostInput(useEffectiveTagsLayout());
+  const inheritedTagsLayout = useEffectiveTagsLayout();
+  const isWideLayout = usesWidePostInput(layoutOverride ?? inheritedTagsLayout);
 
   return (
     <Container

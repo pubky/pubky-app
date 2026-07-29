@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { COLLECTION_LAYOUT } from '@/config/collections';
 import { parseCollectionContent } from './collectionContent';
 
 describe('parseCollectionContent', () => {
@@ -45,6 +46,7 @@ describe('parseCollectionContent', () => {
         description: undefined,
         items: undefined,
         cover_image: undefined,
+        layout: COLLECTION_LAYOUT.GRID,
       });
     });
 
@@ -56,6 +58,7 @@ describe('parseCollectionContent', () => {
         description: undefined,
         items: [],
         cover_image: undefined,
+        layout: COLLECTION_LAYOUT.GRID,
       });
     });
 
@@ -65,6 +68,7 @@ describe('parseCollectionContent', () => {
         description: 'A bit of Bitcoin purity amidst all of the madness.',
         items: ['pubky://author/pub/pubky.app/posts/abc', 'pubky://author/pub/pubky.app/posts/def'],
         cover_image: 'https://example.com/cover.png',
+        layout: COLLECTION_LAYOUT.GRID,
       });
 
       expect(parseCollectionContent(raw)).toEqual({
@@ -72,6 +76,7 @@ describe('parseCollectionContent', () => {
         description: 'A bit of Bitcoin purity amidst all of the madness.',
         items: ['pubky://author/pub/pubky.app/posts/abc', 'pubky://author/pub/pubky.app/posts/def'],
         cover_image: 'https://example.com/cover.png',
+        layout: COLLECTION_LAYOUT.GRID,
       });
     });
 
@@ -106,7 +111,17 @@ describe('parseCollectionContent', () => {
         description: undefined,
         items: [],
         cover_image: undefined,
+        layout: COLLECTION_LAYOUT.GRID,
       });
+    });
+
+    it('uses List when present and Grid for an unknown future layout', () => {
+      expect(parseCollectionContent(JSON.stringify({ name: 'List', layout: 'list' }))?.layout).toBe(
+        COLLECTION_LAYOUT.LIST,
+      );
+      expect(parseCollectionContent(JSON.stringify({ name: 'Future', layout: 'spiral' }))?.layout).toBe(
+        COLLECTION_LAYOUT.GRID,
+      );
     });
   });
 });

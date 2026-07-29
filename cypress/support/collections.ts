@@ -22,7 +22,7 @@ export const openCollectionFromMyCollections = (collectionName: string) => {
 export const createCollection = (
   name: string,
   description?: string,
-  { expectIntro }: { expectIntro?: boolean } = {},
+  { expectIntro, layout = 'grid' }: { expectIntro?: boolean; layout?: 'grid' | 'list' } = {},
 ) => {
   cy.get('[data-cy="new-collection-card-cta"]').click();
 
@@ -46,6 +46,7 @@ export const createCollection = (
   if (description) {
     cy.get('[data-cy="collection-form-description-input"]').clear().type(description);
   }
+  cy.get(`[data-cy="collection-layout-${layout}"]`).click();
 
   cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('collectionCreated');
   cy.get('[data-cy="collection-form-save-btn"]').should('not.be.disabled').click();
@@ -54,6 +55,12 @@ export const createCollection = (
   // saving navigates to the new collection page
   cy.location('pathname', { timeout: 30_000 }).should('match', /^\/collections\/[^/]+\/[^/]+$/);
   cy.get('[data-cy="collection-hero"]').should('contain.text', name);
+};
+
+// switch the current collection's temporary viewer layout; this does not persist
+export const selectCollectionViewerLayout = (layout: 'grid' | 'list') => {
+  cy.get('[data-cy="collection-layout-menu"]').click();
+  cy.get(`[data-cy="collection-layout-${layout}"]`).should('be.visible').click();
 };
 
 // edit the collection name and description from the hero's edit button

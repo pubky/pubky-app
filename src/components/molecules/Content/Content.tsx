@@ -1,8 +1,8 @@
 import { ReactNode } from 'react';
 import Image, { ImageProps } from 'next/image';
-import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { cn } from '@/libs/utils/utils';
+import { IllustratedCard } from '../IllustratedCard/IllustratedCard';
 
 interface ContentCardProps {
   children?: ReactNode;
@@ -19,15 +19,15 @@ interface ContentCardProps {
 }
 
 export function ContentCard({ children, className, classNameImage, image, layout = 'row' }: ContentCardProps) {
-  const layoutClasses = {
-    row: 'flex-col lg:flex-row',
-    column: 'flex-col',
-  };
-
   return (
-    <Card className={cn('p-6 md:p-12', className)}>
-      <Container className={cn('gap-12', layoutClasses[layout])}>
-        {image && (
+    <IllustratedCard
+      layout={layout}
+      paddingBreakpoint="md"
+      visualSizing="intrinsic"
+      className={className}
+      contentClassName="justify-start gap-4"
+      visual={
+        image ? (
           <ContentImage
             src={image.src}
             alt={image.alt}
@@ -35,10 +35,11 @@ export function ContentCard({ children, className, classNameImage, image, layout
             height={image.height}
             containerClassName={classNameImage}
           />
-        )}
-        <Container className="w-full justify-start gap-4">{children}</Container>
-      </Container>
-    </Card>
+        ) : undefined
+      }
+    >
+      {children}
+    </IllustratedCard>
   );
 }
 

@@ -76,10 +76,18 @@ describe('QrCodeSlot', () => {
 
     const qr = screen.getByTestId('qrcode-svg');
     expect(qr).toHaveAttribute('data-value', 'auth-url');
-    expect(qr).toHaveAttribute('width', '220');
+    expect(qr).toHaveAttribute('width', '176');
 
     const ringLogo = screen.getByAltText('Pubky Ring');
     expect(ringLogo).toHaveAttribute('src', '/images/ring-logo.svg');
+    expect(ringLogo).toHaveAttribute('width', '48');
+  });
+
+  it('scales the QR code and ring logo for a non-default size', () => {
+    render(<QrCodeSlot {...baseProps} size={220} />);
+
+    expect(screen.getByTestId('qrcode-svg')).toHaveAttribute('width', '220');
+    expect(screen.getByAltText('Pubky Ring')).toHaveAttribute('width', '60');
   });
 
   it('omits hover transitions on active QR by default', () => {
@@ -130,6 +138,11 @@ describe('QrCodeSlot - Snapshots', () => {
 
   it('matches snapshot for active QR with hover effect', () => {
     const { container } = render(<QrCodeSlot {...baseProps} activeQrHasHoverEffect />);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot for a non-default size', () => {
+    const { container } = render(<QrCodeSlot {...baseProps} size={220} />);
     expect(container).toMatchSnapshot();
   });
 

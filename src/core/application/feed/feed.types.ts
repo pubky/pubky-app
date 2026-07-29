@@ -62,6 +62,7 @@ export interface HomeserverFeedJson {
   name: string;
   feed: {
     tags?: string[];
+    domain_tags?: string[];
     reach: string;
     layout: string;
     sort: string;

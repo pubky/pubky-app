@@ -30,6 +30,7 @@ import { PostTagToggleButton } from '@/organisms/PostTagsExpandableRow/PostTagTo
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import { CollectionLayoutPicker } from '../CollectionLayoutPicker/CollectionLayoutPicker';
 import type { CollectionHeroContentProps, CollectionHeroProps } from './CollectionHero.types';
 
 /**
@@ -46,7 +47,14 @@ import type { CollectionHeroContentProps, CollectionHeroProps } from './Collecti
  *   - owner   → Content / Share / Edit / Delete.
  *   - other   → real Follow / Unfollow (via `useBookmark`) + Share placeholder.
  */
-export function CollectionHero({ authorPubky, postId, postDetails, className }: CollectionHeroProps) {
+export function CollectionHero({
+  authorPubky,
+  postId,
+  postDetails,
+  layout,
+  onLayoutChange,
+  className,
+}: CollectionHeroProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
 
   if (!postDetails) {
@@ -66,12 +74,21 @@ export function CollectionHero({ authorPubky, postId, postDetails, className }: 
       postId={postId}
       compositeId={compositeId}
       postDetails={postDetails}
+      layout={layout}
+      onLayoutChange={onLayoutChange}
       className={className}
     />
   );
 }
 
-function CollectionHeroContent({ authorPubky, compositeId, postDetails, className }: CollectionHeroContentProps) {
+function CollectionHeroContent({
+  authorPubky,
+  compositeId,
+  postDetails,
+  layout,
+  onLayoutChange,
+  className,
+}: CollectionHeroContentProps) {
   const t = useTranslations('collections.single');
   const tCardToast = useTranslations('collections.card.toast');
 
@@ -316,6 +333,7 @@ function CollectionHeroContent({ authorPubky, compositeId, postDetails, classNam
               {tagToggle}
             </>
           )}
+          {!isOwn && <CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />}
         </Container>
       </CardContent>
       {dialogs}

@@ -27,6 +27,11 @@ vi.mock('@/atoms/Card/Card', () => {
         {children}
       </div>
     ),
+    CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-slot="card-content" className={className}>
+        {children}
+      </div>
+    ),
   };
 });
 
@@ -50,6 +55,19 @@ describe('ContentCard', () => {
 
     expect(screen.getByTestId('card')).toBeInTheDocument();
     expect(screen.getByText('Test content')).toBeInTheDocument();
+  });
+
+  it('preserves the configured image dimensions without forcing a fixed visual column', () => {
+    render(
+      <ContentCard image={{ src: '/test.jpg', alt: 'Test image', width: 200, height: 200 }}>
+        <div>Content with image</div>
+      </ContentCard>,
+    );
+
+    const imageContainer = screen.getByTestId('content-image').parentElement;
+    expect(imageContainer).toHaveStyle({ width: '200px', height: '200px' });
+    expect(imageContainer).toHaveClass('hidden', 'lg:flex');
+    expect(imageContainer?.parentElement).not.toHaveClass('w-48', 'shrink-0');
   });
 });
 

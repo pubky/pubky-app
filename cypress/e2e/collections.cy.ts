@@ -17,12 +17,13 @@ import {
   editCollectionFromHero,
   findCollectionCardInSection,
   openCollectionFromMyCollections,
+  selectCollectionViewerLayout,
   sectionDoesNotContainCollection,
   togglePostInCollectionViaSavePicker,
 } from '../support/collections';
 import { searchForProfileByPubky } from '../support/contacts';
 import { goToCollectionsPage, goToHomePage } from '../support/header';
-import { createQuickPost, waitForFeedToLoad } from '../support/posts';
+import { createQuickPost, replyToPost, waitForFeedToLoad } from '../support/posts';
 import { defaultMs } from '../support/slow-down';
 import { BackupType, CheckForNewPosts, HasBackedUp, WaitForNewPosts } from '../support/types/enums';
 
@@ -262,6 +263,59 @@ describe('collections', () => {
     openCollectionFromMyCollections(collectionName);
     deleteCollectionFromHero();
     cy.signOut(HasBackedUp.Yes);
+  });
+
+  it('persists the creator List default and keeps viewer overrides temporary', () => {
+    const collectionName = `List collection ${Date.now()}`;
+    const postContent = `A post in List layout ${Date.now()}`;
+    const replyContent = `A reply hidden from the collection ${Date.now()}`;
+
+    goToHomePage();
+    cy.get('[data-cy="columns-layout-toggle"]').filter(':visible').click();
+    goToCollectionsPage();
+    createCollection(collectionName, 'List by default.', { layout: 'list' });
+    createPostInCollection(postContent);
+    replyToPost({ replyContent, filterText: postContent });
+
+    cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', replyContent);
+    cy.get('[data-cy="timeline-posts-grid"]').should('not.exist');
+    cy.get('[data-cy="collection-layout-menu"]').should('not.exist');
+
+    // * posts opened from List collections use the Home layout and reveal their replies
+    cy.get('[data-cy="timeline-posts"]').contains(postContent).click();
+    cy.location('pathname').should('match', /^\/post\/[^/]+\/[^/]+$/);
+    cy.location('search').should('eq', '');
+    cy.get('[data-cy="single-post-card"]').should('contain.text', postContent);
+    cy.contains(replyContent).should('be.visible');
+    cy.get('[data-cy="columns-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
+
+    // * changing the post layout updates Home state without adding another Back step
+    cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').click();
+    cy.location('search').should('eq', '');
+    cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
+    cy.go('back');
+    cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', replyContent);
+
+    // * a viewer can override the creator default without persisting it
+    cy.wait(1000);
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(follower.username));
+    goToCollectionsPage();
+    findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible').click();
+    selectCollectionViewerLayout('grid');
+    cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', postContent);
+
+    cy.reload();
+    cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
+    cy.get('[data-cy="timeline-posts-grid"]').should('not.exist');
+
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithEncryptedFile(backupDownloadFilePath(curator.username));
+    openCollectionFromMyCollections(collectionName);
+    deleteCollectionFromHero();
+    goToHomePage();
   });
 
   it('can create a collection with a post directly from the save picker', () => {

@@ -447,10 +447,11 @@ describe('FeedApplication', () => {
     const feedUri1 = `pubky://${testUserId}/pub/pubky.app/feeds/feed-abc`;
     const feedUri2 = `pubky://${testUserId}/pub/pubky.app/feeds/feed-def`;
 
-    const createRemoteFeedJson = (name: string, tags: string[] = ['bitcoin']) => ({
+    const createRemoteFeedJson = (name: string, tags: string[] = ['bitcoin'], domainTags?: string[]) => ({
       name,
       feed: {
         tags,
+        domain_tags: domainTags,
         reach: 'all',
         layout: 'columns',
         sort: 'recent',
@@ -491,6 +492,7 @@ describe('FeedApplication', () => {
         'recent',
         null,
         'Bitcoin News',
+        undefined,
       );
       expect(createOrUpdateManySpy).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -502,6 +504,26 @@ describe('FeedApplication', () => {
         ]),
       );
       expect(result).toHaveLength(1);
+    });
+
+    it('preserves remote domain tags while validating the feed hash', async () => {
+      const { listSpy, requestSpy, createOrUpdateManySpy, mockBuilder } = setupFetchMocks();
+
+      listSpy.mockResolvedValue([feedUri1]);
+      requestSpy.mockResolvedValue(createRemoteFeedJson('Network Feed', ['bitcoin'], ['synonym']));
+      createOrUpdateManySpy.mockImplementation((feeds) => Promise.resolve(feeds));
+
+      await FeedApplication.fetchFeeds(testUserId);
+
+      expect(mockBuilder.createFeed).toHaveBeenCalledWith(
+        ['bitcoin'],
+        'all',
+        'columns',
+        'recent',
+        null,
+        'Network Feed',
+        ['synonym'],
+      );
     });
 
     it('should handle multiple feeds', async () => {

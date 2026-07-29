@@ -4,6 +4,8 @@ export interface QrCodeSlotProps {
   url: string;
   generatingLabel: string;
   clickToReloadLabel: string;
+  /** QR code pixel size. Defaults to 176. */
+  size?: number;
   /**
    * When the active QR is itself clickable (e.g. SignIn copy-to-clipboard),
    * the consumer wraps this slot in a `group`-classed button. Setting this to

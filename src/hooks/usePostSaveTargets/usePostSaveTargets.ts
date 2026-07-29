@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { postUriBuilder } from 'pubky-app-specs';
+import { DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { PostController } from '@/controllers/post/post';
 import { useAuthoredCollections } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
@@ -100,6 +101,7 @@ export function usePostSaveTargets(postId: string): UsePostSaveTargetsResult {
         authorId: currentUserPubky,
         name,
         items: [postUri],
+        layout: DEFAULT_COLLECTION_LAYOUT,
       });
       toast({
         title: tSave('collectionCreated'),

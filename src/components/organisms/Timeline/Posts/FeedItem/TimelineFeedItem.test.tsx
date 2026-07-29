@@ -1,7 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { buildCollectionItemsStreamId } from '@/models/stream/post/postStream.types';
+import type { TimelineFeedContextValue } from '../../Feed/TimelineFeed/TimelineFeed.types';
+import { TimelineFeedContext } from '../../Feed/TimelineFeed/TimelineFeedContext';
 import { TimelineFeedItem } from './TimelineFeedItem';
 
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
@@ -77,6 +81,17 @@ function createMockPostDetails(overrides: Partial<EnrichedPostDetails> = {}): En
   };
 }
 
+function createCollectionFeedContext(): TimelineFeedContextValue {
+  return {
+    variant: TIMELINE_FEED_VARIANT.COLLECTION,
+    streamId: buildCollectionItemsStreamId('author', 'collection'),
+    collectionId: 'author:collection',
+    prependPosts: vi.fn(async () => {}),
+    prependOptimisticPosts: vi.fn(),
+    removePosts: vi.fn(),
+  };
+}
+
 describe('TimelineFeedItem', () => {
   const mockPostId = 'author:post123';
   const mockSetCardRef = vi.fn(() => vi.fn());
@@ -105,6 +120,23 @@ describe('TimelineFeedItem', () => {
     expect(screen.getByTestId(`post-${mockPostId}`)).toHaveAttribute('data-is-reply', 'false');
     expect(screen.getByTestId(`replies-${mockPostId}`)).toBeInTheDocument();
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
+  });
+
+  it('hides inline replies for posts rendered in a collection feed', () => {
+    render(
+      <TimelineFeedContext.Provider value={createCollectionFeedContext()}>
+        <TimelineFeedItem
+          postId={mockPostId}
+          index={0}
+          totalCount={1}
+          setCardRef={mockSetCardRef}
+          onPostKeyDown={mockOnPostKeyDown}
+        />
+      </TimelineFeedContext.Provider>,
+    );
+
+    expect(screen.getByTestId(`post-${mockPostId}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`replies-${mockPostId}`)).not.toBeInTheDocument();
   });
 
   it('renders standalone CollectionCard without replies for collection posts', () => {
@@ -226,6 +258,22 @@ describe('TimelineFeedItem - Snapshots', () => {
         setCardRef={mockSetCardRef}
         onPostKeyDown={mockOnPostKeyDown}
       />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for a regular post in a collection feed', () => {
+    const { container } = render(
+      <TimelineFeedContext.Provider value={createCollectionFeedContext()}>
+        <TimelineFeedItem
+          postId="author:post123"
+          index={0}
+          totalCount={1}
+          setCardRef={mockSetCardRef}
+          onPostKeyDown={mockOnPostKeyDown}
+        />
+      </TimelineFeedContext.Provider>,
     );
 
     expect(container.firstChild).toMatchSnapshot();

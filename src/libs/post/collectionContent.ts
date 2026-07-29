@@ -1,22 +1,8 @@
 import type { PubkyAppCollectionContent } from 'pubky-app-specs';
+import { type CollectionLayout, DEFAULT_COLLECTION_LAYOUT, isCollectionLayout } from '@/config/collections';
 
-/**
- * Re-export the canonical Collection content envelope type from `pubky-app-specs`
- * so consumers can import the type and the parser from a single project module.
- *
- * This module must stay pure (no Controller/Application imports): the parser is
- * consumed by the application layer (`PostStreamApplication.filterEmptyCollections`),
- * which must not depend on Controllers (AGENTS.md layering). The
- * `FileController`-backed cover-image resolver lives in `collectionCoverImage.ts`.
- *
- * Shape (per the specs package, `>= 0.5.2-rc2`):
- *   - `name: string` (required)
- *   - `description: string | undefined`
- *   - `items?: string[]` (TS-optional for forward-compat; runtime validator
- *     produces an array)
- *   - `cover_image: string | undefined`
- */
-export type { PubkyAppCollectionContent } from 'pubky-app-specs';
+/** Parsed Collection envelope with a normalized, backwards-compatible layout. */
+export type ParsedCollectionContent = PubkyAppCollectionContent & { layout: CollectionLayout };
 
 /**
  * Parses a Collection post's `content` JSON envelope into `PubkyAppCollectionContent`.
@@ -33,10 +19,10 @@ export type { PubkyAppCollectionContent } from 'pubky-app-specs';
  *
  * Pure function — safe to call from any layer (UI, services, models).
  */
-export function parseCollectionContent(raw: string | null | undefined): PubkyAppCollectionContent | null {
+export function parseCollectionContent(raw: string | null | undefined): ParsedCollectionContent | null {
   if (!raw) return null;
 
-  let content: Partial<PubkyAppCollectionContent>;
+  let content: Partial<PubkyAppCollectionContent> & { layout?: unknown };
   try {
     content = JSON.parse(raw) as Partial<PubkyAppCollectionContent>;
   } catch {
@@ -51,5 +37,6 @@ export function parseCollectionContent(raw: string | null | undefined): PubkyApp
     description: typeof content.description === 'string' ? content.description : undefined,
     items: Array.isArray(content.items) ? content.items : undefined,
     cover_image: typeof content.cover_image === 'string' ? content.cover_image : undefined,
+    layout: isCollectionLayout(content.layout) ? content.layout : DEFAULT_COLLECTION_LAYOUT,
   };
 }

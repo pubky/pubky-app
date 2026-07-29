@@ -62,14 +62,6 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
   };
 });
 
-vi.mock('@/molecules/Content/Content', () => {
-  return {
-    ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
-      <div data-layout={layout}>{children}</div>
-    ),
-  };
-});
-
 vi.mock('@/molecules/Page/Page', () => {
   return {
     PageTitle: ({ children, size }: { children: React.ReactNode; size?: string }) => (
@@ -88,9 +80,14 @@ describe('LogoutContent', () => {
     render(<LogoutContent />);
     const image = screen.getByTestId('next-image');
     expect(image).toHaveAttribute('src', '/images/tag.webp');
-    expect(image).toHaveAttribute('alt', 'Pubky Ring');
+    expect(image).toHaveAttribute('alt', 'Pubky tag');
     expect(image).toHaveAttribute('width', '192');
     expect(image).toHaveAttribute('height', '192');
+  });
+
+  it('centers the illustration in a full-width card', () => {
+    render(<LogoutContent />);
+    expect(screen.getByTestId('logout-image-card')).toHaveClass('items-center', 'justify-center');
   });
 
   it('renders LogoutHeader component', () => {
@@ -136,5 +133,13 @@ describe('LogoutNavigation', () => {
     const continueButton = screen.getByText('Sign back in');
     fireEvent.click(continueButton);
     expect(mockPush).toHaveBeenCalledWith(AUTH_ROUTES.SIGN_IN);
+  });
+});
+
+describe('LogoutContent - Snapshots', () => {
+  it('matches the signed-out illustration layout', () => {
+    const { container } = render(<LogoutContent />);
+
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
