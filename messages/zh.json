@@ -264,6 +264,7 @@
       "sendCode": "发送验证码",
       "phoneNumber": "手机号码",
       "phoneHint": "输入您的手机号码，包括国家代码（如中国 +86）。",
+      "invalidPhone": "请输入包含国家代码的有效手机号码。",
       "placeholder": "+86XXXXXXXXXXX",
       "blocked": "手机号已被封锁",
       "blockedDescription": "此手机号无法用于验证。",

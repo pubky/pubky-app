@@ -264,6 +264,7 @@
       "sendCode": "Send Code",
       "phoneNumber": "Phone number",
       "phoneHint": "Enter your phone number, including country code (e.g. +1 for US).",
+      "invalidPhone": "Enter a valid mobile number including country code.",
       "placeholder": "+316XXXXXXXX",
       "blocked": "Phone number blocked",
       "blockedDescription": "This phone number cannot be used for verification.",
