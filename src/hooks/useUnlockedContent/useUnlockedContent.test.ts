@@ -88,6 +88,18 @@ describe('useUnlockedContent', () => {
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
   });
 
+  it('never reads my guarded original for someone else’s post that points at my lock file', async () => {
+    // lock.json is public: anyone can copy my lock URL into their own post. Only the replicated-copy
+    // read may run — reading my original here would render my private content under their teaser.
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyme' });
+
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'attacker' }));
+
+    await Promise.resolve();
+    expect(result.current.isOwnLock).toBe(false);
+    expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
+  });
+
   it('checks the replicated copy exactly once, not again when the lock file arrives', async () => {
     const { rerender } = renderHook(
       ({ lockFile }: { lockFile: LockFile | null }) =>

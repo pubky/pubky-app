@@ -35,8 +35,10 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   // Own lock when I posted it (author) AND I own the guarded storage (lock file creator == me, a == b).
+  // `authorId === currentUserPubky` is required: lock.json is public, so anyone can point their own
+  // post at MY lock URL. Without it, their post reads my original and renders it under their teaser.
   const lockOwner = lockFile ? stripPubkyPrefix(lockFile.creator) : null;
-  const isOwnLock = lockOwner !== null && lockOwner === currentUserPubky;
+  const isOwnLock = lockOwner !== null && lockOwner === currentUserPubky && authorId === currentUserPubky;
 
   // Bytes → object URLs here; only post + URLs go to state, so the raw bytes are GC'd once this returns.
   const applyContent = (content: TUnlockedContent) => {
