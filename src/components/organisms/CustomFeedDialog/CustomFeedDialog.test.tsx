@@ -728,7 +728,7 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('post-tag-🔥')).toBeInTheDocument();
   });
 
-  it('preserves legacy Me profile tags while keeping the editor hidden', () => {
+  it('shows legacy Me profile tags read-only while keeping the editor hidden', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({ reach: PubkyAppFeedReach.Me, tags: [], domain_tags: ['bitcoiner'] }),
     );
@@ -740,12 +740,13 @@ describe('CustomFeedDialog', () => {
     );
 
     expect(screen.getByTestId('reach-select')).toHaveAttribute('data-value', String(PubkyAppFeedReach.Me));
-    expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('profile-tags-section')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-tag-bitcoiner')).toHaveAttribute('data-show-close', 'false');
+    expect(screen.getByTestId('profile-tags-section')).toBeInTheDocument();
     expect(screen.queryByTestId('feed-profile-tag-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('remove-tag-bitcoiner')).not.toBeInTheDocument();
   });
 
-  it('preserves legacy Following profile tags while keeping the editor hidden', () => {
+  it('shows legacy Following profile tags read-only while keeping the editor hidden', () => {
     mockUseCustomFeed.mockReturnValue(
       createMockFeed({ reach: PubkyAppFeedReach.Following, tags: ['bitcoin'], domain_tags: ['bitcoiner'] }),
     );
@@ -756,9 +757,10 @@ describe('CustomFeedDialog', () => {
       </CustomFeedDialog>,
     );
 
-    expect(screen.queryByTestId('post-tag-bitcoiner')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('profile-tags-section')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-tag-bitcoiner')).toHaveAttribute('data-show-close', 'false');
+    expect(screen.getByTestId('profile-tags-section')).toBeInTheDocument();
     expect(screen.queryByTestId('feed-profile-tag-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('remove-tag-bitcoiner')).not.toBeInTheDocument();
   });
 
   it('clears profile tags on every explicit non-Tagged-as selection', () => {

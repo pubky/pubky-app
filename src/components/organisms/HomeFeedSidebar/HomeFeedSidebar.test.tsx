@@ -32,7 +32,6 @@ const {
       showTaggedAs,
       profileTags,
       profileTagsDisabled,
-      onTabChange,
     }: {
       selectedTab?: string;
       showTaggedAs?: boolean;
@@ -46,7 +45,6 @@ const {
         data-show-tagged-as={showTaggedAs ? 'true' : undefined}
         data-profile-tags={(profileTags ?? []).join(',')}
         data-profile-tags-disabled={profileTagsDisabled ? 'true' : undefined}
-        onClick={() => onTabChange?.('tagged_as')}
       >
         FilterReach
       </div>
@@ -247,6 +245,17 @@ describe('HomeFeedSidebar', () => {
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
   });
 
+  it('does not persist a signed-out All selection', () => {
+    mockCurrentUserPubky.value = null;
+
+    render(<HomeFeedSidebar />);
+    act(() => {
+      mockFilterReach.mock.calls.at(-1)?.[0].onTabChange?.('all');
+    });
+
+    expect(mockSetReach).not.toHaveBeenCalled();
+  });
+
   it('opts Home into the standalone Tagged-as reach controls', () => {
     mockUseHomeStore.mockReturnValue({
       layout: 'columns',
@@ -318,11 +327,34 @@ describe('HomeFeedSidebar', () => {
     expect(screen.getByTestId('filter-reach')).not.toHaveAttribute('data-profile-tags-disabled');
   });
 
+  it('highlights the base reach while an empty Tagged-as editor is open', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'me',
+      setReach: mockSetReach,
+      taggedAsActive: true,
+      setTaggedAsActive: mockSetTaggedAsActive,
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: [],
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'me');
+    expect(screen.getByTestId('filter-reach')).not.toHaveAttribute('data-profile-tags-disabled');
+  });
+
   it('activates Tagged as without changing the parked base reach', () => {
     render(<HomeFeedSidebar />);
 
     act(() => {
-      screen.getByTestId('filter-reach').click();
+      mockFilterReach.mock.calls.at(-1)?.[0].onTabChange?.('tagged_as');
     });
 
     expect(mockSetTaggedAsActive).toHaveBeenCalledWith(true);

@@ -52,14 +52,20 @@ function HomeFeedFilters({
   const { requireAuth } = useRequireAuth();
   const isAuthenticated = Boolean(currentUserPubky);
   const effectiveReach = isAuthenticated ? reach : REACH.ALL;
-  const selectedReach: ReachFilterValue = isAuthenticated && taggedAsActive ? TAGGED_AS_FILTER_KEY : effectiveReach;
+  const selectedReach: ReachFilterValue =
+    isAuthenticated && taggedAsActive && profileTags.length > 0 ? TAGGED_AS_FILTER_KEY : effectiveReach;
   const effectiveProfileTags = isAuthenticated ? profileTags : [];
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
 
   // "All" reach is public; other reach options require an account, so prompt Join Pubky in Explore mode.
   const handleReachChange = (value: ReachFilterValue) => {
     if (value === REACH.ALL) {
-      setReach(value);
+      // Signed-out Home already resolves to All. Avoid persisting this no-op as
+      // an explicit choice so a visitor remains eligible for the post-signup
+      // My-network default.
+      if (isAuthenticated) {
+        setReach(value);
+      }
       return;
     }
 

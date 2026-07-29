@@ -496,7 +496,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
           )}
         </Container>
 
-        {isTaggedAsReach && (
+        {(isTaggedAsReach || domainTags.length > 0) && (
           <Container className="gap-y-2" data-testid="profile-tags-section">
             <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('profileTags')}</Label>
 
@@ -504,24 +504,26 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
               {tDialog('profileTagsDescription')}
             </Typography>
 
-            <TagInput
-              onTagAdd={handleDomainTagAdd}
-              placeholder={tFilter('reach.profileTag')}
-              existingTags={domainTags.map((label) => ({ label }))}
-              viewerTags={domainTags.map((label) => ({ label }))}
-              disabled={disabled}
-              maxTags={HOME_PROFILE_TAGS_MAX_SELECTED}
-              currentTagsCount={domainTags.length}
-              limitReachedPlaceholder={tFilter('reach.profileTagLimitReached', {
-                max: HOME_PROFILE_TAGS_MAX_SELECTED,
-              })}
-              showEmojiButton={!isAtProfileTagLimit}
-              enableApiSuggestions
-              excludeFromApiSuggestions={domainTags}
-              addOnSuggestionClick
-              className="w-48"
-              data-testid="feed-profile-tag-input"
-            />
+            {isTaggedAsReach && (
+              <TagInput
+                onTagAdd={handleDomainTagAdd}
+                placeholder={tFilter('reach.profileTag')}
+                existingTags={domainTags.map((label) => ({ label }))}
+                viewerTags={domainTags.map((label) => ({ label }))}
+                disabled={disabled}
+                maxTags={HOME_PROFILE_TAGS_MAX_SELECTED}
+                currentTagsCount={domainTags.length}
+                limitReachedPlaceholder={tFilter('reach.profileTagLimitReached', {
+                  max: HOME_PROFILE_TAGS_MAX_SELECTED,
+                })}
+                showEmojiButton={!isAtProfileTagLimit}
+                enableApiSuggestions
+                excludeFromApiSuggestions={domainTags}
+                addOnSuggestionClick
+                className="w-48"
+                data-testid="feed-profile-tag-input"
+              />
+            )}
 
             {domainTags.length > 0 && (
               <Container className="flex-row flex-wrap gap-2">
@@ -529,7 +531,7 @@ export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
                   <PostTag
                     key={`${tag}-${index}`}
                     label={tag}
-                    showClose={!disabled}
+                    showClose={isTaggedAsReach && !disabled}
                     onClose={() => setDomainTags((currentTags) => currentTags.filter((_, i) => i !== index))}
                   />
                 ))}
