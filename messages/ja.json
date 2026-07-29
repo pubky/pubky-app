@@ -259,8 +259,8 @@
       "enterInviteCode": "招待コードを入力"
     },
     "phone": {
-      "title": "電話番号の<highlight>確認。</highlight>",
-      "subtitle": "SMSで確認コードをお送りします。",
+      "title": "電話番号を<highlight>入力。</highlight>",
+      "subtitle": "確認コードをお送りします。",
       "sendCode": "コードを送信",
       "phoneNumber": "電話番号",
       "phoneHint": "国番号を含めて電話番号を入力してください（例：日本は+81）。",
@@ -283,6 +283,7 @@
       "subtitle": "6桁の確認コードを{phoneNumber}に送信しました。",
       "label": "確認コード",
       "hint": "{phoneNumber}で受信したコードを入力してください。",
+      "hintChannels": "SMS、WhatsApp、またはTelegramで送信された可能性が高いです。",
       "resend": "コードを再送信",
       "resendTimer": "コードを再送信（{seconds}秒）",
       "verify": "コードを確認",
@@ -310,9 +311,9 @@
       "copyFailed": "請求書をコピーできませんでした。"
     },
     "inviteCode": {
-      "title": "ロボットではないことを<highlight>証明してください。</highlight>",
-      "subtitle": "SMSまたは支払い確認が利用できません。招待コードをお問い合わせください。",
-      "label": "ホームサーバーの招待コード",
+      "title": "<highlight>招待コード</highlight>を使う。",
+      "subtitle": "電話または支払いによる確認を利用できませんか？招待コードをお問い合わせください。",
+      "label": "招待コードを入力",
       "hint": "投稿、写真、動画、プロフィール用に1GBのストレージを取得できます。",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "カスタムホームサーバー",
@@ -358,7 +359,7 @@
     },
     "signIn": {
       "title": "<highlight>Pubky</highlight>にログイン。",
-      "subtitle": "Pubky Ringで認証してログインしてください。",
+      "subtitle": "<highlight>Pubky Ring</highlight>で認証してログインしてください。",
       "progressTitle": "サインイン中。",
       "progressSubtitle": "Pubky の体験を読み込んでいます。しばらくお待ちください。",
       "generating": "QRコード生成中...",

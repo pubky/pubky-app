@@ -17,6 +17,78 @@ exports[`HeaderHome - Snapshots > matches snapshot for default HeaderHome 1`] = 
 </div>
 `;
 
+exports[`HeaderHome - Snapshots > matches snapshot on the logout page 1`] = `
+<div
+  class="flex-1 flex-row items-center justify-end gap-3"
+>
+  <button
+    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
+    data-slot="button"
+    data-testid="header-learn-btn"
+    data-variant="outline"
+    id="header-learn-btn"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-book-open size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 7v14"
+      />
+      <path
+        d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"
+      />
+    </svg>
+    Learn
+  </button>
+  <button
+    class="items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-10 px-4 py-2 has-[>svg]:px-4 hidden gap-2 md:inline-flex"
+    data-slot="button"
+    data-testid="header-explore-btn"
+    data-variant="outline"
+    id="header-explore-btn"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-eye size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+      />
+    </svg>
+    Explore
+  </button>
+  <button
+    data-testid="header-button-sign-in"
+  >
+    Sign in
+  </button>
+</div>
+`;
+
 exports[`HeaderHome - Snapshots > matches snapshot with custom className 1`] = `
 <div
   class="custom-class"

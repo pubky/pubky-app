@@ -79,8 +79,9 @@ describe('DialogSignIn', () => {
       const dialog = screen.getByRole('dialog');
       expect(dialog.querySelectorAll('.lucide-user-round-plus')).toHaveLength(1);
       expect(dialog.querySelectorAll('.lucide-arrow-right')).toHaveLength(1);
-      expect(screen.getByAltText('New here?')).toHaveAttribute('src', '/images/new-here.svg');
-      expect(screen.getByAltText('Already have a pubky?')).toHaveAttribute('src', '/images/sign-in.svg');
+      // next/image optimizes raster assets; assert the underlying public path remains.
+      expect(screen.getByAltText('New here?').getAttribute('src')).toContain('new-here.webp');
+      expect(screen.getByAltText('Already have a pubky?').getAttribute('src')).toContain('sign-in.webp');
     });
   });
 

@@ -264,6 +264,15 @@ describe('ScanContent', () => {
     expect(mobileContainer).toBeInTheDocument();
   });
 
+  it('renders the scan illustration beside the QR on desktop', async () => {
+    await act(async () => {
+      render(<ScanContent />);
+    });
+
+    expect(screen.getByTestId('scan-qr-card')).toBeInTheDocument();
+    expect(screen.getByAltText('Pubky Ring phone scanning a QR code')).toHaveAttribute('src', '/images/scan.webp');
+  });
+
   it('renders logo and button in mobile version', async () => {
     await act(async () => {
       render(<ScanContent />);

@@ -14,6 +14,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
+import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
 import { ContentCard } from '@/molecules/Content/Content';
 import { Logo } from '@/molecules/Logo/Logo';
 import { PageTitle } from '@/molecules/Page/Page';
@@ -149,44 +150,45 @@ export const SignInContent = () => {
   }
   return (
     <>
-      {/** Desktop view */}
       <Container size="container" className="hidden md:flex">
         <SignInHeader />
-        <ContentCard layout="column">
-          <Container className="items-center justify-center gap-3">
-            <button
-              type="button"
-              className="group relative flex h-[220px] w-[220px] cursor-pointer items-center justify-center rounded-lg bg-foreground p-4"
-              onClick={isExpired ? fetchUrl : handleQRClick}
-              disabled={isLoading || (!url && !isExpired)}
-              aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
-            >
-              <QrCodeSlot
-                isLoading={isLoading}
-                isExpired={isExpired}
-                url={url}
-                generatingLabel={t('generating')}
-                clickToReloadLabel={t('clickToReload')}
-                activeQrHasHoverEffect
-              />
-            </button>
-            <Container className="w-56 flex-row items-center justify-between gap-5">
-              <Link href="https://apps.apple.com/us/app/pubky-ring/id6739356756">
-                <Image src="/images/badge-apple.webp" alt="Apple Store Button Pubky Ring" width={94.5} height={28} />
-              </Link>
-              <Link href="https://play.google.com/store/apps/details?id=to.pubky.ring">
-                <Image src="/images/badge-android.webp" alt="Google Store Button Pubky Ring" width={94.5} height={28} />
-              </Link>
-            </Container>
-          </Container>
-        </ContentCard>
+        <BalancedQrCard
+          data-testid="sign-in-qr-card"
+          illustration={
+            <Image
+              priority
+              src="/images/scan.webp"
+              alt="Pubky Ring phone scanning a QR code"
+              width={192}
+              height={192}
+              className="size-48"
+            />
+          }
+        >
+          <button
+            type="button"
+            className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2"
+            onClick={isExpired ? fetchUrl : handleQRClick}
+            disabled={isLoading || (!url && !isExpired)}
+            aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
+          >
+            <QrCodeSlot
+              isLoading={isLoading}
+              isExpired={isExpired}
+              url={url}
+              generatingLabel={t('generating')}
+              clickToReloadLabel={t('clickToReload')}
+              activeQrHasHoverEffect
+            />
+          </button>
+        </BalancedQrCard>
       </Container>
 
       {/** Mobile view */}
       <Container size="container" className="md:hidden">
         <SignInHeader />
         <ContentCard layout="column">
-          <Container className="flex-col items-center justify-center gap-6 lg:flex-row">
+          <Container className="flex-col items-center justify-center gap-6">
             <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
             <Button
               className="w-full"
@@ -229,7 +231,11 @@ export const SignInHeader = () => {
           highlight: (chunks) => <span className="text-brand">{chunks}</span>,
         })}
       </PageTitle>
-      <PageSubtitle>{t('subtitle')}</PageSubtitle>
+      <PageSubtitle>
+        {t.rich('subtitle', {
+          highlight: (chunks) => <span className="text-brand">{chunks}</span>,
+        })}
+      </PageSubtitle>
     </PageHeader>
   );
 };

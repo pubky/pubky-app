@@ -259,8 +259,8 @@
       "enterInviteCode": "Digite o código de convite"
     },
     "phone": {
-      "title": "Prova de <highlight>Telefone.</highlight>",
-      "subtitle": "Enviaremos um código de verificação via SMS para seu número de telefone.",
+      "title": "Digite o <highlight>Telefone.</highlight>",
+      "subtitle": "Enviaremos um código de verificação.",
       "sendCode": "Enviar Código",
       "phoneNumber": "Número de telefone",
       "phoneHint": "Digite seu número de telefone, incluindo o código do pais (ex: +55 para Brasil).",
@@ -283,6 +283,7 @@
       "subtitle": "Enviamos um código de verificação de 6 digitos para {phoneNumber}.",
       "label": "Código de verificação",
       "hint": "Digite o código que você recebeu em {phoneNumber}.",
+      "hintChannels": "Provavelmente foi enviado por SMS, WhatsApp ou Telegram.",
       "resend": "Reenviar Código",
       "resendTimer": "Reenviar Código ({seconds}s)",
       "verify": "Verificar Código",
@@ -310,9 +311,9 @@
       "copyFailed": "Não foi possível copiar a fatura."
     },
     "inviteCode": {
-      "title": "Prove que você <highlight>não e um Robo.</highlight>",
-      "subtitle": "Verificacao por SMS ou pagamento não disponivel. Peca um código de convite.",
-      "label": "Código de convite para homeserver",
+      "title": "Use um <highlight>convite.</highlight>",
+      "subtitle": "A verificação por telefone ou pagamento não está disponível? Peça um código de convite.",
+      "label": "Insira o código de convite",
       "hint": "Voce recebe 1GB de armazenamento, usado para seus posts, fotos, videos e seu perfil.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "Homeserver personalizado",
@@ -358,7 +359,7 @@
     },
     "signIn": {
       "title": "Entre no <highlight>Pubky.</highlight>",
-      "subtitle": "Autorize com o Pubky Ring para entrar.",
+      "subtitle": "Autorize com o <highlight>Pubky Ring</highlight> para entrar.",
       "progressTitle": "Entrando.",
       "progressSubtitle": "Aguarde enquanto sua experiência no Pubky é carregada.",
       "generating": "Gerando Código QR...",

@@ -261,8 +261,8 @@
       "enterInviteCode": "Einladungscode eingeben"
     },
     "phone": {
-      "title": "Telefon<highlight>nachweis.</highlight>",
-      "subtitle": "Wir senden Ihnen einen Verifizierungscode per SMS an Ihre Telefonnummer.",
+      "title": "Telefonnummer <highlight>eingeben.</highlight>",
+      "subtitle": "Wir senden Ihnen einen Verifizierungscode.",
       "sendCode": "Code senden",
       "phoneNumber": "Telefonnummer",
       "phoneHint": "Geben Sie Ihre Telefonnummer einschliesslich Landesvorwahl ein (z.B. +49 für Deutschland).",
@@ -285,6 +285,7 @@
       "subtitle": "Wir haben einen 6-stelligen Verifizierungscode an {phoneNumber} gesendet.",
       "label": "Verifizierungscode",
       "hint": "Geben Sie den Code ein, den Sie auf {phoneNumber} erhalten haben.",
+      "hintChannels": "Er wurde wahrscheinlich per SMS, WhatsApp oder Telegram gesendet.",
       "resend": "Code erneut senden",
       "resendTimer": "Code erneut senden ({seconds}s)",
       "verify": "Code verifizieren",
@@ -312,9 +313,9 @@
       "copyFailed": "Rechnung konnte nicht kopiert werden."
     },
     "inviteCode": {
-      "title": "Beweisen Sie, dass Sie <highlight>kein Roboter sind.</highlight>",
-      "subtitle": "SMS- oder Zahlungsverifizierung nicht verfügbar. Fragen Sie uns nach einem Einladungscode.",
-      "label": "Einladungscode für Homeserver",
+      "title": "Einladung <highlight>verwenden.</highlight>",
+      "subtitle": "Telefon- oder Zahlungsverifizierung nicht verfügbar? Fragen Sie uns nach einem Einladungscode.",
+      "label": "Einladungscode eingeben",
       "hint": "Sie erhalten 1GB Speicherplatz für Ihre Beiträge, Fotos, Videos und Ihr Profil.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "Benutzerdefinierter Homeserver",
@@ -360,7 +361,7 @@
     },
     "signIn": {
       "title": "Bei <highlight>Pubky</highlight> anmelden.",
-      "subtitle": "Autorisieren Sie mit Pubky Ring, um sich anzumelden.",
+      "subtitle": "Autorisieren Sie mit <highlight>Pubky Ring</highlight>, um sich anzumelden.",
       "progressTitle": "Anmeldung läuft.",
       "progressSubtitle": "Bitte warten Sie, während Ihr Pubky-Erlebnis geladen wird.",
       "generating": "QR-Code wird generiert...",

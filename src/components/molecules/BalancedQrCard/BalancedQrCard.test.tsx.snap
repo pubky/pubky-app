@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BalancedQrCard - Snapshots > matches snapshot 1`] = `
+<div
+  class="flex bg-card text-card-foreground shadow-sm w-full flex-row items-center justify-center gap-12 overflow-hidden rounded-md p-6 lg:p-12"
+  data-slot="card"
+  data-testid="card"
+>
+  <div
+    class="hidden w-48 shrink-0 lg:block"
+    data-slot="balanced-qr-illustration"
+  >
+    <span>
+      Illustration
+    </span>
+  </div>
+  <div
+    class="flex w-48 shrink-0 items-center justify-center"
+    data-slot="balanced-qr-content"
+  >
+    <span>
+      QR code
+    </span>
+  </div>
+  <div
+    aria-hidden="true"
+    class="hidden w-48 shrink-0 lg:block"
+    data-slot="balanced-qr-spacer"
+  />
+</div>
+`;

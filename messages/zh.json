@@ -259,8 +259,8 @@
       "enterInviteCode": "输入邀请码"
     },
     "phone": {
-      "title": "手机<highlight>验证。</highlight>",
-      "subtitle": "我们将通过短信向您的手机号发送验证码。",
+      "title": "输入<highlight>手机号。</highlight>",
+      "subtitle": "我们将向您发送验证码。",
       "sendCode": "发送验证码",
       "phoneNumber": "手机号码",
       "phoneHint": "输入您的手机号码，包括国家代码（如中国 +86）。",
@@ -283,6 +283,7 @@
       "subtitle": "我们已向 {phoneNumber} 发送了6位验证码。",
       "label": "验证码",
       "hint": "输入您在 {phoneNumber} 收到的验证码。",
+      "hintChannels": "该验证码很可能通过短信、WhatsApp 或 Telegram 发送。",
       "resend": "重新发送验证码",
       "resendTimer": "重新发送验证码 ({seconds}秒)",
       "verify": "验证",
@@ -310,9 +311,9 @@
       "copyFailed": "无法复制发票。"
     },
     "inviteCode": {
-      "title": "证明您<highlight>不是机器人。</highlight>",
-      "subtitle": "短信或支付验证不可用。请向我们索取邀请码。",
-      "label": "Homeserver 邀请码",
+      "title": "使用<highlight>邀请码。</highlight>",
+      "subtitle": "无法使用电话或支付验证？请向我们索取邀请码。",
+      "label": "输入邀请码",
       "hint": "您将获得 1GB 存储空间，用于您的帖子、照片、视频和个人资料。",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "自定义 Homeserver",
@@ -358,7 +359,7 @@
     },
     "signIn": {
       "title": "登录 <highlight>Pubky。</highlight>",
-      "subtitle": "使用 Pubky Ring 授权登录。",
+      "subtitle": "使用 <highlight>Pubky Ring</highlight> 授权登录。",
       "progressTitle": "正在登录。",
       "progressSubtitle": "请稍候，正在加载你的 Pubky 体验。",
       "generating": "正在生成二维码...",

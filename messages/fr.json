@@ -259,8 +259,8 @@
       "enterInviteCode": "Entrer le code d'invitation"
     },
     "phone": {
-      "title": "Preuve par <highlight>téléphone.</highlight>",
-      "subtitle": "Nous vous enverrons un code de vérification par SMS a votre numéro de téléphone.",
+      "title": "Entrez votre <highlight>téléphone.</highlight>",
+      "subtitle": "Nous vous enverrons un code de vérification.",
       "sendCode": "Envoyer le code",
       "phoneNumber": "Numéro de téléphone",
       "phoneHint": "Entrez votre numéro de téléphone, y compris l'indicatif du pays (ex: +33 pour la France).",
@@ -283,6 +283,7 @@
       "subtitle": "Nous avons envoye un code de vérification a 6 chiffres au {phoneNumber}.",
       "label": "Code de vérification",
       "hint": "Entrez le code que vous avez recu au {phoneNumber}.",
+      "hintChannels": "Il a probablement été envoyé par SMS, WhatsApp ou Telegram.",
       "resend": "Renvoyer le code",
       "resendTimer": "Renvoyer le code ({seconds}s)",
       "verify": "Verifier le code",
@@ -310,9 +311,9 @@
       "copyFailed": "Impossible de copier la facture."
     },
     "inviteCode": {
-      "title": "Prouvez que vous <highlight>n'etes pas un robot.</highlight>",
-      "subtitle": "Vérification par SMS ou paiement non disponible. Demandez-nous un code d'invitation.",
-      "label": "Code d'invitation pour le homeserver",
+      "title": "Utilisez une <highlight>invitation.</highlight>",
+      "subtitle": "La vérification par téléphone ou paiement n'est pas disponible ? Demandez-nous un code d'invitation.",
+      "label": "Saisissez le code d'invitation",
       "hint": "Vous obtenez 1 Go de stockage, utilise pour vos publications, photos, videos et votre profil.",
       "placeholder": "XXXX-XXXX-XXXX",
       "customHomeserver": "Homeserver personnalise",
@@ -358,7 +359,7 @@
     },
     "signIn": {
       "title": "Connectez-vous a <highlight>Pubky.</highlight>",
-      "subtitle": "Autorisez avec Pubky Ring pour vous connecter.",
+      "subtitle": "Autorisez avec <highlight>Pubky Ring</highlight> pour vous connecter.",
       "progressTitle": "Connexion en cours.",
       "progressSubtitle": "Veuillez patienter pendant le chargement de votre expérience Pubky.",
       "generating": "Génération du code QR...",
