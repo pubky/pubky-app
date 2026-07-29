@@ -154,25 +154,51 @@ jobs:
           rsync -a "${{ runner.temp }}/vrt-baselines-linux/" src/test/vrt/
           rsync -a "${{ runner.temp }}/vrt-baselines-darwin/" src/test/vrt/
 
-      - name: Commit and push baselines
+      - name: Collect changed baseline files
+        id: changes
         run: |
-          TARGET_BRANCH="${{ steps.target.outputs.target_branch }}"
+          FILE_LIST="${RUNNER_TEMP}/vrt-baseline-files.txt"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          find src/test/vrt -path '*/__screenshots__/*.png' -print0 | xargs -0 git add --
+          git diff --staged --name-only > "$FILE_LIST"
 
-          find src/test/vrt -path '*/__screenshots__/*.png' -print0 | xargs -0 git add
-
-          if git diff --staged --quiet; then
+          if [ ! -s "$FILE_LIST" ]; then
             echo "No baseline changes to commit."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          git commit -m "test(vrt): regenerate baselines"
-          git push -u origin "$TARGET_BRANCH"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          echo "file_list=${FILE_LIST}" >> "$GITHUB_OUTPUT"
+          echo "Changed baselines:"
+          cat "$FILE_LIST"
+
+      # The signed-commit action creates missing branches from the repo default
+      # branch (often master). Pre-create/reset from the correct base instead.
+      - name: Ensure remote target branch
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          SOURCE_REF="${{ github.ref_name }}"
+          TARGET_BRANCH="${{ steps.target.outputs.target_branch }}"
+
+          if [ "$SOURCE_REF" = "dev" ]; then
+            git push --force origin "refs/remotes/origin/dev:refs/heads/${TARGET_BRANCH}"
+          else
+            git rev-parse --verify "origin/${TARGET_BRANCH}"
+          fi
+
+      - name: Commit and push signed baselines
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: magmanu/github-action-bot-signed-commit@fb2582c7c22a7183a95504156c4ac02bb734d6ed # v1.0.4
+        with:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REF: ${{ steps.target.outputs.target_branch }}
+          FILE_LIST: ${{ steps.changes.outputs.file_list }}
+          SHOULD_CREATE_NEW_BRANCH: false
+          COMMIT_MESSAGE: 'test(vrt): regenerate baselines'
 
       - name: Open pull request
-        if: steps.target.outputs.open_pr == 'true'
+        if: steps.target.outputs.open_pr == 'true' && steps.changes.outputs.has_changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -186,3 +212,8 @@ jobs:
             --head vrt-update-baselines \
             --title "test(vrt): regenerate baselines" \
             --body "$(cat <<'EOF'
+          Regenerated VRT baseline screenshots via the VRT Update Baselines workflow.
+
+          Review the image diffs carefully before merging.
+          EOF
+          )"
