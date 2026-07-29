@@ -43,7 +43,7 @@ export function LockedPostContent({
   const [isUnlockOpen, setIsUnlockOpen] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState(false);
-  const { lockContent, lockFile, hasError } = usePostLock({ content, lock });
+  const { lockContent, lockFile } = usePostLock({ content, lock });
   const { unlockedPost, applyUnlockedContent, media, isOwnLock } = useUnlockedContent({ lock, lockFile, authorId });
   const { toast } = useToast();
   const tToast = useTranslations('toast.post');
@@ -110,12 +110,12 @@ export function LockedPostContent({
           </div>
         </>
       ) : (
-        // Unlock is disabled when the lock file could not be resolved (`hasError`) — nothing to unlock against.
+        // No lock file (still loading, or its fetch failed) → nothing to unlock against.
         <LockedPostCard
           title={lockContent.lock_title}
           unlockOpen={isUnlockOpen}
           onUnlock={
-            hasError
+            !lockFile
               ? undefined
               : () => {
                   setUnlockError(false); // clear a prior failure so reopening starts clean

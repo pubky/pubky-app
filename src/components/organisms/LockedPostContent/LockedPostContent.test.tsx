@@ -69,19 +69,26 @@ describe('LockedPostContent', () => {
   });
 
   it('enables Unlock when the lock file resolved', () => {
-    mockUsePostLock({ hasError: false });
+    mockUsePostLock({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
     render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
   });
 
-  it('leaves Unlock inert when the lock file could not be resolved', () => {
+  it('disables Unlock when the lock file fetch failed', () => {
     mockUsePostLock({ hasError: true });
     render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
 
+  it('disables Unlock while the lock file is loading', () => {
+    // Submitting without a lock file returns silently — the dialog would look broken.
+    mockUsePostLock({ lockFile: null, hasError: false });
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+  });
+
   it('opens the unlock dialog after the button slides over the mask', async () => {
-    mockUsePostLock({ hasError: false });
+    mockUsePostLock({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
     render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
 
     expect(screen.queryByRole('heading', { name: 'Password to Unlock' })).not.toBeInTheDocument();
