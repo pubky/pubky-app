@@ -21,6 +21,18 @@ interface TimelineFeedPropsBase {
   children?: ReactNode;
 }
 
+export type HomeTimelineFeedProps = TimelineFeedPropsBase & {
+  variant: typeof TIMELINE_FEED_VARIANT.HOME;
+  /**
+   * Optional header rendered after ordinary children and before timeline
+   * content. Unlike children, it stays visible in Visual layout.
+   */
+  persistentHeader?: ReactNode;
+  emptyState?: never;
+  gridTrailingSlot?: never;
+  pullToRefreshContainerRef?: never;
+};
+
 type TimelineFeedPullToRefreshContainerRef = RefObject<HTMLElement | null>;
 
 type BookmarksTimelineFeedProps = TimelineFeedPropsBase & {
@@ -56,14 +68,18 @@ type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
 type StandardTimelineFeedProps = TimelineFeedPropsBase & {
   variant: Exclude<
     TimelineFeedVariant,
-    typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION
+    typeof TIMELINE_FEED_VARIANT.HOME | typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION
   >;
   emptyState?: never;
   gridTrailingSlot?: never;
   pullToRefreshContainerRef?: never;
 };
 
-export type TimelineFeedProps = BookmarksTimelineFeedProps | CollectionTimelineFeedProps | StandardTimelineFeedProps;
+export type TimelineFeedProps =
+  | HomeTimelineFeedProps
+  | BookmarksTimelineFeedProps
+  | CollectionTimelineFeedProps
+  | StandardTimelineFeedProps;
 
 export interface TimelineFeedContextValue {
   /**

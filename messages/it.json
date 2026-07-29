@@ -1168,18 +1168,14 @@
     "reach": {
       "title": "Portata",
       "all": "Tutti",
-      "network": "Rete",
+      "network": "La mia rete",
+      "taggedAs": "Etichettato come",
       "following": "Seguiti",
       "friends": "Amici",
       "me": "Io",
       "profileTag": "tag profilo",
       "profileTagLimitReached": "max {max} tag",
-      "profileTagTooltip": {
-        "network": "Mostra i post delle persone che la mia rete ha taggato come…",
-        "following": "Mostra i post delle persone che i miei seguiti hanno taggato come…",
-        "friends": "Mostra i post delle persone che i miei seguiti hanno taggato come…",
-        "me": "Mostra i post delle persone che ho taggato come…"
-      }
+      "taggedAsHeadline": "Post di persone che la mia rete ha etichettato come {tags}"
     },
     "sort": {
       "title": "Ordina",

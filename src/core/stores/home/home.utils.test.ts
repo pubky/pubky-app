@@ -152,103 +152,140 @@ describe('filters.utils', () => {
 
   describe('getHomeStreamIdFromFilters', () => {
     it('should force all reach when no user is authenticated', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL, null);
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.TIMELINE,
+        reach: REACH.NETWORK,
+        content: CONTENT.ALL,
+        currentUserPubky: null,
+      });
 
       expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
     });
 
     it('should ignore profile tags when no user is authenticated', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL, null, ['bitcoin']);
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.TIMELINE,
+        reach: REACH.NETWORK,
+        content: CONTENT.ALL,
+        currentUserPubky: null,
+        profileTags: ['bitcoin'],
+        taggedAsActive: true,
+      });
 
       expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
     });
 
     it('should build author stream for me reach with all content', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.ALL, 'viewer-pubky');
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.TIMELINE,
+        reach: REACH.ME,
+        content: CONTENT.ALL,
+        currentUserPubky: 'viewer-pubky',
+      });
 
       expect(streamId).toBe('author:viewer-pubky');
     });
 
     it('should build author stream with content kind for me reach', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.IMAGES, 'viewer-pubky');
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.TIMELINE,
+        reach: REACH.ME,
+        content: CONTENT.IMAGES,
+        currentUserPubky: 'viewer-pubky',
+      });
 
       expect(streamId).toBe('viewer-pubky:author:image');
     });
 
-    it('should build depth 2 domain stream for Network with profile tags', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL, 'viewer-pubky', [
-        'dev',
-        'bitcoin',
-      ]);
+    it('should build a depth-2 domain stream when Tagged as is active with profile tags', () => {
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.TIMELINE,
+        reach: REACH.NETWORK,
+        content: CONTENT.ALL,
+        currentUserPubky: 'viewer-pubky',
+        profileTags: ['dev', 'bitcoin'],
+        taggedAsActive: true,
+      });
 
       expect(streamId).toBe('timeline:wot_domain:2:all:bitcoin,dev');
     });
 
-    it('should build depth 1 domain stream for Following with profile tags', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.FOLLOWING, CONTENT.ALL, 'viewer-pubky', [
-        'bitcoin',
-      ]);
+    it.each([REACH.ALL, REACH.FOLLOWING, REACH.FRIENDS, REACH.ME])(
+      'uses the same depth-2 Tagged-as stream while preserving %s as the parked base reach',
+      (reach) => {
+        const streamId = getHomeStreamIdFromFilters({
+          sort: SORT.TIMELINE,
+          reach,
+          content: CONTENT.ALL,
+          currentUserPubky: 'viewer-pubky',
+          profileTags: ['bitcoin'],
+          taggedAsActive: true,
+        });
 
-      expect(streamId).toBe('timeline:wot_domain:1:all:bitcoin');
+        expect(streamId).toBe('timeline:wot_domain:2:all:bitcoin');
+      },
+    );
+
+    it('keeps parked profile tags out of the base stream when Tagged as is inactive', () => {
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.TIMELINE,
+        reach: REACH.FOLLOWING,
+        content: CONTENT.ALL,
+        currentUserPubky: 'viewer-pubky',
+        profileTags: ['bitcoin'],
+        taggedAsActive: false,
+      });
+
+      expect(streamId).toBe(PostStreamTypes.TIMELINE_FOLLOWING_ALL);
     });
 
-    it('should share domain stream identity for Following and Friends with the same profile tags', () => {
-      const followingStreamId = getHomeStreamIdFromFilters(
-        SORT.TIMELINE,
-        REACH.FOLLOWING,
-        CONTENT.ALL,
-        'viewer-pubky',
-        ['bitcoin'],
-      );
-      const friendsStreamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.FRIENDS, CONTENT.ALL, 'viewer-pubky', [
-        'bitcoin',
-      ]);
-
-      expect(friendsStreamId).toBe(followingStreamId);
-      expect(friendsStreamId).toBe('timeline:wot_domain:1:all:bitcoin');
-    });
-
-    it('should preserve content kind in domain stream identity', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.COLLECTIONS, 'viewer-pubky', [
-        'bitcoin',
-      ]);
+    it('preserves content kind in Tagged-as stream identity', () => {
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.TIMELINE,
+        reach: REACH.NETWORK,
+        content: CONTENT.COLLECTIONS,
+        currentUserPubky: 'viewer-pubky',
+        profileTags: ['bitcoin'],
+        taggedAsActive: true,
+      });
 
       expect(streamId).toBe('timeline:wot_domain:2:collection:bitcoin');
     });
 
-    it('should preserve emoji profile tags in domain stream identity', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.ENGAGEMENT, REACH.NETWORK, CONTENT.IMAGES, 'viewer-pubky', [
-        '🔥',
-      ]);
+    it('preserves sorting and emoji profile tags in Tagged-as stream identity', () => {
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.ENGAGEMENT,
+        reach: REACH.NETWORK,
+        content: CONTENT.IMAGES,
+        currentUserPubky: 'viewer-pubky',
+        profileTags: ['🔥'],
+        taggedAsActive: true,
+      });
 
       expect(streamId).toBe('total_engagement:wot_domain:2:image:🔥');
     });
 
-    it('should ignore profile tags for gated All reach', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ALL, CONTENT.ALL, 'viewer-pubky', ['bitcoin']);
+    it('uses the base stream while Tagged as has no profile tags', () => {
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.TIMELINE,
+        reach: REACH.ME,
+        content: CONTENT.IMAGES,
+        currentUserPubky: 'viewer-pubky',
+        profileTags: [],
+        taggedAsActive: true,
+      });
 
-      expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
-    });
-
-    it('should build depth 0 domain stream for Me with profile tags', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.ME, CONTENT.ALL, 'viewer-pubky', [
-        'dev',
-        'bitcoin',
-      ]);
-
-      expect(streamId).toBe('timeline:wot_domain:0:all:bitcoin,dev');
-    });
-
-    it('should preserve content kind in Me domain stream identity', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.ENGAGEMENT, REACH.ME, CONTENT.IMAGES, 'viewer-pubky', [
-        'bitcoin',
-      ]);
-
-      expect(streamId).toBe('total_engagement:wot_domain:0:image:bitcoin');
+      expect(streamId).toBe('viewer-pubky:author:image');
     });
 
     it('should use plain Network stream when profile tags are empty', () => {
-      const streamId = getHomeStreamIdFromFilters(SORT.TIMELINE, REACH.NETWORK, CONTENT.ALL, 'viewer-pubky', []);
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.TIMELINE,
+        reach: REACH.NETWORK,
+        content: CONTENT.ALL,
+        currentUserPubky: 'viewer-pubky',
+        profileTags: [],
+      });
 
       expect(streamId).toBe('timeline:wot:all');
     });

@@ -1168,18 +1168,14 @@
     "reach": {
       "title": "Reach",
       "all": "All",
-      "network": "Network",
+      "network": "My network",
+      "taggedAs": "Tagged as",
       "following": "Following",
       "friends": "Friends",
       "me": "Me",
       "profileTag": "profile tag",
       "profileTagLimitReached": "{max} tags max",
-      "profileTagTooltip": {
-        "network": "Show posts from people my network tagged as…",
-        "following": "Show posts from people I follow tagged as…",
-        "friends": "Show posts from people I follow tagged as…",
-        "me": "Show posts from people I tagged as…"
-      }
+      "taggedAsHeadline": "Posts from people tagged as {tags} by my network"
     },
     "sort": {
       "title": "Sort",

@@ -132,6 +132,10 @@ vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
   };
 });
 
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/VisualTimelinePosts', () => ({
+  VisualTimelinePosts: () => <div data-testid="visual-timeline-posts">Visual posts</div>,
+}));
+
 const COLLECTION_STREAM_ID = buildCollectionItemsStreamId('author-pubky', 'collection-post');
 
 const gridLayoutResolution: FeedLayoutResolution = {
@@ -149,6 +153,11 @@ const visualGridLayoutResolution: FeedLayoutResolution = {
   effectiveLayout: LAYOUT.VISUAL,
   isVisualRequested: true,
   isVisualActive: true,
+};
+
+const visualLayoutResolution: FeedLayoutResolution = {
+  ...visualGridLayoutResolution,
+  isGridActive: false,
 };
 
 const mockLoadMore = vi.fn();
@@ -224,6 +233,44 @@ describe('TimelineFeedContent', () => {
       );
       expect(screen.getByTestId('child')).toBeInTheDocument();
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+    });
+
+    it('renders ordinary children before the persistent header and post list', () => {
+      render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+          persistentHeader={<div data-testid="persistent-header">Tagged-as headline</div>}
+        >
+          <div data-testid="child">Post input</div>
+        </TimelineFeedWithStream>,
+      );
+
+      const child = screen.getByTestId('child');
+      const persistentHeader = screen.getByTestId('persistent-header');
+      const posts = screen.getByTestId('timeline-posts');
+
+      expect(child.compareDocumentPosition(persistentHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(persistentHeader.compareDocumentPosition(posts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('keeps the persistent header visible while hiding ordinary children in Visual layout', () => {
+      render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+          layoutResolution={visualLayoutResolution}
+          persistentHeader={<div data-testid="persistent-header">Tagged-as headline</div>}
+        >
+          <div data-testid="child">Post input</div>
+        </TimelineFeedWithStream>,
+      );
+
+      expect(screen.queryByTestId('child')).not.toBeInTheDocument();
+      expect(screen.getByTestId('persistent-header')).toBeInTheDocument();
+      expect(screen.getByTestId('visual-timeline-posts')).toBeInTheDocument();
     });
   });
 
@@ -622,6 +669,27 @@ describe('Grid layout variants (decisions D5/D7)', () => {
     expect(screen.getByTestId('timeline-grid-posts')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
     expect(screen.getByTestId('grid-post-count')).toHaveTextContent('3');
+  });
+
+  it('renders ordinary children and the persistent header before the grid', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+        layoutResolution={gridLayoutResolution}
+        persistentHeader={<div data-testid="persistent-header">Tagged-as headline</div>}
+      >
+        <div data-testid="child">Post input</div>
+      </TimelineFeedWithStream>,
+    );
+
+    const child = screen.getByTestId('child');
+    const persistentHeader = screen.getByTestId('persistent-header');
+    const grid = screen.getByTestId('timeline-grid-posts');
+
+    expect(child.compareDocumentPosition(persistentHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(persistentHeader.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('suppresses the end-of-feed message for the collection grid', () => {

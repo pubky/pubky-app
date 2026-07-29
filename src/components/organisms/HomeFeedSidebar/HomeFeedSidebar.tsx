@@ -1,12 +1,12 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
-import { isProfileTagReachSupported, TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
-import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+import { FilterReach, type ReachFilterValue, TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -38,6 +38,8 @@ function HomeFeedFilters({
     setLayout,
     reach,
     setReach,
+    taggedAsActive,
+    setTaggedAsActive,
     sort,
     setSort,
     content,
@@ -50,17 +52,31 @@ function HomeFeedFilters({
   const { requireAuth } = useRequireAuth();
   const isAuthenticated = Boolean(currentUserPubky);
   const effectiveReach = isAuthenticated ? reach : REACH.ALL;
-  const areProfileTagsDisabled = !isProfileTagReachSupported(effectiveReach);
-  const effectiveProfileTags = isAuthenticated && !areProfileTagsDisabled ? profileTags : [];
+  const selectedReach: ReachFilterValue =
+    isAuthenticated && taggedAsActive && profileTags.length > 0 ? TAGGED_AS_FILTER_KEY : effectiveReach;
+  const effectiveProfileTags = isAuthenticated ? profileTags : [];
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
 
   // "All" reach is public; other reach options require an account, so prompt Join Pubky in Explore mode.
-  const handleReachChange = (value: ReachType) => {
+  const handleReachChange = (value: ReachFilterValue) => {
     if (value === REACH.ALL) {
-      setReach(value);
+      // Signed-out Home already resolves to All. Avoid persisting this no-op as
+      // an explicit choice so a visitor remains eligible for the post-signup
+      // My-network default.
+      if (isAuthenticated) {
+        setReach(value);
+      }
       return;
     }
-    requireAuth(() => setReach(value));
+
+    requireAuth(() => {
+      if (value === TAGGED_AS_FILTER_KEY) {
+        setTaggedAsActive(true);
+        return;
+      }
+
+      setReach(value as ReachType);
+    });
   };
   const resolvedContent = resolveVisualFeedContent({
     content,
@@ -75,14 +91,13 @@ function HomeFeedFilters({
     <Container overrideDefaults className="flex flex-col gap-6">
       {!hideReachFilter && (
         <FilterReach
-          selectedTab={effectiveReach}
+          selectedTab={selectedReach}
           onTabChange={handleReachChange}
-          showNetwork
-          showMe
+          showTaggedAs
           profileTags={effectiveProfileTags}
           onProfileTagAdd={addProfileTag}
           onProfileTagRemove={removeProfileTag}
-          profileTagsDisabled={areProfileTagsDisabled}
+          profileTagsDisabled={!isAuthenticated || !taggedAsActive}
         />
       )}
       <FilterSort selectedTab={sort} onTabChange={setSort} />

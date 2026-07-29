@@ -1,4 +1,3 @@
-import { isProfileTagReachSupported } from '@/config/feed';
 import { sanitizeTagInput } from '@/libs/utils/utils';
 import { ZustandSet } from '../stores.types';
 import {
@@ -7,6 +6,7 @@ import {
   HomeActionTypes,
   homeInitialState,
   HomeStore,
+  REACH,
 } from './home.types';
 
 function normalizeProfileTag(profileTag: string): string {
@@ -41,9 +41,38 @@ export const createHomeActions = (set: ZustandSet<HomeStore>): HomeActions => ({
 
   setReach: (reach) => {
     set(
-      { reach, ...(!isProfileTagReachSupported(reach) ? { profileTags: [] } : {}) },
+      {
+        reach,
+        taggedAsActive: false,
+        hasUserSetReach: true,
+      },
       false,
       HomeActionTypes.SET_HOME_REACH,
+    );
+  },
+
+  setTaggedAsActive: (taggedAsActive) => {
+    set(
+      {
+        taggedAsActive,
+        hasUserSetReach: true,
+      },
+      false,
+      HomeActionTypes.SET_HOME_TAGGED_AS_ACTIVE,
+    );
+  },
+
+  applyDefaultReach: (reach) => {
+    set(
+      (state) => {
+        if (state.hasUserSetReach || state.taggedAsActive || state.reach !== REACH.ALL) {
+          return state;
+        }
+
+        return { reach };
+      },
+      false,
+      HomeActionTypes.APPLY_DEFAULT_HOME_REACH,
     );
   },
 
@@ -88,7 +117,18 @@ export const createHomeActions = (set: ZustandSet<HomeStore>): HomeActions => ({
     set({ profileTags: [] }, false, HomeActionTypes.CLEAR_HOME_PROFILE_TAGS);
   },
 
+  setHasHydrated: (hasHydrated) => {
+    set({ hasHydrated }, false, HomeActionTypes.SET_HOME_HAS_HYDRATED);
+  },
+
   reset: () => {
-    set(homeInitialState, false, HomeActionTypes.RESET_HOME);
+    set(
+      (state) => ({
+        ...homeInitialState,
+        hasHydrated: state.hasHydrated,
+      }),
+      false,
+      HomeActionTypes.RESET_HOME,
+    );
   },
 });

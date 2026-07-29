@@ -1,27 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ReactElement } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { describe, expect, it, vi } from 'vitest';
 import { REACH } from '@/stores/home/home.types';
-import { FilterReach } from './FilterReach';
-
-const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
-
-vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
-  useIsMobile: mockUseIsMobile,
-}));
-
-function renderWithTooltip(ui: ReactElement) {
-  return render(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
-}
+import { FilterReach, TAGGED_AS_FILTER_KEY } from './FilterReach';
 
 describe('FilterReach', () => {
-  beforeEach(() => {
-    mockUseIsMobile.mockReset();
-    mockUseIsMobile.mockReturnValue(false);
-  });
-
   it('renders with default selected tab and proper ARIA attributes', () => {
     render(<FilterReach />);
 
@@ -61,17 +44,22 @@ describe('FilterReach', () => {
     });
   });
 
-  it('renders V1 Network and Me reach options when enabled', () => {
+  it('renders the standalone Tagged-as Home order', () => {
     const mockOnTabChange = vi.fn();
-    render(<FilterReach showNetwork showMe onTabChange={mockOnTabChange} />);
+    render(<FilterReach showTaggedAs onTabChange={mockOnTabChange} />);
 
     const tabs = [
-      { value: REACH.ALL, label: 'All' },
-      { value: REACH.NETWORK, label: 'Network' },
+      { value: REACH.NETWORK, label: 'My network' },
+      { value: TAGGED_AS_FILTER_KEY, label: 'Tagged as' },
       { value: REACH.FOLLOWING, label: 'Following' },
       { value: REACH.FRIENDS, label: 'Friends' },
       { value: REACH.ME, label: 'Me' },
+      { value: REACH.ALL, label: 'All' },
     ];
+
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('aria-label'))).toEqual(
+      tabs.map(({ label }) => label),
+    );
 
     tabs.forEach(({ value, label }) => {
       const element = screen.getByLabelText(label);
@@ -80,12 +68,11 @@ describe('FilterReach', () => {
     });
   });
 
-  it('renders profile tag selector footer when profile tag props are provided', () => {
-    renderWithTooltip(
+  it('renders the profile tag editor immediately after Tagged as', () => {
+    render(
       <FilterReach
-        showNetwork
-        showMe
-        selectedTab={REACH.NETWORK}
+        showTaggedAs
+        selectedTab={TAGGED_AS_FILTER_KEY}
         profileTags={['bitcoin']}
         onProfileTagAdd={vi.fn()}
         onProfileTagRemove={vi.fn()}
@@ -93,35 +80,15 @@ describe('FilterReach', () => {
     );
 
     expect(screen.getByText('bitcoin')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('profile tag')).toBeInTheDocument();
+    const input = screen.getByPlaceholderText('profile tag');
+    expect(input).toBeInTheDocument();
+    expect(screen.getByLabelText('Tagged as').nextElementSibling).toContainElement(input);
   });
 
-  it('passes selected reach through to the profile tag input tooltip', async () => {
-    const user = userEvent.setup();
-
-    renderWithTooltip(
+  it('disables the profile tag editor when profileTagsDisabled is true', () => {
+    render(
       <FilterReach
-        showNetwork
-        showMe
-        selectedTab={REACH.ME}
-        profileTags={[]}
-        onProfileTagAdd={vi.fn()}
-        onProfileTagRemove={vi.fn()}
-      />,
-    );
-
-    await user.hover(screen.getByPlaceholderText('profile tag'));
-
-    await waitFor(() => {
-      expect(screen.getByRole('tooltip')).toHaveTextContent('Show posts from people I tagged as…');
-    });
-  });
-
-  it('disables profile tag selector footer when profileTagsDisabled is true', () => {
-    renderWithTooltip(
-      <FilterReach
-        showNetwork
-        showMe
+        showTaggedAs
         selectedTab={REACH.ALL}
         profileTags={[]}
         onProfileTagAdd={vi.fn()}
@@ -180,6 +147,64 @@ describe('FilterReach', () => {
 });
 
 describe('FilterReach - Keyboard Navigation', () => {
+  it('allows Tab to enter the enabled Tagged-as editor', async () => {
+    const user = userEvent.setup();
+    render(
+      <FilterReach
+        showTaggedAs
+        selectedTab={TAGGED_AS_FILTER_KEY}
+        profileTags={[]}
+        onProfileTagAdd={vi.fn()}
+        onProfileTagRemove={vi.fn()}
+      />,
+    );
+
+    screen.getByLabelText('Tagged as').focus();
+    await user.tab();
+
+    expect(document.activeElement).toBe(screen.getByPlaceholderText('profile tag'));
+  });
+
+  it('skips the Tagged-as editor during radio arrow navigation', () => {
+    render(
+      <FilterReach
+        showTaggedAs
+        selectedTab={TAGGED_AS_FILTER_KEY}
+        profileTags={[]}
+        onProfileTagAdd={vi.fn()}
+        onProfileTagRemove={vi.fn()}
+      />,
+    );
+
+    const taggedAs = screen.getByLabelText('Tagged as');
+    taggedAs.focus();
+    fireEvent.keyDown(taggedAs, { key: 'ArrowDown' });
+
+    expect(document.activeElement).toBe(screen.getByLabelText('Following'));
+  });
+
+  it('does not change Reach when arrow keys are used inside the tag input', () => {
+    const onTabChange = vi.fn();
+    render(
+      <FilterReach
+        showTaggedAs
+        selectedTab={TAGGED_AS_FILTER_KEY}
+        onTabChange={onTabChange}
+        profileTags={[]}
+        onProfileTagAdd={vi.fn()}
+        onProfileTagRemove={vi.fn()}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText('profile tag');
+    input.focus();
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'ArrowLeft' });
+
+    expect(document.activeElement).toBe(input);
+    expect(onTabChange).not.toHaveBeenCalled();
+  });
+
   it('manages tabIndex correctly for keyboard navigation', () => {
     render(<FilterReach selectedTab={REACH.FRIENDS} />);
 

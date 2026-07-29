@@ -26,13 +26,27 @@ import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
  * }
  * ```
  */
-export function useStreamIdFromFilters(contentOverride?: ContentType): PostStreamId {
+export function useStreamIdFromFilters(contentOverride?: ContentType): PostStreamId | undefined {
   const sort = useHomeStore((state) => state.sort);
   const reach = useHomeStore((state) => state.reach);
   const content = useHomeStore((state) => state.content);
   const profileTags = useHomeStore((state) => state.profileTags);
+  const taggedAsActive = useHomeStore((state) => state.taggedAsActive);
+  const homeHasHydrated = useHomeStore((state) => state.hasHydrated);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const effectiveContent = contentOverride ?? content;
 
-  return getHomeStreamIdFromFilters(sort, reach, effectiveContent, currentUserPubky, profileTags);
+  if (!homeHasHydrated || !authHasHydrated) {
+    return undefined;
+  }
+
+  return getHomeStreamIdFromFilters({
+    sort,
+    reach,
+    content: effectiveContent,
+    currentUserPubky,
+    profileTags,
+    taggedAsActive,
+  });
 }

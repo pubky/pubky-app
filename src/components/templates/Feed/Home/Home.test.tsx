@@ -35,11 +35,30 @@ vi.mock('@/organisms/PostInput/PostInput', () => {
   };
 });
 
+const mockUseDefaultHomeReach = vi.hoisted(() => vi.fn());
+
+vi.mock('@/hooks/useDefaultHomeReach/useDefaultHomeReach', () => ({
+  useDefaultHomeReach: mockUseDefaultHomeReach,
+}));
+
+vi.mock('@/molecules/TaggedAsHeadline/TaggedAsHeadline', () => ({
+  TaggedAsHeadline: () => <div data-testid="tagged-as-headline">TaggedAsHeadline</div>,
+}));
+
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => {
   return {
-    TimelineFeed: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
+    TimelineFeed: ({
+      children,
+      persistentHeader,
+      variant,
+    }: {
+      children: React.ReactNode;
+      persistentHeader?: React.ReactNode;
+      variant: string;
+    }) => (
       <div data-testid="timeline-feed" data-variant={variant}>
         {children}
+        {persistentHeader}
       </div>
     ),
   };
@@ -93,6 +112,12 @@ describe('Home', () => {
     expect(timelineFeed).toHaveAttribute('data-variant', 'home');
   });
 
+  it('starts the asynchronous fresh-user reach resolution', () => {
+    render(<Home />);
+
+    expect(mockUseDefaultHomeReach).toHaveBeenCalledTimes(1);
+  });
+
   it('renders PostInput inside TimelineFeed', () => {
     render(<Home />);
     const postInput = screen.getByTestId('post-input');
@@ -105,6 +130,12 @@ describe('Home', () => {
     const postInput = screen.getByTestId('post-input');
     expect(postInput).toHaveAttribute('data-cy', 'home-post-input');
     expect(postInput).toHaveAttribute('data-variant', 'post');
+  });
+
+  it('passes the Tagged-as headline through the persistent header slot', () => {
+    render(<Home />);
+
+    expect(screen.getByTestId('timeline-feed')).toContainElement(screen.getByTestId('tagged-as-headline'));
   });
 
   it('does not render a ContentLayout shell (hoisted into (feeds)/layout.tsx)', () => {

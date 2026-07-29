@@ -1168,18 +1168,14 @@
     "reach": {
       "title": "範囲",
       "all": "すべて",
-      "network": "ネットワーク",
+      "network": "自分のネットワーク",
+      "taggedAs": "タグ付け",
       "following": "フォロー中",
       "friends": "友達",
       "me": "自分",
       "profileTag": "プロフィールタグ",
       "profileTagLimitReached": "最大{max}タグ",
-      "profileTagTooltip": {
-        "network": "ネットワークが次のタグを付けた人の投稿を表示…",
-        "following": "フォロー中の人が次のタグを付けた人の投稿を表示…",
-        "friends": "フォロー中の人が次のタグを付けた人の投稿を表示…",
-        "me": "自分が次のタグを付けた人の投稿を表示…"
-      }
+      "taggedAsHeadline": "自分のネットワークが{tags}とタグ付けした人の投稿"
     },
     "sort": {
       "title": "並べ替え",

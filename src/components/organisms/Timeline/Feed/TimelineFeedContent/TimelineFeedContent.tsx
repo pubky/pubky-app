@@ -18,7 +18,11 @@ import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
 import { TimelineGridPosts } from '../../Posts/GridPosts/GridPosts';
 import { TimelinePosts } from '../../Posts/Posts';
 import { NewPostsSection } from '../NewPostsSection/NewPostsSection';
-import type { TimelineFeedContextValue, TimelineFeedProps } from '../TimelineFeed/TimelineFeed.types';
+import type {
+  HomeTimelineFeedProps,
+  TimelineFeedContextValue,
+  TimelineFeedProps,
+} from '../TimelineFeed/TimelineFeed.types';
 import { TimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { VisualTimelinePosts } from '../TimelineFeed/VisualTimelinePosts';
 
@@ -33,6 +37,7 @@ interface TimelineFeedContentProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
+  persistentHeader?: HomeTimelineFeedProps['persistentHeader'];
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
@@ -45,6 +50,7 @@ interface TimelineFeedWithStreamProps {
   tagsLayout: TagsLayout;
   layoutResolution?: FeedLayoutResolution;
   children?: TimelineFeedProps['children'];
+  persistentHeader?: HomeTimelineFeedProps['persistentHeader'];
   emptyState?: TimelineFeedProps['emptyState'];
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
@@ -63,6 +69,7 @@ export function TimelineFeedWithStream({
   tagsLayout,
   layoutResolution,
   children,
+  persistentHeader,
   emptyState,
   collectionId,
   pullToRefreshContainerRef,
@@ -82,6 +89,7 @@ export function TimelineFeedWithStream({
       collectionId={collectionId}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
       gridTrailingSlot={gridTrailingSlot}
+      persistentHeader={persistentHeader}
     >
       {children}
     </TimelineFeedContent>
@@ -107,6 +115,7 @@ function TimelineFeedContent({
   tagsLayout,
   layoutResolution,
   children,
+  persistentHeader,
   emptyState,
   collectionId,
   pullToRefreshContainerRef,
@@ -212,6 +221,7 @@ function TimelineFeedContent({
         <Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
           {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
           {shouldRenderChildren ? children : null}
+          {persistentHeader}
           <NewPostsSection
             streamId={streamId}
             variant={variant}

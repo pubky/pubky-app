@@ -17,6 +17,8 @@ describe('HomeStore', () => {
       expect(state.reach).toBe(REACH.ALL);
       expect(state.content).toBe(CONTENT.ALL);
       expect(state.profileTags).toEqual([]);
+      expect(state.taggedAsActive).toBe(false);
+      expect(state.hasUserSetReach).toBe(false);
     });
 
     it('should match homeInitialState', () => {
@@ -27,6 +29,8 @@ describe('HomeStore', () => {
       expect(state.reach).toBe(homeInitialState.reach);
       expect(state.content).toBe(homeInitialState.content);
       expect(state.profileTags).toEqual(homeInitialState.profileTags);
+      expect(state.taggedAsActive).toBe(homeInitialState.taggedAsActive);
+      expect(state.hasUserSetReach).toBe(homeInitialState.hasUserSetReach);
     });
   });
 
@@ -138,34 +142,56 @@ describe('HomeStore', () => {
       expect(useHomeStore.getState().reach).toBe(REACH.ALL);
     });
 
-    it('should clear profile tags when reach changes to all', () => {
+    it('should park profile tags when reach changes', () => {
       const store = useHomeStore.getState();
 
-      store.setReach(REACH.NETWORK);
       store.addProfileTag('bitcoin');
       store.addProfileTag('dev');
+      store.setTaggedAsActive(true);
 
       expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'dev']);
 
       store.setReach(REACH.ALL);
 
       expect(useHomeStore.getState().reach).toBe(REACH.ALL);
-      expect(useHomeStore.getState().profileTags).toEqual([]);
+      expect(useHomeStore.getState().taggedAsActive).toBe(false);
+      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'dev']);
     });
 
-    it('should keep profile tags when reach changes to me (depth-0 domain feeds, #2150)', () => {
+    it('should activate Tagged as without changing the base reach', () => {
       const store = useHomeStore.getState();
 
-      store.setReach(REACH.NETWORK);
-      store.addProfileTag('bitcoin');
-      store.addProfileTag('dev');
-
-      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'dev']);
-
       store.setReach(REACH.ME);
+      store.setTaggedAsActive(true);
 
       expect(useHomeStore.getState().reach).toBe(REACH.ME);
-      expect(useHomeStore.getState().profileTags).toEqual(['bitcoin', 'dev']);
+      expect(useHomeStore.getState().taggedAsActive).toBe(true);
+      expect(useHomeStore.getState().hasUserSetReach).toBe(true);
+    });
+
+    it('should apply the fresh-user default only while no user reach choice exists', () => {
+      const store = useHomeStore.getState();
+
+      store.applyDefaultReach(REACH.NETWORK);
+
+      expect(useHomeStore.getState().reach).toBe(REACH.NETWORK);
+      expect(useHomeStore.getState().hasUserSetReach).toBe(false);
+
+      store.reset();
+      store.setReach(REACH.FRIENDS);
+      store.applyDefaultReach(REACH.NETWORK);
+
+      expect(useHomeStore.getState().reach).toBe(REACH.FRIENDS);
+    });
+
+    it('should not apply the fresh-user default after Tagged as was selected', () => {
+      const store = useHomeStore.getState();
+
+      store.setTaggedAsActive(true);
+      store.applyDefaultReach(REACH.NETWORK);
+
+      expect(useHomeStore.getState().reach).toBe(REACH.ALL);
+      expect(useHomeStore.getState().taggedAsActive).toBe(true);
     });
   });
 
@@ -341,6 +367,18 @@ describe('HomeStore', () => {
   });
 
   describe('Reset Functionality', () => {
+    it('should preserve hydration while resetting persisted filters', () => {
+      const store = useHomeStore.getState();
+      store.setHasHydrated(true);
+      store.setReach(REACH.FRIENDS);
+
+      store.reset();
+
+      expect(useHomeStore.getState().hasHydrated).toBe(true);
+      expect(useHomeStore.getState().reach).toBe(REACH.ALL);
+      expect(useHomeStore.getState().hasUserSetReach).toBe(false);
+    });
+
     it('should reset all filters to initial state', () => {
       const store = useHomeStore.getState();
 

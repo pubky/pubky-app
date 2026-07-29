@@ -1162,18 +1162,14 @@
     "reach": {
       "title": "范围",
       "all": "全部",
-      "network": "网络",
+      "network": "我的人脉",
+      "taggedAs": "标记为",
       "following": "关注",
       "friends": "好友",
       "me": "我",
       "profileTag": "个人资料标签",
       "profileTagLimitReached": "最多{max}个标签",
-      "profileTagTooltip": {
-        "network": "显示我的网络标记为…的人的帖子",
-        "following": "显示我关注的人标记为…的人的帖子",
-        "friends": "显示我关注的人标记为…的人的帖子",
-        "me": "显示我标记为…的人的帖子"
-      }
+      "taggedAsHeadline": "来自被我的人脉标记为 {tags} 的用户的帖子"
     },
     "sort": {
       "title": "排序",

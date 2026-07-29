@@ -203,14 +203,19 @@ export class UserController {
 
     try {
       const homeState = useHomeStore.getState();
-      const currentUserPubky = useAuthStore.getState().currentUserPubky;
-      return getHomeStreamIdFromFilters(
-        homeState.sort,
-        homeState.reach,
-        homeState.content,
-        currentUserPubky,
-        homeState.profileTags,
-      );
+      const authState = useAuthStore.getState();
+      if (!homeState.hasHydrated || !authState.hasHydrated) {
+        return null;
+      }
+
+      return getHomeStreamIdFromFilters({
+        sort: homeState.sort,
+        reach: homeState.reach,
+        content: homeState.content,
+        currentUserPubky: authState.currentUserPubky,
+        profileTags: homeState.profileTags,
+        taggedAsActive: homeState.taggedAsActive,
+      });
     } catch (error) {
       Logger.warn('Failed to get active stream ID', { error });
       return null;

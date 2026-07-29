@@ -39,11 +39,11 @@ export const REPOST_OPTIMISTIC_PREPEND_VARIANTS = new Set<TimelineFeedVariant>([
 ]);
 
 /**
- * Reach values enabled for V1 profile/domain tag filtering. Me maps to a
- * depth-0 (observer-only) wot_domain trust set, enabled by #2150 after the
- * Nexus depth-0 support (pubky/pubky-nexus#982) was verified on staging.
- * Both aliases are included because Home calls the feature "network" while
- * pubky-app-specs serializes the same reach as "wot".
+ * Reach values supported by the profile/domain tag stream contract. WoT V1
+ * authoring exposes only standalone Tagged as, serialized as wot/depth 2.
+ * Depth 0/1 support remains intentional for foreign and legacy custom feeds
+ * and for future authoring work. Both network and wot are retained because
+ * Home and pubky-app-specs use different names for the same depth-2 reach.
  */
 const PROFILE_TAG_SUPPORTED_REACHES = ['network', 'wot', 'following', 'friends', 'me'] as const;
 

@@ -9,8 +9,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for drawer variant wit
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab="friends"
-    data-show-me="true"
-    data-show-network="true"
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach
@@ -76,8 +75,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for drawer variant wit
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab=""
-    data-show-me="true"
-    data-show-network="true"
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach
@@ -118,8 +116,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant wi
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab="following"
-    data-show-me="true"
-    data-show-network="true"
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach
@@ -190,8 +187,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant wi
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab="all"
-    data-show-me="true"
-    data-show-network="true"
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach
@@ -262,8 +258,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant wi
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab=""
-    data-show-me="true"
-    data-show-network="true"
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach
