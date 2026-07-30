@@ -1,4 +1,4 @@
-// Consumed by VRT test harness (Home.vrt.test.tsx and post-data hook mocks).
+// Consumed by VRT test harness (Home.vrt.test.tsx, Search.vrt.test.tsx, and post-data hook mocks).
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import type { NexusPostCounts, NexusPostDetails, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
@@ -94,6 +94,7 @@ const CLEO_IMAGE: VRTPostFixture = {
   tags: [
     { label: 'photography', taggers: [VRT_AUTHOR_PUBKYS.fynn], taggers_count: 4, relationship: false },
     { label: 'goldenhour', taggers: [VRT_AUTHOR_PUBKYS.alice], taggers_count: 3, relationship: false },
+    { label: 'design', taggers: [VRT_AUTHOR_PUBKYS.hana], taggers_count: 2, relationship: false },
   ],
 };
 
@@ -110,9 +111,12 @@ const DION_LINK: VRTPostFixture = {
     uri: makeUri(VRT_AUTHOR_PUBKYS.dion, DION_POST_ID),
     attachments: null,
   },
-  counts: { tags: 2, unique_tags: 2, replies: 1, reposts: 1 },
+  counts: { tags: 5, unique_tags: 2, replies: 1, reposts: 1 },
   relationships: { replied: null, reposted: null, mentioned: [] },
-  tags: [{ label: 'distsys', taggers: [VRT_AUTHOR_PUBKYS.bran], taggers_count: 2, relationship: false }],
+  tags: [
+    { label: 'distsys', taggers: [VRT_AUTHOR_PUBKYS.bran], taggers_count: 2, relationship: false },
+    { label: 'pubky', taggers: [VRT_AUTHOR_PUBKYS.alice], taggers_count: 3, relationship: false },
+  ],
 };
 
 const EIRA_REPLY_PARENT_URI = makeUri(VRT_AUTHOR_PUBKYS.bran, BRAN_POST_ID);
@@ -207,9 +211,12 @@ const ALICE_LONG: VRTPostFixture = {
     uri: makeUri(VRT_AUTHOR_PUBKYS.alice, ALICE_LONG_POST_ID),
     attachments: null,
   },
-  counts: { tags: 4, unique_tags: 4, replies: 1, reposts: 1 },
+  counts: { tags: 6, unique_tags: 2, replies: 1, reposts: 1 },
   relationships: { replied: null, reposted: null, mentioned: [] },
-  tags: [{ label: 'engineering', taggers: [VRT_AUTHOR_PUBKYS.bran], taggers_count: 2, relationship: false }],
+  tags: [
+    { label: 'engineering', taggers: [VRT_AUTHOR_PUBKYS.bran], taggers_count: 2, relationship: false },
+    { label: 'pubky', taggers: [VRT_AUTHOR_PUBKYS.glen], taggers_count: 4, relationship: false },
+  ],
 };
 
 const CLEO_VIDEO: VRTPostFixture = {
