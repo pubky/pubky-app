@@ -89,6 +89,15 @@ describe('ProviderInApp', () => {
       expect(InApp.parseEmbed(`https://pubky.app/post/${PUBKY}/${POST_ID}`)).toBeNull();
     });
 
+    it('matches the www-prefixed variant of the current host (same policy as link confirmation)', () => {
+      const wwwUrl = `${window.location.protocol}//www.${window.location.host}/post/${PUBKY}/${POST_ID}`;
+
+      expect(InApp.parseEmbed(wwwUrl)).toEqual({
+        type: 'post',
+        value: `${PUBKY}:${POST_ID}`,
+      });
+    });
+
     it('returns null for non-http(s) protocols', () => {
       expect(InApp.parseEmbed(`pubky://${PUBKY}/pub/pubky.app/posts/${POST_ID}`)).toBeNull();
     });

@@ -1,5 +1,5 @@
 import { matchPostRoute, matchSingleCollectionRoute } from '@/app/routes';
-import { isPubkyIdentifier } from '@/libs/utils/utils';
+import { isPubkyIdentifier, isSameDomain } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import type { EmbedData, EmbedProvider } from '../Provider.types';
@@ -7,18 +7,18 @@ import type { EmbedData, EmbedProvider } from '../Provider.types';
 /**
  * Resolve an in-app post/collection URL to a composite post id, or null.
  *
- * A URL is in-app when its host matches the current origin and its path is a
- * single post (`/post/[userId]/[postId]`) or single collection
- * (`/collections/[userId]/[postId]`) route. Host (not origin) comparison:
- * linkify-it normalizes protocol-less text to `http://`, which would fail
- * strict origin equality on https deployments.
+ * A URL is in-app when it is same-domain per `isSameDomain` — the same policy
+ * the link-confirmation dialog uses (hostname with `www.` stripped, http(s)
+ * only via `getSafeExternalUrl`) — and its path is a single post
+ * (`/post/[userId]/[postId]`) or single collection
+ * (`/collections/[userId]/[postId]`) route. Sharing the helper keeps the two
+ * features from ever giving the same URL different internal/external verdicts.
  */
 const parseInAppCompositeId = (url: string): string | null => {
   if (typeof window === 'undefined') return null;
   try {
+    if (!isSameDomain(url)) return null;
     const parsed = new URL(url);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-    if (parsed.host !== window.location.host) return null;
     // URL.pathname excludes query/hash; the route matchers handle trailing slashes.
     const match = matchPostRoute(parsed.pathname) ?? matchSingleCollectionRoute(parsed.pathname);
     if (!match) return null;
