@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/.vitest-attachments
 
 # next.js
 /.next/
