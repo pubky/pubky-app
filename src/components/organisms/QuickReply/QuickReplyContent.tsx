@@ -4,6 +4,7 @@ import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInput
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { LIST_POST_BODY_TEXT_CLASS, WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import type { QuickReplyContentProps } from './QuickReply.types';
@@ -48,13 +49,20 @@ export function QuickReplyContent({
 }: QuickReplyContentComponentProps) {
   return (
     <>
-      {currentUserPubky && (
+      {currentUserPubky ? (
         <PostHeader
           postId={currentUserPubky}
           isReplyInput={true}
           characterLimit={characterLimit}
           showPopover={false}
           size={layout === 'side' ? 'large' : 'normal'}
+        />
+      ) : (
+        <AvatarWithFallback
+          name=""
+          fallbackSeed="user"
+          size={layout === 'side' ? 'xl' : 'default'}
+          data-testid="quick-reply-fallback-avatar"
         />
       )}
 

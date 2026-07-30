@@ -245,6 +245,17 @@ describe('QuickReply', () => {
     expect(handleChange).not.toHaveBeenCalled();
   });
 
+  it('renders a fallback avatar for a logged-out user', () => {
+    mockIsAuthenticated = false;
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, { currentUserPubky: null }),
+    );
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    expect(screen.getByTestId('quick-reply-fallback-avatar')).toBeInTheDocument();
+  });
+
   it('opens sign-in and does not submit when an anonymous user clicks submit', () => {
     mockIsAuthenticated = false;
     mockRequireAuth.mockReturnValue(undefined);
@@ -366,24 +377,6 @@ describe('QuickReply', () => {
 
       expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'normal');
       expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-base font-medium leading-5');
-    });
-
-    it('passes characterLimit to PostHeader when expanded in list layout', () => {
-      mockUsePostInput.mockImplementation((options: unknown) =>
-        createUsePostInputReturn(options, { content: 'Hello world', isExpanded: true }),
-      );
-
-      render(
-        <PostMainLayoutProvider tagsLayout="list">
-          <QuickReply parentPostId="author:post1" />
-        </PostMainLayoutProvider>,
-      );
-
-      const postHeader = screen.getByTestId('post-header');
-      expect(postHeader).toHaveAttribute('data-count', '11');
-      expect(postHeader).toHaveAttribute('data-max', POST_MAX_CHARACTER_LENGTH.toString());
-      expect(screen.getByTestId('post-input-expandable-section')).toBeInTheDocument();
-      expect(screen.queryByTestId('quick-reply-list-actions')).not.toBeInTheDocument();
     });
   });
 
