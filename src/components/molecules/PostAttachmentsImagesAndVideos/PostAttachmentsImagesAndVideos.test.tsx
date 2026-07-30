@@ -42,6 +42,7 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       hiddenTitle,
       showCloseButton,
       overrideDefaults,
+      centered,
       onClick,
       'aria-describedby': ariaDescribedBy,
       'data-testid': dataTestId,
@@ -50,6 +51,7 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       hiddenTitle?: string;
       showCloseButton?: boolean;
       overrideDefaults?: boolean;
+      centered?: boolean;
       onClick?: (e: React.MouseEvent) => void;
       'aria-describedby'?: string;
       'data-testid'?: string;
@@ -64,6 +66,7 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
           data-hidden-title={hiddenTitle}
           data-show-close-button={showCloseButton}
           data-override-defaults={overrideDefaults}
+          data-centered={centered}
           aria-describedby={ariaDescribedBy}
           onClick={onClick}
         >
@@ -544,6 +547,14 @@ describe('PostAttachmentsImagesAndVideos', () => {
 
       const dialogContent = screen.getByTestId('dialog-content');
       expect(dialogContent).toHaveAttribute('data-hidden-title', 'Post Attachments Media Carousel');
+    });
+
+    it('opts the media preview out of the mobile drawer so it stays centered', () => {
+      setDialogOpen(true);
+      const imagesAndVideos = [createMockImage()];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+
+      expect(screen.getByTestId('dialog-content')).toHaveAttribute('data-centered', 'true');
     });
 
     it('does not render dialog content when closed', () => {

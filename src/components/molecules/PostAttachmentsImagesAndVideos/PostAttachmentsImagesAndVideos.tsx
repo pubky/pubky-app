@@ -198,6 +198,7 @@ export const PostAttachmentsImagesAndVideos = ({
         aria-describedby={undefined}
         showCloseButton={false}
         overrideDefaults
+        centered
         onClick={(e) => {
           e.stopPropagation();
         }}
