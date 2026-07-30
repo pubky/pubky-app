@@ -80,6 +80,22 @@ describe('ProviderInApp', () => {
       expect(InApp.parseEmbed(`${ORIGIN}/post/${PUBKY}/${POST_ID}/extra`)).toBeNull();
     });
 
+    // Post ID shape is intentionally NOT validated — the app has no post-id
+    // shape validator anywhere (the repost path resolves arbitrary ids the
+    // same way). Nonexistent ids 404 downstream and PostPreviewCard renders
+    // PostMissing, matching repost behavior; unindexed-but-real posts hydrate
+    // into the full preview once Nexus indexes them.
+    it('accepts any non-empty postId segment without shape validation', () => {
+      expect(InApp.parseEmbed(`${ORIGIN}/post/${PUBKY}/typo`)).toEqual({
+        type: 'post',
+        value: `${PUBKY}:typo`,
+      });
+      expect(InApp.parseEmbed(`${ORIGIN}/collections/${PUBKY}/not-a-real-id`)).toEqual({
+        type: 'post',
+        value: `${PUBKY}:not-a-real-id`,
+      });
+    });
+
     it('returns null for an invalid user identifier', () => {
       expect(InApp.parseEmbed(`${ORIGIN}/post/not-a-pubky/${POST_ID}`)).toBeNull();
       expect(InApp.parseEmbed(`${ORIGIN}/post/${PUBKY.toUpperCase()}/${POST_ID}`)).toBeNull();

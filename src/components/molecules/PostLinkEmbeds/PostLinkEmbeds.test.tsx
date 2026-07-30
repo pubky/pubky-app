@@ -745,6 +745,16 @@ describe('PostLinkEmbeds', () => {
       expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
     });
 
+    it('routes a valid-pubky URL with a nonexistent post id to the preview card (which owns the not-found state)', () => {
+      render(<PostLinkEmbeds content={`${origin}/post/${pubky}/typo`} />);
+
+      // Post ID shape is not validated; PostPreviewCard resolves the id and
+      // renders PostMissing on 404, matching repost behavior.
+      const card = screen.getByTestId('post-preview-card');
+      expect(card).toHaveAttribute('data-post-id', `${pubky}:typo`);
+      expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
+    });
+
     it('falls back to generic preview for a route-shaped URL with an invalid pubky', () => {
       render(<PostLinkEmbeds content={`${origin}/post/not-a-pubky/${postId}`} />);
 
