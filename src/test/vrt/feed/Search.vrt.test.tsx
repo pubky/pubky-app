@@ -2,8 +2,9 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
@@ -15,14 +16,19 @@ import { Search } from '@/templates/Feed/Search/Search';
 // no synchronous require(), so each factory loads its fixture via async import
 // the first time the mocked module is consumed.
 const fixtures = vi.hoisted(async () => {
-  const [profilesModule, whoToFollowModule, navModule, mockApp] = await Promise.all([
+  const [postsModule, profilesModule, whoToFollowModule, navModule, mockApp] = await Promise.all([
+    import('@/test/fixtures/feed/posts'),
     import('@/test/fixtures/feed/profiles'),
     import('@/test/fixtures/feed/whoToFollow'),
     import('@/test/fixtures/feed/feedNavigation'),
     import('@/test/mocks/feedApplication'),
   ]);
+  const postsByCompositeId = new Map(postsModule.VRT_FEED_POSTS.map((post) => [post.compositeId, post]));
+  const orderedCompositeIds = postsModule.VRT_FEED_POSTS.map((post) => post.compositeId);
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   return {
+    postsByCompositeId,
+    orderedCompositeIds,
     profiles: profilesModule.VRT_AUTHOR_PROFILES,
     viewerPubky,
     whoToFollow: whoToFollowModule.VRT_WHO_TO_FOLLOW,
@@ -31,7 +37,11 @@ const fixtures = vi.hoisted(async () => {
   };
 });
 
-// Empty `searchParams` → no `?tags=` → Search renders SearchEmptyState.
+// Mutable so empty + tagged cases share one mock graph. Tests set `tags` before render.
+const navigation = vi.hoisted(() => ({
+  searchParams: new URLSearchParams(),
+}));
+
 vi.mock('next/navigation', () => {
   const router = {
     push: vi.fn(),
@@ -42,11 +52,10 @@ vi.mock('next/navigation', () => {
     refresh: vi.fn(),
   };
   const params = {};
-  const searchParams = new URLSearchParams();
   return {
     useRouter: () => router,
     usePathname: () => '/search',
-    useSearchParams: () => searchParams,
+    useSearchParams: () => navigation.searchParams,
     useParams: () => params,
   };
 });
@@ -125,6 +134,22 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   usePublicRoute: () => ({ isPublicRoute: false }),
 }));
 
+vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
+  const f = await fixtures;
+  const result = {
+    postIds: f.orderedCompositeIds,
+    loading: false,
+    loadingMore: false,
+    error: null,
+    hasMore: false,
+    loadMore: async () => {},
+    refresh: async () => {},
+    prependPosts: async () => {},
+    removePosts: () => {},
+  };
+  return { useStreamPagination: () => result };
+});
+
 vi.mock('@/hooks/useUserStream/useUserStream', async () => {
   const f = await fixtures;
   const usersSnapshot = [...f.whoToFollow];
@@ -164,6 +189,66 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => {
   return { useFollowUser: () => result };
 });
 
+vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => {
+  const result = { unreadPostIds: [] as string[], unreadCount: 0 };
+  return { useUnreadPosts: () => result };
+});
+
+vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => {
+  const result = { state: 'idle' as const, pullDistance: 0 };
+  return { usePullToRefresh: () => result };
+});
+
+vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
+  useIsScrolledFromTop: () => false,
+}));
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', async () => {
+  const f = await fixtures;
+  const EMPTY = { postDetails: null, isLoading: false } as const;
+  const cache = new Map<string, { postDetails: unknown; isLoading: false }>();
+  return {
+    usePostDetails: (compositeId: string | null) => {
+      if (!compositeId) return EMPTY;
+      const cached = cache.get(compositeId);
+      if (cached) return cached;
+      const fixture = f.postsByCompositeId.get(compositeId);
+      if (!fixture) {
+        cache.set(compositeId, EMPTY);
+        return EMPTY;
+      }
+      const result = {
+        postDetails: { ...fixture.details, is_moderated: false, is_blurred: false },
+        isLoading: false as const,
+      };
+      cache.set(compositeId, result);
+      return result;
+    },
+  };
+});
+
+vi.mock('@/hooks/usePostCounts/usePostCounts', async () => {
+  const f = await fixtures;
+  const ZERO_COUNTS = { tags: 0, unique_tags: 0, replies: 0, reposts: 0 };
+  const cache = new Map<string, { postCounts: typeof ZERO_COUNTS; isLoading: false }>();
+  return {
+    usePostCounts: (compositeId: string) => {
+      const cached = cache.get(compositeId);
+      if (cached) return cached;
+      const fixture = f.postsByCompositeId.get(compositeId);
+      const result = { postCounts: fixture?.counts ?? ZERO_COUNTS, isLoading: false as const };
+      cache.set(compositeId, result);
+      return result;
+    },
+  };
+});
+
+vi.mock('@/hooks/useBookmark/useBookmark', () => {
+  const noopToggle = async () => {};
+  const result = { isBookmarked: false, isLoading: false, isToggling: false, toggle: noopToggle };
+  return { useBookmark: () => result };
+});
+
 vi.mock('@/hooks/useUserDetails/useUserDetails', async () => {
   const f = await fixtures;
   const EMPTY = { userDetails: null, isLoading: false } as const;
@@ -187,6 +272,74 @@ vi.mock('@/hooks/useUserDetails/useUserDetails', async () => {
 vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
   useAvatarUrl: (userDetails: { image: string | null } | null | undefined) => userDetails?.image ?? null,
 }));
+
+vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => {
+  const result = { formatRelativeTime: formatStableRelative };
+  return { useRelativeTime: () => result };
+});
+
+vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => {
+  const noopRef = () => {};
+  const result = { ref: noopRef };
+  return { useTtlSubscription: () => result };
+});
+
+vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
+  const f = await fixtures;
+  const cache = new Map<string, { showRepostHeader: boolean; shouldShowPostHeader: boolean }>();
+  return {
+    usePostHeaderVisibility: (compositeId: string) => {
+      const cached = cache.get(compositeId);
+      if (cached) return cached;
+      const result = {
+        showRepostHeader: !!f.postsByCompositeId.get(compositeId)?.relationships.reposted,
+        shouldShowPostHeader: true,
+      };
+      cache.set(compositeId, result);
+      return result;
+    },
+  };
+});
+
+vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
+  const f = await fixtures;
+  const noopToggle = async () => {};
+  const noopAdd = async () => ({ success: true });
+  const isViewerTagger = () => false;
+  const cache = new Map<string, unknown>();
+  return {
+    useEntityTags: (taggedId: string) => {
+      const cached = cache.get(taggedId);
+      if (cached) return cached;
+      const fixture = f.postsByCompositeId.get(taggedId);
+      const tags = (fixture?.tags ?? []).map((tag) => ({ ...tag, taggers_avatars: [] }));
+      const result = {
+        tags,
+        count: tags.length,
+        isLoading: false as const,
+        isViewerTagger,
+        handleTagToggle: noopToggle,
+        handleTagAdd: noopAdd,
+      };
+      cache.set(taggedId, result);
+      return result;
+    },
+  };
+});
+
+vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => {
+  const result = {
+    taggersByLabel: new Map<string, string[]>(),
+    taggerStates: new Map<string, { isLoading: boolean; error: string | null }>(),
+    fetchAllTaggers: async () => {},
+  };
+  return { usePostTaggers: () => result };
+});
+
+vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => {
+  const result = { replyIds: [] as string[], isLoading: false, hasMore: false, loadMore: async () => {} };
+  return { useThreadReplies: () => result };
+});
 
 vi.mock('@/hooks/useAuthStatus/useAuthStatus', async () => {
   const types =
@@ -237,11 +390,9 @@ vi.mock('@/controllers/file/file', () => ({
   },
 }));
 
-// Search only renders the centre column; sidebars live in (feeds)/layout.tsx's
-// ContentLayout. Resolve the same shell config here so VRT matches prod.
 const searchShellConfig = tryResolveFeedsShellConfig('/search')!;
 
-function SearchEmptyWithLayout() {
+function SearchWithLayout() {
   return (
     <>
       <Header />
@@ -252,14 +403,40 @@ function SearchEmptyWithLayout() {
   );
 }
 
+function setSearchTags(tags: string[]) {
+  navigation.searchParams = tags.length ? new URLSearchParams({ tags: tags.join(',') }) : new URLSearchParams();
+}
+
+beforeEach(() => {
+  setSearchTags([]);
+});
+
 describe('Search (empty state) — visual regression', () => {
   it('renders the search empty state at desktop viewport', async () => {
-    const screen = await renderForVRT(<SearchEmptyWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-empty-desktop');
   });
 
   it('renders the search empty state at mobile viewport', async () => {
-    const screen = await renderForVRT(<SearchEmptyWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-empty-mobile');
+  });
+});
+
+describe('Search (tagged results) — visual regression', () => {
+  // Tags mirror labels on VRT feed fixtures (`pubky`, `design`) so the results
+  // header reads as a realistic `/search?tags=…` query.
+  beforeEach(() => {
+    setSearchTags(['pubky', 'design']);
+  });
+
+  it('renders tagged search results at desktop viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-desktop');
+  });
+
+  it('renders tagged search results at mobile viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-mobile');
   });
 });
