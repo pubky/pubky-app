@@ -24,7 +24,10 @@ const fixtures = vi.hoisted(async () => {
     import('@/test/mocks/feedApplication'),
   ]);
   const postsByCompositeId = new Map(postsModule.VRT_FEED_POSTS.map((post) => [post.compositeId, post]));
-  const orderedCompositeIds = postsModule.VRT_FEED_POSTS.map((post) => post.compositeId);
+  // Tagged-results case searches `pubky` + `design` — only return posts that carry those labels.
+  const taggedSearchCompositeIds = postsModule.VRT_FEED_POSTS.filter((post) =>
+    post.tags.some((tag) => tag.label === 'pubky' || tag.label === 'design'),
+  ).map((post) => post.compositeId);
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   // Profile autocomplete results (same shape as useSearchAutocomplete → SearchUsersSection).
   // Pubky ids follow the existing VRT author convention (`…alice01`, `…bran02`, …).
@@ -44,7 +47,7 @@ const fixtures = vi.hoisted(async () => {
   }));
   return {
     postsByCompositeId,
-    orderedCompositeIds,
+    taggedSearchCompositeIds,
     profiles: profilesModule.VRT_AUTHOR_PROFILES,
     viewerPubky,
     whoToFollow: whoToFollowModule.VRT_WHO_TO_FOLLOW,
@@ -161,7 +164,7 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
   const f = await fixtures;
   const result = {
-    postIds: f.orderedCompositeIds,
+    postIds: f.taggedSearchCompositeIds,
     loading: false,
     loadingMore: false,
     error: null,
