@@ -266,6 +266,7 @@
       "sendCode": "ارسال الرمز",
       "phoneNumber": "رقم الهاتف",
       "phoneHint": "ادخل رقم هاتفك مع رمز الدولة (مثلا +966 للسعودية).",
+      "invalidPhone": "ادخل رقم جوال صالح مع رمز الدولة.",
       "placeholder": "+966XXXXXXXXX",
       "blocked": "رقم الهاتف محظور",
       "blockedDescription": "لا يمكن استخدام رقم الهاتف هذا للتحقق.",

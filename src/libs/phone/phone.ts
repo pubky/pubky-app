@@ -1,5 +1,31 @@
 import parsePhoneNumberFromString, { PhoneNumber } from 'libphonenumber-js/mobile';
 
+const E164_DIGITS_ONLY = /^\+(\d)*$/;
+const ARGENTINA_CALLING_CODE = '54';
+
+/**
+ * Argentina mobiles in E.164 need a trunk `9` after `+54`
+ * (e.g. `+54 9 11 …`). Users often omit it; insert and re-validate.
+ */
+function tryNormalizeArgentinaMobile(parsed: PhoneNumber): PhoneNumber | undefined {
+  if (parsed.country !== 'AR' && parsed.countryCallingCode !== ARGENTINA_CALLING_CODE) {
+    return;
+  }
+
+  const nationalNumber = parsed.nationalNumber;
+  if (!nationalNumber || nationalNumber.startsWith('9')) {
+    return;
+  }
+
+  const withMobileTrunk = `+${ARGENTINA_CALLING_CODE}9${nationalNumber}`;
+  const normalized = parsePhoneNumberFromString(withMobileTrunk);
+  if (!normalized?.isValid()) {
+    return;
+  }
+
+  return normalized;
+}
+
 /**
  * Validates an international phone number in E.164 format.
  * @param phoneNumber - The phone number to validate (e.g., "+316XXXXXXXX")
@@ -9,8 +35,7 @@ export function parsePhoneNumber(phoneNumber: string): PhoneNumber | undefined {
   const trimmed = phoneNumber.trim().replaceAll(' ', '');
 
   // Check if there are any non-digit characters other than the plus sign
-  const regex = /^\+(\d)*$/;
-  if (!regex.test(trimmed)) {
+  if (!E164_DIGITS_ONLY.test(trimmed)) {
     return;
   }
 
@@ -21,9 +46,9 @@ export function parsePhoneNumber(phoneNumber: string): PhoneNumber | undefined {
     return;
   }
 
-  if (!parsed.isValid()) {
-    return;
+  if (parsed.isValid()) {
+    return parsed;
   }
 
-  return parsed;
+  return tryNormalizeArgentinaMobile(parsed);
 }

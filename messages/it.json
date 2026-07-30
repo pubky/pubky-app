@@ -264,6 +264,7 @@
       "sendCode": "Invia codice",
       "phoneNumber": "Numero di telefono",
       "phoneHint": "Inserisci il tuo numero di telefono, incluso il prefisso internazionale (es. +39 per Italia).",
+      "invalidPhone": "Inserisci un numero di cellulare valido incluso il prefisso internazionale.",
       "placeholder": "+39XXXXXXXXXX",
       "blocked": "Numero di telefono bloccato",
       "blockedDescription": "Questo numero di telefono non può essere usato per la verifica.",

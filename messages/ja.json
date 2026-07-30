@@ -264,6 +264,7 @@
       "sendCode": "コードを送信",
       "phoneNumber": "電話番号",
       "phoneHint": "国番号を含めて電話番号を入力してください（例：日本は+81）。",
+      "invalidPhone": "国番号を含む有効な携帯電話番号を入力してください。",
       "placeholder": "+81XXXXXXXXXX",
       "blocked": "電話番号がブロックされています",
       "blockedDescription": "この電話番号は確認に使用できません。",

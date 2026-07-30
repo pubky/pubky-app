@@ -2,6 +2,7 @@
 
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
+import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { TaggedEmpty } from '@/molecules/TaggedEmpty/TaggedEmpty';
@@ -29,6 +30,10 @@ export function ProfileTagged() {
 
   const { tags, count, isLoading, handleTagAdd, handleTagToggle, hasMore, isLoadingMore, loadMore } = useTagged(pubky);
 
+  // Enrich taggers with user names so compact hashfaces use username initials
+  // (same pattern as PostTagsPanel — transformTagsForViewer only has id + avatarUrl)
+  const { enrichedTags } = useEnrichedTags(tags);
+
   const userName = profile?.name || '';
 
   if (isLoading) {
@@ -46,7 +51,7 @@ export function ProfileTagged() {
         Tagged ({count})
       </Heading>
       <TaggedSection
-        tags={tags}
+        tags={enrichedTags}
         userName={userName}
         handleTagAdd={handleTagAdd}
         handleTagToggle={handleTagToggle}
