@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
+import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { ProfileTagged } from './ProfileTagged';
@@ -27,6 +28,10 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
   useTagged: vi.fn(),
 }));
 
+vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
+  useEnrichedTags: vi.fn((tags: unknown[]) => ({ enrichedTags: tags, isLoading: false })),
+}));
+
 // Mock molecules
 vi.mock('@/molecules/TaggedEmpty/TaggedEmpty', () => {
   return {
@@ -36,13 +41,18 @@ vi.mock('@/molecules/TaggedEmpty/TaggedEmpty', () => {
 
 vi.mock('@/molecules/TaggedSection/TaggedSection', () => {
   return {
-    TaggedSection: () => <div data-testid="tagged-section">TaggedSection</div>,
+    TaggedSection: ({ tags }: { tags: Array<{ taggers: Array<{ name?: string }> }> }) => (
+      <div data-testid="tagged-section" data-tagger-name={tags[0]?.taggers[0]?.name ?? ''}>
+        TaggedSection
+      </div>
+    ),
   };
 });
 
 const mockUseCurrentUserProfile = vi.mocked(useCurrentUserProfile);
 const mockUseUserProfile = vi.mocked(useUserProfile);
 const mockUseTagged = vi.mocked(useTagged);
+const mockUseEnrichedTags = vi.mocked(useEnrichedTags);
 
 const mockTaggedOneTag = {
   tags: [
@@ -95,6 +105,10 @@ beforeEach(() => {
     profile: { name: 'Satoshi' },
     isLoading: false,
   } as ReturnType<typeof useUserProfile>);
+  mockUseEnrichedTags.mockImplementation((tags: unknown[]) => ({
+    enrichedTags: tags as ReturnType<typeof useEnrichedTags>['enrichedTags'],
+    isLoading: false,
+  }));
 });
 
 describe('ProfileTagged', () => {
@@ -110,6 +124,23 @@ describe('ProfileTagged', () => {
   it('renders tag count heading', () => {
     render(<ProfileTagged />);
     expect(screen.getByText('Tagged (1)')).toBeInTheDocument();
+  });
+
+  it('passes enriched tags to TaggedSection for hashface username initials', () => {
+    const enrichedTags = [
+      {
+        label: 'bitcoin',
+        taggers: [{ id: 'user1', name: 'Not Vlada', avatarUrl: 'https://cdn.example.com/avatar/user1' }],
+        taggers_count: 1,
+        relationship: false,
+      },
+    ];
+    mockUseEnrichedTags.mockReturnValue({ enrichedTags, isLoading: false });
+
+    render(<ProfileTagged />);
+
+    expect(mockUseEnrichedTags).toHaveBeenCalledWith(mockTaggedOneTag.tags);
+    expect(screen.getByTestId('tagged-section')).toHaveAttribute('data-tagger-name', 'Not Vlada');
   });
 });
 
