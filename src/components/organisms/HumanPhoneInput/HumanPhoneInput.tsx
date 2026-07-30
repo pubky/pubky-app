@@ -26,10 +26,19 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
   const tCommon = useTranslations('common');
   const [phoneNumberInput, setPhoneNumberInput] = useState(initialPhoneNumber || '');
   const [isSendingCode, setIsSendingCode] = useState(false);
+  const [hasAttemptedSend, setHasAttemptedSend] = useState(false);
+
+  const parsedPhoneNumber = parsePhoneNumber(phoneNumberInput);
+  const isValidNumber = !!parsedPhoneNumber;
+  const showInvalidError = hasAttemptedSend && !isValidNumber;
+
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhoneNumberInput(e.target.value);
+    if (hasAttemptedSend) {
+      setHasAttemptedSend(false);
+    }
   };
-  const isValidNumber = !!parsePhoneNumber(phoneNumberInput);
+
   async function onSendCode(phoneNumber: string) {
     if (isSendingCode) {
       return;
@@ -87,6 +96,16 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
       setIsSendingCode(false);
     }
   }
+
+  function handleSendCode() {
+    if (!parsedPhoneNumber) {
+      setHasAttemptedSend(true);
+      return;
+    }
+    setHasAttemptedSend(false);
+    void onSendCode(parsedPhoneNumber.format('E.164'));
+  }
+
   return (
     <React.Fragment>
       <PageHeader>
@@ -101,7 +120,8 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
         value={phoneNumberInput}
         onChange={handlePhoneNumberChange}
         isValid={isValidNumber}
-        onEnter={() => isValidNumber && onSendCode(phoneNumberInput)}
+        error={showInvalidError ? t('invalidPhone') : undefined}
+        onEnter={handleSendCode}
       />
       <Container className={cn('mt-6 flex-row justify-between gap-3 lg:gap-6')}>
         <Button
@@ -119,8 +139,8 @@ export const HumanPhoneInput = ({ onBack, onCodeSent, initialPhoneNumber }: Huma
           size="lg"
           className="w-full flex-1 rounded-full md:flex-0"
           variant="default"
-          disabled={!isValidNumber || isSendingCode}
-          onClick={() => isValidNumber && onSendCode(phoneNumberInput)}
+          disabled={isSendingCode}
+          onClick={handleSendCode}
         >
           <ArrowRight className="mr-2 h-4 w-4" />
           {t('sendCode')}

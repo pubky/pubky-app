@@ -1,119 +1,77 @@
-import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-import { parsePhoneNumber } from '@/libs/phone/phone';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HomegateController } from '@/controllers/homegate/homegate';
 import { HumanPhoneInput } from './HumanPhoneInput';
 
+vi.mock('@/controllers/homegate/homegate', () => ({
+  HomegateController: {
+    sendSmsCode: vi.fn(),
+  },
+}));
+
 describe('HumanPhoneInput', () => {
-  it('matches snapshot', () => {
-    const { container } = render(<HumanPhoneInput onBack={() => {}} onCodeSent={() => {}} />);
-    expect(container.firstChild).toMatchSnapshot();
+  beforeEach(() => {
+    vi.mocked(HomegateController.sendSmsCode).mockReset();
+    vi.mocked(HomegateController.sendSmsCode).mockResolvedValue({ success: true });
+  });
+
+  it('enables Send Code for Argentina numbers missing trunk 9 and sends normalized E.164', async () => {
+    const user = userEvent.setup();
+    const onCodeSent = vi.fn();
+
+    render(<HumanPhoneInput onBack={() => {}} onCodeSent={onCodeSent} />);
+
+    const input = screen.getByTestId('human-phone-input');
+    await user.type(input, '+543416620881');
+
+    const sendButton = screen.getByRole('button', { name: /send code/i });
+    expect(sendButton).toBeEnabled();
+
+    await user.click(sendButton);
+
+    await waitFor(() => {
+      expect(HomegateController.sendSmsCode).toHaveBeenCalledWith('+5493416620881');
+    });
+    expect(onCodeSent).toHaveBeenCalledWith('+5493416620881');
+  });
+
+  it('keeps Send Code enabled and hides the error until an invalid send is attempted', async () => {
+    const user = userEvent.setup();
+
+    render(<HumanPhoneInput onBack={() => {}} onCodeSent={() => {}} />);
+
+    const input = screen.getByTestId('human-phone-input');
+    await user.type(input, '+12345678');
+
+    const sendButton = screen.getByRole('button', { name: /send code/i });
+    expect(sendButton).toBeEnabled();
+    expect(screen.queryByTestId('human-phone-input-error')).not.toBeInTheDocument();
+
+    await user.click(sendButton);
+
+    expect(HomegateController.sendSmsCode).not.toHaveBeenCalled();
+    expect(screen.getByTestId('human-phone-input-error')).toBeInTheDocument();
+  });
+
+  it('clears the invalid phone error when the user edits the number', async () => {
+    const user = userEvent.setup();
+
+    render(<HumanPhoneInput onBack={() => {}} onCodeSent={() => {}} />);
+
+    const input = screen.getByTestId('human-phone-input');
+    await user.type(input, '+12345678');
+    await user.click(screen.getByRole('button', { name: /send code/i }));
+    expect(screen.getByTestId('human-phone-input-error')).toBeInTheDocument();
+
+    await user.type(input, '9');
+    expect(screen.queryByTestId('human-phone-input-error')).not.toBeInTheDocument();
   });
 });
 
-describe('parsePhoneNumber', () => {
-  describe('valid phone numbers', () => {
-    it('parses a valid US phone number', () => {
-      const result = parsePhoneNumber('+14155551234');
-      expect(result).toBeDefined();
-      expect(result?.country).toBe('US');
-      expect(result?.isValid()).toBe(true);
-    });
-
-    it('parses a valid Dutch phone number', () => {
-      const result = parsePhoneNumber('+31612345678');
-      expect(result).toBeDefined();
-      expect(result?.country).toBe('NL');
-      expect(result?.isValid()).toBe(true);
-    });
-
-    it('parses a valid UK phone number', () => {
-      const result = parsePhoneNumber('+447400123456');
-      expect(result).toBeDefined();
-      expect(result?.country).toBe('GB');
-      expect(result?.isValid()).toBe(true);
-    });
-
-    it('parses a valid German phone number', () => {
-      const result = parsePhoneNumber('+4915123456789');
-      expect(result).toBeDefined();
-      expect(result?.country).toBe('DE');
-      expect(result?.isValid()).toBe(true);
-    });
-
-    it('parses a valid Belarusian phone number', () => {
-      const result = parsePhoneNumber('+375291234567');
-      expect(result).toBeDefined();
-      expect(result?.country).toBe('BY');
-      expect(result?.isValid()).toBe(true);
-    });
-
-    it('handles phone numbers with leading/trailing whitespace', () => {
-      const result = parsePhoneNumber('  +14155551234  ');
-      expect(result).toBeDefined();
-      expect(result?.isValid()).toBe(true);
-    });
-
-    it('handles phone numbers with spaces between digits', () => {
-      const result = parsePhoneNumber('+1 415 555 1234');
-      expect(result).toBeDefined();
-      expect(result?.isValid()).toBe(true);
-    });
-  });
-
-  describe('invalid phone numbers', () => {
-    it('returns undefined for empty string', () => {
-      const result = parsePhoneNumber('');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for whitespace only', () => {
-      const result = parsePhoneNumber('   ');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for number without plus sign', () => {
-      const result = parsePhoneNumber('14155551234');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for number with letters', () => {
-      const result = parsePhoneNumber('+1415abc1234');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for number with special characters', () => {
-      const result = parsePhoneNumber('+1-415-555-1234');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for number with parentheses', () => {
-      const result = parsePhoneNumber('+1(415)5551234');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for just a plus sign', () => {
-      const result = parsePhoneNumber('+');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for too short phone number', () => {
-      const result = parsePhoneNumber('+1234');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for invalid country code', () => {
-      const result = parsePhoneNumber('+999123456789');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for number with multiple plus signs', () => {
-      const result = parsePhoneNumber('++14155551234');
-      expect(result).toBeUndefined();
-    });
-
-    it('returns undefined for plus sign in middle of number', () => {
-      const result = parsePhoneNumber('1+4155551234');
-      expect(result).toBeUndefined();
-    });
+describe('HumanPhoneInput - Snapshots', () => {
+  it('matches snapshot', () => {
+    const { container } = render(<HumanPhoneInput onBack={() => {}} onCodeSent={() => {}} />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -264,6 +264,7 @@
       "sendCode": "Enviar código",
       "phoneNumber": "Número de teléfono",
       "phoneHint": "Ingresa tu número de teléfono, incluyendo el código de pais (ej. +34 para España).",
+      "invalidPhone": "Ingresa un número de móvil válido incluyendo el código de país.",
       "placeholder": "+34XXXXXXXXX",
       "blocked": "Número de teléfono bloqueado",
       "blockedDescription": "Este número de teléfono no puede usarse para verificación.",

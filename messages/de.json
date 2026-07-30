@@ -266,6 +266,7 @@
       "sendCode": "Code senden",
       "phoneNumber": "Telefonnummer",
       "phoneHint": "Geben Sie Ihre Telefonnummer einschliesslich Landesvorwahl ein (z.B. +49 für Deutschland).",
+      "invalidPhone": "Geben Sie eine gültige Handynummer einschliesslich Landesvorwahl ein.",
       "placeholder": "+49XXXXXXXXXXX",
       "blocked": "Telefonnummer gesperrt",
       "blockedDescription": "Diese Telefonnummer kann nicht zur Verifizierung verwendet werden.",
