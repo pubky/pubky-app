@@ -48,12 +48,6 @@ exports[`SinglePostContent > SinglePostContent - Snapshots > matches snapshot wi
 exports[`SinglePostContent > SinglePostContent - Snapshots > matches snapshot with long post (article) 1`] = `
 <div>
   <div
-    data-post-id="author:post123"
-    data-testid="post-page-header"
-  >
-    PostPageHeader
-  </div>
-  <div
     data-content="{\\"title\\":\\"Article Title\\",\\"body\\":\\"# Article Title\\\\n\\\\nArticle content\\"}"
     data-is-blurred="false"
     data-post-id="author:post123"

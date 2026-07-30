@@ -22,8 +22,8 @@ await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('name-deskto
 
 `renderForVRT` wraps the tree in a viewport-clamped root (the screenshot is
 exactly the viewport, not full scroll height), freezes the clock, seeds
-`Math.random`, and waits for fonts + image decode. Mock every data dependency
-(store/hook/fetch/router) so the pixels are deterministic.
+`Math.random`, and waits for fonts + successfully loaded images. Mock every
+data dependency (store/hook/fetch/router) so the pixels are deterministic.
 
 ## Determinism
 
@@ -46,7 +46,12 @@ diffs stand out:
   and placeholders stay stable.
 - **Images** — `next/image` is mocked to a plain `<img>` in `vrt.setup.ts` (the
   browser runtime has no Next image optimizer, so the real component 404s).
-  `renderForVRT` awaits `img.decode()` so a screenshot never fires mid-load.
+  `renderForVRT` waits until each `<img>` has real pixels (`naturalWidth > 0`),
+  then `decode()`, then two animation frames so SVG/logo paint cannot race the
+  screenshot. Load/decode failures reject with the image URL — broken assets
+  must not become blank baselines. Swallowing `decode()` alone was not enough
+  and caused intermittent blank header logos. Intentionally absent artwork
+  should be mocked out of the tree rather than left as a broken `<img>`.
 - **Avatars** — VRT profile fixtures use `image: null` so every avatar renders
   `FacehashAvatar`. `vrt.setup.ts` sets `globalThis.__VRT__` and stabiliser CSS;
   `FacehashAvatar` disables blink, 3D tilt, and hover when that flag is set.

@@ -37,7 +37,7 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
   return (
     <PostMainLayoutProvider tagsLayout={tagsLayout}>
       {/* Page header with breadcrumb navigation */}
-      <PostPageHeader postId={postId} />
+      {!isArticle && <PostPageHeader postId={postId} />}
 
       {/* Main post - FULL WIDTH - always visible */}
       {isDeleted ? (

@@ -295,6 +295,12 @@ describe('SinglePostContent', () => {
       expect(screen.queryByTestId('post-main')).not.toBeInTheDocument();
     });
 
+    it('hides PostPageHeader for article posts', () => {
+      render(<SinglePostContent postId={mockPostId} postDetails={ARTICLE_POST_DETAILS} />);
+
+      expect(screen.queryByTestId('post-page-header')).toBeNull();
+    });
+
     it('renders malformed long posts through PostMain', () => {
       const { container } = render(<SinglePostContent postId={mockPostId} postDetails={MALFORMED_LONG_POST_DETAILS} />);
 
