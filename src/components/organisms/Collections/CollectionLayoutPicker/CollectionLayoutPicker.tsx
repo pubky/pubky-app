@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronDown, Grip, type LucideIcon, Rows4 } from 'lucide-react';
+import { Check, ChevronDown, Grip, LayoutGrid, type LucideIcon, Rows4 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -31,6 +31,22 @@ interface CollectionLayoutOptionProps {
 interface CollectionLayoutPickerContentProps {
   layout: CollectionLayout;
   onSelect: (layout: CollectionLayout) => void;
+}
+
+const COLLECTION_LAYOUT_PICKER_OPTIONS: Array<{
+  value: CollectionLayout;
+  labelKey: 'layoutGrid' | 'layoutList' | 'layoutVisual';
+  icon: LucideIcon;
+}> = [
+  { value: COLLECTION_LAYOUT.GRID, labelKey: 'layoutGrid', icon: Grip },
+  { value: COLLECTION_LAYOUT.LIST, labelKey: 'layoutList', icon: Rows4 },
+  { value: COLLECTION_LAYOUT.VISUAL, labelKey: 'layoutVisual', icon: LayoutGrid },
+];
+
+function getPickerOption(layout: CollectionLayout) {
+  return (
+    COLLECTION_LAYOUT_PICKER_OPTIONS.find((option) => option.value === layout) ?? COLLECTION_LAYOUT_PICKER_OPTIONS[0]
+  );
 }
 
 function CollectionLayoutOption({
@@ -67,22 +83,17 @@ function CollectionLayoutPickerContent({ layout, onSelect }: CollectionLayoutPic
 
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-3">
-      <CollectionLayoutOption
-        value={COLLECTION_LAYOUT.GRID}
-        label={t('layoutGrid')}
-        icon={Grip}
-        isSelected={layout === COLLECTION_LAYOUT.GRID}
-        dataCy="collection-layout-grid"
-        onSelect={onSelect}
-      />
-      <CollectionLayoutOption
-        value={COLLECTION_LAYOUT.LIST}
-        label={t('layoutList')}
-        icon={Rows4}
-        isSelected={layout === COLLECTION_LAYOUT.LIST}
-        dataCy="collection-layout-list"
-        onSelect={onSelect}
-      />
+      {COLLECTION_LAYOUT_PICKER_OPTIONS.map((option) => (
+        <CollectionLayoutOption
+          key={option.value}
+          value={option.value}
+          label={t(option.labelKey)}
+          icon={option.icon}
+          isSelected={layout === option.value}
+          dataCy={`collection-layout-${option.value}`}
+          onSelect={onSelect}
+        />
+      ))}
     </Container>
   );
 }
@@ -90,7 +101,9 @@ function CollectionLayoutPickerContent({ layout, onSelect }: CollectionLayoutPic
 export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLayoutPickerProps) {
   const t = useTranslations('collections.single');
   const [open, setOpen] = useState(false);
-  const layoutLabel = layout === COLLECTION_LAYOUT.LIST ? t('layoutList') : t('layoutGrid');
+  const activeOption = getPickerOption(layout);
+  const layoutLabel = t(activeOption.labelKey);
+  const ActiveIcon = activeOption.icon;
 
   const handleSelect = (nextLayout: CollectionLayout) => {
     if (nextLayout !== layout) onLayoutChange(nextLayout);
@@ -105,7 +118,7 @@ export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLay
       data-cy="collection-layout-menu"
       className="hidden lg:inline-flex lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
     >
-      {layout === COLLECTION_LAYOUT.LIST ? <Rows4 className="size-4" /> : <Grip className="size-4" />}
+      <ActiveIcon className="size-4" />
       <Typography as="span" overrideDefaults className="hidden lg:inline">
         {layoutLabel}
       </Typography>

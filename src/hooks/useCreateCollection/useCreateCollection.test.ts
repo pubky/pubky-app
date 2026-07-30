@@ -140,6 +140,25 @@ describe('useCreateCollection', () => {
     });
   });
 
+  it('passes the Visual layout selection to the controller', async () => {
+    mocks.commitCreateCollection.mockResolvedValue('current-user:c1');
+
+    const { result } = renderHook(() => useCreateCollection());
+
+    act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.NAME, 'Gallery'));
+    act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.LAYOUT, COLLECTION_LAYOUT.VISUAL));
+
+    let saved: string | null = null;
+    await act(async () => {
+      saved = await result.current.submit();
+    });
+
+    expect(saved).toBe('current-user:c1');
+    expect(mocks.commitCreateCollection).toHaveBeenCalledWith(
+      expect.objectContaining({ layout: COLLECTION_LAYOUT.VISUAL }),
+    );
+  });
+
   it('seeds the local-files store with a blob URL of the picked cover File so the cover renders instantly', async () => {
     mocks.commitCreateCollection.mockResolvedValue('current-user:c1');
     const file = new File(['x'], 'cover.png', { type: 'image/png' });

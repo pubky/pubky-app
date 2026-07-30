@@ -1361,6 +1361,7 @@
       "layoutLabel": "Layout",
       "layoutGrid": "Raster",
       "layoutList": "Liste",
+      "layoutVisual": "Visuell",
       "addImage": "Bild hinzufügen",
       "removeImage": "Bild entfernen",
       "coverImageInvalid": "Das Coverbild muss eine Bilddatei sein.",
@@ -1427,6 +1428,8 @@
       "layout": "Layout",
       "layoutGrid": "Raster",
       "layoutList": "Liste",
+      "layoutVisual": "Visuell",
+      "hiddenItemsNotice": "Einige Elemente in dieser Sammlung sind aufgrund des ausgewählten Layout-Typs ausgeblendet.",
       "empty": "Diese Sammlung ist leer.",
       "notFound": {
         "title": "Sammlung nicht gefunden",

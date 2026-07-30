@@ -7,6 +7,7 @@ import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { buildCompositeId } from '@/models/models.utils';
 import { CollectionHero } from '@/organisms/Collections/CollectionHero/CollectionHero';
+import { CollectionHiddenItemsNotice } from '@/organisms/Collections/CollectionHiddenItemsNotice/CollectionHiddenItemsNotice';
 import { CollectionItemsEmpty } from '@/organisms/Collections/CollectionItemsEmpty/CollectionItemsEmpty';
 import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
@@ -64,7 +65,9 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
   const isConfirmedEmpty = postDetails != null && (collection?.items?.length ?? 0) === 0;
   const emptyState = <CollectionItemsEmpty />;
   const isListLayout = viewerLayout === COLLECTION_LAYOUT.LIST;
-  const requestedLayout = isListLayout ? LAYOUT.LIST : LAYOUT.COLUMNS;
+  const isVisualLayout = viewerLayout === COLLECTION_LAYOUT.VISUAL;
+  const requestedLayout = isListLayout ? LAYOUT.LIST : isVisualLayout ? LAYOUT.VISUAL : LAYOUT.COLUMNS;
+  const addContentVariant = isListLayout ? 'list' : isVisualLayout ? 'visual' : 'grid';
 
   if (!isOwn && isConfirmedEmpty) {
     // gap-6 mirrors the hero → grid/empty spacing the feed-driven paths get from
@@ -84,12 +87,13 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
       requestedLayout={requestedLayout}
       emptyState={emptyState}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
+      visualHiddenItemsNotice={<CollectionHiddenItemsNotice />}
       trailingSlot={
         isOwn ? (
           <DialogAddContent
-            triggerVariant={isListLayout ? 'list' : 'grid'}
+            triggerVariant={addContentVariant}
             target={{ type: 'collection', collectionId: compositeId }}
-            dataCy={isListLayout ? 'collection-add-content-list' : 'collection-add-content-grid'}
+            dataCy={`collection-add-content-${addContentVariant}`}
           />
         ) : undefined
       }

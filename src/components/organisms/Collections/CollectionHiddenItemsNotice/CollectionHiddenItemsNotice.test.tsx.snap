@@ -1,0 +1,42 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CollectionHiddenItemsNotice - Snapshots > matches the snapshot 1`] = `
+<div
+  class="flex w-full items-center gap-3 rounded-md bg-card p-4"
+  data-cy="collection-hidden-items-notice"
+  data-testid="container"
+  role="status"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-info size-4 shrink-0 text-muted-foreground"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle
+      cx="12"
+      cy="12"
+      r="10"
+    />
+    <path
+      d="M12 16v-4"
+    />
+    <path
+      d="M12 8h.01"
+    />
+  </svg>
+  <p
+    class="text-sm font-medium text-muted-foreground"
+    data-testid="typography"
+  >
+    collections.single.hiddenItemsNotice
+  </p>
+</div>
+`;

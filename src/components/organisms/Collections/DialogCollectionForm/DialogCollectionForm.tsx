@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { Grip, Image as ImageIcon, Rows4, Trash2 } from 'lucide-react';
+import { Grip, Image as ImageIcon, LayoutGrid, Rows4, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Controller, type UseFormReturn, useWatch } from 'react-hook-form';
 import { Button } from '@/atoms/Button/Button';
@@ -34,7 +34,7 @@ type DialogCollectionFormProps = {
   title: string;
   /** Submit button label when idle (`t('save')`). */
   submitLabel: string;
-  /** Label above the Grid/List selector. */
+  /** Label above the Grid/List/Visual selector. */
   layoutLabel: string;
   /** RHF form + cover picker from a `use{Create,Edit}Collection` hook. */
   form: UseFormReturn<CreateCollectionFormData>;
@@ -112,6 +112,7 @@ export function DialogCollectionForm({
   const layoutOptions = [
     { value: COLLECTION_LAYOUT.GRID, label: t('layoutGrid'), icon: Grip },
     { value: COLLECTION_LAYOUT.LIST, label: t('layoutList'), icon: Rows4 },
+    { value: COLLECTION_LAYOUT.VISUAL, label: t('layoutVisual'), icon: LayoutGrid },
   ];
 
   const coverErrorMessage =

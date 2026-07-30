@@ -71,9 +71,18 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
     pullToRefreshContainerRef?: RefObject<HTMLElement | null>;
     trailingSlot?: ReactNode;
     requestedLayout?: LayoutType;
+    visualHiddenItemsNotice?: ReactNode;
   }) => {
-    const { variant, children, emptyState, pullToRefreshContainerRef, trailingSlot, requestedLayout } = props;
-    mockTimelineFeedProps({ pullToRefreshContainerRef, trailingSlot, requestedLayout });
+    const {
+      variant,
+      children,
+      emptyState,
+      pullToRefreshContainerRef,
+      trailingSlot,
+      requestedLayout,
+      visualHiddenItemsNotice,
+    } = props;
+    mockTimelineFeedProps({ pullToRefreshContainerRef, trailingSlot, requestedLayout, visualHiddenItemsNotice });
 
     return (
       <div
@@ -81,9 +90,11 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
         data-variant={variant}
         data-has-empty-state={String(Boolean(emptyState))}
         data-has-trailing-slot={String(Boolean(trailingSlot))}
+        data-has-visual-hidden-items-notice={String(Boolean(visualHiddenItemsNotice))}
         data-requested-layout={requestedLayout}
       >
         {children}
+        {visualHiddenItemsNotice}
         {trailingSlot}
       </div>
     );
@@ -251,6 +262,53 @@ describe('CollectionItems', () => {
     expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-trigger-variant', 'list');
   });
 
+  it('provides the collection empty state and owner CTA for an empty Visual collection', () => {
+    setAuthStore(AUTHOR_PUBKY);
+
+    renderCollectionItems({
+      postDetails: buildPostDetails(
+        JSON.stringify({
+          name: 'Reading',
+          items: [],
+          layout: COLLECTION_LAYOUT.VISUAL,
+        }),
+      ),
+    });
+
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.VISUAL);
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-empty-state', 'true');
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-cy', 'collection-add-content-visual');
+    expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-trigger-variant', 'visual');
+  });
+
+  it('provides the owner CTA after posts in a populated Visual collection', () => {
+    setAuthStore(AUTHOR_PUBKY);
+
+    renderCollectionItems({
+      postDetails: buildPostDetails(
+        JSON.stringify({
+          name: 'Reading',
+          items: ['pubky://author/pub/pubky.app/posts/a'],
+          layout: COLLECTION_LAYOUT.VISUAL,
+        }),
+      ),
+    });
+
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.VISUAL);
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-cy', 'collection-add-content-visual');
+    expect(screen.getByTestId('add-content-dialog')).toHaveAttribute('data-trigger-variant', 'visual');
+  });
+
+  it('passes the hidden-items notice to the feed regardless of the active layout', () => {
+    renderCollectionItems();
+
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', LAYOUT.COLUMNS);
+    expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-visual-hidden-items-notice', 'true');
+    expect(screen.getByRole('status')).toHaveAttribute('data-cy', 'collection-hidden-items-notice');
+  });
+
   it('renders only the hero skeleton while the envelope is still loading', () => {
     renderCollectionItems({ postDetails: undefined });
 
@@ -314,6 +372,22 @@ describe('CollectionItems - Snapshots', () => {
     setAuthStore(AUTHOR_PUBKY);
 
     const { container } = renderCollectionItems();
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches the owner Visual layout snapshot', () => {
+    setAuthStore(AUTHOR_PUBKY);
+
+    const { container } = renderCollectionItems({
+      postDetails: buildPostDetails(
+        JSON.stringify({
+          name: 'Based Bitcoin',
+          items: ['pubky://author/pub/pubky.app/posts/a'],
+          layout: COLLECTION_LAYOUT.VISUAL,
+        }),
+      ),
+    });
 
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -29,7 +29,11 @@ export const createCollectionFormSchema = (t: CreateCollectionTranslator) =>
       .max(COLLECTION_NAME_MAX_CHARACTER_LENGTH)
       .refine((value) => value.trim().length > 0, { message: t('nameRequired') }),
     [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: z.string().max(COLLECTION_DESCRIPTION_MAX_CHARACTER_LENGTH),
-    [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: z.enum([COLLECTION_LAYOUT.GRID, COLLECTION_LAYOUT.LIST]),
+    [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: z.enum([
+      COLLECTION_LAYOUT.GRID,
+      COLLECTION_LAYOUT.LIST,
+      COLLECTION_LAYOUT.VISUAL,
+    ]),
   });
 
 export type CreateCollectionFormData = z.infer<ReturnType<typeof createCollectionFormSchema>>;

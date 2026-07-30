@@ -10,6 +10,35 @@ exports[`TimelineFeedContent - Snapshots > matches snapshot for loading state 1`
 </div>
 `;
 
+exports[`TimelineFeedContent - Snapshots > matches snapshot for the collection visual layout 1`] = `
+<div>
+  <div
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    data-testid="container"
+  >
+    <div>
+      Collection hero
+    </div>
+    <div
+      data-has-hidden-items-notice="true"
+      data-has-trailing-slot="false"
+      data-show-end-message="false"
+      data-show-unavailable-posts="true"
+      data-testid="visual-timeline-posts"
+    >
+      <span
+        data-testid="visual-post-count"
+      >
+        3
+      </span>
+      <div>
+        Some items are hidden
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`TimelineFeedContent - Snapshots > matches snapshot with children 1`] = `
 <div>
   <div

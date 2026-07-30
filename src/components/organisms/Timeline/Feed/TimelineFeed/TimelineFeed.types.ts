@@ -34,11 +34,12 @@ type BookmarksTimelineFeedProps = TimelineFeedPropsBase & {
   trailingSlot?: ReactNode;
   pullToRefreshContainerRef?: never;
   requestedLayout?: never;
+  visualHiddenItemsNotice?: never;
 };
 
 type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
   variant: typeof TIMELINE_FEED_VARIANT.COLLECTION;
-  /** Collection-scoped Grid/List choice; never sourced from the persisted home store. */
+  /** Collection-scoped Grid/List/Visual choice; never sourced from the persisted home store. */
   requestedLayout?: LayoutType;
   /**
    * Empty state for finite collection-like feeds.
@@ -46,6 +47,12 @@ type CollectionTimelineFeedProps = TimelineFeedPropsBase & {
   emptyState?: ReactNode;
   /** Owner-only Add Content CTA rendered after collection posts. */
   trailingSlot?: ReactNode;
+  /**
+   * Rendered above the Visual mosaic when the collection contains non-media
+   * items the layout hides. Shown to owners and visitors alike; other layouts
+   * ignore it.
+   */
+  visualHiddenItemsNotice?: ReactNode;
   /**
    * Optional element that should own pull-to-refresh touch events. Defaults to
    * the feed container.
@@ -62,6 +69,7 @@ type StandardTimelineFeedProps = TimelineFeedPropsBase & {
   trailingSlot?: never;
   pullToRefreshContainerRef?: never;
   requestedLayout?: never;
+  visualHiddenItemsNotice?: never;
 };
 
 export type TimelineFeedProps = BookmarksTimelineFeedProps | CollectionTimelineFeedProps | StandardTimelineFeedProps;

@@ -110,7 +110,7 @@ describe('DialogCollectionForm', () => {
     const layoutLabel = screen.getByText('Default layout');
     const backgroundLabel = screen.getByText('collections.new.backgroundLabel');
 
-    expect(screen.getAllByRole('radio')).toHaveLength(2);
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
     expect(grid).toHaveAttribute('aria-checked', 'true');
     expect(list).toHaveAttribute('aria-checked', 'false');
     expect(list.querySelector('.lucide-rows-4')).toBeInTheDocument();
@@ -123,6 +123,29 @@ describe('DialogCollectionForm', () => {
 
     expect(grid).toHaveAttribute('aria-checked', 'false');
     expect(list).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('lets the creator select Visual', () => {
+    render(<Harness />);
+
+    const grid = screen.getByRole('radio', { name: 'collections.new.layoutGrid' });
+    const visual = screen.getByRole('radio', { name: 'collections.new.layoutVisual' });
+
+    expect(visual).toHaveAttribute('aria-checked', 'false');
+    expect(visual).toHaveAttribute('data-cy', 'collection-layout-visual');
+    expect(visual.querySelector('.lucide-layout-grid')).toBeInTheDocument();
+
+    fireEvent.click(visual);
+
+    expect(grid).toHaveAttribute('aria-checked', 'false');
+    expect(visual).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('preselects Visual when editing a Visual collection', () => {
+    render(<Harness initialLayout={COLLECTION_LAYOUT.VISUAL} />);
+
+    expect(screen.getByRole('radio', { name: 'collections.new.layoutVisual' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'collections.new.layoutGrid' })).toHaveAttribute('aria-checked', 'false');
   });
 
   it('disables the save button while the name is empty', () => {

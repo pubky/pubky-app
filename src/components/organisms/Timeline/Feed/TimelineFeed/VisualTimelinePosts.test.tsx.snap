@@ -95,9 +95,95 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for a populated visu
     >
       End
     </div>
+  </div>
+</div>
+`;
+
+exports[`VisualTimelinePosts - Snapshots > matches snapshot for a trailing CTA occupying the last-row spacer 1`] = `
+<div
+  data-cy="visual-feed-container"
+>
+  <div
+    class="mx-auto flex w-full flex-col gap-6"
+    style="max-width: 1200px;"
+  >
     <div
-      class="h-5"
-    />
+      class="grid grid-cols-12 gap-6"
+    >
+      <div
+        class="min-w-0"
+        style="grid-column: span 6 / span 6;"
+      >
+        <div
+          aria-label="Open post author:post1"
+          class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 bg-black focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+          data-cy="visual-feed-tile"
+          role="button"
+          style="aspect-ratio: 588 / 384;"
+          tabindex="0"
+        >
+          <img
+            alt="image.jpg"
+            class="object-cover"
+            src="/image.jpg"
+          />
+        </div>
+      </div>
+      <div
+        class="min-w-0"
+        style="grid-column: span 6 / span 6;"
+      >
+        <div
+          style="aspect-ratio: 588 / 384;"
+        >
+          <button
+            data-testid="trailing-cta"
+          >
+            Add content
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      data-testid="timeline-end"
+    >
+      End
+    </div>
+  </div>
+</div>
+`;
+
+exports[`VisualTimelinePosts - Snapshots > matches snapshot for an empty collection with empty state and trailing CTA 1`] = `
+<div
+  data-cy="visual-feed-container"
+>
+  <div
+    class="mx-auto flex w-full flex-col gap-6"
+    style="max-width: 1200px;"
+  >
+    <div
+      data-testid="collection-empty"
+    >
+      No content yet
+    </div>
+    <div
+      class="grid grid-cols-12 gap-6"
+    >
+      <div
+        class="min-w-0"
+        style="grid-column: span 6 / span 6;"
+      >
+        <div
+          style="aspect-ratio: 588 / 384;"
+        >
+          <button
+            data-testid="trailing-cta"
+          >
+            Add your first post
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 `;
@@ -107,6 +193,51 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for the filtered emp
   data-testid="timeline-empty"
 >
   Empty
+</div>
+`;
+
+exports[`VisualTimelinePosts - Snapshots > matches snapshot for the hidden items notice above the mosaic 1`] = `
+<div
+  data-cy="visual-feed-container"
+>
+  <div
+    class="mx-auto flex w-full flex-col gap-6"
+    style="max-width: 1200px;"
+  >
+    <div
+      data-testid="hidden-notice"
+    >
+      2 items hidden
+    </div>
+    <div
+      class="grid grid-cols-12 gap-6"
+    >
+      <div
+        class="min-w-0"
+        style="grid-column: span 6 / span 6;"
+      >
+        <div
+          aria-label="Open post author:post1"
+          class="group relative size-full cursor-pointer overflow-hidden rounded-md border border-white/10 bg-black focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+          data-cy="visual-feed-tile"
+          role="button"
+          style="aspect-ratio: 588 / 384;"
+          tabindex="0"
+        >
+          <img
+            alt="image.jpg"
+            class="object-cover"
+            src="/image.jpg"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      data-testid="timeline-end"
+    >
+      End
+    </div>
+  </div>
 </div>
 `;
 
@@ -146,9 +277,6 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for touch devices wi
     >
       End
     </div>
-    <div
-      class="h-5"
-    />
   </div>
 </div>
 `;

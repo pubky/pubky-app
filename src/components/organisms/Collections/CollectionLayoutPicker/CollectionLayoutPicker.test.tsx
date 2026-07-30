@@ -7,6 +7,7 @@ const translations: Record<string, string> = {
   'collections.single.layout': 'Layout',
   'collections.single.layoutGrid': 'Grid',
   'collections.single.layoutList': 'List',
+  'collections.single.layoutVisual': 'Visual',
 };
 
 vi.mock('next-intl', () => ({
@@ -62,6 +63,33 @@ describe('CollectionLayoutPicker', () => {
     renderPicker({ layout: COLLECTION_LAYOUT.LIST });
 
     expect(screen.getByRole('button', { name: 'Layout: List' }).querySelector('.lucide-rows-4')).toBeInTheDocument();
+  });
+
+  it('offers the Visual option and reports its selection', async () => {
+    const { onLayoutChange } = renderPicker();
+
+    openDesktopPicker();
+
+    const visualOption = await screen.findByRole('menuitem', { name: 'Visual' });
+    expect(visualOption).toHaveAttribute('data-cy', 'collection-layout-visual');
+    expect(visualOption.querySelector('.lucide-layout-grid')).toBeInTheDocument();
+    expect(visualOption.querySelector('.lucide-check')).not.toBeInTheDocument();
+
+    fireEvent.click(visualOption);
+
+    expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.VISUAL);
+  });
+
+  it('uses the Visual icon and label in the trigger when Visual is active', async () => {
+    renderPicker({ layout: COLLECTION_LAYOUT.VISUAL });
+
+    const trigger = screen.getByRole('button', { name: 'Layout: Visual' });
+    expect(trigger.querySelector('.lucide-layout-grid')).toBeInTheDocument();
+
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+
+    const visualOption = await screen.findByRole('menuitem', { name: 'Visual' });
+    expect(visualOption.querySelector('.lucide-check')).toHaveClass('text-brand');
   });
 
   it('matches the open desktop picker snapshot', async () => {

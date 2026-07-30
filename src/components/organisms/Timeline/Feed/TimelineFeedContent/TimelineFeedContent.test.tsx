@@ -144,6 +144,39 @@ vi.mock('@/organisms/Timeline/Posts/GridPosts/GridPosts', () => {
   };
 });
 
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/VisualTimelinePosts', () => {
+  return {
+    VisualTimelinePosts: ({
+      postIds,
+      showEndMessage,
+      emptyState,
+      trailingSlot,
+      hiddenItemsNotice,
+      showUnavailablePosts,
+    }: {
+      postIds: string[];
+      showEndMessage?: boolean;
+      emptyState?: ReactNode;
+      trailingSlot?: ReactNode;
+      hiddenItemsNotice?: ReactNode;
+      showUnavailablePosts?: boolean;
+    }) => (
+      <div
+        data-testid="visual-timeline-posts"
+        data-show-end-message={String(showEndMessage)}
+        data-has-trailing-slot={String(Boolean(trailingSlot))}
+        data-has-hidden-items-notice={String(Boolean(hiddenItemsNotice))}
+        data-show-unavailable-posts={String(Boolean(showUnavailablePosts))}
+      >
+        <span data-testid="visual-post-count">{postIds.length}</span>
+        {postIds.length === 0 ? emptyState : null}
+        {hiddenItemsNotice}
+        {trailingSlot}
+      </div>
+    ),
+  };
+});
+
 const COLLECTION_STREAM_ID = buildCollectionItemsStreamId('author-pubky', 'collection-post');
 
 const gridLayoutResolution: FeedLayoutResolution = {
@@ -161,6 +194,15 @@ const visualGridLayoutResolution: FeedLayoutResolution = {
   effectiveLayout: LAYOUT.VISUAL,
   isVisualRequested: true,
   isVisualActive: true,
+};
+
+const visualLayoutResolution: FeedLayoutResolution = {
+  ...gridLayoutResolution,
+  requestedLayout: LAYOUT.VISUAL,
+  effectiveLayout: LAYOUT.VISUAL,
+  isVisualRequested: true,
+  isVisualActive: true,
+  isGridActive: false,
 };
 
 const listLayoutResolution: FeedLayoutResolution = {
@@ -833,6 +875,101 @@ describe('Grid layout variants (decisions D5/D7)', () => {
   });
 });
 
+describe('Visual layout variants', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
+    mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+    mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
+  });
+
+  it('keeps the collection hero visible when the Visual mosaic is active', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={visualLayoutResolution}
+      >
+        <div data-testid="collection-hero">Collection hero</div>
+      </TimelineFeedWithStream>,
+    );
+
+    expect(screen.getByTestId('collection-hero')).toBeInTheDocument();
+    expect(screen.getByTestId('visual-timeline-posts')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-grid-posts')).not.toBeInTheDocument();
+  });
+
+  it('hides header children for the home variant when the Visual mosaic is active', () => {
+    render(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+        layoutResolution={visualLayoutResolution}
+      >
+        <div data-testid="home-header">Filter bar</div>
+      </TimelineFeedWithStream>,
+    );
+
+    expect(screen.queryByTestId('home-header')).not.toBeInTheDocument();
+    expect(screen.getByTestId('visual-timeline-posts')).toBeInTheDocument();
+  });
+
+  it('forwards the empty state, trailing slot, hidden-items notice, and end-message suppression to the visual renderer', () => {
+    mockUseStreamPagination.mockReturnValue({
+      ...defaultPaginationResult,
+      postIds: [],
+    });
+
+    render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={visualLayoutResolution}
+        emptyState={<div data-testid="custom-visual-empty">Collection is empty</div>}
+        trailingSlot={<div data-testid="visual-trailing-slot">Add content</div>}
+        visualHiddenItemsNotice={<div data-testid="visual-hidden-items-notice">Some items are hidden</div>}
+      />,
+    );
+
+    const visualPosts = screen.getByTestId('visual-timeline-posts');
+    expect(visualPosts).toHaveAttribute('data-show-end-message', 'false');
+    expect(visualPosts).toHaveAttribute('data-has-trailing-slot', 'true');
+    expect(visualPosts).toHaveAttribute('data-has-hidden-items-notice', 'true');
+    expect(screen.getByTestId('custom-visual-empty')).toBeInTheDocument();
+    expect(screen.getByTestId('visual-trailing-slot')).toBeInTheDocument();
+    expect(screen.getByTestId('visual-hidden-items-notice')).toBeInTheDocument();
+  });
+
+  it('enables unavailable-post placeholders only for the collection variant', () => {
+    const { unmount } = render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={visualLayoutResolution}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-timeline-posts')).toHaveAttribute('data-show-unavailable-posts', 'true');
+    unmount();
+
+    render(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+        layoutResolution={visualLayoutResolution}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-timeline-posts')).toHaveAttribute('data-show-unavailable-posts', 'false');
+  });
+});
+
 describe('TimelineFeedContent - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -867,6 +1004,21 @@ describe('TimelineFeedContent - Snapshots', () => {
         tagsLayout="inline"
       >
         <div>Filter bar</div>
+      </TimelineFeedWithStream>,
+    );
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the collection visual layout', () => {
+    const { container } = render(
+      <TimelineFeedWithStream
+        streamId={COLLECTION_STREAM_ID}
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        tagsLayout="inline"
+        layoutResolution={visualLayoutResolution}
+        visualHiddenItemsNotice={<div>Some items are hidden</div>}
+      >
+        <div>Collection hero</div>
       </TimelineFeedWithStream>,
     );
     expect(container).toMatchSnapshot();

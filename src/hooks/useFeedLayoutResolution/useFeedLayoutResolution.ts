@@ -37,12 +37,13 @@ export function resolveFeedLayout({
   variant,
   isPhoneViewport,
 }: FeedLayoutResolutionInput): FeedLayoutResolution {
+  const isRichLayoutSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
+  const isCollectionVariant = variant === TIMELINE_FEED_VARIANT.COLLECTION;
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
-  const isVisualSupported = !isPhoneViewport && RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
+  const isVisualSupported = !isPhoneViewport && (isRichLayoutSupported || isCollectionVariant);
   const isWideRequested = requestedLayout === LAYOUT.WIDE;
   const isListRequested = requestedLayout === LAYOUT.LIST;
-  const isRichLayoutSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
-  const isListSupported = isRichLayoutSupported || variant === TIMELINE_FEED_VARIANT.COLLECTION;
+  const isListSupported = isRichLayoutSupported || isCollectionVariant;
   const effectiveLayout =
     (isVisualRequested && !isVisualSupported) ||
     (isWideRequested && !isRichLayoutSupported) ||

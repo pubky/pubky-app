@@ -250,6 +250,59 @@ exports[`DialogNewCollection - Snapshots > matches snapshot when open 1`] = `
                 />
               </svg>
             </button>
+            <button
+              aria-checked="false"
+              aria-label="layoutVisual"
+              class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
+              data-cy="collection-layout-visual"
+              data-slot="button"
+              data-variant="ghost"
+              role="radio"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-layout-grid size-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="3"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="14"
+                  y="14"
+                />
+                <rect
+                  height="7"
+                  rx="1"
+                  width="7"
+                  x="3"
+                  y="14"
+                />
+              </svg>
+            </button>
           </div>
         </div>
         <div
