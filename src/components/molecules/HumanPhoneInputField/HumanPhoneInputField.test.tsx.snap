@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`HumanPhoneInputField > matches snapshot 1`] = `
+exports[`HumanPhoneInputField - Snapshots > matches snapshot 1`] = `
 <div
   class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12"
   data-slot="card"
@@ -46,16 +46,96 @@ exports[`HumanPhoneInputField > matches snapshot 1`] = `
         </p>
       </div>
       <div
-        class="flex w-full max-w-128 flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
-        data-testid="human-phone-input-wrapper"
+        class="flex w-full max-w-128 flex-col gap-2"
       >
-        <input
-          class="flex h-9 w-full min-w-0 rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
-          data-testid="human-phone-input"
-          placeholder="+316XXXXXXXX"
-          type="tel"
-          value=""
-        />
+        <div
+          class="flex w-full flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
+          data-testid="human-phone-input-wrapper"
+        >
+          <input
+            aria-invalid="false"
+            class="flex h-9 w-full min-w-0 rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
+            data-testid="human-phone-input"
+            placeholder="+316XXXXXXXX"
+            type="tel"
+            value=""
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`HumanPhoneInputField - Snapshots > matches snapshot with error 1`] = `
+<div
+  class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm gap-0 p-6 lg:p-12"
+  data-slot="card"
+  data-testid="human-phone-input-card"
+>
+  <div
+    class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col lg:flex-row p-0"
+    data-slot="card-content"
+  >
+    <div
+      class="hidden w-48 shrink-0 flex-col lg:flex"
+      data-slot="illustrated-card-visual"
+    >
+      <img
+        alt="Pubky phone representing phone number entry"
+        class="max-w-full size-48"
+        data-nimg="1"
+        decoding="async"
+        height="600"
+        src="/images/phone-number.webp"
+        style="color: transparent;"
+        width="800"
+      />
+    </div>
+    <div
+      class="flex w-full max-w-xl min-w-0 flex-1 flex-col gap-6"
+      data-slot="illustrated-card-content"
+    >
+      <div
+        class="flex flex-col gap-3"
+      >
+        <h3
+          class="text-2xl leading-[32px] font-semibold text-foreground sm:text-[28px]"
+          data-testid="typography"
+        >
+          Phone number
+        </h3>
+        <p
+          class="text-base leading-6 font-medium text-secondary-foreground/80"
+          data-testid="typography"
+        >
+          Enter your phone number, including country code (e.g. +1 for US).
+        </p>
+      </div>
+      <div
+        class="flex w-full max-w-128 flex-col gap-2"
+      >
+        <div
+          class="flex w-full flex-row items-center rounded-md border border-dashed border-brand px-5 py-2 shadow-xs"
+          data-testid="human-phone-input-wrapper"
+        >
+          <input
+            aria-describedby="human-phone-input-error"
+            aria-invalid="true"
+            class="flex h-9 w-full min-w-0 rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-offset-0 aria-invalid:border-destructive aria-invalid:ring-destructive/40 border-none bg-transparent text-base font-medium text-brand placeholder:text-brand/50 focus:ring-0 focus:outline-none"
+            data-testid="human-phone-input"
+            placeholder="+316XXXXXXXX"
+            type="tel"
+            value="+12345678"
+          />
+        </div>
+        <p
+          class="text-sm font-medium text-destructive"
+          data-testid="human-phone-input-error"
+          id="human-phone-input-error"
+        >
+          Enter a valid mobile number
+        </p>
       </div>
     </div>
   </div>

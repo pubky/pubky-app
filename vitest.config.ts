@@ -1,34 +1,27 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import { playwright } from '@vitest/browser-playwright';
+import { VRT_VIEWPORT_DESKTOP } from './src/test-utils/vrt.viewports';
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
+  resolve: {
+    // Force a single copy of these packages so we never load two versions at once.
+    dedupe: ['react', 'react-dom'],
+  },
   test: {
-    // react-tweet is ESM-only with CSS module imports that Node.js can't resolve
-    // without bundling. Inlining forces Vitest to transform it through Vite's pipeline.
-    server: { deps: { inline: ['react-tweet'] } },
-    environment: 'jsdom',
-    setupFiles: ['./src/config/test.ts'],
-    globals: true,
-    exclude: ['**/node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       reportOnFailure: true,
     },
-    // Snapshot testing configuration
     snapshotFormat: {
       escapeString: true,
       printBasicPrototype: false,
     },
-    // Configure snapshots to be placed alongside test files
-    resolveSnapshotPath: (testPath, snapExtension) => {
-      return testPath + snapExtension;
-    },
-    // Suppress specific warnings
+    resolveSnapshotPath: (testPath, snapExtension) => testPath + snapExtension,
     onConsoleLog(log) {
-      // Suppress WebAssembly warnings
       if (
         log.includes('WebAssembly.instantiateStreaming') ||
         log.includes('application/wasm') ||
@@ -36,15 +29,90 @@ export default defineConfig({
       ) {
         return false;
       }
-      // Suppress JSDOM navigation warnings
       if (log.includes('Not implemented: navigation')) {
         return false;
       }
       return true;
     },
-    // Configure to better handle unhandled rejections
     dangerouslyIgnoreUnhandledErrors: false,
-    // Silence some types of warnings in stderr
     silent: false,
+    projects: [
+      // Unit tests run in jsdom.
+      {
+        plugins: [react(), tsconfigPaths()],
+        test: {
+          name: 'unit',
+          environment: 'jsdom',
+          setupFiles: ['./src/config/test.ts'],
+          globals: true,
+          include: ['**/*.test.{ts,tsx}'],
+          exclude: ['**/node_modules/**', '**/*.vrt.test.{ts,tsx}'],
+          server: { deps: { inline: ['react-tweet'] } },
+        },
+      },
+      // VRT(Visual Regression Tests) run in real browsers via Playwright.
+      {
+        plugins: [react(), tsconfigPaths()],
+        optimizeDeps: {
+          include: [
+            'react',
+            'react-dom',
+            'react-dom/client',
+            'react/jsx-runtime',
+            'react/jsx-dev-runtime',
+            'next/font/google',
+          ],
+        },
+        test: {
+          name: 'vrt',
+          globals: true,
+          include: ['**/*.vrt.test.{ts,tsx}'],
+          exclude: ['**/node_modules/**'],
+          setupFiles: ['./src/test-utils/vrt.setup.ts'],
+          server: { deps: { inline: ['react-tweet'] } },
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            headless: true,
+            // Shared by comparison (`npm run test:vrt`) and regeneration
+            // (`--update`). A capture within this ratio of the committed
+            // baseline is treated as unchanged, so `--update` only rewrites
+            // baselines that changed beyond sub-pixel/anti-aliasing noise.
+            // Trade-off: visual diffs under this ratio won't be flagged.
+            expect: {
+              toMatchScreenshot: {
+                comparatorName: 'pixelmatch',
+                comparatorOptions: {
+                  allowedMismatchedPixelRatio: 0.001,
+                },
+                // Home feed desktop (WebKit/Linux) needs extra headroom for
+                // layout to settle after fonts/images decode.
+                timeout: 10_000,
+              },
+            },
+            // `viewport` below is the INITIAL browser size only. Each test
+            // resizes the page per-call via `page.viewport(w, h)` inside
+            // `renderForVRT` (see `src/test-utils/vrt.tsx`), so mobile
+            // (VRT_VIEWPORT_MOBILE) is driven by the test, not by this
+            // config. Add new sizes to `src/test-utils/vrt.viewports.ts`.
+            instances: [
+              {
+                browser: 'chromium',
+                viewport: VRT_VIEWPORT_DESKTOP,
+              },
+              {
+                browser: 'firefox',
+                viewport: VRT_VIEWPORT_DESKTOP,
+              },
+              {
+                // `webkit` covers Safari's rendering engine.
+                browser: 'webkit',
+                viewport: VRT_VIEWPORT_DESKTOP,
+              },
+            ],
+          },
+        },
+      },
+    ],
   },
 });

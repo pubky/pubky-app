@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import type { HomeStore } from '@/stores/home/home.types';
 import type { HotStore } from '@/stores/hot/hot.types';
@@ -39,3 +40,23 @@ export const mockLocalFilesStore = (partial: Partial<LocalFilesStore> = {}): Loc
 export const mockHotStore = (partial: Partial<HotStore> = {}): HotStore => buildStore(partial);
 
 export const mockSearchStore = (partial: Partial<SearchStore> = {}): SearchStore => buildStore(partial);
+
+/**
+ * Wrap a store snapshot in a Zustand-style hook with selector + getState support.
+ *
+ * Used when `vi.mock(...)` needs to replace a Zustand hook with a deterministic
+ * snapshot — e.g. the VRT harness, where the rendered tree calls both
+ * `useStore()` and `useStore(selector)` forms and the same snapshot must satisfy
+ * both.
+ */
+export function createZustandLikeHook<T extends object>(snapshot: T) {
+  function hook(): T;
+  function hook<U>(selector: (state: T) => U): U;
+  function hook<U>(selector?: (state: T) => U): T | U {
+    return selector ? selector(snapshot) : snapshot;
+  }
+  hook.getState = () => snapshot;
+  hook.setState = vi.fn();
+  hook.subscribe = vi.fn(() => () => {});
+  return hook;
+}

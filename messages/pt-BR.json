@@ -264,6 +264,7 @@
       "sendCode": "Enviar Código",
       "phoneNumber": "Número de telefone",
       "phoneHint": "Digite seu número de telefone, incluindo o código do pais (ex: +55 para Brasil).",
+      "invalidPhone": "Digite um número de celular válido incluindo o código do país.",
       "placeholder": "+5511XXXXXXXXX",
       "blocked": "Número de telefone bloqueado",
       "blockedDescription": "Este número de telefone não pode ser usado para verificação.",
