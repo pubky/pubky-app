@@ -27,11 +27,21 @@ const fixtures = vi.hoisted(async () => {
   const orderedCompositeIds = postsModule.VRT_FEED_POSTS.map((post) => post.compositeId);
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   // Profile autocomplete results (same shape as useSearchAutocomplete → SearchUsersSection).
-  // Mirrors Nexus `search/users/by_name` / `by_id` output after details hydration.
-  const autocompleteUsers = (['alice', 'bran', 'cleo', 'dion', 'eira'] as const).map((key) => {
-    const profile = profilesModule.VRT_AUTHOR_PROFILES[profilesModule.VRT_AUTHOR_PUBKYS[key]];
-    return { id: profile.id, name: profile.name, avatarUrl: undefined as string | undefined };
-  });
+  // Pubky ids follow the existing VRT author convention (`…alice01`, `…bran02`, …).
+  // Display names are Ali*-prefixed fixtures for the typed query in the profile-results case.
+  const autocompleteUsers = (
+    [
+      { key: 'alice' as const, name: 'Alice Mercado' },
+      { key: 'bran' as const, name: 'Alicia Ortega' },
+      { key: 'cleo' as const, name: 'Alina Croft' },
+      { key: 'dion' as const, name: 'Ali Reza' },
+      { key: 'eira' as const, name: 'Alison Hale' },
+    ] as const
+  ).map(({ key, name }) => ({
+    id: profilesModule.VRT_AUTHOR_PUBKYS[key],
+    name,
+    avatarUrl: undefined as string | undefined,
+  }));
   return {
     postsByCompositeId,
     orderedCompositeIds,
@@ -426,7 +436,7 @@ vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', async () => {
       if (!enabled || !query.trim()) return empty;
       return {
         tags: [{ name: 'alice' }, { name: 'alias' }],
-        users: f.autocompleteUsers,
+        users: f.autocompleteUsers.filter((user) => user.name.toLowerCase().startsWith(query.trim().toLowerCase())),
         isLoading: false,
       };
     },
