@@ -26,6 +26,12 @@ const fixtures = vi.hoisted(async () => {
   const postsByCompositeId = new Map(postsModule.VRT_FEED_POSTS.map((post) => [post.compositeId, post]));
   const orderedCompositeIds = postsModule.VRT_FEED_POSTS.map((post) => post.compositeId);
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
+  // Profile autocomplete results (same shape as useSearchAutocomplete → SearchUsersSection).
+  // Mirrors Nexus `search/users/by_name` / `by_id` output after details hydration.
+  const autocompleteUsers = (['alice', 'bran', 'cleo', 'dion', 'eira'] as const).map((key) => {
+    const profile = profilesModule.VRT_AUTHOR_PROFILES[profilesModule.VRT_AUTHOR_PUBKYS[key]];
+    return { id: profile.id, name: profile.name, avatarUrl: undefined as string | undefined };
+  });
   return {
     postsByCompositeId,
     orderedCompositeIds,
@@ -34,12 +40,20 @@ const fixtures = vi.hoisted(async () => {
     whoToFollow: whoToFollowModule.VRT_WHO_TO_FOLLOW,
     homeFilters: navModule.VRT_HOME_FILTERS,
     mockFeedApplication: mockApp.mockFeedApplication,
+    autocompleteUsers,
   };
 });
 
-// Mutable so empty + tagged cases share one mock graph. Tests set `tags` before render.
+// Mutable so empty / tagged / profile cases share one mock graph.
 const navigation = vi.hoisted(() => ({
   searchParams: new URLSearchParams(),
+}));
+
+// Forces the search suggestions panel open with a typed query for profile results.
+// Empty/tagged leave these defaults so the dropdown stays closed.
+const searchInputUi = vi.hoisted(() => ({
+  inputValue: '',
+  isFocused: false,
 }));
 
 vi.mock('next/navigation', () => {
@@ -374,9 +388,49 @@ vi.mock('@/hooks/useHotTags/useHotTags', () => {
   return { useHotTags: () => result };
 });
 
-vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', () => {
-  const result = { tags: [], users: [], isLoading: false, error: null };
-  return { useSearchAutocomplete: () => result };
+// Deterministic open/closed search field for profile-results snapshots. Empty and
+// tagged cases leave `searchInputUi` cleared so suggestions stay closed.
+vi.mock('@/hooks/useSearchInput/useSearchInput', async () => {
+  const React = await import('react');
+  return {
+    useSearchInput: () => {
+      const containerRef = React.useRef<HTMLDivElement>(null);
+      const inputRef = React.useRef<HTMLInputElement>(null);
+      return {
+        inputValue: searchInputUi.inputValue,
+        isFocused: searchInputUi.isFocused,
+        containerRef,
+        inputRef,
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: () => {
+          searchInputUi.isFocused = true;
+        },
+        clearInputValue: () => {
+          searchInputUi.inputValue = '';
+        },
+        setFocus: (focused: boolean) => {
+          searchInputUi.isFocused = focused;
+        },
+      };
+    },
+  };
+});
+
+// When the field is focused with a query, return fixture users (by_name / by_id path).
+vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', async () => {
+  const f = await fixtures;
+  const empty = { tags: [] as { name: string }[], users: [] as typeof f.autocompleteUsers, isLoading: false };
+  return {
+    useSearchAutocomplete: ({ query, enabled = true }: { query: string; enabled?: boolean }) => {
+      if (!enabled || !query.trim()) return empty;
+      return {
+        tags: [{ name: 'alice' }, { name: 'alias' }],
+        users: f.autocompleteUsers,
+        isLoading: false,
+      };
+    },
+  };
 });
 
 vi.mock('@/application/feed/feed', async () => {
@@ -407,8 +461,14 @@ function setSearchTags(tags: string[]) {
   navigation.searchParams = tags.length ? new URLSearchParams({ tags: tags.join(',') }) : new URLSearchParams();
 }
 
+function resetSearchInputUi() {
+  searchInputUi.inputValue = '';
+  searchInputUi.isFocused = false;
+}
+
 beforeEach(() => {
   setSearchTags([]);
+  resetSearchInputUi();
 });
 
 describe('Search (empty state) — visual regression', () => {
@@ -438,5 +498,24 @@ describe('Search (tagged results) — visual regression', () => {
   it('renders tagged search results at mobile viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-mobile');
+  });
+});
+
+describe('Search (profile results) — visual regression', () => {
+  // Autocomplete users panel — UI for Nexus `search/users/by_name` / `by_id`.
+  // Empty URL (no ?tags=); focused input with a name prefix opens suggestions.
+  beforeEach(() => {
+    searchInputUi.inputValue = 'Ali';
+    searchInputUi.isFocused = true;
+  });
+
+  it('renders profile search suggestions at desktop viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-profiles-desktop');
+  });
+
+  it('renders profile search suggestions at mobile viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-profiles-mobile');
   });
 });
