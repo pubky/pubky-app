@@ -270,7 +270,6 @@
       "blockedDescription": "此手机号无法用于验证。",
       "tooManyAttempts": "验证尝试次数过多",
       "tooManyAttemptsDescription": "验证尝试次数过多",
-      "sendFailed": "发送短信验证码失败",
       "sendFailedDescription": "无法发送验证码。请稍后重试。",
       "rateLimitedWithRetry": "验证尝试次数过多。请在{seconds}秒后重试。",
       "weeklyLimitReached": "验证尝试次数过多",
@@ -290,7 +289,6 @@
       "verify": "验证",
       "valid": "验证码有效",
       "invalid": "验证码无效。请重试。",
-      "verifyFailed": "短信验证码验证失败",
       "verifyFailedDescription": "无法验证验证码。请稍后重试。"
     },
     "lightning": {

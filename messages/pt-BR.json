@@ -270,7 +270,6 @@
       "blockedDescription": "Este número de telefone não pode ser usado para verificação.",
       "tooManyAttempts": "Muitas tentativas de verificação",
       "tooManyAttemptsDescription": "Muitas tentativas de verificação",
-      "sendFailed": "Falha ao enviar código SMS",
       "sendFailedDescription": "Não foi possível enviar o código de verificação. Tente mais tarde.",
       "rateLimitedWithRetry": "Muitas tentativas de verificação. Tente novamente em {seconds}s.",
       "weeklyLimitReached": "Muitas tentativas de verificação",
@@ -290,7 +289,6 @@
       "verify": "Verificar Código",
       "valid": "Código de Verificacao Válido",
       "invalid": "Código de Verificacao Inválido. Tente novamente.",
-      "verifyFailed": "Falha ao verificar código SMS",
       "verifyFailedDescription": "Não foi possível verificar o código. Tente mais tarde."
     },
     "lightning": {
