@@ -176,7 +176,11 @@ export function QuickReply({
           </Container>
         )}
 
-        <Container ref={cardRef} className="flex flex-row gap-4" overrideDefaults>
+        <Container
+          ref={cardRef}
+          className={cn('flex gap-4', isAuthenticated ? 'flex-col' : 'flex-row items-center')}
+          overrideDefaults
+        >
           <QuickReplyContent {...contentProps} layout={effectiveTagsLayout} />
         </Container>
       </Container>
