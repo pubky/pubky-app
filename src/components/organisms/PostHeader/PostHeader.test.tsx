@@ -87,13 +87,11 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
       ({
         userId,
         userName,
-        characterLimit,
         size,
         timeAgo,
       }: {
         userId: string;
         userName: string;
-        characterLimit?: { count: number; max: number };
         size?: 'normal' | 'large';
         timeAgo?: string | null;
       }) => (
@@ -101,11 +99,6 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
           <div data-testid="avatar" />
           <div>{userName}</div>
           <div>@{userId.substring(0, 8)}</div>
-          {characterLimit && (
-            <div>
-              {characterLimit.count}/{characterLimit.max}
-            </div>
-          )}
           {timeAgo && <div data-testid="bottom-left-time">{timeAgo}</div>}
         </div>
       ),
@@ -193,6 +186,30 @@ describe('PostHeader', () => {
     expect(screen.getByText('2h')).toBeInTheDocument();
   });
 
+  it('renders a real post when the author profile query settles without details', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: {
+        id: 'userpubkykey:post456',
+        indexed_at: Date.now(),
+        kind: 'short' as const,
+        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
+        content: '',
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+      } as EnrichedPostDetails,
+      isLoading: false,
+    });
+    mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
+    mockUseAvatarUrl.mockReturnValue(undefined);
+
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" />);
+
+    expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(false);
+    expect(screen.getByTestId('avatar')).toBeInTheDocument();
+    expect(screen.getByText('2h')).toBeInTheDocument();
+  });
+
   it('hides time when isReplyInput is true', () => {
     // When isReplyInput is true, postDetails is not fetched
     mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
@@ -210,14 +227,28 @@ describe('PostHeader', () => {
     expect(container.querySelector('.lucide-clock')).not.toBeInTheDocument();
   });
 
-  it('shows skeleton when user details are not available and isReplyInput is true', () => {
+  it('shows skeleton while user details are still loading and isReplyInput is true', () => {
     mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
-    mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: true });
     mockUseAvatarUrl.mockReturnValue(undefined);
 
     renderPostHeader(<PostHeader postId="userpubkykey:post456" isReplyInput={true} />);
 
     expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
+  });
+
+  it('renders the header and character counter when the profile query settles without details', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
+    mockUseAvatarUrl.mockReturnValue(undefined);
+
+    renderPostHeader(
+      <PostHeader postId="userpubkykey" isReplyInput={true} characterLimit={{ count: 12, max: 2000 }} />,
+    );
+
+    expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(false);
+    expect(screen.getByTestId('avatar')).toBeInTheDocument();
+    expect(screen.getByText('12/2000')).toBeInTheDocument();
   });
 
   it('passes size prop to PostHeaderUserInfo', () => {
@@ -326,6 +357,22 @@ describe('PostHeader', () => {
 
     expect(screen.getAllByText('2h')).toHaveLength(1);
     expect(screen.getByTestId('bottom-left-time')).toHaveTextContent('2h');
+  });
+
+  it('renders characterLimit in the top-right instead of timestamp', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    renderPostHeader(
+      <PostHeader postId="userpubkykey" isReplyInput={true} characterLimit={{ count: 21, max: 2000 }} />,
+    );
+
+    expect(screen.getByText('21/2000')).toBeInTheDocument();
+    expect(screen.queryByText('2h')).not.toBeInTheDocument();
   });
 });
 

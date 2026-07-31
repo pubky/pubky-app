@@ -13,10 +13,6 @@ interface PostHeaderUserInfoProps {
   userId: string;
   userName: string;
   avatarUrl?: string;
-  characterLimit?: {
-    count: number;
-    max: number;
-  };
   showPopover?: boolean;
   size?: 'normal' | 'large';
   timeAgo?: string | null;
@@ -27,7 +23,6 @@ export function PostHeaderUserInfo({
   userId,
   userName,
   avatarUrl,
-  characterLimit,
   showPopover = true,
   size = 'normal',
   timeAgo,
@@ -77,15 +72,6 @@ export function PostHeaderUserInfo({
           >
             {formattedPublicKey}
           </Typography>
-          {characterLimit && (
-            <Typography
-              data-cy="post-header-character-count"
-              className="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:hidden"
-              overrideDefaults
-            >
-              {characterLimit.count}/{characterLimit.max}
-            </Typography>
-          )}
           {timeAgo && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
         </Container>
       </Container>

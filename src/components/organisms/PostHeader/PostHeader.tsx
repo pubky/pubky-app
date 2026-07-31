@@ -1,6 +1,7 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
@@ -26,14 +27,18 @@ export function PostHeader({
   const { postDetails } = usePostDetails(isReplyInput ? null : postId);
 
   // Fetch user details for avatar and name
-  const { userDetails } = useUserDetails(userId);
+  const { userDetails, isLoading: isLoadingUserDetails } = useUserDetails(userId);
 
   // Compute avatar URL from user details (only if the user has an image)
   const avatarUrl = useAvatarUrl(userDetails);
 
   const { formatRelativeTime } = useRelativeTime();
 
-  const isLoading = !userDetails || (!isReplyInput && !postDetails);
+  // once the query settles we render regardless of whether it found a
+  // profile — a missed local read + failed Nexus fetch must not hide the avatar,
+  // pubky and character counter behind a permanent skeleton.
+  const isLoading = isLoadingUserDetails || (!isReplyInput && !postDetails);
+
   // Every parent renders its own header-less deleted state (PostDeleted), but
   // from a separate usePostDetails instance that can resolve after this one.
   // Never commit author data for a deleted post — hold the skeleton until the
@@ -55,16 +60,25 @@ export function PostHeader({
       <div className="w-full max-w-full min-w-0">
         <PostHeaderUserInfo
           userId={userId}
-          userName={userDetails.name || ''}
+          userName={userDetails?.name || ''}
           avatarUrl={avatarUrl}
-          characterLimit={characterLimit}
           showPopover={showPopover}
           size={size}
           timeAgo={timeAgoPlacement === 'bottom-left' ? timeAgo : null}
           indexedAt={timeAgoPlacement === 'bottom-left' ? indexedAt : null}
         />
       </div>
-      {timeAgo && timeAgoPlacement === 'top-right' && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />}
+      {characterLimit ? (
+        <Typography
+          data-cy="post-header-character-count"
+          className="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums"
+          overrideDefaults
+        >
+          {characterLimit.count}/{characterLimit.max}
+        </Typography>
+      ) : (
+        timeAgo && timeAgoPlacement === 'top-right' && <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />
+      )}
     </Container>
   );
 }

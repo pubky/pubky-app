@@ -325,14 +325,6 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all props 1`] = 
           >
             snap...rKey
           </p>
-          <p
-            class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:hidden"
-            data-testid="typography"
-          >
-            150
-            /
-            280
-          </p>
         </div>
       </div>
     </div>
@@ -723,103 +715,6 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without avatarUrl 1`]
           data-size="default"
           data-testid="avatar"
         >
-          <div
-            data-testid="avatar-fallback"
-          >
-            SN
-          </div>
-        </div>
-      </a>
-      <div
-        class="max-w-full min-w-0"
-        data-override-defaults="true"
-        data-testid="container"
-      >
-        <a
-          class="block w-full max-w-full min-w-0 overflow-hidden"
-          data-testid="profile-link"
-          href="/profile/snapshotUserKey"
-        >
-          <p
-            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
-            data-testid="typography"
-          >
-            Snapshot User
-          </p>
-        </a>
-        <div
-          class="flex min-w-0 flex-wrap items-center gap-2"
-          data-override-defaults="true"
-          data-testid="container"
-        >
-          <p
-            class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground uppercase"
-            data-testid="typography"
-          >
-            snap...rKey
-          </p>
-          <p
-            class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:hidden"
-            data-testid="typography"
-          >
-            50
-            /
-            280
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div
-    data-side-offset="1"
-    data-testid="popover-content"
-  >
-    <div
-      data-testid="popover-inner-content"
-    >
-      <div
-        data-testid="avatar"
-      />
-      <div>
-        Snapshot User
-      </div>
-      <div>
-        @
-        snap...rKey
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
-exports[`PostHeaderUserInfo - Snapshots > matches snapshot without character count 1`] = `
-<div
-  data-hover="true"
-  data-testid="popover"
->
-  <div
-    data-as-child="true"
-    data-testid="popover-trigger"
-  >
-    <div
-      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <a
-        class="shrink-0"
-        data-testid="profile-link"
-        href="/profile/snapshotUserKey"
-      >
-        <div
-          data-size="default"
-          data-testid="avatar"
-        >
-          <img
-            alt="Snapshot User"
-            data-testid="avatar-image"
-            src="https://example.com/avatar.png"
-          />
           <div
             data-testid="avatar-fallback"
           >

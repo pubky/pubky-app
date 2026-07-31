@@ -184,13 +184,8 @@ vi.mock('../PostInputTags/PostInputTags', () => ({
 
 vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
   PostInputActionBar: vi.fn(
-    ({ onPostClick, onEmojiClick, onImageClick, onArticleClick, isPostDisabled, isSubmitting, characterLimit }) => (
-      <div
-        data-testid="post-input-action-bar"
-        data-character-count={characterLimit?.count}
-        data-character-max={characterLimit?.max}
-        data-post-disabled={String(isPostDisabled)}
-      >
+    ({ onPostClick, onEmojiClick, onImageClick, onArticleClick, isPostDisabled, isSubmitting }) => (
+      <div data-testid="post-input-action-bar" data-post-disabled={String(isPostDisabled)}>
         <button data-testid="emoji-button" onClick={onEmojiClick} aria-label="Add emoji">
           Emoji
         </button>
@@ -392,6 +387,7 @@ const mockUsePostReturn = {
   isSubmitting: false,
   isArticle: false,
   articleTitle: '',
+  isExpanded: true,
 };
 
 function createUsePostInputReturn(options: UsePostInputOptions, overrides: Record<string, unknown> = {}) {
@@ -414,7 +410,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleArticleTitleChange: vi.fn(),
     handleArticleBodyChange: vi.fn(),
     isDragging: mockUsePostReturn.isDragging,
-    isExpanded: true,
+    isExpanded: mockUsePostReturn.isExpanded,
     isSubmitting: mockUsePostReturn.isSubmitting,
     showEmojiPicker: false,
     setShowEmojiPicker: vi.fn(),
@@ -516,6 +512,7 @@ describe('PostInput', () => {
     mockUsePostReturn.isSubmitting = false;
     mockUsePostReturn.isArticle = false;
     mockUsePostReturn.articleTitle = '';
+    mockUsePostReturn.isExpanded = true;
     mockUsePostReturn.setContent = mockSetContent;
     mockUsePostReturn.setTags = mockSetTags;
     mockUsePostReturn.setAttachments = mockSetAttachments;
@@ -544,31 +541,35 @@ describe('PostInput', () => {
     expect(screen.getByPlaceholderText("What's on your mind?")).toBeInTheDocument();
   });
 
-  it('passes characterLimit to header and action bar for non-article mode', () => {
+  it('passes characterLimit to header when expanded in non-article mode', () => {
     mockUsePostReturn.content = 'Hello world';
+    mockUsePostReturn.isExpanded = true;
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
     const postHeader = screen.getByTestId('post-header');
     expect(postHeader).toHaveAttribute('data-count', '11');
     expect(postHeader).toHaveAttribute('data-max', POST_MAX_CHARACTER_LENGTH.toString());
+  });
 
-    const actionBar = screen.getByTestId('post-input-action-bar');
-    expect(actionBar).toHaveAttribute('data-character-count', '11');
-    expect(actionBar).toHaveAttribute('data-character-max', POST_MAX_CHARACTER_LENGTH.toString());
+  it('does not pass characterLimit to header when collapsed', () => {
+    mockUsePostReturn.content = 'Hello world';
+    mockUsePostReturn.isExpanded = false;
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const postHeader = screen.getByTestId('post-header');
+    expect(postHeader).not.toHaveAttribute('data-count');
+    expect(postHeader).not.toHaveAttribute('data-max');
   });
 
   it('does not pass characterLimit in article mode', () => {
     mockUsePostReturn.isArticle = true;
+    mockUsePostReturn.isExpanded = true;
     mockUsePostReturn.content = 'Article body';
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
     const postHeader = screen.getByTestId('post-header');
     expect(postHeader).not.toHaveAttribute('data-count');
     expect(postHeader).not.toHaveAttribute('data-max');
-
-    const actionBar = screen.getByTestId('post-input-action-bar');
-    expect(actionBar).not.toHaveAttribute('data-character-count');
-    expect(actionBar).not.toHaveAttribute('data-character-max');
   });
 
   it('renders with repost variant', () => {
@@ -912,7 +913,7 @@ describe('PostInput', () => {
       render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
 
       const postHeader = screen.getByTestId('post-header');
@@ -930,7 +931,7 @@ describe('PostInput', () => {
 
       const outerContainer = screen.getAllByTestId('container')[0];
       expect(outerContainer.className).toContain('p-12');
-      expect(outerContainer.className).not.toContain('p-4');
+      expect(outerContainer.className).not.toContain('p-6');
 
       const postHeader = screen.getByTestId('post-header');
       expect(postHeader).toHaveAttribute('data-size', 'large');
@@ -959,7 +960,7 @@ describe('PostInput', () => {
       );
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
       expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'normal');
       expect(screen.getByTestId('textarea')).not.toHaveAttribute('data-class-name');
@@ -975,7 +976,7 @@ describe('PostInput', () => {
       );
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-4');
+      expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
 
       const postHeader = screen.getByTestId('post-header');

@@ -7,8 +7,6 @@ import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConne
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { Typography } from '@/atoms/Typography/Typography';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
-import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
-import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
@@ -18,8 +16,7 @@ import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
-import { QuickReplyDefaultContent } from './QuickReplyDefaultContent';
-import { QuickReplyListContent } from './QuickReplyListContent';
+import { QuickReplyContent } from './QuickReplyContent';
 
 export function QuickReply({
   parentPostId,
@@ -31,9 +28,6 @@ export function QuickReply({
   const prompts = Array.isArray(rawPrompts) ? rawPrompts : ['What are your thoughts on this?'];
   const [promptIndex] = React.useState(() => Math.floor(Math.random() * prompts.length));
   const prompt = prompts[promptIndex] || prompts[0];
-
-  const { userDetails, currentUserPubky } = useCurrentUserProfile();
-  const avatarUrl = useAvatarUrl(userDetails);
 
   const {
     textareaRef,
@@ -49,6 +43,7 @@ export function QuickReply({
     showEmojiPicker,
     setShowEmojiPicker,
     displayPlaceholder,
+    currentUserPubky,
     handleExpand,
     handleSubmit,
     handleChange,
@@ -105,8 +100,6 @@ export function QuickReply({
 
   const isValid = () => canSubmitPost(POST_INPUT_VARIANT.REPLY, content, attachments, isSubmitting);
 
-  const characterLimit = { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
-
   const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitWithAuth, {
     requireModifier: true,
   });
@@ -119,12 +112,10 @@ export function QuickReply({
 
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
-  const isListLayout = effectiveTagsLayout === 'list';
+  const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
 
   const contentProps: QuickReplyContentProps = {
-    avatarUrl,
-    userName: userDetails?.name || '',
-    avatarFallbackSeed: currentUserPubky || userDetails?.name || 'user',
+    currentUserPubky,
     textareaRef,
     content,
     displayPlaceholder,
@@ -185,12 +176,12 @@ export function QuickReply({
           </Container>
         )}
 
-        <Container ref={cardRef} className="gap-2" overrideDefaults>
-          {isListLayout ? (
-            <QuickReplyListContent {...contentProps} />
-          ) : (
-            <QuickReplyDefaultContent {...contentProps} isWideLayout={isWideLayout} />
-          )}
+        <Container
+          ref={cardRef}
+          className={cn('flex gap-4', isAuthenticated ? 'flex-col' : 'flex-row items-center')}
+          overrideDefaults
+        >
+          <QuickReplyContent {...contentProps} layout={effectiveTagsLayout} />
         </Container>
       </Container>
     </Container>
