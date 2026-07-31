@@ -29,6 +29,10 @@ vi.mock('@/molecules/PostMissing/PostMissing', () => ({
   PostMissing: () => <div data-testid="post-missing" />,
 }));
 
+vi.mock('@/molecules/PostDeleted/PostDeleted', () => ({
+  PostDeleted: () => <div data-testid="post-deleted" />,
+}));
+
 // Mock organisms
 vi.mock('@/organisms/PostContentBase/PostContentBase', () => {
   return {
@@ -227,6 +231,34 @@ describe('PostPreviewCard', () => {
     expect(screen.queryByTestId('card-content')).not.toBeInTheDocument();
     expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
     expect(screen.queryByTestId('post-content-base')).not.toBeInTheDocument();
+  });
+
+  it('renders PostDeleted (not header/content) when the original post is deleted', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: { id: 'deleted-post', kind: 'short', content: '[DELETED]' } as never,
+      isLoading: false,
+    });
+
+    render(<PostPreviewCard postId="deleted-post" />);
+
+    // PostDeleted replaces the inner CardContent so no header is shown —
+    // matching how PostMain renders deleted posts.
+    expect(screen.getByTestId('post-deleted')).toBeInTheDocument();
+    expect(screen.queryByTestId('card-content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-content-base')).not.toBeInTheDocument();
+  });
+
+  it('renders PostDeleted (not CollectionCard) when a collection original is deleted', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: { id: COLLECTION_COMPOSITE_ID, kind: 'collection', content: '[DELETED]' } as never,
+      isLoading: false,
+    });
+
+    render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} />);
+
+    expect(screen.getByTestId('post-deleted')).toBeInTheDocument();
+    expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
   });
 
   it('renders header/content (not PostMissing) while the original post is still loading', () => {

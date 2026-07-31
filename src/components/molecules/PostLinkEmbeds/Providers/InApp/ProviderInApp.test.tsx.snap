@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProviderInApp - Snapshots > matches snapshot for post embed 1`] = `
+<div
+  class="bg-muted"
+  data-post-id="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:0034BBBDFK83G"
+  data-testid="post-preview-card"
+>
+  Mocked Post Preview Card
+</div>
+`;
