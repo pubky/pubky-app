@@ -7,6 +7,7 @@ import type { PostThreadConnectorVariant } from './PostThreadConnector.types';
 interface PostThreadConnectorProps {
   height?: number;
   variant?: PostThreadConnectorVariant;
+  className?: string;
   'data-testid'?: string;
 }
 const DEFAULT_HEIGHT = 96; // Default height in pixels (6rem = 96px)
@@ -22,8 +23,13 @@ const ThreadLine = () => {
 };
 
 // Base container props shared by height-based variants
-const getBaseContainerProps = (effectiveHeight: number, variant: PostThreadConnectorVariant, dataTestId?: string) => ({
-  className: 'flex w-3 flex-col items-start',
+const getBaseContainerProps = (
+  effectiveHeight: number,
+  variant: PostThreadConnectorVariant,
+  dataTestId?: string,
+  className?: string,
+) => ({
+  className: cn('flex w-3 flex-col items-start', className),
   style: {
     height: `${effectiveHeight}px`,
   } as React.CSSProperties,
@@ -59,6 +65,7 @@ const DialogReplyVariant = ({ dataTestId }: { dataTestId?: string }) => (
 export const PostThreadConnector = ({
   height,
   variant = POST_THREAD_CONNECTOR_VARIANTS.REGULAR,
+  className,
   'data-testid': dataTestId,
 }: PostThreadConnectorProps) => {
   // Dialog reply is special - doesn't need height calculation
@@ -68,7 +75,7 @@ export const PostThreadConnector = ({
 
   // Calculate effective height for variants that need it
   const effectiveHeight = height || DEFAULT_HEIGHT;
-  const baseProps = getBaseContainerProps(effectiveHeight, variant, dataTestId);
+  const baseProps = getBaseContainerProps(effectiveHeight, variant, dataTestId, className);
   switch (variant) {
     case POST_THREAD_CONNECTOR_VARIANTS.LAST:
       // Last variant - shows a rounded corner at the end, aligned with action buttons

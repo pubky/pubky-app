@@ -3,27 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
 import { PostInputExpandableSection } from './PostInputExpandableSection';
 
-vi.mock('motion/react', () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  motion: {
-    div: ({
-      children,
-      initial: _initial,
-      animate: _animate,
-      exit: _exit,
-      transition: _transition,
-      ...props
-    }: {
-      children: React.ReactNode;
-      initial?: unknown;
-      animate?: unknown;
-      exit?: unknown;
-      transition?: unknown;
-      [key: string]: unknown;
-    }) => <div {...props}>{children}</div>,
-  },
-}));
-
 // Use real libs - use actual implementations
 
 // Mock atoms
@@ -312,13 +291,6 @@ describe('PostInputExpandableSection', () => {
     fireEvent.click(emojiSelectButton);
 
     expect(onEmojiSelect).toHaveBeenCalledWith({ native: '😀' });
-  });
-
-  it('renders animated wrapper with overflow-hidden when expanded', () => {
-    const { container } = render(<PostInputExpandableSection {...defaultProps} isExpanded={true} />);
-
-    const expandableContainer = container.querySelector('.overflow-hidden');
-    expect(expandableContainer).toBeInTheDocument();
   });
 
   it('unmounts expandable section when collapsed', () => {

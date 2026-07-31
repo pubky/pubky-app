@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
@@ -17,6 +18,8 @@ import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
 import { QuickReplyContent } from './QuickReplyContent';
+
+const QUICK_REPLY_HEIGHT_EASE = [0.25, 1, 0.5, 1] as const;
 
 export function QuickReply({
   parentPostId,
@@ -44,6 +47,7 @@ export function QuickReply({
     setShowEmojiPicker,
     displayPlaceholder,
     currentUserPubky,
+    currentUserDetails,
     handleExpand,
     handleSubmit,
     handleChange,
@@ -97,6 +101,12 @@ export function QuickReply({
   });
 
   const { ref: cardRef, height: cardHeight } = useElementHeight();
+  const shouldReduceMotion = useReducedMotion();
+  const [hasMeasuredCardHeight, setHasMeasuredCardHeight] = React.useState(false);
+
+  React.useEffect(() => {
+    if (cardHeight > 0) setHasMeasuredCardHeight(true);
+  }, [cardHeight]);
 
   const isValid = () => canSubmitPost(POST_INPUT_VARIANT.REPLY, content, attachments, isSubmitting);
 
@@ -113,9 +123,20 @@ export function QuickReply({
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
+  const heightTransition = shouldReduceMotion
+    ? { duration: 0 }
+    : { duration: isExpanded ? 0.28 : 0.22, ease: QUICK_REPLY_HEIGHT_EASE };
+  const connectorHeightTransitionClassName =
+    shouldReduceMotion || !hasMeasuredCardHeight
+      ? 'transition-none'
+      : cn(
+          'transition-[height] ease-[cubic-bezier(0.25,1,0.5,1)]',
+          isExpanded ? 'duration-[280ms]' : 'duration-[220ms]',
+        );
 
   const contentProps: QuickReplyContentProps = {
     currentUserPubky,
+    currentUserDetails,
     textareaRef,
     content,
     displayPlaceholder,
@@ -149,14 +170,23 @@ export function QuickReply({
   return (
     <Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>
       <Container overrideDefaults className="-mt-4 w-3 shrink-0">
-        <PostThreadConnector height={connectorHeight} variant={connectorVariant} data-testid="quick-reply-connector" />
+        <PostThreadConnector
+          height={connectorHeight}
+          variant={connectorVariant}
+          className={connectorHeightTransitionClassName}
+          data-testid="quick-reply-connector"
+        />
       </Container>
 
       <Container
         ref={containerRef}
+        data-state={isExpanded ? 'expanded' : 'collapsed'}
         className={cn(
           'relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200',
-          isWideLayout ? 'p-12' : 'p-4',
+          '[&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150',
+          'focus-within:[&_textarea::placeholder]:opacity-0',
+          'motion-reduce:[&_textarea::placeholder]:transition-none',
+          isWideLayout ? 'p-12' : 'p-6',
           isDragging ? 'border-brand' : 'border-input',
         )}
         onClick={handleExpandWithAuth}
@@ -176,13 +206,22 @@ export function QuickReply({
           </Container>
         )}
 
-        <Container
-          ref={cardRef}
-          className={cn('flex gap-4', isAuthenticated ? 'flex-col' : 'flex-row items-center')}
-          overrideDefaults
+        <motion.div
+          data-testid="quick-reply-state-height"
+          className="overflow-hidden"
+          initial={false}
+          animate={{ height: shouldReduceMotion || cardHeight <= 0 ? 'auto' : cardHeight }}
+          transition={{ height: heightTransition }}
         >
-          <QuickReplyContent {...contentProps} layout={effectiveTagsLayout} />
-        </Container>
+          <Container
+            ref={cardRef}
+            data-testid="quick-reply-state-content"
+            className="relative flex min-w-0 flex-col gap-4"
+            overrideDefaults
+          >
+            <QuickReplyContent {...contentProps} layout={effectiveTagsLayout} />
+          </Container>
+        </motion.div>
       </Container>
     </Container>
   );

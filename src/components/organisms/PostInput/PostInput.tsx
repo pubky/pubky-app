@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
@@ -18,17 +19,88 @@ import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
+import {
+  AVATAR_SIZE_BY_HEADER_SIZE,
+  GAP_CLASS_BY_HEADER_SIZE,
+} from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo.utils';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
-import { usesWidePostInput } from '@/organisms/PostMain/PostMainLayoutRules';
+import { POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT, usesWidePostInput } from '@/organisms/PostMain/PostMainLayoutRules';
 import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import type { PostInputProps } from './PostInput.types';
 
-const EXPANDABLE_SECTION_PARENT_GAP_PX = 16;
+const STATE_REVEAL_EASE = [0.19, 1, 0.22, 1] as const;
+const STATE_HEIGHT_EASE = [0.25, 1, 0.5, 1] as const;
+const SELECTIVE_DISSOLVE_VARIANTS = {
+  hidden: {
+    opacity: 0,
+    filter: 'blur(2px)',
+  },
+  visible: {
+    opacity: 1,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 0.22,
+      delay: 0.04,
+      ease: STATE_REVEAL_EASE,
+    },
+  },
+  exit: {
+    opacity: 0,
+    filter: 'blur(2px)',
+    transition: {
+      duration: 0.14,
+      ease: STATE_REVEAL_EASE,
+    },
+  },
+} satisfies Variants;
+const REDUCED_SELECTIVE_DISSOLVE_VARIANTS = {
+  hidden: {
+    opacity: 0.6,
+    filter: 'blur(0px)',
+  },
+  visible: {
+    opacity: 1,
+    filter: 'blur(0px)',
+    transition: { duration: 0.14, ease: STATE_REVEAL_EASE },
+  },
+  exit: {
+    opacity: 0.6,
+    filter: 'blur(0px)',
+    transition: { duration: 0.1, ease: STATE_REVEAL_EASE },
+  },
+} satisfies Variants;
+
+function useMeasuredHeight() {
+  const measureRef = React.useRef<HTMLDivElement>(null);
+  const [height, setHeight] = React.useState<number | null>(null);
+
+  React.useLayoutEffect(() => {
+    const element = measureRef.current;
+    if (!element) return;
+
+    const updateHeight = (nextHeight: number) => {
+      if (nextHeight <= 0) return;
+      setHeight((currentHeight) => (currentHeight === nextHeight ? currentHeight : nextHeight));
+    };
+
+    updateHeight(element.getBoundingClientRect().height);
+
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      if (entry) updateHeight(entry.contentRect.height);
+    });
+    resizeObserver.observe(element);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  return { measureRef, height };
+}
 
 export function PostInput({
   dataCy,
@@ -80,6 +152,7 @@ export function PostInput({
     setShowEmojiPicker,
     displayPlaceholder,
     currentUserPubky,
+    currentUserDetails,
     handleExpand,
     handleSubmit,
     handleChange,
@@ -156,6 +229,11 @@ export function PostInput({
   const isEdit = variant === POST_INPUT_VARIANT.EDIT;
 
   const { toast } = useToast();
+  const shouldReduceMotion = useReducedMotion();
+  const { measureRef: stateContentMeasureRef, height: stateContentHeight } = useMeasuredHeight();
+  const heightTransition = shouldReduceMotion
+    ? { duration: 0 }
+    : { duration: isExpanded ? 0.28 : 0.22, ease: STATE_HEIGHT_EASE };
 
   React.useEffect(() => {
     if (isEdit) {
@@ -199,13 +277,16 @@ export function PostInput({
     isExpanded && !isArticle ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
 
   const inheritedTagsLayout = useEffectiveTagsLayout();
-  const isWideLayout = usesWidePostInput(layoutOverride ?? inheritedTagsLayout);
+  const tagsLayout = layoutOverride ?? inheritedTagsLayout;
+  const isWideLayout = usesWidePostInput(tagsLayout);
+  const headerSize = POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT[tagsLayout];
 
   return (
     <Container
       data-cy={dataCy}
       id={id}
       ref={containerRef}
+      data-state={isExpanded ? 'expanded' : 'collapsed'}
       className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
         'max-w-full min-w-0',
@@ -230,109 +311,208 @@ export function PostInput({
       )}
 
       {showThreadConnector && <PostThreadConnector variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY} />}
-      <Container className="min-w-0 gap-4 contain-inline-size">
-        {isArticle && (
-          <Input
-            placeholder={t('articleTitle')}
-            defaultValue={articleTitle}
-            onChange={handleArticleTitleChangeWithAuth}
-            maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}
-            disabled={isSubmitting || !isAuthenticated}
-            className="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
-          />
+      <Container
+        className={cn(
+          'min-w-0 contain-inline-size',
+          '[&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150',
+          'focus-within:[&_textarea::placeholder]:opacity-0',
+          'motion-reduce:[&_textarea::placeholder]:transition-none',
         )}
-
-        {currentUserPubky && (
-          <PostHeader
-            postId={currentUserPubky}
-            isReplyInput={true}
-            characterLimit={characterLimit}
-            showPopover={false}
-            size={isWideLayout ? 'large' : 'normal'}
-          />
-        )}
-
-        {!isArticle && (
-          <Container overrideDefaults className="relative">
-            <Textarea
-              ref={textareaRef}
-              placeholder={displayPlaceholder}
-              variant="inline"
-              className={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
-              value={content}
-              onChange={handleChangeWithAuth}
-              onFocus={handleExpandWithAuth}
-              onKeyDown={handleKeyDown}
-              onPaste={isEdit ? undefined : handlePasteWithAuth}
-              maxLength={POST_MAX_CHARACTER_LENGTH}
-              rows={1}
-              disabled={isSubmitting}
-              readOnly={!isAuthenticated}
-              aria-haspopup="listbox"
-              autoFocus={autoFocusTextarea}
-              // Suppress the iOS keyboard autofill accessory bar (passwords/cards/contacts)
-              autoComplete="off"
-            />
-
-            {/* Mention autocomplete popover */}
-            {mentionIsOpen && (
-              <MentionPopover
-                users={mentionUsers}
-                selectedIndex={mentionSelectedIndex}
-                onSelect={handleMentionSelect}
-                onHover={setMentionSelectedIndex}
-              />
+      >
+        <motion.div
+          data-testid="post-input-state-height"
+          className="overflow-hidden"
+          initial={false}
+          animate={{ height: shouldReduceMotion || stateContentHeight === null ? 'auto' : stateContentHeight }}
+          transition={{ height: heightTransition }}
+        >
+          <div ref={stateContentMeasureRef} className="relative">
+            {!isArticle && currentUserPubky && (
+              <div data-testid="post-input-stable-avatar" className="absolute top-0 left-0 z-10">
+                <PostHeader
+                  postId={currentUserPubky}
+                  isReplyInput={true}
+                  userDetails={currentUserDetails}
+                  showPopover={false}
+                  showUserInfo={false}
+                  size={headerSize}
+                />
+              </div>
             )}
-          </Container>
-        )}
 
-        {!isEdit && (
-          <PostInputAttachments
-            ref={fileInputRef}
-            attachments={attachments}
-            setAttachments={setAttachmentsWithAuth}
-            handleFilesAdded={handleFilesAddedWithAuth}
-            isSubmitting={isSubmitting}
-            isArticle={isArticle}
-            handleFileClick={handleFileClickWithAuth}
-          />
-        )}
+            <div data-testid="post-input-state-content" className="relative flex min-w-0 flex-col gap-4">
+              {isArticle && (
+                <Input
+                  placeholder={t('articleTitle')}
+                  defaultValue={articleTitle}
+                  onChange={handleArticleTitleChangeWithAuth}
+                  maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}
+                  disabled={isSubmitting || !isAuthenticated}
+                  className="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
+                />
+              )}
 
-        {isArticle && (
-          <MarkdownEditor
-            ref={markdownEditorRef}
-            autoFocus
-            markdown={sanitizeCodeBlockLanguages(content)}
-            onChange={handleArticleBodyChangeWithAuth}
-            readOnly={isSubmitting || !isAuthenticated}
-          />
-        )}
+              {isArticle && currentUserPubky && (
+                <PostHeader
+                  postId={currentUserPubky}
+                  isReplyInput={true}
+                  userDetails={currentUserDetails}
+                  showPopover={false}
+                  showUserInfo={false}
+                  size={headerSize}
+                />
+              )}
 
-        {/* Show original post preview for reposts */}
-        {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
-          <PostPreviewCard postId={originalPostId} className="bg-card" interactiveActions={false} />
-        )}
+              {!isArticle && (
+                <Container overrideDefaults className="relative flex min-w-0 flex-col gap-4">
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {isExpanded && currentUserPubky && (
+                      <motion.div
+                        key="post-input-expanded-header"
+                        data-testid="post-input-expanded-header"
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        variants={
+                          shouldReduceMotion ? REDUCED_SELECTIVE_DISSOLVE_VARIANTS : SELECTIVE_DISSOLVE_VARIANTS
+                        }
+                      >
+                        <PostHeader
+                          postId={currentUserPubky}
+                          isReplyInput={true}
+                          userDetails={currentUserDetails}
+                          characterLimit={characterLimit}
+                          characterLimitPlacement={tagsLayout === 'inline' ? 'name-row' : 'metadata'}
+                          showPopover={false}
+                          visuallyHideAvatar={true}
+                          size={headerSize}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-        <PostInputExpandableSection
-          isExpanded={isExpanded}
-          content={content}
-          tags={tags}
-          isSubmitting={isSubmitting}
-          isArticle={isArticle}
-          isDisabled={!isAuthenticated}
-          setTags={setTagsWithAuth}
-          onSubmit={handleSubmitWithAuth}
-          showEmojiPicker={showEmojiPicker}
-          setShowEmojiPicker={setShowEmojiPicker}
-          onEmojiSelect={handleEmojiSelectWithAuth}
-          onImageClick={handleFileClickWithAuth}
-          onArticleClick={handleArticleClickWithAuth}
-          isPostDisabled={isAuthenticated ? !isValid() : false}
-          submitMode={variant}
-          submitLabel={submitLabel}
-          submitIcon={submitIcon}
-          parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
-        />
+                  <Container
+                    overrideDefaults
+                    className={cn('flex w-full min-w-0 items-center', GAP_CLASS_BY_HEADER_SIZE[headerSize])}
+                  >
+                    {!isExpanded && currentUserPubky && (
+                      <div className="shrink-0">
+                        <PostHeader
+                          postId={currentUserPubky}
+                          isReplyInput={true}
+                          userDetails={currentUserDetails}
+                          showPopover={false}
+                          showUserInfo={false}
+                          visuallyHideAvatar={true}
+                          size={headerSize}
+                        />
+                      </div>
+                    )}
+                    {!currentUserPubky && (
+                      <AvatarWithFallback
+                        name=""
+                        fallbackSeed="user"
+                        size={AVATAR_SIZE_BY_HEADER_SIZE[headerSize]}
+                        data-testid="post-input-fallback-avatar"
+                      />
+                    )}
+                    <Container overrideDefaults className="relative min-w-0 flex-1">
+                      <Textarea
+                        ref={textareaRef}
+                        placeholder={displayPlaceholder}
+                        variant="inline"
+                        className={cn('field-sizing-fixed rounded-none', isWideLayout && WIDE_POST_BODY_TEXT_CLASS)}
+                        value={content}
+                        onChange={handleChangeWithAuth}
+                        onFocus={handleExpandWithAuth}
+                        onKeyDown={handleKeyDown}
+                        onPaste={isEdit ? undefined : handlePasteWithAuth}
+                        maxLength={POST_MAX_CHARACTER_LENGTH}
+                        rows={1}
+                        disabled={isSubmitting}
+                        readOnly={!isAuthenticated}
+                        aria-haspopup="listbox"
+                        autoFocus={autoFocusTextarea}
+                        // Suppress the iOS keyboard autofill accessory bar (passwords/cards/contacts)
+                        autoComplete="off"
+                      />
+
+                      {/* Mention autocomplete popover */}
+                      {mentionIsOpen && (
+                        <MentionPopover
+                          users={mentionUsers}
+                          selectedIndex={mentionSelectedIndex}
+                          onSelect={handleMentionSelect}
+                          onHover={setMentionSelectedIndex}
+                        />
+                      )}
+                    </Container>
+                  </Container>
+                </Container>
+              )}
+
+              {!isEdit && (
+                <PostInputAttachments
+                  ref={fileInputRef}
+                  attachments={attachments}
+                  setAttachments={setAttachmentsWithAuth}
+                  handleFilesAdded={handleFilesAddedWithAuth}
+                  isSubmitting={isSubmitting}
+                  isArticle={isArticle}
+                  handleFileClick={handleFileClickWithAuth}
+                />
+              )}
+
+              {isArticle && (
+                <MarkdownEditor
+                  ref={markdownEditorRef}
+                  autoFocus
+                  markdown={sanitizeCodeBlockLanguages(content)}
+                  onChange={handleArticleBodyChangeWithAuth}
+                  readOnly={isSubmitting || !isAuthenticated}
+                />
+              )}
+
+              {/* Show original post preview for reposts */}
+              {variant === POST_INPUT_VARIANT.REPOST && originalPostId && (
+                <PostPreviewCard postId={originalPostId} className="bg-card" interactiveActions={false} />
+              )}
+
+              <AnimatePresence initial={false} mode="popLayout">
+                {isExpanded && (
+                  <motion.div
+                    key="post-input-expanded-controls"
+                    data-testid="post-input-expanded-controls"
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    variants={shouldReduceMotion ? REDUCED_SELECTIVE_DISSOLVE_VARIANTS : SELECTIVE_DISSOLVE_VARIANTS}
+                  >
+                    <PostInputExpandableSection
+                      isExpanded
+                      content={content}
+                      tags={tags}
+                      isSubmitting={isSubmitting}
+                      isArticle={isArticle}
+                      isDisabled={!isAuthenticated}
+                      setTags={setTagsWithAuth}
+                      onSubmit={handleSubmitWithAuth}
+                      showEmojiPicker={showEmojiPicker}
+                      setShowEmojiPicker={setShowEmojiPicker}
+                      onEmojiSelect={handleEmojiSelectWithAuth}
+                      onImageClick={handleFileClickWithAuth}
+                      onArticleClick={handleArticleClickWithAuth}
+                      isPostDisabled={isAuthenticated ? !isValid() : false}
+                      submitMode={variant}
+                      submitLabel={submitLabel}
+                      submitIcon={submitIcon}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </motion.div>
       </Container>
     </Container>
   );

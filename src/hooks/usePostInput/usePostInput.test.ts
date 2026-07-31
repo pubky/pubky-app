@@ -49,6 +49,7 @@ const mockDeletePost = vi.fn();
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   useCurrentUserProfile: vi.fn(() => ({
     currentUserPubky: 'test-user-pubky',
+    userDetails: { name: 'Test Author' },
   })),
 }));
 
@@ -172,6 +173,7 @@ describe('usePostInput', () => {
       expect(result.current.hasContent).toBe(false);
       expect(result.current.isDragging).toBe(false);
       expect(result.current.currentUserPubky).toBe('test-user-pubky');
+      expect(result.current.currentUserDetails).toEqual({ name: 'Test Author' });
     });
 
     it('returns initial state with expanded mode when expanded=true', () => {
@@ -200,6 +202,49 @@ describe('usePostInput', () => {
       expect(result.current.markdownEditorRef.current).toBeNull();
       expect(result.current.containerRef.current).toBeNull();
       expect(result.current.fileInputRef.current).toBeNull();
+    });
+  });
+
+  describe('textarea autosizing', () => {
+    it('forces an empty textarea to one line instead of measuring a stretched layout', () => {
+      const { result, rerender } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = document.createElement('textarea');
+      textarea.style.height = '900px';
+      result.current.textareaRef.current = textarea;
+
+      act(() => {
+        result.current.handleExpand();
+      });
+      rerender();
+
+      expect(textarea.style.height).toBe('1lh');
+    });
+
+    it('measures non-empty content from zero height', () => {
+      const { result, rerender } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = document.createElement('textarea');
+      textarea.style.height = '900px';
+      Object.defineProperty(textarea, 'scrollHeight', {
+        configurable: true,
+        get: () => {
+          expect(textarea.style.height).toBe('0px');
+          return 48;
+        },
+      });
+      result.current.textareaRef.current = textarea;
+
+      mockContent = 'Two lines of content';
+      rerender();
+
+      expect(textarea.style.height).toBe('48px');
     });
   });
 

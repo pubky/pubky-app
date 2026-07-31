@@ -65,6 +65,14 @@ describe('PostThreadConnector', () => {
       expect(connector).toHaveStyle({ height: '200px' });
     });
 
+    it('merges a custom class name on height-based connectors', () => {
+      const { container } = render(
+        <PostThreadConnector height={200} className="transition-[height]" data-testid="connector" />,
+      );
+      const connector = container.querySelector('[data-testid="connector"]');
+      expect(connector).toHaveClass('flex', 'w-3', 'transition-[height]');
+    });
+
     it('uses default height when height is 0', () => {
       const { container } = render(<PostThreadConnector height={0} data-testid="connector" />);
       const connector = container.querySelector('[data-testid="connector"]');

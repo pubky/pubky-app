@@ -1,3 +1,4 @@
+import type { PostHeaderSize } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo.utils';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import type { TagsLayout } from './PostMain.types';
 
@@ -16,6 +17,13 @@ export function getTagsLayoutForSurfaceLayout(layout: LayoutType): TagsLayout {
 
   return 'inline';
 }
+
+/** PostInput header size by tags layout: list = small, wide = large, column = normal. */
+export const POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT: Record<TagsLayout, PostHeaderSize> = {
+  list: 'normal',
+  side: 'large',
+  inline: 'normal',
+};
 
 /** Wide and list layouts opt into expanded PostInput treatment. List applies local compact styling overrides. */
 export function usesWidePostInput(tagsLayout: TagsLayout): boolean {

@@ -89,16 +89,39 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
         userName,
         size,
         timeAgo,
+        showUserInfo = true,
+        visuallyHideAvatar = false,
+        characterLimitPlacement,
+        characterLimit,
       }: {
         userId: string;
         userName: string;
-        size?: 'normal' | 'large';
+        size?: 'normal' | 'large' | 'extraLarge';
         timeAgo?: string | null;
+        showUserInfo?: boolean;
+        visuallyHideAvatar?: boolean;
+        characterLimitPlacement?: string;
+        characterLimit?: { count: number; max: number };
       }) => (
-        <div data-testid="post-header-user-info" data-size={size}>
+        <div
+          data-testid="post-header-user-info"
+          data-size={size}
+          data-show-user-info={showUserInfo}
+          data-visually-hide-avatar={visuallyHideAvatar || undefined}
+          data-character-limit-placement={characterLimitPlacement}
+        >
           <div data-testid="avatar" />
-          <div>{userName}</div>
-          <div>@{userId.substring(0, 8)}</div>
+          {showUserInfo && (
+            <>
+              <div>{userName}</div>
+              <div>@{userId.substring(0, 8)}</div>
+            </>
+          )}
+          {characterLimit && (
+            <div>
+              {characterLimit.count}/{characterLimit.max}
+            </div>
+          )}
           {timeAgo && <div data-testid="bottom-left-time">{timeAgo}</div>}
         </div>
       ),
@@ -237,6 +260,43 @@ describe('PostHeader', () => {
     expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
   });
 
+  it('renders provided user details without showing a remount skeleton', () => {
+    const providedUserDetails = {
+      id: 'userpubkykey',
+      name: 'Provided User',
+      image: null,
+      bio: '',
+      links: null,
+      status: null,
+      indexed_at: Date.now(),
+    } as NexusUserDetails;
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({ userDetails: undefined, isLoading: true });
+    mockUseAvatarUrl.mockReturnValue(undefined);
+
+    renderPostHeader(<PostHeader postId="userpubkykey" isReplyInput={true} userDetails={providedUserDetails} />);
+
+    expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(false);
+    expect(screen.getByText('Provided User')).toBeInTheDocument();
+    expect(mockUseUserDetails).toHaveBeenCalledWith(null);
+    expect(mockUseAvatarUrl).toHaveBeenCalledWith(providedUserDetails);
+  });
+
+  it('treats provided null user details as a resolved fallback profile', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({ userDetails: undefined, isLoading: true });
+    mockUseAvatarUrl.mockReturnValue(undefined);
+
+    renderPostHeader(<PostHeader postId="userpubkykey" isReplyInput={true} userDetails={null} />);
+
+    expect(screen.getAllByRole('generic').some((element) => element.getAttribute('data-slot') === 'skeleton')).toBe(
+      false,
+    );
+    expect(screen.getByTestId('avatar')).toBeInTheDocument();
+    expect(mockUseUserDetails).toHaveBeenCalledWith(null);
+    expect(mockUseAvatarUrl).toHaveBeenCalledWith(null);
+  });
+
   it('renders the header and character counter when the profile query settles without details', () => {
     mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
     mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: false });
@@ -249,6 +309,53 @@ describe('PostHeader', () => {
     expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(false);
     expect(screen.getByTestId('avatar')).toBeInTheDocument();
     expect(screen.getByText('12/2000')).toBeInTheDocument();
+  });
+
+  it('passes showUserInfo to PostHeaderUserInfo', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    renderPostHeader(<PostHeader postId="userpubkykey" isReplyInput={true} showUserInfo={false} />);
+
+    expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-show-user-info', 'false');
+    expect(screen.queryByText('Test User')).not.toBeInTheDocument();
+  });
+
+  it('passes visuallyHideAvatar to PostHeaderUserInfo', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    renderPostHeader(<PostHeader postId="userpubkykey" isReplyInput={true} visuallyHideAvatar={true} />);
+
+    expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-visually-hide-avatar', 'true');
+  });
+
+  it('passes the character limit placement to PostHeaderUserInfo', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    renderPostHeader(
+      <PostHeader
+        postId="userpubkykey"
+        isReplyInput={true}
+        characterLimit={{ count: 21, max: 2000 }}
+        characterLimitPlacement="name-row"
+      />,
+    );
+
+    expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-character-limit-placement', 'name-row');
   });
 
   it('passes size prop to PostHeaderUserInfo', () => {
