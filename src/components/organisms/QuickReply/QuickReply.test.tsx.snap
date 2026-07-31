@@ -21,7 +21,7 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
     data-testid="container"
   >
     <div
-      class="flex flex-col gap-4"
+      class="flex flex-row gap-4"
       data-testid="container"
     >
       <div
@@ -90,7 +90,7 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
     data-testid="container"
   >
     <div
-      class=""
+      class="flex flex-row gap-4"
       data-testid="container"
     >
       <div
