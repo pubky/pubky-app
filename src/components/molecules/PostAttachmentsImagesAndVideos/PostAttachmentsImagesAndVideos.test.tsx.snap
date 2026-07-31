@@ -68,6 +68,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     />
   </div>
   <div
+    data-centered="true"
     data-hidden-title="Post Attachments Media Carousel"
     data-override-defaults="true"
     data-show-close-button="false"
@@ -99,7 +100,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       </svg>
     </button>
     <div
-      class="w-full max-w-80 xsm:max-w-dvw sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
+      class="w-full max-w-80 xsm:max-w-full sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
       data-duration="15"
       data-loop="true"
       data-start-index="0"
@@ -268,6 +269,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     </div>
   </div>
   <div
+    data-centered="true"
     data-hidden-title="Post Attachments Media Carousel"
     data-override-defaults="true"
     data-show-close-button="false"
@@ -299,7 +301,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       </svg>
     </button>
     <div
-      class="w-full max-w-80 xsm:max-w-dvw sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
+      class="w-full max-w-80 xsm:max-w-full sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
       data-duration="15"
       data-loop="true"
       data-start-index="0"
@@ -448,6 +450,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     </div>
   </div>
   <div
+    data-centered="true"
     data-hidden-title="Post Attachments Media Carousel"
     data-override-defaults="true"
     data-show-close-button="false"
@@ -479,7 +482,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       </svg>
     </button>
     <div
-      class="w-full max-w-80 xsm:max-w-dvw sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
+      class="w-full max-w-80 xsm:max-w-full sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
       data-duration="15"
       data-loop="true"
       data-start-index="0"
@@ -567,6 +570,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     />
   </div>
   <div
+    data-centered="true"
     data-hidden-title="Post Attachments Media Carousel"
     data-override-defaults="true"
     data-show-close-button="false"
@@ -598,7 +602,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       </svg>
     </button>
     <div
-      class="w-full max-w-80 xsm:max-w-dvw sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
+      class="w-full max-w-80 xsm:max-w-full sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
       data-duration="15"
       data-loop="true"
       data-start-index="0"
@@ -690,6 +694,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
     />
   </div>
   <div
+    data-centered="true"
     data-hidden-title="Post Attachments Media Carousel"
     data-override-defaults="true"
     data-show-close-button="false"
@@ -721,7 +726,7 @@ exports[`PostAttachmentsImagesAndVideos - Snapshots > matches snapshot with dial
       </svg>
     </button>
     <div
-      class="w-full max-w-80 xsm:max-w-dvw sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
+      class="w-full max-w-80 xsm:max-w-full sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
       data-duration="15"
       data-loop="true"
       data-start-index="0"

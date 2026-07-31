@@ -2,21 +2,32 @@
 
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
+import { LIST_POST_BODY_TEXT_CLASS, WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
+import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import type { QuickReplyContentProps } from './QuickReply.types';
 import { QuickReplyComposerRow } from './QuickReplyComposerRow';
 
-interface QuickReplyDefaultContentProps extends QuickReplyContentProps {
-  isWideLayout: boolean;
+const BODY_TEXT_CLASS_BY_LAYOUT: Record<TagsLayout, string | undefined> = {
+  side: WIDE_POST_BODY_TEXT_CLASS,
+  list: LIST_POST_BODY_TEXT_CLASS,
+  inline: undefined,
+};
+
+interface QuickReplyContentComponentProps extends QuickReplyContentProps {
+  layout: TagsLayout;
 }
 
 /**
- * Default (inline/wide) QuickReply content: composer row on top,
- * tags input and action bar inside the expandable section below.
+ * QuickReply content for every layout: PostHeader on top (with character count
+ * when expanded), composer textarea, attachments, then the expandable section
+ * holding tags and the action bar. Only the body text size varies by layout.
  */
-export function QuickReplyDefaultContent({
-  isWideLayout,
+export function QuickReplyContent({
+  layout,
+  currentUserPubky,
   fileInputRef,
   attachments,
   setAttachments,
@@ -35,16 +46,32 @@ export function QuickReplyDefaultContent({
   isPostDisabled,
   characterLimit,
   ...composerRowProps
-}: QuickReplyDefaultContentProps) {
+}: QuickReplyContentComponentProps) {
   return (
     <>
+      {currentUserPubky ? (
+        <PostHeader
+          postId={currentUserPubky}
+          isReplyInput={true}
+          characterLimit={characterLimit}
+          showPopover={false}
+          size={layout === 'side' ? 'large' : 'normal'}
+        />
+      ) : (
+        <AvatarWithFallback
+          name=""
+          fallbackSeed="user"
+          size={layout === 'side' ? 'xl' : 'default'}
+          data-testid="quick-reply-fallback-avatar"
+        />
+      )}
+
       <QuickReplyComposerRow
         {...composerRowProps}
         content={content}
         isSubmitting={isSubmitting}
         isAuthenticated={isAuthenticated}
-        avatarSize={isWideLayout ? 'xl' : 'default'}
-        textareaClassName={isWideLayout ? WIDE_POST_BODY_TEXT_CLASS : undefined}
+        textareaClassName={BODY_TEXT_CLASS_BY_LAYOUT[layout]}
       />
 
       <PostInputAttachments
@@ -69,8 +96,6 @@ export function QuickReplyDefaultContent({
         onImageClick={onImageClick}
         isPostDisabled={isPostDisabled}
         submitMode={POST_INPUT_VARIANT.REPLY}
-        className={isExpanded ? 'mt-4' : ''}
-        characterLimit={characterLimit}
       />
     </>
   );

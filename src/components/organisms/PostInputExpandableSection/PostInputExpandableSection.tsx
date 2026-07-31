@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Container } from '@/atoms/Container/Container';
 import { EmojiPickerDialog } from '@/molecules/EmojiPickerDialog/EmojiPickerDialog';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
-import { PostTag } from '@/molecules/PostTag/PostTag';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
 import { PostInputActionBar } from '../PostInputActionBar/PostInputActionBar';
 import { PostInputTags } from '../PostInputTags/PostInputTags';
@@ -18,6 +17,7 @@ const IconsButton = {
   [POST_INPUT_VARIANT.POST]: undefined,
   [POST_INPUT_VARIANT.REPLY]: MessageCircle,
 } as const;
+
 export function PostInputExpandableSection({
   isExpanded,
   content,
@@ -36,11 +36,7 @@ export function PostInputExpandableSection({
   onEmojiSelect,
   onImageClick,
   onArticleClick,
-  className,
   parentGapPx = 0,
-  characterLimit,
-  hideActionBar = false,
-  inline = false,
 }: PostInputExpandableSectionProps) {
   const hasContent = content.trim().length > 0;
   const isUiDisabled = isSubmitting || isDisabled;
@@ -51,41 +47,6 @@ export function PostInputExpandableSection({
   const isEdit = submitMode === POST_INPUT_VARIANT.EDIT;
   const hasParentGapCompensation = parentGapPx > 0;
   const compensatedMarginTop = -parentGapPx;
-
-  const tagChips =
-    tags.length > 0 ? (
-      <Container className="flex flex-wrap items-center gap-2" overrideDefaults>
-        {tags.map((tag, index) => (
-          <PostTag
-            key={`${tag}-${index}`}
-            label={tag}
-            showClose={!isUiDisabled}
-            onClose={() => {
-              setTags((prevTags) => prevTags.filter((_, i) => i !== index));
-            }}
-          />
-        ))}
-      </Container>
-    ) : null;
-
-  const actionBar = !hideActionBar ? (
-    <PostInputActionBar
-      onPostClick={onSubmit}
-      onEmojiClick={() => setShowEmojiPicker(true)}
-      onImageClick={onImageClick}
-      onArticleClick={onArticleClick}
-      isPostDisabled={isPostDisabled}
-      isSubmitting={isSubmitting}
-      postButtonLabel={postButtonLabel}
-      postButtonAriaLabel={postButtonAriaLabel}
-      hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle}
-      isArticle={isArticle}
-      isEdit={isEdit}
-      postButtonIcon={submitIcon ?? IconsButton[submitMode]}
-      characterLimit={characterLimit}
-      separateActions={inline}
-    />
-  ) : null;
 
   return (
     <>
@@ -138,28 +99,27 @@ export function PostInputExpandableSection({
                   : {}),
               },
             }}
-            className={`overflow-hidden ${className || ''}`}
+            className="overflow-hidden"
           >
-            <Container className="gap-6">
+            <Container className="gap-4">
               {hasContent && !isArticle && <PostLinkEmbeds content={content} />}
 
-              {inline ? (
-                <Container overrideDefaults className="flex flex-row flex-wrap items-center gap-2">
-                  {tagChips}
-                  <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-6">
-                    <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
-                    {actionBar}
-                  </Container>
-                </Container>
-              ) : (
-                <>
-                  {tagChips}
-                  <Container className="gap-4">
-                    <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
-                    {actionBar}
-                  </Container>
-                </>
-              )}
+              <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
+
+              <PostInputActionBar
+                onPostClick={onSubmit}
+                onEmojiClick={() => setShowEmojiPicker(true)}
+                onImageClick={onImageClick}
+                onArticleClick={onArticleClick}
+                isPostDisabled={isPostDisabled}
+                isSubmitting={isSubmitting}
+                postButtonLabel={postButtonLabel}
+                postButtonAriaLabel={postButtonAriaLabel}
+                hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle}
+                isArticle={isArticle}
+                isEdit={isEdit}
+                postButtonIcon={submitIcon ?? IconsButton[submitMode]}
+              />
             </Container>
           </motion.div>
         )}

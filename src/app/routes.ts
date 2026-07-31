@@ -193,10 +193,23 @@ export function matchesAllowedRoute(
   return pathname.startsWith(`${route}/`);
 }
 
+/**
+ * Matches a single post route `/post/[userId]/[postId]` and returns its params,
+ * or `null` for any other path. Shape-only matching — identifier validation is
+ * the caller's concern (mirrors `matchSingleCollectionRoute`).
+ */
+export function matchPostRoute(pathname: string): { userId: string; postId: string } | null {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] !== 'post' || segments.length !== 3) {
+    return null;
+  }
+  const [, userId, postId] = segments;
+  return { userId, postId };
+}
+
 /** `/post/[userId]/[postId]` — browsable without auth; uses explore header chrome for guests. */
 export function isPostRoute(pathname: string): boolean {
-  const segments = pathname.split('/').filter(Boolean);
-  return segments[0] === 'post' && segments.length === 3;
+  return matchPostRoute(pathname) !== null;
 }
 
 export function isCoreExploreRoute(pathname: string): boolean {

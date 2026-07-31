@@ -276,7 +276,6 @@
       "yearlyLimitReached": "Too many verification attempts",
       "yearlyLimitDescription": "Too many verification attempts",
       "verificationFailed": "Phone verification failed. Try again.",
-      "sendFailed": "Failed to send SMS code",
       "sendFailedDescription": "Could not send verification code. Try again later."
     },
     "phoneCode": {
@@ -290,7 +289,6 @@
       "verify": "Verify Code",
       "valid": "Verification code valid",
       "invalid": "Verification Code Invalid. Try again.",
-      "verifyFailed": "Failed to verify sms code",
       "verifyFailedDescription": "Could not verify code. Try again later."
     },
     "lightning": {

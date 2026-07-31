@@ -2,64 +2,52 @@
 
 exports[`PostInputTags - Snapshots > matches snapshot with empty tags 1`] = `
 <div
-  class="flex flex-col gap-1"
+  class="flex flex-wrap items-center gap-2"
   data-override-defaults="true"
   data-testid="container"
 >
   <div
-    class="flex flex-wrap items-center gap-2"
-    data-override-defaults="true"
-    data-testid="container"
+    data-testid="tag-input-toggle"
   >
-    <div
-      data-testid="tag-input-toggle"
+    <button
+      data-testid="add-tag-button"
+      data-variant="plain"
     >
-      <button
-        data-testid="add-tag-button"
-        data-variant="plain"
-      >
-        +
-      </button>
-    </div>
+      +
+    </button>
   </div>
 </div>
 `;
 
 exports[`PostInputTags - Snapshots > matches snapshot with input open 1`] = `
 <div
-  class="flex flex-col gap-1"
+  class="flex flex-wrap items-center gap-2"
   data-override-defaults="true"
   data-testid="container"
 >
   <div
-    class="flex flex-wrap items-center gap-2"
-    data-override-defaults="true"
-    data-testid="container"
+    data-testid="tag-input-toggle"
   >
     <div
-      data-testid="tag-input-toggle"
+      data-container-variant="plain"
+      data-testid="tag-input-wrapper"
     >
-      <div
-        data-container-variant="plain"
-        data-testid="tag-input-wrapper"
+      <input
+        data-testid="tag-input"
+        value=""
+      />
+      <button
+        aria-label="Open emoji picker"
+        data-testid="emoji-button"
       >
-        <input
-          data-testid="tag-input"
-          value=""
-        />
-        <button
-          aria-label="Open emoji picker"
-          data-testid="emoji-button"
-        >
-          😀
-        </button>
-        <button
-          aria-label="Close tag input"
-          data-testid="close-button"
-        >
-          ×
-        </button>
-      </div>
+        😀
+      </button>
+      <button
+        aria-label="Close tag input"
+        data-testid="close-button"
+      >
+        ×
+      </button>
     </div>
   </div>
 </div>
@@ -67,25 +55,39 @@ exports[`PostInputTags - Snapshots > matches snapshot with input open 1`] = `
 
 exports[`PostInputTags - Snapshots > matches snapshot with tags 1`] = `
 <div
-  class="flex flex-col gap-1"
+  class="flex flex-wrap items-center gap-2"
   data-override-defaults="true"
   data-testid="container"
 >
   <div
-    class="flex flex-wrap items-center gap-2"
-    data-override-defaults="true"
-    data-testid="container"
+    data-testid="post-tag"
   >
-    <div
-      data-testid="tag-input-toggle"
+    tag1
+    <button
+      data-testid="tag-close-tag1"
     >
-      <button
-        data-testid="add-tag-button"
-        data-variant="plain"
-      >
-        +
-      </button>
-    </div>
+      ×
+    </button>
+  </div>
+  <div
+    data-testid="post-tag"
+  >
+    tag2
+    <button
+      data-testid="tag-close-tag2"
+    >
+      ×
+    </button>
+  </div>
+  <div
+    data-testid="tag-input-toggle"
+  >
+    <button
+      data-testid="add-tag-button"
+      data-variant="plain"
+    >
+      +
+    </button>
   </div>
 </div>
 `;

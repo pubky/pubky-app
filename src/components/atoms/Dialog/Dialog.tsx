@@ -67,6 +67,7 @@ function DialogContent({
   hiddenTitle,
   overrideDefaults = false,
   avoidKeyboard = false,
+  centered = false,
   style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
@@ -74,6 +75,8 @@ function DialogContent({
   hiddenTitle?: string;
   overrideDefaults?: boolean;
   avoidKeyboard?: boolean;
+  /** Opt out of the mobile bottom-drawer treatment and center the dialog on every breakpoint. */
+  centered?: boolean;
 }) {
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
@@ -85,7 +88,12 @@ function DialogContent({
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay onCloseRef={closeRef} contentRef={contentRef} />
-      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <div
+        className={cn(
+          'fixed inset-0 z-50 flex justify-center',
+          centered ? 'items-center' : 'items-end sm:items-center',
+        )}
+      >
         <DialogPrimitive.Content
           ref={contentRef}
           aria-describedby={undefined}
@@ -95,17 +103,26 @@ function DialogContent({
           className={cn(
             'relative z-50 grid',
             'duration-200',
-            'm-0 sm:m-4',
+            // Centered on mobile has no drawer edge to sit flush against, so it needs its own gutter.
+            centered ? 'm-6 sm:m-4' : 'm-0 sm:m-4',
             'data-[state=closed]:animate-out data-[state=open]:animate-in',
-            // Mobile: clean slide up/down from the bottom (the overlay handles the dimming).
-            'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
-            // Desktop: reset the slide and fade + zoom in/out instead.
-            'sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0',
-            'sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0',
-            'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95',
+            centered
+              ? // Centered exception: fade + zoom at every breakpoint, no drawer slide.
+                'data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95'
+              : [
+                  // Mobile: clean slide up/down from the bottom (the overlay handles the dimming).
+                  'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
+                  // Desktop: reset the slide and fade + zoom in/out instead.
+                  'sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0',
+                  'sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0',
+                  'sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95',
+                ],
             overrideDefaults
               ? ''
-              : 'max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8',
+              : cn(
+                  'max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto border bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:p-8',
+                  centered ? 'rounded-xl' : 'rounded-t-lg border-b-0 sm:border-b',
+                ),
             className,
           )}
           style={contentStyle}

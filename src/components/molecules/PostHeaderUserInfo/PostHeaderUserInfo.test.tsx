@@ -283,18 +283,6 @@ describe('PostHeaderUserInfo', () => {
     expect(avatarImages[0]).toHaveAttribute('alt', 'Test User');
   });
 
-  it('renders character limit when provided', () => {
-    render(<PostHeaderUserInfo userId="user123" userName="Test User" characterLimit={{ count: 50, max: 280 }} />);
-
-    expect(screen.getByText('50/280')).toBeInTheDocument();
-  });
-
-  it('does not render character limit when not provided', () => {
-    render(<PostHeaderUserInfo userId="user123" userName="Test User" />);
-
-    expect(screen.queryByText(/\d+\/\d+/)).not.toBeInTheDocument();
-  });
-
   it('formats public key correctly', () => {
     const formattedPublicKey = formatPublicKey({ key: 'userpubkykey' });
 
@@ -539,27 +527,13 @@ describe('PostHeaderUserInfo - Snapshots', () => {
         userId="snapshotUserKey"
         userName="Snapshot User"
         avatarUrl="https://example.com/avatar.png"
-        characterLimit={{ count: 150, max: 280 }}
       />,
     );
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot without avatarUrl', () => {
-    const { container } = render(
-      <PostHeaderUserInfo userId="snapshotUserKey" userName="Snapshot User" characterLimit={{ count: 50, max: 280 }} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot without character count', () => {
-    const { container } = render(
-      <PostHeaderUserInfo
-        userId="snapshotUserKey"
-        userName="Snapshot User"
-        avatarUrl="https://example.com/avatar.png"
-      />,
-    );
+    const { container } = render(<PostHeaderUserInfo userId="snapshotUserKey" userName="Snapshot User" />);
     expect(container.firstChild).toMatchSnapshot();
   });
 

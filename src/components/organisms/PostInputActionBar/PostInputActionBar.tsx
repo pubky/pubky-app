@@ -9,6 +9,8 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { cn } from '@/libs/utils/utils';
 import type { PostInputActionBarProps } from './PostInputActionBar.types';
 
+const COMMON_BUTTON_PROPS = { variant: 'secondary', size: 'sm' } as const;
+
 interface ActionButtonContentProps {
   Icon: React.ComponentType<{
     className?: string;
@@ -32,36 +34,20 @@ export function PostInputActionBar({
   hideArticleButton,
   isArticle,
   isEdit,
-  characterLimit,
-  separateActions = false,
 }: PostInputActionBarProps) {
   const isMobile = useIsMobile();
-  const commonButtonProps = React.useMemo(
-    () => ({
-      variant: 'secondary' as const,
-      size: 'sm' as const,
-    }),
-    [],
-  );
   const getButtonDataCy = (ariaLabel: string) => `post-input-action-bar-${ariaLabel.toLowerCase().replace(' ', '-')}`;
   const PostButtonIconComponent = isSubmitting ? Loader2 : (postButtonIcon ?? Send);
   const postButtonAriaText = isSubmitting ? 'Posting...' : postButtonAriaLabel;
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
   return (
-    <Container
-      className={cn(
-        separateActions
-          ? 'flex min-w-0 flex-1 flex-row items-center justify-between gap-6'
-          : 'flex w-full flex-col justify-between gap-4 sm:flex-row sm:items-center',
-      )}
-      overrideDefaults
-    >
+    <Container className="flex w-full flex-row items-center justify-between gap-4" overrideDefaults>
       <Container className="flex items-center gap-2" overrideDefaults>
         {!isArticle ? (
           <Button
             data-cy={getButtonDataCy('Add emoji')}
-            {...commonButtonProps}
+            {...COMMON_BUTTON_PROPS}
             onClick={onEmojiClick}
             disabled={!onEmojiClick || isSubmitting}
             aria-label="Add emoji"
@@ -72,7 +58,7 @@ export function PostInputActionBar({
         {!isArticle && !isEdit ? (
           <Button
             data-cy={getButtonDataCy('Add image')}
-            {...commonButtonProps}
+            {...COMMON_BUTTON_PROPS}
             onClick={onImageClick}
             disabled={!onImageClick || isSubmitting}
             aria-label="Add image"
@@ -83,7 +69,7 @@ export function PostInputActionBar({
         {!hideArticleButton ? (
           <Button
             data-cy={getButtonDataCy('Add article')}
-            {...commonButtonProps}
+            {...COMMON_BUTTON_PROPS}
             onClick={onArticleClick}
             disabled={!onArticleClick || isSubmitting}
             aria-label="Add article"
@@ -92,23 +78,13 @@ export function PostInputActionBar({
           </Button>
         ) : null}
       </Container>
-      <Container className={cn('flex items-center justify-end gap-2', separateActions && 'shrink-0')} overrideDefaults>
-        {characterLimit ? (
-          <Typography
-            data-cy="post-input-action-bar-character-count"
-            className="hidden shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums sm:block"
-            overrideDefaults
-          >
-            {characterLimit.count}/{characterLimit.max}
-          </Typography>
-        ) : null}
+      <Container className="flex shrink-0 items-center justify-end gap-2" overrideDefaults>
         <Button
           data-cy={getButtonDataCy(postButtonAriaText)}
-          {...commonButtonProps}
+          {...COMMON_BUTTON_PROPS}
           onClick={onPostClick}
           disabled={isPostDisabled || !onPostClick}
           aria-label={postButtonAriaText}
-          className="w-full flex-1 sm:flex-auto"
           variant={'default'}
           size={isMobile ? 'default' : 'sm'}
         >

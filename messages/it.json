@@ -270,7 +270,6 @@
       "blockedDescription": "Questo numero di telefono non può essere usato per la verifica.",
       "tooManyAttempts": "Troppi tentativi di verifica",
       "tooManyAttemptsDescription": "Troppi tentativi di verifica",
-      "sendFailed": "Invio codice SMS fallito",
       "sendFailedDescription": "Impossibile inviare il codice di verifica. Riprova più tardi.",
       "rateLimitedWithRetry": "Troppi tentativi di verifica. Riprova tra {seconds}s.",
       "weeklyLimitReached": "Troppi tentativi di verifica",
@@ -290,7 +289,6 @@
       "verify": "Verifica codice",
       "valid": "Codice di verifica valido",
       "invalid": "Codice di verifica non valido. Riprova.",
-      "verifyFailed": "Verifica codice SMS fallita",
       "verifyFailedDescription": "Impossibile verificare il codice. Riprova più tardi."
     },
     "lightning": {

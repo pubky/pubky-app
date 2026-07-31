@@ -270,7 +270,6 @@
       "blockedDescription": "この電話番号は確認に使用できません。",
       "tooManyAttempts": "確認の試行回数が多すぎます",
       "tooManyAttemptsDescription": "認証試行回数が多すぎます",
-      "sendFailed": "SMSコードの送信に失敗しました",
       "sendFailedDescription": "認証コードを送信できませんでした。後でもう一度お試しください。",
       "rateLimitedWithRetry": "認証試行回数が多すぎます。{seconds}秒後に再試行してください。",
       "weeklyLimitReached": "認証試行回数が多すぎます",
@@ -290,7 +289,6 @@
       "verify": "コードを確認",
       "valid": "確認コードは有効です",
       "invalid": "確認コードが無効です。再試行してください。",
-      "verifyFailed": "SMSコードの確認に失敗しました",
       "verifyFailedDescription": "コードを確認できませんでした。後でもう一度お試しください。"
     },
     "lightning": {

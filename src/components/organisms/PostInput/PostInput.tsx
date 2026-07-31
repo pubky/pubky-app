@@ -195,7 +195,8 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
-  const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
+  const characterLimit =
+    isExpanded && !isArticle ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
 
   const inheritedTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = usesWidePostInput(layoutOverride ?? inheritedTagsLayout);
@@ -208,7 +209,7 @@ export function PostInput({
       className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
         'max-w-full min-w-0',
-        isWideLayout ? 'p-12' : 'p-4',
+        isWideLayout ? 'p-12' : 'p-6',
         !isAuthenticated ? 'px-6' : '',
         isDragging ? 'border-brand' : 'border-input',
       )}
@@ -331,7 +332,6 @@ export function PostInput({
           submitLabel={submitLabel}
           submitIcon={submitIcon}
           parentGapPx={EXPANDABLE_SECTION_PARENT_GAP_PX}
-          characterLimit={characterLimit}
         />
       </Container>
     </Container>

@@ -59,6 +59,21 @@ vi.mock('@/molecules/PostTagAddButton/PostTagAddButton', () => {
   };
 });
 
+vi.mock('@/molecules/PostTag/PostTag', () => {
+  return {
+    PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
+      <div data-testid="post-tag">
+        {label}
+        {showClose && (
+          <button data-testid={`tag-close-${label}`} onClick={onClose}>
+            ×
+          </button>
+        )}
+      </div>
+    ),
+  };
+});
+
 vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
     TagInput: vi.fn(
@@ -176,8 +191,30 @@ describe('PostInputTags', () => {
 
   it('renders with empty tags array', () => {
     render(<PostInputTags tags={[]} onTagsChange={mockOnTagsChange} />);
-    expect(screen.getAllByTestId('container').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('container')).toHaveClass('flex', 'flex-wrap', 'items-center', 'gap-2');
     expect(screen.getByTestId('add-tag-button')).toBeInTheDocument();
+  });
+
+  it('renders existing tags on the same row as the add control', () => {
+    render(<PostInputTags tags={['tag1', 'tag2']} onTagsChange={mockOnTagsChange} />);
+
+    expect(screen.getAllByTestId('post-tag')).toHaveLength(2);
+    expect(screen.getByTestId('add-tag-button')).toBeInTheDocument();
+    expect(screen.getByTestId('container')).toHaveClass('flex', 'flex-wrap', 'items-center', 'gap-2');
+  });
+
+  it('removes a tag when its close button is clicked', () => {
+    render(<PostInputTags tags={['tag1', 'tag2']} onTagsChange={mockOnTagsChange} />);
+
+    fireEvent.click(screen.getByTestId('tag-close-tag1'));
+
+    expect(mockOnTagsChange).toHaveBeenCalledWith(['tag2']);
+  });
+
+  it('does not show tag close buttons when disabled', () => {
+    render(<PostInputTags tags={['tag1']} onTagsChange={mockOnTagsChange} disabled />);
+
+    expect(screen.queryByTestId('tag-close-tag1')).not.toBeInTheDocument();
   });
 
   it('shows TagInput when add button is clicked', () => {

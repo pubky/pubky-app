@@ -76,26 +76,11 @@ vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
   };
 });
 
-vi.mock('@/molecules/PostTag/PostTag', () => {
-  return {
-    PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
-      <div data-testid="post-tag">
-        {label}
-        {showClose && (
-          <button data-testid={`tag-close-${label}`} onClick={onClose}>
-            ×
-          </button>
-        )}
-      </div>
-    ),
-  };
-});
-
 // Mock PostInputTags
 vi.mock('../PostInputTags/PostInputTags', () => ({
   PostInputTags: ({
     tags,
-    onTagsChange: _onTagsChange,
+    onTagsChange,
     disabled,
   }: {
     tags: string[];
@@ -104,7 +89,14 @@ vi.mock('../PostInputTags/PostInputTags', () => ({
   }) => (
     <div data-testid="post-input-tags" data-disabled={disabled}>
       {tags.map((tag) => (
-        <span key={tag}>{tag}</span>
+        <span key={tag} data-testid="post-tag">
+          {tag}
+          {!disabled && (
+            <button data-testid={`tag-close-${tag}`} onClick={() => onTagsChange(tags.filter((t) => t !== tag))}>
+              ×
+            </button>
+          )}
+        </span>
       ))}
     </div>
   ),
@@ -124,7 +116,6 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isEdit,
     postButtonIcon,
     postButtonLabel,
-    characterLimit,
   }: {
     onPostClick?: () => void;
     onEmojiClick?: () => void;
@@ -136,7 +127,6 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isEdit?: boolean;
     postButtonIcon?: React.ComponentType;
     postButtonLabel?: string;
-    characterLimit?: { count: number; max: number };
   }) => (
     <div
       data-testid="post-input-action-bar"
@@ -147,8 +137,6 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
       data-is-edit={isEdit}
       data-has-post-button-icon={!!postButtonIcon}
       data-post-button-label={postButtonLabel}
-      data-character-count={characterLimit?.count}
-      data-character-max={characterLimit?.max}
     >
       <button data-testid="action-bar-post" onClick={onPostClick} disabled={isPostDisabled}>
         Post
@@ -221,6 +209,14 @@ describe('PostInputExpandableSection', () => {
     expect(tag2Texts.length).toBeGreaterThan(0);
   });
 
+  it('renders tags above the action bar', () => {
+    render(<PostInputExpandableSection {...defaultProps} tags={['tag1']} />);
+
+    const tags = screen.getByTestId('post-input-tags');
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(tags.compareDocumentPosition(actionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('calls setTags when tag close button is clicked', () => {
     const setTags = vi.fn();
     render(
@@ -230,20 +226,7 @@ describe('PostInputExpandableSection', () => {
     const closeButton = screen.getByTestId('tag-close-tag1');
     fireEvent.click(closeButton);
 
-    expect(setTags).toHaveBeenCalled();
-  });
-
-  it('applies tag removal updater when closing a tag', () => {
-    const setTags = vi.fn();
-    render(
-      <PostInputExpandableSection {...defaultProps} tags={['tag1', 'tag2']} setTags={setTags} isDisabled={false} />,
-    );
-
-    fireEvent.click(screen.getByTestId('tag-close-tag1'));
-
-    const updater = setTags.mock.calls[0]?.[0] as (prevTags: string[]) => string[];
-    expect(updater).toBeTypeOf('function');
-    expect(updater(['tag1', 'tag2'])).toEqual(['tag2']);
+    expect(setTags).toHaveBeenCalledWith(['tag2']);
   });
 
   it('does not show tag close button when disabled', () => {
@@ -332,13 +315,10 @@ describe('PostInputExpandableSection', () => {
   });
 
   it('renders animated wrapper with overflow-hidden when expanded', () => {
-    const { container } = render(
-      <PostInputExpandableSection {...defaultProps} isExpanded={true} className="test-expandable-class" />,
-    );
+    const { container } = render(<PostInputExpandableSection {...defaultProps} isExpanded={true} />);
 
     const expandableContainer = container.querySelector('.overflow-hidden');
     expect(expandableContainer).toBeInTheDocument();
-    expect(expandableContainer).toHaveClass('test-expandable-class');
   });
 
   it('unmounts expandable section when collapsed', () => {
@@ -448,14 +428,6 @@ describe('PostInputExpandableSection', () => {
     expect(screen.queryByTestId('action-bar-article')).not.toBeInTheDocument();
   });
 
-  it('passes characterLimit to PostInputActionBar', () => {
-    render(<PostInputExpandableSection {...defaultProps} characterLimit={{ count: 123, max: 300 }} />);
-
-    const actionBar = screen.getByTestId('post-input-action-bar');
-    expect(actionBar).toHaveAttribute('data-character-count', '123');
-    expect(actionBar).toHaveAttribute('data-character-max', '300');
-  });
-
   it('stacks tags above the action bar at all breakpoints', () => {
     render(<PostInputExpandableSection {...defaultProps} />);
 
@@ -463,14 +435,6 @@ describe('PostInputExpandableSection', () => {
     expect(layout).toHaveClass('gap-4');
     expect(layout).not.toHaveClass('md:flex-row');
     expect(layout).not.toHaveClass('md:gap-0');
-  });
-
-  it('does not pass characterLimit when not provided', () => {
-    render(<PostInputExpandableSection {...defaultProps} />);
-
-    const actionBar = screen.getByTestId('post-input-action-bar');
-    expect(actionBar).not.toHaveAttribute('data-character-count');
-    expect(actionBar).not.toHaveAttribute('data-character-max');
   });
 });
 
