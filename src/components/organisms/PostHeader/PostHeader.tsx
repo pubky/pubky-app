@@ -32,7 +32,7 @@ export function PostHeader({
   const { postDetails } = usePostDetails(isReplyInput ? null : postId);
 
   // Fetch user details for avatar and name
-  const hasProvidedUserDetails = providedUserDetails !== undefined;
+  const hasProvidedUserDetails = providedUserDetails != null;
   const { userDetails: queriedUserDetails, isLoading: isLoadingUserDetails } = useUserDetails(
     hasProvidedUserDetails ? null : userId,
   );

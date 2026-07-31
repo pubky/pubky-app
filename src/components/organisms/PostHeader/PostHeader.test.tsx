@@ -282,18 +282,17 @@ describe('PostHeader', () => {
     expect(mockUseAvatarUrl).toHaveBeenCalledWith(providedUserDetails);
   });
 
-  it('treats provided null user details as a resolved fallback profile', () => {
+  it('falls back to querying user details when provided user details are null', () => {
     mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
-    mockUseUserDetails.mockReturnValue({ userDetails: undefined, isLoading: true });
+    mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: true });
     mockUseAvatarUrl.mockReturnValue(undefined);
 
     renderPostHeader(<PostHeader postId="userpubkykey" isReplyInput={true} userDetails={null} />);
 
     expect(screen.getAllByRole('generic').some((element) => element.getAttribute('data-slot') === 'skeleton')).toBe(
-      false,
+      true,
     );
-    expect(screen.getByTestId('avatar')).toBeInTheDocument();
-    expect(mockUseUserDetails).toHaveBeenCalledWith(null);
+    expect(mockUseUserDetails).toHaveBeenCalledWith('userpubkykey');
     expect(mockUseAvatarUrl).toHaveBeenCalledWith(null);
   });
 
