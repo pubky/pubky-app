@@ -236,7 +236,7 @@ describe('useProfileConnections', () => {
         [
           'user-1',
           {
-            tagged: 0,
+            tagged: 4,
             tags: 10,
             unique_tags: 10,
             posts: 5,
@@ -251,7 +251,7 @@ describe('useProfileConnections', () => {
         [
           'user-2',
           {
-            tagged: 0,
+            tagged: 7,
             tags: 20,
             unique_tags: 20,
             posts: 10,
@@ -295,7 +295,7 @@ describe('useProfileConnections', () => {
       expect(connection1?.name).toBe('John Doe');
       expect(connection1?.bio).toBe('Test bio');
       expect(connection1?.avatarUrl).toBe('https://cdn.example.com/avatar/user-1.png');
-      expect(connection1?.stats?.tags).toBe(10);
+      expect(connection1?.stats?.tags).toBe(4);
       expect(connection1?.stats?.posts).toBe(5);
       expect(connection1?.isFollowing).toBe(false);
 
@@ -304,7 +304,7 @@ describe('useProfileConnections', () => {
       expect(connection2?.name).toBe('Jane Smith');
       expect(connection2?.bio).toBe('Another bio');
       expect(connection2?.avatarUrl).toBe(null); // No image, so no avatar URL
-      expect(connection2?.stats?.tags).toBe(20);
+      expect(connection2?.stats?.tags).toBe(7);
       expect(connection2?.stats?.posts).toBe(10);
       expect(connection2?.isFollowing).toBe(true);
     });

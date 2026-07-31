@@ -21,6 +21,7 @@ export interface UserConnectionData extends NexusUserDetails {
   avatarUrl: string | null;
   tags?: string[];
   stats?: {
+    /** Tags applied by this user (Nexus `tagged`), not tags received on their profile/posts */
     tags: number;
     posts: number;
   };
