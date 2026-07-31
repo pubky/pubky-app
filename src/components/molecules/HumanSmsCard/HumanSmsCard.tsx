@@ -37,7 +37,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
           <Image
             priority
             src="/images/sms-verification-phone.webp"
-            alt="Lime Pubky phone representing SMS verification"
+            alt="Lime Pubky phone representing phone number verification"
             className="size-48"
           />
         }

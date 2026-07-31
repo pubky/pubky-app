@@ -4,8 +4,10 @@ import { useMemo } from 'react';
 import LinkifyIt from 'linkify-it';
 import { Container } from '@/atoms/Container/Container';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
+import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import type { ParseUrlForLinkEmbedResult, PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 import { Generic } from './Providers/Generic/ProviderGeneric';
+import { InApp } from './Providers/InApp/ProviderInApp';
 import type { EmbedProvider } from './Providers/Provider.types';
 import { Twitter } from './Providers/Twitter/ProviderTwitter';
 import { Vimeo } from './Providers/Vimeo/ProviderVimeo';
@@ -71,11 +73,22 @@ const parseContentForUrl = (content: string) => {
 /**
  * Parse content for embeddable links
  * Returns the first embeddable link and its provider
+ *
+ * In-app post/collection URLs are checked before the provider map: the current
+ * origin is dynamic so it can't be a static map key. When `allowInApp` is false
+ * (inside an embedded post preview) an in-app URL renders no embed at all — the
+ * plain link text from PostText is enough, and a generic OG card of our own SPA
+ * page would only add noise.
  */
-const parseContentForLinkEmbed = (content: string): ParseUrlForLinkEmbedResult => {
+const parseContentForLinkEmbed = (content: string, allowInApp: boolean): ParseUrlForLinkEmbedResult => {
   try {
     const url = parseContentForUrl(content);
     if (!url) return { embed: null, provider: null };
+
+    const inAppEmbed = InApp.parseEmbed(url);
+    if (inAppEmbed) {
+      return allowInApp ? { embed: inAppEmbed, provider: InApp } : { embed: null, provider: null };
+    }
 
     const parsedUrl = new URL(url);
     const hostname = parsedUrl.hostname.toLowerCase();
@@ -103,7 +116,8 @@ const parseContentForLinkEmbed = (content: string): ParseUrlForLinkEmbedResult =
 };
 
 export const PostLinkEmbeds = ({ content }: PostLinkEmbedsProps) => {
-  const { embed, provider } = useMemo(() => parseContentForLinkEmbed(content), [content]);
+  const isNested = useIsNestedPostPreview();
+  const { embed, provider } = useMemo(() => parseContentForLinkEmbed(content, !isNested), [content, isNested]);
   const mediaContainerRef = usePauseMediaOutsideViewport();
 
   if (!embed || !provider) return null;

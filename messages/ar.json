@@ -272,7 +272,6 @@
       "blockedDescription": "لا يمكن استخدام رقم الهاتف هذا للتحقق.",
       "tooManyAttempts": "محاولات تحقق كثيرة جدا",
       "tooManyAttemptsDescription": "محاولات تحقق كثيرة جداً",
-      "sendFailed": "فشل ارسال رمز الرسالة القصيرة",
       "sendFailedDescription": "تعذر إرسال رمز التحقق. حاول لاحقاً.",
       "rateLimitedWithRetry": "محاولات تحقق كثيرة جداً. أعد المحاولة خلال {seconds} ث.",
       "weeklyLimitReached": "محاولات تحقق كثيرة جداً",
@@ -292,7 +291,6 @@
       "verify": "تحقق من الرمز",
       "valid": "رمز التحقق صحيح",
       "invalid": "رمز التحقق غير صحيح. حاول مرة اخرى.",
-      "verifyFailed": "فشل التحقق من رمز الرسالة القصيرة",
       "verifyFailedDescription": "تعذر التحقق من الرمز. حاول لاحقاً."
     },
     "lightning": {

@@ -276,7 +276,6 @@
       "yearlyLimitReached": "Demasiados intentos de verificación",
       "yearlyLimitDescription": "Demasiados intentos de verificación",
       "verificationFailed": "La verificación del teléfono falló. Inténtalo de nuevo.",
-      "sendFailed": "Error al enviar código SMS",
       "sendFailedDescription": "No se pudo enviar el código de verificación. Inténtalo más tarde."
     },
     "phoneCode": {
@@ -290,7 +289,6 @@
       "verify": "Verificar código",
       "valid": "Código de verificación válido",
       "invalid": "Código de verificación inválido. Intenta de nuevo.",
-      "verifyFailed": "Error al verificar código SMS",
       "verifyFailedDescription": "No se pudo verificar el código. Inténtalo más tarde."
     },
     "lightning": {

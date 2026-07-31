@@ -198,6 +198,7 @@ export const PostAttachmentsImagesAndVideos = ({
         aria-describedby={undefined}
         showCloseButton={false}
         overrideDefaults
+        centered
         onClick={(e) => {
           e.stopPropagation();
         }}
@@ -214,7 +215,7 @@ export const PostAttachmentsImagesAndVideos = ({
             watchDrag: !isFullscreen,
           }}
           setApi={setApi}
-          className="w-full max-w-80 xsm:max-w-dvw sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
+          className="w-full max-w-80 xsm:max-w-full sm:max-w-[75dvw] 2xl:max-w-[50dvw]"
         >
           <CarouselContent className="-ml-3 items-center">
             {imagesAndVideos.map((media, i) => (

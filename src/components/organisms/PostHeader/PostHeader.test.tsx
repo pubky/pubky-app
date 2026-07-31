@@ -138,6 +138,34 @@ describe('PostHeader', () => {
     expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
   });
 
+  it('shows skeleton (never author info) when the post is deleted', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: {
+        id: 'userpubkykey:post456',
+        indexed_at: Date.now(),
+        kind: 'short' as const,
+        uri: 'pubky://userpubkykey/pub/pubky.app/posts/post456',
+        content: '[DELETED]',
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+      } as EnrichedPostDetails,
+      isLoading: false,
+    });
+    mockUseUserDetails.mockReturnValue({
+      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
+      isLoading: false,
+    });
+    mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
+
+    renderPostHeader(<PostHeader postId="userpubkykey:post456" />);
+
+    // Parents render the deleted state from their own query instance, which can
+    // resolve later — author info must never appear for a deleted post.
+    expect(screen.queryByText('Test User')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
+  });
+
   it('renders user name, handle and time', () => {
     mockUsePostDetails.mockReturnValue({
       postDetails: {

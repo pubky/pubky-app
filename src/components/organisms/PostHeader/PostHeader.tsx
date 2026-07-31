@@ -5,6 +5,7 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
 import { PostHeaderSkeleton } from './PostHeader.skeleton';
@@ -33,8 +34,13 @@ export function PostHeader({
   const { formatRelativeTime } = useRelativeTime();
 
   const isLoading = !userDetails || (!isReplyInput && !postDetails);
+  // Every parent renders its own header-less deleted state (PostDeleted), but
+  // from a separate usePostDetails instance that can resolve after this one.
+  // Never commit author data for a deleted post — hold the skeleton until the
+  // parent swaps it out, so a username can't flash and then vanish.
+  const isDeleted = !isReplyInput && isPostDeleted(postDetails?.content);
 
-  if (isLoading) {
+  if (isLoading || isDeleted) {
     return <PostHeaderSkeleton />;
   }
 
