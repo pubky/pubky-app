@@ -119,6 +119,54 @@ describe('Dialog', () => {
     expect(spacer).toHaveAttribute('aria-hidden', 'true');
     expect(spacer).toHaveStyle({ height: '120px' });
   });
+
+  it('uses the mobile bottom-drawer treatment by default', () => {
+    render(
+      <Dialog open={true}>
+        <DialogContent>
+          <div>Dialog Content</div>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent.parentElement).toHaveClass('items-end', 'sm:items-center');
+    expect(dialogContent).toHaveClass('data-[state=open]:slide-in-from-bottom', 'rounded-t-lg', 'm-0', 'sm:m-4');
+  });
+
+  it('centers on every breakpoint with a mobile gutter when centered', () => {
+    render(
+      <Dialog open={true}>
+        <DialogContent centered>
+          <div>Dialog Content</div>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent.parentElement).toHaveClass('items-center');
+    expect(dialogContent.parentElement).not.toHaveClass('items-end');
+    // No drawer slide — fade + zoom at all widths, fully rounded, with its own margin.
+    expect(dialogContent).not.toHaveClass('data-[state=open]:slide-in-from-bottom');
+    expect(dialogContent).toHaveClass('data-[state=open]:zoom-in-95', 'data-[state=open]:fade-in-0');
+    expect(dialogContent).toHaveClass('rounded-xl', 'm-6', 'sm:m-4');
+    expect(dialogContent).not.toHaveClass('rounded-t-lg');
+  });
+
+  it('keeps centered layout classes when overrideDefaults drops the default styling', () => {
+    render(
+      <Dialog open={true}>
+        <DialogContent centered overrideDefaults>
+          <div>Dialog Content</div>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    const dialogContent = screen.getByTestId('dialog-content');
+    expect(dialogContent.parentElement).toHaveClass('items-center');
+    expect(dialogContent).toHaveClass('m-6', 'sm:m-4', 'data-[state=open]:zoom-in-95');
+    expect(dialogContent).not.toHaveClass('rounded-xl', 'bg-background');
+  });
 });
 
 describe('Dialog - Snapshots', () => {

@@ -2,11 +2,11 @@
 
 exports[`DialogReportPost - Snapshots > matches snapshot for issue selection step 1`] = `
 <div
-  class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+  class="fixed inset-0 z-50 flex justify-center items-end sm:items-center"
 >
   <div
     aria-labelledby="radix-normalized"
-    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 w-xl"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto border bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:p-8 rounded-t-lg border-b-0 sm:border-b w-xl"
     data-cy="dialog-content"
     data-slot="dialog-content"
     data-state="open"
@@ -86,11 +86,11 @@ exports[`DialogReportPost - Snapshots > matches snapshot for issue selection ste
 
 exports[`DialogReportPost - Snapshots > matches snapshot for reason step 1`] = `
 <div
-  class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+  class="fixed inset-0 z-50 flex justify-center items-end sm:items-center"
 >
   <div
     aria-labelledby="radix-normalized"
-    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 w-xl"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto border bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:p-8 rounded-t-lg border-b-0 sm:border-b w-xl"
     data-cy="dialog-content"
     data-slot="dialog-content"
     data-state="open"
@@ -180,11 +180,11 @@ exports[`DialogReportPost - Snapshots > matches snapshot for reason step 1`] = `
 
 exports[`DialogReportPost - Snapshots > matches snapshot for success state 1`] = `
 <div
-  class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+  class="fixed inset-0 z-50 flex justify-center items-end sm:items-center"
 >
   <div
     aria-labelledby="radix-normalized"
-    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto rounded-t-lg border border-b-0 bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:border-b sm:p-8 w-xl"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto border bg-background p-6 shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:p-8 rounded-t-lg border-b-0 sm:border-b w-xl"
     data-cy="dialog-content"
     data-slot="dialog-content"
     data-state="open"
