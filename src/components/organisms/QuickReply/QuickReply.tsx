@@ -176,7 +176,7 @@ export function QuickReply({
           </Container>
         )}
 
-        <Container ref={cardRef} className={cn(isWideLayout ? '' : 'flex flex-col gap-4')} overrideDefaults>
+        <Container ref={cardRef} className="flex flex-row gap-4" overrideDefaults>
           <QuickReplyContent {...contentProps} layout={effectiveTagsLayout} />
         </Container>
       </Container>

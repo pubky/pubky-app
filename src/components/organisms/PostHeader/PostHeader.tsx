@@ -38,6 +38,7 @@ export function PostHeader({
   // profile — a missed local read + failed Nexus fetch must not hide the avatar,
   // pubky and character counter behind a permanent skeleton.
   const isLoading = isLoadingUserDetails || (!isReplyInput && !postDetails);
+
   // Every parent renders its own header-less deleted state (PostDeleted), but
   // from a separate usePostDetails instance that can resolve after this one.
   // Never commit author data for a deleted post — hold the skeleton until the
