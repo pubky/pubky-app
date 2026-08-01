@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import type { LockFile, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -260,6 +263,30 @@ describe('LocksApplication.fetchUnlockedContent', () => {
     errorSpy.mockRestore();
   });
 
+  it('rejects the whole fetch when an attachment proxy-read fails', async () => {
+    const errorSpy = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+    const post = { content: 'body', kind: 'image', attachments: ['pubky://ownerb/priv/locks.app/content/img1'] };
+    mocks.proxyReadGuardedResource
+      .mockResolvedValueOnce(new TextEncoder().encode(JSON.stringify(post))) // primary
+      .mockRejectedValueOnce(
+        Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'proxy read failed', {
+          service: ErrorService.Locks,
+          operation: 'LocksService.proxyReadGuardedResource',
+        }),
+      );
+    const lockFile = asOpaque<LockFile>({
+      primary_resource: { path: '/priv/locks.app/content/p.json' },
+      secondary_resources: { '/priv/locks.app/content/img1': { content_type: 'image/png', hash: 'h', size: 2 } },
+    });
+
+    // A partial resolve would get replicated and marked complete (`post.json`), freezing the missing
+    // attachment out of the copy forever; the retry path only exists if this read failure surfaces.
+    await expect(LocksApplication.fetchUnlockedContent({ lockFile, credential: 'cred' })).rejects.toThrow();
+    // Successfully read bytes are discarded with the rejection — nothing lands on the reader HS.
+    expect(mocks.putBlob).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it('throws and does not read when the lock file has no readable primary resource', async () => {
     const lockFile = asOpaque<LockFile>({ primary_resource: undefined });
 
@@ -408,6 +435,15 @@ describe('LocksApplication.fetchOwnContent', () => {
 
   it('throws (data error) when the guarded original is not a parseable post', async () => {
     mocks.getBytes.mockResolvedValueOnce(new TextEncoder().encode('not json'));
+
+    await expect(LocksApplication.fetchOwnContent({ lockFile: ownLockFile })).rejects.toThrow();
+  });
+
+  it('rejects the whole fetch when an attachment direct read fails', async () => {
+    const attachmentUri = 'pubky://owner/priv/locks.app/content/img1';
+    mocks.getBytes
+      .mockResolvedValueOnce(encode({ content: 'my secret', kind: 'image', attachments: [attachmentUri] }))
+      .mockRejectedValueOnce(new Error('network down'));
 
     await expect(LocksApplication.fetchOwnContent({ lockFile: ownLockFile })).rejects.toThrow();
   });

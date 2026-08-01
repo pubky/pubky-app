@@ -2,6 +2,7 @@ import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isAppError, isValidationError } from '@/libs/error/error.utils';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -147,7 +148,13 @@ export class LocksApplication {
   /**
    * Pairs each attachment's bytes with its content type (from the lock file), reading the bytes via the
    * caller's `readBytes` (reader = proxy-read with a credential; creator = direct read of their own HS).
-   * One bad attachment is reported and dropped, not fatal — the rest of the post still renders.
+   * A validation error (permanent data fault) drops only that attachment; any other failure rejects
+   * the whole read so no caller persists a partial result — see the catch below.
+   *
+   * TODO:[Locks] #2040 — both failure kinds surface only after the unlock is already paid for (credential
+   * issued), so the reader needs a user-facing retry UI that does not charge again — re-download for
+   * transient failures, re-fetch of the dropped attachment for permanent ones. Decide with the real
+   * payment verifier.
    */
   private static async readAttachments(
     lockFile: LockFile,
@@ -170,8 +177,14 @@ export class LocksApplication {
             });
           }
           return { id: path.slice(path.lastIndexOf('/') + 1), contentType, bytes: await readBytes(path, uri) };
-        } catch {
-          return null; // already reported (Err factory / service `toAppError`); skip so the rest render
+        } catch (error) {
+          // Validation = permanent data error (bad uri / no descriptor / outside namespace), already
+          // reported — retrying can't fix it, so drop this attachment and let the rest render.
+          if (isAppError(error) && isValidationError(error)) return null;
+          // Anything else is a transient `readBytes` failure (the proxy-read / homeserver GET —
+          // network, 5xx): rethrow so the fetch fails before `replicateUnlockedContent` writes the
+          // `post.json` marker, keeping the unlock retryable.
+          throw error;
         }
       }),
     );

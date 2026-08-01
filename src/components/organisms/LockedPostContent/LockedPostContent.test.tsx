@@ -192,6 +192,8 @@ describe('LockedPostContent', () => {
     await waitFor(() => expect(LocksController.fetchUnlockedContent).toHaveBeenCalled());
     expect(screen.getByRole('heading', { name: 'Password to Unlock' })).toBeInTheDocument();
     expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+    // Downloaded bytes are discarded with the failure — no replication, so no `post.json` marker.
+    expect(LocksController.replicateUnlockedContent).not.toHaveBeenCalled();
   });
 
   it('shows already-unlocked content on mount without the lock card or a password prompt', async () => {
