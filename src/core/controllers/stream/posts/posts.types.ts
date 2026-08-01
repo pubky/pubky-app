@@ -24,4 +24,10 @@ export type TReadPostStreamChunkResponse = {
   /** True only if we've reached the actual end of the stream.
    * False if we hit MAX_FETCH_ITERATIONS or filled the limit. */
   reachedEnd?: boolean;
+  /** Id of the last RAW post scanned this round (visible or filtered). Thread it back as
+   * the next request's `lastPostId` — prefer it over the last visible id via
+   * `resolveResumeAnchor` (posts.utils.ts) — so the local cache walk resumes past
+   * fully-filtered pages instead of restarting at the cache head.
+   * May be a filtered-out post id — do not dereference for display. */
+  lastRawPostId?: string;
 };

@@ -306,6 +306,14 @@ export class PostStreamApplication {
       return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
     }
 
+    // Coordinator head-polls (streamHead > 0) only need the fetch side effects (unread
+    // persist + counts + cache-miss ids); the response is discarded. Keep them out of the
+    // shared pagination queue: routing them through collect() consumes/rewrites the UI's
+    // overflow buffer, and with a raw resume anchor those buffered posts would be skipped.
+    if (streamHead > SKIP_FETCH_NEW_POSTS) {
+      return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
+    }
+
     // Author streams and bookmarks intentionally include posts from muted users:
     // bookmarks are explicit saves (#1804); profile is someone's full timeline.
     const shouldFilterMuted = !isAuthorStreamSkippingMuteFilter(streamId) && !isBookmarkStream(streamId);
@@ -381,6 +389,9 @@ export class PostStreamApplication {
       cacheMissPostIds: cacheMissIds,
       nextCursor,
       reachedEnd,
+      // The raw cache-walk anchor: last raw id scanned this round (buffer-only rounds
+      // scan nothing, so it holds at the caller's own lastPostId).
+      lastRawPostId: lastReturnedPostId,
     };
   }
 

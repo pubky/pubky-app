@@ -1,4 +1,3 @@
-import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import type { TMuteParams } from '@/controllers/mute/mute.types';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -52,12 +51,9 @@ export class LocalMuteService {
         await this.updateUserStreams(mutee, isMuting);
       });
 
-      if (statusChanged) {
-        // Clear post stream queue so next scroll uses updated mute list
-        // The queue may contain posts filtered with the old mute state
-        postStreamQueue.clear();
-      }
-
+      // The post stream queue is intentionally NOT cleared here: collect() re-filters its
+      // buffer against the current mute list on every read, and clearing it mid-scroll
+      // would make the raw resume anchor (lastRawPostId) skip the buffered posts.
       Logger.debug(isMuting ? 'Mute created successfully' : 'Unmute completed successfully', { muter, mutee });
     } catch (error) {
       const operation = isMuting ? 'mute' : 'unmute';
