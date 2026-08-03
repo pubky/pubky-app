@@ -13,6 +13,7 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for a populated visu
     >
       <div
         class="min-w-0"
+        data-grid-item="true"
         style="grid-column: span 6 / span 6;"
       >
         <div
@@ -112,6 +113,7 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for a trailing CTA o
     >
       <div
         class="min-w-0"
+        data-grid-item="true"
         style="grid-column: span 6 / span 6;"
       >
         <div
@@ -131,6 +133,7 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for a trailing CTA o
       </div>
       <div
         class="min-w-0"
+        data-grid-item="true"
         style="grid-column: span 6 / span 6;"
       >
         <div
@@ -171,6 +174,7 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for an empty collect
     >
       <div
         class="min-w-0"
+        data-grid-item="true"
         style="grid-column: span 6 / span 6;"
       >
         <div
@@ -214,6 +218,7 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for the hidden items
     >
       <div
         class="min-w-0"
+        data-grid-item="true"
         style="grid-column: span 6 / span 6;"
       >
         <div
@@ -254,6 +259,7 @@ exports[`VisualTimelinePosts - Snapshots > matches snapshot for touch devices wi
     >
       <div
         class="min-w-0"
+        data-grid-item="true"
         style="grid-column: span 6 / span 6;"
       >
         <div

@@ -1,14 +1,14 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
-import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
-import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { PostText } from '@/molecules/PostText/PostText';
+import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { PostArticle } from '../PostArticle/PostArticle';
@@ -25,6 +25,7 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  * `CollectionCard` with `presentation="embed"`.
  */
 export function PostContentBase({ postId, className, textClassName, mediaVariant = 'default' }: PostContentBaseProps) {
+  const t = useTranslations('post');
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
@@ -33,7 +34,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
   if (!postDetails) {
     // `undefined`/in-flight → skeleton; a settled `null` means the post 404'd,
     // so show the terminal "not found" message instead of skeletoning forever.
-    return isLoading ? <PostContentBaseSkeleton /> : <PostMissing />;
+    return isLoading ? <PostContentBaseSkeleton /> : <PostUnavailable message={t('missing')} />;
   }
 
   const isDeleted = isPostDeleted(postDetails.content);
@@ -43,7 +44,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
   const hasAttachments = (postDetails.attachments?.length ?? 0) > 0 || (localAttachments?.length ?? 0) > 0;
   const isCollection = postDetails.kind === 'collection';
 
-  if (isDeleted) return <PostDeleted />;
+  if (isDeleted) return <PostUnavailable message={t('deleted')} />;
 
   if (isBlurred) return <PostContentBlurred postId={postId} className={className} />;
 

@@ -17,7 +17,7 @@ interface CollectionDeletedProps {
  * post is soft-deleted (`content === '[DELETED]'`). Mirrors the regular
  * `CollectionCard` shell (outer block sizing + Card chrome + CardContent
  * padding) so the deleted-state slot has the same footprint in any grid it
- * lands in, and centers the standard "deleted" message à la `PostDeleted`.
+ * lands in, and centers the standard "deleted" message à la `PostUnavailable`.
  *
  * Fully self-contained — callers render `<CollectionDeleted />` without
  * additional wrappers.

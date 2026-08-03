@@ -97,8 +97,8 @@ vi.mock('@/molecules/PostHeaderTimestamp/PostHeaderTimestamp', () => ({
   PostHeaderTimestamp: ({ timeAgo }: { timeAgo: string }) => <span>{timeAgo}</span>,
 }));
 
-vi.mock('@/molecules/PostDeleted/PostDeleted', () => ({
-  PostDeleted: () => <div data-testid="post-deleted" />,
+vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => ({
+  PostUnavailable: ({ message }: { message: string }) => <div data-testid="post-unavailable" data-message={message} />,
 }));
 
 vi.mock('@/molecules/PostListMediaThumbnail/PostListMediaThumbnail', () => ({
@@ -564,7 +564,10 @@ describe('PostMainListRow', () => {
       />,
     );
 
-    expect(screen.getByTestId('post-deleted')).toBeInTheDocument();
+    expect(screen.getByTestId('post-unavailable')).toHaveAttribute(
+      'data-message',
+      'This post has been deleted by its author.',
+    );
     expect(screen.queryByText('[DELETED]')).not.toBeInTheDocument();
     expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
   });

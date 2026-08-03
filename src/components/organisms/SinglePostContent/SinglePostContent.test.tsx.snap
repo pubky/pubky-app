@@ -13,9 +13,10 @@ exports[`SinglePostContent > SinglePostContent - Snapshots > matches snapshot wi
     data-testid="card"
   >
     <div
-      data-testid="post-deleted"
+      data-message="This post has been deleted by its author."
+      data-testid="post-unavailable"
     >
-      Post deleted
+      Post unavailable
     </div>
   </div>
   <div

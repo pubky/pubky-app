@@ -11,13 +11,49 @@ import { isCollectionItemsStream, isSkipPaginatedStream } from '@/models/stream/
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
 
-function resolveDisplayedPostIds(streamPostIds: string[], optimisticPostIds: string[]) {
+function resolveDisplayedPostIds(
+  streamPostIds: string[],
+  optimisticPostIds: string[],
+  hiddenPostIds = new Set<string>(),
+) {
   const streamPostIdsSet = new Set(streamPostIds);
   const filteredOptimisticPostIds = optimisticPostIds.filter((id) => !streamPostIdsSet.has(id));
 
   return {
     optimisticPostIds: filteredOptimisticPostIds,
-    displayedPostIds: [...filteredOptimisticPostIds, ...streamPostIds],
+    displayedPostIds: [
+      ...filteredOptimisticPostIds.filter((id) => !hiddenPostIds.has(id)),
+      ...streamPostIds.filter((id) => !hiddenPostIds.has(id)),
+    ],
+  };
+}
+
+function decrementHiddenPostCounts(hiddenPostCounts: Map<string, number>, postIds: string[]) {
+  postIds.forEach((id) => {
+    const removalCount = hiddenPostCounts.get(id);
+    if (removalCount === undefined) return;
+    if (removalCount === 1) {
+      hiddenPostCounts.delete(id);
+    } else {
+      hiddenPostCounts.set(id, removalCount - 1);
+    }
+  });
+}
+
+function revealPostIds(
+  postIds: string[],
+  hiddenPostCounts: Map<string, number>,
+  streamPostIds: string[],
+  optimisticPostIds: string[],
+) {
+  const revealedPostIds = new Set(postIds.filter((id) => hiddenPostCounts.delete(id)));
+  if (revealedPostIds.size === 0) {
+    return { streamPostIds, optimisticPostIds };
+  }
+
+  return {
+    streamPostIds: streamPostIds.filter((id) => !revealedPostIds.has(id)),
+    optimisticPostIds: optimisticPostIds.filter((id) => !revealedPostIds.has(id)),
   };
 }
 
@@ -44,6 +80,9 @@ export function useStreamPagination({
 
   const postIdsRef = useRef<string[]>([]);
   const optimisticPostIdsRef = useRef<string[]>([]);
+  const hiddenPostCountsRef = useRef<Map<string, number>>(new Map());
+  const activeStreamIdRef = useRef(streamId);
+  activeStreamIdRef.current = streamId;
 
   /**
    * Sets the appropriate loading state based on load type
@@ -127,7 +166,11 @@ export function useStreamPagination({
         // Update state with unique posts only
         const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
         postIdsRef.current = updatedPostIds;
-        const displayedState = resolveDisplayedPostIds(updatedPostIds, optimisticPostIdsRef.current);
+        const displayedState = resolveDisplayedPostIds(
+          updatedPostIds,
+          optimisticPostIdsRef.current,
+          new Set(hiddenPostCountsRef.current.keys()),
+        );
         optimisticPostIdsRef.current = displayedState.optimisticPostIds;
         setPostIds(displayedState.displayedPostIds);
       } catch (err) {
@@ -146,12 +189,21 @@ export function useStreamPagination({
   /**
    * Clears all state
    */
-  const clearState = useCallback(({ preserveOptimisticPostIds = false } = {}) => {
+  const clearState = useCallback(({ preserveOptimisticPostIds = false, preserveHiddenPostIds = false } = {}) => {
     postIdsRef.current = [];
+    if (!preserveHiddenPostIds) {
+      hiddenPostCountsRef.current.clear();
+    }
     if (!preserveOptimisticPostIds) {
       optimisticPostIdsRef.current = [];
     }
-    setPostIds(optimisticPostIdsRef.current);
+    const displayedState = resolveDisplayedPostIds(
+      postIdsRef.current,
+      optimisticPostIdsRef.current,
+      new Set(hiddenPostCountsRef.current.keys()),
+    );
+    optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+    setPostIds(displayedState.displayedPostIds);
     setLastPostId(undefined);
     setStreamTail(0);
     setHasMore(true);
@@ -162,7 +214,10 @@ export function useStreamPagination({
    * Refresh function - clears state and fetches from beginning
    */
   const refresh = useCallback(async () => {
-    clearState({ preserveOptimisticPostIds: isCollectionItemsStream(streamId) });
+    clearState({
+      preserveOptimisticPostIds: isCollectionItemsStream(streamId),
+      preserveHiddenPostIds: true,
+    });
     await fetchStreamSlice(true);
   }, [clearState, fetchStreamSlice, streamId]);
 
@@ -181,6 +236,14 @@ export function useStreamPagination({
    */
   const prependPosts = useCallback(async (postIds: string | string[]) => {
     const idsToAdd = Array.isArray(postIds) ? postIds : [postIds];
+    const revealedState = revealPostIds(
+      idsToAdd,
+      hiddenPostCountsRef.current,
+      postIdsRef.current,
+      optimisticPostIdsRef.current,
+    );
+    postIdsRef.current = revealedState.streamPostIds;
+    optimisticPostIdsRef.current = revealedState.optimisticPostIds;
 
     // Filter out posts that already exist to avoid duplicates
     const existingIds = new Set(postIdsRef.current);
@@ -197,14 +260,22 @@ export function useStreamPagination({
       // Fetch post details to get timestamps and sort
       const sortedIds = await sortPostIdsByTimestamp(allIds);
       postIdsRef.current = sortedIds;
-      const displayedState = resolveDisplayedPostIds(sortedIds, optimisticPostIdsRef.current);
+      const displayedState = resolveDisplayedPostIds(
+        sortedIds,
+        optimisticPostIdsRef.current,
+        new Set(hiddenPostCountsRef.current.keys()),
+      );
       optimisticPostIdsRef.current = displayedState.optimisticPostIds;
       setPostIds(displayedState.displayedPostIds);
     } catch (err) {
       Logger.error('Failed to prepend posts:', err);
       // Fallback: add without sorting
       postIdsRef.current = allIds;
-      const displayedState = resolveDisplayedPostIds(allIds, optimisticPostIdsRef.current);
+      const displayedState = resolveDisplayedPostIds(
+        allIds,
+        optimisticPostIdsRef.current,
+        new Set(hiddenPostCountsRef.current.keys()),
+      );
       optimisticPostIdsRef.current = displayedState.optimisticPostIds;
       setPostIds(displayedState.displayedPostIds);
     }
@@ -217,6 +288,14 @@ export function useStreamPagination({
    */
   const prependOptimisticPosts = (postIds: string | string[]) => {
     const idsToAdd = Array.isArray(postIds) ? postIds : [postIds];
+    const revealedState = revealPostIds(
+      idsToAdd,
+      hiddenPostCountsRef.current,
+      postIdsRef.current,
+      optimisticPostIdsRef.current,
+    );
+    postIdsRef.current = revealedState.streamPostIds;
+    optimisticPostIdsRef.current = revealedState.optimisticPostIds;
     const currentDisplayedIds = new Set([...optimisticPostIdsRef.current, ...postIdsRef.current]);
     const newIds = idsToAdd.filter((id) => {
       if (currentDisplayedIds.has(id)) {
@@ -232,7 +311,11 @@ export function useStreamPagination({
     }
 
     const optimisticPostIds = [...newIds, ...optimisticPostIdsRef.current];
-    const displayedState = resolveDisplayedPostIds(postIdsRef.current, optimisticPostIds);
+    const displayedState = resolveDisplayedPostIds(
+      postIdsRef.current,
+      optimisticPostIds,
+      new Set(hiddenPostCountsRef.current.keys()),
+    );
     optimisticPostIdsRef.current = displayedState.optimisticPostIds;
     setPostIds(displayedState.displayedPostIds);
   };
@@ -243,16 +326,76 @@ export function useStreamPagination({
    * @param postIds - A single post ID or array of post IDs to remove
    */
   const removePosts = useCallback((postIds: string | string[]) => {
-    const idsToRemove = Array.isArray(postIds) ? postIds : [postIds];
+    const existingPostIds = new Set([...postIdsRef.current, ...optimisticPostIdsRef.current]);
+    const idsToRemove = [...new Set(Array.isArray(postIds) ? postIds : [postIds])].filter((id) =>
+      existingPostIds.has(id),
+    );
     const idsToRemoveSet = new Set(idsToRemove);
-
+    idsToRemove.forEach((id) => hiddenPostCountsRef.current.delete(id));
     optimisticPostIdsRef.current = optimisticPostIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
-    const updatedPostIds = postIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
-    postIdsRef.current = updatedPostIds;
-    const displayedState = resolveDisplayedPostIds(updatedPostIds, optimisticPostIdsRef.current);
+    postIdsRef.current = postIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
+    const displayedState = resolveDisplayedPostIds(
+      postIdsRef.current,
+      optimisticPostIdsRef.current,
+      new Set(hiddenPostCountsRef.current.keys()),
+    );
     optimisticPostIdsRef.current = displayedState.optimisticPostIds;
     setPostIds(displayedState.displayedPostIds);
   }, []);
+
+  const removePostsOptimistically = (postIds: string | string[]) => {
+    const existingPostIds = new Set([...postIdsRef.current, ...optimisticPostIdsRef.current]);
+    const idsToRemove = [...new Set(Array.isArray(postIds) ? postIds : [postIds])].filter((id) =>
+      existingPostIds.has(id),
+    );
+    const removalStreamId = streamId;
+    idsToRemove.forEach((id) => {
+      hiddenPostCountsRef.current.set(id, (hiddenPostCountsRef.current.get(id) ?? 0) + 1);
+    });
+    const updateDisplayedPosts = () => {
+      const displayedState = resolveDisplayedPostIds(
+        postIdsRef.current,
+        optimisticPostIdsRef.current,
+        new Set(hiddenPostCountsRef.current.keys()),
+      );
+      optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+      setPostIds(displayedState.displayedPostIds);
+    };
+    updateDisplayedPosts();
+
+    let hasFinalized = false;
+    const finalize = (shouldCommit: boolean) => {
+      if (hasFinalized || activeStreamIdRef.current !== removalStreamId) return;
+      hasFinalized = true;
+
+      decrementHiddenPostCounts(hiddenPostCountsRef.current, idsToRemove);
+      if (shouldCommit) {
+        const idsToRemoveSet = new Set(idsToRemove);
+        if (isSkipPaginatedStream(removalStreamId)) {
+          // Skip streams resume from a consumed-raw-rows offset. A committed
+          // removal deletes one of those rows server-side, shifting every
+          // later index down — so drop the removed stream rows from the
+          // offset too, or the next loadMore skips one live row per removal
+          // once the backend reindexes the shorter list. Membership is
+          // checked at commit time: rows refetched after a refresh are
+          // already recounted in the new offset, and optimistic prepends
+          // never counted toward it.
+          const removedStreamRowCount = postIdsRef.current.filter((id) => idsToRemoveSet.has(id)).length;
+          if (removedStreamRowCount > 0) {
+            setStreamTail((tail) => Math.max(0, tail - removedStreamRowCount));
+          }
+        }
+        optimisticPostIdsRef.current = optimisticPostIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
+        postIdsRef.current = postIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
+      }
+      updateDisplayedPosts();
+    };
+
+    return {
+      commit: () => finalize(true),
+      rollback: () => finalize(false),
+    };
+  };
 
   // Initial load and reset when streamId changes
   useEffect(() => {
@@ -274,5 +417,6 @@ export function useStreamPagination({
     prependPosts,
     prependOptimisticPosts,
     removePosts,
+    removePostsOptimistically,
   };
 }
