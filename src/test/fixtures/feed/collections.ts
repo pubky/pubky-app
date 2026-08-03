@@ -7,6 +7,9 @@ import type {
   VisualTileSize,
 } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedVisual.types';
 import type { NexusPostCounts, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
+import designReferencesCoverUrl from '@/test/vrt/images/vrt-design-references.webp?url';
+import goldenHourCoverUrl from '@/test/vrt/images/vrt-golden-hour.webp?url';
+import signalsFromFieldCoverUrl from '@/test/vrt/images/vrt-signals-from-field.webp?url';
 import { HOUR_MS, VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
 import { VRT_FEED_POSTS } from './posts';
 import { VRT_AUTHOR_PUBKYS } from './profiles';
@@ -19,6 +22,7 @@ const COLLECTION_COVER_IDS = {
   localFirstNotes: 'vrt-cover-local-first-notes',
   designReferences: 'vrt-cover-design-references',
   goldenHour: 'vrt-cover-golden-hour',
+  signalsFromField: 'vrt-cover-signals-from-field',
   weekendReads: 'vrt-cover-weekend-reads',
 } as const;
 
@@ -187,7 +191,7 @@ function singleCollection(postId: string, layout: 'grid' | 'list' | 'visual'): V
     VRT_COLLECTION_ITEM_POSTS.length,
     3,
     singleCollectionTags,
-    { itemUris: collectionItemUris, layout },
+    { itemUris: collectionItemUris, layout, coverId: COLLECTION_COVER_IDS.signalsFromField },
   );
 }
 
@@ -248,13 +252,13 @@ export const VRT_COLLECTION_VISUAL_ROWS: readonly VisualRow[] = [
   },
 ];
 
-/** Local public assets returned by the FileController mock for selected covers. */
+/** Local cover assets returned by the FileController mock for selected cards. */
 export const VRT_COLLECTION_COVER_URLS: Readonly<Record<string, string>> = {
   [makeCompositeId(VRT_AUTHOR_PUBKYS.alice, COLLECTION_COVER_IDS.localFirstNotes)]:
     '/images/collections-onboarding.webp',
-  [makeCompositeId(VRT_AUTHOR_PUBKYS.alice, COLLECTION_COVER_IDS.designReferences)]:
-    '/images/vrt-design-references.webp',
-  [makeCompositeId(VRT_AUTHOR_PUBKYS.cleo, COLLECTION_COVER_IDS.goldenHour)]: '/images/vrt-golden-hour.webp',
+  [makeCompositeId(VRT_AUTHOR_PUBKYS.alice, COLLECTION_COVER_IDS.designReferences)]: designReferencesCoverUrl,
+  [makeCompositeId(VRT_AUTHOR_PUBKYS.cleo, COLLECTION_COVER_IDS.goldenHour)]: goldenHourCoverUrl,
+  [makeCompositeId(VRT_AUTHOR_PUBKYS.cleo, COLLECTION_COVER_IDS.signalsFromField)]: signalsFromFieldCoverUrl,
   [makeCompositeId(VRT_AUTHOR_PUBKYS.dion, COLLECTION_COVER_IDS.weekendReads)]: '/images/note.webp',
 };
 

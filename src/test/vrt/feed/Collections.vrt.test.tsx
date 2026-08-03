@@ -670,6 +670,7 @@ async function renderSingleCollection(
   const collection = f.singleCollections[layout];
   routeState.pathname = `/collections/${collection.details.author}/${collection.postId}`;
   routeState.params = { userId: collection.details.author, postId: collection.postId };
+  await preloadImages(Object.values(f.collectionCoverUrls));
 
   const screen = await renderForVRT(<CollectionWithHeader postId={collection.compositeId} />, { viewport });
   await expect.element(screen.getByRole('heading', { name: 'Signals from the field' })).toBeVisible();
