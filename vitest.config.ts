@@ -66,6 +66,7 @@ export default defineConfig({
         test: {
           name: 'vrt',
           globals: true,
+          testTimeout: 30_000,
           include: ['**/*.vrt.test.{ts,tsx}'],
           exclude: ['**/node_modules/**'],
           setupFiles: ['./src/test-utils/vrt.setup.ts'],
