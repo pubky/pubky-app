@@ -48,7 +48,9 @@ diffs stand out:
   browser runtime has no Next image optimizer, so the real component 404s).
   `renderForVRT` waits until each `<img>` has real pixels (`naturalWidth > 0`),
   then `decode()`, then two animation frames so SVG/logo paint cannot race the
-  screenshot. Load/decode failures reject with the image URL — broken assets
+  screenshot. Each image has a short timeout that rejects with the URL (and
+  `complete` / `naturalWidth`) so a hung load is not mistaken for a generic
+  test timeout. Load/decode failures reject with the image URL — broken assets
   must not become blank baselines. Swallowing `decode()` alone was not enough
   and caused intermittent blank header logos. Intentionally absent artwork
   should be mocked out of the tree rather than left as a broken `<img>`.
