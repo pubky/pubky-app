@@ -54,6 +54,31 @@ describe('StreamPostsController', () => {
       });
     });
 
+    it('passes forceNetwork through to the application initial-load path', async () => {
+      const getOrFetchStreamSliceSpy = vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+        nextPageIds: [],
+        cacheMissPostIds: [],
+        nextCursor: undefined,
+        reachedEnd: true,
+      });
+
+      await StreamPostsController.getOrFetchStreamSlice({
+        streamId,
+        streamTail: 0,
+        forceNetwork: true,
+      });
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        streamId,
+        limit: NEXUS_POSTS_PER_PAGE,
+        streamHead: 0,
+        streamTail: 0,
+        lastPostId: undefined,
+        viewerId,
+        forceNetwork: true,
+      });
+    });
+
     it('should fetch missing posts and re-filter stream posts when cacheMissPostIds exist', async () => {
       const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
       const cacheMissPostIds = ['user-1:post-3', 'user-1:post-4'];

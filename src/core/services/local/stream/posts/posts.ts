@@ -1,6 +1,7 @@
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import { db } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import type { BookmarkModelSchema } from '@/models/bookmark/bookmark.schema';
@@ -26,6 +27,7 @@ import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import type {
   TAddReplyToStreamParams,
+  TDeletedPostStreams,
   TPersistPostsParams,
   TPostDetailsTimestampParams,
   TPostStreamBulkParams,
@@ -78,6 +80,17 @@ export class LocalStreamPostsService {
    */
   static async deleteById({ streamId }: TStreamIdParams): Promise<void> {
     await PostStreamModel.deleteById(streamId);
+  }
+
+  static async deleteByIdPredicate(predicate: (streamId: PostStreamId) => boolean): Promise<TDeletedPostStreams> {
+    return await db.transaction('rw', [PostStreamModel.table, UnreadPostStreamModel.table], async () => {
+      const [cachedStreamIds, unreadStreamIds] = await Promise.all([
+        PostStreamModel.deleteByIdPredicate(predicate),
+        UnreadPostStreamModel.deleteByIdPredicate(predicate),
+      ]);
+
+      return { cachedStreamIds, unreadStreamIds };
+    });
   }
 
   /**

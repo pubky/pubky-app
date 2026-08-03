@@ -165,6 +165,33 @@ export abstract class BaseStreamModel<TId, TItem, TSchema extends BaseStreamMode
   }
 
   /**
+   * Deletes every stream whose primary key matches the supplied predicate.
+   * Returns the deleted ids so callers can report exactly what was invalidated.
+   */
+  static async deleteByIdPredicate<TId, TItem, TSchema extends BaseStreamModelSchema<TId, TItem>>(
+    this: { table: Table<TSchema> },
+    predicate: (id: TId) => boolean,
+  ): Promise<TId[]> {
+    try {
+      const primaryKeys = (await this.table.toCollection().primaryKeys()) as TId[];
+      const idsToDelete = primaryKeys.filter(predicate);
+
+      if (idsToDelete.length > 0) {
+        await this.table.bulkDelete(idsToDelete as IndexableType[]);
+      }
+
+      return idsToDelete;
+    } catch (error) {
+      throw Err.database(DatabaseErrorCode.DELETE_FAILED, `Failed to delete streams in ${this.table.name}`, {
+        service: ErrorService.Local,
+        operation: 'deleteByIdPredicate',
+        context: { table: this.table.name },
+        cause: error,
+      });
+    }
+  }
+
+  /**
    * Clears all streams from the table
    * @param this - Context containing the table reference
    * @returns Promise that resolves when all streams are cleared

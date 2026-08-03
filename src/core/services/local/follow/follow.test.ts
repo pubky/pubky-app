@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
-import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamModel } from '@/models/stream/user/userStream';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserConnectionsModel } from '@/models/user/connections/userConnections';
@@ -172,9 +173,12 @@ describe('LocalFollowService.create', () => {
     await UserRelationshipsModel.create({ id: userB, following: false, followed_by: true });
 
     // First follow should create following and bump friends for both
-    await LocalFollowService.create({ follower: userA, followee: userB });
+    const firstResult = await LocalFollowService.create({ follower: userA, followee: userB });
     // Second follow should be a no-op for friends and counts
-    await LocalFollowService.create({ follower: userA, followee: userB });
+    const secondResult = await LocalFollowService.create({ follower: userA, followee: userB });
+
+    expect(firstResult).toEqual({ friendshipChanged: true });
+    expect(secondResult).toEqual({ friendshipChanged: false });
 
     const [aCounts, bCounts, aConn, bConn] = await Promise.all([
       UserCountsModel.table.get(userA),
@@ -295,7 +299,9 @@ describe('LocalFollowService.delete', () => {
   });
 
   it('decrements following and followers and removes connections', async () => {
-    await LocalFollowService.delete({ follower: userA, followee: userB });
+    const result = await LocalFollowService.delete({ follower: userA, followee: userB });
+
+    expect(result).toEqual({ friendshipChanged: false });
 
     const [aCounts, bCounts, aConn, bConn] = await Promise.all([
       UserCountsModel.table.get(userA),
@@ -332,7 +338,9 @@ describe('LocalFollowService.delete', () => {
       });
     });
 
-    await LocalFollowService.delete({ follower: userA, followee: userB });
+    const result = await LocalFollowService.delete({ follower: userA, followee: userB });
+
+    expect(result).toEqual({ friendshipChanged: true });
 
     const [aCounts, bCounts, aConn, bConn] = await Promise.all([
       UserCountsModel.table.get(userA),
@@ -566,116 +574,68 @@ describe('LocalFollowService - Stream Updates', () => {
     });
   });
 
-  // Note: TypeScript TS2684 errors are suppressed because BaseStreamModel generic types
-  // have complex this-context requirements that don't affect runtime behavior
   describe('timeline stream invalidation', () => {
+    const followingTagged = 'timeline:following:image:bitcoin' as PostStreamId;
+    const wot = 'timeline:wot:all' as PostStreamId;
+    const depthOneDomain = 'timeline:wot_domain:1:all:developer' as PostStreamId;
+    const depthTwoCombined = 'timeline:wot_domain:2:image:developer:bitcoin' as PostStreamId;
+    const depthZeroDomain = 'timeline:wot_domain:0:all:developer' as PostStreamId;
+    const popularityFollowing = 'total_engagement:following:all' as PostStreamId;
+
     beforeEach(async () => {
-      // Seed some timeline streams (only TIMELINE streams are cached, not POPULARITY/engagement)
-      await db.transaction('rw', [PostStreamModel.table], async () => {
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        await PostStreamModel.upsert(PostStreamTypes.TIMELINE_FOLLOWING_ALL, ['post1', 'post2']);
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        await PostStreamModel.upsert(PostStreamTypes.TIMELINE_FOLLOWING_SHORT, ['post1']);
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        await PostStreamModel.upsert(PostStreamTypes.TIMELINE_FRIENDS_ALL, ['post3', 'post4']);
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        await PostStreamModel.upsert(PostStreamTypes.TIMELINE_FRIENDS_SHORT, ['post3']);
+      await db.transaction('rw', [PostStreamModel.table, UnreadPostStreamModel.table], async () => {
+        await Promise.all([
+          PostStreamModel.upsert(PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId, ['following']),
+          PostStreamModel.upsert(followingTagged, ['following-tagged']),
+          PostStreamModel.upsert(PostStreamTypes.TIMELINE_FRIENDS_ALL as PostStreamId, ['friends']),
+          PostStreamModel.upsert(wot, ['wot']),
+          PostStreamModel.upsert(depthOneDomain, ['depth-one']),
+          PostStreamModel.upsert(depthTwoCombined, ['depth-two']),
+          PostStreamModel.upsert(depthZeroDomain, ['depth-zero']),
+          PostStreamModel.upsert(popularityFollowing, ['popularity']),
+          PostStreamModel.upsert(PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId, ['all']),
+          UnreadPostStreamModel.upsert(followingTagged, ['unread-following']),
+          UnreadPostStreamModel.upsert(PostStreamTypes.TIMELINE_FRIENDS_ALL as PostStreamId, ['unread-friends']),
+          UnreadPostStreamModel.upsert(depthTwoCombined, ['unread-depth-two']),
+        ]);
       });
     });
 
-    it('invalidates following timeline streams on follow', async () => {
+    it('invalidates graph-dependent main and unread streams while preserving Friends and unrelated streams', async () => {
+      await LocalFollowService.invalidateTimelineStreams({ includeFriends: false });
+
+      const [following, tagged, wotStream, depthOne, depthTwo, unreadTagged, unreadDepthTwo] = await Promise.all([
+        PostStreamModel.findById(PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId),
+        PostStreamModel.findById(followingTagged),
+        PostStreamModel.findById(wot),
+        PostStreamModel.findById(depthOneDomain),
+        PostStreamModel.findById(depthTwoCombined),
+        UnreadPostStreamModel.findById(followingTagged),
+        UnreadPostStreamModel.findById(depthTwoCombined),
+      ]);
+
+      expect([following, tagged, wotStream, depthOne, depthTwo, unreadTagged, unreadDepthTwo]).toEqual(
+        Array(7).fill(null),
+      );
+      expect(await PostStreamModel.findById(PostStreamTypes.TIMELINE_FRIENDS_ALL as PostStreamId)).not.toBeNull();
+      expect(await UnreadPostStreamModel.findById(PostStreamTypes.TIMELINE_FRIENDS_ALL as PostStreamId)).not.toBeNull();
+      expect(await PostStreamModel.findById(depthZeroDomain)).not.toBeNull();
+      expect(await PostStreamModel.findById(popularityFollowing)).not.toBeNull();
+      expect(await PostStreamModel.findById(PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId)).not.toBeNull();
+    });
+
+    it('also invalidates fixed Friends caches for a friendship transition', async () => {
+      await LocalFollowService.invalidateTimelineStreams({ includeFriends: true });
+
+      expect(await PostStreamModel.findById(PostStreamTypes.TIMELINE_FRIENDS_ALL as PostStreamId)).toBeNull();
+      expect(await UnreadPostStreamModel.findById(PostStreamTypes.TIMELINE_FRIENDS_ALL as PostStreamId)).toBeNull();
+      expect(await PostStreamModel.findById(depthZeroDomain)).not.toBeNull();
+    });
+
+    it('leaves post-stream invalidation to the application workflow', async () => {
       await LocalFollowService.create({ follower: userA, followee: userB });
 
-      // Following streams should be deleted
-      const [timelineAll, timelineShort] = await Promise.all([
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FOLLOWING_ALL),
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FOLLOWING_SHORT),
-      ]);
-
-      expect(timelineAll).toBeNull();
-      expect(timelineShort).toBeNull();
-    });
-
-    it('does not invalidate friends streams when not becoming friends', async () => {
-      await LocalFollowService.create({ follower: userA, followee: userB });
-
-      // Friends streams should still exist
-      const [friendsAll, friendsShort] = await Promise.all([
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FRIENDS_ALL),
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FRIENDS_SHORT),
-      ]);
-
-      expect(friendsAll?.stream).toEqual(['post3', 'post4']);
-      expect(friendsShort?.stream).toEqual(['post3']);
-    });
-
-    it('invalidates both following and friends streams when becoming friends', async () => {
-      // Setup: B already follows A
-      await UserRelationshipsModel.create({ id: userB, following: false, followed_by: true });
-
-      await LocalFollowService.create({ follower: userA, followee: userB });
-
-      // All timeline streams should be deleted
-      const [followingAll, friendsAll] = await Promise.all([
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FOLLOWING_ALL),
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FRIENDS_ALL),
-      ]);
-
-      expect(followingAll).toBeNull();
-      expect(friendsAll).toBeNull();
-    });
-
-    it('invalidates following timeline streams on unfollow', async () => {
-      // Setup existing follow
-      await db.transaction('rw', [UserConnectionsModel.table, UserCountsModel.table], async () => {
-        await UserConnectionsModel.create({ id: userA, following: [userB], followers: [] });
-        await UserConnectionsModel.create({ id: userB, following: [], followers: [userA] });
-        await UserCountsModel.update(userA, { following: 1 });
-        await UserCountsModel.update(userB, { followers: 1 });
-      });
-
-      await LocalFollowService.delete({ follower: userA, followee: userB });
-
-      // Following streams should be deleted
-      const [timelineAll, timelineShort] = await Promise.all([
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FOLLOWING_ALL),
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FOLLOWING_SHORT),
-      ]);
-
-      expect(timelineAll).toBeNull();
-      expect(timelineShort).toBeNull();
-    });
-
-    it('invalidates both following and friends streams when breaking friendship', async () => {
-      // Setup mutual follow (friends)
-      await UserRelationshipsModel.create({ id: userB, following: true, followed_by: true });
-      await db.transaction('rw', [UserConnectionsModel.table, UserCountsModel.table], async () => {
-        await UserConnectionsModel.create({ id: userA, following: [userB], followers: [] });
-        await UserConnectionsModel.create({ id: userB, following: [], followers: [userA] });
-        await UserCountsModel.update(userA, { following: 1, friends: 1 });
-        await UserCountsModel.update(userB, { followers: 1, friends: 1 });
-      });
-
-      await LocalFollowService.delete({ follower: userA, followee: userB });
-
-      // All timeline streams should be deleted
-      const [followingAll, friendsAll] = await Promise.all([
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FOLLOWING_ALL),
-        // @ts-expect-error - BaseStreamModel generic type constraint
-        PostStreamModel.findById(PostStreamTypes.TIMELINE_FRIENDS_ALL),
-      ]);
-
-      expect(followingAll).toBeNull();
-      expect(friendsAll).toBeNull();
+      expect(await PostStreamModel.findById(PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId)).not.toBeNull();
     });
   });
 });

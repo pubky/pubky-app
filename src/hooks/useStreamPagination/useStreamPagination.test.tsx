@@ -315,6 +315,42 @@ describe('useStreamPagination', () => {
       // Should have called getCachedLastPostTimestamp again
       expect(StreamPostsController.getCachedLastPostTimestamp).toHaveBeenCalledTimes(2);
     });
+
+    it('refreshFromNetwork bypasses cache preparation and clears optimistic pagination state', async () => {
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId, limit: 3 }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      act(() => {
+        result.current.prependOptimisticPosts('optimistic-post');
+      });
+      expect(result.current.postIds).toContain('optimistic-post');
+
+      vi.mocked(StreamPostsController.prepareStreamForInitialLoad).mockClear();
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['fresh-post'],
+        nextCursor: 42,
+        reachedEnd: true,
+      });
+
+      await act(async () => {
+        await result.current.refreshFromNetwork();
+      });
+
+      expect(StreamPostsController.prepareStreamForInitialLoad).not.toHaveBeenCalled();
+      expect(StreamPostsController.getCachedLastPostTimestamp).not.toHaveBeenCalled();
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith({
+        streamId: mockStreamId,
+        lastPostId: undefined,
+        streamTail: 0,
+        limit: 3,
+        forceNetwork: true,
+      });
+      expect(result.current.postIds).toEqual(['fresh-post']);
+      expect(result.current.hasMore).toBe(false);
+      expect(result.current.error).toBeNull();
+    });
   });
 
   describe('Stream Change', () => {

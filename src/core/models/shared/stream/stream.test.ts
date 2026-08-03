@@ -72,6 +72,24 @@ describe('BaseStreamModel', () => {
     expect(await TestStreamModel.table.get('s1')).toBeUndefined();
   });
 
+  it('deleteByIdPredicate removes and returns only matching stream ids', async () => {
+    await TestStreamModel.upsert('keep-1', ['a']);
+    await TestStreamModel.upsert('delete-1', ['b']);
+    await TestStreamModel.upsert('delete-2', ['c']);
+
+    const deletedIds = await TestStreamModel.deleteByIdPredicate((id: string) => id.startsWith('delete-'));
+
+    expect(deletedIds).toEqual(['delete-1', 'delete-2']);
+    expect(await TestStreamModel.table.toArray()).toEqual([{ id: 'keep-1', stream: ['a'] }]);
+  });
+
+  it('deleteByIdPredicate is a no-op when no stream ids match', async () => {
+    await TestStreamModel.upsert('keep-1', ['a']);
+
+    await expect(TestStreamModel.deleteByIdPredicate(() => false)).resolves.toEqual([]);
+    expect(await TestStreamModel.table.toArray()).toEqual([{ id: 'keep-1', stream: ['a'] }]);
+  });
+
   it('clear removes all streams', async () => {
     await TestStreamModel.upsert('s1', ['a']);
     await TestStreamModel.upsert('s2', ['b']);
@@ -226,6 +244,25 @@ describe('BaseStreamModel error handling', () => {
       expect(appError.service).toBe(ErrorService.Local);
       expect(appError.operation).toBe('deleteById');
       expect(appError.context).toMatchObject({ table: 'test_streams', id: 's1' });
+    }
+  });
+
+  it('deleteByIdPredicate throws DELETE_FAILED with correct context on failure', async () => {
+    vi.spyOn(TestStreamModel.table, 'toCollection').mockImplementationOnce(() => {
+      throw new Error('DB error');
+    });
+
+    try {
+      await TestStreamModel.deleteByIdPredicate(() => true);
+      expect.fail('Expected error to be thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      const appError = error as AppError;
+      expect(appError.category).toBe(ErrorCategory.Database);
+      expect(appError.code).toBe(DatabaseErrorCode.DELETE_FAILED);
+      expect(appError.service).toBe(ErrorService.Local);
+      expect(appError.operation).toBe('deleteByIdPredicate');
+      expect(appError.context).toMatchObject({ table: 'test_streams' });
     }
   });
 

@@ -189,6 +189,7 @@ const mockPrependPosts = vi.fn();
 const mockPrependOptimisticPosts = vi.fn();
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
+const mockRefreshFromNetwork = vi.fn();
 const defaultPaginationResult = {
   postIds: ['post1', 'post2', 'post3'],
   loading: false,
@@ -197,6 +198,7 @@ const defaultPaginationResult = {
   hasMore: true,
   loadMore: mockLoadMore,
   refresh: mockRefresh,
+  refreshFromNetwork: mockRefreshFromNetwork,
   prependPosts: mockPrependPosts,
   prependOptimisticPosts: mockPrependOptimisticPosts,
   removePosts: vi.fn(),

@@ -492,6 +492,75 @@ describe('PostStreamApplication', () => {
       expect(cached?.stream).toEqual(result.nextPageIds);
     });
 
+    it('force-refreshes from Nexus and replaces stale main and unread state', async () => {
+      const followStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      const staleIds = [`${DEFAULT_AUTHOR}:stale-1`, `${DEFAULT_AUTHOR}:stale-2`];
+      const freshResponse = createMockNexusPostsKeyStream(2, 10);
+      await PostStreamModel.upsert(followStreamId, staleIds);
+      await UnreadPostStreamModel.upsert(followStreamId, [`${DEFAULT_AUTHOR}:unread-stale`]);
+      postStreamQueue['save'](followStreamId, [`${DEFAULT_AUTHOR}:queued-stale`], BASE_TIMESTAMP);
+      const clearUnreadSpy = vi.spyOn(LocalStreamPostsService, 'clearUnreadStream');
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(freshResponse);
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: BASE_TIMESTAMP,
+        lastPostId: staleIds[1],
+        viewerId: 'user-viewer' as Pubky,
+        forceNetwork: true,
+      });
+
+      expect(nexusFetchSpy).toHaveBeenCalledOnce();
+      expect(result.nextPageIds).toEqual(freshResponse.post_keys);
+      expect((await PostStreamModel.findById(followStreamId))?.stream).toEqual(freshResponse.post_keys);
+      expect(await UnreadPostStreamModel.findById(followStreamId)).toBeNull();
+      expect(postStreamQueue.get(followStreamId)).toBeUndefined();
+      expect(clearUnreadSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('replaces a stale cache row when a forced Nexus response is empty', async () => {
+      const followStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      await PostStreamModel.upsert(followStreamId, [`${DEFAULT_AUTHOR}:stale`]);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: [],
+        last_post_score: null,
+      });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: BASE_TIMESTAMP,
+        viewerId: 'user-viewer' as Pubky,
+        forceNetwork: true,
+      });
+
+      expect(result.nextPageIds).toEqual([]);
+      expect((await PostStreamModel.findById(followStreamId))?.stream).toEqual([]);
+    });
+
+    it('still replaces the mounted cache when unread cleanup fails', async () => {
+      const followStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      const freshResponse = createMockNexusPostsKeyStream(2, 20);
+      await PostStreamModel.upsert(followStreamId, [`${DEFAULT_AUTHOR}:stale`]);
+      vi.spyOn(LocalStreamPostsService, 'clearUnreadStream').mockRejectedValue(new Error('cleanup-fail'));
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(freshResponse);
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: BASE_TIMESTAMP,
+        viewerId: 'user-viewer' as Pubky,
+        forceNetwork: true,
+      });
+
+      expect(result.nextPageIds).toEqual(freshResponse.post_keys);
+      expect((await PostStreamModel.findById(followStreamId))?.stream).toEqual(freshResponse.post_keys);
+    });
+
     it('should paginate using cursor (post_id and timestamp)', async () => {
       const initialPostIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(initialPostIds);
@@ -2144,6 +2213,40 @@ describe('PostStreamApplication', () => {
       // @ts-expect-error - BaseStreamModel generic type constraint
       await UserStreamModel.upsert(UserStreamTypes.MUTED, mutedUsers);
     };
+
+    it('keeps filtering and pagination active while rebuilding a forced stream cache', async () => {
+      await setupMutedUsers(['author-2'] as Pubky[]);
+      await PostStreamModel.upsert(streamId, ['author-3:stale']);
+      const mutedPage = {
+        post_keys: Array.from({ length: 10 }, (_, i) => `author-2:post-${i + 1}`),
+        last_post_score: BASE_TIMESTAMP + 9,
+      };
+      const visiblePage = {
+        post_keys: ['author-1:post-11', 'author-1:post-12', 'author-1:post-13'],
+        last_post_score: BASE_TIMESTAMP + 12,
+      };
+      const nexusFetchSpy = vi
+        .spyOn(NexusPostStreamService, 'fetch')
+        .mockResolvedValueOnce(mutedPage)
+        .mockResolvedValueOnce(visiblePage);
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: BASE_TIMESTAMP,
+        viewerId,
+        forceNetwork: true,
+      });
+
+      expect(nexusFetchSpy).toHaveBeenCalledTimes(2);
+      expect(result.nextPageIds).toEqual(visiblePage.post_keys);
+      expect(result.nextCursor).toBe(visiblePage.last_post_score);
+      expect((await PostStreamModel.findById(streamId))?.stream).toEqual([
+        ...mutedPage.post_keys,
+        ...visiblePage.post_keys,
+      ]);
+    });
 
     it('should filter out posts from muted users', async () => {
       // Mute author-2

@@ -15,6 +15,7 @@ import {
   type TStreamQueryParams,
   type TStreamWithObserverParams,
 } from '@/services/nexus/stream/posts/postStream.types';
+import { POST_STREAM_GRAMMAR_FIXTURES } from '@/test/fixtures/stream/postStreamIds';
 import { NexusPostStreamService } from './postStream';
 import { postStreamApi } from './postStream.api';
 import { StreamKind, StreamOrder } from './postStream.types';
@@ -847,6 +848,16 @@ describe('createPostStreamParams', () => {
 });
 
 describe('breakDownStreamId', () => {
+  it.each(POST_STREAM_GRAMMAR_FIXTURES)(
+    'parses the shared grammar fixture $streamId',
+    ({ streamId, source, ...fixture }) => {
+      const result = breakDownStreamId(streamId as PostStreamId);
+
+      expect(result.invokeEndpoint).toBe(source);
+      expect(result.wotDepth).toBe('depth' in fixture ? fixture.depth : undefined);
+    },
+  );
+
   describe('Timeline pattern', () => {
     it('should parse timeline:endpoint:kind:tags', () => {
       const result = breakDownStreamId('timeline:bookmarks:all:tech,ai' as PostStreamId);

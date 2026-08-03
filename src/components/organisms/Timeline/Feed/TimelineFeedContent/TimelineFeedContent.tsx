@@ -6,6 +6,7 @@ import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useApplyPendingFeedInsert } from '@/hooks/useApplyPendingFeedInsert/useApplyPendingFeedInsert';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { useFollowDependentStreamRefresh } from '@/hooks/useFollowDependentStreamRefresh/useFollowDependentStreamRefresh';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
@@ -145,12 +146,14 @@ function TimelineFeedContent({
     hasMore,
     loadMore,
     refresh,
+    refreshFromNetwork,
     prependPosts,
     prependOptimisticPosts,
     removePosts,
   } = useStreamPagination({
     streamId,
   });
+  useFollowDependentStreamRefresh({ streamId, refreshFromNetwork });
 
   const postIds = [...new Set(rawPostIds)];
 

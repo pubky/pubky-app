@@ -102,6 +102,7 @@ export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
 export type PostStreamKindSegment = 'all' | StreamKind;
 export type WotDomainDepth = 0 | 1 | 2;
+export type FollowDependentStreamScope = 'follow_graph' | 'friends';
 export type WotStreamId =
   | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}`
   | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}:${string}`;
@@ -243,6 +244,44 @@ export function getPostStreamKind(streamId: string): PostStreamKindSegment | und
   // Author-kind shape: `<pubky>:author:<kind>`.
   if (second === StreamSource.AUTHOR) {
     return toPostStreamKindSegment(parts[2]);
+  }
+
+  return undefined;
+}
+
+/**
+ * Classifies streams whose membership can change after a follow mutation.
+ *
+ * Depth-1 domain streams are deliberately graph-scoped: Following and Friends
+ * both serialize to depth 1, so their original reach cannot be reconstructed
+ * from the stream id. Depth 0 depends on profile tagging, not follow changes.
+ */
+export function getFollowDependentStreamScope(streamId: string): FollowDependentStreamScope | undefined {
+  const parts = streamId.split(':');
+  const [sorting, source, thirdSegment] = parts;
+  const isKnownSorting = Object.values<string>(StreamSorting).includes(sorting);
+
+  if (!isKnownSorting || !getPostStreamKind(streamId)) {
+    return undefined;
+  }
+
+  if (source === StreamSource.WOT_DOMAIN) {
+    if (parts.length < 5 || parts.length > 6 || !parts[4] || (parts.length === 6 && !parts[5])) {
+      return undefined;
+    }
+    return thirdSegment === '1' || thirdSegment === '2' ? 'follow_graph' : undefined;
+  }
+
+  if (parts.length < 3 || parts.length > 4 || (parts.length === 4 && !parts[3])) {
+    return undefined;
+  }
+
+  if (source === StreamSource.FRIENDS) {
+    return 'friends';
+  }
+
+  if (source === StreamSource.FOLLOWING || source === StreamSource.WOT) {
+    return 'follow_graph';
   }
 
   return undefined;

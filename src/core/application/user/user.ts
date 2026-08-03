@@ -1,4 +1,8 @@
-import type { TUserApplicationFollowParams, TUserCountsOrFetchResult } from '@/application/user/user.types';
+import type {
+  TUserApplicationFollowParams,
+  TUserApplicationFollowResult,
+  TUserCountsOrFetchResult,
+} from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -246,14 +250,43 @@ export class UserApplication {
     followJson,
     follower,
     followee,
-    activeStreamId,
-  }: TUserApplicationFollowParams) {
-    if (eventType === HttpMethod.PUT) {
-      await LocalFollowService.create({ follower, followee, activeStreamId });
-    } else if (eventType === HttpMethod.DELETE) {
-      await LocalFollowService.delete({ follower, followee, activeStreamId });
+  }: TUserApplicationFollowParams): Promise<TUserApplicationFollowResult> {
+    const isFollowMutation = eventType === HttpMethod.PUT || eventType === HttpMethod.DELETE;
+
+    if (!isFollowMutation) {
+      await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+      return { friendshipChanged: false };
     }
-    await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+
+    let mutationResult: TUserApplicationFollowResult | undefined;
+    let mutationError: unknown;
+
+    try {
+      mutationResult =
+        eventType === HttpMethod.PUT
+          ? await LocalFollowService.create({ follower, followee })
+          : await LocalFollowService.delete({ follower, followee });
+
+      await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+      return mutationResult;
+    } catch (error) {
+      mutationError = error;
+      throw error;
+    } finally {
+      try {
+        await LocalFollowService.invalidateTimelineStreams({
+          includeFriends: mutationResult?.friendshipChanged ?? true,
+        });
+      } catch (cleanupError) {
+        if (mutationError !== undefined) {
+          Logger.warn('Failed to invalidate follow-dependent streams after follow mutation error', {
+            cleanupError,
+          });
+        } else {
+          throw cleanupError;
+        }
+      }
+    }
   }
 
   /**

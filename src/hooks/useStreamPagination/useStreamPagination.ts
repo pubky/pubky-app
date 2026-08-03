@@ -60,7 +60,7 @@ export function useStreamPagination({
    * Fetches a slice from the stream
    */
   const fetchStreamSlice = useCallback(
-    async (isInitialLoad: boolean) => {
+    async (isInitialLoad: boolean, forceNetwork = false) => {
       setLoadingState(isInitialLoad, true);
       setError(null);
 
@@ -69,18 +69,21 @@ export function useStreamPagination({
         // Always resume from `streamTail`; never recompute the cursor from the visible count.
 
         if (isInitialLoad) {
-          // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
-          await StreamPostsController.prepareStreamForInitialLoad({ streamId });
-
-          const cachedLastPostTimestamp = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
-          setStreamTail(cachedLastPostTimestamp);
+          let initialStreamTail = NOT_FOUND_CACHED_STREAM;
+          if (!forceNetwork) {
+            // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
+            await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+            initialStreamTail = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
+          }
+          setStreamTail(initialStreamTail);
 
           result = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
             lastPostId: undefined,
             // Skip streams always start at offset 0; score streams seed from the cached tail.
-            streamTail: isSkipPaginatedStream(streamId) ? 0 : cachedLastPostTimestamp,
+            streamTail: isSkipPaginatedStream(streamId) || forceNetwork ? 0 : initialStreamTail,
             limit,
+            ...(forceNetwork && { forceNetwork: true }),
           });
         } else {
           result = await StreamPostsController.getOrFetchStreamSlice({
@@ -165,6 +168,13 @@ export function useStreamPagination({
     clearState({ preserveOptimisticPostIds: isCollectionItemsStream(streamId) });
     await fetchStreamSlice(true);
   }, [clearState, fetchStreamSlice, streamId]);
+
+  const refreshFromNetwork = useCallback(async () => {
+    // Follow-dependent streams are membership feeds, so no optimistic ids survive
+    // a server-authoritative rebuild. Reset every pagination field before fetching.
+    clearState();
+    await fetchStreamSlice(true, true);
+  }, [clearState, fetchStreamSlice]);
 
   /**
    * Load more function - fetches next page
@@ -271,6 +281,7 @@ export function useStreamPagination({
     hasMore,
     loadMore,
     refresh,
+    refreshFromNetwork,
     prependPosts,
     prependOptimisticPosts,
     removePosts,

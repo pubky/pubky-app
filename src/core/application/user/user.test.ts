@@ -29,66 +29,75 @@ describe('UserApplication.commitFollow', () => {
     vi.clearAllMocks();
   });
 
-  it('should update local state on PUT and call homeserver', async () => {
-    const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
-    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(undefined);
+  it('updates local state, syncs the homeserver, then invalidates follow-dependent streams', async () => {
+    const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue({ friendshipChanged: false });
+    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue({ friendshipChanged: false });
     const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    const invalidateSpy = vi.spyOn(LocalFollowService, 'invalidateTimelineStreams').mockResolvedValue(undefined);
 
-    await UserApplication.commitFollow({
+    const result = await UserApplication.commitFollow({
       eventType: HttpMethod.PUT,
       followUrl,
       followJson,
       follower,
       followee,
-      activeStreamId: undefined,
     });
 
-    expect(createSpy).toHaveBeenCalledWith({ follower, followee, activeStreamId: undefined });
+    expect(result).toEqual({ friendshipChanged: false });
+    expect(createSpy).toHaveBeenCalledWith({ follower, followee });
     expect(deleteSpy).not.toHaveBeenCalled();
     expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: followUrl, bodyJson: followJson });
+    expect(invalidateSpy).toHaveBeenCalledWith({ includeFriends: false });
+    expect(createSpy.mock.invocationCallOrder[0]).toBeLessThan(requestSpy.mock.invocationCallOrder[0]);
+    expect(requestSpy.mock.invocationCallOrder[0]).toBeLessThan(invalidateSpy.mock.invocationCallOrder[0]);
   });
 
-  it('should update local state on DELETE and call homeserver', async () => {
-    const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
-    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(undefined);
+  it('includes Friends invalidation when DELETE breaks a friendship', async () => {
+    const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue({ friendshipChanged: false });
+    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue({ friendshipChanged: true });
     const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    const invalidateSpy = vi.spyOn(LocalFollowService, 'invalidateTimelineStreams').mockResolvedValue(undefined);
 
-    await UserApplication.commitFollow({
+    const result = await UserApplication.commitFollow({
       eventType: HttpMethod.DELETE,
       followUrl,
       followJson,
       follower,
       followee,
-      activeStreamId: undefined,
     });
 
-    expect(deleteSpy).toHaveBeenCalledWith({ follower, followee, activeStreamId: undefined });
+    expect(result).toEqual({ friendshipChanged: true });
+    expect(deleteSpy).toHaveBeenCalledWith({ follower, followee });
     expect(createSpy).not.toHaveBeenCalled();
     expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: followUrl, bodyJson: followJson });
+    expect(invalidateSpy).toHaveBeenCalledWith({ includeFriends: true });
   });
 
-  it('should not update local state for non-mutate methods but still call homeserver', async () => {
-    const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
-    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(undefined);
+  it('returns a non-friendship result without invalidation for non-mutation methods', async () => {
+    const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue({ friendshipChanged: false });
+    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue({ friendshipChanged: false });
     const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    const invalidateSpy = vi.spyOn(LocalFollowService, 'invalidateTimelineStreams').mockResolvedValue(undefined);
 
-    await UserApplication.commitFollow({
+    const result = await UserApplication.commitFollow({
       eventType: HttpMethod.GET,
       followUrl,
       followJson,
       follower,
       followee,
-      activeStreamId: undefined,
     });
 
+    expect(result).toEqual({ friendshipChanged: false });
     expect(createSpy).not.toHaveBeenCalled();
     expect(deleteSpy).not.toHaveBeenCalled();
     expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.GET, url: followUrl, bodyJson: followJson });
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 
-  it('should propagate error when local create fails on PUT and not call homeserver', async () => {
+  it('invalidates both scopes when local create fails before returning a result', async () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockRejectedValue(new Error('local-fail'));
     const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    const invalidateSpy = vi.spyOn(LocalFollowService, 'invalidateTimelineStreams').mockResolvedValue(undefined);
 
     await expect(
       UserApplication.commitFollow({
@@ -97,36 +106,18 @@ describe('UserApplication.commitFollow', () => {
         followJson,
         follower,
         followee,
-        activeStreamId: undefined,
       }),
     ).rejects.toThrow('local-fail');
 
     expect(createSpy).toHaveBeenCalledOnce();
     expect(requestSpy).not.toHaveBeenCalled();
+    expect(invalidateSpy).toHaveBeenCalledWith({ includeFriends: true });
   });
 
-  it('should propagate error when local delete fails on DELETE and not call homeserver', async () => {
-    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockRejectedValue(new Error('local-delete-fail'));
-    const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
-
-    await expect(
-      UserApplication.commitFollow({
-        eventType: HttpMethod.DELETE,
-        followUrl,
-        followJson,
-        follower,
-        followee,
-        activeStreamId: undefined,
-      }),
-    ).rejects.toThrow('local-delete-fail');
-
-    expect(deleteSpy).toHaveBeenCalledOnce();
-    expect(requestSpy).not.toHaveBeenCalled();
-  });
-
-  it('should propagate error when homeserver request fails', async () => {
-    vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+  it('preserves a homeserver error while still invalidating the known scope', async () => {
+    vi.spyOn(LocalFollowService, 'create').mockResolvedValue({ friendshipChanged: false });
     const requestSpy = vi.spyOn(HomeserverService, 'request').mockRejectedValue(new Error('homeserver-fail'));
+    const invalidateSpy = vi.spyOn(LocalFollowService, 'invalidateTimelineStreams').mockResolvedValue(undefined);
 
     await expect(
       UserApplication.commitFollow({
@@ -135,7 +126,41 @@ describe('UserApplication.commitFollow', () => {
         followJson,
         follower,
         followee,
-        activeStreamId: undefined,
+      }),
+    ).rejects.toThrow('homeserver-fail');
+
+    expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: followUrl, bodyJson: followJson });
+    expect(invalidateSpy).toHaveBeenCalledWith({ includeFriends: false });
+  });
+
+  it('propagates cleanup failure when the mutation otherwise succeeds', async () => {
+    vi.spyOn(LocalFollowService, 'create').mockResolvedValue({ friendshipChanged: false });
+    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    vi.spyOn(LocalFollowService, 'invalidateTimelineStreams').mockRejectedValue(new Error('cleanup-fail'));
+
+    await expect(
+      UserApplication.commitFollow({
+        eventType: HttpMethod.PUT,
+        followUrl,
+        followJson,
+        follower,
+        followee,
+      }),
+    ).rejects.toThrow('cleanup-fail');
+  });
+
+  it('does not replace the mutation error when cleanup also fails', async () => {
+    vi.spyOn(LocalFollowService, 'create').mockResolvedValue({ friendshipChanged: false });
+    const requestSpy = vi.spyOn(HomeserverService, 'request').mockRejectedValue(new Error('homeserver-fail'));
+    vi.spyOn(LocalFollowService, 'invalidateTimelineStreams').mockRejectedValue(new Error('cleanup-fail'));
+
+    await expect(
+      UserApplication.commitFollow({
+        eventType: HttpMethod.PUT,
+        followUrl,
+        followJson,
+        follower,
+        followee,
       }),
     ).rejects.toThrow('homeserver-fail');
 

@@ -249,6 +249,36 @@ describe('LocalStreamPostsService', () => {
     });
   });
 
+  describe('deleteByIdPredicate', () => {
+    it('atomically deletes matching main and unread stream rows', async () => {
+      const followingId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      await PostStreamModel.upsert(followingId, ['main-post']);
+      await UnreadPostStreamModel.upsert(followingId, ['unread-post']);
+      await PostStreamModel.upsert(streamId as PostStreamId, ['keep-post']);
+
+      const deleted = await LocalStreamPostsService.deleteByIdPredicate((id) => id === followingId);
+
+      expect(deleted).toEqual({ cachedStreamIds: [followingId], unreadStreamIds: [followingId] });
+      expect(await PostStreamModel.findById(followingId)).toBeNull();
+      expect(await UnreadPostStreamModel.findById(followingId)).toBeNull();
+      expect(await PostStreamModel.findById(streamId as PostStreamId)).not.toBeNull();
+    });
+
+    it('rolls back the main-stream deletion when unread deletion fails', async () => {
+      const followingId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      await PostStreamModel.upsert(followingId, ['main-post']);
+      await UnreadPostStreamModel.upsert(followingId, ['unread-post']);
+      vi.spyOn(UnreadPostStreamModel, 'deleteByIdPredicate').mockRejectedValue(new Error('unread-delete-fail'));
+
+      await expect(LocalStreamPostsService.deleteByIdPredicate((id) => id === followingId)).rejects.toThrow(
+        'unread-delete-fail',
+      );
+
+      expect(await PostStreamModel.findById(followingId)).not.toBeNull();
+      expect(await UnreadPostStreamModel.findById(followingId)).not.toBeNull();
+    });
+  });
+
   describe('persistPosts', () => {
     it('should persist posts and return post attachments', async () => {
       const mockPosts: NexusPost[] = [createMockNexusPost('post-1', 'user-1'), createMockNexusPost('post-2', 'user-2')];

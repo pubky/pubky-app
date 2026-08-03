@@ -3,39 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserApplication } from '@/application/user/user';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
 import type { NexusTag, NexusTaggers, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
-import { useAuthStore } from '@/stores/auth/auth.store';
-import { useHomeStore } from '@/stores/home/home.store';
-import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
+import { useStreamInvalidationStore } from '@/stores/streamInvalidation/streamInvalidation.store';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { UserController } from './user';
-
-vi.mock('@/stores/home/home.store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/stores/home/home.store')>();
-  const useHomeStoreMock = Object.assign(vi.fn(), {
-    getState: vi.fn(),
-  });
-  return {
-    ...actual,
-    useHomeStore: useHomeStoreMock,
-  };
-});
-
-const mockUseHomeStore = vi.mocked(useHomeStore);
-const mockUseHomeStoreGetState = vi.mocked(useHomeStore.getState);
-
-const createMockHomeState = () =>
-  asOpaque<ReturnType<typeof useHomeStore.getState>>({
-    sort: SORT.TIMELINE,
-    reach: REACH.ALL,
-    content: CONTENT.ALL,
-    profileTags: [],
-    taggedAsActive: false,
-    hasHydrated: true,
-  });
 
 // Valid 52-character z-base32 encoded pubky IDs for testing
 const TEST_PUBKY = {
@@ -46,10 +19,7 @@ const TEST_PUBKY = {
 describe('UserController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseHomeStore.mockReset();
-    mockUseHomeStoreGetState.mockReset();
-    useAuthStore.getState().reset();
-    useAuthStore.getState().setHasHydrated(true);
+    useStreamInvalidationStore.getState().reset();
   });
 
   afterEach(() => {
@@ -403,9 +373,7 @@ describe('UserController', () => {
         }),
       );
 
-      // Mock useHomeStore to return null for activeStreamId (not on /home route)
-      mockUseHomeStoreGetState.mockReturnValue(createMockHomeState());
-      const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
+      const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue({ friendshipChanged: false });
 
       await UserController.commitFollow(HttpMethod.PUT, { follower, followee });
 
@@ -417,7 +385,10 @@ describe('UserController', () => {
         followJson: mockFollowJson,
         follower,
         followee,
-        activeStreamId: null,
+      });
+      expect(useStreamInvalidationStore.getState()).toMatchObject({
+        followGraphRevision: 1,
+        friendsRevision: 0,
       });
     });
 
@@ -436,9 +407,7 @@ describe('UserController', () => {
         }),
       );
 
-      // Mock useHomeStore to return null for activeStreamId (not on /home route)
-      mockUseHomeStoreGetState.mockReturnValue(createMockHomeState());
-      const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
+      const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue({ friendshipChanged: true });
 
       await UserController.commitFollow(HttpMethod.DELETE, { follower, followee });
 
@@ -448,7 +417,10 @@ describe('UserController', () => {
         followJson: mockFollowJson,
         follower,
         followee,
-        activeStreamId: null,
+      });
+      expect(useStreamInvalidationStore.getState()).toMatchObject({
+        followGraphRevision: 1,
+        friendsRevision: 1,
       });
     });
 
@@ -459,13 +431,17 @@ describe('UserController', () => {
       vi.spyOn(FollowNormalizer, 'to').mockImplementation(() => {
         throw new Error('normalize-fail');
       });
-      const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
+      const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue({ friendshipChanged: false });
 
       await expect(UserController.commitFollow(HttpMethod.PUT, { follower, followee })).rejects.toThrow(
         'normalize-fail',
       );
 
       expect(followSpy).not.toHaveBeenCalled();
+      expect(useStreamInvalidationStore.getState()).toMatchObject({
+        followGraphRevision: 0,
+        friendsRevision: 0,
+      });
     });
 
     it('should bubble when UserApplication.follow fails', async () => {
@@ -479,88 +455,35 @@ describe('UserController', () => {
         }),
       );
 
-      // Mock useHomeStore to return null for activeStreamId (not on /home route)
-      mockUseHomeStoreGetState.mockReturnValue(createMockHomeState());
       vi.spyOn(UserApplication, 'commitFollow').mockRejectedValue(new Error('delegate-fail'));
 
       await expect(UserController.commitFollow(HttpMethod.PUT, { follower, followee })).rejects.toThrow(
         'delegate-fail',
       );
-    });
-
-    it('should pass activeStreamId when on /home route', async () => {
-      const follower = TEST_PUBKY.USER_1;
-      const followee = TEST_PUBKY.USER_2;
-      const expectedStreamId = 'timeline:all:all' as PostStreamId;
-
-      const mockFollowJson = { foo: 'bar' } as Record<string, unknown>;
-      const mockToJson = vi.fn(() => mockFollowJson);
-      const mockMeta = { url: 'https://example.com/follow' } as { url: string };
-
-      vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-        asOpaque<FollowResult>({
-          meta: mockMeta,
-          follow: { toJson: mockToJson },
-        }),
-      );
-
-      // Mock window.location.pathname to be /home
-      Object.defineProperty(window, 'location', {
-        value: { pathname: '/home' },
-        writable: true,
-      });
-      // Mock useHomeStore so the controller can derive the active stream ID.
-      mockUseHomeStoreGetState.mockReturnValue(createMockHomeState());
-      const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
-
-      await UserController.commitFollow(HttpMethod.PUT, { follower, followee });
-
-      expect(followSpy).toHaveBeenCalledWith({
-        eventType: HttpMethod.PUT,
-        followUrl: mockMeta.url,
-        followJson: mockFollowJson,
-        follower,
-        followee,
-        activeStreamId: expectedStreamId,
+      expect(useStreamInvalidationStore.getState()).toMatchObject({
+        followGraphRevision: 1,
+        friendsRevision: 1,
       });
     });
 
-    it('should pass wot_domain activeStreamId when profile tags are active on home', async () => {
+    it('does not advance revisions for a non-mutation method', async () => {
       const follower = TEST_PUBKY.USER_1;
       const followee = TEST_PUBKY.USER_2;
-      const expectedStreamId = 'timeline:wot_domain:2:all:bitcoin' as PostStreamId;
 
       vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
         asOpaque<FollowResult>({
-          meta: { url: 'https://example.com/follow' },
+          meta: { url: 'https://example.com/read' },
           follow: { toJson: () => ({}) },
         }),
       );
+      vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue({ friendshipChanged: false });
 
-      Object.defineProperty(window, 'location', {
-        value: { pathname: '/home' },
-        writable: true,
+      await UserController.commitFollow(HttpMethod.GET, { follower, followee });
+
+      expect(useStreamInvalidationStore.getState()).toMatchObject({
+        followGraphRevision: 0,
+        friendsRevision: 0,
       });
-      mockUseHomeStoreGetState.mockReturnValue(
-        asOpaque<ReturnType<typeof useHomeStore.getState>>({
-          sort: SORT.TIMELINE,
-          reach: REACH.NETWORK,
-          content: CONTENT.ALL,
-          profileTags: ['bitcoin'],
-          taggedAsActive: true,
-          hasHydrated: true,
-        }),
-      );
-      useAuthStore.getState().setCurrentUserPubky(follower);
-      const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
-
-      await UserController.commitFollow(HttpMethod.PUT, { follower, followee });
-
-      expect(followSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          activeStreamId: expectedStreamId,
-        }),
-      );
     });
   });
 

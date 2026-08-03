@@ -160,6 +160,7 @@ const defaultPagination = {
   hasMore: false,
   loadMore: vi.fn(),
   refresh: vi.fn(),
+  refreshFromNetwork: vi.fn(),
   prependPosts: vi.fn(),
   prependOptimisticPosts: vi.fn(),
   removePosts: vi.fn(),
