@@ -17,6 +17,8 @@ export interface TagInputProps {
   viewerTags?: TagLabel[];
   /** Whether to show the close button (X) */
   showCloseButton?: boolean;
+  /** Whether to show the emoji picker button */
+  showEmojiButton?: boolean;
   /** Callback when close button is clicked */
   onClose?: () => void;
   /** Whether the input is disabled */
@@ -43,6 +45,8 @@ export interface TagInputProps {
   containerVariant?: TagInputContainerVariant;
   /** Additional className for the container */
   className?: string;
+  /** Additional className for the inner input */
+  inputClassName?: string;
   /** Inline styles for the container */
   style?: React.CSSProperties;
 }

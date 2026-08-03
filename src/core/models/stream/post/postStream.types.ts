@@ -100,6 +100,17 @@ export enum PostStreamTypes {
 export type ReplyStreamCompositeId = `${StreamSource.REPLIES}:${string}`;
 export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
+export type PostStreamKindSegment = 'all' | StreamKind;
+export type WotDomainDepth = 0 | 1 | 2;
+export type WotStreamId =
+  | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}`
+  | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}:${string}`;
+export type WotDomainStreamCompositeId =
+  | `${StreamSorting}:${StreamSource.WOT_DOMAIN}:${WotDomainDepth}:${PostStreamKindSegment}:${string}`
+  | `${StreamSorting}:${StreamSource.WOT_DOMAIN}:${WotDomainDepth}:${PostStreamKindSegment}:${string}:${string}`;
+export type SortedAuthorStreamCompositeId =
+  | `${StreamSorting}:${StreamSource.AUTHOR}:${string}:${PostStreamKindSegment}`
+  | `${StreamSorting}:${StreamSource.AUTHOR}:${string}:${PostStreamKindSegment}:${string}`;
 
 // Collections feature (see `.plans/2026/may/collections-feature-foundation.md`).
 //
@@ -125,6 +136,30 @@ export function buildPostReplyStreamId(compositePostId: string): ReplyStreamComp
   return `${StreamSource.REPLIES}:${compositePostId}`;
 }
 
+export function buildWotDomainStreamId(
+  sorting: StreamSorting,
+  depth: WotDomainDepth,
+  kind: PostStreamKindSegment,
+  domainTags: string[],
+  postTags: string[] = [],
+): WotDomainStreamCompositeId {
+  const canonicalDomainTags = [...domainTags].sort().join(',');
+  const baseStreamId = `${sorting}:${StreamSource.WOT_DOMAIN}:${depth}:${kind}:${canonicalDomainTags}`;
+  return (postTags.length > 0 ? `${baseStreamId}:${postTags.join(',')}` : baseStreamId) as WotDomainStreamCompositeId;
+}
+
+export function buildSortedAuthorStreamId(
+  sorting: StreamSorting,
+  authorPubky: Pubky,
+  kind: PostStreamKindSegment,
+  postTags: string[] = [],
+): SortedAuthorStreamCompositeId {
+  const baseStreamId = `${sorting}:${StreamSource.AUTHOR}:${authorPubky}:${kind}`;
+  return (
+    postTags.length > 0 ? `${baseStreamId}:${postTags.join(',')}` : baseStreamId
+  ) as SortedAuthorStreamCompositeId;
+}
+
 export function buildAuthorCollectionsStreamId(authorPubky: Pubky): AuthorCollectionsStreamId {
   return `${authorPubky}:${StreamSource.AUTHOR}:${StreamKind.COLLECTION}`;
 }
@@ -134,13 +169,12 @@ export function buildAuthorCollectionsStreamId(authorPubky: Pubky): AuthorCollec
  * (viewing someone's profile shows their full timeline, same as bookmarks #1804).
  */
 export function isAuthorStreamSkippingMuteFilter(streamId: string): boolean {
-  if (streamId.startsWith(`${StreamSource.AUTHOR}:`)) {
-    return true;
-  }
-  if (streamId.startsWith(`${StreamSource.AUTHOR_REPLIES}:`)) {
-    return true;
-  }
-  return streamId.endsWith(`:${StreamSource.AUTHOR}:${StreamKind.COLLECTION}`);
+  const [firstSegment, secondSegment] = streamId.split(':');
+  return (
+    firstSegment === StreamSource.AUTHOR ||
+    firstSegment === StreamSource.AUTHOR_REPLIES ||
+    secondSegment === StreamSource.AUTHOR
+  );
 }
 
 export function buildFollowedCollectionsStreamId(): FollowedCollectionsStreamId {
@@ -164,6 +198,56 @@ export function isCollectionItemsStream(streamId: string): streamId is Collectio
   return streamId.startsWith(`${StreamSource.COLLECTION}:`);
 }
 
+export function isWotDomainStream(streamId: string): streamId is WotDomainStreamCompositeId {
+  return streamId.split(':')[1] === StreamSource.WOT_DOMAIN;
+}
+
+const POST_STREAM_KIND_SEGMENTS: ReadonlySet<string> = new Set(['all', ...Object.values<string>(StreamKind)]);
+
+function toPostStreamKindSegment(segment: string | undefined): PostStreamKindSegment | undefined {
+  return segment !== undefined && POST_STREAM_KIND_SEGMENTS.has(segment)
+    ? (segment as PostStreamKindSegment)
+    : undefined;
+}
+
+/**
+ * Extracts the post kind segment from any known stream id shape, or `undefined`
+ * for shapes that encode no kind (`author:<pubky>`, `author_replies:<pubky>`,
+ * `post_replies:<pubky>:<postId>`, `collection:<pubky>:<postId>`).
+ *
+ * This is the canonical kind parser: consumers gating posts by kind (e.g.
+ * `postKindBelongsToStream`) must use it instead of splitting the id themselves.
+ */
+export function getPostStreamKind(streamId: string): PostStreamKindSegment | undefined {
+  const parts = streamId.split(':');
+  const [first, second] = parts;
+
+  // `${sorting}:wot_domain:<depth>:<kind>:<domainTags>[:postTags]`
+  if (second === StreamSource.WOT_DOMAIN) {
+    return toPostStreamKindSegment(parts[3]);
+  }
+
+  const isSortingFirst = Object.values<string>(StreamSorting).includes(first);
+
+  // Sorted-author shape (#2190): `${sorting}:author:<pubky>:<kind>[:tags]`.
+  // Must precede the generic sorting-first branch or the pubky reads as the kind.
+  if (isSortingFirst && second === StreamSource.AUTHOR) {
+    return toPostStreamKindSegment(parts[3]);
+  }
+
+  // `${sorting}:source:<kind>[:tags]` (timeline enums, wot, bookmarks, tag streams).
+  if (isSortingFirst) {
+    return toPostStreamKindSegment(parts[2]);
+  }
+
+  // Author-kind shape: `<pubky>:author:<kind>`.
+  if (second === StreamSource.AUTHOR) {
+    return toPostStreamKindSegment(parts[2]);
+  }
+
+  return undefined;
+}
+
 /**
  * Single-collection item feeds (`collection:<author>:<postId>`) and the
  * bookmarks post feeds (`<sorting>:bookmarks:<kind>`) intentionally keep deleted
@@ -184,6 +268,9 @@ export function isDeletedRetainingStream(streamId: string): boolean {
 
 export type PostStreamId =
   | PostStreamTypes
+  | WotStreamId
+  | WotDomainStreamCompositeId
+  | SortedAuthorStreamCompositeId
   | ReplyStreamCompositeId
   | AuthorStreamCompositeId
   | AuthorRepliesStreamCompositeId

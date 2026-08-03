@@ -755,6 +755,10 @@
       "content": "内容",
       "contentPlaceholder": "选择内容类型",
       "filterTags": "按内容标签筛选",
+      "postTags": "帖子标签",
+      "postTagsDescription": "按帖子主题筛选。",
+      "profileTags": "个人资料标签",
+      "profileTagsDescription": "按用户被标记的方式筛选。",
       "saveFeed": "保存信息流",
       "deleteFeed": "删除信息流",
       "feedCreated": "信息流 {name} 已创建！",
@@ -1159,8 +1163,15 @@
     "reach": {
       "title": "范围",
       "all": "全部",
+      "network": "我的人脉",
+      "taggedAs": "标记为",
       "following": "关注",
-      "friends": "好友"
+      "friends": "好友",
+      "me": "我",
+      "profileTag": "个人资料标签",
+      "profileTagLimitReached": "最多{max}个标签",
+      "taggedAsTag": "“{tag}”",
+      "taggedAsHeadline": "来自被我的人脉标记为 {tags} 的用户的帖子"
     },
     "sort": {
       "title": "排序",

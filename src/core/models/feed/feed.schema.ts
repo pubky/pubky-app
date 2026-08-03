@@ -4,6 +4,7 @@ export interface FeedModelSchema {
   id: string;
   name: string;
   tags: string[];
+  domain_tags: string[];
   reach: PubkyAppFeedReach;
   sort: PubkyAppFeedSort;
   content: PubkyAppPostKind | null;

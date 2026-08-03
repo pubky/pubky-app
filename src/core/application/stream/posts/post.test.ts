@@ -258,6 +258,18 @@ describe('PostStreamApplication', () => {
       expect(result).toEqual([collectionPostId]);
     });
 
+    it('keeps collection-kind posts in wot_domain collection content streams', async () => {
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: 'timeline:wot_domain:2:collection:bitcoin' as PostStreamId,
+        postIds: [collectionPostId],
+      });
+
+      expect(result).toEqual([collectionPostId]);
+    });
+
     it('excludes collection-kind posts from author profile streams', async () => {
       const authorStreamId = `author:${DEFAULT_AUTHOR}` as PostStreamId;
       const shortPostId = `${DEFAULT_AUTHOR}:short-post`;

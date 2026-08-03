@@ -22,7 +22,7 @@ import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import { TimelineFeedWithStream } from '../TimelineFeedContent/TimelineFeedContent';
-import type { TimelineFeedProps } from './TimelineFeed.types';
+import type { HomeTimelineFeedProps, TimelineFeedProps } from './TimelineFeed.types';
 import { resolveVisualFeedContent } from './TimelineFeedVisual.helpers';
 
 export { useTimelineFeedContext } from './TimelineFeedContext';
@@ -33,44 +33,36 @@ export { useTimelineFeedContext } from './TimelineFeedContext';
  * Organism that encapsulates stream calculation and pagination logic.
  * Routes to variant-specific wrappers so each only subscribes to its own data sources.
  */
-export function TimelineFeed({
-  variant,
-  children,
-  emptyState,
-  pullToRefreshContainerRef,
-  trailingSlot,
-  requestedLayout,
-  visualHiddenItemsNotice,
-}: TimelineFeedProps) {
-  switch (variant) {
+export function TimelineFeed(props: TimelineFeedProps) {
+  switch (props.variant) {
     case TIMELINE_FEED_VARIANT.HOME:
-      return <HomeTimelineFeed>{children}</HomeTimelineFeed>;
+      return <HomeTimelineFeed persistentHeader={props.persistentHeader}>{props.children}</HomeTimelineFeed>;
     case TIMELINE_FEED_VARIANT.CUSTOM:
-      return <CustomTimelineFeed>{children}</CustomTimelineFeed>;
+      return <CustomTimelineFeed>{props.children}</CustomTimelineFeed>;
     case TIMELINE_FEED_VARIANT.BOOKMARKS:
       return (
-        <BookmarksTimelineFeed emptyState={emptyState} trailingSlot={trailingSlot}>
-          {children}
+        <BookmarksTimelineFeed emptyState={props.emptyState} trailingSlot={props.trailingSlot}>
+          {props.children}
         </BookmarksTimelineFeed>
       );
     case TIMELINE_FEED_VARIANT.PROFILE:
-      return <ProfileTimelineFeed>{children}</ProfileTimelineFeed>;
+      return <ProfileTimelineFeed>{props.children}</ProfileTimelineFeed>;
     case TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS:
-      return <ProfileCollectionsTimelineFeed>{children}</ProfileCollectionsTimelineFeed>;
+      return <ProfileCollectionsTimelineFeed>{props.children}</ProfileCollectionsTimelineFeed>;
     case TIMELINE_FEED_VARIANT.HOT:
-      return <HotTimelineFeed>{children}</HotTimelineFeed>;
+      return <HotTimelineFeed>{props.children}</HotTimelineFeed>;
     case TIMELINE_FEED_VARIANT.SEARCH:
-      return <SearchTimelineFeed>{children}</SearchTimelineFeed>;
+      return <SearchTimelineFeed>{props.children}</SearchTimelineFeed>;
     case TIMELINE_FEED_VARIANT.COLLECTION:
       return (
         <CollectionTimelineFeed
-          emptyState={emptyState}
-          pullToRefreshContainerRef={pullToRefreshContainerRef}
-          trailingSlot={trailingSlot}
-          requestedLayout={requestedLayout}
-          visualHiddenItemsNotice={visualHiddenItemsNotice}
+          emptyState={props.emptyState}
+          pullToRefreshContainerRef={props.pullToRefreshContainerRef}
+          trailingSlot={props.trailingSlot}
+          requestedLayout={props.requestedLayout}
+          visualHiddenItemsNotice={props.visualHiddenItemsNotice}
         >
-          {children}
+          {props.children}
         </CollectionTimelineFeed>
       );
     default:
@@ -78,7 +70,13 @@ export function TimelineFeed({
   }
 }
 
-function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
+function HomeTimelineFeed({
+  children,
+  persistentHeader,
+}: {
+  children?: HomeTimelineFeedProps['children'];
+  persistentHeader?: HomeTimelineFeedProps['persistentHeader'];
+}) {
   const content = useHomeStore((state) => state.content);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.HOME);
   const resolvedContent = resolveVisualFeedContent({
@@ -96,6 +94,7 @@ function HomeTimelineFeed({ children }: { children?: TimelineFeedProps['children
       variant={TIMELINE_FEED_VARIANT.HOME}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      persistentHeader={persistentHeader}
     >
       {children}
     </TimelineFeedWithStream>

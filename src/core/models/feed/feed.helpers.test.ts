@@ -15,6 +15,7 @@ import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 
 describe('Feed Helpers', () => {
+  const TEST_VIEWER = 'viewer-pubky';
   describe('reachToString', () => {
     it('should convert Following to "following"', () => {
       expect(reachToString(PubkyAppFeedReach.Following)).toBe('following');
@@ -32,11 +33,8 @@ describe('Feed Helpers', () => {
       expect(reachToString(PubkyAppFeedReach.All)).toBe('all');
     });
 
-    it('should convert Wot to "wot"', () => {
+    it('should convert Wot and Me to their specs values', () => {
       expect(reachToString(PubkyAppFeedReach.Wot)).toBe('wot');
-    });
-
-    it('should convert Me to "me"', () => {
       expect(reachToString(PubkyAppFeedReach.Me)).toBe('me');
     });
   });
@@ -115,6 +113,10 @@ describe('Feed Helpers', () => {
     it('should convert Followers to StreamSource.FOLLOWERS', () => {
       expect(reachToStreamSource(PubkyAppFeedReach.Followers)).toBe(StreamSource.FOLLOWERS);
     });
+
+    it('should convert Wot to StreamSource.WOT', () => {
+      expect(reachToStreamSource(PubkyAppFeedReach.Wot)).toBe(StreamSource.WOT);
+    });
   });
 
   describe('sortToStreamSorting', () => {
@@ -170,6 +172,7 @@ describe('Feed Helpers', () => {
       id: '123',
       name: 'Test Feed',
       tags: ['bitcoin'],
+      domain_tags: [],
       reach: PubkyAppFeedReach.All,
       sort: PubkyAppFeedSort.Recent,
       content: null,
@@ -187,7 +190,7 @@ describe('Feed Helpers', () => {
         tags: ['bitcoin'],
       });
 
-      expect(buildFeedStreamId(feed)).toBe('timeline:all:all:bitcoin');
+      expect(buildFeedStreamId(feed, TEST_VIEWER)).toBe('timeline:all:all:bitcoin');
     });
 
     it('should build stream ID with multiple tags', () => {
@@ -195,7 +198,7 @@ describe('Feed Helpers', () => {
         tags: ['bitcoin', 'lightning', 'tech'],
       });
 
-      expect(buildFeedStreamId(feed)).toBe('timeline:all:all:bitcoin,lightning,tech');
+      expect(buildFeedStreamId(feed, TEST_VIEWER)).toBe('timeline:all:all:bitcoin,lightning,tech');
     });
 
     it('should build stream ID for following source', () => {
@@ -203,7 +206,7 @@ describe('Feed Helpers', () => {
         reach: PubkyAppFeedReach.Following,
       });
 
-      expect(buildFeedStreamId(feed)).toBe('timeline:following:all:bitcoin');
+      expect(buildFeedStreamId(feed, TEST_VIEWER)).toBe('timeline:following:all:bitcoin');
     });
 
     it('should build stream ID for friends source', () => {
@@ -211,7 +214,7 @@ describe('Feed Helpers', () => {
         reach: PubkyAppFeedReach.Friends,
       });
 
-      expect(buildFeedStreamId(feed)).toBe('timeline:friends:all:bitcoin');
+      expect(buildFeedStreamId(feed, TEST_VIEWER)).toBe('timeline:friends:all:bitcoin');
     });
 
     it('should build stream ID for followers source', () => {
@@ -219,7 +222,7 @@ describe('Feed Helpers', () => {
         reach: PubkyAppFeedReach.Followers,
       });
 
-      expect(buildFeedStreamId(feed)).toBe('timeline:followers:all:bitcoin');
+      expect(buildFeedStreamId(feed, TEST_VIEWER)).toBe('timeline:followers:all:bitcoin');
     });
 
     it('should build stream ID for popularity sorting', () => {
@@ -227,7 +230,7 @@ describe('Feed Helpers', () => {
         sort: PubkyAppFeedSort.Popularity,
       });
 
-      expect(buildFeedStreamId(feed)).toBe('total_engagement:all:all:bitcoin');
+      expect(buildFeedStreamId(feed, TEST_VIEWER)).toBe('total_engagement:all:all:bitcoin');
     });
 
     it('should build stream ID with specific content type', () => {
@@ -235,7 +238,64 @@ describe('Feed Helpers', () => {
         content: PubkyAppPostKind.Image,
       });
 
-      expect(buildFeedStreamId(feed)).toBe('timeline:all:image:bitcoin');
+      expect(buildFeedStreamId(feed, TEST_VIEWER)).toBe('timeline:all:image:bitcoin');
+    });
+
+    it('should build Network post-only and profile-only streams', () => {
+      expect(buildFeedStreamId(createFeed({ reach: PubkyAppFeedReach.Wot }), TEST_VIEWER)).toBe(
+        'timeline:wot:all:bitcoin',
+      );
+      expect(
+        buildFeedStreamId(
+          createFeed({ reach: PubkyAppFeedReach.Wot, tags: [], domain_tags: ['developer', 'bitcoiner'] }),
+          TEST_VIEWER,
+        ),
+      ).toBe('timeline:wot_domain:2:all:bitcoiner,developer');
+    });
+
+    it('should build combined Following/Friends domain streams at depth 1', () => {
+      const following = createFeed({
+        reach: PubkyAppFeedReach.Following,
+        tags: ['second', 'first'],
+        domain_tags: ['bitcoiner'],
+      });
+      const friends = { ...following, reach: PubkyAppFeedReach.Friends };
+
+      expect(buildFeedStreamId(following, TEST_VIEWER)).toBe('timeline:wot_domain:1:all:bitcoiner:second,first');
+      expect(buildFeedStreamId(friends, TEST_VIEWER)).toBe('timeline:wot_domain:1:all:bitcoiner:second,first');
+    });
+
+    it('should keep Recent and Popularity custom Me streams collision-safe', () => {
+      const meFeed = createFeed({ reach: PubkyAppFeedReach.Me, tags: ['bitcoin'] });
+
+      expect(buildFeedStreamId(meFeed, TEST_VIEWER)).toBe(`timeline:author:${TEST_VIEWER}:all:bitcoin`);
+      expect(buildFeedStreamId({ ...meFeed, sort: PubkyAppFeedSort.Popularity }, TEST_VIEWER)).toBe(
+        `total_engagement:author:${TEST_VIEWER}:all:bitcoin`,
+      );
+    });
+
+    it('should build depth-0 Me domain streams with profile tags (#2150)', () => {
+      expect(
+        buildFeedStreamId(
+          createFeed({ reach: PubkyAppFeedReach.Me, tags: [], domain_tags: ['developer', 'bitcoiner'] }),
+          TEST_VIEWER,
+        ),
+      ).toBe('timeline:wot_domain:0:all:bitcoiner,developer');
+    });
+
+    it('should combine Me profile tags with post tags in the sixth segment', () => {
+      expect(
+        buildFeedStreamId(
+          createFeed({ reach: PubkyAppFeedReach.Me, tags: ['second', 'first'], domain_tags: ['bitcoiner'] }),
+          TEST_VIEWER,
+        ),
+      ).toBe('timeline:wot_domain:0:all:bitcoiner:second,first');
+    });
+
+    it('should reject profile tags for unsupported reach values', () => {
+      expect(() =>
+        buildFeedStreamId(createFeed({ reach: PubkyAppFeedReach.All, domain_tags: ['bitcoiner'] }), TEST_VIEWER),
+      ).toThrow('Profile tags are not supported for this feed reach');
     });
 
     it('should build complex stream ID with all options', () => {
@@ -246,16 +306,7 @@ describe('Feed Helpers', () => {
         tags: ['crypto', 'news'],
       });
 
-      expect(buildFeedStreamId(feed)).toBe('total_engagement:following:video:crypto,news');
+      expect(buildFeedStreamId(feed, TEST_VIEWER)).toBe('total_engagement:following:video:crypto,news');
     });
-
-    it.each([PubkyAppFeedReach.Wot, PubkyAppFeedReach.Me])(
-      'rejects reach %s until its stream implementation is available',
-      (reach) => {
-        const feed = createFeed({ reach });
-
-        expect(() => buildFeedStreamId(feed)).toThrow('Feed reach is not supported by this stream implementation');
-      },
-    );
   });
 });

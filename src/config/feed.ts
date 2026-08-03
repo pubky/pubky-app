@@ -36,6 +36,21 @@ export const REPOST_OPTIMISTIC_PREPEND_VARIANTS = new Set<TimelineFeedVariant>([
 ]);
 
 /**
+ * Reach values supported by the profile/domain tag stream contract. WoT V1
+ * authoring exposes only standalone Tagged as, serialized as wot/depth 2.
+ * Depth 0/1 support remains intentional for foreign and legacy custom feeds
+ * and for future authoring work. Both network and wot are retained because
+ * Home and pubky-app-specs use different names for the same depth-2 reach.
+ */
+const PROFILE_TAG_SUPPORTED_REACHES = ['network', 'wot', 'following', 'friends', 'me'] as const;
+
+export type ProfileTagSupportedReach = (typeof PROFILE_TAG_SUPPORTED_REACHES)[number];
+
+export function isProfileTagReachSupported(reach: string): reach is ProfileTagSupportedReach {
+  return PROFILE_TAG_SUPPORTED_REACHES.some((supportedReach) => supportedReach === reach);
+}
+
+/**
  * Responsive column classes for the shared card grid (`TimelineGridPosts`).
  * One column on phones, two at `md`, three at `xl` — mirrors the 3-up Figma grid.
  * Breakpoints may be retuned in the Phase C spike once the real cell width is measured.

@@ -755,6 +755,10 @@
       "content": "Content",
       "contentPlaceholder": "Select content",
       "filterTags": "Filter on Content Tags",
+      "postTags": "Post Tags",
+      "postTagsDescription": "Filter by what posts are about.",
+      "profileTags": "Profile Tags",
+      "profileTagsDescription": "Filter by how people are tagged.",
       "saveFeed": "Save Feed",
       "deleteFeed": "Delete Feed",
       "feedCreated": "Feed created: {name}",
@@ -1165,8 +1169,15 @@
     "reach": {
       "title": "Reach",
       "all": "All",
+      "network": "My network",
+      "taggedAs": "Tagged as",
       "following": "Following",
-      "friends": "Friends"
+      "friends": "Friends",
+      "me": "Me",
+      "profileTag": "profile tag",
+      "profileTagLimitReached": "{max} tags max",
+      "taggedAsTag": "‘{tag}’",
+      "taggedAsHeadline": "Posts from people tagged as {tags} by my network"
     },
     "sort": {
       "title": "Sort",

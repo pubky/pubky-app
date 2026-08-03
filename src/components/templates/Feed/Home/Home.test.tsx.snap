@@ -29,6 +29,11 @@ exports[`Home - Snapshots > matches snapshot 1`] = `
     >
       PostInput
     </div>
+    <div
+      data-testid="tagged-as-headline"
+    >
+      TaggedAsHeadline
+    </div>
   </div>
 </div>
 `;

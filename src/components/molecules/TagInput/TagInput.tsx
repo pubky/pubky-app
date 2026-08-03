@@ -25,6 +25,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     existingTags = [],
     viewerTags,
     showCloseButton = false,
+    showEmojiButton = true,
     onClose,
     disabled = false,
     maxTags,
@@ -38,6 +39,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     autoFocus = false,
     containerVariant = 'dashed',
     className,
+    inputClassName,
     style,
   },
   ref,
@@ -161,7 +163,6 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
               isDashedVariant && 'border border-dashed border-input shadow-sm transition-all duration-300',
               onClick && 'cursor-pointer',
               className,
-              isAtLimit && 'w-40',
             )}
             style={style}
             // Adding / typing a tag is the only intent here — never navigation.
@@ -193,26 +194,29 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
                 '-mt-0.5 h-full flex-1 bg-transparent p-0 text-sm leading-8 font-bold caret-white',
                 'border-none shadow-none ring-0 outline-none hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none',
                 'placeholder:font-bold',
-                isAtLimit ? 'placeholder:text-destructive' : 'placeholder:text-input',
+                isAtLimit ? 'placeholder:text-destructive disabled:opacity-100' : 'placeholder:text-input',
                 inputValue ? 'text-foreground' : 'text-input',
                 isDisabled && onClick && 'pointer-events-none',
+                inputClassName,
               )}
             />
 
-            <Button
-              overrideDefaults={true}
-              onMouseDown={preventBlur}
-              onClick={() => setShowEmojiPicker(true)}
-              className={cn(
-                'inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
-                isDashedVariant && 'shadow-xs-dark hover:shadow-xs-dark',
-                isDisabled && onClick && 'pointer-events-none',
-              )}
-              aria-label="Open emoji picker"
-              disabled={isDisabled}
-            >
-              <Smile className="size-4" strokeWidth={2} />
-            </Button>
+            {showEmojiButton && (
+              <Button
+                overrideDefaults={true}
+                onMouseDown={preventBlur}
+                onClick={() => setShowEmojiPicker(true)}
+                className={cn(
+                  'inline-flex size-5 cursor-pointer items-center justify-center rounded-full p-1',
+                  isDashedVariant && 'shadow-xs-dark hover:shadow-xs-dark',
+                  isDisabled && onClick && 'pointer-events-none',
+                )}
+                aria-label="Open emoji picker"
+                disabled={isDisabled}
+              >
+                <Smile className="size-4" strokeWidth={2} />
+              </Button>
+            )}
 
             {showCloseButton && (
               <Button

@@ -9,9 +9,35 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for drawer variant wit
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab="friends"
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach
+  </div>
+  <div
+    class="flex flex-col gap-2"
+    data-testid="custom-feed-post-tags"
+  >
+    <label
+      class="text-xs tracking-wide text-muted-foreground uppercase"
+    >
+      Filter on Content Tags
+    </label>
+    <div
+      class="flex flex-wrap gap-2"
+      data-testid="container"
+    >
+      <span
+        data-testid="readonly-tag-tag1"
+      >
+        tag1
+      </span>
+      <span
+        data-testid="readonly-tag-tag2"
+      >
+        tag2
+      </span>
+    </div>
   </div>
   <div
     data-default-selected-tab=""
@@ -49,6 +75,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for drawer variant wit
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab=""
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach
@@ -89,9 +116,35 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant wi
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab="following"
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach
+  </div>
+  <div
+    class="flex flex-col gap-2"
+    data-testid="custom-feed-post-tags"
+  >
+    <label
+      class="text-xs tracking-wide text-muted-foreground uppercase"
+    >
+      Filter on Content Tags
+    </label>
+    <div
+      class="flex flex-wrap gap-2"
+      data-testid="container"
+    >
+      <span
+        data-testid="readonly-tag-tag1"
+      >
+        tag1
+      </span>
+      <span
+        data-testid="readonly-tag-tag2"
+      >
+        tag2
+      </span>
+    </div>
   </div>
   <div
     data-default-selected-tab=""
@@ -134,9 +187,35 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant wi
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab="all"
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach
+  </div>
+  <div
+    class="flex flex-col gap-2"
+    data-testid="custom-feed-post-tags"
+  >
+    <label
+      class="text-xs tracking-wide text-muted-foreground uppercase"
+    >
+      Filter on Content Tags
+    </label>
+    <div
+      class="flex flex-wrap gap-2"
+      data-testid="container"
+    >
+      <span
+        data-testid="readonly-tag-tag1"
+      >
+        tag1
+      </span>
+      <span
+        data-testid="readonly-tag-tag2"
+      >
+        tag2
+      </span>
+    </div>
   </div>
   <div
     data-default-selected-tab=""
@@ -179,6 +258,7 @@ exports[`CustomFeedFilters - Snapshots > matches snapshot for sidebar variant wi
     data-default-selected-tab=""
     data-disabled="true"
     data-selected-tab=""
+    data-show-tagged-as="true"
     data-testid="filter-reach"
   >
     FilterReach

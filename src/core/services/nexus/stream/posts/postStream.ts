@@ -46,10 +46,12 @@ export class NexusPostStreamService {
         break;
       case StreamSource.FOLLOWING:
       case StreamSource.FRIENDS:
+      case StreamSource.WOT:
+      case StreamSource.WOT_DOMAIN:
       case StreamSource.BOOKMARKS:
         // TODO: from now, always is going to be
         if (!params.viewer_id) {
-          throw new Error('Viewer ID is required for friends stream');
+          throw new Error(`Viewer ID is required for ${invokeEndpoint} stream`);
         }
         nexusEndpoint = postStreamApi[invokeEndpoint]({ ...params, observer_id: params.viewer_id });
         break;

@@ -1,4 +1,13 @@
-import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import type { Pubky } from '@/models/models.types';
+import {
+  buildSortedAuthorStreamId,
+  buildWotDomainStreamId,
+  getPostStreamKind,
+  type PostStreamId,
+  type PostStreamKindSegment,
+} from '@/models/stream/post/postStream.types';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 import { CONTENT, type ContentType, REACH, type ReachType, SORT, type SortType } from './home.types';
 
 // ============================================
@@ -15,19 +24,22 @@ function reverseMapping<K extends string, V extends string>(map: Record<K, V>): 
 
 /** Maps SORT filter to streamId SORTING part */
 const SORT_TO_SORTING = {
-  [SORT.TIMELINE]: 'timeline',
-  [SORT.ENGAGEMENT]: 'total_engagement',
-} as const satisfies Record<SortType, string>;
+  [SORT.TIMELINE]: StreamSorting.TIMELINE,
+  [SORT.ENGAGEMENT]: StreamSorting.ENGAGEMENT,
+} as const satisfies Record<SortType, StreamSorting>;
 
 /** Maps streamId SORTING part to SORT filter (auto-generated) */
 const SORTING_TO_SORT = reverseMapping(SORT_TO_SORTING);
 
 /** Maps REACH filter to streamId SOURCE part */
+type SourceMappedReachType = Exclude<ReachType, typeof REACH.ME>;
+
 const REACH_TO_SOURCE = {
   [REACH.ALL]: 'all',
+  [REACH.NETWORK]: 'wot',
   [REACH.FOLLOWING]: 'following',
   [REACH.FRIENDS]: 'friends',
-} as const satisfies Record<ReachType, string>;
+} as const satisfies Record<SourceMappedReachType, string>;
 
 /** Maps streamId SOURCE part to REACH filter (auto-generated) */
 const SOURCE_TO_REACH = reverseMapping(REACH_TO_SOURCE);
@@ -35,17 +47,33 @@ const SOURCE_TO_REACH = reverseMapping(REACH_TO_SOURCE);
 /** Maps CONTENT filter to streamId KIND part */
 const CONTENT_TO_KIND = {
   [CONTENT.ALL]: 'all',
-  [CONTENT.SHORT]: 'short',
-  [CONTENT.LONG]: 'long',
-  [CONTENT.COLLECTIONS]: 'collection',
-  [CONTENT.IMAGES]: 'image',
-  [CONTENT.VIDEOS]: 'video',
-  [CONTENT.LINKS]: 'link',
-  [CONTENT.FILES]: 'file',
-} as const satisfies Record<ContentType, string>;
+  [CONTENT.SHORT]: StreamKind.SHORT,
+  [CONTENT.LONG]: StreamKind.LONG,
+  [CONTENT.COLLECTIONS]: StreamKind.COLLECTION,
+  [CONTENT.IMAGES]: StreamKind.IMAGE,
+  [CONTENT.VIDEOS]: StreamKind.VIDEO,
+  [CONTENT.LINKS]: StreamKind.LINK,
+  [CONTENT.FILES]: StreamKind.FILE,
+} as const satisfies Record<ContentType, PostStreamKindSegment>;
+
+/**
+ * Tagged as is a standalone depth-2 Home feed in the V1 UI. Depth 0/1 domain
+ * paths remain supported by custom-feed models for foreign/legacy feed
+ * interoperability and the post-V1 ideal state.
+ */
+const TAGGED_AS_WOT_DOMAIN_DEPTH = 2;
 
 /** Maps streamId KIND part to CONTENT filter (auto-generated) */
 const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
+
+interface HomeStreamFilters {
+  sort: SortType;
+  reach: ReachType;
+  content: ContentType;
+  currentUserPubky?: Pubky | null;
+  profileTags?: string[];
+  taggedAsActive?: boolean;
+}
 
 /**
  * Maps filter state to streamId pattern: sorting:source:kind
@@ -61,6 +89,10 @@ const KIND_TO_CONTENT = reverseMapping(CONTENT_TO_KIND);
  * getStreamIdFromFilters('recent', 'friends', 'posts') // => 'timeline:friends:short'
  */
 export function getStreamIdFromFilters(sort: SortType, reach: ReachType, content: ContentType): string {
+  if (reach === REACH.ME) {
+    throw new Error('Me reach requires the current user id. Use getHomeStreamIdFromFilters instead.');
+  }
+
   const sorting = SORT_TO_SORTING[sort];
   const source = REACH_TO_SOURCE[reach];
   const kind = CONTENT_TO_KIND[content];
@@ -78,11 +110,32 @@ export function getStreamIdFromFilters(sort: SortType, reach: ReachType, content
  * getStreamId('recent', 'following', 'images') // => PostStreamTypes.TIMELINE_FOLLOWING_IMAGE
  * getStreamId('popularity', 'friends', 'videos') // => PostStreamTypes.POPULARITY_FRIENDS_VIDEO
  */
-export function getStreamId(sort: SortType, reach: ReachType, content: ContentType): PostStreamTypes {
+export function getStreamId(sort: SortType, reach: ReachType, content: ContentType): PostStreamId {
   const streamId = getStreamIdFromFilters(sort, reach, content);
 
-  // The streamId string matches the enum value exactly, so we can cast directly
-  return streamId as PostStreamTypes;
+  return streamId as PostStreamId;
+}
+
+export function getHomeStreamIdFromFilters({
+  sort,
+  reach,
+  content,
+  currentUserPubky,
+  profileTags = [],
+  taggedAsActive = false,
+}: HomeStreamFilters): PostStreamId {
+  const effectiveReach = currentUserPubky ? reach : REACH.ALL;
+  const kind = CONTENT_TO_KIND[content];
+
+  if (currentUserPubky && taggedAsActive && profileTags.length > 0) {
+    return buildWotDomainStreamId(SORT_TO_SORTING[sort], TAGGED_AS_WOT_DOMAIN_DEPTH, kind, profileTags);
+  }
+
+  if (effectiveReach === REACH.ME && currentUserPubky) {
+    return buildSortedAuthorStreamId(SORT_TO_SORTING[sort], currentUserPubky, kind);
+  }
+
+  return getStreamId(sort, effectiveReach, content);
 }
 
 /**
@@ -93,6 +146,11 @@ export function getStreamId(sort: SortType, reach: ReachType, content: ContentTy
  * matchesFilters('timeline:following:all', 'recent', 'all', 'all') // => false
  */
 export function matchesFilters(streamId: string, sort: SortType, reach: ReachType, content: ContentType): boolean {
+  // Me streams require viewer-aware author ids, which this legacy matcher cannot derive.
+  if (reach === REACH.ME) {
+    return false;
+  }
+
   const expectedStreamId = getStreamIdFromFilters(sort, reach, content);
   return streamId === expectedStreamId;
 }
@@ -140,12 +198,20 @@ const POST_KIND_TO_CONTENT = {
 } as const satisfies Record<string, ContentType>;
 
 /**
- * Returns whether a post kind belongs in a timeline stream identified by streamId.
- * Unparseable stream ids (profile, author collections, etc.) accept all kinds.
+ * Returns whether a post kind belongs in a stream identified by streamId.
+ * Kind extraction is delegated to the canonical model-layer parser, which
+ * covers timeline, tag, wot_domain, and author-kind shapes. Stream ids that
+ * encode no kind (replies, single-collection items, plain author feeds)
+ * accept all kinds.
  */
 export function postKindBelongsToStream(postKind: string, streamId: string): boolean {
-  const parsed = parseStreamId(streamId);
-  if (!parsed || parsed.content === CONTENT.ALL) {
+  const kindSegment = getPostStreamKind(streamId);
+  if (!kindSegment) {
+    return true;
+  }
+
+  const streamContent = KIND_TO_CONTENT[kindSegment];
+  if (streamContent === CONTENT.ALL) {
     return true;
   }
 
@@ -154,5 +220,5 @@ export function postKindBelongsToStream(postKind: string, streamId: string): boo
     return false;
   }
 
-  return postContent === parsed.content;
+  return postContent === streamContent;
 }

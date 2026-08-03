@@ -7,7 +7,10 @@ exports[`HomeFeedDrawer - Snapshots > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
+      data-profile-tags=""
+      data-profile-tags-disabled="true"
       data-selected-tab="following"
+      data-show-tagged-as="true"
       data-testid="filter-reach"
     >
       FilterReach
@@ -40,7 +43,10 @@ exports[`HomeFeedDrawerMobile - Snapshots > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
+      data-profile-tags=""
+      data-profile-tags-disabled="true"
       data-selected-tab="following"
+      data-show-tagged-as="true"
       data-testid="filter-reach"
     >
       FilterReach
@@ -67,7 +73,10 @@ exports[`HomeFeedSidebar - Snapshots > matches snapshot 1`] = `
     data-testid="container"
   >
     <div
+      data-profile-tags=""
+      data-profile-tags-disabled="true"
       data-selected-tab="following"
+      data-show-tagged-as="true"
       data-testid="filter-reach"
     >
       FilterReach

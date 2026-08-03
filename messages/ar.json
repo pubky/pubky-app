@@ -757,6 +757,10 @@
       "content": "المحتوى",
       "contentPlaceholder": "اختر محتوى",
       "filterTags": "تصفية حسب وسوم المحتوى",
+      "postTags": "وسوم المنشورات",
+      "postTagsDescription": "صفِّ حسب موضوع المنشورات.",
+      "profileTags": "وسوم الملفات الشخصية",
+      "profileTagsDescription": "صفِّ حسب كيفية وسم الأشخاص.",
       "saveFeed": "حفظ الخلاصة",
       "deleteFeed": "حذف الخلاصة",
       "feedCreated": "تم إنشاء الخلاصة {name}!",
@@ -1161,8 +1165,15 @@
     "reach": {
       "title": "النطاق",
       "all": "الكل",
+      "network": "شبكتي",
+      "taggedAs": "موسوم كـ",
       "following": "المتابَعون",
-      "friends": "الاصدقاء"
+      "friends": "الاصدقاء",
+      "me": "انا",
+      "profileTag": "وسم الملف الشخصي",
+      "profileTagLimitReached": "{max} وسوم كحد اقصى",
+      "taggedAsTag": "«{tag}»",
+      "taggedAsHeadline": "منشورات من أشخاص وسمتهم شبكتي كـ {tags}"
     },
     "sort": {
       "title": "الترتيب",

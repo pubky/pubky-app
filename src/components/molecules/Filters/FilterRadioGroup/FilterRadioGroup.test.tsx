@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FilterRadioGroup } from './FilterRadioGroup';
 
@@ -107,6 +108,22 @@ describe('FilterRadioGroup', () => {
     fireEvent.click(option2);
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders an item extra immediately after its radio inside the radiogroup', () => {
+    render(
+      <FilterRadioGroup
+        title="Test Filter"
+        items={mockItems}
+        itemExtras={{ option2: <input aria-label="Option 2 editor" /> }}
+      />,
+    );
+
+    const option2 = screen.getByLabelText('Option 2');
+    const editor = screen.getByLabelText('Option 2 editor');
+
+    expect(screen.getByRole('radiogroup')).toContainElement(editor);
+    expect(option2.nextElementSibling).toBe(editor);
   });
 
   describe('Disabled items', () => {
@@ -238,6 +255,25 @@ describe('FilterRadioGroup', () => {
       // Should skip option2 (disabled) and focus option3
       expect(document.activeElement).toBe(option3);
     });
+
+    it('skips item extras during radio arrow navigation', () => {
+      render(
+        <FilterRadioGroup
+          title="Test Filter"
+          items={mockItems}
+          defaultValue="option2"
+          itemExtras={{ option2: <input aria-label="Option 2 editor" /> }}
+        />,
+      );
+
+      const option2 = screen.getByLabelText('Option 2');
+      const option3 = screen.getByLabelText('Option 3');
+
+      option2.focus();
+      fireEvent.keyDown(option2, { key: 'ArrowDown' });
+
+      expect(document.activeElement).toBe(option3);
+    });
   });
 
   describe('TabIndex management', () => {
@@ -266,6 +302,23 @@ describe('FilterRadioGroup', () => {
 
       expect(option1).toHaveAttribute('tabIndex', '-1');
       expect(option2).toHaveAttribute('tabIndex', '0');
+    });
+
+    it('allows Tab to enter an enabled item extra', async () => {
+      const user = userEvent.setup();
+      render(
+        <FilterRadioGroup
+          title="Test Filter"
+          items={mockItems}
+          selectedValue="option2"
+          itemExtras={{ option2: <input aria-label="Option 2 editor" /> }}
+        />,
+      );
+
+      screen.getByLabelText('Option 2').focus();
+      await user.tab();
+
+      expect(document.activeElement).toBe(screen.getByLabelText('Option 2 editor'));
     });
   });
 });
