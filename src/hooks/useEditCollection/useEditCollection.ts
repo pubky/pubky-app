@@ -102,6 +102,18 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
     hasPrefilledRef.current = true;
   }, [form, originalDescription, originalLayout, originalName]);
 
+  // Latest envelope values, readable imperatively from `reset()`. The dialog's
+  // close handler captures `reset` in the render where Save was clicked, so
+  // reading the render-scope primitives there would restore the PRE-save
+  // values: the local-first commit propagates the committed envelope through
+  // the Dexie live query while the save is still awaited — i.e. before
+  // `reset()` runs — and the prefill effect above never re-fires afterwards
+  // because its deps already changed while `hasPrefilledRef` was still armed.
+  const originalsRef = useRef({ name: originalName, description: originalDescription, layout: originalLayout });
+  useEffect(() => {
+    originalsRef.current = { name: originalName, description: originalDescription, layout: originalLayout };
+  }, [originalDescription, originalLayout, originalName]);
+
   const submit = async (): Promise<boolean> => {
     if (!collection) return false;
 
@@ -158,16 +170,17 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
   };
 
   const reset = () => {
+    // Read through `originalsRef` (not the render closure) so a dialog closed
+    // right after a save resets to the values the user just committed.
     form.reset({
-      [CREATE_COLLECTION_FORM_FIELDS.NAME]: originalName,
-      [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: originalDescription,
-      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: originalLayout,
+      [CREATE_COLLECTION_FORM_FIELDS.NAME]: originalsRef.current.name,
+      [CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION]: originalsRef.current.description,
+      [CREATE_COLLECTION_FORM_FIELDS.LAYOUT]: originalsRef.current.layout,
     });
     cover.reset();
-    // Allow the prefill effect to re-run on the next render. Right after a
-    // successful save, the Dexie live query may not have propagated yet, so
-    // `originalName` / `originalDescription` above can still be stale. Clearing
-    // the ref lets the effect catch up once the fresh envelope arrives — so a
+    // Covers the opposite ordering: if the Dexie live query has NOT propagated
+    // yet, the values above are still the pre-save ones. Clearing the ref lets
+    // the prefill effect catch up once the fresh envelope arrives — so a
     // reopened dialog shows the committed values rather than the pre-save ones.
     hasPrefilledRef.current = false;
   };

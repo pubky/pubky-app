@@ -60,6 +60,7 @@ export function TimelineFeed(props: TimelineFeedProps) {
           pullToRefreshContainerRef={props.pullToRefreshContainerRef}
           trailingSlot={props.trailingSlot}
           requestedLayout={props.requestedLayout}
+          visualHiddenItemsNotice={props.visualHiddenItemsNotice}
         >
           {props.children}
         </CollectionTimelineFeed>
@@ -191,6 +192,7 @@ function CollectionTimelineFeed({
   pullToRefreshContainerRef,
   trailingSlot,
   requestedLayout,
+  visualHiddenItemsNotice,
 }: {
   children?: TimelineFeedProps['children'];
   emptyState?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }>['emptyState'];
@@ -200,6 +202,10 @@ function CollectionTimelineFeed({
   >['pullToRefreshContainerRef'];
   trailingSlot?: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }>['trailingSlot'];
   requestedLayout: Extract<TimelineFeedProps, { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }>['requestedLayout'];
+  visualHiddenItemsNotice?: Extract<
+    TimelineFeedProps,
+    { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
+  >['visualHiddenItemsNotice'];
 }) {
   // The single-collection route owns these params (`/collections/[userId]/[postId]`).
   // Reading them here mirrors how `ProfileTimelineFeed` resolves its stream from context.
@@ -221,6 +227,7 @@ function CollectionTimelineFeed({
       collectionId={collectionId}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
       trailingSlot={trailingSlot}
+      visualHiddenItemsNotice={visualHiddenItemsNotice}
     >
       {children}
     </TimelineFeedWithStream>

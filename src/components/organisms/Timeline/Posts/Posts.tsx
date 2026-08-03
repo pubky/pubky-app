@@ -90,7 +90,11 @@ export function TimelinePosts({
 
           {showEndMessage && !hasMore && !loadingMore && postIds.length > 0 && <TimelineEndMessage />}
 
-          <Container overrideDefaults className="h-5" ref={sentinelRef} />
+          {/* Infinite-scroll sentinel — only mounted (and given height) while there are
+              more posts to observe for, mirroring TimelineGridPosts. Once the feed is
+              fully loaded the observer detaches, so rendering it would just leave dead
+              space below the list. */}
+          {hasMore && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
         </Container>
       </Container>
     </TimelineStateWrapper>

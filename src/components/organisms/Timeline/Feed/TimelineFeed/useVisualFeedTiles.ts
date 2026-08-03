@@ -25,7 +25,7 @@ import {
   resolvePreferredVisualTileSize,
   resolveVisualTileSizeOptions,
 } from './TimelineFeedVisual.helpers';
-import type { VisualTile } from './TimelineFeedVisual.types';
+import type { VisualPlaceholderKind, VisualTile } from './TimelineFeedVisual.types';
 import {
   ensureVisualTileProbe,
   getVisualTilePreferredSizeFallback,
@@ -36,12 +36,56 @@ import {
 type VisualFeedSnapshot = {
   tiles: VisualTile[];
   missingFileUris: string[];
+  /**
+   * Posts that definitively carry no image/video media and are therefore
+   * invisible in the Visual layout. Only counted once resolved: posts still
+   * fetching or awaiting file metadata are excluded so the count never
+   * retracts. Deleted and not-found posts are excluded because they render as
+   * placeholder tiles (Grid/List parity) rather than being hidden.
+   */
+  hiddenPostCount: number;
+  /**
+   * Posts whose details are neither in the local DB nor settled (their
+   * ensure-fetch is still in flight). Consumers treat this as loading — only
+   * a post that still has no row AFTER its fetch settled is "not found".
+   */
+  pendingDetailPostCount: number;
 };
 
 const EMPTY_SNAPSHOT: VisualFeedSnapshot = {
   tiles: [],
   missingFileUris: [],
+  hiddenPostCount: 0,
+  pendingDetailPostCount: 0,
 };
+
+/**
+ * Deleted / not-found collection items render as placeholder cards so the item
+ * count matches Grid and List (which show PostDeleted/PostMissing). Media
+ * fields stay empty — rendering branches on `placeholderKind` before reading
+ * them — and the geometry is fixed so placeholders never enter the probe flow:
+ * smallest footprint preferred, any size allowed so the row packer can slot
+ * them wherever they fit.
+ */
+function buildPlaceholderTile(postId: string, placeholderKind: VisualPlaceholderKind, indexedAt = 0): VisualTile {
+  return {
+    id: `${postId}:placeholder:${placeholderKind}`,
+    postId,
+    placeholderKind,
+    attachmentId: '',
+    attachmentName: '',
+    contentType: '',
+    mediaKind: 'image',
+    previewSrc: '',
+    mainSrc: '',
+    sizeOptions: ['square', 'medium', 'wide'],
+    preferredSize: 'square',
+    probeState: 'ready',
+    isBlurred: false,
+    content: '',
+    indexedAt,
+  };
+}
 
 function buildLocalTile(
   post: EnrichedPostDetails,
@@ -105,6 +149,12 @@ function buildRemoteTile(post: EnrichedPostDetails, file: FileDetailsModelSchema
 }
 
 function resolveTileProbeState(tile: VisualTile): VisualTile {
+  // Placeholder tiles mount with a resolved size; probing would misread their
+  // empty media fields as a pending probe and stall the row packer.
+  if (tile.placeholderKind) {
+    return tile;
+  }
+
   const cachedFallbackPreferredSize = getVisualTilePreferredSizeFallback(tile.id);
 
   if (tile.metadataWidth && tile.metadataHeight) {
@@ -176,10 +226,28 @@ function resolveTileProbeState(tile: VisualTile): VisualTile {
   };
 }
 
-export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; hasMore: boolean }) {
+export function useVisualFeedTiles({
+  postIds,
+  hasMore,
+  showUnavailablePosts = false,
+}: {
+  postIds: string[];
+  hasMore: boolean;
+  /**
+   * Render deleted / not-found posts as placeholder tiles instead of dropping
+   * them. Single-collection feeds enable this for Grid/List count parity;
+   * interactive feeds (Home/Search/Custom) keep the drop behavior.
+   */
+  showUnavailablePosts?: boolean;
+}) {
   const localPostAttachments = useLocalFilesStore((state) => state.posts);
   const postIdsKey = React.useMemo(() => postIds.join('|'), [postIds]);
   const [, forceProbeRefresh] = React.useReducer((count) => count + 1, 0);
+  // Post ids whose ensure-fetch has settled (success OR failure). The batch
+  // equivalent of PostMain's `postDetails === null && !isLoading` missing
+  // check: a post absent from the local DB counts as "not found" only once its
+  // id lands here. Ids from earlier pages are deliberately kept on pagination.
+  const [settledDetailPostIds, setSettledDetailPostIds] = React.useState<ReadonlySet<string>>(() => new Set());
 
   React.useEffect(() => {
     if (!postIdsKey) return;
@@ -195,10 +263,22 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
             postId,
             error,
           });
+        } finally {
+          // Settlement only matters where unavailable posts render as
+          // placeholders; skip the state churn (and the liveQuery re-runs it
+          // triggers) on feeds that drop them.
+          if (showUnavailablePosts) {
+            setSettledDetailPostIds((previous) => {
+              if (previous.has(postId)) return previous;
+              const next = new Set(previous);
+              next.add(postId);
+              return next;
+            });
+          }
         }
       }),
     );
-  }, [postIdsKey]);
+  }, [postIdsKey, showUnavailablePosts]);
 
   const snapshot = useLiveQuery(
     async (): Promise<VisualFeedSnapshot> => {
@@ -232,21 +312,45 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
         : [];
       const remoteFilesById = new Map(remoteFiles.map((file) => [file.id, file]));
 
+      let hiddenPostCount = 0;
+      let pendingDetailPostCount = 0;
       const tiles = postIds.flatMap((postId) => {
         const post = enrichedPostsById.get(postId);
-        if (!post || isPostDeleted(post.content)) {
+        if (!post) {
+          if (!showUnavailablePosts) {
+            return [];
+          }
+          if (settledDetailPostIds.has(postId)) {
+            return [buildPlaceholderTile(postId, 'missing')];
+          }
+          pendingDetailPostCount += 1;
           return [];
+        }
+
+        if (isPostDeleted(post.content)) {
+          return showUnavailablePosts ? [buildPlaceholderTile(postId, 'deleted', post.indexed_at)] : [];
         }
 
         const localAttachments = localPostAttachments[postId];
         if (localAttachments?.length) {
-          return localAttachments.flatMap((attachment, index) => {
+          const postTiles = localAttachments.flatMap((attachment, index) => {
             const tile = buildLocalTile(post, attachment, index);
             return tile ? [tile] : [];
           });
+          if (postTiles.length === 0) {
+            hiddenPostCount += 1;
+          }
+          return postTiles;
         }
 
-        return (post.attachments ?? []).flatMap((attachmentUri) => {
+        const attachmentUris = post.attachments ?? [];
+        if (attachmentUris.length === 0) {
+          hiddenPostCount += 1;
+          return [];
+        }
+
+        let hasUnresolvedFile = false;
+        const postTiles = attachmentUris.flatMap((attachmentUri) => {
           const attachmentId = buildCompositeIdFromPubkyUri({
             uri: attachmentUri,
             domain: CompositeIdDomain.FILES,
@@ -259,22 +363,33 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
           const file = remoteFilesById.get(attachmentId);
           if (!file) {
             missingFileUris.add(attachmentUri);
+            hasUnresolvedFile = true;
             return [];
           }
 
           const tile = buildRemoteTile(post, file);
           return tile ? [tile] : [];
         });
+        if (postTiles.length === 0 && !hasUnresolvedFile) {
+          hiddenPostCount += 1;
+        }
+        return postTiles;
       });
 
       return {
         tiles,
         missingFileUris: Array.from(missingFileUris),
+        hiddenPostCount,
+        pendingDetailPostCount,
       };
     },
-    [postIdsKey, localPostAttachments],
-    EMPTY_SNAPSHOT,
+    // No default value: `undefined` marks the snapshot as still resolving, which
+    // consumers must treat as loading — a fully-paged feed (hasMore false) would
+    // otherwise flash its empty state for the frame(s) before the first
+    // liveQuery emission, e.g. when a collection viewer switches to Visual.
+    [postIdsKey, localPostAttachments, settledDetailPostIds, showUnavailablePosts],
   );
+  const hasPendingSnapshot = snapshot === undefined;
   const missingFileUris = React.useMemo(() => snapshot?.missingFileUris ?? [], [snapshot?.missingFileUris]);
   const missingFileUrisKey = React.useMemo(() => missingFileUris.join('|'), [missingFileUris]);
 
@@ -368,7 +483,10 @@ export function useVisualFeedTiles({ postIds, hasMore }: { postIds: string[]; ha
     rows,
     tail,
     tiles: stabilizedTiles,
+    hasPendingSnapshot,
     hasPendingTiles: firstPendingTileIndex !== -1,
     hasPendingFiles: missingFileUris.length > 0,
+    hasPendingPostDetails: (snapshot?.pendingDetailPostCount ?? 0) > 0,
+    hiddenPostCount: snapshot?.hiddenPostCount ?? 0,
   };
 }

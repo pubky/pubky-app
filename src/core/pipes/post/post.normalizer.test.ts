@@ -502,6 +502,24 @@ describe('PostNormalizer', () => {
       );
     });
 
+    it('forwards the Visual layout to pubky-app-specs', async () => {
+      await PostNormalizer.toCollection(
+        {
+          name: 'Gallery',
+          layout: COLLECTION_LAYOUT.VISUAL,
+        },
+        TEST_PUBKY.USER_1,
+      );
+
+      expect(mockBuilder.createCollectionPost).toHaveBeenCalledWith(
+        'Gallery',
+        '',
+        [],
+        undefined,
+        COLLECTION_LAYOUT.VISUAL,
+      );
+    });
+
     it('validates the collection envelope before calling specs', async () => {
       await expect(
         PostNormalizer.toCollection(

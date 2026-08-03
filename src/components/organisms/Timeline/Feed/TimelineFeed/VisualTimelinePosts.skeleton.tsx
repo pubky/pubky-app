@@ -36,7 +36,7 @@ function VisualTimelineSkeletonTile({ size }: { size: VisualTileSize }) {
 
 export function VisualTimelinePostsSkeleton() {
   return (
-    <Container data-cy="visual-feed-skeleton-container" data-testid="visual-feed-skeleton" className="py-4">
+    <Container data-cy="visual-feed-skeleton-container" data-testid="visual-feed-skeleton">
       <Container
         overrideDefaults
         className="mx-auto flex w-full flex-col gap-6"

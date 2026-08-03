@@ -274,6 +274,63 @@ exports[`CollectionLayoutPicker > matches the open desktop picker snapshot 1`] =
             List
           </span>
         </div>
+        <div
+          class="relative flex cursor-pointer items-center rounded-sm transition-colors outline-none select-none hover:text-foreground focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full gap-2 p-0 text-base font-medium text-muted-foreground"
+          data-cy="collection-layout-visual"
+          data-orientation="vertical"
+          data-radix-collection-item=""
+          role="menuitem"
+          tabindex="-1"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-layout-grid size-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              height="7"
+              rx="1"
+              width="7"
+              x="3"
+              y="3"
+            />
+            <rect
+              height="7"
+              rx="1"
+              width="7"
+              x="14"
+              y="3"
+            />
+            <rect
+              height="7"
+              rx="1"
+              width="7"
+              x="14"
+              y="14"
+            />
+            <rect
+              height="7"
+              rx="1"
+              width="7"
+              x="3"
+              y="14"
+            />
+          </svg>
+          <span
+            class="min-w-0 flex-1 truncate"
+            data-testid="typography"
+          >
+            Visual
+          </span>
+        </div>
       </div>
     </div>
   </div>

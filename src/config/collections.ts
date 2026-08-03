@@ -9,17 +9,18 @@ import type { PubkyAppCollectionLayout } from 'pubky-app-specs';
 
 // Intentionally whitelist layouts implemented by this UI so future specs
 // layouts remain unsupported until their rendering and controls are added.
-export type CollectionLayout = Extract<PubkyAppCollectionLayout, 'grid' | 'list'>;
+export type CollectionLayout = Extract<PubkyAppCollectionLayout, 'grid' | 'list' | 'visual'>;
 
-export const COLLECTION_LAYOUT: Record<'GRID' | 'LIST', CollectionLayout> = {
+export const COLLECTION_LAYOUT: Record<'GRID' | 'LIST' | 'VISUAL', CollectionLayout> = {
   GRID: 'grid',
   LIST: 'list',
+  VISUAL: 'visual',
 };
 
 export const DEFAULT_COLLECTION_LAYOUT: CollectionLayout = COLLECTION_LAYOUT.GRID;
 
 export function isCollectionLayout(value: unknown): value is CollectionLayout {
-  return value === COLLECTION_LAYOUT.GRID || value === COLLECTION_LAYOUT.LIST;
+  return value === COLLECTION_LAYOUT.GRID || value === COLLECTION_LAYOUT.LIST || value === COLLECTION_LAYOUT.VISUAL;
 }
 
 /** Page size for each of the three sections (My / Followed / Discover). */

@@ -208,6 +208,22 @@ describe('CollectionPostContent', () => {
       );
     });
 
+    it('round-trips Visual through normalize, toJson, and parse', () => {
+      expect(
+        CollectionPostContent.normalize({
+          name: 'Gallery',
+          layout: COLLECTION_LAYOUT.VISUAL,
+        }).layout,
+      ).toBe(COLLECTION_LAYOUT.VISUAL);
+
+      const visualJson = CollectionPostContent.toJson({
+        name: 'Gallery',
+        layout: COLLECTION_LAYOUT.VISUAL,
+      });
+
+      expect(CollectionPostContent.parse(visualJson)?.layout).toBe(COLLECTION_LAYOUT.VISUAL);
+    });
+
     it('returns null for malformed envelopes', () => {
       expect(CollectionPostContent.parse('not json')).toBeNull();
       expect(CollectionPostContent.parse(JSON.stringify({ description: 'no name' }))).toBeNull();

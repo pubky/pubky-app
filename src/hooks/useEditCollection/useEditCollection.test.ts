@@ -118,6 +118,27 @@ describe('useEditCollection', () => {
     expect(result.current.isLoaded).toBe(true);
   });
 
+  it('prefills the Visual layout and keeps it on submit when untouched', async () => {
+    mocks.postDetails = { content: collectionContent({ layout: COLLECTION_LAYOUT.VISUAL }) };
+    mocks.commitEditCollection.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useEditCollection({ compositeCollectionId: COMPOSITE_ID }));
+
+    await waitFor(() => {
+      expect(result.current.form.getValues()[CREATE_COLLECTION_FORM_FIELDS.LAYOUT]).toBe(COLLECTION_LAYOUT.VISUAL);
+    });
+
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.submit();
+    });
+
+    expect(ok).toBe(true);
+    expect(mocks.commitEditCollection).toHaveBeenCalledWith(
+      expect.objectContaining({ layout: COLLECTION_LAYOUT.VISUAL }),
+    );
+  });
+
   it('submits with the original cover URL when the user does not touch the picker', async () => {
     mocks.postDetails = {
       content: collectionContent({ cover_image: 'pubky://author/files/cover-1' }),
@@ -294,6 +315,38 @@ describe('useEditCollection', () => {
 
     expect(ok).toBe(false);
     expect(mocks.commitEditCollection).not.toHaveBeenCalled();
+  });
+
+  it('resets to the just-committed envelope when the live query propagates BEFORE close (stale reopen regression)', async () => {
+    // Regression (QA find): the local-first commit propagates the committed
+    // envelope through the Dexie live query while the save is still awaited,
+    // so by the time the dialog closes, the `reset` the close handler captured
+    // belongs to the pre-save render. Reading the render-scope values there
+    // wrote the page-load layout back into the form, and the prefill effect
+    // never re-fired (its deps had already changed while the guard was armed) —
+    // so reopening the dialog highlighted the old layout until a page refresh.
+    mocks.postDetails = { content: collectionContent({ layout: COLLECTION_LAYOUT.GRID }) };
+    const { result, rerender } = renderHook(() => useEditCollection({ compositeCollectionId: COMPOSITE_ID }));
+
+    await waitFor(() => {
+      expect(result.current.form.getValues()[CREATE_COLLECTION_FORM_FIELDS.LAYOUT]).toBe(COLLECTION_LAYOUT.GRID);
+    });
+
+    // Capture reset from the pre-save render — this is the closure the dialog's
+    // close handler actually holds when the save resolves.
+    const staleReset = result.current.reset;
+
+    // User picks Visual and saves; the live query emits the committed envelope
+    // before the dialog close runs.
+    act(() => result.current.form.setValue(CREATE_COLLECTION_FORM_FIELDS.LAYOUT, COLLECTION_LAYOUT.VISUAL));
+    await act(async () => {
+      mocks.postDetails = { content: collectionContent({ layout: COLLECTION_LAYOUT.VISUAL }) };
+      rerender();
+    });
+
+    act(() => staleReset());
+
+    expect(result.current.form.getValues()[CREATE_COLLECTION_FORM_FIELDS.LAYOUT]).toBe(COLLECTION_LAYOUT.VISUAL);
   });
 
   it('re-prefills the form from the latest envelope after reset() — even when the live query updates AFTER close', async () => {

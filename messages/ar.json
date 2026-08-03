@@ -1364,6 +1364,7 @@
       "layoutLabel": "التخطيط",
       "layoutGrid": "شبكة",
       "layoutList": "قائمة",
+      "layoutVisual": "مرئي",
       "addImage": "إضافة صورة",
       "removeImage": "إزالة الصورة",
       "coverImageInvalid": "يجب أن تكون صورة الغلاف ملف صورة.",
@@ -1430,6 +1431,8 @@
       "layout": "التخطيط",
       "layoutGrid": "شبكة",
       "layoutList": "قائمة",
+      "layoutVisual": "مرئي",
+      "hiddenItemsNotice": "بعض العناصر في هذه المجموعة مخفية بسبب نوع التخطيط المحدد.",
       "empty": "هذه المجموعة فارغة.",
       "notFound": {
         "title": "المجموعة غير موجودة",
