@@ -1358,6 +1358,7 @@
       "layoutLabel": "Layout",
       "layoutGrid": "Grid",
       "layoutList": "List",
+      "layoutVisual": "Visual",
       "addImage": "Add image",
       "removeImage": "Remove image",
       "coverImageInvalid": "Cover image must be an image file.",
@@ -1424,6 +1425,8 @@
       "layout": "Layout",
       "layoutGrid": "Grid",
       "layoutList": "List",
+      "layoutVisual": "Visual",
+      "hiddenItemsNotice": "Some items in this collection are hidden due to the selected layout type.",
       "empty": "This collection is empty.",
       "notFound": {
         "title": "Collection Not Found",

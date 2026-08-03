@@ -308,6 +308,32 @@ export function composeVisualRows(
   };
 }
 
+/**
+ * Places the trailing CTA cell into the mosaic: reuses the last row's spacer
+ * cell when one exists (the single-leftover-tile end-of-stream row emits one),
+ * otherwise appends a dedicated row with a lone medium cell so the CTA keeps
+ * standard tile geometry.
+ */
+export function appendVisualTrailingCell(rows: VisualRow[]): VisualRow[] {
+  const lastRow = rows[rows.length - 1];
+  const spacerIndex = lastRow ? lastRow.cells.findIndex((cell) => cell.isSpacer) : -1;
+
+  if (lastRow && spacerIndex !== -1) {
+    const cells = lastRow.cells.map((cell, index) =>
+      index === spacerIndex ? { ...cell, isSpacer: false, isTrailingSlot: true } : cell,
+    );
+    return [...rows.slice(0, -1), { ...lastRow, cells }];
+  }
+
+  return [
+    ...rows,
+    {
+      key: 'row:visual-trailing',
+      cells: [{ key: 'cell:visual-trailing', size: 'medium', isTrailingSlot: true }],
+    },
+  ];
+}
+
 export function getVisualPendingOverflowFallbackIds(
   tiles: Pick<VisualTile, 'id' | 'preferredSize'>[],
   pendingTailLimit = VISUAL_PENDING_TAIL_LIMIT,

@@ -1358,6 +1358,7 @@
       "layoutLabel": "Layout",
       "layoutGrid": "Griglia",
       "layoutList": "Elenco",
+      "layoutVisual": "Visuale",
       "addImage": "Aggiungi immagine",
       "removeImage": "Rimuovi immagine",
       "coverImageInvalid": "L'immagine di copertina deve essere un file immagine.",
@@ -1424,6 +1425,8 @@
       "layout": "Layout",
       "layoutGrid": "Griglia",
       "layoutList": "Elenco",
+      "layoutVisual": "Visuale",
+      "hiddenItemsNotice": "Alcuni elementi di questa raccolta sono nascosti a causa del tipo di layout selezionato.",
       "empty": "Questa raccolta è vuota.",
       "notFound": {
         "title": "Raccolta non trovata",

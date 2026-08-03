@@ -1358,6 +1358,7 @@
       "layoutLabel": "Layout",
       "layoutGrid": "Grade",
       "layoutList": "Lista",
+      "layoutVisual": "Visual",
       "addImage": "Adicionar imagem",
       "removeImage": "Remover imagem",
       "coverImageInvalid": "A imagem de capa deve ser um arquivo de imagem.",
@@ -1424,6 +1425,8 @@
       "layout": "Layout",
       "layoutGrid": "Grade",
       "layoutList": "Lista",
+      "layoutVisual": "Visual",
+      "hiddenItemsNotice": "Alguns itens desta coleção estão ocultos devido ao tipo de layout selecionado.",
       "empty": "Esta coleção está vazia.",
       "notFound": {
         "title": "Coleção não encontrada",

@@ -27,6 +27,11 @@ type TimelineFeedTrailingSlot = Extract<
   { variant: typeof TIMELINE_FEED_VARIANT.BOOKMARKS | typeof TIMELINE_FEED_VARIANT.COLLECTION }
 >['trailingSlot'];
 
+type TimelineFeedVisualHiddenItemsNotice = Extract<
+  TimelineFeedProps,
+  { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
+>['visualHiddenItemsNotice'];
+
 interface TimelineFeedContentProps {
   streamId: PostStreamId;
   variant: TimelineFeedProps['variant'];
@@ -37,6 +42,7 @@ interface TimelineFeedContentProps {
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
   trailingSlot?: TimelineFeedTrailingSlot;
+  visualHiddenItemsNotice?: TimelineFeedVisualHiddenItemsNotice;
 }
 
 interface TimelineFeedWithStreamProps {
@@ -49,6 +55,7 @@ interface TimelineFeedWithStreamProps {
   collectionId?: TimelineFeedContextValue['collectionId'];
   pullToRefreshContainerRef?: TimelineFeedProps['pullToRefreshContainerRef'];
   trailingSlot?: TimelineFeedTrailingSlot;
+  visualHiddenItemsNotice?: TimelineFeedVisualHiddenItemsNotice;
 }
 
 /**
@@ -67,6 +74,7 @@ export function TimelineFeedWithStream({
   collectionId,
   pullToRefreshContainerRef,
   trailingSlot,
+  visualHiddenItemsNotice,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
     return <TimelineLoading />;
@@ -82,6 +90,7 @@ export function TimelineFeedWithStream({
       collectionId={collectionId}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
       trailingSlot={trailingSlot}
+      visualHiddenItemsNotice={visualHiddenItemsNotice}
     >
       {children}
     </TimelineFeedContent>
@@ -111,6 +120,7 @@ function TimelineFeedContent({
   collectionId,
   pullToRefreshContainerRef,
   trailingSlot,
+  visualHiddenItemsNotice,
 }: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const refreshContainerRef = pullToRefreshContainerRef ?? containerRef;
@@ -203,7 +213,10 @@ function TimelineFeedContent({
     removePosts,
   };
   const showEndMessage = variant !== TIMELINE_FEED_VARIANT.COLLECTION && variant !== TIMELINE_FEED_VARIANT.BOOKMARKS;
-  const shouldRenderChildren = !isVisualActive || isGridActive;
+  // `children` is the composer/filter region on interactive feeds (hidden by the
+  // immersive Visual mosaic on Home/Search/Custom) but the collection hero on
+  // COLLECTION, which must stay visible in every layout.
+  const shouldRenderChildren = !isVisualActive || isGridActive || variant === TIMELINE_FEED_VARIANT.COLLECTION;
 
   return (
     <TimelineFeedContext.Provider value={contextValue}>
@@ -239,6 +252,11 @@ function TimelineFeedContent({
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
+              emptyState={emptyState}
+              trailingSlot={trailingSlot}
+              hiddenItemsNotice={visualHiddenItemsNotice}
+              showEndMessage={showEndMessage}
+              showUnavailablePosts={variant === TIMELINE_FEED_VARIANT.COLLECTION}
             />
           ) : (
             <TimelinePosts

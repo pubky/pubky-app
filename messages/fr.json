@@ -1358,6 +1358,7 @@
       "layoutLabel": "Mise en page",
       "layoutGrid": "Grille",
       "layoutList": "Liste",
+      "layoutVisual": "Visuel",
       "addImage": "Ajouter une image",
       "removeImage": "Supprimer l'image",
       "coverImageInvalid": "L'image de couverture doit être un fichier image.",
@@ -1424,6 +1425,8 @@
       "layout": "Mise en page",
       "layoutGrid": "Grille",
       "layoutList": "Liste",
+      "layoutVisual": "Visuel",
+      "hiddenItemsNotice": "Certains éléments de cette collection sont masqués en raison du type de mise en page sélectionné.",
       "empty": "Cette collection est vide.",
       "notFound": {
         "title": "Collection introuvable",

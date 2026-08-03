@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { VisualRow } from './TimelineFeedVisual.types';
+import type { VisualPlaceholderKind, VisualRow, VisualTile } from './TimelineFeedVisual.types';
 import { VisualTimelinePosts } from './VisualTimelinePosts';
 
 const {
@@ -203,6 +203,37 @@ vi.mock('@/organisms/PostContentBlurred/PostContentBlurred', () => {
   };
 });
 
+function createRowsWithTrailingSpacer(): VisualRow[] {
+  const [row] = createRows();
+
+  return [
+    {
+      key: 'row-1-spacer',
+      cells: [row.cells[0], { key: 'spacer:tile-1', size: 'medium', isSpacer: true }],
+    },
+  ];
+}
+
+function createPlaceholderTile(postId: string, placeholderKind: VisualPlaceholderKind): VisualTile {
+  return {
+    id: `${postId}:placeholder:${placeholderKind}`,
+    postId,
+    placeholderKind,
+    attachmentId: '',
+    attachmentName: '',
+    contentType: '',
+    mediaKind: 'image',
+    previewSrc: '',
+    mainSrc: '',
+    preferredSize: 'square',
+    rowSize: 'square',
+    probeState: 'ready',
+    isBlurred: false,
+    content: '',
+    indexedAt: 1,
+  };
+}
+
 function createRows(): VisualRow[] {
   return [
     {
@@ -244,8 +275,10 @@ describe('VisualTimelinePosts', () => {
       rows: createRows(),
       tail: [],
       tiles: [],
+      hasPendingSnapshot: false,
       hasPendingTiles: false,
       hasPendingFiles: false,
+      hasPendingPostDetails: false,
     });
   });
 
@@ -326,6 +359,108 @@ describe('VisualTimelinePosts', () => {
     expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
   });
 
+  it('shows the loading skeleton, not the empty state, while the tile snapshot is still resolving', () => {
+    // Regression: switching a fully-loaded collection (hasMore=false) to the
+    // Visual layout mounts this component before the first liveQuery emission —
+    // that frame flashed "No posts found" instead of reading as loading.
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingSnapshot: true,
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+  });
+
+  it('renders deleted and not-found items as clickable placeholder cards', () => {
+    // Grid/List parity: deleted and not-found collection items keep their slot
+    // so item counts match across layouts, and navigate to the post page on
+    // click like the Grid/List cards do.
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [
+        {
+          key: 'row-placeholders',
+          cells: [
+            { key: 'cell-deleted', size: 'square', tile: createPlaceholderTile('author:post-del', 'deleted') },
+            { key: 'cell-missing', size: 'square', tile: createPlaceholderTile('author:post-miss', 'missing') },
+          ],
+        },
+      ],
+      tail: [],
+      tiles: [],
+      hasPendingSnapshot: false,
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+      hasPendingPostDetails: false,
+    });
+
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={['author:post-del', 'author:post-miss']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+        showUnavailablePosts
+      />,
+    );
+
+    expect(mockUseVisualFeedTiles).toHaveBeenCalledWith(expect.objectContaining({ showUnavailablePosts: true }));
+    expect(screen.getByText('This post has been deleted by its author.')).toBeInTheDocument();
+    expect(screen.getByText('Post not found.')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-cy="visual-feed-placeholder-tile"]')).toHaveLength(2);
+
+    // The placeholder carries no aria-label, so its accessible name is the
+    // localized deleted/missing copy itself (unlike media tiles' `Open post`).
+    fireEvent.click(screen.getByRole('button', { name: 'This post has been deleted by its author.' }));
+    expect(mockNavigateToPost).toHaveBeenCalledWith('author:post-del');
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Post not found.' }), { key: 'Enter' });
+    expect(mockNavigateToPost).toHaveBeenCalledWith('author:post-miss');
+  });
+
+  it('does not render the filtered empty state while post details are still being ensured', () => {
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingSnapshot: false,
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+      hasPendingPostDetails: true,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+  });
+
   it('does not render the filtered empty state while file metadata is being fetched', () => {
     mockUseVisualFeedTiles.mockReturnValue({
       rows: [],
@@ -383,6 +518,39 @@ describe('VisualTimelinePosts', () => {
     await waitFor(() => {
       expect(mockLoadMore).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('does not backfill while the tile snapshot is still resolving', async () => {
+    // Regression: before the first liveQuery emission, empty rows say nothing
+    // about whether the already-loaded posts will fill the mosaic — firing
+    // loadMore() then fetches a page that may not be needed (e.g. on a
+    // Grid→Visual switch of a partially-paged collection with cached tiles).
+    const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingSnapshot: true,
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+    });
+
+    render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={true}
+        loadMore={mockLoadMore}
+      />,
+    );
+
+    expect(screen.getByTestId('visual-feed-skeleton')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockUseInfiniteScroll).toHaveBeenCalled();
+    });
+    expect(mockLoadMore).not.toHaveBeenCalled();
   });
 
   it('backfills initial rows while tile probes are pending', async () => {
@@ -643,6 +811,232 @@ describe('VisualTimelinePosts', () => {
       });
     });
   });
+
+  describe('Trailing slot, empty state, and hidden items', () => {
+    it('renders the trailing slot inside the last-row spacer cell', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: createRowsWithTrailingSpacer(),
+        tail: [],
+        tiles: [],
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hiddenPostCount: 0,
+      });
+
+      const { container } = render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          trailingSlot={<button data-testid="trailing-cta">Add content</button>}
+        />,
+      );
+
+      expect(container.querySelectorAll('.grid.grid-cols-12')).toHaveLength(1);
+      expect(container.querySelector('[aria-hidden="true"]')).toBeNull();
+      expect(screen.getByTestId('trailing-cta').parentElement).toHaveAttribute('style', 'aspect-ratio: 588 / 384;');
+    });
+
+    it('appends the trailing slot as its own row when the last row is full', () => {
+      const { container } = render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          trailingSlot={<button data-testid="trailing-cta">Add content</button>}
+        />,
+      );
+
+      const rowsInDom = container.querySelectorAll('.grid.grid-cols-12');
+      expect(rowsInDom).toHaveLength(2);
+      expect(rowsInDom[1].contains(screen.getByTestId('trailing-cta'))).toBe(true);
+      expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+    });
+
+    it('renders the hidden items notice above the mosaic when posts are hidden', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: createRows(),
+        tail: [],
+        tiles: [],
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hiddenPostCount: 2,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          hiddenItemsNotice={<div data-testid="hidden-notice">2 items hidden</div>}
+        />,
+      );
+
+      expect(screen.getByTestId('hidden-notice')).toBeInTheDocument();
+    });
+
+    it('does not render the hidden items notice when no posts are hidden', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: createRows(),
+        tail: [],
+        tiles: [],
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hiddenPostCount: 0,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          hiddenItemsNotice={<div data-testid="hidden-notice">0 items hidden</div>}
+        />,
+      );
+
+      expect(screen.queryByTestId('hidden-notice')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+    });
+
+    it('renders no notice when posts are hidden but no notice is provided', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: createRows(),
+        tail: [],
+        tiles: [],
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hiddenPostCount: 3,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByTestId('hidden-notice')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+    });
+
+    it('renders the empty state alongside the trailing slot when the feed has no posts', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: [],
+        tail: [],
+        tiles: [],
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hiddenPostCount: 0,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          emptyState={<div data-testid="collection-empty">No content yet</div>}
+          trailingSlot={<button data-testid="trailing-cta">Add content</button>}
+        />,
+      );
+
+      expect(screen.getByTestId('collection-empty')).toBeInTheDocument();
+      expect(screen.getByTestId('trailing-cta')).toBeInTheDocument();
+      expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    });
+
+    it('renders the provided empty state without a trailing slot (visitor view, Grid/List parity)', () => {
+      // Regression: emptyState must reach TimelineStateWrapper's emptyComponent
+      // like Posts/GridPosts do — a visitor whose visual collection feed
+      // resolves to zero posts sees CollectionItemsEmpty, not generic copy.
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: [],
+        tail: [],
+        tiles: [],
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hiddenPostCount: 0,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          emptyState={<div data-testid="collection-empty">No content yet</div>}
+        />,
+      );
+
+      expect(screen.getByTestId('collection-empty')).toBeInTheDocument();
+      expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+    });
+
+    it('renders the notice and trailing slot instead of the filtered empty state when every post is hidden', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: [],
+        tail: [],
+        tiles: [],
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hiddenPostCount: 2,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1', 'author:post2']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          hiddenItemsNotice={<div data-testid="hidden-notice">2 items hidden</div>}
+          trailingSlot={<button data-testid="trailing-cta">Add content</button>}
+        />,
+      );
+
+      expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+      expect(screen.getByTestId('hidden-notice')).toBeInTheDocument();
+      expect(screen.getByTestId('trailing-cta')).toBeInTheDocument();
+    });
+
+    it('suppresses the end message when showEndMessage is false', () => {
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+          showEndMessage={false}
+        />,
+      );
+
+      expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+      expect(screen.queryByTestId('timeline-end')).not.toBeInTheDocument();
+    });
+  });
 });
 
 describe('VisualTimelinePosts - Snapshots', () => {
@@ -656,8 +1050,10 @@ describe('VisualTimelinePosts - Snapshots', () => {
       rows: createRows(),
       tail: [],
       tiles: [],
+      hasPendingSnapshot: false,
       hasPendingTiles: false,
       hasPendingFiles: false,
+      hasPendingPostDetails: false,
     });
   });
 
@@ -710,6 +1106,85 @@ describe('VisualTimelinePosts - Snapshots', () => {
         error={null}
         hasMore={false}
         loadMore={vi.fn()}
+      />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for a trailing CTA occupying the last-row spacer', () => {
+    mockUseIsTouchDevice.mockReturnValue(true);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: createRowsWithTrailingSpacer(),
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+      hiddenPostCount: 0,
+    });
+
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+        trailingSlot={<button data-testid="trailing-cta">Add content</button>}
+      />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for an empty collection with empty state and trailing CTA', () => {
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [],
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+      hiddenPostCount: 0,
+    });
+
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={[]}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+        emptyState={<div data-testid="collection-empty">No content yet</div>}
+        trailingSlot={<button data-testid="trailing-cta">Add your first post</button>}
+        showEndMessage={false}
+      />,
+    );
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for the hidden items notice above the mosaic', () => {
+    mockUseIsTouchDevice.mockReturnValue(true);
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: createRows(),
+      tail: [],
+      tiles: [],
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+      hiddenPostCount: 2,
+    });
+
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={['author:post1']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+        hiddenItemsNotice={<div data-testid="hidden-notice">2 items hidden</div>}
       />,
     );
 

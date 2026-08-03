@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { CONTENT } from '@/stores/home/home.types';
 import {
+  appendVisualTrailingCell,
   composeVisualRows,
   getVisualPendingOverflowFallbackIds,
   resolvePreferredVisualTileSize,
   resolveVisualFeedContent,
   resolveVisualTileSizeOptions,
 } from './TimelineFeedVisual.helpers';
-import type { VisualTile } from './TimelineFeedVisual.types';
+import type { VisualRow, VisualTile } from './TimelineFeedVisual.types';
 
 function createTile(id: string, preferredSize: NonNullable<VisualTile['preferredSize']>): VisualTile {
   return {
@@ -135,6 +136,80 @@ describe('composeVisualRows', () => {
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].cells.map((cell) => cell.isSpacer ?? false)).toEqual([false, true]);
     expect(result.rows[0].cells.map((cell) => cell.size)).toEqual(['medium', 'medium']);
+  });
+});
+
+describe('appendVisualTrailingCell', () => {
+  it('reuses the last-row spacer as the trailing slot with its size preserved', () => {
+    const { rows } = composeVisualRows([createTile('a', 'medium')], true);
+
+    const result = appendVisualTrailingCell(rows);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].cells.map((cell) => cell.size)).toEqual(['medium', 'medium']);
+    expect(result[0].cells[0]).toEqual(rows[0].cells[0]);
+    expect(result[0].cells[1]).toEqual({
+      key: 'spacer:a',
+      size: 'medium',
+      isSpacer: false,
+      isTrailingSlot: true,
+    });
+  });
+
+  it('leaves earlier rows, sibling cells, and the input array untouched when replacing a spacer', () => {
+    const fullRow: VisualRow = {
+      key: 'row:full',
+      cells: [
+        { key: 'cell:a', size: 'square', tile: { ...createTile('a', 'square'), rowSize: 'square' } },
+        { key: 'cell:b', size: 'wide', tile: { ...createTile('b', 'wide'), rowSize: 'wide' } },
+      ],
+    };
+    const spacerRow: VisualRow = {
+      key: 'row:c:spacer',
+      cells: [
+        { key: 'cell:c', size: 'medium', tile: { ...createTile('c', 'medium'), rowSize: 'medium' } },
+        { key: 'spacer:c', size: 'medium', isSpacer: true },
+      ],
+    };
+    const rows = [fullRow, spacerRow];
+
+    const result = appendVisualTrailingCell(rows);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe(fullRow);
+    expect(result[1]).not.toBe(spacerRow);
+    expect(result[1].cells[0]).toBe(spacerRow.cells[0]);
+    expect(result[1].cells[1]).toEqual({
+      key: 'spacer:c',
+      size: 'medium',
+      isSpacer: false,
+      isTrailingSlot: true,
+    });
+    expect(rows).toHaveLength(2);
+    expect(spacerRow.cells[1]).toEqual({ key: 'spacer:c', size: 'medium', isSpacer: true });
+  });
+
+  it('appends a dedicated medium trailing row when the last row has no spacer', () => {
+    const { rows } = composeVisualRows([createTile('a', 'square'), createTile('b', 'wide')], false);
+
+    const result = appendVisualTrailingCell(rows);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe(rows[0]);
+    expect(result[1]).toEqual({
+      key: 'row:visual-trailing',
+      cells: [{ key: 'cell:visual-trailing', size: 'medium', isTrailingSlot: true }],
+    });
+    expect(rows).toHaveLength(1);
+  });
+
+  it('returns only the trailing row for an empty mosaic', () => {
+    expect(appendVisualTrailingCell([])).toEqual([
+      {
+        key: 'row:visual-trailing',
+        cells: [{ key: 'cell:visual-trailing', size: 'medium', isTrailingSlot: true }],
+      },
+    ]);
   });
 });
 

@@ -184,11 +184,11 @@ describe('resolveFeedLayout', () => {
       expect(result.isGridActive).toBe(false);
     });
 
-    it('keeps grid active independently of effectiveLayout (orthogonal to wide/visual)', () => {
-      // The collection variant is not in the rich-layout set, so a VISUAL request
+    it('keeps grid active independently of effectiveLayout (orthogonal to wide)', () => {
+      // The collection variant is not in the rich-layout set, so a WIDE request
       // falls back to COLUMNS; grid membership must still be derived from the variant.
       const result = resolveFeedLayout({
-        requestedLayout: LAYOUT.VISUAL,
+        requestedLayout: LAYOUT.WIDE,
         variant: TIMELINE_FEED_VARIANT.COLLECTION,
         isPhoneViewport: false,
       });
@@ -196,6 +196,44 @@ describe('resolveFeedLayout', () => {
       expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
       expect(result.isVisualActive).toBe(false);
       expect(result.isGridActive).toBe(true);
+    });
+  });
+
+  describe('collection visual layout', () => {
+    it('keeps visual layout active for the collection variant on desktop/tablet', () => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.VISUAL,
+        variant: TIMELINE_FEED_VARIANT.COLLECTION,
+        isPhoneViewport: false,
+      });
+
+      expect(result.effectiveLayout).toBe(LAYOUT.VISUAL);
+      expect(result.isVisualActive).toBe(true);
+      expect(result.isGridActive).toBe(false);
+    });
+
+    it('falls back to the collection grid for visual layout on phones', () => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.VISUAL,
+        variant: TIMELINE_FEED_VARIANT.COLLECTION,
+        isPhoneViewport: true,
+      });
+
+      expect(result.requestedLayout).toBe(LAYOUT.VISUAL);
+      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
+      expect(result.isVisualRequested).toBe(true);
+      expect(result.isVisualActive).toBe(false);
+      expect(result.isGridActive).toBe(true);
+    });
+
+    it('still does not enable wide layout for the collection variant', () => {
+      const result = resolveFeedLayout({
+        requestedLayout: LAYOUT.WIDE,
+        variant: TIMELINE_FEED_VARIANT.COLLECTION,
+        isPhoneViewport: false,
+      });
+
+      expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
     });
   });
 });

@@ -123,5 +123,14 @@ describe('parseCollectionContent', () => {
         COLLECTION_LAYOUT.GRID,
       );
     });
+
+    it('uses Visual when present and Grid for an unknown future layout', () => {
+      expect(parseCollectionContent(JSON.stringify({ name: 'Visual', layout: 'visual' }))?.layout).toBe(
+        COLLECTION_LAYOUT.VISUAL,
+      );
+      expect(parseCollectionContent(JSON.stringify({ name: 'Future', layout: 'mosaic' }))?.layout).toBe(
+        COLLECTION_LAYOUT.GRID,
+      );
+    });
   });
 });

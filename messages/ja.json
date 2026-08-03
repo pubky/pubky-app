@@ -1358,6 +1358,7 @@
       "layoutLabel": "レイアウト",
       "layoutGrid": "グリッド",
       "layoutList": "リスト",
+      "layoutVisual": "ビジュアル",
       "addImage": "画像を追加",
       "removeImage": "画像を削除",
       "coverImageInvalid": "カバー画像は画像ファイルである必要があります。",
@@ -1424,6 +1425,8 @@
       "layout": "レイアウト",
       "layoutGrid": "グリッド",
       "layoutList": "リスト",
+      "layoutVisual": "ビジュアル",
+      "hiddenItemsNotice": "選択されたレイアウトの種類により、このコレクションの一部のアイテムは非表示になっています。",
       "empty": "このコレクションは空です。",
       "notFound": {
         "title": "コレクションが見つかりません",

@@ -201,6 +201,15 @@ describe('DialogAddContent', () => {
     expect(trigger).not.toHaveClass('h-full');
   });
 
+  it('renders a dashed mosaic tile when triggerVariant is visual', () => {
+    render(<DialogAddContent triggerVariant="visual" dataCy="collection-add-content-visual" />);
+
+    const trigger = screen.getByRole('button', { name: 'collections.single.addContent' });
+    expect(trigger).toHaveAttribute('data-cy', 'collection-add-content-visual');
+    expect(trigger).toHaveClass('h-full', 'w-full', 'border-dashed');
+    expect(trigger).not.toHaveClass('h-16');
+  });
+
   it('opens the desktop dialog with feed, URL, and create-post options', () => {
     render(<DialogAddContent />);
 
@@ -423,6 +432,12 @@ describe('DialogAddContent - Snapshots', () => {
 
   it('matches the closed list trigger snapshot', () => {
     const { container } = render(<DialogAddContent triggerVariant="list" />);
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches the closed visual trigger snapshot', () => {
+    const { container } = render(<DialogAddContent triggerVariant="visual" dataCy="collection-add-content-visual" />);
 
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -1352,6 +1352,7 @@
       "layoutLabel": "布局",
       "layoutGrid": "网格",
       "layoutList": "列表",
+      "layoutVisual": "视觉",
       "addImage": "添加图片",
       "removeImage": "移除图片",
       "coverImageInvalid": "封面图片必须是图片文件。",
@@ -1418,6 +1419,8 @@
       "layout": "布局",
       "layoutGrid": "网格",
       "layoutList": "列表",
+      "layoutVisual": "视觉",
+      "hiddenItemsNotice": "由于所选的布局类型，此收藏中的部分内容已被隐藏。",
       "empty": "此收藏为空。",
       "notFound": {
         "title": "未找到收藏",

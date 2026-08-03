@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -39,6 +40,7 @@ interface CapturedStreamProps {
   tagsLayout: string;
   layoutResolution?: FeedLayoutResolution;
   collectionId?: string;
+  visualHiddenItemsNotice?: ReactNode;
 }
 
 const capturedProps: CapturedStreamProps[] = [];
@@ -102,5 +104,31 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     expect(mockUseFeedLayoutResolution).toHaveBeenCalledWith(TIMELINE_FEED_VARIANT.COLLECTION, LAYOUT.LIST);
     expect(lastProps().tagsLayout).toBe('list');
     expect(lastProps().layoutResolution?.isGridActive).toBe(false);
+  });
+
+  it('forwards the collection-scoped Visual selection and threads the hidden-items notice', () => {
+    mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+    mockUseFeedLayoutResolution.mockReturnValue({
+      ...gridLayoutResolution(),
+      requestedLayout: LAYOUT.VISUAL,
+      effectiveLayout: LAYOUT.VISUAL,
+      isVisualRequested: true,
+      isVisualActive: true,
+      isGridActive: false,
+    });
+    const notice = <div data-testid="hidden-items-notice" />;
+
+    render(
+      <TimelineFeed
+        variant={TIMELINE_FEED_VARIANT.COLLECTION}
+        requestedLayout={LAYOUT.VISUAL}
+        visualHiddenItemsNotice={notice}
+      />,
+    );
+
+    expect(mockUseFeedLayoutResolution).toHaveBeenCalledWith(TIMELINE_FEED_VARIANT.COLLECTION, LAYOUT.VISUAL);
+    expect(lastProps().tagsLayout).toBe('inline');
+    expect(lastProps().layoutResolution?.isVisualActive).toBe(true);
+    expect(lastProps().visualHiddenItemsNotice).toBe(notice);
   });
 });

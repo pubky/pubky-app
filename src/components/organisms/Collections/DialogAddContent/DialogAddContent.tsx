@@ -110,6 +110,10 @@ function renderDialogAddContentTrigger(variant: DialogAddContentTriggerVariant, 
       return <DialogAddContentGridTrigger {...props} />;
     case 'list':
       return <DialogAddContentListTrigger {...props} />;
+    case 'visual':
+      // The Visual mosaic CTA fills an aspect-ratio cell, which the grid's
+      // dashed h-full/w-full tile already does — no dedicated trigger needed.
+      return <DialogAddContentGridTrigger {...props} />;
     default: {
       const exhaustiveCheck: never = variant;
       return exhaustiveCheck;

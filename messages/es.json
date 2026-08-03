@@ -1362,6 +1362,7 @@
       "layoutLabel": "Diseño",
       "layoutGrid": "Cuadrícula",
       "layoutList": "Lista",
+      "layoutVisual": "Visual",
       "addImage": "Añadir imagen",
       "removeImage": "Quitar imagen",
       "coverImageInvalid": "La imagen de portada debe ser un archivo de imagen.",
@@ -1428,6 +1429,8 @@
       "layout": "Diseño",
       "layoutGrid": "Cuadrícula",
       "layoutList": "Lista",
+      "layoutVisual": "Visual",
+      "hiddenItemsNotice": "Algunos elementos de esta colección están ocultos debido al tipo de diseño seleccionado.",
       "empty": "Esta colección está vacía.",
       "notFound": {
         "title": "Colección no encontrada",
