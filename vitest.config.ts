@@ -66,9 +66,6 @@ export default defineConfig({
         test: {
           name: 'vrt',
           globals: true,
-          // Dense surfaces (e.g. Hot desktop) + WebKit/Linux can spend several
-          // seconds in renderForVRT image waits and up to 10s in screenshot
-          // stability retries — 15s (Vitest default) is too tight.
           testTimeout: 30_000,
           include: ['**/*.vrt.test.{ts,tsx}'],
           exclude: ['**/node_modules/**'],
