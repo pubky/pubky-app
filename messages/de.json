@@ -1178,6 +1178,7 @@
       "me": "Ich",
       "profileTag": "Profil-Tag",
       "profileTagLimitReached": "Max. {max} Tags",
+      "taggedAsTag": "„{tag}“",
       "taggedAsHeadline": "Beiträge von Personen, die mein Netzwerk als {tags} markiert hat"
     },
     "sort": {

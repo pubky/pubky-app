@@ -1176,6 +1176,7 @@
       "me": "Moi",
       "profileTag": "tag de profil",
       "profileTagLimitReached": "{max} tags max",
+      "taggedAsTag": "« {tag} »",
       "taggedAsHeadline": "Publications de personnes que mon réseau a identifiées comme {tags}"
     },
     "sort": {

@@ -220,7 +220,7 @@ describe('useStreamIdFromFilters', () => {
       { reach: REACH.NETWORK, expected: 'timeline:wot:all' },
       { reach: REACH.FOLLOWING, expected: 'timeline:following:all' },
       { reach: REACH.FRIENDS, expected: 'timeline:friends:all' },
-      { reach: REACH.ME, expected: 'author:viewer-pubky' },
+      { reach: REACH.ME, expected: 'timeline:author:viewer-pubky:all' },
     ];
 
     reachOptions.forEach(({ reach, expected }) => {
@@ -239,7 +239,19 @@ describe('useStreamIdFromFilters', () => {
 
     const { result } = renderHook(() => useStreamIdFromFilters());
 
-    expect(result.current).toBe('viewer-pubky:author:image');
+    expect(result.current).toBe('timeline:author:viewer-pubky:image');
+  });
+
+  it('should preserve popularity sorting when reach is me', () => {
+    const { result: setReach } = renderHook(() => useHomeStore((state) => state.setReach));
+    const { result: setSort } = renderHook(() => useHomeStore((state) => state.setSort));
+
+    setReach.current(REACH.ME);
+    setSort.current(SORT.ENGAGEMENT);
+
+    const { result } = renderHook(() => useStreamIdFromFilters());
+
+    expect(result.current).toBe('total_engagement:author:viewer-pubky:all');
   });
 
   it('should build a depth-2 wot_domain stream when Tagged as is active', () => {
@@ -295,7 +307,7 @@ describe('useStreamIdFromFilters', () => {
 
     const { result: meResult } = renderHook(() => useStreamIdFromFilters());
 
-    expect(meResult.current).toBe('author:viewer-pubky');
+    expect(meResult.current).toBe('timeline:author:viewer-pubky:all');
   });
 
   it('should include content kind and emoji profile tags in wot_domain stream IDs', () => {

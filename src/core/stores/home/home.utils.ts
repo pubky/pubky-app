@@ -1,12 +1,13 @@
 import type { Pubky } from '@/models/models.types';
 import {
+  buildSortedAuthorStreamId,
   buildWotDomainStreamId,
   getPostStreamKind,
   type PostStreamId,
   type PostStreamKindSegment,
 } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
-import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 import { CONTENT, type ContentType, REACH, type ReachType, SORT, type SortType } from './home.types';
 
 // ============================================
@@ -130,12 +131,8 @@ export function getHomeStreamIdFromFilters({
     return buildWotDomainStreamId(SORT_TO_SORTING[sort], TAGGED_AS_WOT_DOMAIN_DEPTH, kind, profileTags);
   }
 
-  if (effectiveReach === REACH.ME) {
-    const streamId =
-      kind === 'all'
-        ? `${StreamSource.AUTHOR}:${currentUserPubky}`
-        : `${currentUserPubky}:${StreamSource.AUTHOR}:${kind}`;
-    return streamId as PostStreamId;
+  if (effectiveReach === REACH.ME && currentUserPubky) {
+    return buildSortedAuthorStreamId(SORT_TO_SORTING[sort], currentUserPubky, kind);
   }
 
   return getStreamId(sort, effectiveReach, content);
@@ -149,7 +146,7 @@ export function getHomeStreamIdFromFilters({
  * matchesFilters('timeline:following:all', 'recent', 'all', 'all') // => false
  */
 export function matchesFilters(streamId: string, sort: SortType, reach: ReachType, content: ContentType): boolean {
-  // Me streams use author-based ids, never the sorting:source:kind shape.
+  // Me streams require viewer-aware author ids, which this legacy matcher cannot derive.
   if (reach === REACH.ME) {
     return false;
   }

@@ -27,8 +27,8 @@ export const useHomeStore = create<HomeStore>()(
           taggedAsActive: state.taggedAsActive,
           hasUserSetReach: state.hasUserSetReach,
         }),
-        onRehydrateStorage: () => (state) => {
-          state?.setHasHydrated(true);
+        onRehydrateStorage: (state) => (rehydratedState) => {
+          (rehydratedState ?? state).setHasHydrated(true);
         },
       },
     ),

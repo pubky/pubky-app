@@ -1176,6 +1176,7 @@
       "me": "自分",
       "profileTag": "プロフィールタグ",
       "profileTagLimitReached": "最大{max}タグ",
+      "taggedAsTag": "「{tag}」",
       "taggedAsHeadline": "自分のネットワークが{tags}とタグ付けした人の投稿"
     },
     "sort": {

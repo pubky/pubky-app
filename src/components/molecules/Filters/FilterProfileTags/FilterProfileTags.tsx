@@ -33,6 +33,7 @@ export function FilterProfileTags({
     <Container
       overrideDefaults
       aria-hidden={disabled}
+      inert={disabled}
       className={cn(
         'grid w-full transition-all duration-300 ease-in-out',
         disabled ? 'pointer-events-none grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100',
@@ -62,6 +63,7 @@ export function FilterProfileTags({
               label={tag}
               showClose
               onClose={() => onTagRemove(tag)}
+              tabIndex={disabled ? -1 : undefined}
               className="w-32 justify-between"
             />
           ))}

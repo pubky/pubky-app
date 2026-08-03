@@ -1178,6 +1178,7 @@
       "me": "Yo",
       "profileTag": "etiqueta de perfil",
       "profileTagLimitReached": "máximo {max} etiquetas",
+      "taggedAsTag": "«{tag}»",
       "taggedAsHeadline": "Publicaciones de personas que mi red etiquetó como {tags}"
     },
     "sort": {

@@ -5,7 +5,11 @@ export const HOME_STORE_VERSION = 1;
 type PersistedHomeState = Omit<HomeState, 'hasHydrated'>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isReach(value: unknown): value is HomeState['reach'] {
+  return typeof value === 'string' && Object.values<string>(REACH).includes(value);
 }
 
 function getPersistedProfileTags(state: Record<string, unknown>): string[] {
@@ -28,12 +32,16 @@ export function migrateHomePersistedState(persistedState: unknown, version: numb
   }
 
   const profileTags = getPersistedProfileTags(state);
-  const taggedAsActive = state.reach === REACH.NETWORK && profileTags.length > 0;
+  const persistedReach = isReach(state.reach) ? state.reach : undefined;
+  const taggedAsActive = persistedReach === REACH.NETWORK && profileTags.length > 0;
+  const stateWithoutReach = { ...state };
+  delete stateWithoutReach.reach;
 
   return {
-    ...(state as Partial<PersistedHomeState>),
+    ...(stateWithoutReach as Partial<PersistedHomeState>),
+    ...(persistedReach ? { reach: persistedReach } : {}),
     profileTags,
     taggedAsActive,
-    hasUserSetReach: true,
+    hasUserSetReach: persistedReach !== undefined,
   } as PersistedHomeState;
 }

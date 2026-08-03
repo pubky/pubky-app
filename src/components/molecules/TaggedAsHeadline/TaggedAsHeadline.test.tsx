@@ -16,8 +16,11 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 vi.mock('next-intl', () => ({
   useFormatter: () => ({ list: mockList }),
-  useTranslations: () => (key: string, values?: { tags?: string }) =>
-    key === 'taggedAsHeadline' ? `Posts from people tagged as ${values?.tags} by my network` : key,
+  useTranslations: () => (key: string, values?: { tag?: string; tags?: string }) => {
+    if (key === 'taggedAsTag') return `‘${values?.tag}’`;
+    if (key === 'taggedAsHeadline') return `Posts from people tagged as ${values?.tags} by my network`;
+    return key;
+  },
 }));
 
 describe('TaggedAsHeadline', () => {

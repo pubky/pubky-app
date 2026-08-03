@@ -1172,6 +1172,7 @@
       "me": "انا",
       "profileTag": "وسم الملف الشخصي",
       "profileTagLimitReached": "{max} وسوم كحد اقصى",
+      "taggedAsTag": "«{tag}»",
       "taggedAsHeadline": "منشورات من أشخاص وسمتهم شبكتي كـ {tags}"
     },
     "sort": {

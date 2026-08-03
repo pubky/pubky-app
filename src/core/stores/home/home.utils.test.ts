@@ -175,7 +175,7 @@ describe('filters.utils', () => {
       expect(streamId).toBe(PostStreamTypes.TIMELINE_ALL_ALL);
     });
 
-    it('should build author stream for me reach with all content', () => {
+    it('should build a sorting-aware author stream for me reach with all content', () => {
       const streamId = getHomeStreamIdFromFilters({
         sort: SORT.TIMELINE,
         reach: REACH.ME,
@@ -183,7 +183,7 @@ describe('filters.utils', () => {
         currentUserPubky: 'viewer-pubky',
       });
 
-      expect(streamId).toBe('author:viewer-pubky');
+      expect(streamId).toBe('timeline:author:viewer-pubky:all');
     });
 
     it('should build author stream with content kind for me reach', () => {
@@ -194,7 +194,18 @@ describe('filters.utils', () => {
         currentUserPubky: 'viewer-pubky',
       });
 
-      expect(streamId).toBe('viewer-pubky:author:image');
+      expect(streamId).toBe('timeline:author:viewer-pubky:image');
+    });
+
+    it('should preserve popularity sorting for me reach', () => {
+      const streamId = getHomeStreamIdFromFilters({
+        sort: SORT.ENGAGEMENT,
+        reach: REACH.ME,
+        content: CONTENT.ALL,
+        currentUserPubky: 'viewer-pubky',
+      });
+
+      expect(streamId).toBe('total_engagement:author:viewer-pubky:all');
     });
 
     it('should build a depth-2 domain stream when Tagged as is active with profile tags', () => {
@@ -275,7 +286,7 @@ describe('filters.utils', () => {
         taggedAsActive: true,
       });
 
-      expect(streamId).toBe('viewer-pubky:author:image');
+      expect(streamId).toBe('timeline:author:viewer-pubky:image');
     });
 
     it('should use plain Network stream when profile tags are empty', () => {

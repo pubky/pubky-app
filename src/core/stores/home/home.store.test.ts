@@ -34,6 +34,29 @@ describe('HomeStore', () => {
     });
   });
 
+  describe('Persistence Hydration', () => {
+    it('marks the store as hydrated when persisted storage cannot be read', async () => {
+      const originalStorage = useHomeStore.persist.getOptions().storage;
+      const failingStorage: NonNullable<typeof originalStorage> = {
+        getItem: async () => {
+          throw new Error('storage unavailable');
+        },
+        setItem: async () => undefined,
+        removeItem: async () => undefined,
+      };
+
+      useHomeStore.getState().setHasHydrated(false);
+      useHomeStore.persist.setOptions({ storage: failingStorage });
+
+      try {
+        await useHomeStore.persist.rehydrate();
+        expect(useHomeStore.getState().hasHydrated).toBe(true);
+      } finally {
+        useHomeStore.persist.setOptions({ storage: originalStorage });
+      }
+    });
+  });
+
   describe('Layout Management', () => {
     it('should set layout to columns', () => {
       const store = useHomeStore.getState();

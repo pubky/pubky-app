@@ -46,14 +46,16 @@ describe('FilterProfileTags', () => {
     expect(screen.getByPlaceholderText('profile tag')).toBeDisabled();
   });
 
-  it('collapses the whole tags block when disabled', () => {
+  it('collapses the whole tags block and removes parked tags from keyboard navigation when disabled', () => {
     const { container } = render(
-      <FilterProfileTags selectedTags={[]} onTagAdd={vi.fn()} onTagRemove={vi.fn()} disabled />,
+      <FilterProfileTags selectedTags={['bitcoin']} onTagAdd={vi.fn()} onTagRemove={vi.fn()} disabled />,
     );
 
     const wrapper = container.firstChild;
     expect(wrapper).toHaveClass('grid-rows-[0fr]', 'opacity-0', 'pointer-events-none', 'duration-300', 'ease-in-out');
     expect(wrapper).toHaveAttribute('aria-hidden', 'true');
+    expect(wrapper).toHaveAttribute('inert');
+    expect(screen.getByRole('button', { name: 'bitcoin tag', hidden: true })).toHaveAttribute('tabindex', '-1');
   });
 
   it('expands the tags block when active', () => {

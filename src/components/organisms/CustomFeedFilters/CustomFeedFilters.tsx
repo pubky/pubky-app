@@ -25,7 +25,6 @@ interface CustomFeedFiltersProps {
 export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
   const customFeed = useCustomFeed();
   const tDialog = useTranslations('dialogs.customFeed');
-  const tReach = useTranslations('filters.reach');
   const reach: ReachFilterValue | undefined =
     customFeed?.reach === PubkyAppFeedReach.Wot && customFeed.domain_tags.length > 0
       ? TAGGED_AS_FILTER_KEY
@@ -58,7 +57,7 @@ export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
 
       {customFeed?.domain_tags.length ? (
         <Container overrideDefaults className="flex flex-col gap-2" data-testid="custom-feed-profile-tags">
-          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tReach('profileTag')}</Label>
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('profileTags')}</Label>
           <Container overrideDefaults className="flex flex-wrap gap-2">
             {customFeed.domain_tags.map((tag) => (
               <PostTag key={tag} label={tag} aria-disabled tabIndex={-1} />

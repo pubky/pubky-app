@@ -1176,6 +1176,7 @@
       "me": "Io",
       "profileTag": "tag profilo",
       "profileTagLimitReached": "max {max} tag",
+      "taggedAsTag": "“{tag}”",
       "taggedAsHeadline": "Post di persone che la mia rete ha etichettato come {tags}"
     },
     "sort": {

@@ -44,6 +44,20 @@ describe('migrateHomePersistedState', () => {
     });
   });
 
+  it.each([null, 'invalid', [], { reach: 'unknown' }])(
+    'does not treat malformed legacy state as an explicit Reach choice',
+    (persistedState) => {
+      const migrated = migrateHomePersistedState(persistedState, 0);
+
+      expect(migrated).toMatchObject({
+        profileTags: [],
+        taggedAsActive: false,
+        hasUserSetReach: false,
+      });
+      expect(migrated).not.toHaveProperty('reach');
+    },
+  );
+
   it('does not reinterpret data already stored at the current version', () => {
     const state = {
       reach: REACH.FRIENDS,

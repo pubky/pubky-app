@@ -1170,6 +1170,7 @@
       "me": "我",
       "profileTag": "个人资料标签",
       "profileTagLimitReached": "最多{max}个标签",
+      "taggedAsTag": "“{tag}”",
       "taggedAsHeadline": "来自被我的人脉标记为 {tags} 的用户的帖子"
     },
     "sort": {

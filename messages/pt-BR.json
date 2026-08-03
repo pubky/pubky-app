@@ -1176,6 +1176,7 @@
       "me": "Eu",
       "profileTag": "tag de perfil",
       "profileTagLimitReached": "maximo {max} tags",
+      "taggedAsTag": "“{tag}”",
       "taggedAsHeadline": "Publicações de pessoas que minha rede marcou como {tags}"
     },
     "sort": {

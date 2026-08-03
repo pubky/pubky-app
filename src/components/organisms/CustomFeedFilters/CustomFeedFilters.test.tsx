@@ -268,7 +268,7 @@ describe('CustomFeedFilters', () => {
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'tagged_as');
     expect(screen.getByTestId('custom-feed-post-tags')).toHaveTextContent('Filter on Content Tags');
-    expect(screen.getByTestId('custom-feed-profile-tags')).toHaveTextContent('profile tag');
+    expect(screen.getByTestId('custom-feed-profile-tags')).toHaveTextContent('Profile Tags');
     expect(screen.getByTestId('readonly-tag-bitcoin')).toBeInTheDocument();
     expect(screen.getByTestId('readonly-tag-bitcoiner')).toBeInTheDocument();
     expect(screen.getByTestId('readonly-tag-🔥')).toBeInTheDocument();
