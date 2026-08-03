@@ -88,7 +88,7 @@ export default defineConfig({
                 },
                 // Home feed desktop (WebKit/Linux) needs extra headroom for
                 // layout to settle after fonts/images decode.
-                timeout: 10_000,
+                timeout: 15_000,
               },
             },
             // `viewport` below is the INITIAL browser size only. Each test
