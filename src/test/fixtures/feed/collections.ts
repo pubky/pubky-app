@@ -252,8 +252,9 @@ export const VRT_COLLECTION_VISUAL_ROWS: readonly VisualRow[] = [
 export const VRT_COLLECTION_COVER_URLS: Readonly<Record<string, string>> = {
   [makeCompositeId(VRT_AUTHOR_PUBKYS.alice, COLLECTION_COVER_IDS.localFirstNotes)]:
     '/images/collections-onboarding.webp',
-  [makeCompositeId(VRT_AUTHOR_PUBKYS.alice, COLLECTION_COVER_IDS.designReferences)]: '/images/landing-experience5.png',
-  [makeCompositeId(VRT_AUTHOR_PUBKYS.cleo, COLLECTION_COVER_IDS.goldenHour)]: '/images/landing-webbroken2.png',
+  [makeCompositeId(VRT_AUTHOR_PUBKYS.alice, COLLECTION_COVER_IDS.designReferences)]:
+    '/images/vrt-design-references.webp',
+  [makeCompositeId(VRT_AUTHOR_PUBKYS.cleo, COLLECTION_COVER_IDS.goldenHour)]: '/images/vrt-golden-hour.webp',
   [makeCompositeId(VRT_AUTHOR_PUBKYS.dion, COLLECTION_COVER_IDS.weekendReads)]: '/images/note.webp',
 };
 
