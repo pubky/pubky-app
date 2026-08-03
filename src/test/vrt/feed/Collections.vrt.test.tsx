@@ -8,30 +8,46 @@ import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
+import { BookmarksCollection } from '@/templates/BookmarksCollection/BookmarksCollection';
+import { Collection } from '@/templates/Collection/Collection';
 import { Collections } from '@/templates/Collections/Collections';
+
+const routeState = vi.hoisted(() => ({
+  pathname: '/collections',
+  params: {} as { userId?: string; postId?: string },
+}));
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
 // the first time the mocked module is consumed.
 const fixtures = vi.hoisted(async () => {
-  const [collectionsModule, profilesModule, navModule, mockApp] = await Promise.all([
+  const [collectionsModule, postsModule, profilesModule, navModule, mockApp] = await Promise.all([
     import('@/test/fixtures/feed/collections'),
+    import('@/test/fixtures/feed/posts'),
     import('@/test/fixtures/feed/profiles'),
     import('@/test/fixtures/feed/feedNavigation'),
     import('@/test/mocks/feedApplication'),
   ]);
+  const postsByCompositeId = new Map(postsModule.VRT_FEED_POSTS.map((post) => [post.compositeId, post]));
   const collectionsByCompositeId = new Map(
     collectionsModule.VRT_ALL_COLLECTIONS.map((collection) => [collection.compositeId, collection]),
   );
+  const entitiesByCompositeId = new Map([...postsByCompositeId, ...collectionsByCompositeId]);
   const myCollectionIds = collectionsModule.VRT_MY_COLLECTIONS.map((c) => c.compositeId);
   const followedCollectionIds = collectionsModule.VRT_FOLLOWED_COLLECTIONS.map((c) => c.compositeId);
   const discoverCollectionIds = collectionsModule.VRT_DISCOVER_COLLECTIONS.map((c) => c.compositeId);
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   return {
     collectionsByCompositeId,
+    entitiesByCompositeId,
+    postsByCompositeId,
     myCollectionIds,
     followedCollectionIds,
     discoverCollectionIds,
+    singleCollections: collectionsModule.VRT_SINGLE_COLLECTIONS,
+    collectionItemIds: collectionsModule.VRT_COLLECTION_ITEM_IDS,
+    bookmarkPostIds: collectionsModule.VRT_BOOKMARK_POST_IDS,
+    visualRows: collectionsModule.VRT_COLLECTION_VISUAL_ROWS,
     profiles: profilesModule.VRT_AUTHOR_PROFILES,
     viewerPubky,
     homeFilters: navModule.VRT_HOME_FILTERS,
@@ -48,13 +64,12 @@ vi.mock('next/navigation', () => {
     forward: vi.fn(),
     refresh: vi.fn(),
   };
-  const params = {};
   const searchParams = new URLSearchParams();
   return {
     useRouter: () => router,
-    usePathname: () => '/collections',
+    usePathname: () => routeState.pathname,
     useSearchParams: () => searchParams,
-    useParams: () => params,
+    useParams: () => routeState.params,
   };
 });
 
@@ -160,21 +175,36 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   }),
 }));
 
-// My Collections paginates authored collection posts via this hook.
+// Collection sections and finite collection/bookmark feeds share this hook.
+// Route by stream shape so each surface receives its own stable fixture slice.
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
   const f = await fixtures;
-  const result = {
-    postIds: f.myCollectionIds,
-    loading: false,
-    loadingMore: false,
-    error: null,
-    hasMore: false,
-    loadMore: async () => {},
-    refresh: async () => {},
-    prependPosts: async () => {},
-    removePosts: () => {},
+  const cache = new Map<string, unknown>();
+  return {
+    useStreamPagination: ({ streamId }: { streamId: string }) => {
+      const cached = cache.get(streamId);
+      if (cached) return cached;
+      const postIds = streamId.startsWith('collection:')
+        ? f.collectionItemIds
+        : streamId === 'timeline:bookmarks:all'
+          ? f.bookmarkPostIds
+          : f.myCollectionIds;
+      const result = {
+        postIds,
+        loading: false,
+        loadingMore: false,
+        error: null,
+        hasMore: false,
+        loadMore: async () => {},
+        refresh: async () => {},
+        prependPosts: async () => {},
+        prependOptimisticPosts: async () => {},
+        removePosts: () => {},
+      };
+      cache.set(streamId, result);
+      return result;
+    },
   };
-  return { useStreamPagination: () => result };
 });
 
 vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => {
@@ -204,6 +234,11 @@ vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => {
   return { useUnreadPosts: () => result };
 });
 
+vi.mock('@/hooks/usePullToRefresh/usePullToRefresh', () => {
+  const result = { state: 'idle' as const, pullDistance: 0 };
+  return { usePullToRefresh: () => result };
+});
+
 vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
   useIsScrolledFromTop: () => false,
 }));
@@ -217,7 +252,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', async () => {
       if (!compositeId) return EMPTY;
       const cached = cache.get(compositeId);
       if (cached) return cached;
-      const fixture = f.collectionsByCompositeId.get(compositeId);
+      const fixture = f.entitiesByCompositeId.get(compositeId);
       if (!fixture) {
         cache.set(compositeId, EMPTY);
         return EMPTY;
@@ -240,7 +275,7 @@ vi.mock('@/hooks/usePostCounts/usePostCounts', async () => {
     usePostCounts: (compositeId: string) => {
       const cached = cache.get(compositeId);
       if (cached) return cached;
-      const fixture = f.collectionsByCompositeId.get(compositeId);
+      const fixture = f.entitiesByCompositeId.get(compositeId);
       const result = { postCounts: fixture?.counts ?? ZERO_COUNTS, isLoading: false as const };
       cache.set(compositeId, result);
       return result;
@@ -258,6 +293,22 @@ vi.mock('@/hooks/useBookmark/useBookmark', () => {
       toggle: noopToggle,
     }),
   };
+});
+
+vi.mock('@/hooks/usePostSaveTargets/usePostSaveTargets', () => {
+  const noop = async () => {};
+  const result = {
+    isBookmarked: false,
+    isBookmarkLoading: false,
+    isBookmarkToggling: false,
+    collections: [],
+    isCollectionsLoading: false,
+    isCreatingCollection: false,
+    toggleBookmark: noop,
+    toggleCollection: noop,
+    createCollectionWithPost: noop,
+  };
+  return { usePostSaveTargets: () => result };
 });
 
 vi.mock('@/hooks/useUserDetails/useUserDetails', async () => {
@@ -295,6 +346,23 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => {
   return { useTtlSubscription: () => result };
 });
 
+vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => {
+  const result = { showRepostHeader: false, shouldShowPostHeader: true };
+  return { usePostHeaderVisibility: () => result };
+});
+
+vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => {
+  const result = {
+    isRepost: false,
+    repostAuthorId: null,
+    isCurrentUserRepost: false,
+    originalPostId: null,
+    isLoading: false,
+    hasError: false,
+  };
+  return { useRepostInfo: () => result };
+});
+
 vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
   const f = await fixtures;
   const noopToggle = async () => {};
@@ -305,7 +373,7 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
     useEntityTags: (taggedId: string) => {
       const cached = cache.get(taggedId);
       if (cached) return cached;
-      const fixture = f.collectionsByCompositeId.get(taggedId);
+      const fixture = f.entitiesByCompositeId.get(taggedId);
       const tags = (fixture?.tags ?? []).map((tag) => ({ ...tag, taggers_avatars: [] }));
       const result = {
         tags,
@@ -319,6 +387,42 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
       return result;
     },
   };
+});
+
+vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => {
+  const result = {
+    taggersByLabel: new Map<string, string[]>(),
+    taggerStates: new Map<string, { isLoading: boolean; error: string | null }>(),
+    fetchAllTaggers: async () => {},
+  };
+  return { usePostTaggers: () => result };
+});
+
+vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => {
+  const result = {
+    replyIds: [] as string[],
+    totalCount: 0,
+    hasMore: false,
+    showAll: false,
+    isExpandingAll: false,
+    expandAll: async () => {},
+  };
+  return { useThreadReplies: () => result };
+});
+
+vi.mock('@/organisms/Timeline/Feed/TimelineFeed/useVisualFeedTiles', async () => {
+  const f = await fixtures;
+  const result = {
+    rows: f.visualRows,
+    tail: [] as never[],
+    tiles: f.visualRows.flatMap((row) => row.cells.flatMap((cell) => (cell.tile ? [cell.tile] : []))),
+    hasPendingSnapshot: false,
+    hasPendingTiles: false,
+    hasPendingFiles: false,
+    hasPendingPostDetails: false,
+    hiddenPostCount: 2,
+  };
+  return { useVisualFeedTiles: () => result };
 });
 
 vi.mock('@/hooks/useAuthStatus/useAuthStatus', async () => {
@@ -386,7 +490,7 @@ vi.mock('@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary', a
       avatarName: profile.name ?? 'U',
       avatarSeed: f.viewerPubky,
       avatarUrl: undefined,
-      bookmarkCount: 12,
+      bookmarkCount: f.bookmarkPostIds.length,
       isProfileResolved: true,
     }),
   };
@@ -430,6 +534,8 @@ vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: () => null,
     getFileUrl: () => null,
+    getMetadata: async () => [],
+    fetchFiles: async () => [],
   },
 }));
 
@@ -492,6 +598,24 @@ function CollectionsWithHeader() {
   );
 }
 
+function CollectionWithHeader({ postId }: { postId: string }) {
+  return (
+    <>
+      <Header />
+      <Collection postId={postId} />
+    </>
+  );
+}
+
+function BookmarksWithHeader() {
+  return (
+    <>
+      <Header />
+      <BookmarksCollection />
+    </>
+  );
+}
+
 async function expectCollectionsOverviewReady(screen: Awaited<ReturnType<typeof renderForVRT>>) {
   // Sections hydrate via async live queries / stream seeds — wait for known
   // card titles so the screenshot is not a skeleton first-paint.
@@ -501,6 +625,35 @@ async function expectCollectionsOverviewReady(screen: Awaited<ReturnType<typeof 
   await expect.element(screen.getByText('Golden hour')).toBeVisible();
   await expect.element(screen.getByText('Discover Collections')).toBeVisible();
   await expect.element(screen.getByText('Weekend reads')).toBeVisible();
+}
+
+async function renderSingleCollection(
+  layout: keyof Awaited<typeof fixtures>['singleCollections'],
+  viewport: { width: number; height: number },
+) {
+  const f = await fixtures;
+  const collection = f.singleCollections[layout];
+  routeState.pathname = `/collections/${collection.details.author}/${collection.postId}`;
+  routeState.params = { userId: collection.details.author, postId: collection.postId };
+
+  const screen = await renderForVRT(<CollectionWithHeader postId={collection.compositeId} />, { viewport });
+  await expect.element(screen.getByRole('heading', { name: 'Signals from the field' })).toBeVisible();
+  if (layout === 'visual' && viewport.width >= 768) {
+    await expect.element(screen.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
+  } else {
+    await expect.element(screen.getByRole('feed')).toBeVisible();
+  }
+  return screen;
+}
+
+async function renderBookmarks(viewport: { width: number; height: number }) {
+  routeState.pathname = '/collections/bookmarks';
+  routeState.params = {};
+
+  const screen = await renderForVRT(<BookmarksWithHeader />, { viewport });
+  await expect.element(screen.getByRole('heading', { name: 'Bookmarks' })).toBeVisible();
+  await expect.element(screen.getByRole('feed')).toBeVisible();
+  return screen;
 }
 
 describe('Collections overview — visual regression', () => {
@@ -515,5 +668,53 @@ describe('Collections overview — visual regression', () => {
     const screen = await renderForVRT(<CollectionsWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await expectCollectionsOverviewReady(screen);
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('collections-overview-mobile');
+  });
+});
+
+describe('Single collection — grid layout — visual regression', () => {
+  it('renders a grid collection at desktop viewport', async () => {
+    const screen = await renderSingleCollection('grid', VRT_VIEWPORT_DESKTOP);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-grid-desktop');
+  });
+
+  it('renders a grid collection at mobile viewport', async () => {
+    const screen = await renderSingleCollection('grid', VRT_VIEWPORT_MOBILE);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-grid-mobile');
+  });
+});
+
+describe('Single collection — list layout — visual regression', () => {
+  it('renders a list collection at desktop viewport', async () => {
+    const screen = await renderSingleCollection('list', VRT_VIEWPORT_DESKTOP);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-list-desktop');
+  });
+
+  it('renders a list collection at mobile viewport', async () => {
+    const screen = await renderSingleCollection('list', VRT_VIEWPORT_MOBILE);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-list-mobile');
+  });
+});
+
+describe('Single collection — visual layout — visual regression', () => {
+  it('renders a visual collection at desktop viewport', async () => {
+    const screen = await renderSingleCollection('visual', VRT_VIEWPORT_DESKTOP);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-visual-desktop');
+  });
+
+  it('renders the visual collection grid fallback at mobile viewport', async () => {
+    const screen = await renderSingleCollection('visual', VRT_VIEWPORT_MOBILE);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-visual-mobile');
+  });
+});
+
+describe('Bookmarks collection — visual regression', () => {
+  it('renders bookmarks at desktop viewport', async () => {
+    const screen = await renderBookmarks(VRT_VIEWPORT_DESKTOP);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('bookmarks-collection-desktop');
+  });
+
+  it('renders bookmarks at mobile viewport', async () => {
+    const screen = await renderBookmarks(VRT_VIEWPORT_MOBILE);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('bookmarks-collection-mobile');
   });
 });
