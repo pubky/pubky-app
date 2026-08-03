@@ -10,7 +10,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
   <div
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-    data-testid="container"
+    data-testid="collection-cover"
     style="background-image: linear-gradient(to right, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.6) 45%, rgba(0, 0, 0, 0.2) 100%), url(\\"https://example.com/cover.png\\");"
   />
   <div
@@ -342,7 +342,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
   <div
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-    data-testid="container"
+    data-testid="collection-cover"
     style="background-image: linear-gradient(to right, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.6) 45%, rgba(0, 0, 0, 0.2) 100%), url(\\"https://example.com/cover.png\\");"
   />
   <div

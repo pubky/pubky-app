@@ -640,6 +640,26 @@ async function preloadImages(urls: readonly string[]) {
   );
 }
 
+async function waitForSingleCollectionCoverReady() {
+  const cover = document.querySelector<HTMLElement>('[data-testid="collection-cover"]');
+  if (!cover) {
+    throw new Error('Single-collection VRT rendered without its expected cover');
+  }
+
+  const match = cover.style.backgroundImage.match(/url\(\s*(['"]?)(.*?)\1\s*\)/i);
+  const coverUrl = match?.[2];
+  if (!coverUrl) {
+    throw new Error('Single-collection VRT cover has no background-image URL');
+  }
+
+  // Wait on the exact URL applied to the hydrated hero. Loading before render
+  // alone is insufficient: the CSS background can be committed afterwards.
+  await preloadImages([coverUrl]);
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
 async function expectCollectionsOverviewReady(screen: Awaited<ReturnType<typeof renderForVRT>>) {
   // Sections hydrate via async live queries / stream seeds — wait for known
   // card titles so the screenshot is not a skeleton first-paint.
@@ -670,7 +690,6 @@ async function renderSingleCollection(
   const collection = f.singleCollections[layout];
   routeState.pathname = `/collections/${collection.details.author}/${collection.postId}`;
   routeState.params = { userId: collection.details.author, postId: collection.postId };
-  await preloadImages(Object.values(f.collectionCoverUrls));
 
   const screen = await renderForVRT(<CollectionWithHeader postId={collection.compositeId} />, { viewport });
   await expect.element(screen.getByRole('heading', { name: 'Signals from the field' })).toBeVisible();
@@ -679,6 +698,7 @@ async function renderSingleCollection(
   } else {
     await expect.element(screen.getByRole('feed')).toBeVisible();
   }
+  await waitForSingleCollectionCoverReady();
   return screen;
 }
 

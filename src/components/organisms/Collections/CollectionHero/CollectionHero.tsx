@@ -199,6 +199,7 @@ function CollectionHeroContent({
         <Container
           overrideDefaults
           aria-hidden="true"
+          data-testid="collection-cover"
           className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.6) 45%, rgba(0,0,0,0.2) 100%), url(${coverImage})`,
