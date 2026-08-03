@@ -2,7 +2,7 @@
 
 exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Follow state 1`] = `
 <div
-  class="flex flex-col text-card-foreground shadow-sm relative gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
+  class="flex flex-col text-card-foreground shadow-sm relative isolate gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
   data-cy="collection-hero"
   data-slot="card"
   data-testid="card"
@@ -334,7 +334,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
 
 exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1`] = `
 <div
-  class="flex flex-col text-card-foreground shadow-sm relative gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
+  class="flex flex-col text-card-foreground shadow-sm relative isolate gap-0 overflow-hidden rounded-md py-0 border-transparent bg-card/40"
   data-cy="collection-hero"
   data-slot="card"
   data-testid="card"
@@ -627,7 +627,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
 
 exports[`CollectionHero - Snapshots > matches the snapshot when no cover image and no description are set 1`] = `
 <div
-  class="flex flex-col bg-card text-card-foreground shadow-sm relative gap-0 overflow-hidden rounded-md py-0"
+  class="flex flex-col bg-card text-card-foreground shadow-sm relative isolate gap-0 overflow-hidden rounded-md py-0"
   data-cy="collection-hero"
   data-slot="card"
   data-testid="card"

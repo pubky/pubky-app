@@ -190,7 +190,7 @@ function CollectionHeroContent({
     <Card
       data-cy="collection-hero"
       className={cn(
-        'relative gap-0 overflow-hidden rounded-md py-0',
+        'relative isolate gap-0 overflow-hidden rounded-md py-0',
         coverImage && 'border-transparent bg-card/40',
         className,
       )}
