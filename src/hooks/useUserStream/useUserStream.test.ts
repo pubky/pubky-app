@@ -117,6 +117,57 @@ describe('useUserStream', () => {
     });
   });
 
+  describe('user counts mapping', () => {
+    it('maps the tags stat from counts.tagged (tags applied by the user)', async () => {
+      mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: ['user-1'],
+        skip: 1,
+      });
+      const countsMap = new Map([
+        [
+          'user-1',
+          {
+            tagged: 4,
+            tags: 10,
+            unique_tags: 8,
+            posts: 5,
+            replies: 0,
+            collections: 0,
+            following: 1,
+            followers: 2,
+            friends: 0,
+            bookmarks: 0,
+          },
+        ],
+      ]);
+      // The hook issues three live queries; details is the only one with a single
+      // dep, and with includeRelationships off the counts query is the only one
+      // whose second dep is `true`.
+      mockUseLiveQuery.mockImplementation((_queryFn: unknown, deps: unknown[]) => {
+        if (deps.length === 1) return mockUserDetails;
+        return deps[1] === true ? countsMap : new Map();
+      });
+
+      const { result } = renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          includeCounts: true,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.users).toHaveLength(1);
+      });
+
+      expect(result.current.users[0].counts).toEqual({
+        posts: 5,
+        tags: 4,
+        followers: 2,
+        following: 1,
+      });
+    });
+  });
+
   describe('non-paginated mode', () => {
     it('uses default limit when not provided', async () => {
       mockGetOrFetchStreamSlice.mockResolvedValue({ nextPageIds: [], skip: 0 });

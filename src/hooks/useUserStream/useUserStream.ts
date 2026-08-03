@@ -174,7 +174,7 @@ export function useUserStream({
       counts: counts
         ? {
             posts: counts.posts,
-            tags: counts.tags,
+            tags: counts.tagged,
             followers: counts.followers,
             following: counts.following,
           }

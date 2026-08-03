@@ -201,7 +201,7 @@ export function useProfileConnections(type: ConnectionType, userId?: Pubky): Use
         avatarUrl,
         tags,
         stats: {
-          tags: counts?.unique_tags ?? 0,
+          tags: counts?.tagged ?? 0,
           posts: counts?.posts ?? 0,
         },
         isFollowing: relationship?.following ?? false,

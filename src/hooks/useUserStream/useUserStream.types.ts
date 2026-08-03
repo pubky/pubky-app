@@ -3,6 +3,7 @@ import type { UserStreamId } from '@/models/stream/user/userStream.types';
 
 export interface UserStreamUserCounts {
   posts: number;
+  /** Tags applied by this user (Nexus `tagged`), not tags received on their profile/posts */
   tags: number;
   followers: number;
   following: number;
