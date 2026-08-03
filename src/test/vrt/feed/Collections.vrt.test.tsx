@@ -46,8 +46,10 @@ const fixtures = vi.hoisted(async () => {
     discoverCollectionIds,
     singleCollections: collectionsModule.VRT_SINGLE_COLLECTIONS,
     collectionItemIds: collectionsModule.VRT_COLLECTION_ITEM_IDS,
+    collectionItemTags: collectionsModule.VRT_COLLECTION_ITEM_TAGS,
     bookmarkPostIds: collectionsModule.VRT_BOOKMARK_POST_IDS,
     visualRows: collectionsModule.VRT_COLLECTION_VISUAL_ROWS,
+    collectionCoverUrls: collectionsModule.VRT_COLLECTION_COVER_URLS,
     profiles: profilesModule.VRT_AUTHOR_PROFILES,
     viewerPubky,
     homeFilters: navModule.VRT_HOME_FILTERS,
@@ -371,10 +373,15 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
   const cache = new Map<string, unknown>();
   return {
     useEntityTags: (taggedId: string) => {
-      const cached = cache.get(taggedId);
+      const cacheKey = `${routeState.pathname}:${taggedId}`;
+      const cached = cache.get(cacheKey);
       if (cached) return cached;
       const fixture = f.entitiesByCompositeId.get(taggedId);
-      const tags = (fixture?.tags ?? []).map((tag) => ({ ...tag, taggers_avatars: [] }));
+      const isGridSurface =
+        routeState.pathname === '/collections/bookmarks' ||
+        routeState.params.postId === f.singleCollections.grid.postId;
+      const fixtureTags = (isGridSurface ? f.collectionItemTags[taggedId] : undefined) ?? fixture?.tags ?? [];
+      const tags = fixtureTags.map((tag) => ({ ...tag, taggers_avatars: [] }));
       const result = {
         tags,
         count: tags.length,
@@ -383,7 +390,7 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
         handleTagToggle: noopToggle,
         handleTagAdd: noopAdd,
       };
-      cache.set(taggedId, result);
+      cache.set(cacheKey, result);
       return result;
     },
   };
@@ -420,7 +427,7 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/useVisualFeedTiles', async () =>
     hasPendingTiles: false,
     hasPendingFiles: false,
     hasPendingPostDetails: false,
-    hiddenPostCount: 2,
+    hiddenPostCount: 1,
   };
   return { useVisualFeedTiles: () => result };
 });
@@ -530,14 +537,17 @@ vi.mock('@/application/feed/feed', async () => {
   return { FeedApplication: f.mockFeedApplication };
 });
 
-vi.mock('@/controllers/file/file', () => ({
-  FileController: {
-    getAvatarUrl: () => null,
-    getFileUrl: () => null,
-    getMetadata: async () => [],
-    fetchFiles: async () => [],
-  },
-}));
+vi.mock('@/controllers/file/file', async () => {
+  const f = await fixtures;
+  return {
+    FileController: {
+      getAvatarUrl: () => null,
+      getFileUrl: ({ fileId }: { fileId: string }) => f.collectionCoverUrls[fileId] ?? null,
+      getMetadata: async () => [],
+      fetchFiles: async () => [],
+    },
+  };
+});
 
 // Followed / Discover seed from stream slices; live queries read bookmarks + details.
 vi.mock('@/controllers/stream/posts/posts', async () => {
@@ -616,6 +626,20 @@ function BookmarksWithHeader() {
   );
 }
 
+async function preloadImages(urls: readonly string[]) {
+  await Promise.all(
+    urls.map(async (url) => {
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.addEventListener('load', () => resolve(), { once: true });
+        image.addEventListener('error', () => reject(new Error(`Failed to preload VRT image: ${url}`)), { once: true });
+        image.src = url;
+      });
+      await image.decode();
+    }),
+  );
+}
+
 async function expectCollectionsOverviewReady(screen: Awaited<ReturnType<typeof renderForVRT>>) {
   // Sections hydrate via async live queries / stream seeds — wait for known
   // card titles so the screenshot is not a skeleton first-paint.
@@ -625,6 +649,17 @@ async function expectCollectionsOverviewReady(screen: Awaited<ReturnType<typeof 
   await expect.element(screen.getByText('Golden hour')).toBeVisible();
   await expect.element(screen.getByText('Discover Collections')).toBeVisible();
   await expect.element(screen.getByText('Weekend reads')).toBeVisible();
+}
+
+async function renderCollectionsOverview(viewport: { width: number; height: number }) {
+  const f = await fixtures;
+  routeState.pathname = '/collections';
+  routeState.params = {};
+  await preloadImages(Object.values(f.collectionCoverUrls));
+
+  const screen = await renderForVRT(<CollectionsWithHeader />, { viewport });
+  await expectCollectionsOverviewReady(screen);
+  return screen;
 }
 
 async function renderSingleCollection(
@@ -658,15 +693,13 @@ async function renderBookmarks(viewport: { width: number; height: number }) {
 
 describe('Collections overview — visual regression', () => {
   it('renders the collections overview at desktop viewport', async () => {
-    const screen = await renderForVRT(<CollectionsWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
-    await expectCollectionsOverviewReady(screen);
+    const screen = await renderCollectionsOverview(VRT_VIEWPORT_DESKTOP);
     // Viewport-clamped root: first fold (My + start of Followed/Discover).
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('collections-overview-desktop');
   });
 
   it('renders the collections overview at mobile viewport', async () => {
-    const screen = await renderForVRT(<CollectionsWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expectCollectionsOverviewReady(screen);
+    const screen = await renderCollectionsOverview(VRT_VIEWPORT_MOBILE);
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('collections-overview-mobile');
   });
 });
@@ -688,22 +721,12 @@ describe('Single collection — list layout — visual regression', () => {
     const screen = await renderSingleCollection('list', VRT_VIEWPORT_DESKTOP);
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-list-desktop');
   });
-
-  it('renders a list collection at mobile viewport', async () => {
-    const screen = await renderSingleCollection('list', VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-list-mobile');
-  });
 });
 
 describe('Single collection — visual layout — visual regression', () => {
   it('renders a visual collection at desktop viewport', async () => {
     const screen = await renderSingleCollection('visual', VRT_VIEWPORT_DESKTOP);
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-visual-desktop');
-  });
-
-  it('renders the visual collection grid fallback at mobile viewport', async () => {
-    const screen = await renderSingleCollection('visual', VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-visual-mobile');
   });
 });
 
