@@ -2,50 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiPickerDialog } from './EmojiPickerDialog';
 
-vi.mock('@/atoms/Dialog/Dialog', () => {
-  return {
-    Dialog: ({
-      children,
-      open,
-    }: {
-      children: React.ReactNode;
-      open: boolean;
-      onOpenChange?: (open: boolean) => void;
-    }) => (
-      <div data-testid="dialog" data-open={open}>
-        {open && children}
-      </div>
-    ),
-    DialogContent: ({
-      children,
-      className,
-      onClick,
-      onWheel,
-      onTouchMove,
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      onClick?: (e: React.MouseEvent) => void;
-      onWheel?: (e: React.WheelEvent) => void;
-      onTouchMove?: (e: React.TouchEvent) => void;
-    }) => (
-      <div
-        data-testid="dialog-content"
-        className={className}
-        onClick={onClick}
-        onWheel={onWheel}
-        onTouchMove={onTouchMove}
-      >
-        {children}
-      </div>
-    ),
-    DialogDescription: ({ children }: { children: React.ReactNode }) => (
-      <p data-testid="dialog-description">{children}</p>
-    ),
-  };
-});
-
-// Mock EmojiPicker
+// Mock EmojiPicker (emoji-mart) — keep Dialog real per docs/component-testing.md
 const mockOnEmojiSelect = vi.fn();
 vi.mock('@/molecules/EmojiPicker/EmojiPicker', () => {
   return {
@@ -73,17 +30,6 @@ vi.mock('@/molecules/EmojiPicker/EmojiPicker', () => {
   };
 });
 
-// Mock Dialog components
-vi.mock('@/atoms/Container/Container', () => {
-  return {
-    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="container" className={className}>
-        {children}
-      </div>
-    ),
-  };
-});
-
 describe('EmojiPickerDialog', () => {
   const mockOnEmojiSelect = vi.fn();
   const mockOnOpenChange = vi.fn();
@@ -95,15 +41,15 @@ describe('EmojiPickerDialog', () => {
   it('renders when open is true', () => {
     render(<EmojiPickerDialog open={true} onOpenChange={mockOnOpenChange} onEmojiSelect={mockOnEmojiSelect} />);
 
-    expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-content')).toBeInTheDocument();
     expect(screen.getByTestId('emoji-picker')).toBeInTheDocument();
   });
 
-  it('does not render when open is false', () => {
+  it('does not render content when open is false', () => {
     render(<EmojiPickerDialog open={false} onOpenChange={mockOnOpenChange} onEmojiSelect={mockOnEmojiSelect} />);
 
-    expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByTestId('dialog-content')).not.toBeInTheDocument();
     expect(screen.queryByTestId('emoji-picker')).not.toBeInTheDocument();
   });
@@ -201,32 +147,24 @@ describe('EmojiPickerDialog', () => {
   it('renders dialog description', () => {
     render(<EmojiPickerDialog open={true} onOpenChange={mockOnOpenChange} onEmojiSelect={mockOnEmojiSelect} />);
 
-    expect(screen.getByTestId('dialog-description')).toHaveTextContent('Select an emoji');
+    expect(screen.getByText('Select an emoji')).toBeInTheDocument();
   });
 });
 
 describe('EmojiPickerDialog - Snapshots', () => {
   it('matches snapshot when open', () => {
-    const { container } = render(<EmojiPickerDialog open={true} onOpenChange={() => {}} onEmojiSelect={() => {}} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot when closed', () => {
-    const { container } = render(<EmojiPickerDialog open={false} onOpenChange={() => {}} onEmojiSelect={() => {}} />);
-    expect(container.firstChild).toMatchSnapshot();
+    render(<EmojiPickerDialog open={true} onOpenChange={() => {}} onEmojiSelect={() => {}} />);
+    // Portaled content: snapshot the content wrapper (same pattern as Dialog atom tests)
+    expect(screen.getByTestId('dialog-content').parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot with maxLength', () => {
-    const { container } = render(
-      <EmojiPickerDialog open={true} onOpenChange={() => {}} onEmojiSelect={() => {}} maxLength={12} />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
+    render(<EmojiPickerDialog open={true} onOpenChange={() => {}} onEmojiSelect={() => {}} maxLength={12} />);
+    expect(screen.getByTestId('dialog-content').parentElement).toMatchSnapshot();
   });
 
   it('matches snapshot with currentInput', () => {
-    const { container } = render(
-      <EmojiPickerDialog open={true} onOpenChange={() => {}} onEmojiSelect={() => {}} currentInput="Hello" />,
-    );
-    expect(container.firstChild).toMatchSnapshot();
+    render(<EmojiPickerDialog open={true} onOpenChange={() => {}} onEmojiSelect={() => {}} currentInput="Hello" />);
+    expect(screen.getByTestId('dialog-content').parentElement).toMatchSnapshot();
   });
 });
