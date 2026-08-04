@@ -1142,7 +1142,7 @@ describe('PostInput', () => {
       );
     });
 
-    it('applies wide padding, large header size, and text-xl body when inheriting side layout', () => {
+    it('applies wide padding, extraLarge header size, and text-xl body when inheriting side layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="side">
           <PostInput variant={POST_INPUT_VARIANT.POST} />
@@ -1154,7 +1154,7 @@ describe('PostInput', () => {
       expect(outerContainer.className).not.toContain('p-6');
 
       const postHeader = getStatePostHeader();
-      expect(postHeader).toHaveAttribute('data-size', 'large');
+      expect(postHeader).toHaveAttribute('data-size', 'extraLarge');
       expect(postHeader).toHaveAttribute('data-show-user-info', 'true');
       expect(postHeader).toHaveAttribute('data-character-limit-placement', 'metadata');
 

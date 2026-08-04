@@ -372,7 +372,7 @@ describe('QuickReply', () => {
       expect(screen.getByTestId('quick-reply-textarea')).not.toHaveAttribute('class');
     });
 
-    it('applies wide padding, large header, and text-xl body when inheriting side layout', () => {
+    it('applies wide padding, extraLarge header, and text-xl body when inheriting side layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="side">
           <QuickReply parentPostId="author:post1" />
@@ -383,7 +383,7 @@ describe('QuickReply', () => {
       expect(inputContainer?.className).toContain('p-12');
       expect(inputContainer?.className).not.toContain('p-6');
 
-      expect(getStablePostHeader()).toHaveAttribute('data-size', 'large');
+      expect(getStablePostHeader()).toHaveAttribute('data-size', 'extraLarge');
       expect(getStablePostHeader()).toHaveAttribute('data-show-user-info', 'false');
       expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-xl leading-7');
     });

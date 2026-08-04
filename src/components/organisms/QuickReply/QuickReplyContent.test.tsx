@@ -193,7 +193,7 @@ describe('QuickReplyContent', () => {
     rerender(
       <QuickReplyContent {...createProps({ layout: 'side', currentUserPubky: null, currentUserDetails: null })} />,
     );
-    expect(screen.getByTestId('quick-reply-fallback-avatar')).toHaveAttribute('data-size', 'lg');
+    expect(screen.getByTestId('quick-reply-fallback-avatar')).toHaveAttribute('data-size', 'xl');
   });
 
   it('uses the standard selective-dissolve timing when motion is enabled', () => {
