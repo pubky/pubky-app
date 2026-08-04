@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiPickerDialog } from './EmojiPickerDialog';
 
@@ -20,12 +20,22 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       children,
       className,
       onClick,
+      onWheel,
+      onTouchMove,
     }: {
       children: React.ReactNode;
       className?: string;
       onClick?: (e: React.MouseEvent) => void;
+      onWheel?: (e: React.WheelEvent) => void;
+      onTouchMove?: (e: React.TouchEvent) => void;
     }) => (
-      <div data-testid="dialog-content" className={className} onClick={onClick}>
+      <div
+        data-testid="dialog-content"
+        className={className}
+        onClick={onClick}
+        onWheel={onWheel}
+        onTouchMove={onTouchMove}
+      >
         {children}
       </div>
     ),
@@ -151,6 +161,34 @@ describe('EmojiPickerDialog', () => {
 
     expect(mockOnEmojiSelect).toHaveBeenCalledWith({ native: '😊' });
     expect(ancestorClick).not.toHaveBeenCalled();
+  });
+
+  it('stops wheel propagation so Radix RemoveScroll does not block emoji-mart scrolling', () => {
+    // Regression (#1871): without stopPropagation, Radix Dialog RemoveScroll
+    // swallows wheel events before emoji-mart's Shadow DOM scroller can use them.
+    const ancestorWheel = vi.fn();
+    render(
+      <div onWheel={ancestorWheel}>
+        <EmojiPickerDialog open={true} onOpenChange={mockOnOpenChange} onEmojiSelect={mockOnEmojiSelect} />
+      </div>,
+    );
+
+    fireEvent.wheel(screen.getByTestId('dialog-content'));
+
+    expect(ancestorWheel).not.toHaveBeenCalled();
+  });
+
+  it('stops touchmove propagation so Radix RemoveScroll does not block emoji-mart scrolling', () => {
+    const ancestorTouchMove = vi.fn();
+    render(
+      <div onTouchMove={ancestorTouchMove}>
+        <EmojiPickerDialog open={true} onOpenChange={mockOnOpenChange} onEmojiSelect={mockOnEmojiSelect} />
+      </div>,
+    );
+
+    fireEvent.touchMove(screen.getByTestId('dialog-content'));
+
+    expect(ancestorTouchMove).not.toHaveBeenCalled();
   });
 
   it('renders with correct dialog classes', () => {
