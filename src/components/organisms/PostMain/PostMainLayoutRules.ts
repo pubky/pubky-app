@@ -21,7 +21,7 @@ export function getTagsLayoutForSurfaceLayout(layout: LayoutType): TagsLayout {
 /** PostInput header size by tags layout: list = small, wide = large, column = normal. */
 export const POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT: Record<TagsLayout, PostHeaderSize> = {
   list: 'normal',
-  side: 'large',
+  side: 'extraLarge',
   inline: 'normal',
 };
 

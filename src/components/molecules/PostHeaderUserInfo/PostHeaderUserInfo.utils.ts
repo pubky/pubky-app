@@ -10,9 +10,9 @@ export const AVATAR_SIZE_BY_HEADER_SIZE: Record<PostHeaderSize, AvatarSize> = {
 };
 
 export const GAP_CLASS_BY_HEADER_SIZE: Record<PostHeaderSize, string> = {
-  normal: 'gap-4',
-  large: 'gap-5',
-  extraLarge: 'gap-6',
+  normal: 'gap-3',
+  large: 'gap-4',
+  extraLarge: 'gap-5',
 };
 
 export const USERNAME_CLASS_BY_HEADER_SIZE: Record<PostHeaderSize, string> = {
