@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
@@ -14,6 +14,7 @@ import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffect
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
+import { getComposerDissolveVariants, getComposerHeightTransition } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
@@ -33,48 +34,6 @@ import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import type { PostInputProps } from './PostInput.types';
-
-const STATE_REVEAL_EASE = [0.19, 1, 0.22, 1] as const;
-const STATE_HEIGHT_EASE = [0.25, 1, 0.5, 1] as const;
-const SELECTIVE_DISSOLVE_VARIANTS = {
-  hidden: {
-    opacity: 0,
-    filter: 'blur(2px)',
-  },
-  visible: {
-    opacity: 1,
-    filter: 'blur(0px)',
-    transition: {
-      duration: 0.22,
-      delay: 0.04,
-      ease: STATE_REVEAL_EASE,
-    },
-  },
-  exit: {
-    opacity: 0,
-    filter: 'blur(2px)',
-    transition: {
-      duration: 0.14,
-      ease: STATE_REVEAL_EASE,
-    },
-  },
-} satisfies Variants;
-const REDUCED_SELECTIVE_DISSOLVE_VARIANTS = {
-  hidden: {
-    opacity: 0.6,
-    filter: 'blur(0px)',
-  },
-  visible: {
-    opacity: 1,
-    filter: 'blur(0px)',
-    transition: { duration: 0.14, ease: STATE_REVEAL_EASE },
-  },
-  exit: {
-    opacity: 0.6,
-    filter: 'blur(0px)',
-    transition: { duration: 0.1, ease: STATE_REVEAL_EASE },
-  },
-} satisfies Variants;
 
 function useMeasuredHeight() {
   const measureRef = React.useRef<HTMLDivElement>(null);
@@ -231,9 +190,8 @@ export function PostInput({
   const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
   const { measureRef: stateContentMeasureRef, height: stateContentHeight } = useMeasuredHeight();
-  const heightTransition = shouldReduceMotion
-    ? { duration: 0 }
-    : { duration: isExpanded ? 0.28 : 0.22, ease: STATE_HEIGHT_EASE };
+  const heightTransition = getComposerHeightTransition(isExpanded, shouldReduceMotion);
+  const dissolveVariants = getComposerDissolveVariants(shouldReduceMotion);
 
   React.useEffect(() => {
     if (isEdit) {
@@ -374,9 +332,7 @@ export function PostInput({
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        variants={
-                          shouldReduceMotion ? REDUCED_SELECTIVE_DISSOLVE_VARIANTS : SELECTIVE_DISSOLVE_VARIANTS
-                        }
+                        variants={dissolveVariants}
                       >
                         <PostHeader
                           postId={currentUserPubky}
@@ -487,7 +443,7 @@ export function PostInput({
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    variants={shouldReduceMotion ? REDUCED_SELECTIVE_DISSOLVE_VARIANTS : SELECTIVE_DISSOLVE_VARIANTS}
+                    variants={dissolveVariants}
                   >
                     <PostInputExpandableSection
                       isExpanded

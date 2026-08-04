@@ -559,7 +559,7 @@ describe('QuickReply', () => {
     const connector = screen.getByTestId('quick-reply-connector');
 
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
-    await waitFor(() => expect(connector).toHaveClass('duration-[220ms]'));
+    await waitFor(() => expect(connector).toHaveStyle({ transition: 'height 220ms cubic-bezier(0.25, 1, 0.5, 1)' }));
     expect(connector).toHaveAttribute('height', '130');
 
     mockElementHeight.value = 260;
@@ -568,7 +568,7 @@ describe('QuickReply', () => {
 
     expect(screen.getByTestId('quick-reply-state-height')).toBe(heightWrapper);
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
-    expect(connector).toHaveClass('duration-[280ms]');
+    expect(connector).toHaveStyle({ transition: 'height 280ms cubic-bezier(0.25, 1, 0.5, 1)' });
     expect(connector).toHaveAttribute('height', '310');
   });
 
@@ -581,7 +581,7 @@ describe('QuickReply', () => {
     const connector = screen.getByTestId('quick-reply-connector');
 
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
-    expect(connector).toHaveClass('duration-[280ms]');
+    expect(connector).toHaveStyle({ transition: 'height 280ms cubic-bezier(0.25, 1, 0.5, 1)' });
     expect(screen.getByTestId('quick-reply-expanded-header')).toBeInTheDocument();
 
     mockElementHeight.value = 80;
@@ -590,7 +590,7 @@ describe('QuickReply', () => {
 
     expect(screen.getByTestId('quick-reply-state-height')).toBe(heightWrapper);
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
-    expect(connector).toHaveClass('duration-[220ms]');
+    expect(connector).toHaveStyle({ transition: 'height 220ms cubic-bezier(0.25, 1, 0.5, 1)' });
     expect(connector).toHaveAttribute('height', '130');
     await waitFor(() => expect(screen.queryByTestId('quick-reply-expanded-header')).not.toBeInTheDocument());
     expect(screen.queryByTestId('quick-reply-expanded-content')).not.toBeInTheDocument();
@@ -604,7 +604,7 @@ describe('QuickReply', () => {
     render(<QuickReply parentPostId="author:post1" />);
 
     await waitFor(() => expect(screen.getByTestId('quick-reply-state-height')).toHaveStyle({ height: 'auto' }));
-    expect(screen.getByTestId('quick-reply-connector')).toHaveClass('transition-none');
+    expect(screen.getByTestId('quick-reply-connector')).toHaveStyle({ transition: 'none' });
     expect(screen.getByTestId('quick-reply-expanded-header')).toHaveStyle({ filter: 'blur(0px)' });
   });
 

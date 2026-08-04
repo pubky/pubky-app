@@ -13,13 +13,12 @@ import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
+import { getComposerHeightTransition, getComposerHeightTransitionStyle } from '@/libs/motion/composerMotion';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
 import { QuickReplyContent } from './QuickReplyContent';
-
-const QUICK_REPLY_HEIGHT_EASE = [0.25, 1, 0.5, 1] as const;
 
 export function QuickReply({
   parentPostId,
@@ -123,16 +122,12 @@ export function QuickReply({
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
-  const heightTransition = shouldReduceMotion
-    ? { duration: 0 }
-    : { duration: isExpanded ? 0.28 : 0.22, ease: QUICK_REPLY_HEIGHT_EASE };
-  const connectorHeightTransitionClassName =
-    shouldReduceMotion || !hasMeasuredCardHeight
-      ? 'transition-none'
-      : cn(
-          'transition-[height] ease-[cubic-bezier(0.25,1,0.5,1)]',
-          isExpanded ? 'duration-[280ms]' : 'duration-[220ms]',
-        );
+  const heightTransition = getComposerHeightTransition(isExpanded, shouldReduceMotion);
+  // Connector animates via CSS, so it takes the same curve as a style instead of a tween.
+  const connectorHeightTransitionStyle = getComposerHeightTransitionStyle(
+    isExpanded,
+    shouldReduceMotion || !hasMeasuredCardHeight,
+  );
 
   const contentProps: QuickReplyContentProps = {
     currentUserPubky,
@@ -173,7 +168,7 @@ export function QuickReply({
         <PostThreadConnector
           height={connectorHeight}
           variant={connectorVariant}
-          className={connectorHeightTransitionClassName}
+          style={connectorHeightTransitionStyle}
           data-testid="quick-reply-connector"
         />
       </Container>

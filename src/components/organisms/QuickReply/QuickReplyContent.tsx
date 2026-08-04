@@ -1,7 +1,8 @@
 'use client';
 
-import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Container } from '@/atoms/Container/Container';
+import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { cn } from '@/libs/utils/utils';
 import {
   AVATAR_SIZE_BY_HEADER_SIZE,
@@ -23,47 +24,6 @@ const BODY_TEXT_CLASS_BY_LAYOUT: Record<TagsLayout, string | undefined> = {
   list: LIST_POST_BODY_TEXT_CLASS,
   inline: undefined,
 };
-
-const QUICK_REPLY_REVEAL_EASE = [0.19, 1, 0.22, 1] as const;
-const QUICK_REPLY_SELECTIVE_DISSOLVE_VARIANTS = {
-  hidden: {
-    opacity: 0,
-    filter: 'blur(2px)',
-  },
-  visible: {
-    opacity: 1,
-    filter: 'blur(0px)',
-    transition: {
-      duration: 0.22,
-      delay: 0.04,
-      ease: QUICK_REPLY_REVEAL_EASE,
-    },
-  },
-  exit: {
-    opacity: 0,
-    filter: 'blur(2px)',
-    transition: {
-      duration: 0.14,
-      ease: QUICK_REPLY_REVEAL_EASE,
-    },
-  },
-} satisfies Variants;
-const REDUCED_QUICK_REPLY_SELECTIVE_DISSOLVE_VARIANTS = {
-  hidden: {
-    opacity: 0.6,
-    filter: 'blur(0px)',
-  },
-  visible: {
-    opacity: 1,
-    filter: 'blur(0px)',
-    transition: { duration: 0.14, ease: QUICK_REPLY_REVEAL_EASE },
-  },
-  exit: {
-    opacity: 0.6,
-    filter: 'blur(0px)',
-    transition: { duration: 0.1, ease: QUICK_REPLY_REVEAL_EASE },
-  },
-} satisfies Variants;
 
 interface QuickReplyContentComponentProps extends QuickReplyContentProps {
   layout: TagsLayout;
@@ -99,6 +59,7 @@ export function QuickReplyContent({
 }: QuickReplyContentComponentProps) {
   const headerSize = POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT[layout];
   const shouldReduceMotion = useReducedMotion();
+  const dissolveVariants = getComposerDissolveVariants(shouldReduceMotion);
 
   return (
     <div className="relative">
@@ -125,11 +86,7 @@ export function QuickReplyContent({
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                variants={
-                  shouldReduceMotion
-                    ? REDUCED_QUICK_REPLY_SELECTIVE_DISSOLVE_VARIANTS
-                    : QUICK_REPLY_SELECTIVE_DISSOLVE_VARIANTS
-                }
+                variants={dissolveVariants}
               >
                 <PostHeader
                   postId={currentUserPubky}
@@ -200,11 +157,7 @@ export function QuickReplyContent({
               initial="hidden"
               animate="visible"
               exit="exit"
-              variants={
-                shouldReduceMotion
-                  ? REDUCED_QUICK_REPLY_SELECTIVE_DISSOLVE_VARIANTS
-                  : QUICK_REPLY_SELECTIVE_DISSOLVE_VARIANTS
-              }
+              variants={dissolveVariants}
             >
               <PostInputExpandableSection
                 isExpanded

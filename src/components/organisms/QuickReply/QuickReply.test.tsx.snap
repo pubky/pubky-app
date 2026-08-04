@@ -11,9 +11,9 @@ exports[`QuickReply - Mobile Snapshots > matches expanded snapshot on mobile vie
     data-testid="container"
   >
     <div
-      class="transition-[height] ease-[cubic-bezier(0.25,1,0.5,1)] duration-[280ms]"
       data-testid="quick-reply-connector"
       height="310"
+      style="transition: height 280ms cubic-bezier(0.25, 1, 0.5, 1);"
       variant="last"
     />
   </div>
@@ -151,9 +151,9 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
     data-testid="container"
   >
     <div
-      class="transition-[height] ease-[cubic-bezier(0.25,1,0.5,1)] duration-[220ms]"
       data-testid="quick-reply-connector"
       height="173"
+      style="transition: height 220ms cubic-bezier(0.25, 1, 0.5, 1);"
       variant="last"
     />
   </div>
@@ -257,9 +257,9 @@ exports[`QuickReply - Snapshots > matches snapshot when expanded 1`] = `
     data-testid="container"
   >
     <div
-      class="transition-[height] ease-[cubic-bezier(0.25,1,0.5,1)] duration-[280ms]"
       data-testid="quick-reply-connector"
       height="310"
+      style="transition: height 280ms cubic-bezier(0.25, 1, 0.5, 1);"
       variant="last"
     />
   </div>
@@ -398,9 +398,9 @@ exports[`QuickReply - Snapshots > matches snapshot with a logged-out fallback av
     data-testid="container"
   >
     <div
-      class="transition-[height] ease-[cubic-bezier(0.25,1,0.5,1)] duration-[220ms]"
       data-testid="quick-reply-connector"
       height="173"
+      style="transition: height 220ms cubic-bezier(0.25, 1, 0.5, 1);"
       variant="last"
     />
   </div>
@@ -538,9 +538,9 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
     data-testid="container"
   >
     <div
-      class="transition-[height] ease-[cubic-bezier(0.25,1,0.5,1)] duration-[220ms]"
       data-testid="quick-reply-connector"
       height="173"
+      style="transition: height 220ms cubic-bezier(0.25, 1, 0.5, 1);"
       variant="last"
     />
   </div>
