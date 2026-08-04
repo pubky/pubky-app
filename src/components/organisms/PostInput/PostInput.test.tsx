@@ -1149,7 +1149,7 @@ describe('PostInput', () => {
       );
     });
 
-    it('applies wide PostInput styling with normal header size when inheriting list layout', () => {
+    it('applies compact padding and wide typography with normal header size when inheriting list layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="list">
           <PostInput variant={POST_INPUT_VARIANT.POST} />
@@ -1157,7 +1157,8 @@ describe('PostInput', () => {
       );
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-12');
+      expect(outerContainer.className).toContain('p-6');
+      expect(outerContainer.className).not.toContain('p-12');
       expect(getStatePostHeader()).toHaveAttribute('data-size', 'normal');
       expect(getStatePostHeader()).toHaveAttribute('data-show-user-info', 'true');
       expect(getStatePostHeader()).toHaveAttribute('data-character-limit-placement', 'metadata');
@@ -1279,6 +1280,15 @@ describe('PostInput - Snapshots', () => {
   it('matches snapshot for post variant without content or attachments', () => {
     const { container } = render(
       <PostMainLayoutProvider tagsLayout="side">
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </PostMainLayoutProvider>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for list layout', () => {
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="list">
         <PostInput variant={POST_INPUT_VARIANT.POST} />
       </PostMainLayoutProvider>,
     );

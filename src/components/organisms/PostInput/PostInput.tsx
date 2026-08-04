@@ -279,6 +279,7 @@ export function PostInput({
   const inheritedTagsLayout = useEffectiveTagsLayout();
   const tagsLayout = layoutOverride ?? inheritedTagsLayout;
   const isWideLayout = usesWidePostInput(tagsLayout);
+  const usesWidePadding = tagsLayout === 'side';
   const headerSize = POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT[tagsLayout];
 
   return (
@@ -290,7 +291,7 @@ export function PostInput({
       className={cn(
         'relative cursor-pointer rounded-md border border-dashed transition-colors duration-200',
         'max-w-full min-w-0',
-        isWideLayout ? 'p-12' : 'p-6',
+        usesWidePadding ? 'p-12' : 'p-6',
         !isAuthenticated ? 'px-6' : '',
         isDragging ? 'border-brand' : 'border-input',
       )}
