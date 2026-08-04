@@ -206,11 +206,50 @@ describe('useRemoveDeletedPost', () => {
     expect(PostController.getDetails).toHaveBeenCalledWith({ compositeId: collectionId });
     expect(rollbackRemoval).not.toHaveBeenCalled();
     expect(commitRemoval).toHaveBeenCalledTimes(1);
-    // Same as the bookmark case: committed locally, so warn about the sync
-    // instead of contradicting the removed card with a failure message.
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'warning',
       description: 'Removed from the collection on this device, but syncing failed.',
+    });
+  });
+
+  it('restores the card when the update failed because the collection is missing', async () => {
+    // commitUpdateCollectionItem throws NOT_FOUND for a missing collection
+    // BEFORE writing anything — "post not in collection" here must not be
+    // misread as a committed removal.
+    vi.mocked(useTimelineFeedContext).mockReturnValue(collectionFeed);
+    vi.mocked(PostController.commitUpdateCollectionItem).mockRejectedValue(new Error('Collection not found'));
+    vi.mocked(PostController.getDetails).mockResolvedValue(null);
+
+    const { result } = renderHook(() => useRemoveDeletedPost(postId));
+
+    await act(async () => {
+      expect(await result.current.remove()).toBe(false);
+    });
+
+    expect(rollbackRemoval).toHaveBeenCalledTimes(1);
+    expect(commitRemoval).not.toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Failed to update collection.',
+    });
+  });
+
+  it('restores the card when the update failed because the collection is tombstoned', async () => {
+    vi.mocked(useTimelineFeedContext).mockReturnValue(collectionFeed);
+    vi.mocked(PostController.commitUpdateCollectionItem).mockRejectedValue(new Error('Collection not found'));
+    vi.mocked(PostController.getDetails).mockResolvedValue({ content: '[DELETED]' } as never);
+
+    const { result } = renderHook(() => useRemoveDeletedPost(postId));
+
+    await act(async () => {
+      expect(await result.current.remove()).toBe(false);
+    });
+
+    expect(rollbackRemoval).toHaveBeenCalledTimes(1);
+    expect(commitRemoval).not.toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Failed to update collection.',
     });
   });
 

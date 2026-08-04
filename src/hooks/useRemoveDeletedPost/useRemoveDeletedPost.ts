@@ -48,7 +48,11 @@ function resolveRemovalTarget(
 
 async function isPostStillInCollection(collectionId: string, postId: string): Promise<boolean | null> {
   const collection = await PostController.getDetails({ compositeId: collectionId });
-  if (!collection || isPostDeleted(collection.content)) return false;
+  // A missing or tombstoned collection cannot confirm the removal committed —
+  // commitUpdateCollectionItem throws NOT_FOUND for this exact state before
+  // writing anything, so "already gone" here would misread a failed no-op as
+  // success. Unverifiable → caller keeps shouldRestore and rolls back.
+  if (!collection || isPostDeleted(collection.content)) return null;
 
   const content = CollectionPostContent.parse(collection.content);
   if (!content) return null;

@@ -1030,6 +1030,7 @@
       "addFailed": "Impossibile aggiungere il segnalibro",
       "removeFailed": "Impossibile rimuovere il segnalibro",
       "removedSyncFailed": "Segnalibro rimosso su questo dispositivo, ma la sincronizzazione non è riuscita.",
+      "addedSyncFailed": "Segnalibro aggiunto su questo dispositivo, ma la sincronizzazione non è riuscita.",
       "loginRequired": "Accedi per salvare i post"
     },
     "collection": {

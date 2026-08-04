@@ -1030,6 +1030,7 @@
       "addFailed": "ブックマークを追加できませんでした",
       "removeFailed": "ブックマークを削除できませんでした",
       "removedSyncFailed": "この端末ではブックマークを削除しましたが、同期に失敗しました。",
+      "addedSyncFailed": "この端末ではブックマークを追加しましたが、同期に失敗しました。",
       "loginRequired": "投稿を保存するにはサインインしてください"
     },
     "collection": {

@@ -1030,6 +1030,7 @@
       "addFailed": "无法添加书签",
       "removeFailed": "无法移除书签",
       "removedSyncFailed": "已在此设备上移除书签，但同步失败。",
+      "addedSyncFailed": "已在此设备上添加书签，但同步失败。",
       "loginRequired": "请登录以保存帖子"
     },
     "collection": {

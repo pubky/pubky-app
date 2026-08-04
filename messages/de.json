@@ -1032,6 +1032,7 @@
       "addFailed": "Lesezeichen konnte nicht hinzugefügt werden",
       "removeFailed": "Lesezeichen konnte nicht entfernt werden",
       "removedSyncFailed": "Auf diesem Gerät aus den Lesezeichen entfernt, aber die Synchronisierung ist fehlgeschlagen.",
+      "addedSyncFailed": "Auf diesem Gerät zu den Lesezeichen hinzugefügt, aber die Synchronisierung ist fehlgeschlagen.",
       "loginRequired": "Melden Sie sich an, um Beiträge zu speichern"
     },
     "collection": {

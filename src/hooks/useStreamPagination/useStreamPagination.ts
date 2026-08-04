@@ -81,6 +81,14 @@ export function useStreamPagination({
   const postIdsRef = useRef<string[]>([]);
   const optimisticPostIdsRef = useRef<string[]>([]);
   const hiddenPostCountsRef = useRef<Map<string, number>>(new Map());
+  // Cumulative count of committed-removal stream rows on skip-paginated
+  // streams. `setStreamTail(result.nextCursor)` is an absolute write derived
+  // from the offset captured when the request STARTED, so a commit landing
+  // while a fetch is in flight would be silently overwritten. Each fetch
+  // snapshots this counter at entry and subtracts whatever accrued during its
+  // flight from the cursor it writes back. Reset in `clearState` (a fresh
+  // fetch recounts consumed rows from scratch).
+  const committedRemovalsRef = useRef(0);
   const activeStreamIdRef = useRef(streamId);
   activeStreamIdRef.current = streamId;
 
@@ -102,6 +110,7 @@ export function useStreamPagination({
     async (isInitialLoad: boolean) => {
       setLoadingState(isInitialLoad, true);
       setError(null);
+      const committedRemovalsAtRequest = committedRemovalsRef.current;
 
       try {
         let result: TReadPostStreamChunkResponse;
@@ -132,7 +141,15 @@ export function useStreamPagination({
 
         // Advance from the response, even on a fully-filtered (empty) page.
         if (result.nextCursor != null) {
-          setStreamTail(result.nextCursor);
+          // Skip streams: `nextCursor` extends the offset this request captured
+          // at start, so removals committed during the flight are not in it —
+          // re-apply them or the absolute write below would discard their
+          // decrements. Clamped: a `clearState` during the flight resets the
+          // counter, and a stale resolution must not over-correct a fresh one.
+          const removalsDuringFlight = isSkipPaginatedStream(streamId)
+            ? Math.max(0, committedRemovalsRef.current - committedRemovalsAtRequest)
+            : 0;
+          setStreamTail(Math.max(0, result.nextCursor - removalsDuringFlight));
         }
 
         // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
@@ -206,6 +223,7 @@ export function useStreamPagination({
     setPostIds(displayedState.displayedPostIds);
     setLastPostId(undefined);
     setStreamTail(0);
+    committedRemovalsRef.current = 0;
     setHasMore(true);
     setError(null);
   }, []);
@@ -382,6 +400,9 @@ export function useStreamPagination({
           // never counted toward it.
           const removedStreamRowCount = postIdsRef.current.filter((id) => idsToRemoveSet.has(id)).length;
           if (removedStreamRowCount > 0) {
+            // Also tallied in committedRemovalsRef so an in-flight fetch can
+            // re-apply this decrement to the absolute cursor it writes back.
+            committedRemovalsRef.current += removedStreamRowCount;
             setStreamTail((tail) => Math.max(0, tail - removedStreamRowCount));
           }
         }

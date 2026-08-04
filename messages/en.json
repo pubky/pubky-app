@@ -1030,6 +1030,7 @@
       "addFailed": "Could not add bookmark",
       "removeFailed": "Could not remove bookmark",
       "removedSyncFailed": "Removed from bookmarks on this device, but syncing failed.",
+      "addedSyncFailed": "Saved to bookmarks on this device, but syncing failed.",
       "loginRequired": "Sign in to bookmark posts"
     },
     "collection": {

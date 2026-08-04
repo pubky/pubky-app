@@ -1032,6 +1032,7 @@
       "addFailed": "No se pudo agregar el marcador",
       "removeFailed": "No se pudo eliminar el marcador",
       "removedSyncFailed": "Se eliminó de marcadores en este dispositivo, pero falló la sincronización.",
+      "addedSyncFailed": "Se guardó en marcadores en este dispositivo, pero falló la sincronización.",
       "loginRequired": "Inicia sesión para guardar publicaciones"
     },
     "collection": {

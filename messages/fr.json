@@ -1030,6 +1030,7 @@
       "addFailed": "Impossible d'ajouter le favori",
       "removeFailed": "Impossible de retirer le favori",
       "removedSyncFailed": "Favori retiré sur cet appareil, mais la synchronisation a échoué.",
+      "addedSyncFailed": "Favori ajouté sur cet appareil, mais la synchronisation a échoué.",
       "loginRequired": "Connectez-vous pour enregistrer des publications"
     },
     "collection": {

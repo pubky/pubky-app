@@ -1374,6 +1374,162 @@ describe('useStreamPagination', () => {
       );
     });
 
+    it('should re-apply a commit landing mid-fetch to the skip offset the fetch writes back', async () => {
+      const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['c1', 'c2', 'c3']);
+      });
+
+      let resolveSlice: ((value: { nextPageIds: string[]; nextCursor: number }) => void) | undefined;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValue(
+        new Promise((resolve) => {
+          resolveSlice = resolve;
+        }),
+      );
+      let loadMorePromise: Promise<void> | undefined;
+      act(() => {
+        loadMorePromise = result.current.loadMore();
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically('c2').commit;
+      });
+      act(() => commit?.());
+
+      await act(async () => {
+        resolveSlice?.({ nextPageIds: ['c4', 'c5'], nextCursor: 5 });
+        await loadMorePromise;
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c6'],
+        nextCursor: 5,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // The in-flight page derived nextCursor 5 from the offset captured
+      // before the commit, so its absolute write must re-apply the commit's
+      // decrement instead of silently discarding it.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 4,
+        }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c3', 'c4', 'c5', 'c6']);
+    });
+
+    it('should not double-apply a commit that settled before the next fetch started', async () => {
+      const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['c1', 'c2', 'c3']);
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically('c2').commit;
+      });
+      act(() => commit?.());
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5'],
+        nextCursor: 4,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c6'],
+        nextCursor: 5,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // The commit was already folded into the offset the second fetch sent
+      // (streamTail 2 → nextCursor 4); re-subtracting it here would refetch
+      // and dedupe-drop a row on every subsequent page.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 4,
+        }),
+      );
+    });
+
+    it('should keep the timestamp cursor from an in-flight fetch when a removal commits mid-flight', async () => {
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: mockPostIds,
+        nextCursor: 1111,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let resolveSlice: ((value: { nextPageIds: string[]; nextCursor: number }) => void) | undefined;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValue(
+        new Promise((resolve) => {
+          resolveSlice = resolve;
+        }),
+      );
+      let loadMorePromise: Promise<void> | undefined;
+      act(() => {
+        loadMorePromise = result.current.loadMore();
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically(mockPostIds[1]).commit;
+      });
+      act(() => commit?.());
+
+      await act(async () => {
+        resolveSlice?.({ nextPageIds: ['post4'], nextCursor: 2222 });
+        await loadMorePromise;
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['post5'],
+        nextCursor: 3333,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // Score cursors are timestamps, not row counts — a mid-flight commit
+      // must not subtract anything from them.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: mockStreamId,
+          streamTail: 2222,
+        }),
+      );
+    });
+
     it('should reveal a committed post again when it is re-added optimistically', async () => {
       const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
 

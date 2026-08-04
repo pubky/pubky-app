@@ -13,7 +13,10 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  *
  * **Failure Handling:**
  * Local failures stop the operation before network sync. Homeserver failures
- * leave the optimistic local state available for caller reconciliation.
+ * are rethrown with the local write left in place — there is no compensating
+ * rollback or retry queue. Callers that surface bookmark state must re-read
+ * local state after a failure (`useBookmark.toggle` and `useRemoveDeletedPost`
+ * reconcile via `BookmarkController.exists`).
  */
 export class BookmarkApplication {
   /**
