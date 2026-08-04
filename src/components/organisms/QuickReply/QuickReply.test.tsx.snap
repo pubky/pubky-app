@@ -81,7 +81,7 @@ exports[`QuickReply - Mobile Snapshots > matches expanded snapshot on mobile vie
                 </div>
               </div>
               <div
-                class="flex w-full min-w-0 items-center gap-4"
+                class="flex w-full min-w-0 items-center gap-3"
                 data-testid="container"
               >
                 <div
@@ -196,7 +196,7 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
               data-testid="container"
             >
               <div
-                class="flex w-full min-w-0 items-center gap-4"
+                class="flex w-full min-w-0 items-center gap-3"
                 data-testid="container"
               >
                 <div
@@ -288,7 +288,7 @@ exports[`QuickReply - Snapshots > matches snapshot when expanded 1`] = `
               data-is-reply="true"
               data-post-id="user:me"
               data-show-user-info="false"
-              data-size="large"
+              data-size="extraLarge"
               data-testid="post-header"
               data-user-name="Current User"
             />
@@ -312,7 +312,7 @@ exports[`QuickReply - Snapshots > matches snapshot when expanded 1`] = `
                   data-max="2000"
                   data-post-id="user:me"
                   data-show-user-info="true"
-                  data-size="large"
+                  data-size="extraLarge"
                   data-testid="post-header"
                   data-user-name="Current User"
                   data-visually-hide-avatar="true"
@@ -430,7 +430,7 @@ exports[`QuickReply - Snapshots > matches snapshot with a logged-out fallback av
               data-testid="container"
             >
               <div
-                class="flex w-full min-w-0 items-center gap-4"
+                class="flex w-full min-w-0 items-center gap-3"
                 data-testid="container"
               >
                 <span
@@ -569,7 +569,7 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
               data-is-reply="true"
               data-post-id="user:me"
               data-show-user-info="false"
-              data-size="large"
+              data-size="extraLarge"
               data-testid="post-header"
               data-user-name="Current User"
             />
@@ -594,7 +594,7 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
                     data-is-reply="true"
                     data-post-id="user:me"
                     data-show-user-info="false"
-                    data-size="large"
+                    data-size="extraLarge"
                     data-testid="post-header"
                     data-user-name="Current User"
                     data-visually-hide-avatar="true"

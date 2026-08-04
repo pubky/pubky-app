@@ -56,7 +56,7 @@ exports[`PostInput - Mobile Snapshots > matches expanded snapshot on mobile view
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -192,7 +192,7 @@ exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] 
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -311,7 +311,7 @@ exports[`PostInput - Snapshots > matches snapshot for a collapsed post composer 
             data-testid="container"
           >
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -414,7 +414,7 @@ exports[`PostInput - Snapshots > matches snapshot for an expanded post composer 
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -653,7 +653,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -870,7 +870,7 @@ exports[`PostInput - Snapshots > matches snapshot for list layout 1`] = `
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -1017,7 +1017,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -1152,7 +1152,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -1288,7 +1288,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -1427,7 +1427,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -1563,7 +1563,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -1668,7 +1668,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
             data-is-reply="true"
             data-post-id="test-user-id:pubkey"
             data-show-user-info="false"
-            data-size="large"
+            data-size="extraLarge"
             data-testid="post-header"
           />
         </div>
@@ -1692,7 +1692,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
                 data-max="2000"
                 data-post-id="test-user-id:pubkey"
                 data-show-user-info="true"
-                data-size="large"
+                data-size="extraLarge"
                 data-testid="post-header"
                 data-visually-hide-avatar="true"
               />
@@ -1833,7 +1833,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -1972,7 +1972,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -2107,7 +2107,7 @@ exports[`PostInput - Snapshots > matches snapshot for repost variant without con
               />
             </div>
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
@@ -2221,7 +2221,7 @@ exports[`PostInput - Snapshots > matches snapshot with a logged-out fallback ava
             data-testid="container"
           >
             <div
-              class="flex w-full min-w-0 items-stretch gap-4"
+              class="flex w-full min-w-0 items-stretch gap-3"
               data-override-defaults="true"
               data-testid="container"
             >
