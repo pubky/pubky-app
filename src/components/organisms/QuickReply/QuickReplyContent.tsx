@@ -12,18 +12,12 @@ import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInput
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainLayoutRules';
-import { LIST_POST_BODY_TEXT_CLASS, WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { BODY_TEXT_CLASS_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainTypography';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import type { QuickReplyContentProps } from './QuickReply.types';
 import { QuickReplyComposerRow } from './QuickReplyComposerRow';
-
-const BODY_TEXT_CLASS_BY_LAYOUT: Record<TagsLayout, string | undefined> = {
-  side: WIDE_POST_BODY_TEXT_CLASS,
-  list: LIST_POST_BODY_TEXT_CLASS,
-  inline: undefined,
-};
 
 interface QuickReplyContentComponentProps extends QuickReplyContentProps {
   layout: TagsLayout;
@@ -135,7 +129,7 @@ export function QuickReplyContent({
                 content={content}
                 isSubmitting={isSubmitting}
                 isAuthenticated={isAuthenticated}
-                textareaClassName={BODY_TEXT_CLASS_BY_LAYOUT[layout]}
+                textareaClassName={BODY_TEXT_CLASS_BY_TAGS_LAYOUT[layout]}
               />
             </Container>
           </Container>

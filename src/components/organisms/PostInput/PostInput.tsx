@@ -11,6 +11,7 @@ import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
+import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
@@ -27,39 +28,13 @@ import {
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
-import { POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT, usesWidePostInput } from '@/organisms/PostMain/PostMainLayoutRules';
-import { WIDE_POST_BODY_TEXT_CLASS } from '@/organisms/PostMain/PostMainTypography';
+import { POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainLayoutRules';
+import { BODY_TEXT_CLASS_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainTypography';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import type { PostInputProps } from './PostInput.types';
-
-function useMeasuredHeight() {
-  const measureRef = React.useRef<HTMLDivElement>(null);
-  const [height, setHeight] = React.useState<number | null>(null);
-
-  React.useLayoutEffect(() => {
-    const element = measureRef.current;
-    if (!element) return;
-
-    const updateHeight = (nextHeight: number) => {
-      if (nextHeight <= 0) return;
-      setHeight((currentHeight) => (currentHeight === nextHeight ? currentHeight : nextHeight));
-    };
-
-    updateHeight(element.getBoundingClientRect().height);
-
-    const resizeObserver = new ResizeObserver(([entry]) => {
-      if (entry) updateHeight(entry.contentRect.height);
-    });
-    resizeObserver.observe(element);
-
-    return () => resizeObserver.disconnect();
-  }, []);
-
-  return { measureRef, height };
-}
 
 export function PostInput({
   dataCy,
@@ -189,7 +164,7 @@ export function PostInput({
 
   const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
-  const { measureRef: stateContentMeasureRef, height: stateContentHeight } = useMeasuredHeight();
+  const { ref: stateContentMeasureRef, height: stateContentHeight } = useElementHeight();
   const heightTransition = getComposerHeightTransition(isExpanded, shouldReduceMotion);
   const dissolveVariants = getComposerDissolveVariants(shouldReduceMotion);
 
@@ -236,7 +211,6 @@ export function PostInput({
 
   const inheritedTagsLayout = useEffectiveTagsLayout();
   const tagsLayout = layoutOverride ?? inheritedTagsLayout;
-  const isWideLayout = usesWidePostInput(tagsLayout);
   const usesWidePadding = tagsLayout === 'side';
   const headerSize = POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT[tagsLayout];
 
@@ -282,7 +256,7 @@ export function PostInput({
           data-testid="post-input-state-height"
           className="overflow-hidden"
           initial={false}
-          animate={{ height: shouldReduceMotion || stateContentHeight === null ? 'auto' : stateContentHeight }}
+          animate={{ height: shouldReduceMotion || stateContentHeight <= 0 ? 'auto' : stateContentHeight }}
           transition={{ height: heightTransition }}
         >
           <div ref={stateContentMeasureRef} className="relative">
@@ -375,10 +349,11 @@ export function PostInput({
                     )}
                     <Container overrideDefaults className="relative min-w-0 flex-1">
                       <Textarea
+                        name="post-input-textarea"
                         ref={textareaRef}
                         placeholder={displayPlaceholder}
                         variant="inline"
-                        className={cn('field-sizing-fixed rounded-none', isWideLayout && WIDE_POST_BODY_TEXT_CLASS)}
+                        className={cn('field-sizing-fixed rounded-none', BODY_TEXT_CLASS_BY_TAGS_LAYOUT[tagsLayout])}
                         value={content}
                         onChange={handleChangeWithAuth}
                         onFocus={handleExpandWithAuth}

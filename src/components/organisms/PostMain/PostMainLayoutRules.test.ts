@@ -4,7 +4,6 @@ import {
   getEffectiveTagsLayout,
   getTagsLayoutForSurfaceLayout,
   POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT,
-  usesWidePostInput,
 } from './PostMainLayoutRules';
 
 describe('PostMainLayoutRules', () => {
@@ -21,14 +20,6 @@ describe('PostMainLayoutRules', () => {
       expect(POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT.list).toBe('normal');
       expect(POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT.side).toBe('large');
       expect(POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT.inline).toBe('normal');
-    });
-  });
-
-  describe('usesWidePostInput', () => {
-    it('returns true for side and list layouts', () => {
-      expect(usesWidePostInput('side')).toBe(true);
-      expect(usesWidePostInput('list')).toBe(true);
-      expect(usesWidePostInput('inline')).toBe(false);
     });
   });
 

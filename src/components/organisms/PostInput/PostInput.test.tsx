@@ -740,6 +740,18 @@ describe('PostInput', () => {
       mockUsePostReturn.isExpanded = true;
       rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
+      getBoundingClientRect.mockReturnValue({
+        width: 600,
+        height: 260,
+        top: 0,
+        right: 600,
+        bottom: 260,
+        left: 0,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
       act(() => {
         resizeCallback?.([{ contentRect: { height: 260 } as DOMRectReadOnly } as ResizeObserverEntry], resizeObserver!);
       });
@@ -1149,7 +1161,7 @@ describe('PostInput', () => {
       );
     });
 
-    it('applies compact padding and wide typography with normal header size when inheriting list layout', () => {
+    it('applies compact padding, list typography, and normal header size when inheriting list layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="list">
           <PostInput variant={POST_INPUT_VARIANT.POST} />
@@ -1164,7 +1176,7 @@ describe('PostInput', () => {
       expect(getStatePostHeader()).toHaveAttribute('data-character-limit-placement', 'metadata');
       expect(screen.getByTestId('textarea')).toHaveAttribute(
         'data-class-name',
-        'field-sizing-fixed rounded-none text-xl leading-7',
+        'field-sizing-fixed rounded-none text-base font-medium leading-5',
       );
     });
 

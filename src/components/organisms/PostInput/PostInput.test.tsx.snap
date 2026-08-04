@@ -880,7 +880,7 @@ exports[`PostInput - Snapshots > matches snapshot for list layout 1`] = `
                 data-testid="container"
               >
                 <textarea
-                  data-class-name="field-sizing-fixed rounded-none text-xl leading-7"
+                  data-class-name="field-sizing-fixed rounded-none text-base font-medium leading-5"
                   data-testid="textarea"
                   placeholder="What's on your mind?"
                 />

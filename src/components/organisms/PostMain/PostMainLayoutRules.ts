@@ -25,11 +25,6 @@ export const POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT: Record<TagsLayout, PostHeade
   inline: 'normal',
 };
 
-/** Wide and list layouts opt into expanded PostInput treatment. List applies local compact styling overrides. */
-export function usesWidePostInput(tagsLayout: TagsLayout): boolean {
-  return tagsLayout === 'side' || tagsLayout === 'list';
-}
-
 /**
  * Rich feed layouts (wide/list) render as standard inline posts on mobile,
  * matching the wide-layout phone behavior while keeping the wide shell.
