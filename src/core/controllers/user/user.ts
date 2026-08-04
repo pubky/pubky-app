@@ -6,7 +6,7 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
-import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
@@ -18,8 +18,9 @@ import type {
   NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { getStreamId } from '@/stores/home/home.utils';
+import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 
 export class UserController {
   private constructor() {} // Prevent instantiation
@@ -195,14 +196,26 @@ export class UserController {
    *
    * @returns The active stream ID, or null if not on /home route or if retrieval fails
    */
-  private static getActiveStreamId(): PostStreamTypes | null {
+  private static getActiveStreamId(): PostStreamId | null {
     if (typeof window === 'undefined' || window.location.pathname !== '/home') {
       return null;
     }
 
     try {
       const homeState = useHomeStore.getState();
-      return getStreamId(homeState.sort, homeState.reach, homeState.content);
+      const authState = useAuthStore.getState();
+      if (!homeState.hasHydrated || !authState.hasHydrated) {
+        return null;
+      }
+
+      return getHomeStreamIdFromFilters({
+        sort: homeState.sort,
+        reach: homeState.reach,
+        content: homeState.content,
+        currentUserPubky: authState.currentUserPubky,
+        profileTags: homeState.profileTags,
+        taggedAsActive: homeState.taggedAsActive,
+      });
     } catch (error) {
       Logger.warn('Failed to get active stream ID', { error });
       return null;

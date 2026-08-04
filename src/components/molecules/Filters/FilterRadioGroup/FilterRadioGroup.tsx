@@ -17,6 +17,7 @@ import { FilterListItem } from '../Filters.types';
 export interface FilterRadioGroupProps<T = string> {
   title: string;
   items: FilterListItem<T>[];
+  itemExtras?: Partial<Record<T & string, React.ReactNode>>;
   selectedValue?: T;
   defaultValue?: T;
   onChange?: (value: T) => void;
@@ -28,6 +29,7 @@ export interface FilterRadioGroupProps<T = string> {
 export function FilterRadioGroup<T extends string = string>({
   title,
   items,
+  itemExtras,
   selectedValue: controlledValue,
   defaultValue,
   onChange,
@@ -81,22 +83,24 @@ export function FilterRadioGroup<T extends string = string>({
             const isSelected = selectedValue === key;
 
             return (
-              <FilterItem
-                key={String(key)}
-                isSelected={isSelected}
-                onClick={() => handleItemClick(key, disabled)}
-                onKeyDown={(e) => handleRadiogroupKeyDown(e, index)}
-                role="radio"
-                aria-checked={isSelected}
-                aria-label={label}
-                aria-disabled={disabled}
-                tabIndex={isSelected ? 0 : -1}
-                data-cy={itemDataCy}
-                className={disabled ? 'cursor-default opacity-40' : undefined}
-              >
-                <FilterItemIcon icon={Icon} />
-                <FilterItemLabel>{label}</FilterItemLabel>
-              </FilterItem>
+              <React.Fragment key={String(key)}>
+                <FilterItem
+                  isSelected={isSelected}
+                  onClick={() => handleItemClick(key, disabled)}
+                  onKeyDown={(e) => handleRadiogroupKeyDown(e, index)}
+                  role="radio"
+                  aria-checked={isSelected}
+                  aria-label={label}
+                  aria-disabled={disabled}
+                  tabIndex={isSelected ? 0 : -1}
+                  data-cy={itemDataCy}
+                  className={disabled ? 'cursor-default opacity-40' : undefined}
+                >
+                  <FilterItemIcon icon={Icon} />
+                  <FilterItemLabel>{label}</FilterItemLabel>
+                </FilterItem>
+                {itemExtras?.[key]}
+              </React.Fragment>
             );
           })}
         </FilterList>

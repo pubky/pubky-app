@@ -755,6 +755,10 @@
       "content": "Contenu",
       "contentPlaceholder": "Selectionner un contenu",
       "filterTags": "Filtrer par tags de contenu",
+      "postTags": "Tags de publication",
+      "postTagsDescription": "Filtrez selon le sujet des publications.",
+      "profileTags": "Tags de profil",
+      "profileTagsDescription": "Filtrez selon la façon dont les personnes sont taguées.",
       "saveFeed": "Enregistrer le flux",
       "deleteFeed": "Supprimer le flux",
       "feedCreated": "Flux {name} cree !",
@@ -1165,8 +1169,15 @@
     "reach": {
       "title": "Portee",
       "all": "Tous",
+      "network": "Mon réseau",
+      "taggedAs": "Identifié comme",
       "following": "Abonnements",
-      "friends": "Amis"
+      "friends": "Amis",
+      "me": "Moi",
+      "profileTag": "tag de profil",
+      "profileTagLimitReached": "{max} tags max",
+      "taggedAsTag": "« {tag} »",
+      "taggedAsHeadline": "Publications de personnes que mon réseau a identifiées comme {tags}"
     },
     "sort": {
       "title": "Trier",

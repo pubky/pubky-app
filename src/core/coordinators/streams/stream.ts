@@ -19,8 +19,9 @@ import { buildCompositeId } from '@/models/models.utils';
 import { buildPostReplyStreamId, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { breakDownStreamId } from '@/services/nexus/stream/posts/postStream.utils';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { getStreamId } from '@/stores/home/home.utils';
+import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 
 /**
  * StreamCoordinator
@@ -71,6 +72,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
    * @see https://github.com/microsoft/TypeScript/issues/21132
    */
   private homeStoreUnsubscribe!: (() => void) | null;
+  private authHydrationUnsubscribe!: (() => void) | null;
 
   private constructor() {
     super({
@@ -177,8 +179,26 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
 
     // Home route: build from home store state
     if (this.state.currentRoute === APP_ROUTES.HOME) {
-      const { sort, reach, content } = useHomeStore.getState();
-      this.streamState.currentStreamId = getStreamId(sort, reach, content);
+      const {
+        sort,
+        reach,
+        content,
+        profileTags,
+        taggedAsActive,
+        hasHydrated: homeHasHydrated,
+      } = useHomeStore.getState();
+      const { currentUserPubky, hasHydrated: authHasHydrated } = useAuthStore.getState();
+      this.streamState.currentStreamId =
+        homeHasHydrated && authHasHydrated
+          ? getHomeStreamIdFromFilters({
+              sort,
+              reach,
+              content,
+              currentUserPubky,
+              profileTags,
+              taggedAsActive,
+            })
+          : null;
       Logger.debug(`Built ${APP_ROUTES.HOME} streamId`, { streamId: this.streamState.currentStreamId });
     }
     // Post route: extract from URL and build reply stream ID
@@ -334,7 +354,14 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
         return;
       }
 
-      const streamId = buildFeedStreamId(feed);
+      const currentUserPubky = useAuthStore.getState().currentUserPubky;
+      if (!currentUserPubky) {
+        Logger.warn('Cannot resolve custom feed stream without an authenticated viewer', { feedId });
+        this.pendingFeedResolution = false;
+        return;
+      }
+
+      const streamId = buildFeedStreamId(feed, currentUserPubky);
       this.feedStreamCache = { feedId, streamId };
       Logger.debug('Resolved feed stream ID', { feedId, streamId });
 
@@ -378,7 +405,7 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
    */
   private isEngagementStream(streamId: PostStreamId): boolean {
     try {
-      const [sorting] = breakDownStreamId(streamId);
+      const { sorting } = breakDownStreamId(streamId);
       return sorting === StreamSorting.ENGAGEMENT;
     } catch (error) {
       Logger.warn('Failed to parse stream ID for engagement check', { streamId, error });
@@ -396,19 +423,32 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
   protected setupListeners(): void {
     // Call parent to setup base listeners (auth, visibility)
     super.setupListeners();
+    this.authHydrationUnsubscribe = useAuthStore.subscribe((state, prevState) => {
+      if (this.getState().currentRoute === APP_ROUTES.HOME && state.hasHydrated !== prevState.hasHydrated) {
+        this.evaluateAndStartPolling();
+      }
+    });
     // Listen to home store changes (sort, reach, content affect streamId)
     this.homeStoreUnsubscribe = useHomeStore.subscribe(async (state, prevState) => {
       // Only re-evaluate if we're on /home and relevant fields changed
       const currentState = this.getState();
       if (currentState.currentRoute === APP_ROUTES.HOME) {
         const stateChanged =
-          state.sort !== prevState.sort || state.reach !== prevState.reach || state.content !== prevState.content;
+          state.sort !== prevState.sort ||
+          state.reach !== prevState.reach ||
+          state.content !== prevState.content ||
+          state.profileTags !== prevState.profileTags ||
+          state.taggedAsActive !== prevState.taggedAsActive ||
+          state.hasHydrated !== prevState.hasHydrated;
 
         if (stateChanged) {
           Logger.debug('Home store changed, re-evaluating stream', {
             sort: state.sort,
             reach: state.reach,
             content: state.content,
+            profileTags: state.profileTags,
+            taggedAsActive: state.taggedAsActive,
+            hasHydrated: state.hasHydrated,
           });
 
           this.evaluateAndStartPolling();
@@ -428,6 +468,10 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
     if (this.homeStoreUnsubscribe) {
       this.homeStoreUnsubscribe();
       this.homeStoreUnsubscribe = null;
+    }
+    if (this.authHydrationUnsubscribe) {
+      this.authHydrationUnsubscribe();
+      this.authHydrationUnsubscribe = null;
     }
   }
 

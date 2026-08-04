@@ -25,12 +25,11 @@ export const useAuthStore = create<AuthStore>()(
         }),
 
         // Set hasHydrated to true after rehydration
-        onRehydrateStorage: () => (state) => {
-          if (state) {
-            state.setHasHydrated(true);
-            if (state.sessionExport) {
-              state.setIsRestoringSession(true);
-            }
+        onRehydrateStorage: (state) => (rehydratedState) => {
+          const resolvedState = rehydratedState ?? state;
+          resolvedState.setHasHydrated(true);
+          if (rehydratedState?.sessionExport) {
+            resolvedState.setIsRestoringSession(true);
           }
         },
       },

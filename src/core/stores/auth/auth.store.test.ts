@@ -19,6 +19,30 @@ describe('AuthStore', () => {
     vi.clearAllMocks();
   });
 
+  describe('Persistence Hydration', () => {
+    it('marks the store as hydrated when persisted storage cannot be read', async () => {
+      const originalStorage = useAuthStore.persist.getOptions().storage;
+      const failingStorage: NonNullable<typeof originalStorage> = {
+        getItem: async () => {
+          throw new Error('storage unavailable');
+        },
+        setItem: async () => undefined,
+        removeItem: async () => undefined,
+      };
+
+      useAuthStore.getState().setHasHydrated(false);
+      useAuthStore.persist.setOptions({ storage: failingStorage });
+
+      try {
+        await useAuthStore.persist.rehydrate();
+        expect(useAuthStore.getState().hasHydrated).toBe(true);
+        expect(useAuthStore.getState().isRestoringSession).toBe(false);
+      } finally {
+        useAuthStore.persist.setOptions({ storage: originalStorage });
+      }
+    });
+  });
+
   describe('Authentication Management', () => {
     it('should set currentUserPubky without affecting authentication state', () => {
       const pubky = 'test-pubky-key';

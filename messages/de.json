@@ -757,6 +757,10 @@
       "content": "Inhalt",
       "contentPlaceholder": "Inhalt auswählen",
       "filterTags": "Nach Inhalts-Tags filtern",
+      "postTags": "Beitrags-Tags",
+      "postTagsDescription": "Filtere danach, worum es in Beiträgen geht.",
+      "profileTags": "Profil-Tags",
+      "profileTagsDescription": "Filtere danach, wie Personen markiert sind.",
       "saveFeed": "Feed speichern",
       "deleteFeed": "Feed löschen",
       "feedCreated": "Feed {name} erstellt!",
@@ -1167,8 +1171,15 @@
     "reach": {
       "title": "Reichweite",
       "all": "Alle",
+      "network": "Mein Netzwerk",
+      "taggedAs": "Markiert als",
       "following": "Folge ich",
-      "friends": "Freunde"
+      "friends": "Freunde",
+      "me": "Ich",
+      "profileTag": "Profil-Tag",
+      "profileTagLimitReached": "Max. {max} Tags",
+      "taggedAsTag": "„{tag}“",
+      "taggedAsHeadline": "Beiträge von Personen, die mein Netzwerk als {tags} markiert hat"
     },
     "sort": {
       "title": "Sortieren",

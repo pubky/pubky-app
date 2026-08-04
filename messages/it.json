@@ -755,6 +755,10 @@
       "content": "Contenuto",
       "contentPlaceholder": "Seleziona un contenuto",
       "filterTags": "Filtra per tag di contenuto",
+      "postTags": "Tag dei post",
+      "postTagsDescription": "Filtra in base all'argomento dei post.",
+      "profileTags": "Tag del profilo",
+      "profileTagsDescription": "Filtra in base a come sono taggate le persone.",
       "saveFeed": "Salva Feed",
       "deleteFeed": "Elimina Feed",
       "feedCreated": "Feed {name} creato!",
@@ -1165,8 +1169,15 @@
     "reach": {
       "title": "Portata",
       "all": "Tutti",
+      "network": "La mia rete",
+      "taggedAs": "Etichettato come",
       "following": "Seguiti",
-      "friends": "Amici"
+      "friends": "Amici",
+      "me": "Io",
+      "profileTag": "tag profilo",
+      "profileTagLimitReached": "max {max} tag",
+      "taggedAsTag": "“{tag}”",
+      "taggedAsHeadline": "Post di persone che la mia rete ha etichettato come {tags}"
     },
     "sort": {
       "title": "Ordina",

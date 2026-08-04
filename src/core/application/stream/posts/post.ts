@@ -697,7 +697,7 @@ export class PostStreamApplication {
 
   /** Collections appear only on streams whose id encodes `kind=collection` (e.g. timeline:all:collection). */
   private static shouldExcludeCollectionsFromStream(streamId: PostStreamId): boolean {
-    const [, , kind] = breakDownStreamId(streamId);
+    const { kind } = breakDownStreamId(streamId);
     return kind !== StreamKind.COLLECTION;
   }
 
@@ -737,7 +737,7 @@ export class PostStreamApplication {
     if (trulyNewPostIds.length === 0) return;
 
     // The authorId and postId are going to be use to identify the replies parent id
-    const [replyParentAuthorId, invokeEndpoint, replyParentPostId] = breakDownStreamId(streamId);
+    const { sorting: replyParentAuthorId, invokeEndpoint, kind: replyParentPostId } = breakDownStreamId(streamId);
 
     // If it is a reply, we need to update the parent post counts
     // TODO: Might happen some edge cases but for now, we can go with this approach.

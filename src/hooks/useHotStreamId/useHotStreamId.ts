@@ -1,4 +1,4 @@
-import type { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { CONTENT, REACH, SORT } from '@/stores/home/home.types';
 import { getStreamId } from '@/stores/home/home.utils';
@@ -20,7 +20,7 @@ import { useHotStore } from '@/stores/hot/hot.store';
  * // Returns PostStreamTypes.POPULARITY_FRIENDS_ALL when reach is 'friends'
  * ```
  */
-export function useHotStreamId(): PostStreamTypes {
+export function useHotStreamId(): PostStreamId {
   const reach = useHotStore((state) => state.reach);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const effectiveReach = currentUserPubky ? reach : REACH.ALL;

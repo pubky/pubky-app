@@ -88,6 +88,10 @@ async function waitForImagesReady(root: Element) {
   });
 }
 
+/** Per-image budget so a hung load/decode fails with the offending URL instead
+ * of the whole test dying at the project `testTimeout` with no context. */
+const IMAGE_READY_TIMEOUT_MS = 8_000;
+
 /**
  * Wait until an <img> has loaded real pixels. Re-checks `complete` after
  * attaching listeners so a cached load cannot race past us. Load/decode
@@ -95,7 +99,13 @@ async function waitForImagesReady(root: Element) {
  */
 async function waitForHtmlImage(img: HTMLImageElement): Promise<void> {
   const src = img.currentSrc || img.src || img.getAttribute('src') || '(unknown src)';
+  await withTimeout(waitForHtmlImageReady(img, src), IMAGE_READY_TIMEOUT_MS, () => {
+    const state = `complete=${img.complete} naturalWidth=${img.naturalWidth}`;
+    return `VRT image timed out after ${IMAGE_READY_TIMEOUT_MS}ms (${state}): ${src}`;
+  });
+}
 
+async function waitForHtmlImageReady(img: HTMLImageElement, src: string): Promise<void> {
   if (!img.complete) {
     await new Promise<void>((resolve, reject) => {
       const onLoad = () => {
@@ -131,6 +141,22 @@ async function waitForHtmlImage(img: HTMLImageElement): Promise<void> {
   } catch {
     throw new Error(`VRT image failed to decode: ${src}`);
   }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: () => string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message())), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 // VRT compares pixels, so random values must be stable across runs. This

@@ -15,6 +15,7 @@ const testData = {
 const createFeedParams = (overrides: Partial<TFeedCreateParams> = {}): TFeedCreateParams => ({
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
+  domain_tags: [],
   reach: PubkyAppFeedReach.All,
   sort: PubkyAppFeedSort.Recent,
   content: null,
@@ -26,6 +27,7 @@ const createMockFeedSchema = (overrides: Partial<FeedModelSchema> = {}): FeedMod
   id: 'feed-abc123',
   name: 'Bitcoin News',
   tags: ['bitcoin', 'lightning'],
+  domain_tags: [],
   reach: PubkyAppFeedReach.All,
   sort: PubkyAppFeedSort.Recent,
   content: null,
@@ -93,6 +95,65 @@ describe('FeedController', () => {
 
       await expect(FeedController.commitCreate(params)).rejects.toThrow('Maximum 5 tags allowed');
     });
+
+    it('should create a profile-only Network feed', async () => {
+      const params = createFeedParams({
+        tags: [],
+        domain_tags: ['🔥', 'bitcoiner'],
+        reach: PubkyAppFeedReach.Wot,
+      });
+
+      await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
+      expect(FeedApplication.persist).toHaveBeenCalledWith({
+        userId: testData.userPubky,
+        params: { feed: expect.any(Object) },
+      });
+    });
+
+    it('should enforce the five-tag limit independently for profile tags', async () => {
+      const params = createFeedParams({
+        tags: ['post1', 'post2', 'post3', 'post4', 'post5'],
+        domain_tags: ['profile1', 'profile2', 'profile3', 'profile4', 'profile5', 'profile6'],
+        reach: PubkyAppFeedReach.Wot,
+      });
+
+      await expect(FeedController.commitCreate(params)).rejects.toThrow('Maximum 5 tags allowed');
+    });
+
+    it('should allow five post tags and five profile tags together', async () => {
+      const params = createFeedParams({
+        tags: ['post1', 'post2', 'post3', 'post4', 'post5'],
+        domain_tags: ['profile1', 'profile2', 'profile3', 'profile4', 'profile5'],
+        reach: PubkyAppFeedReach.Wot,
+      });
+
+      await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
+    });
+
+    it('should create a profile-only Me feed (depth-0 domain, #2150)', async () => {
+      const params = createFeedParams({
+        tags: [],
+        domain_tags: ['bitcoiner'],
+        reach: PubkyAppFeedReach.Me,
+      });
+
+      await expect(FeedController.commitCreate(params)).resolves.toBeTruthy();
+      expect(FeedApplication.persist).toHaveBeenCalledWith({
+        userId: testData.userPubky,
+        params: { feed: expect.any(Object) },
+      });
+    });
+
+    it.each([PubkyAppFeedReach.All, PubkyAppFeedReach.Followers])(
+      'should reject profile tags for unsupported reach %s',
+      async (reach) => {
+        const params = createFeedParams({ domain_tags: ['bitcoiner'], reach });
+
+        await expect(FeedController.commitCreate(params)).rejects.toThrow(
+          'Profile tags are not supported for this feed reach',
+        );
+      },
+    );
   });
 
   describe('update', () => {
@@ -168,6 +229,21 @@ describe('FeedController', () => {
       await expect(FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { tags: ['new'] } })).rejects.toThrow(
         'User not authenticated',
       );
+    });
+
+    it('should validate the fully merged feed configuration', async () => {
+      vi.spyOn(FeedApplication, 'prepareUpdateParams').mockResolvedValue(
+        createFeedParams({
+          reach: PubkyAppFeedReach.Followers,
+          tags: [],
+          domain_tags: ['bitcoiner'],
+        }),
+      );
+
+      await expect(
+        FeedController.commitUpdate({ feedId: 'feed-abc123', changes: { reach: PubkyAppFeedReach.Followers } }),
+      ).rejects.toThrow('Profile tags are not supported for this feed reach');
+      expect(FeedApplication.persist).not.toHaveBeenCalled();
     });
   });
 

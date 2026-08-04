@@ -78,6 +78,14 @@ describe('pubky-app-spec-feed-mappers', () => {
         expect(pubkyReachToHomeReach(PubkyAppFeedReach.All)).toBe(REACH.ALL);
       });
 
+      it('should map PubkyAppFeedReach.Wot to REACH.NETWORK', () => {
+        expect(pubkyReachToHomeReach(PubkyAppFeedReach.Wot)).toBe(REACH.NETWORK);
+      });
+
+      it('should map PubkyAppFeedReach.Me to REACH.ME', () => {
+        expect(pubkyReachToHomeReach(PubkyAppFeedReach.Me)).toBe(REACH.ME);
+      });
+
       it('should return undefined for PubkyAppFeedReach.Followers (no home equivalent)', () => {
         expect(pubkyReachToHomeReach(PubkyAppFeedReach.Followers)).toBeUndefined();
       });
@@ -100,6 +108,14 @@ describe('pubky-app-spec-feed-mappers', () => {
         expect(homeReachToPubkyReach(REACH.ALL)).toBe(PubkyAppFeedReach.All);
       });
 
+      it('should map REACH.NETWORK to PubkyAppFeedReach.Wot', () => {
+        expect(homeReachToPubkyReach(REACH.NETWORK)).toBe(PubkyAppFeedReach.Wot);
+      });
+
+      it('should map REACH.ME to PubkyAppFeedReach.Me', () => {
+        expect(homeReachToPubkyReach(REACH.ME)).toBe(PubkyAppFeedReach.Me);
+      });
+
       it('should return undefined for unknown reach values', () => {
         // @ts-expect-error Testing invalid input
         expect(homeReachToPubkyReach('unknown')).toBeUndefined();
@@ -109,7 +125,13 @@ describe('pubky-app-spec-feed-mappers', () => {
     describe('Reach bidirectional mapping', () => {
       it('should be reversible for mappable reach values', () => {
         // Note: Followers is excluded because it has no home equivalent
-        const reaches = [PubkyAppFeedReach.Following, PubkyAppFeedReach.Friends, PubkyAppFeedReach.All];
+        const reaches = [
+          PubkyAppFeedReach.Following,
+          PubkyAppFeedReach.Friends,
+          PubkyAppFeedReach.All,
+          PubkyAppFeedReach.Wot,
+          PubkyAppFeedReach.Me,
+        ];
 
         for (const pubkyReach of reaches) {
           const homeReach = pubkyReachToHomeReach(pubkyReach);

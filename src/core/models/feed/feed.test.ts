@@ -9,6 +9,7 @@ describe('FeedModel', () => {
     id: 'feed-abc123',
     name: 'Bitcoin News',
     tags: ['bitcoin', 'lightning'],
+    domain_tags: [],
     reach: PubkyAppFeedReach.All,
     sort: PubkyAppFeedSort.Recent,
     content: null,
@@ -136,6 +137,7 @@ describe('FeedModel', () => {
         id: 'feed-complete',
         name: 'Complete Feed',
         tags: ['tag1', 'tag2', 'tag3'],
+        domain_tags: ['bitcoiner', '🔥'],
         reach: PubkyAppFeedReach.Following,
         sort: PubkyAppFeedSort.Popularity,
         content: PubkyAppPostKind.Image,
@@ -147,6 +149,7 @@ describe('FeedModel', () => {
 
       expect(saved!.name).toBe('Complete Feed');
       expect(saved!.tags).toEqual(['tag1', 'tag2', 'tag3']);
+      expect(saved!.domain_tags).toEqual(['bitcoiner', '🔥']);
       expect(saved!.reach).toBe(PubkyAppFeedReach.Following);
       expect(saved!.sort).toBe(PubkyAppFeedSort.Popularity);
       expect(saved!.content).toBe(PubkyAppPostKind.Image);

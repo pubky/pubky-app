@@ -755,6 +755,10 @@
       "content": "コンテンツ",
       "contentPlaceholder": "コンテンツを選択",
       "filterTags": "コンテンツタグでフィルタ",
+      "postTags": "投稿タグ",
+      "postTagsDescription": "投稿の内容で絞り込みます。",
+      "profileTags": "プロフィールタグ",
+      "profileTagsDescription": "ユーザーがどのようにタグ付けされているかで絞り込みます。",
       "saveFeed": "フィードを保存",
       "deleteFeed": "フィードを削除",
       "feedCreated": "フィード {name} を作成しました！",
@@ -1165,8 +1169,15 @@
     "reach": {
       "title": "範囲",
       "all": "すべて",
+      "network": "自分のネットワーク",
+      "taggedAs": "タグ付け",
       "following": "フォロー中",
-      "friends": "友達"
+      "friends": "友達",
+      "me": "自分",
+      "profileTag": "プロフィールタグ",
+      "profileTagLimitReached": "最大{max}タグ",
+      "taggedAsTag": "「{tag}」",
+      "taggedAsHeadline": "自分のネットワークが{tags}とタグ付けした人の投稿"
     },
     "sort": {
       "title": "並べ替え",

@@ -6,7 +6,7 @@ import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeed
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
-import { FilterReach } from '@/molecules/Filters/FilterReach/FilterReach';
+import { FilterReach, type ReachFilterValue, TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
 import { FilterSort } from '@/molecules/Filters/FilterSort/FilterSort';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -33,20 +33,50 @@ function HomeFeedFilters({
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
   variant = 'drawer',
 }: HomeFeedSidebarProps) {
-  const { layout, setLayout, reach, setReach, sort, setSort, content, setContent } = useHomeStore();
+  const {
+    layout,
+    setLayout,
+    reach,
+    setReach,
+    taggedAsActive,
+    setTaggedAsActive,
+    sort,
+    setSort,
+    content,
+    setContent,
+    profileTags,
+    addProfileTag,
+    removeProfileTag,
+  } = useHomeStore();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { requireAuth } = useRequireAuth();
   const isAuthenticated = Boolean(currentUserPubky);
   const effectiveReach = isAuthenticated ? reach : REACH.ALL;
+  const selectedReach: ReachFilterValue =
+    isAuthenticated && taggedAsActive && profileTags.length > 0 ? TAGGED_AS_FILTER_KEY : effectiveReach;
+  const effectiveProfileTags = isAuthenticated ? profileTags : [];
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
 
-  // "All" reach is public; "Following"/"Friends" require an account, so prompt Join Pubky in Explore mode.
-  const handleReachChange = (value: ReachType) => {
+  // "All" reach is public; other reach options require an account, so prompt Join Pubky in Explore mode.
+  const handleReachChange = (value: ReachFilterValue) => {
     if (value === REACH.ALL) {
-      setReach(value);
+      // Signed-out Home already resolves to All. Avoid persisting this no-op as
+      // an explicit choice so a visitor remains eligible for the post-signup
+      // My-network default.
+      if (isAuthenticated) {
+        setReach(value);
+      }
       return;
     }
-    requireAuth(() => setReach(value));
+
+    requireAuth(() => {
+      if (value === TAGGED_AS_FILTER_KEY) {
+        setTaggedAsActive(true);
+        return;
+      }
+
+      setReach(value as ReachType);
+    });
   };
   const resolvedContent = resolveVisualFeedContent({
     content,
@@ -59,7 +89,17 @@ function HomeFeedFilters({
 
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
-      {!hideReachFilter && <FilterReach selectedTab={effectiveReach} onTabChange={handleReachChange} />}
+      {!hideReachFilter && (
+        <FilterReach
+          selectedTab={selectedReach}
+          onTabChange={handleReachChange}
+          showTaggedAs
+          profileTags={effectiveProfileTags}
+          onProfileTagAdd={addProfileTag}
+          onProfileTagRemove={removeProfileTag}
+          profileTagsDisabled={!isAuthenticated || !taggedAsActive}
+        />
+      )}
       <FilterSort selectedTab={sort} onTabChange={setSort} />
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">

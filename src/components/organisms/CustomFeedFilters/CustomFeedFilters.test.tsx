@@ -14,8 +14,10 @@ vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
 vi.mock('@/stores/home/home.types', () => ({
   REACH: {
     ALL: 'all',
+    NETWORK: 'network',
     FOLLOWING: 'following',
     FRIENDS: 'friends',
+    ME: 'me',
   },
   SORT: {
     TIMELINE: 'timeline',
@@ -56,6 +58,16 @@ vi.mock('@/atoms/Container/Container', () => {
     ),
   };
 });
+
+vi.mock('@/atoms/Label/Label', () => ({
+  Label: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <label className={className}>{children}</label>
+  ),
+}));
+
+vi.mock('@/molecules/PostTag/PostTag', () => ({
+  PostTag: ({ label }: { label: string }) => <span data-testid={`readonly-tag-${label}`}>{label}</span>,
+}));
 
 // Mock molecules — filter components capture their props for assertion
 vi.mock('@/molecules/Filters/FilterContent/FilterContent', () => {
@@ -106,20 +118,24 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
 
 vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
+    TAGGED_AS_FILTER_KEY: 'tagged_as',
     FilterReach: ({
       selectedTab,
       defaultSelectedTab,
       disabled,
+      showTaggedAs,
     }: {
       selectedTab?: string;
       defaultSelectedTab?: string;
       disabled?: boolean;
+      showTaggedAs?: boolean;
     }) => (
       <div
         data-testid="filter-reach"
         data-selected-tab={selectedTab ?? ''}
         data-default-selected-tab={defaultSelectedTab ?? ''}
         data-disabled={disabled}
+        data-show-tagged-as={showTaggedAs}
       >
         FilterReach
       </div>
@@ -154,6 +170,7 @@ const createMockFeed = (overrides?: Partial<FeedModelSchema>): FeedModelSchema =
   id: 'feed-1',
   name: 'Test Feed',
   tags: ['tag1', 'tag2'],
+  domain_tags: [],
   reach: PubkyAppFeedReach.All,
   sort: PubkyAppFeedSort.Recent,
   content: PubkyAppPostKind.Short,
@@ -228,6 +245,44 @@ describe('CustomFeedFilters', () => {
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'following');
+  });
+
+  it('maps My network and Me reach values and exposes the standalone read-only options', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Wot }));
+    const { rerender } = render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'network');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-tagged-as', 'true');
+
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ reach: PubkyAppFeedReach.Me }));
+    rerender(<CustomFeedFilters variant="sidebar" />);
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'me');
+  });
+
+  it('renders post and profile tags in separate labeled groups', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({ tags: ['bitcoin'], domain_tags: ['bitcoiner', '🔥'], reach: PubkyAppFeedReach.Wot }),
+    );
+
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'tagged_as');
+    expect(screen.getByTestId('custom-feed-post-tags')).toHaveTextContent('Filter on Content Tags');
+    expect(screen.getByTestId('custom-feed-profile-tags')).toHaveTextContent('Profile Tags');
+    expect(screen.getByTestId('readonly-tag-bitcoin')).toBeInTheDocument();
+    expect(screen.getByTestId('readonly-tag-bitcoiner')).toBeInTheDocument();
+    expect(screen.getByTestId('readonly-tag-🔥')).toBeInTheDocument();
+  });
+
+  it('renders profile tags for a legacy Me feed without reinterpreting its reach', () => {
+    mockUseCustomFeed.mockReturnValue(
+      createMockFeed({ tags: [], domain_tags: ['bitcoiner'], reach: PubkyAppFeedReach.Me }),
+    );
+
+    render(<CustomFeedFilters variant="sidebar" />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'me');
+    expect(screen.getByTestId('readonly-tag-bitcoiner')).toBeInTheDocument();
   });
 
   it('maps customFeed sort to filter selectedTab', () => {

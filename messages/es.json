@@ -757,6 +757,10 @@
       "content": "Contenido",
       "contentPlaceholder": "Selecciona un contenido",
       "filterTags": "Filtrar por etiquetas de contenido",
+      "postTags": "Etiquetas de publicaciones",
+      "postTagsDescription": "Filtra por el tema de las publicaciones.",
+      "profileTags": "Etiquetas de perfil",
+      "profileTagsDescription": "Filtra según cómo están etiquetadas las personas.",
       "saveFeed": "Guardar Feed",
       "deleteFeed": "Eliminar Feed",
       "feedCreated": "¡Feed {name} creado!",
@@ -1167,8 +1171,15 @@
     "reach": {
       "title": "Alcance",
       "all": "Todos",
+      "network": "Mi red",
+      "taggedAs": "Etiquetado como",
       "following": "Siguiendo",
-      "friends": "Amigos"
+      "friends": "Amigos",
+      "me": "Yo",
+      "profileTag": "etiqueta de perfil",
+      "profileTagLimitReached": "máximo {max} etiquetas",
+      "taggedAsTag": "«{tag}»",
+      "taggedAsHeadline": "Publicaciones de personas que mi red etiquetó como {tags}"
     },
     "sort": {
       "title": "Ordenar",

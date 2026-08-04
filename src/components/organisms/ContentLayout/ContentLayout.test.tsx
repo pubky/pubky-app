@@ -162,13 +162,6 @@ vi.mock('@/organisms/WhoToFollowSidebar/WhoToFollowSidebar', () => {
   };
 });
 
-// Mock the organisms
-vi.mock('@/organisms/LeftSidebar/LeftSidebar', () => {
-  return {
-    LeftSidebar: () => <div data-testid="left-sidebar">Left Sidebar</div>,
-  };
-});
-
 vi.mock('@/organisms/RightSidebar/RightSidebar', () => {
   return {
     RightSidebar: () => <div data-testid="right-sidebar">Right Sidebar</div>,

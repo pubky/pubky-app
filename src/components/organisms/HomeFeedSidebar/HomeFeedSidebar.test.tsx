@@ -1,37 +1,73 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from './HomeFeedSidebar';
 
-const { mockSetContent, mockUseHomeStore, mockFilterContent, mockUseFeedLayoutResolution, mockCurrentUserPubky } =
-  vi.hoisted(() => ({
-    mockSetContent: vi.fn(),
-    mockUseHomeStore: vi.fn(),
-    mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
+const {
+  mockSetContent,
+  mockSetReach,
+  mockSetTaggedAsActive,
+  mockUseHomeStore,
+  mockFilterContent,
+  mockFilterReach,
+  mockUseFeedLayoutResolution,
+  mockCurrentUserPubky,
+} = vi.hoisted(() => ({
+  mockSetContent: vi.fn(),
+  mockSetReach: vi.fn(),
+  mockSetTaggedAsActive: vi.fn(),
+  mockUseHomeStore: vi.fn(),
+  mockFilterContent: vi.fn(({ disabledTabs, selectedTab }: { disabledTabs?: string[]; selectedTab?: string }) => (
+    <div
+      data-testid="filter-content"
+      data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+      data-selected-tab={selectedTab}
+    >
+      FilterContent
+    </div>
+  )),
+  mockFilterReach: vi.fn(
+    ({
+      selectedTab,
+      showTaggedAs,
+      profileTags,
+      profileTagsDisabled,
+    }: {
+      selectedTab?: string;
+      showTaggedAs?: boolean;
+      profileTags?: string[];
+      profileTagsDisabled?: boolean;
+      onTabChange?: (value: string) => void;
+    }) => (
       <div
-        data-testid="filter-content"
-        data-disabled-tabs={(disabledTabs ?? []).length ? disabledTabs?.join(',') : undefined}
+        data-testid="filter-reach"
         data-selected-tab={selectedTab}
+        data-show-tagged-as={showTaggedAs ? 'true' : undefined}
+        data-profile-tags={(profileTags ?? []).join(',')}
+        data-profile-tags-disabled={profileTagsDisabled ? 'true' : undefined}
       >
-        FilterContent
+        FilterReach
       </div>
-    )),
-    mockUseFeedLayoutResolution: vi.fn(() => ({
-      requestedLayout: 'columns',
-      effectiveLayout: 'columns',
-      isVisualRequested: false,
-      isVisualActive: false,
-      isPhoneViewport: false,
-    })),
-    mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
-  }));
+    ),
+  ),
+  mockUseFeedLayoutResolution: vi.fn(() => ({
+    requestedLayout: 'columns',
+    effectiveLayout: 'columns',
+    isVisualRequested: false,
+    isVisualActive: false,
+    isPhoneViewport: false,
+  })),
+  mockCurrentUserPubky: { value: 'viewer-pubky' as string | null },
+}));
 
 // Mock useHomeStore
 vi.mock('@/stores/home/home.types', () => ({
   REACH: {
     ALL: 'all',
+    NETWORK: 'network',
     FOLLOWING: 'following',
     FRIENDS: 'friends',
+    ME: 'me',
   },
   CONTENT: {
     ALL: 'all',
@@ -54,6 +90,13 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
   useFeedLayoutResolution: () => mockUseFeedLayoutResolution(),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    requireAuth: (action: () => unknown) => action(),
+    isAuthenticated: true,
+  }),
 }));
 
 // Mock Atoms
@@ -86,11 +129,14 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
 
 vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
   return {
-    FilterReach: ({ selectedTab }: { selectedTab?: string }) => (
-      <div data-testid="filter-reach" data-selected-tab={selectedTab}>
-        FilterReach
-      </div>
-    ),
+    TAGGED_AS_FILTER_KEY: 'tagged_as',
+    FilterReach: (props: {
+      selectedTab?: string;
+      showTaggedAs?: boolean;
+      profileTags?: string[];
+      profileTagsDisabled?: boolean;
+      onTabChange?: (value: string) => void;
+    }) => mockFilterReach(props),
   };
 });
 
@@ -102,18 +148,26 @@ vi.mock('@/molecules/Filters/FilterSort/FilterSort', () => {
 
 beforeEach(() => {
   mockSetContent.mockClear();
+  mockSetReach.mockClear();
+  mockSetTaggedAsActive.mockClear();
   mockCurrentUserPubky.value = 'viewer-pubky';
   mockUseHomeStore.mockReturnValue({
     layout: 'columns',
     setLayout: vi.fn(),
     reach: 'following',
-    setReach: vi.fn(),
+    setReach: mockSetReach,
+    taggedAsActive: false,
+    setTaggedAsActive: mockSetTaggedAsActive,
     sort: 'timeline',
     setSort: vi.fn(),
     content: 'all',
     setContent: mockSetContent,
+    profileTags: [],
+    addProfileTag: vi.fn(),
+    removeProfileTag: vi.fn(),
   });
   mockFilterContent.mockClear();
+  mockFilterReach.mockClear();
   mockUseFeedLayoutResolution.mockReturnValue({
     requestedLayout: 'columns',
     effectiveLayout: 'columns',
@@ -161,7 +215,9 @@ describe('HomeFeedSidebar', () => {
       layout: 'visual',
       setLayout: vi.fn(),
       reach: 'following',
-      setReach: vi.fn(),
+      setReach: mockSetReach,
+      taggedAsActive: false,
+      setTaggedAsActive: mockSetTaggedAsActive,
       sort: 'timeline',
       setSort: vi.fn(),
       content: 'short',
@@ -187,6 +243,122 @@ describe('HomeFeedSidebar', () => {
     render(<HomeFeedSidebar />);
 
     expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
+  });
+
+  it('does not persist a signed-out All selection', () => {
+    mockCurrentUserPubky.value = null;
+
+    render(<HomeFeedSidebar />);
+    act(() => {
+      mockFilterReach.mock.calls.at(-1)?.[0].onTabChange?.('all');
+    });
+
+    expect(mockSetReach).not.toHaveBeenCalled();
+  });
+
+  it('opts Home into the standalone Tagged-as reach controls', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'network',
+      setReach: mockSetReach,
+      taggedAsActive: false,
+      setTaggedAsActive: mockSetTaggedAsActive,
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: ['bitcoin', 'dev'],
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-show-tagged-as', 'true');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', 'bitcoin,dev');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags-disabled', 'true');
+  });
+
+  it('parks and disables profile tags while a base reach is selected', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'all',
+      setReach: mockSetReach,
+      taggedAsActive: false,
+      setTaggedAsActive: mockSetTaggedAsActive,
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: ['bitcoin'],
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', 'bitcoin');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags-disabled', 'true');
+  });
+
+  it('selects Tagged as and enables its editor while retaining the base reach', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'me',
+      setReach: mockSetReach,
+      taggedAsActive: true,
+      setTaggedAsActive: mockSetTaggedAsActive,
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: ['bitcoin'],
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'tagged_as');
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-profile-tags', 'bitcoin');
+    expect(screen.getByTestId('filter-reach')).not.toHaveAttribute('data-profile-tags-disabled');
+  });
+
+  it('highlights the base reach while an empty Tagged-as editor is open', () => {
+    mockUseHomeStore.mockReturnValue({
+      layout: 'columns',
+      setLayout: vi.fn(),
+      reach: 'me',
+      setReach: mockSetReach,
+      taggedAsActive: true,
+      setTaggedAsActive: mockSetTaggedAsActive,
+      sort: 'timeline',
+      setSort: vi.fn(),
+      content: 'all',
+      setContent: mockSetContent,
+      profileTags: [],
+      addProfileTag: vi.fn(),
+      removeProfileTag: vi.fn(),
+    });
+
+    render(<HomeFeedSidebar />);
+
+    expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'me');
+    expect(screen.getByTestId('filter-reach')).not.toHaveAttribute('data-profile-tags-disabled');
+  });
+
+  it('activates Tagged as without changing the parked base reach', () => {
+    render(<HomeFeedSidebar />);
+
+    act(() => {
+      mockFilterReach.mock.calls.at(-1)?.[0].onTabChange?.('tagged_as');
+    });
+
+    expect(mockSetTaggedAsActive).toHaveBeenCalledWith(true);
+    expect(mockSetReach).not.toHaveBeenCalled();
   });
 });
 
