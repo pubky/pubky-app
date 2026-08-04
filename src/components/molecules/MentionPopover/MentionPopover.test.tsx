@@ -47,7 +47,10 @@ describe('MentionPopover', () => {
     { id: 'user3' as Pubky, name: 'Bob Wilson' },
   ];
 
+  const anchorRef = { current: document.createElement('textarea') };
+
   const defaultProps = {
+    anchorRef,
     users: mockUsers,
     selectedIndex: null,
     onSelect: vi.fn(),
@@ -100,14 +103,15 @@ describe('MentionPopover', () => {
   });
 
   describe('MentionPopover - Snapshots', () => {
+    // The popover renders in a portal, so it lives in document.body, not the render container.
     it('matches snapshot with users', () => {
-      const { container } = render(<MentionPopover {...defaultProps} />);
-      expect(container.firstChild).toMatchSnapshot();
+      render(<MentionPopover {...defaultProps} />);
+      expect(screen.getByTestId('mention-popover')).toMatchSnapshot();
     });
 
     it('matches snapshot with selected index', () => {
-      const { container } = render(<MentionPopover {...defaultProps} selectedIndex={0} />);
-      expect(container.firstChild).toMatchSnapshot();
+      render(<MentionPopover {...defaultProps} selectedIndex={0} />);
+      expect(screen.getByTestId('mention-popover')).toMatchSnapshot();
     });
 
     it('matches snapshot with empty users', () => {

@@ -377,6 +377,7 @@ export function PostInput({
                       {/* Mention autocomplete popover */}
                       {mentionIsOpen && (
                         <MentionPopover
+                          anchorRef={textareaRef}
                           users={mentionUsers}
                           selectedIndex={mentionSelectedIndex}
                           onSelect={handleMentionSelect}
