@@ -1136,7 +1136,10 @@ describe('PostInput', () => {
       expect(postHeader).toHaveAttribute('data-size', 'normal');
       expect(postHeader).toHaveAttribute('data-show-user-info', 'true');
 
-      expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'field-sizing-fixed rounded-none');
+      expect(screen.getByTestId('textarea')).toHaveAttribute(
+        'data-class-name',
+        'field-sizing-fixed w-full rounded-none',
+      );
     });
 
     it('applies wide padding, large header size, and text-xl body when inheriting side layout', () => {
@@ -1157,7 +1160,7 @@ describe('PostInput', () => {
 
       expect(screen.getByTestId('textarea')).toHaveAttribute(
         'data-class-name',
-        'field-sizing-fixed rounded-none text-xl leading-7',
+        'field-sizing-fixed w-full rounded-none text-xl leading-7',
       );
     });
 
@@ -1176,7 +1179,7 @@ describe('PostInput', () => {
       expect(getStatePostHeader()).toHaveAttribute('data-character-limit-placement', 'metadata');
       expect(screen.getByTestId('textarea')).toHaveAttribute(
         'data-class-name',
-        'field-sizing-fixed rounded-none text-base font-medium leading-5',
+        'field-sizing-fixed w-full rounded-none text-base font-medium leading-5',
       );
     });
 
@@ -1192,7 +1195,10 @@ describe('PostInput', () => {
       expect(outerContainer.className).not.toContain('p-12');
       expect(getStatePostHeader()).toHaveAttribute('data-size', 'normal');
       expect(getStatePostHeader()).toHaveAttribute('data-character-limit-placement', 'name-row');
-      expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'field-sizing-fixed rounded-none');
+      expect(screen.getByTestId('textarea')).toHaveAttribute(
+        'data-class-name',
+        'field-sizing-fixed w-full rounded-none',
+      );
     });
 
     it('falls back to inline layout on mobile even when the inherited layout is side', () => {
@@ -1210,7 +1216,10 @@ describe('PostInput', () => {
 
       const postHeader = getStatePostHeader();
       expect(postHeader).toHaveAttribute('data-size', 'normal');
-      expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'field-sizing-fixed rounded-none');
+      expect(screen.getByTestId('textarea')).toHaveAttribute(
+        'data-class-name',
+        'field-sizing-fixed w-full rounded-none',
+      );
     });
   });
 

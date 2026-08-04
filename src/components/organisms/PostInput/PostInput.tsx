@@ -324,10 +324,10 @@ export function PostInput({
 
                   <Container
                     overrideDefaults
-                    className={cn('flex w-full min-w-0 items-center', GAP_CLASS_BY_HEADER_SIZE[headerSize])}
+                    className={cn('flex w-full min-w-0 items-stretch', GAP_CLASS_BY_HEADER_SIZE[headerSize])}
                   >
                     {!isExpanded && currentUserPubky && (
-                      <div className="shrink-0">
+                      <div className="shrink-0 self-start">
                         <PostHeader
                           postId={currentUserPubky}
                           isReplyInput={true}
@@ -340,20 +340,25 @@ export function PostInput({
                       </div>
                     )}
                     {!currentUserPubky && (
-                      <AvatarWithFallback
-                        name=""
-                        fallbackSeed="user"
-                        size={AVATAR_SIZE_BY_HEADER_SIZE[headerSize]}
-                        data-testid="post-input-fallback-avatar"
-                      />
+                      <div className="shrink-0 self-start">
+                        <AvatarWithFallback
+                          name=""
+                          fallbackSeed="user"
+                          size={AVATAR_SIZE_BY_HEADER_SIZE[headerSize]}
+                          data-testid="post-input-fallback-avatar"
+                        />
+                      </div>
                     )}
-                    <Container overrideDefaults className="relative min-w-0 flex-1">
+                    <Container overrideDefaults className="relative flex min-w-0 flex-1 items-center">
                       <Textarea
                         name="post-input-textarea"
                         ref={textareaRef}
                         placeholder={displayPlaceholder}
                         variant="inline"
-                        className={cn('field-sizing-fixed rounded-none', BODY_TEXT_CLASS_BY_TAGS_LAYOUT[tagsLayout])}
+                        className={cn(
+                          'field-sizing-fixed w-full rounded-none',
+                          BODY_TEXT_CLASS_BY_TAGS_LAYOUT[tagsLayout],
+                        )}
                         value={content}
                         onChange={handleChangeWithAuth}
                         onFocus={handleExpandWithAuth}
