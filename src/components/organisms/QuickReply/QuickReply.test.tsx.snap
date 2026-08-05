@@ -13,7 +13,7 @@ exports[`QuickReply - Mobile Snapshots > matches expanded snapshot on mobile vie
     <div
       data-testid="quick-reply-connector"
       height="310"
-      style="transition: height 280ms cubic-bezier(0.25, 1, 0.5, 1);"
+      style="transition: none;"
       variant="last"
     />
   </div>
@@ -153,7 +153,7 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
     <div
       data-testid="quick-reply-connector"
       height="173"
-      style="transition: height 220ms cubic-bezier(0.25, 1, 0.5, 1);"
+      style="transition: none;"
       variant="last"
     />
   </div>
@@ -200,19 +200,10 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
                 data-testid="container"
               >
                 <div
-                  class="shrink-0"
+                  aria-hidden="true"
+                  class="shrink-0 size-10"
                   data-testid="quick-reply-collapsed-avatar-placeholder"
-                >
-                  <div
-                    data-is-reply="true"
-                    data-post-id="user:me"
-                    data-show-user-info="false"
-                    data-size="normal"
-                    data-testid="post-header"
-                    data-user-name="Current User"
-                    data-visually-hide-avatar="true"
-                  />
-                </div>
+                />
                 <div
                   class="relative min-w-0 flex-1"
                   data-testid="container"
@@ -259,7 +250,7 @@ exports[`QuickReply - Snapshots > matches snapshot when expanded 1`] = `
     <div
       data-testid="quick-reply-connector"
       height="310"
-      style="transition: height 280ms cubic-bezier(0.25, 1, 0.5, 1);"
+      style="transition: none;"
       variant="last"
     />
   </div>
@@ -400,7 +391,7 @@ exports[`QuickReply - Snapshots > matches snapshot with a logged-out fallback av
     <div
       data-testid="quick-reply-connector"
       height="173"
-      style="transition: height 220ms cubic-bezier(0.25, 1, 0.5, 1);"
+      style="transition: none;"
       variant="last"
     />
   </div>
@@ -540,7 +531,7 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
     <div
       data-testid="quick-reply-connector"
       height="173"
-      style="transition: height 220ms cubic-bezier(0.25, 1, 0.5, 1);"
+      style="transition: none;"
       variant="last"
     />
   </div>
@@ -587,19 +578,10 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
                 data-testid="container"
               >
                 <div
-                  class="shrink-0"
+                  aria-hidden="true"
+                  class="shrink-0 size-16"
                   data-testid="quick-reply-collapsed-avatar-placeholder"
-                >
-                  <div
-                    data-is-reply="true"
-                    data-post-id="user:me"
-                    data-show-user-info="false"
-                    data-size="extraLarge"
-                    data-testid="post-header"
-                    data-user-name="Current User"
-                    data-visually-hide-avatar="true"
-                  />
-                </div>
+                />
                 <div
                   class="relative min-w-0 flex-1"
                   data-testid="container"

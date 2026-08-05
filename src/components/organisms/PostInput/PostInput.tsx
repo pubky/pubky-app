@@ -10,18 +10,20 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/Post
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/useComposerHeightAnimation';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
-import { getComposerDissolveVariants, getComposerHeightTransition } from '@/libs/motion/composerMotion';
+import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
 import {
+  AVATAR_CLASS_BY_HEADER_SIZE,
   AVATAR_SIZE_BY_HEADER_SIZE,
   GAP_CLASS_BY_HEADER_SIZE,
 } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo.utils';
@@ -165,16 +167,16 @@ export function PostInput({
   const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
   const { ref: stateContentMeasureRef, height: stateContentHeight } = useElementHeight();
-  const [hasMeasuredStateContentHeight, setHasMeasuredStateContentHeight] = React.useState(false);
-
-  React.useEffect(() => {
-    if (stateContentHeight > 0) setHasMeasuredStateContentHeight(true);
-  }, [stateContentHeight]);
-
-  const heightTransition = getComposerHeightTransition(
+  // Forced-expanded dialog composers must not use Framer height at all — even
+  // `animate={{ height: 'auto' }}` measures and can lock a tall inline height
+  // during the dialog zoom-in, leaving empty space in the composer.
+  const skipHeightMotion = Boolean(expanded || shouldReduceMotion);
+  const { animatedHeight, heightTransition, onHeightAnimationComplete } = useComposerHeightAnimation({
     isExpanded,
-    shouldReduceMotion || expanded || !hasMeasuredStateContentHeight,
-  );
+    measuredHeight: stateContentHeight,
+    shouldReduceMotion,
+    skipAnimation: expanded,
+  });
   const dissolveVariants = getComposerDissolveVariants(shouldReduceMotion);
 
   React.useEffect(() => {
@@ -263,10 +265,12 @@ export function PostInput({
       >
         <motion.div
           data-testid="post-input-state-height"
-          className="overflow-hidden"
+          className={skipHeightMotion ? undefined : 'overflow-hidden'}
           initial={false}
-          animate={{ height: shouldReduceMotion || expanded || stateContentHeight <= 0 ? 'auto' : stateContentHeight }}
-          transition={{ height: heightTransition }}
+          // `false` disables Framer height control entirely (needed for dialogs).
+          animate={skipHeightMotion ? false : { height: animatedHeight }}
+          transition={skipHeightMotion ? undefined : { height: heightTransition }}
+          onAnimationComplete={skipHeightMotion ? undefined : onHeightAnimationComplete}
         >
           <div ref={stateContentMeasureRef} className="relative">
             {!isArticle && currentUserPubky && (
@@ -336,17 +340,11 @@ export function PostInput({
                     className={cn('flex w-full min-w-0 items-stretch', GAP_CLASS_BY_HEADER_SIZE[headerSize])}
                   >
                     {!isExpanded && currentUserPubky && (
-                      <div className="shrink-0 self-start">
-                        <PostHeader
-                          postId={currentUserPubky}
-                          isReplyInput={true}
-                          userDetails={currentUserDetails}
-                          showPopover={false}
-                          showUserInfo={false}
-                          visuallyHideAvatar={true}
-                          size={headerSize}
-                        />
-                      </div>
+                      <div
+                        data-testid="post-input-collapsed-avatar-placeholder"
+                        className={cn('shrink-0 self-start', AVATAR_CLASS_BY_HEADER_SIZE[headerSize])}
+                        aria-hidden="true"
+                      />
                     )}
                     {!currentUserPubky && (
                       <div className="shrink-0 self-start">

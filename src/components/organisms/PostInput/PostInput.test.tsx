@@ -282,6 +282,10 @@ function getStatePostHeader() {
   return within(screen.getByTestId('post-input-state-content')).getByTestId('post-header');
 }
 
+function getStablePostHeader() {
+  return within(screen.getByTestId('post-input-stable-avatar')).getByTestId('post-header');
+}
+
 afterEach(() => {
   vi.mocked(useReducedMotion).mockReturnValue(false);
 });
@@ -597,8 +601,11 @@ describe('PostInput', () => {
     mockUsePostReturn.isExpanded = false;
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    expect(getStatePostHeader()).toHaveAttribute('data-show-user-info', 'false');
-    expect(getStatePostHeader()).not.toHaveAttribute('data-count');
+    expect(getStablePostHeader()).toHaveAttribute('data-show-user-info', 'false');
+    expect(getStablePostHeader()).not.toHaveAttribute('data-count');
+    expect(screen.getByTestId('post-input-collapsed-avatar-placeholder')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByTestId('post-input-collapsed-avatar-placeholder')).toHaveClass('size-10');
+    expect(screen.queryByTestId('post-input-expanded-header')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('container')[0]).toHaveAttribute('data-state', 'collapsed');
   });
 
@@ -673,20 +680,22 @@ describe('PostInput', () => {
     expect(expandedControls).not.toContainElement(textarea);
     expect(stableHeader).not.toHaveAttribute('data-visually-hide-avatar');
     expect(getStatePostHeader()).toHaveAttribute('data-visually-hide-avatar', 'true');
+    expect(screen.queryByTestId('post-input-collapsed-avatar-placeholder')).not.toBeInTheDocument();
   });
 
-  it('uses blur-free, auto-height transitions when reduced motion is requested', async () => {
+  it('uses blur-free height shell when reduced motion is requested', async () => {
     vi.mocked(useReducedMotion).mockReturnValue(true);
     mockUsePostReturn.isExpanded = true;
 
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    await waitFor(() => expect(screen.getByTestId('post-input-state-height')).toHaveStyle({ height: 'auto' }));
+    // Reduced motion disables Framer height control — no locked pixel height.
+    await waitFor(() => expect(screen.getByTestId('post-input-state-height')).not.toHaveClass('overflow-hidden'));
     expect(screen.getByTestId('post-input-expanded-header')).toHaveStyle({ filter: 'blur(0px)' });
     expect(screen.getByTestId('post-input-expanded-controls')).toHaveStyle({ filter: 'blur(0px)' });
   });
 
-  it('keeps a forced-expanded dialog composer at auto height after measuring its content', async () => {
+  it('keeps a forced-expanded dialog composer free of Framer height locking', async () => {
     const layoutHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(260);
 
     try {
@@ -698,7 +707,11 @@ describe('PostInput', () => {
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       });
 
-      expect(screen.getByTestId('post-input-state-height')).toHaveStyle({ height: 'auto' });
+      const heightWrapper = screen.getByTestId('post-input-state-height');
+      // Dialogs must not lock a measured pixel height (avoids empty composer space
+      // when Framer measures during the dialog zoom-in).
+      expect(heightWrapper).not.toHaveClass('overflow-hidden');
+      expect(heightWrapper).not.toHaveStyle({ height: '260px' });
     } finally {
       layoutHeight.mockRestore();
     }
@@ -770,6 +783,53 @@ describe('PostInput', () => {
     } finally {
       globalThis.ResizeObserver = OriginalResizeObserver;
       transformedBoundingRect.mockRestore();
+      layoutHeight.mockRestore();
+    }
+  });
+
+  it('snaps measured height when content grows while already expanded', async () => {
+    let resizeCallback: ResizeObserverCallback | undefined;
+    let resizeObserver: ResizeObserver | undefined;
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    const layoutHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(260);
+
+    class TestResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback;
+        resizeObserver = asOpaque<ResizeObserver>(this);
+      }
+
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    globalThis.ResizeObserver = asOpaque<typeof ResizeObserver>(TestResizeObserver);
+
+    try {
+      mockUsePostReturn.isExpanded = true;
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      const heightWrapper = screen.getByTestId('post-input-state-height');
+
+      await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
+
+      layoutHeight.mockReturnValue(320);
+      act(() => {
+        resizeCallback?.(
+          [
+            asOpaque<ResizeObserverEntry>({
+              contentRect: { height: 320 } as DOMRectReadOnly,
+              borderBoxSize: [{ blockSize: 320, inlineSize: 600 }],
+            }),
+          ],
+          resizeObserver!,
+        );
+      });
+
+      // Line-wrap / attachment growth updates the pixel height with duration 0 (snap).
+      await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '320px' }));
+    } finally {
+      globalThis.ResizeObserver = OriginalResizeObserver;
       layoutHeight.mockRestore();
     }
   });

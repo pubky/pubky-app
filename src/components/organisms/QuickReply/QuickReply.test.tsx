@@ -558,17 +558,23 @@ describe('QuickReply', () => {
     const heightWrapper = screen.getByTestId('quick-reply-state-height');
     const connector = screen.getByTestId('quick-reply-connector');
 
+    // Resting: pixel height with connector CSS transition disabled.
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
-    await waitFor(() => expect(connector).toHaveStyle({ transition: 'height 220ms cubic-bezier(0.25, 1, 0.5, 1)' }));
+    await waitFor(() => expect(connector).toHaveStyle({ transition: 'none' }));
     expect(connector).toHaveAttribute('height', '130');
 
-    mockElementHeight.value = 260;
+    // Flip expanded first while height is still the collapsed measure so the
+    // tween window is observable before Motion completes in jsdom.
     mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
     rerender(<QuickReply parentPostId="author:post1" />);
 
     expect(screen.getByTestId('quick-reply-state-height')).toBe(heightWrapper);
-    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
     expect(connector).toHaveStyle({ transition: 'height 280ms cubic-bezier(0.25, 1, 0.5, 1)' });
+
+    mockElementHeight.value = 260;
+    rerender(<QuickReply parentPostId="author:post1" />);
+
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
     expect(connector).toHaveAttribute('height', '310');
   });
 
@@ -581,19 +587,42 @@ describe('QuickReply', () => {
     const connector = screen.getByTestId('quick-reply-connector');
 
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
-    expect(connector).toHaveStyle({ transition: 'height 280ms cubic-bezier(0.25, 1, 0.5, 1)' });
+    expect(connector).toHaveStyle({ transition: 'none' });
     expect(screen.getByTestId('quick-reply-expanded-header')).toBeInTheDocument();
 
-    mockElementHeight.value = 80;
+    // Flip collapsed first while height is still the expanded measure.
     mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: false }));
     rerender(<QuickReply parentPostId="author:post1" />);
 
     expect(screen.getByTestId('quick-reply-state-height')).toBe(heightWrapper);
-    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
     expect(connector).toHaveStyle({ transition: 'height 220ms cubic-bezier(0.25, 1, 0.5, 1)' });
+
+    mockElementHeight.value = 80;
+    rerender(<QuickReply parentPostId="author:post1" />);
+
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
     expect(connector).toHaveAttribute('height', '130');
     await waitFor(() => expect(screen.queryByTestId('quick-reply-expanded-header')).not.toBeInTheDocument());
     expect(screen.queryByTestId('quick-reply-expanded-content')).not.toBeInTheDocument();
+  });
+
+  it('does not tween height when content grows while the reply stays expanded', async () => {
+    mockElementHeight.value = 260;
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
+
+    const { rerender } = render(<QuickReply parentPostId="author:post1" />);
+    const heightWrapper = screen.getByTestId('quick-reply-state-height');
+    const connector = screen.getByTestId('quick-reply-connector');
+
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
+    expect(connector).toHaveStyle({ transition: 'none' });
+
+    mockElementHeight.value = 320;
+    rerender(<QuickReply parentPostId="author:post1" />);
+
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '320px' }));
+    expect(connector).toHaveStyle({ transition: 'none' });
+    expect(connector).toHaveAttribute('height', '370');
   });
 
   it('disables height and connector motion when reduced motion is requested', async () => {

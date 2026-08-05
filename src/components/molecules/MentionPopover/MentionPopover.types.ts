@@ -14,5 +14,5 @@ export interface MentionPopoverProps {
   /** Callback when hovering over a user (for keyboard navigation sync) */
   onHover: (index: number) => void;
   /** Element the popover is positioned under — it renders in a portal, so this is its only anchor */
-  anchorRef: RefObject<HTMLTextAreaElement | null>;
+  anchorRef: RefObject<HTMLElement | null>;
 }

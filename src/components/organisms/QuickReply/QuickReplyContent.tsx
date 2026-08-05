@@ -5,6 +5,7 @@ import { Container } from '@/atoms/Container/Container';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { cn } from '@/libs/utils/utils';
 import {
+  AVATAR_CLASS_BY_HEADER_SIZE,
   AVATAR_SIZE_BY_HEADER_SIZE,
   GAP_CLASS_BY_HEADER_SIZE,
 } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo.utils';
@@ -101,17 +102,11 @@ export function QuickReplyContent({
             className={cn('flex w-full min-w-0 items-center', GAP_CLASS_BY_HEADER_SIZE[headerSize])}
           >
             {!isExpanded && currentUserPubky && (
-              <div data-testid="quick-reply-collapsed-avatar-placeholder" className="shrink-0">
-                <PostHeader
-                  postId={currentUserPubky}
-                  isReplyInput={true}
-                  userDetails={currentUserDetails}
-                  showPopover={false}
-                  showUserInfo={false}
-                  visuallyHideAvatar={true}
-                  size={headerSize}
-                />
-              </div>
+              <div
+                data-testid="quick-reply-collapsed-avatar-placeholder"
+                className={cn('shrink-0', AVATAR_CLASS_BY_HEADER_SIZE[headerSize])}
+                aria-hidden="true"
+              />
             )}
 
             {!currentUserPubky && (

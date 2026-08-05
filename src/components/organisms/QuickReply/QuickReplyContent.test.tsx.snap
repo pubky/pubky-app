@@ -27,16 +27,10 @@ exports[`QuickReplyContent - Snapshots > matches the collapsed snapshot 1`] = `
         data-testid="container"
       >
         <div
-          class="shrink-0"
+          aria-hidden="true"
+          class="shrink-0 size-10"
           data-testid="quick-reply-collapsed-avatar-placeholder"
-        >
-          <div
-            data-show-user-info="false"
-            data-size="normal"
-            data-testid="post-header"
-            data-visually-hide-avatar="true"
-          />
-        </div>
+        />
         <div
           class="relative min-w-0 flex-1"
           data-testid="container"

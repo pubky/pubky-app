@@ -67,7 +67,7 @@ export interface UsePostInputReturn {
   hasContent: boolean;
   displayPlaceholder: string;
   currentUserPubky: string | null;
-  currentUserDetails: NexusUserDetails | null | undefined;
+  currentUserDetails?: NexusUserDetails | null;
 
   // Handlers
   handleExpand: () => void;

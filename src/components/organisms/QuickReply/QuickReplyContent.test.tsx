@@ -152,12 +152,20 @@ describe('QuickReplyContent', () => {
       'data-show-user-info',
       'false',
     );
+    expect(screen.getByTestId('quick-reply-collapsed-avatar-placeholder')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByTestId('quick-reply-collapsed-avatar-placeholder')).toHaveClass('size-10');
     expect(
-      within(screen.getByTestId('quick-reply-collapsed-avatar-placeholder')).getByTestId('post-header'),
-    ).toHaveAttribute('data-visually-hide-avatar', 'true');
+      within(screen.getByTestId('quick-reply-collapsed-avatar-placeholder')).queryByTestId('post-header'),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId('quick-reply-textarea')).toBeInTheDocument();
     expect(screen.queryByTestId('quick-reply-expanded-header')).not.toBeInTheDocument();
     expect(screen.queryByTestId('quick-reply-expanded-content')).not.toBeInTheDocument();
+  });
+
+  it('sizes the collapsed avatar spacer for side layout', () => {
+    render(<QuickReplyContent {...createProps({ layout: 'side' })} />);
+
+    expect(screen.getByTestId('quick-reply-collapsed-avatar-placeholder')).toHaveClass('size-16');
   });
 
   it('reveals full identity and reply controls while preserving the stable avatar', () => {

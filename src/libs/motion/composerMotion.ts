@@ -7,6 +7,9 @@ import type { CSSProperties } from 'react';
  * connector must track the card height with the exact same curve, so the
  * framer transitions and the connector's CSS transition are derived from
  * these constants instead of being re-typed per component.
+ *
+ * Height tweens are gated by `useComposerHeightAnimation`: expand/collapse
+ * uses the durations below; content-driven growth keeps `duration: 0` so it snaps.
  */
 export const COMPOSER_REVEAL_EASE = [0.19, 1, 0.22, 1] as const;
 export const COMPOSER_HEIGHT_EASE = [0.25, 1, 0.5, 1] as const;

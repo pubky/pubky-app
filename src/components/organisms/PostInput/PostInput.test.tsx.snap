@@ -316,17 +316,10 @@ exports[`PostInput - Snapshots > matches snapshot for a collapsed post composer 
               data-testid="container"
             >
               <div
-                class="shrink-0 self-start"
-              >
-                <div
-                  data-is-reply="true"
-                  data-post-id="test-user-id:pubkey"
-                  data-show-user-info="false"
-                  data-size="normal"
-                  data-testid="post-header"
-                  data-visually-hide-avatar="true"
-                />
-              </div>
+                aria-hidden="true"
+                class="shrink-0 self-start size-10"
+                data-testid="post-input-collapsed-avatar-placeholder"
+              />
               <div
                 class="relative flex min-w-0 flex-1 items-center"
                 data-override-defaults="true"

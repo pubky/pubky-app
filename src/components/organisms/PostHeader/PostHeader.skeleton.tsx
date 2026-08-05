@@ -1,19 +1,16 @@
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { cn } from '@/libs/utils/utils';
-import type { PostHeaderSize } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo.utils';
+import {
+  AVATAR_CLASS_BY_HEADER_SIZE,
+  type PostHeaderSize,
+} from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo.utils';
 
 interface PostHeaderSkeletonProps {
   showUserInfo?: boolean;
   visuallyHideAvatar?: boolean;
   size?: PostHeaderSize;
 }
-
-const AVATAR_CLASS_BY_HEADER_SIZE: Record<PostHeaderSize, string> = {
-  normal: 'size-10',
-  large: 'size-12',
-  extraLarge: 'size-16',
-};
 
 export function PostHeaderSkeleton({
   showUserInfo = true,

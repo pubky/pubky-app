@@ -8,12 +8,12 @@ import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConne
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { Typography } from '@/atoms/Typography/Typography';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/useComposerHeightAnimation';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
-import { getComposerHeightTransition, getComposerHeightTransitionStyle } from '@/libs/motion/composerMotion';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
@@ -101,11 +101,12 @@ export function QuickReply({
 
   const { ref: cardRef, height: cardHeight } = useElementHeight();
   const shouldReduceMotion = useReducedMotion();
-  const [hasMeasuredCardHeight, setHasMeasuredCardHeight] = React.useState(false);
-
-  React.useEffect(() => {
-    if (cardHeight > 0) setHasMeasuredCardHeight(true);
-  }, [cardHeight]);
+  const { animatedHeight, heightTransition, heightTransitionStyle, onHeightAnimationComplete } =
+    useComposerHeightAnimation({
+      isExpanded,
+      measuredHeight: cardHeight,
+      shouldReduceMotion,
+    });
 
   const isValid = () => canSubmitPost(POST_INPUT_VARIANT.REPLY, content, attachments, isSubmitting);
 
@@ -121,12 +122,6 @@ export function QuickReply({
 
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
-  const heightTransition = getComposerHeightTransition(isExpanded, shouldReduceMotion || !hasMeasuredCardHeight);
-  // Connector animates via CSS, so it takes the same curve as a style instead of a tween.
-  const connectorHeightTransitionStyle = getComposerHeightTransitionStyle(
-    isExpanded,
-    shouldReduceMotion || !hasMeasuredCardHeight,
-  );
 
   const contentProps: QuickReplyContentProps = {
     currentUserPubky,
@@ -167,7 +162,7 @@ export function QuickReply({
         <PostThreadConnector
           height={connectorHeight}
           variant={connectorVariant}
-          style={connectorHeightTransitionStyle}
+          style={heightTransitionStyle}
           data-testid="quick-reply-connector"
         />
       </Container>
@@ -204,8 +199,9 @@ export function QuickReply({
           data-testid="quick-reply-state-height"
           className="overflow-hidden"
           initial={false}
-          animate={{ height: shouldReduceMotion || cardHeight <= 0 ? 'auto' : cardHeight }}
+          animate={{ height: animatedHeight }}
           transition={{ height: heightTransition }}
+          onAnimationComplete={onHeightAnimationComplete}
         >
           <Container
             ref={cardRef}

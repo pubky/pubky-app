@@ -16,7 +16,7 @@ export interface QuickReplyProps {
 export interface QuickReplyContentProps {
   // Current user header
   currentUserPubky: string | null;
-  currentUserDetails: NexusUserDetails | null | undefined;
+  currentUserDetails?: NexusUserDetails | null;
 
   // Textarea
   textareaRef: RefObject<HTMLTextAreaElement | null>;

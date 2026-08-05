@@ -9,6 +9,13 @@ export const AVATAR_SIZE_BY_HEADER_SIZE: Record<PostHeaderSize, AvatarSize> = {
   extraLarge: 'xl',
 };
 
+/** Tailwind size classes matching `AVATAR_SIZE_BY_HEADER_SIZE` — use for layout spacers. */
+export const AVATAR_CLASS_BY_HEADER_SIZE: Record<PostHeaderSize, string> = {
+  normal: 'size-10',
+  large: 'size-12',
+  extraLarge: 'size-16',
+};
+
 export const GAP_CLASS_BY_HEADER_SIZE: Record<PostHeaderSize, string> = {
   normal: 'gap-3',
   large: 'gap-4',
