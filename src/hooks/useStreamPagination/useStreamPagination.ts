@@ -7,7 +7,11 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { isCollectionItemsStream, isSkipPaginatedStream } from '@/models/stream/post/postStream.types';
+import {
+  isCollectionItemsStream,
+  isSkipPaginatedStream,
+  type PostStreamId,
+} from '@/models/stream/post/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
 
@@ -20,6 +24,8 @@ function resolveDisplayedPostIds(streamPostIds: string[], optimisticPostIds: str
     displayedPostIds: [...filteredOptimisticPostIds, ...streamPostIds],
   };
 }
+
+type ReplacementLoadMode = 'local_first' | 'network_refresh';
 
 /**
  * useStreamPagination
@@ -34,9 +40,6 @@ export function useStreamPagination({
   onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
-  const [lastPostId, setLastPostId] = useState<string | undefined>(undefined);
-  const [streamTail, setStreamTail] = useState<number>(NOT_FOUND_CACHED_STREAM);
-
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +47,15 @@ export function useStreamPagination({
 
   const postIdsRef = useRef<string[]>([]);
   const optimisticPostIdsRef = useRef<string[]>([]);
+  const lastPostIdRef = useRef<string | undefined>(undefined);
+  const streamTailRef = useRef(NOT_FOUND_CACHED_STREAM);
+  const hasMoreRef = useRef(true);
+  const requestGenerationRef = useRef(0);
+  const renderedStreamIdRef = useRef(streamId);
+  const initializedStreamIdRef = useRef<PostStreamId | null>(null);
+  const replacementOwnerRef = useRef<symbol | null>(null);
+  const loadMoreOwnerRef = useRef<symbol | null>(null);
+  renderedStreamIdRef.current = streamId;
 
   /**
    * Sets the appropriate loading state based on load type
@@ -56,133 +68,228 @@ export function useStreamPagination({
     }
   }, []);
 
-  /**
-   * Fetches a slice from the stream
-   */
-  const fetchStreamSlice = useCallback(
-    async (isInitialLoad: boolean, forceNetwork = false) => {
-      setLoadingState(isInitialLoad, true);
-      setError(null);
+  const setHasMoreState = useCallback((value: boolean) => {
+    hasMoreRef.current = value;
+    setHasMore(value);
+  }, []);
 
-      try {
-        let result: TReadPostStreamChunkResponse;
-        // Always resume from `streamTail`; never recompute the cursor from the visible count.
+  const isCurrentRequest = useCallback(
+    (generation: number, requestStreamId: PostStreamId) =>
+      requestGenerationRef.current === generation && renderedStreamIdRef.current === requestStreamId,
+    [],
+  );
 
-        if (isInitialLoad) {
-          let initialStreamTail = NOT_FOUND_CACHED_STREAM;
-          if (!forceNetwork) {
-            // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
-            await StreamPostsController.prepareStreamForInitialLoad({ streamId });
-            initialStreamTail = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
-          }
-          setStreamTail(initialStreamTail);
-
-          result = await StreamPostsController.getOrFetchStreamSlice({
-            streamId,
-            lastPostId: undefined,
-            // Skip streams always start at offset 0; score streams seed from the cached tail.
-            streamTail: isSkipPaginatedStream(streamId) || forceNetwork ? 0 : initialStreamTail,
-            limit,
-            ...(forceNetwork && { forceNetwork: true }),
-          });
-        } else {
-          result = await StreamPostsController.getOrFetchStreamSlice({
-            streamId,
-            lastPostId,
-            streamTail,
-            limit,
-          });
-        }
-
-        // Advance from the response, even on a fully-filtered (empty) page.
-        if (result.nextCursor != null) {
-          setStreamTail(result.nextCursor);
-        }
-
-        // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
-        // keeps hasMore so the advanced cursor is re-requested. This can't spin IN PLACE (the
-        // cursor always advances by raw count, and a short raw page forces reachedEnd), but an
-        // auto-loading caller (useInfiniteScroll) will chain rounds through a filtered region
-        // until the true stream end, with no per-user-action bound or feedback. Known
-        // limitation, deliberately unchanged here — any remedy (toast + backoff, manual
-        // load-more) is a product-visible UX change tracked as follow-up.
-        if (result.nextPageIds.length === 0) {
-          setHasMore(!result.reachedEnd);
-          setLoadingState(isInitialLoad, false);
-          return;
-        }
-
-        // Deduplicate posts
-        const existingIds = new Set(postIdsRef.current);
-        const newUniquePostIds = result.nextPageIds.filter((id) => !existingIds.has(id));
-
-        // Update last-returned id even if all posts are duplicates (we need to move forward)
-        const lastId = result.nextPageIds[result.nextPageIds.length - 1];
-        setLastPostId(lastId);
-        setHasMore(result.reachedEnd !== true);
-
-        // If all posts were duplicates, don't update the UI but keep hasMore state
-        if (newUniquePostIds.length === 0) {
-          setLoadingState(isInitialLoad, false);
-          return;
-        }
-
-        // Update state with unique posts only
-        const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
-        postIdsRef.current = updatedPostIds;
-        const displayedState = resolveDisplayedPostIds(updatedPostIds, optimisticPostIdsRef.current);
-        optimisticPostIdsRef.current = displayedState.optimisticPostIds;
-        setPostIds(displayedState.displayedPostIds);
-      } catch (err) {
-        const errorMessage = isAppError(err) ? err.message : 'An unknown error occurred.';
-        setError(errorMessage);
-        setHasMore(false);
-        Logger.error('Failed to fetch stream slice:', err);
-        onError?.(err);
-      } finally {
-        setLoadingState(isInitialLoad, false);
+  const commitPage = useCallback(
+    (result: TReadPostStreamChunkResponse, isInitialLoad: boolean) => {
+      // Advance from the response even when stream filters remove the entire page.
+      if (result.nextCursor != null) {
+        streamTailRef.current = result.nextCursor;
       }
+
+      // Empty-but-not-ended pages keep pagination alive because the collector advanced
+      // over raw backend data even though no visible posts survived filtering.
+      if (result.nextPageIds.length === 0) {
+        setHasMoreState(!result.reachedEnd);
+        return;
+      }
+
+      const existingIds = new Set(postIdsRef.current);
+      const newUniquePostIds = result.nextPageIds.filter((id) => !existingIds.has(id));
+      lastPostIdRef.current = result.nextPageIds[result.nextPageIds.length - 1];
+      setHasMoreState(result.reachedEnd !== true);
+
+      if (newUniquePostIds.length === 0) return;
+
+      const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
+      postIdsRef.current = updatedPostIds;
+      const displayedState = resolveDisplayedPostIds(updatedPostIds, optimisticPostIdsRef.current);
+      optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+      setPostIds(displayedState.displayedPostIds);
     },
-    [streamId, lastPostId, streamTail, limit, setLoadingState, onError],
+    [setHasMoreState],
+  );
+
+  const commitNetworkReplacement = useCallback(
+    (result: TReadPostStreamChunkResponse) => {
+      const refreshedPostIds = Array.from(new Set(result.nextPageIds));
+      postIdsRef.current = refreshedPostIds;
+      lastPostIdRef.current = refreshedPostIds.at(-1);
+      streamTailRef.current = result.nextCursor ?? NOT_FOUND_CACHED_STREAM;
+      setHasMoreState(result.reachedEnd !== true);
+
+      const displayedState = resolveDisplayedPostIds(refreshedPostIds, optimisticPostIdsRef.current);
+      optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+      setPostIds(displayedState.displayedPostIds);
+    },
+    [setHasMoreState],
   );
 
   /**
    * Clears all state
    */
-  const clearState = useCallback(({ preserveOptimisticPostIds = false } = {}) => {
-    postIdsRef.current = [];
-    if (!preserveOptimisticPostIds) {
-      optimisticPostIdsRef.current = [];
-    }
-    setPostIds(optimisticPostIdsRef.current);
-    setLastPostId(undefined);
-    setStreamTail(0);
-    setHasMore(true);
-    setError(null);
-  }, []);
+  const clearState = useCallback(
+    ({ preserveOptimisticPostIds = false } = {}) => {
+      postIdsRef.current = [];
+      if (!preserveOptimisticPostIds) {
+        optimisticPostIdsRef.current = [];
+      }
+      setPostIds(optimisticPostIdsRef.current);
+      lastPostIdRef.current = undefined;
+      streamTailRef.current = NOT_FOUND_CACHED_STREAM;
+      setHasMoreState(true);
+      setError(null);
+    },
+    [setHasMoreState],
+  );
+
+  const runReplacementLoad = useCallback(
+    async ({
+      mode,
+      clearBeforeLoad = false,
+      preserveOptimisticPostIds = false,
+    }: {
+      mode: ReplacementLoadMode;
+      clearBeforeLoad?: boolean;
+      preserveOptimisticPostIds?: boolean;
+    }) => {
+      const requestStreamId = streamId;
+      const owner = Symbol('stream-replacement');
+      replacementOwnerRef.current = owner;
+      loadMoreOwnerRef.current = null;
+      setLoadingMore(false);
+
+      if (clearBeforeLoad) {
+        clearState({ preserveOptimisticPostIds });
+      }
+
+      const generation = ++requestGenerationRef.current;
+      setLoadingState(true, true);
+      setError(null);
+
+      try {
+        let result: TReadPostStreamChunkResponse;
+
+        if (mode === 'network_refresh') {
+          result = await StreamPostsController.refreshStreamSlice({ streamId: requestStreamId, limit });
+        } else {
+          await StreamPostsController.prepareStreamForInitialLoad({ streamId: requestStreamId });
+          if (!isCurrentRequest(generation, requestStreamId)) return;
+
+          const cachedTail = await StreamPostsController.getCachedLastPostTimestamp({ streamId: requestStreamId });
+          if (!isCurrentRequest(generation, requestStreamId)) return;
+
+          streamTailRef.current = cachedTail;
+          result = await StreamPostsController.getOrFetchStreamSlice({
+            streamId: requestStreamId,
+            lastPostId: undefined,
+            // Skip streams always start at offset 0; score streams seed from the cached tail.
+            streamTail: isSkipPaginatedStream(requestStreamId) ? NOT_FOUND_CACHED_STREAM : cachedTail,
+            limit,
+          });
+        }
+
+        if (!isCurrentRequest(generation, requestStreamId)) return;
+
+        if (mode === 'network_refresh') {
+          commitNetworkReplacement(result);
+        } else {
+          commitPage(result, true);
+        }
+      } catch (err) {
+        if (!isCurrentRequest(generation, requestStreamId)) return;
+
+        const errorMessage = isAppError(err) ? err.message : 'An unknown error occurred.';
+        setError(errorMessage);
+        // Follow-driven refreshes leave the existing pagination snapshot usable.
+        if (mode === 'local_first') {
+          setHasMoreState(false);
+        }
+        Logger.error('Failed to fetch stream slice:', err);
+        onError?.(err);
+      } finally {
+        if (isCurrentRequest(generation, requestStreamId)) {
+          setLoadingState(true, false);
+        }
+        if (replacementOwnerRef.current === owner) {
+          replacementOwnerRef.current = null;
+        }
+      }
+    },
+    [
+      clearState,
+      commitNetworkReplacement,
+      commitPage,
+      isCurrentRequest,
+      limit,
+      onError,
+      setHasMoreState,
+      setLoadingState,
+      streamId,
+    ],
+  );
 
   /**
    * Refresh function - clears state and fetches from beginning
    */
   const refresh = useCallback(async () => {
-    clearState({ preserveOptimisticPostIds: isCollectionItemsStream(streamId) });
-    await fetchStreamSlice(true);
-  }, [clearState, fetchStreamSlice, streamId]);
+    await runReplacementLoad({
+      mode: 'local_first',
+      clearBeforeLoad: true,
+      preserveOptimisticPostIds: isCollectionItemsStream(streamId),
+    });
+  }, [runReplacementLoad, streamId]);
 
   const refreshFromNetwork = useCallback(async () => {
-    // Follow-dependent streams are membership feeds, so no optimistic ids survive
-    // a server-authoritative rebuild. Reset every pagination field before fetching.
-    clearState();
-    await fetchStreamSlice(true, true);
-  }, [clearState, fetchStreamSlice]);
+    await runReplacementLoad({ mode: 'network_refresh' });
+  }, [runReplacementLoad]);
 
   /**
    * Load more function - fetches next page
    */
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
-    await fetchStreamSlice(false);
-  }, [loadingMore, hasMore, fetchStreamSlice]);
+    if (
+      replacementOwnerRef.current ||
+      initializedStreamIdRef.current !== streamId ||
+      loadMoreOwnerRef.current ||
+      !hasMoreRef.current
+    ) {
+      return;
+    }
+
+    const owner = Symbol('stream-pagination');
+    loadMoreOwnerRef.current = owner;
+    const requestStreamId = streamId;
+    const generation = ++requestGenerationRef.current;
+    setLoadingState(false, true);
+    setError(null);
+
+    try {
+      const result = await StreamPostsController.getOrFetchStreamSlice({
+        streamId: requestStreamId,
+        lastPostId: lastPostIdRef.current,
+        streamTail: streamTailRef.current,
+        limit,
+      });
+
+      if (!isCurrentRequest(generation, requestStreamId)) return;
+      commitPage(result, false);
+    } catch (err) {
+      if (!isCurrentRequest(generation, requestStreamId)) return;
+
+      const errorMessage = isAppError(err) ? err.message : 'An unknown error occurred.';
+      setError(errorMessage);
+      setHasMoreState(false);
+      Logger.error('Failed to fetch stream slice:', err);
+      onError?.(err);
+    } finally {
+      if (isCurrentRequest(generation, requestStreamId)) {
+        setLoadingState(false, false);
+      }
+      if (loadMoreOwnerRef.current === owner) {
+        loadMoreOwnerRef.current = null;
+      }
+    }
+  }, [commitPage, isCurrentRequest, limit, onError, setHasMoreState, setLoadingState, streamId]);
 
   /**
    * Add post(s) to the timeline, sorted by timestamp
@@ -266,10 +373,14 @@ export function useStreamPagination({
 
   // Initial load and reset when streamId changes
   useEffect(() => {
-    if (resetOnStreamChange) {
-      clearState();
-    }
-    fetchStreamSlice(true);
+    // Rendered identity changes before this effect runs. Invalidate older state
+    // writers, mark the new stream initialized, then establish its replacement
+    // owner synchronously before any pagination request can begin.
+    requestGenerationRef.current += 1;
+    initializedStreamIdRef.current = streamId;
+    loadMoreOwnerRef.current = null;
+    setLoadingMore(false);
+    void runReplacementLoad({ mode: 'local_first', clearBeforeLoad: resetOnStreamChange });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamId]);
 

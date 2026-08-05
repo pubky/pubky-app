@@ -1,11 +1,14 @@
 import { PostStreamApplication } from '@/application/stream/posts/post';
+import type { TPostStreamChunkResponse } from '@/application/stream/posts/post.types';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type {
   TReadPostStreamChunkParams,
   TReadPostStreamChunkResponse,
+  TRefreshPostStreamChunkParams,
   TStreamIdParams,
 } from '@/controllers/stream/posts/posts.types';
+import type { Pubky } from '@/models/models.types';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -58,23 +61,48 @@ export class StreamPostsController {
     lastPostId,
     limit = NEXUS_POSTS_PER_PAGE,
     order,
-    forceNetwork,
   }: TReadPostStreamChunkParams): Promise<TReadPostStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile posts)
     const viewerId = useAuthStore.getState().currentUserPubky;
-    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd } = await PostStreamApplication.getOrFetchStreamSlice(
-      {
-        streamId,
-        limit,
-        streamHead,
-        streamTail,
-        lastPostId,
-        viewerId,
-        order,
-        ...(forceNetwork !== undefined && { forceNetwork }),
-      },
-    );
+    const result = await PostStreamApplication.getOrFetchStreamSlice({
+      streamId,
+      limit,
+      streamHead,
+      streamTail,
+      lastPostId,
+      viewerId,
+      order,
+    });
+
+    return await this.hydrateStreamSlice({ streamId, viewerId, result });
+  }
+
+  /**
+   * Refreshes a post stream from Nexus and rebuilds its cacheable membership.
+   * Named `refresh*` because this network-driven path also updates local cache.
+   */
+  static async refreshStreamSlice({
+    streamId,
+    limit = NEXUS_POSTS_PER_PAGE,
+    order,
+  }: TRefreshPostStreamChunkParams): Promise<TReadPostStreamChunkResponse> {
+    const viewerId = useAuthStore.getState().currentUserPubky;
+    const result = await PostStreamApplication.refreshStreamSlice({ streamId, limit, viewerId, order });
+
+    return await this.hydrateStreamSlice({ streamId, viewerId, result });
+  }
+
+  private static async hydrateStreamSlice({
+    streamId,
+    viewerId,
+    result,
+  }: {
+    streamId: TStreamIdParams['streamId'];
+    viewerId: Pubky | null;
+    result: TPostStreamChunkResponse;
+  }): Promise<TReadPostStreamChunkResponse> {
+    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd } = result;
     // Query nexus to get the cacheMissPostIds
     if (cacheMissPostIds.length > 0) {
       // TODO: When TTL is implemented, we can return to void

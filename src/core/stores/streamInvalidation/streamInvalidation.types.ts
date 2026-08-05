@@ -1,9 +1,9 @@
-export interface StreamInvalidationState {
+interface StreamInvalidationState {
   followGraphRevision: number;
   friendsRevision: number;
 }
 
-export interface StreamInvalidationActions {
+interface StreamInvalidationActions {
   invalidateFollowDependentStreams: (options: { includeFriends: boolean }) => void;
   reset: () => void;
 }

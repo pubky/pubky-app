@@ -13,9 +13,9 @@ export interface TFetchStreamParams {
   lastPostId?: string;
   tags?: string[];
   order?: StreamOrder;
-  /** Bypass local stream and unread caches while retaining the normal filtering pipeline. */
-  forceNetwork?: boolean;
 }
+
+export type TRefreshStreamParams = Pick<TFetchStreamParams, 'streamId' | 'limit' | 'viewerId' | 'order'>;
 
 export interface TFetchStreamFromNexusParams extends TFetchStreamParams {
   /** Replace the cache with this response instead of merging it. Used by the first forced page. */

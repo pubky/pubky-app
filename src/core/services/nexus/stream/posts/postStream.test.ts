@@ -858,6 +858,17 @@ describe('breakDownStreamId', () => {
     },
   );
 
+  it('tolerates an empty optional post-tag segment in a wot_domain request breakdown', () => {
+    expect(breakDownStreamId('timeline:wot_domain:2:all:developer:' as PostStreamId)).toEqual({
+      sorting: 'timeline',
+      invokeEndpoint: StreamSource.WOT_DOMAIN,
+      kind: 'all',
+      wotDepth: 2,
+      domainTags: 'developer',
+      tags: undefined,
+    });
+  });
+
   describe('Timeline pattern', () => {
     it('should parse timeline:endpoint:kind:tags', () => {
       const result = breakDownStreamId('timeline:bookmarks:all:tech,ai' as PostStreamId);

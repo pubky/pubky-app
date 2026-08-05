@@ -10,9 +10,9 @@ export type TReadPostStreamChunkParams = {
   limit?: number;
   /** Order of results: 'ascending' (oldest first) or 'descending' (newest first, default) */
   order?: StreamOrder;
-  /** Bypass cached membership and rebuild the first page from Nexus. */
-  forceNetwork?: boolean;
 };
+
+export type TRefreshPostStreamChunkParams = Pick<TReadPostStreamChunkParams, 'streamId' | 'limit' | 'order'>;
 
 export type TStreamIdParams = {
   streamId: PostStreamId;

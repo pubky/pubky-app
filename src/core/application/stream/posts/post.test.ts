@@ -36,8 +36,9 @@ import {
   StreamSorting,
 } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
+import { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import { MuteFilter } from './muting/mute-filter';
 import { postStreamQueue } from './muting/post-stream-queue';
 
@@ -45,6 +46,16 @@ describe('PostStreamApplication', () => {
   const streamId = PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId;
   const DEFAULT_AUTHOR = 'user-1';
   const BASE_TIMESTAMP = 1000000;
+
+  const createDeferred = <T>() => {
+    let resolve!: (value: T) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
+  };
 
   // ============================================================================
   // Test Helpers
@@ -218,6 +229,9 @@ describe('PostStreamApplication', () => {
     await UserRelationshipsModel.table.clear();
     await UserTagsModel.table.clear();
     await UserStreamModel.table.clear();
+    asOpaque<{ pendingStreamOperations: Map<PostStreamId, Promise<void>> }>(
+      PostStreamApplication,
+    ).pendingStreamOperations.clear();
   });
 
   afterEach(async () => {
@@ -381,6 +395,25 @@ describe('PostStreamApplication', () => {
   });
 
   describe('getOrFetchStreamSlice', () => {
+    it('keeps ascending reads on the direct Nexus path', async () => {
+      const response = createMockNexusPostsKeyStream(2);
+      const mutedLookupSpy = vi.spyOn(LocalStreamUsersService, 'findById');
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(response);
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+        order: StreamOrder.ASCENDING,
+      });
+
+      expect(nexusFetchSpy).toHaveBeenCalledOnce();
+      expect(mutedLookupSpy).not.toHaveBeenCalled();
+      expect(result.nextPageIds).toEqual(response.post_keys);
+    });
+
     it('should return posts from cache when available (no cursor)', async () => {
       const postIds = Array.from({ length: 20 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
@@ -502,14 +535,10 @@ describe('PostStreamApplication', () => {
       const clearUnreadSpy = vi.spyOn(LocalStreamPostsService, 'clearUnreadStream');
       const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(freshResponse);
 
-      const result = await PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.refreshStreamSlice({
         streamId: followStreamId,
         limit: 10,
-        streamHead: 0,
-        streamTail: BASE_TIMESTAMP,
-        lastPostId: staleIds[1],
         viewerId: 'user-viewer' as Pubky,
-        forceNetwork: true,
       });
 
       expect(nexusFetchSpy).toHaveBeenCalledOnce();
@@ -517,7 +546,7 @@ describe('PostStreamApplication', () => {
       expect((await PostStreamModel.findById(followStreamId))?.stream).toEqual(freshResponse.post_keys);
       expect(await UnreadPostStreamModel.findById(followStreamId)).toBeNull();
       expect(postStreamQueue.get(followStreamId)).toBeUndefined();
-      expect(clearUnreadSpy).toHaveBeenCalledTimes(2);
+      expect(clearUnreadSpy).toHaveBeenCalledOnce();
     });
 
     it('replaces a stale cache row when a forced Nexus response is empty', async () => {
@@ -528,13 +557,10 @@ describe('PostStreamApplication', () => {
         last_post_score: null,
       });
 
-      const result = await PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.refreshStreamSlice({
         streamId: followStreamId,
         limit: 10,
-        streamHead: 0,
-        streamTail: BASE_TIMESTAMP,
         viewerId: 'user-viewer' as Pubky,
-        forceNetwork: true,
       });
 
       expect(result.nextPageIds).toEqual([]);
@@ -548,17 +574,168 @@ describe('PostStreamApplication', () => {
       vi.spyOn(LocalStreamPostsService, 'clearUnreadStream').mockRejectedValue(new Error('cleanup-fail'));
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(freshResponse);
 
-      const result = await PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.refreshStreamSlice({
         streamId: followStreamId,
         limit: 10,
-        streamHead: 0,
-        streamTail: BASE_TIMESTAMP,
         viewerId: 'user-viewer' as Pubky,
-        forceNetwork: true,
       });
 
       expect(result.nextPageIds).toEqual(freshResponse.post_keys);
       expect((await PostStreamModel.findById(followStreamId))?.stream).toEqual(freshResponse.post_keys);
+    });
+
+    it('serializes an existing page load before a same-stream refresh so the refresh cache wins', async () => {
+      const followStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      const staleResponse = createDeferred<NexusPostsKeyStream>();
+      const freshResponse = createMockNexusPostsKeyStream(2, 20);
+      const nexusFetchSpy = vi
+        .spyOn(NexusPostStreamService, 'fetch')
+        .mockReturnValueOnce(staleResponse.promise)
+        .mockResolvedValueOnce(freshResponse);
+
+      const staleLoad = PostStreamApplication.getOrFetchStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      await vi.waitFor(() => expect(nexusFetchSpy).toHaveBeenCalledOnce());
+
+      const refresh = PostStreamApplication.refreshStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      await Promise.resolve();
+      expect(nexusFetchSpy).toHaveBeenCalledOnce();
+
+      staleResponse.resolve(createMockNexusPostsKeyStream(2, 1));
+      await staleLoad;
+      await vi.waitFor(() => expect(nexusFetchSpy).toHaveBeenCalledTimes(2));
+      await refresh;
+
+      expect((await PostStreamModel.findById(followStreamId))?.stream).toEqual(freshResponse.post_keys);
+      expect(
+        asOpaque<{ pendingStreamOperations: Map<PostStreamId, Promise<void>> }>(PostStreamApplication)
+          .pendingStreamOperations.size,
+      ).toBe(0);
+    });
+
+    it('continues a same-stream queue after a rejected operation', async () => {
+      const followStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      const failedResponse = createDeferred<NexusPostsKeyStream>();
+      const freshResponse = createMockNexusPostsKeyStream(1, 30);
+      const nexusFetchSpy = vi
+        .spyOn(NexusPostStreamService, 'fetch')
+        .mockReturnValueOnce(failedResponse.promise)
+        .mockResolvedValueOnce(freshResponse);
+
+      const failedLoad = PostStreamApplication.getOrFetchStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      await vi.waitFor(() => expect(nexusFetchSpy).toHaveBeenCalledOnce());
+
+      const refresh = PostStreamApplication.refreshStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      failedResponse.reject(new Error('page-fail'));
+
+      await expect(failedLoad).rejects.toThrow('page-fail');
+      await vi.waitFor(() => expect(nexusFetchSpy).toHaveBeenCalledTimes(2));
+      await expect(refresh).resolves.toEqual(expect.objectContaining({ nextPageIds: freshResponse.post_keys }));
+    });
+
+    it('allows unrelated streams to fetch concurrently', async () => {
+      const followingStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      const friendsStreamId = PostStreamTypes.TIMELINE_FRIENDS_ALL as PostStreamId;
+      const followingResponse = createDeferred<NexusPostsKeyStream>();
+      const friendsResponse = createDeferred<NexusPostsKeyStream>();
+      const nexusFetchSpy = vi
+        .spyOn(NexusPostStreamService, 'fetch')
+        .mockReturnValueOnce(followingResponse.promise)
+        .mockReturnValueOnce(friendsResponse.promise);
+
+      const followingLoad = PostStreamApplication.getOrFetchStreamSlice({
+        streamId: followingStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      const friendsLoad = PostStreamApplication.getOrFetchStreamSlice({
+        streamId: friendsStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+
+      await vi.waitFor(() => expect(nexusFetchSpy).toHaveBeenCalledTimes(2));
+      followingResponse.resolve(createMockNexusPostsKeyStream(1, 40));
+      friendsResponse.resolve(createMockNexusPostsKeyStream(1, 50));
+      await Promise.all([followingLoad, friendsLoad]);
+    });
+
+    it('allows polling queued after a refresh to create legitimate unread state', async () => {
+      const followStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      const refreshResponse = createDeferred<NexusPostsKeyStream>();
+      const pollResponse: NexusPostsKeyStream = {
+        post_keys: [`${DEFAULT_AUTHOR}:poll-post`],
+        last_post_score: BASE_TIMESTAMP + 100,
+      };
+      const nexusFetchSpy = vi
+        .spyOn(NexusPostStreamService, 'fetch')
+        .mockReturnValueOnce(refreshResponse.promise)
+        .mockResolvedValueOnce(pollResponse);
+
+      const refresh = PostStreamApplication.refreshStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      await vi.waitFor(() => expect(nexusFetchSpy).toHaveBeenCalledOnce());
+
+      const poll = PostStreamApplication.getOrFetchStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        streamHead: BASE_TIMESTAMP,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      await Promise.resolve();
+      expect(nexusFetchSpy).toHaveBeenCalledOnce();
+
+      refreshResponse.resolve(createMockNexusPostsKeyStream(1, 60));
+      await refresh;
+      await poll;
+
+      expect((await UnreadPostStreamModel.findById(followStreamId))?.stream).toEqual(pollResponse.post_keys);
+    });
+
+    it('refreshes Popularity from Nexus without creating a timestamp-keyed cache row', async () => {
+      const popularityStreamId = `${StreamSorting.ENGAGEMENT}:following:all` as PostStreamId;
+      const response = createMockNexusPostsKeyStream(2, 70);
+      const upsertSpy = vi.spyOn(LocalStreamPostsService, 'upsert');
+      const appendSpy = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk');
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(response);
+
+      const result = await PostStreamApplication.refreshStreamSlice({
+        streamId: popularityStreamId,
+        limit: 10,
+        viewerId: 'user-viewer' as Pubky,
+      });
+
+      expect(result.nextPageIds).toEqual(response.post_keys);
+      expect(await PostStreamModel.findById(popularityStreamId)).toBeNull();
+      expect(upsertSpy).not.toHaveBeenCalled();
+      expect(appendSpy).not.toHaveBeenCalled();
     });
 
     it('should paginate using cursor (post_id and timestamp)', async () => {
@@ -2230,13 +2407,10 @@ describe('PostStreamApplication', () => {
         .mockResolvedValueOnce(mutedPage)
         .mockResolvedValueOnce(visiblePage);
 
-      const result = await PostStreamApplication.getOrFetchStreamSlice({
+      const result = await PostStreamApplication.refreshStreamSlice({
         streamId,
         limit: 10,
-        streamHead: 0,
-        streamTail: BASE_TIMESTAMP,
         viewerId,
-        forceNetwork: true,
       });
 
       expect(nexusFetchSpy).toHaveBeenCalledTimes(2);

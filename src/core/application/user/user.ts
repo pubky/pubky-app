@@ -259,7 +259,6 @@ export class UserApplication {
     }
 
     let mutationResult: TUserApplicationFollowResult | undefined;
-    let mutationError: unknown;
 
     try {
       mutationResult =
@@ -269,22 +268,14 @@ export class UserApplication {
 
       await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
       return mutationResult;
-    } catch (error) {
-      mutationError = error;
-      throw error;
     } finally {
       try {
         await LocalFollowService.invalidateTimelineStreams({
           includeFriends: mutationResult?.friendshipChanged ?? true,
         });
-      } catch (cleanupError) {
-        if (mutationError !== undefined) {
-          Logger.warn('Failed to invalidate follow-dependent streams after follow mutation error', {
-            cleanupError,
-          });
-        } else {
-          throw cleanupError;
-        }
+      } catch {
+        // Cache invalidation is best effort. Database failures are logged by
+        // Err.database, and must not replace the follow mutation outcome.
       }
     }
   }

@@ -7,6 +7,11 @@ export const POST_STREAM_GRAMMAR_FIXTURES = [
     scope: 'follow_graph',
   },
   {
+    streamId: 'timeline:following:all:',
+    source: StreamSource.FOLLOWING,
+    scope: 'follow_graph',
+  },
+  {
     streamId: 'total_engagement:following:image:bitcoin',
     source: StreamSource.FOLLOWING,
     scope: 'follow_graph',
@@ -17,12 +22,22 @@ export const POST_STREAM_GRAMMAR_FIXTURES = [
     scope: 'friends',
   },
   {
+    streamId: 'timeline:friends:all:',
+    source: StreamSource.FRIENDS,
+    scope: 'friends',
+  },
+  {
     streamId: 'total_engagement:friends:collection',
     source: StreamSource.FRIENDS,
     scope: 'friends',
   },
   {
     streamId: 'timeline:wot:all',
+    source: StreamSource.WOT,
+    scope: 'follow_graph',
+  },
+  {
+    streamId: 'timeline:wot:all:',
     source: StreamSource.WOT,
     scope: 'follow_graph',
   },

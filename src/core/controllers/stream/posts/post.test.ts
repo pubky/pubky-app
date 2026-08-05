@@ -54,29 +54,44 @@ describe('StreamPostsController', () => {
       });
     });
 
-    it('passes forceNetwork through to the application initial-load path', async () => {
-      const getOrFetchStreamSliceSpy = vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+    it('refreshes from Nexus through the dedicated application path', async () => {
+      const refreshStreamSliceSpy = vi.spyOn(PostStreamApplication, 'refreshStreamSlice').mockResolvedValue({
         nextPageIds: [],
         cacheMissPostIds: [],
         nextCursor: undefined,
         reachedEnd: true,
       });
 
-      await StreamPostsController.getOrFetchStreamSlice({
+      await StreamPostsController.refreshStreamSlice({
         streamId,
-        streamTail: 0,
-        forceNetwork: true,
       });
 
-      expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+      expect(refreshStreamSliceSpy).toHaveBeenCalledWith({
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
-        streamHead: 0,
-        streamTail: 0,
-        lastPostId: undefined,
         viewerId,
-        forceNetwork: true,
+        order: undefined,
       });
+    });
+
+    it('hydrates and re-filters cache misses returned by refreshStreamSlice', async () => {
+      vi.spyOn(PostStreamApplication, 'refreshStreamSlice').mockResolvedValue({
+        nextPageIds: ['visible-post', 'filtered-post'],
+        cacheMissPostIds: ['filtered-post'],
+        nextCursor: 42,
+        reachedEnd: false,
+      });
+      const hydrateSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
+      const filterSpy = vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue(['visible-post']);
+
+      const result = await StreamPostsController.refreshStreamSlice({ streamId, limit: 2 });
+
+      expect(hydrateSpy).toHaveBeenCalledWith({ cacheMissPostIds: ['filtered-post'], viewerId });
+      expect(filterSpy).toHaveBeenCalledWith({
+        streamId,
+        postIds: ['visible-post', 'filtered-post'],
+      });
+      expect(result).toEqual({ nextPageIds: ['visible-post'], nextCursor: 42, reachedEnd: false });
     });
 
     it('should fetch missing posts and re-filter stream posts when cacheMissPostIds exist', async () => {

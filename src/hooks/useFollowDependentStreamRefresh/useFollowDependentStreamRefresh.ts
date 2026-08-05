@@ -18,14 +18,18 @@ export function useFollowDependentStreamRefresh({
   streamId,
   refreshFromNetwork,
 }: UseFollowDependentStreamRefreshParams): void {
-  const followGraphRevision = useStreamInvalidationStore((state) => state.followGraphRevision);
-  const friendsRevision = useStreamInvalidationStore((state) => state.friendsRevision);
   const scope = getFollowDependentStreamScope(streamId);
-  const revision = scope === 'follow_graph' ? followGraphRevision : scope === 'friends' ? friendsRevision : 0;
+  const revision = useStreamInvalidationStore((state) => {
+    if (scope === 'follow_graph') return state.followGraphRevision;
+    if (scope === 'friends') return state.friendsRevision;
+    return 0;
+  });
 
   const baselineRef = useRef({ streamId, revision });
-  const refreshInFlightRef = useRef(false);
+  const refreshRef = useRef(refreshFromNetwork);
+  const drainOwnerRef = useRef<{ streamId: PostStreamId; token: symbol } | null>(null);
   const refreshQueuedRef = useRef(false);
+  refreshRef.current = refreshFromNetwork;
 
   useEffect(() => {
     const baseline = baselineRef.current;
@@ -33,6 +37,7 @@ export function useFollowDependentStreamRefresh({
 
     if (baseline.streamId !== streamId) {
       refreshQueuedRef.current = false;
+      drainOwnerRef.current = null;
       return;
     }
 
@@ -41,26 +46,32 @@ export function useFollowDependentStreamRefresh({
     }
 
     refreshQueuedRef.current = true;
-    if (refreshInFlightRef.current) {
+    if (drainOwnerRef.current?.streamId === streamId) {
       return;
     }
 
+    const owner = { streamId, token: Symbol('follow-dependent-refresh') };
+    drainOwnerRef.current = owner;
+
     const drainRefreshQueue = async () => {
-      refreshInFlightRef.current = true;
       try {
-        while (refreshQueuedRef.current) {
+        while (refreshQueuedRef.current && drainOwnerRef.current === owner) {
           refreshQueuedRef.current = false;
-          await refreshFromNetwork();
+          await refreshRef.current();
         }
       } catch {
         // useStreamPagination owns reporting refresh failures. Stop this drain;
         // the next revision can start a fresh reconciliation attempt.
-        refreshQueuedRef.current = false;
+        if (drainOwnerRef.current === owner) {
+          refreshQueuedRef.current = false;
+        }
       } finally {
-        refreshInFlightRef.current = false;
+        if (drainOwnerRef.current === owner) {
+          drainOwnerRef.current = null;
+        }
       }
     };
 
     void drainRefreshQueue();
-  }, [refreshFromNetwork, revision, scope, streamId]);
+  }, [revision, scope, streamId]);
 }

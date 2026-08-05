@@ -8,6 +8,7 @@ import type {
   TPartialCacheHitParams,
   TPersistUnreadNewStreamChunkParams,
   TPostStreamChunkResponse,
+  TRefreshStreamParams,
 } from '@/application/stream/posts/post.types';
 import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
@@ -47,7 +48,14 @@ import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream
 import { MuteFilter } from './muting/mute-filter';
 import { postStreamQueue } from './muting/post-stream-queue';
 
+type TCollectStreamSliceParams = TFetchStreamParams & {
+  readFromCache: boolean;
+  replaceFirstPage: boolean;
+};
+
 export class PostStreamApplication {
+  private static pendingStreamOperations = new Map<PostStreamId, Promise<void>>();
+
   private constructor() {}
 
   // ============================================================================
@@ -291,7 +299,84 @@ export class PostStreamApplication {
    * Fetches a page of posts for a stream.
    * Filters out muted authors for most streams; skips filtering for author timelines and bookmarks.
    */
-  static async getOrFetchStreamSlice({
+  static async getOrFetchStreamSlice(params: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
+    return await this.withSerializedStreamOperation(params.streamId, async () => {
+      // Ascending streams bypass the descending cache and retain their existing
+      // direct-Nexus behavior, including its pre-existing filtering semantics.
+      if (params.order === StreamOrder.ASCENDING) {
+        return await this.fetchStreamFromNexus(params);
+      }
+
+      return await this.collectStreamSlice({
+        ...params,
+        readFromCache: true,
+        replaceFirstPage: false,
+      });
+    });
+  }
+
+  /**
+   * Refreshes a post stream from Nexus while rebuilding cacheable membership.
+   * The shared collector still applies normal stream filtering and pagination.
+   */
+  static async refreshStreamSlice(params: TRefreshStreamParams): Promise<TPostStreamChunkResponse> {
+    return await this.withSerializedStreamOperation(params.streamId, async () => {
+      postStreamQueue.remove(params.streamId);
+      try {
+        await LocalStreamPostsService.clearUnreadStream({ streamId: params.streamId });
+      } catch {
+        // Best effort: model-layer database errors are already logged, and the
+        // server-authoritative refresh can still replace the mounted stream.
+      }
+
+      return await this.collectStreamSlice({
+        ...params,
+        streamHead: SKIP_FETCH_NEW_POSTS,
+        streamTail: NOT_FOUND_CACHED_STREAM,
+        lastPostId: undefined,
+        readFromCache: false,
+        replaceFirstPage: true,
+      });
+    });
+  }
+
+  static async fetchStreamSlice(params: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
+    return await this.fetchStreamFromNexus(params);
+  }
+
+  // ============================================================================
+  // Internal Helpers
+  // ============================================================================
+
+  /**
+   * Serializes cache and queue mutations for one stream while allowing unrelated
+   * streams to progress concurrently. Callers are public boundaries only: code
+   * running inside `operation` must never call a locked public method, or it will
+   * wait on itself indefinitely.
+   */
+  private static async withSerializedStreamOperation<T>(streamId: PostStreamId, operation: () => Promise<T>) {
+    const previous = this.pendingStreamOperations.get(streamId) ?? Promise.resolve();
+    const current = previous.catch(() => undefined).then(operation);
+    const tail = current.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.pendingStreamOperations.set(streamId, tail);
+
+    try {
+      return await current;
+    } finally {
+      if (this.pendingStreamOperations.get(streamId) === tail) {
+        this.pendingStreamOperations.delete(streamId);
+      }
+    }
+  }
+
+  /**
+   * Shared unlocked collector for cache-first pagination and Nexus refreshes.
+   * Lock ownership belongs exclusively to the public methods above.
+   */
+  private static async collectStreamSlice({
     streamId,
     streamHead,
     streamTail,
@@ -299,25 +384,9 @@ export class PostStreamApplication {
     limit,
     viewerId,
     order,
-    forceNetwork = false,
-  }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
-    // Skip cache for ascending order (chronological) - always fetch from Nexus
-    // This is because cache is stored in descending order
-    // TODO: Might be a better way to handle this.
-    if (order === StreamOrder.ASCENDING && !forceNetwork) {
-      return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
-    }
-
-    if (forceNetwork) {
-      postStreamQueue.remove(streamId);
-      try {
-        await LocalStreamPostsService.clearUnreadStream({ streamId });
-      } catch (error) {
-        // A failed cache cleanup must not block the server-authoritative rebuild.
-        Logger.warn('Failed to clear unread stream before forced refresh', { streamId, error });
-      }
-    }
-
+    readFromCache,
+    replaceFirstPage,
+  }: TCollectStreamSliceParams): Promise<TPostStreamChunkResponse> {
     // Author streams and bookmarks intentionally include posts from muted users:
     // bookmarks are explicit saves (#1804); profile is someone's full timeline.
     const shouldFilterMuted = !isAuthorStreamSkippingMuteFilter(streamId) && !isBookmarkStream(streamId);
@@ -331,62 +400,54 @@ export class PostStreamApplication {
     const bookmarkedIds = isDiscover ? new Set(await BookmarkModel.findAll()) : new Set<string>();
 
     let isFirstFetch = true;
-    let lastReturnedPostId: string | undefined = forceNetwork ? undefined : lastPostId;
+    let lastReturnedPostId = lastPostId;
 
-    let collected: Awaited<ReturnType<typeof postStreamQueue.collect>>;
-    try {
-      collected = await postStreamQueue.collect(streamId, {
-        limit,
-        cursor: forceNetwork ? NOT_FOUND_CACHED_STREAM : streamTail,
-        // Discover bounds its per-load scan tighter than the shared default: it is a
-        // secondary surface, so we cap the data/latency cost of digging through a
-        // heavily-filtered region and let the no-new-results toast + cursor advance
-        // handle the give-up case instead.
-        maxIterations: isDiscover ? COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD : undefined,
-        filter: async (posts) => {
-          // Muted users (sync), then deleted/kind/empty (async), then Discover's own/bookmarked.
-          const afterMuteFilter = MuteFilter.filterPosts(posts, mutedUserIds);
-          const standard = await PostStreamApplication.filterStreamPosts({ streamId, postIds: afterMuteFilter });
-          return isDiscover
-            ? PostStreamApplication.filterDiscoverOwnAndBookmarked(standard, viewerId, bookmarkedIds)
-            : standard;
-        },
-        // Overflow-buffer early returns resolve score cursors stream-aware: bookmark
-        // streams resume by bookmark time, everything else by the post's `indexed_at`.
-        // Without this, the buffered path re-introduces the #2100 pagination seam.
-        cursorForPost: (postId) => PostStreamApplication.getStreamCursorTimestamp(streamId, postId),
-        fetch: async (cursor) => {
-          const fetchParams = {
-            streamId,
-            streamHead: forceNetwork ? SKIP_FETCH_NEW_POSTS : isFirstFetch ? streamHead : SKIP_FETCH_NEW_POSTS,
-            streamTail: cursor,
-            lastPostId: lastReturnedPostId,
-            limit,
-            viewerId,
-            order,
-          };
-          const result = forceNetwork
-            ? await this.fetchStreamSlice({ ...fetchParams, replaceCache: isFirstFetch })
-            : await this.fetchStreamSliceInternal(fetchParams);
-          isFirstFetch = false;
+    const collected = await postStreamQueue.collect(streamId, {
+      limit,
+      cursor: streamTail,
+      // Discover bounds its per-load scan tighter than the shared default: it is a
+      // secondary surface, so we cap the data/latency cost of digging through a
+      // heavily-filtered region and let the no-new-results toast + cursor advance
+      // handle the give-up case instead.
+      maxIterations: isDiscover ? COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD : undefined,
+      filter: async (posts) => {
+        // Muted users (sync), then deleted/kind/empty (async), then Discover's own/bookmarked.
+        const afterMuteFilter = MuteFilter.filterPosts(posts, mutedUserIds);
+        const standard = await PostStreamApplication.filterStreamPosts({ streamId, postIds: afterMuteFilter });
+        return isDiscover
+          ? PostStreamApplication.filterDiscoverOwnAndBookmarked(standard, viewerId, bookmarkedIds)
+          : standard;
+      },
+      // Overflow-buffer early returns resolve score cursors stream-aware: bookmark
+      // streams resume by bookmark time, everything else by the post's `indexed_at`.
+      // Without this, the buffered path re-introduces the #2100 pagination seam.
+      cursorForPost: (postId) => PostStreamApplication.getStreamCursorTimestamp(streamId, postId),
+      fetch: async (cursor) => {
+        const fetchParams: TFetchStreamParams = {
+          streamId,
+          streamHead: isFirstFetch ? streamHead : SKIP_FETCH_NEW_POSTS,
+          streamTail: cursor,
+          lastPostId: lastReturnedPostId,
+          limit,
+          viewerId,
+          order,
+        };
+        const result = readFromCache
+          ? await this.fetchStreamSliceInternal(fetchParams)
+          : await this.fetchStreamFromNexus({
+              ...fetchParams,
+              replaceCache: replaceFirstPage && isFirstFetch,
+            });
+        isFirstFetch = false;
 
-          // Track last returned post for cache continuation
-          if (result.nextPageIds.length > 0) {
-            lastReturnedPostId = result.nextPageIds[result.nextPageIds.length - 1];
-          }
-
-          return result;
-        },
-      });
-    } finally {
-      if (forceNetwork) {
-        try {
-          await LocalStreamPostsService.clearUnreadStream({ streamId });
-        } catch (error) {
-          Logger.warn('Failed to clear unread stream after forced refresh', { streamId, error });
+        // Track last returned post for cache continuation
+        if (result.nextPageIds.length > 0) {
+          lastReturnedPostId = result.nextPageIds[result.nextPageIds.length - 1];
         }
-      }
-    }
+
+        return result;
+      },
+    });
 
     const { posts, cacheMissIds, nextCursor, reachedEnd } = collected;
 
@@ -409,14 +470,6 @@ export class PostStreamApplication {
       reachedEnd,
     };
   }
-
-  static async fetchStreamSlice(params: TFetchStreamFromNexusParams): Promise<TPostStreamChunkResponse> {
-    return await this.fetchStreamFromNexus(params);
-  }
-
-  // ============================================================================
-  // Internal Helpers
-  // ============================================================================
 
   /**
    * Gets the indexed_at timestamp from a post for pagination cursor advancement.

@@ -133,7 +133,7 @@ describe('UserApplication.commitFollow', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ includeFriends: false });
   });
 
-  it('propagates cleanup failure when the mutation otherwise succeeds', async () => {
+  it('preserves a successful mutation result when cache cleanup fails', async () => {
     vi.spyOn(LocalFollowService, 'create').mockResolvedValue({ friendshipChanged: false });
     vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
     vi.spyOn(LocalFollowService, 'invalidateTimelineStreams').mockRejectedValue(new Error('cleanup-fail'));
@@ -146,7 +146,7 @@ describe('UserApplication.commitFollow', () => {
         follower,
         followee,
       }),
-    ).rejects.toThrow('cleanup-fail');
+    ).resolves.toEqual({ friendshipChanged: false });
   });
 
   it('does not replace the mutation error when cleanup also fails', async () => {

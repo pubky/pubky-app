@@ -122,4 +122,62 @@ describe('useFollowDependentStreamRefresh', () => {
     resolveFirstRefresh?.();
     await waitFor(() => expect(refreshFromNetwork).toHaveBeenCalledTimes(2));
   });
+
+  it('starts a new stream drain without letting the previous drain re-enter', async () => {
+    let resolveFollowingRefresh: (() => void) | undefined;
+    const followingRefreshPromise = new Promise<void>((resolve) => {
+      resolveFollowingRefresh = resolve;
+    });
+    const refreshFollowing = vi.fn().mockReturnValue(followingRefreshPromise);
+    const refreshFriends = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = renderHook(
+      ({ streamId, refreshFromNetwork }) => useFollowDependentStreamRefresh({ streamId, refreshFromNetwork }),
+      {
+        initialProps: {
+          streamId: asStreamId('timeline:following:all'),
+          refreshFromNetwork: refreshFollowing,
+        },
+      },
+    );
+
+    act(() => {
+      useStreamInvalidationStore.getState().invalidateFollowDependentStreams({ includeFriends: false });
+    });
+    await waitFor(() => expect(refreshFollowing).toHaveBeenCalledOnce());
+
+    rerender({
+      streamId: asStreamId('timeline:friends:all'),
+      refreshFromNetwork: refreshFriends,
+    });
+    act(() => {
+      useStreamInvalidationStore.getState().invalidateFollowDependentStreams({ includeFriends: true });
+    });
+    await waitFor(() => expect(refreshFriends).toHaveBeenCalledOnce());
+
+    resolveFollowingRefresh?.();
+    await Promise.resolve();
+    expect(refreshFollowing).toHaveBeenCalledOnce();
+    expect(refreshFriends).toHaveBeenCalledOnce();
+  });
+
+  it('does not rerender an unrelated stream when revisions advance', async () => {
+    const refreshFromNetwork = vi.fn().mockResolvedValue(undefined);
+    let renderCount = 0;
+    renderHook(() => {
+      renderCount += 1;
+      useFollowDependentStreamRefresh({
+        streamId: asStreamId('timeline:all:all'),
+        refreshFromNetwork,
+      });
+    });
+    const initialRenderCount = renderCount;
+
+    act(() => {
+      useStreamInvalidationStore.getState().invalidateFollowDependentStreams({ includeFriends: true });
+    });
+    await Promise.resolve();
+
+    expect(renderCount).toBe(initialRenderCount);
+    expect(refreshFromNetwork).not.toHaveBeenCalled();
+  });
 });

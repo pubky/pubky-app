@@ -272,7 +272,9 @@ export function getFollowDependentStreamScope(streamId: string): FollowDependent
     return thirdSegment === '1' || thirdSegment === '2' ? 'follow_graph' : undefined;
   }
 
-  if (parts.length < 3 || parts.length > 4 || (parts.length === 4 && !parts[3])) {
+  // The existing custom-feed builder emits a trailing colon for an empty post-tag
+  // list. The request parser treats that segment as absent, so classification does too.
+  if (parts.length > 4) {
     return undefined;
   }
 
