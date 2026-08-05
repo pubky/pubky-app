@@ -622,6 +622,61 @@ describe('PostStreamApplication', () => {
       ).toBe(0);
     });
 
+    it('keeps a newer queued lock owner registered when the prior operation completes', async () => {
+      const followStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+      const firstResponse = createDeferred<NexusPostsKeyStream>();
+      const secondResponse = createDeferred<NexusPostsKeyStream>();
+      const thirdResponse = createDeferred<NexusPostsKeyStream>();
+      const nexusFetchSpy = vi
+        .spyOn(NexusPostStreamService, 'fetch')
+        .mockReturnValueOnce(firstResponse.promise)
+        .mockReturnValueOnce(secondResponse.promise)
+        .mockReturnValueOnce(thirdResponse.promise);
+
+      const firstRefresh = PostStreamApplication.refreshStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      await vi.waitFor(() => expect(nexusFetchSpy).toHaveBeenCalledOnce());
+
+      const secondRefresh = PostStreamApplication.refreshStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      await Promise.resolve();
+      expect(nexusFetchSpy).toHaveBeenCalledOnce();
+
+      firstResponse.resolve(createMockNexusPostsKeyStream(1, 1));
+      await firstRefresh;
+      await vi.waitFor(() => expect(nexusFetchSpy).toHaveBeenCalledTimes(2));
+      expect(
+        asOpaque<{ pendingStreamOperations: Map<PostStreamId, Promise<void>> }>(
+          PostStreamApplication,
+        ).pendingStreamOperations.get(followStreamId),
+      ).toBeDefined();
+
+      const thirdRefresh = PostStreamApplication.refreshStreamSlice({
+        streamId: followStreamId,
+        limit: 10,
+        viewerId: 'user-viewer' as Pubky,
+      });
+      await Promise.resolve();
+      expect(nexusFetchSpy).toHaveBeenCalledTimes(2);
+
+      secondResponse.resolve(createMockNexusPostsKeyStream(1, 2));
+      await secondRefresh;
+      await vi.waitFor(() => expect(nexusFetchSpy).toHaveBeenCalledTimes(3));
+      thirdResponse.resolve(createMockNexusPostsKeyStream(1, 3));
+      await thirdRefresh;
+
+      expect(
+        asOpaque<{ pendingStreamOperations: Map<PostStreamId, Promise<void>> }>(PostStreamApplication)
+          .pendingStreamOperations.size,
+      ).toBe(0);
+    });
+
     it('continues a same-stream queue after a rejected operation', async () => {
       const followStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
       const failedResponse = createDeferred<NexusPostsKeyStream>();
@@ -2963,27 +3018,31 @@ describe('PostStreamApplication', () => {
       expect(queueAfter).toBeUndefined();
     });
 
-    it('should handle concurrent calls to the same stream', async () => {
-      // This test documents the current behavior - concurrent calls may cause duplicate fetches
-      // but should not corrupt data or throw errors
-
-      const mockBatch: NexusPostsKeyStream = {
+    it('serializes concurrent calls to the same stream and consumes overflow in order', async () => {
+      const serializedStreamId = `${StreamSorting.ENGAGEMENT}:all:all` as PostStreamId;
+      const firstBatch: NexusPostsKeyStream = {
         post_keys: Array.from({ length: 15 }, (_, i) => `author-1:post-${i + 1}`),
         last_post_score: BASE_TIMESTAMP + 14,
       };
-      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockBatch);
+      const secondBatch: NexusPostsKeyStream = {
+        post_keys: Array.from({ length: 5 }, (_, i) => `author-1:post-${i + 16}`),
+        last_post_score: BASE_TIMESTAMP + 19,
+      };
+      const nexusFetchSpy = vi
+        .spyOn(NexusPostStreamService, 'fetch')
+        .mockResolvedValueOnce(firstBatch)
+        .mockResolvedValueOnce(secondBatch);
 
-      // Fire two concurrent requests
       const [result1, result2] = await Promise.all([
         PostStreamApplication.getOrFetchStreamSlice({
-          streamId,
+          streamId: serializedStreamId,
           limit: 10,
           streamHead: 0,
           streamTail: 0,
           viewerId,
         }),
         PostStreamApplication.getOrFetchStreamSlice({
-          streamId,
+          streamId: serializedStreamId,
           limit: 10,
           streamHead: 0,
           streamTail: 0,
@@ -2991,15 +3050,10 @@ describe('PostStreamApplication', () => {
         }),
       ]);
 
-      // Both should succeed (no errors)
-      expect(result1.nextPageIds).toHaveLength(10);
-      expect(result2.nextPageIds).toHaveLength(10);
-
-      // Queue state should be consistent (one of the calls will have won the race)
-      const queue = postStreamQueue.get(streamId);
-      expect(queue).not.toBeUndefined();
-      // Queue should have overflow posts from at least one call
-      expect(queue?.posts.length).toBeGreaterThanOrEqual(0);
+      expect(result1.nextPageIds).toEqual(firstBatch.post_keys.slice(0, 10));
+      expect(result2.nextPageIds).toEqual([...firstBatch.post_keys.slice(10), ...secondBatch.post_keys]);
+      expect(nexusFetchSpy).toHaveBeenCalledTimes(2);
+      expect(postStreamQueue.get(serializedStreamId)).toBeUndefined();
     });
 
     it('should update queue streamTail when fetching more posts', async () => {

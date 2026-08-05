@@ -366,6 +366,33 @@ describe('useStreamPagination', () => {
       expect(result.current.error).toBeNull();
     });
 
+    it('keeps existing posts visible while a network refresh is pending', async () => {
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['existing-post'],
+        nextCursor: 10,
+        reachedEnd: false,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const refreshPage = createDeferred<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.refreshStreamSlice).mockReturnValueOnce(refreshPage.promise);
+      let refreshPromise!: Promise<void>;
+      act(() => {
+        refreshPromise = result.current.refreshFromNetwork();
+      });
+      await waitFor(() => expect(StreamPostsController.refreshStreamSlice).toHaveBeenCalledOnce());
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.postIds).toEqual(['existing-post']);
+
+      refreshPage.resolve({ nextPageIds: ['fresh-post'], nextCursor: 20, reachedEnd: true });
+      await act(async () => {
+        await refreshPromise;
+      });
+      expect(result.current.postIds).toEqual(['fresh-post']);
+    });
+
     it('removes an optimistic id only after Nexus returns it', async () => {
       const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -643,6 +670,37 @@ describe('useStreamPagination', () => {
         await firstPage.promise;
       });
       expect(result.current.postIds).toEqual(['second-post']);
+    });
+
+    it('ignores a late network refresh after the rendered stream changes', async () => {
+      const firstStreamId = 'timeline:following:all' as PostStreamId;
+      const secondStreamId = 'timeline:friends:all' as PostStreamId;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce({ nextPageIds: ['initial-x'], nextCursor: 10, reachedEnd: false })
+        .mockResolvedValueOnce({ nextPageIds: ['current-y'], nextCursor: 20, reachedEnd: true });
+      const { result, rerender } = renderHook(({ streamId }) => useStreamPagination({ streamId }), {
+        initialProps: { streamId: firstStreamId },
+      });
+      await waitFor(() => expect(result.current.postIds).toEqual(['initial-x']));
+
+      const oldRefresh = createDeferred<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.refreshStreamSlice).mockReturnValueOnce(oldRefresh.promise);
+      let oldRefreshPromise!: Promise<void>;
+      act(() => {
+        oldRefreshPromise = result.current.refreshFromNetwork();
+      });
+      await waitFor(() => expect(StreamPostsController.refreshStreamSlice).toHaveBeenCalledOnce());
+
+      rerender({ streamId: secondStreamId });
+      await waitFor(() => expect(result.current.postIds).toEqual(['current-y']));
+
+      oldRefresh.resolve({ nextPageIds: ['obsolete-x'], nextCursor: 30, reachedEnd: true });
+      await act(async () => {
+        await oldRefreshPromise;
+      });
+
+      expect(result.current.postIds).toEqual(['current-y']);
+      expect(result.current.loading).toBe(false);
     });
 
     it('keeps the newest replacement barrier owned across an X to Y to X transition', async () => {

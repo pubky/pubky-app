@@ -80,7 +80,8 @@ export class StreamPostsController {
 
   /**
    * Refreshes a post stream from Nexus and rebuilds its cacheable membership.
-   * Named `refresh*` because this network-driven path also updates local cache.
+   * Named `refresh*` rather than `fetch*` because this network-driven path may
+   * rebuild local cache; `fetch*` is reserved for network-only operations.
    */
   static async refreshStreamSlice({
     streamId,

@@ -246,7 +246,12 @@ export function useStreamPagination({
 
       const generation = ++requestGenerationRef.current;
       const committedRemovalsAtRequest = committedRemovalsRef.current;
-      setLoadingState(true, true);
+      // Follow-driven replacements retain the current feed while Nexus responds.
+      // The finally block still clears loading if this request superseded an
+      // initial local-first load that already raised the blocking state.
+      if (mode === 'local_first') {
+        setLoadingState(true, true);
+      }
       setError(null);
 
       try {
