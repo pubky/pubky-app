@@ -12,7 +12,9 @@ import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { toast } from '@/molecules/Toaster/use-toast';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
@@ -42,6 +44,7 @@ interface RouteGuardProviderProps {
  */
 export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const t = useTranslations('common');
+  const tSignIn = useTranslations('onboarding.signIn');
   const router = useRouter();
   const pathname = usePathname();
   const { status, isLoading } = useAuthStatus();
@@ -63,9 +66,16 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (session) return;
     if (!sessionExport) return;
     AuthController.restorePersistedSession().catch((error) => {
+      if (isWrongEnvironmentHomeserverError(error)) {
+        toast({
+          variant: 'error',
+          description: tSignIn('wrongEnvironmentHomeserverDescription'),
+        });
+        return;
+      }
       Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
     });
-  }, [hasHydrated, session, sessionExport]);
+  }, [hasHydrated, session, sessionExport, tSignIn]);
 
   // Post-migration re-sync: fetch critical homeserver data after DB recreation
   // TODO: Consider using BroadcastChannel to notify other browser tabs when DB was recreated / resync completed

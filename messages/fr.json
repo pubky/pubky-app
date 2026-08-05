@@ -371,6 +371,7 @@
       "tryAgain": "Veuillez réessayer.",
       "authInitFailedTitle": "Échec de la connexion. Réessayez.",
       "authInitFailedDescription": "Échec de la connexion. Réessayez.",
+      "wrongEnvironmentHomeserverDescription": "This key is linked to a different homeserver. Use a staging account on this site.",
       "authNotCompletedTitle": "L'autorisation n'a pas été terminée",
       "authNotCompletedDescription": "Autorisation échouée. Réessayez.",
       "qrGenerationFailedTitle": "Échec de la génération du code QR",

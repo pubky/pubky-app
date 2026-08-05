@@ -371,6 +371,7 @@
       "tryAgain": "请重试。",
       "authInitFailedTitle": "登录失败，请重试。",
       "authInitFailedDescription": "登录失败。请重试。",
+      "wrongEnvironmentHomeserverDescription": "This key is linked to a different homeserver. Use a staging account on this site.",
       "authNotCompletedTitle": "授权未完成",
       "authNotCompletedDescription": "授权失败。请重试。",
       "qrGenerationFailedTitle": "二维码生成失败",

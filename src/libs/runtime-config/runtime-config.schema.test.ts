@@ -17,6 +17,7 @@ const VALID_ENV_INPUT = {
   defaultHttpRelay: 'https://relay.example.com/inbox',
   pkarrRelays: '["https://pkarr.example.com"]',
   testnet: 'true',
+  deployEnv: 'production',
 };
 
 const SENTRY_ENV_INPUT = {
@@ -56,6 +57,20 @@ describe('runtimeEnvInputSchema', () => {
   it('throws on partial config (missing a required value)', () => {
     const { testnet: _testnet, ...partial } = VALID_ENV_INPUT;
     expect(() => runtimeEnvInputSchema.parse(partial)).toThrow();
+  });
+
+  it('throws when PUBKY_RUNTIME_ENV is missing (deploy identity is required)', () => {
+    const { deployEnv: _deployEnv, ...partial } = VALID_ENV_INPUT;
+    expect(() => runtimeEnvInputSchema.parse(partial)).toThrow();
+  });
+
+  it('throws on an invalid PUBKY_RUNTIME_ENV value', () => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, deployEnv: 'prod' })).toThrow();
+  });
+
+  it('parses both deploy identities', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).deployEnv).toBe('production');
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, deployEnv: 'staging' }).deployEnv).toBe('staging');
   });
 
   it('throws on malformed PKARR_RELAYS JSON', () => {
@@ -214,5 +229,10 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     expect(parsed.testnet).toBe(true);
     // Unset fields fall back to defaults.
     expect(parsed.cdnUrl).toBe(NETWORK_RUNTIME_DEFAULTS.cdnUrl);
+  });
+
+  it('defaults the deploy identity to staging and honors an explicit production override', () => {
+    expect(runtimeEnvInputSchemaWithDefaults.parse({}).deployEnv).toBe('staging');
+    expect(runtimeEnvInputSchemaWithDefaults.parse({ deployEnv: 'production' }).deployEnv).toBe('production');
   });
 });

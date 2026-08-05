@@ -58,6 +58,8 @@ export enum AuthErrorCode {
   FORBIDDEN = 'FORBIDDEN',
   SESSION_EXPIRED = 'SESSION_EXPIRED',
   INVALID_TOKEN = 'INVALID_TOKEN',
+  /** User's PKARR homeserver does not match this staging deploy's configured homeserver */
+  WRONG_ENVIRONMENT_HOMESERVER = 'WRONG_ENVIRONMENT_HOMESERVER',
 }
 
 /**

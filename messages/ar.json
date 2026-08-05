@@ -373,6 +373,7 @@
       "tryAgain": "يرجى المحاولة مرة اخرى.",
       "authInitFailedTitle": "فشل تسجيل الدخول. حاول مرة أخرى.",
       "authInitFailedDescription": "فشل تسجيل الدخول. حاول مرة أخرى.",
+      "wrongEnvironmentHomeserverDescription": "This key is linked to a different homeserver. Use a staging account on this site.",
       "authNotCompletedTitle": "لم يكتمل التفويض",
       "authNotCompletedDescription": "فشل التفويض. حاول مرة أخرى.",
       "qrGenerationFailedTitle": "فشل انشاء رمز QR",

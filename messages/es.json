@@ -372,6 +372,7 @@
       "tryAgain": "Por favor intenta de nuevo.",
       "authInitFailedTitle": "Error al iniciar sesión. Inténtalo de nuevo.",
       "authInitFailedDescription": "Error al iniciar sesión. Inténtalo de nuevo.",
+      "wrongEnvironmentHomeserverDescription": "This key is linked to a different homeserver. Use a staging account on this site.",
       "authNotCompletedTitle": "La autorización no se completó",
       "authNotCompletedDescription": "La autorización falló. Inténtalo de nuevo.",
       "qrGenerationFailedTitle": "Error al generar el código QR",

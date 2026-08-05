@@ -371,6 +371,7 @@
       "tryAgain": "Riprova.",
       "authInitFailedTitle": "Accesso non riuscito. Riprova.",
       "authInitFailedDescription": "Accesso fallito. Riprova.",
+      "wrongEnvironmentHomeserverDescription": "This key is linked to a different homeserver. Use a staging account on this site.",
       "authNotCompletedTitle": "L'autorizzazione non è stata completata",
       "authNotCompletedDescription": "Autorizzazione fallita. Riprova.",
       "qrGenerationFailedTitle": "Generazione del codice QR non riuscita",

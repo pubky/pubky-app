@@ -5,7 +5,7 @@ import type { Session } from '@synonymdev/pubky';
 import { useTranslations } from 'next-intl';
 import { AuthController } from '@/controllers/auth/auth';
 import { AuthErrorCode } from '@/libs/error/error.codes';
-import { isAppError, isAuthError, isTimeoutError } from '@/libs/error/error.utils';
+import { isAppError, isAuthError, isTimeoutError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/use-toast';
@@ -53,12 +53,29 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           try {
             await AuthController.initializeAuthenticatedSession({ session });
           } catch (error) {
-            Logger.error('Failed to persist session and check profile:', error);
-            if (!isMountedRef.current) return;
+            if (isWrongEnvironmentHomeserverError(error)) {
+              toast({
+                variant: 'error',
+                description: t('wrongEnvironmentHomeserverDescription'),
+              });
+              if (isMountedRef.current) {
+                setUrl('');
+                setIsExpired(true);
+              }
+              return;
+            }
+
+            if (!isAppError(error)) {
+              Logger.error('Failed to persist session and check profile:', error);
+            }
             toast({
               variant: 'error',
               description: t('authInitFailedDescription'),
             });
+            if (isMountedRef.current) {
+              setUrl('');
+              setIsExpired(true);
+            }
           }
         })
         .catch((error: unknown) => {

@@ -373,6 +373,7 @@
       "tryAgain": "Bitte versuchen Sie es erneut.",
       "authInitFailedTitle": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
       "authInitFailedDescription": "Anmeldung fehlgeschlagen. Versuchen Sie es erneut.",
+      "wrongEnvironmentHomeserverDescription": "This key is linked to a different homeserver. Use a staging account on this site.",
       "authNotCompletedTitle": "Autorisierung wurde nicht abgeschlossen",
       "authNotCompletedDescription": "Autorisierung fehlgeschlagen. Versuchen Sie es erneut.",
       "qrGenerationFailedTitle": "QR-Code-Generierung fehlgeschlagen",

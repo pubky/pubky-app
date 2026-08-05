@@ -46,7 +46,7 @@ export default defineConfig({
           setupFiles: ['./src/config/test.ts'],
           globals: true,
           include: ['**/*.test.{ts,tsx}'],
-          exclude: ['**/node_modules/**', '**/*.vrt.test.{ts,tsx}'],
+          exclude: ['**/node_modules/**', '**/.claude/**', '**/*.vrt.test.{ts,tsx}'],
           server: { deps: { inline: ['react-tweet'] } },
         },
       },

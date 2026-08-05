@@ -371,6 +371,7 @@
       "tryAgain": "Por favor, tente novamente.",
       "authInitFailedTitle": "Falha ao entrar. Tente novamente.",
       "authInitFailedDescription": "Falha ao entrar. Tente novamente.",
+      "wrongEnvironmentHomeserverDescription": "This key is linked to a different homeserver. Use a staging account on this site.",
       "authNotCompletedTitle": "A autorização não foi concluída",
       "authNotCompletedDescription": "Autorização falhou. Tente novamente.",
       "qrGenerationFailedTitle": "Falha ao gerar o código QR",

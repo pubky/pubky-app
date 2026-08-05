@@ -371,6 +371,7 @@
       "tryAgain": "Please try again.",
       "authInitFailedTitle": "Sign in failed. Try again.",
       "authInitFailedDescription": "Sign in failed. Try again.",
+      "wrongEnvironmentHomeserverDescription": "This key is linked to a different homeserver. Use a staging account on this site.",
       "authNotCompletedTitle": "Authorization was not completed",
       "authNotCompletedDescription": "Authorization failed. Try again.",
       "qrGenerationFailedTitle": "QR code generation failed",

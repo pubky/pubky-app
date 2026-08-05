@@ -7,7 +7,6 @@ import { TagApplication } from '@/application/tag/tag';
 import type {
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
-  TPubkyParams,
   TSignUpParams,
 } from '@/controllers/auth/auth.types';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
@@ -15,7 +14,8 @@ import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { setLocaleCookie } from '@/i18n/utils';
-import type { AppError } from '@/libs/error/error';
+import { ErrorService } from '@/libs/error/error.types';
+import { isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
@@ -51,23 +51,33 @@ export class AuthController {
 
   /**
    * Restores a persisted session from the auth store.
-   * @returns Promise resolving to true if the session was restored successfully, false otherwise
+   * @returns true on success, false on failure
+   * @throws Wrong-environment homeserver errors after local cleanup so UI can show feedback
    */
   static async restorePersistedSession(): Promise<boolean> {
     const authStore = useAuthStore.getState();
-    const result = await AuthApplication.restorePersistedSession({ authStore });
-    if (!result) {
+    try {
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+      if (!result) {
+        await this.cleanupLocalState();
+        return false;
+      }
+      const { session } = result;
+      const initialState = {
+        session,
+        currentUserPubky: Identity.z32FromSession({ session }),
+        hasProfile: authStore.hasProfile,
+      };
+      authStore.init(initialState);
+      return true;
+    } catch (error) {
+      const appError = toAppError(error, ErrorService.Local, 'restorePersistedSession');
       await this.cleanupLocalState();
+      if (isWrongEnvironmentHomeserverError(appError)) {
+        throw appError;
+      }
       return false;
     }
-    const { session } = result;
-    const initialState = {
-      session,
-      currentUserPubky: Identity.z32FromSession({ session }),
-      hasProfile: authStore.hasProfile,
-    };
-    authStore.init(initialState);
-    return true;
   }
 
   /**
@@ -98,7 +108,7 @@ export class AuthController {
    * @param params.session - The user session data
    * @param params.pubky - The user's public key identifier
    */
-  private static async hydrateMeImAlive({ pubky }: TPubkyParams) {
+  private static async hydrateMeImAlive({ pubky }: { pubky: Pubky }) {
     const signInStore = useSignInStore.getState();
     const {
       meta: { url },
@@ -155,6 +165,8 @@ export class AuthController {
       this.cancelActiveAuthFlow();
       const pubky = Identity.z32FromSession({ session });
 
+      await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
+
       authStore.init({ session, currentUserPubky: pubky, hasProfile: null });
 
       const isSignedUp = await AuthApplication.userIsSignedUp({ pubky });
@@ -167,9 +179,16 @@ export class AuthController {
       // Update hasProfile after bootstrap completes - triggers redirect via useAuthStatus
       authStore.setHasProfile(isSignedUp);
     } catch (error) {
-      // Clean up early-stored session to prevent dangling state
+      if (isWrongEnvironmentHomeserverError(error)) {
+        // The just-approved session lives on the user's actual homeserver —
+        // sign it out instead of leaving it dangling after the rejection.
+        // Best-effort: the rejection must surface regardless.
+        await AuthApplication.logout({ session }).catch((logoutError) => {
+          Logger.warn('Failed to sign out wrong-environment session', { logoutError });
+        });
+      }
       authStore.reset();
-      signInStore.setError(error as AppError);
+      signInStore.reset();
       throw error;
     }
   }
@@ -335,8 +354,12 @@ export class AuthController {
     // Fresh loads can still have a persisted session export before the live session is restored.
     // Reuse the restore flow so /logout performs a real homeserver sign-out before local cleanup.
     if (!session && authStore.sessionExport) {
-      const didRestoreSession = await this.restorePersistedSession();
-      if (!didRestoreSession) {
+      try {
+        const didRestoreSession = await this.restorePersistedSession();
+        if (!didRestoreSession) {
+          return;
+        }
+      } catch {
         return;
       }
       authStore = useAuthStore.getState();

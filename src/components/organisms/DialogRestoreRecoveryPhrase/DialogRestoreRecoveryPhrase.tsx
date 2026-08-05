@@ -17,6 +17,7 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { AuthController } from '@/controllers/auth/auth';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { WordSlot } from '@/molecules/WordSlot/WordSlot';
 
@@ -52,12 +53,12 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
       if (!hasErrors && allFilled) {
         onRestore?.();
       }
-    } catch {
-      // TODO: handle error based on the error type
-      // show error toast
+    } catch (error) {
       toast({
         variant: 'error',
-        description: t('restoreRecoveryPhrase.errorDescription'),
+        description: isWrongEnvironmentHomeserverError(error)
+          ? t('wrongEnvironmentHomeserverDescription')
+          : t('restoreRecoveryPhrase.errorDescription'),
       });
       setIsRestoring(false);
     }

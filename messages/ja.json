@@ -371,6 +371,7 @@
       "tryAgain": "再試行してください。",
       "authInitFailedTitle": "サインインに失敗しました。もう一度お試しください。",
       "authInitFailedDescription": "サインインに失敗しました。もう一度お試しください。",
+      "wrongEnvironmentHomeserverDescription": "This key is linked to a different homeserver. Use a staging account on this site.",
       "authNotCompletedTitle": "認証が完了しませんでした",
       "authNotCompletedDescription": "認可に失敗しました。もう一度お試しください。",
       "qrGenerationFailedTitle": "QRコードの生成に失敗しました",

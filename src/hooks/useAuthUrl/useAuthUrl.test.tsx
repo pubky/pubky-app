@@ -2,7 +2,7 @@ import type { Session } from '@synonymdev/pubky';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { mockSession } from '@/test-utils/pubky';
 import { useAuthUrl } from './useAuthUrl';
@@ -19,6 +19,7 @@ const mockTranslations = vi.fn((key: string) => {
   const t: Record<string, string> = {
     authInitFailedTitle: 'Sign in failed. Try again.',
     authInitFailedDescription: 'Sign in failed. Try again.',
+    wrongEnvironmentHomeserverDescription: 'This account belongs to a different environment.',
     authNotCompletedTitle: 'Authorization was not completed',
     authNotCompletedDescription: 'Authorization failed. Try again.',
     qrGenerationFailedTitle: 'QR code generation failed',
@@ -295,12 +296,20 @@ describe('useAuthUrl', () => {
       cancelAuthFlow: createCancelAuthFlow(),
     });
 
-    mockInitializeAuthenticatedSession.mockRejectedValue(new Error('Failed to initialize session'));
+    mockInitializeAuthenticatedSession.mockRejectedValue(
+      new AppError({
+        category: ErrorCategory.Server,
+        code: ServerErrorCode.INTERNAL_ERROR,
+        message: 'PKARR relay unavailable',
+        service: ErrorService.Homeserver,
+        operation: 'assertUserHomeserverAllowed',
+      }),
+    );
 
-    renderHook(() => useAuthUrl());
+    const { result } = renderHook(() => useAuthUrl());
 
     await waitFor(() => {
-      expect(mockGetAuthUrl).toHaveBeenCalled();
+      expect(result.current.url).toBe('pubkyring://authorize?token=init-failure');
     });
 
     resolveApproval!(session);
@@ -310,7 +319,51 @@ describe('useAuthUrl', () => {
         variant: 'error',
         description: 'Sign in failed. Try again.',
       });
+      expect(result.current.url).toBe('');
+      expect(result.current.isExpired).toBe(true);
     });
+    expect(mockLoggerError).not.toHaveBeenCalled();
+  });
+
+  it('expires the Ring URL without double-logging when session initialization rejects the environment', async () => {
+    const session = mockSession();
+
+    let resolveApproval: (session: Session) => void;
+    const mockAwaitApproval = new Promise<Session>((resolve) => {
+      resolveApproval = resolve;
+    });
+
+    mockGetAuthUrl.mockResolvedValue({
+      authorizationUrl: 'pubkyring://authorize?token=wrong-environment',
+      awaitApproval: mockAwaitApproval,
+      cancelAuthFlow: createCancelAuthFlow(),
+    });
+    mockInitializeAuthenticatedSession.mockRejectedValue(
+      new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+        message: 'Wrong homeserver environment',
+        service: ErrorService.Homeserver,
+        operation: 'initializeAuthenticatedSession',
+      }),
+    );
+
+    const { result } = renderHook(() => useAuthUrl());
+
+    await waitFor(() => {
+      expect(result.current.url).toBe('pubkyring://authorize?token=wrong-environment');
+    });
+    resolveApproval!(session);
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'This account belongs to a different environment.',
+      });
+      expect(result.current.url).toBe('');
+      expect(result.current.isExpired).toBe(true);
+    });
+    expect(mockLoggerError).not.toHaveBeenCalled();
   });
 
   it('shows toast when getAuthUrl fails', async () => {
@@ -369,6 +422,46 @@ describe('useAuthUrl', () => {
     await waitFor(() => {
       expect(mockInitializeAuthenticatedSession).toHaveBeenCalledWith({ session });
     });
+  });
+
+  it('shows the environment rejection after Ring approval even when the component unmounts', async () => {
+    const session = mockSession();
+
+    let resolveApproval: (session: Session) => void;
+    const mockAwaitApproval = new Promise<Session>((resolve) => {
+      resolveApproval = resolve;
+    });
+
+    mockGetAuthUrl.mockResolvedValue({
+      authorizationUrl: 'pubkyring://authorize?token=post-unmount-wrong-environment',
+      awaitApproval: mockAwaitApproval,
+      cancelAuthFlow: createCancelAuthFlow(),
+    });
+    mockInitializeAuthenticatedSession.mockRejectedValue(
+      new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+        message: 'Wrong homeserver environment',
+        service: ErrorService.Homeserver,
+        operation: 'initializeAuthenticatedSession',
+      }),
+    );
+
+    const { result, unmount } = renderHook(() => useAuthUrl());
+
+    await waitFor(() => {
+      expect(result.current.url).toBe('pubkyring://authorize?token=post-unmount-wrong-environment');
+    });
+    unmount();
+    resolveApproval!(session);
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'This account belongs to a different environment.',
+      });
+    });
+    expect(mockLoggerError).not.toHaveBeenCalled();
   });
 
   it('calls AuthController.getSignupAuthUrl when type is signup with inviteCode', async () => {

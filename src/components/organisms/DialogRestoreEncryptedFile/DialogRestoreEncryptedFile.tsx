@@ -22,7 +22,9 @@ import { AuthController } from '@/controllers/auth/auth';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { AppError } from '@/libs/error/error';
 import { ErrorService } from '@/libs/error/error.types';
+import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { formatFileName } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/use-toast';
 
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const t = useTranslations('onboarding.signIn');
@@ -63,7 +65,12 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
       });
       onRestore?.();
     } catch (error) {
-      if (error instanceof Error) {
+      if (isWrongEnvironmentHomeserverError(error)) {
+        toast({
+          variant: 'error',
+          description: t('wrongEnvironmentHomeserverDescription'),
+        });
+      } else if (error instanceof Error) {
         const errorMessage = error.message.toLowerCase();
         if (
           errorMessage.includes('password') ||
