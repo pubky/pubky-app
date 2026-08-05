@@ -121,7 +121,7 @@ export function QuickReply({
 
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
-  const heightTransition = getComposerHeightTransition(isExpanded, shouldReduceMotion);
+  const heightTransition = getComposerHeightTransition(isExpanded, shouldReduceMotion || !hasMeasuredCardHeight);
   // Connector animates via CSS, so it takes the same curve as a style instead of a tween.
   const connectorHeightTransitionStyle = getComposerHeightTransitionStyle(
     isExpanded,

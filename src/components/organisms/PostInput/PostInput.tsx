@@ -165,7 +165,16 @@ export function PostInput({
   const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
   const { ref: stateContentMeasureRef, height: stateContentHeight } = useElementHeight();
-  const heightTransition = getComposerHeightTransition(isExpanded, shouldReduceMotion);
+  const [hasMeasuredStateContentHeight, setHasMeasuredStateContentHeight] = React.useState(false);
+
+  React.useEffect(() => {
+    if (stateContentHeight > 0) setHasMeasuredStateContentHeight(true);
+  }, [stateContentHeight]);
+
+  const heightTransition = getComposerHeightTransition(
+    isExpanded,
+    shouldReduceMotion || expanded || !hasMeasuredStateContentHeight,
+  );
   const dissolveVariants = getComposerDissolveVariants(shouldReduceMotion);
 
   React.useEffect(() => {
@@ -256,7 +265,7 @@ export function PostInput({
           data-testid="post-input-state-height"
           className="overflow-hidden"
           initial={false}
-          animate={{ height: shouldReduceMotion || stateContentHeight <= 0 ? 'auto' : stateContentHeight }}
+          animate={{ height: shouldReduceMotion || expanded || stateContentHeight <= 0 ? 'auto' : stateContentHeight }}
           transition={{ height: heightTransition }}
         >
           <div ref={stateContentMeasureRef} className="relative">

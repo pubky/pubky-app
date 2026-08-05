@@ -686,6 +686,24 @@ describe('PostInput', () => {
     expect(screen.getByTestId('post-input-expanded-controls')).toHaveStyle({ filter: 'blur(0px)' });
   });
 
+  it('keeps a forced-expanded dialog composer at auto height after measuring its content', async () => {
+    const layoutHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(260);
+
+    try {
+      mockUsePostReturn.isExpanded = true;
+      render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" expanded />);
+
+      await waitFor(() => expect(layoutHeight).toHaveBeenCalled());
+      await act(async () => {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      });
+
+      expect(screen.getByTestId('post-input-state-height')).toHaveStyle({ height: 'auto' });
+    } finally {
+      layoutHeight.mockRestore();
+    }
+  });
+
   it('reuses the resolved current-user profile when returning to the collapsed state', () => {
     mockUsePostReturn.isExpanded = true;
     const { rerender } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
