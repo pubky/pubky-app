@@ -767,6 +767,59 @@ export function generateRandomUsername(): string {
   return `${randomAdjective}-${randomNoun1}-${randomNoun2}`;
 }
 
+const FOCUSABLE_SELECTOR = 'button,a[href],[tabindex]:not([tabindex="-1"])';
+// Feed cards (`[role="article"]` in grid/list layouts) and visual-mosaic cells
+// (`[data-grid-item]` — the tiles are `role="button"`, not articles).
+const GRID_ITEM_SELECTOR = '[role="article"],[data-grid-item]';
+
+function isFocusCandidate(element: HTMLElement): boolean {
+  return !element.matches(':disabled') && element.closest('[hidden],[aria-hidden="true"]') === null;
+}
+
+function findFocusTarget(item: HTMLElement): HTMLElement | null {
+  if (item.matches(FOCUSABLE_SELECTOR) && isFocusCandidate(item)) return item;
+  for (const candidate of item.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)) {
+    if (isFocusCandidate(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
+ * Moves keyboard focus to the adjacent feed card before the current card is
+ * removed from the DOM.
+ *
+ * Used by collection/bookmarks Remove CTAs on deleted or missing posts: the
+ * Remove button is about to unmount with its card, so without this hand-off
+ * focus would fall to `document.body` (or disappear), which breaks keyboard
+ * and screen-reader navigation through the grid. The current card is the
+ * closest grid item (`[role="article"]` card or `[data-grid-item]` mosaic
+ * cell). Siblings are scanned outward — all following, then all preceding, so
+ * non-focusable neighbors (spacers, sentinels) don't dead-end the hand-off —
+ * and disabled or hidden elements are never focused. Each sibling yields the
+ * item itself when focusable, otherwise its first focusable descendant.
+ */
+export function focusAdjacentGridItem(button: HTMLButtonElement): void {
+  const currentItem = button.closest<HTMLElement>(GRID_ITEM_SELECTOR);
+  if (!currentItem) return;
+
+  for (let sibling = currentItem.nextElementSibling; sibling; sibling = sibling.nextElementSibling) {
+    if (!(sibling instanceof HTMLElement)) continue;
+    const target = findFocusTarget(sibling);
+    if (target) {
+      target.focus();
+      return;
+    }
+  }
+  for (let sibling = currentItem.previousElementSibling; sibling; sibling = sibling.previousElementSibling) {
+    if (!(sibling instanceof HTMLElement)) continue;
+    const target = findFocusTarget(sibling);
+    if (target) {
+      target.focus();
+      return;
+    }
+  }
+}
+
 /**
  * Snapshot serializer to normalize Radix UI generated IDs.
  * This ensures snapshot tests are consistent across test runs by replacing

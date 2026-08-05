@@ -10,6 +10,7 @@ const {
   mockUseInfiniteScroll,
   mockUseVisualFeedTiles,
   mockUseIsTouchDevice,
+  mockUseRemoveDeletedPost,
   mockClickableTagsList,
 } = vi.hoisted(() => ({
   mockNavigateToPost: vi.fn(),
@@ -19,6 +20,7 @@ const {
   mockUseInfiniteScroll: vi.fn(),
   mockUseVisualFeedTiles: vi.fn(),
   mockUseIsTouchDevice: vi.fn(() => false),
+  mockUseRemoveDeletedPost: vi.fn(),
   mockClickableTagsList: vi.fn(({ className }: { className?: string }) => (
     <div data-testid="visual-overlay-tags" className={className}>
       Tags
@@ -28,6 +30,10 @@ const {
 
 vi.mock('./useVisualFeedTiles', () => ({
   useVisualFeedTiles: mockUseVisualFeedTiles,
+}));
+
+vi.mock('@/hooks/useRemoveDeletedPost/useRemoveDeletedPost', () => ({
+  useRemoveDeletedPost: mockUseRemoveDeletedPost,
 }));
 
 vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
@@ -268,6 +274,11 @@ describe('VisualTimelinePosts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseIsTouchDevice.mockReturnValue(false);
+    mockUseRemoveDeletedPost.mockReturnValue({
+      canRemove: false,
+      isRemoving: false,
+      remove: vi.fn(),
+    });
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
     });
@@ -433,6 +444,102 @@ describe('VisualTimelinePosts', () => {
 
     fireEvent.keyDown(screen.getByRole('button', { name: 'Post not found.' }), { key: 'Enter' });
     expect(mockNavigateToPost).toHaveBeenCalledWith('author:post-miss');
+
+    // Non-removable placeholders carry no Remove CTA at all.
+    expect(container.querySelector('[data-cy="post-deleted-remove-btn"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-cy="post-missing-remove-btn"]')).not.toBeInTheDocument();
+  });
+
+  it('wires the Remove CTA into placeholder tiles for removable posts', () => {
+    // Grid/List parity for owners: the same Remove flow PostMain offers on
+    // unavailable cards must be reachable from the visual mosaic placeholders.
+    const removeByPostId: Record<string, ReturnType<typeof vi.fn>> = {
+      'author:post-del': vi.fn().mockResolvedValue(true),
+      'author:post-miss': vi.fn().mockResolvedValue(true),
+    };
+    mockUseRemoveDeletedPost.mockImplementation((postId: string) => ({
+      canRemove: true,
+      isRemoving: false,
+      remove: removeByPostId[postId] ?? vi.fn(),
+    }));
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [
+        {
+          key: 'row-placeholders',
+          cells: [
+            { key: 'cell-deleted', size: 'square', tile: createPlaceholderTile('author:post-del', 'deleted') },
+            { key: 'cell-missing', size: 'square', tile: createPlaceholderTile('author:post-miss', 'missing') },
+          ],
+        },
+      ],
+      tail: [],
+      tiles: [],
+      hasPendingSnapshot: false,
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+      hasPendingPostDetails: false,
+    });
+
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={['author:post-del', 'author:post-miss']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+        showUnavailablePosts
+      />,
+    );
+
+    const deletedRemoveButton = container.querySelector('[data-cy="post-deleted-remove-btn"]');
+    const missingRemoveButton = container.querySelector('[data-cy="post-missing-remove-btn"]');
+    expect(deletedRemoveButton).toBeInTheDocument();
+    expect(missingRemoveButton).toBeInTheDocument();
+
+    // Clicking Remove must trigger the removal, not the tile's navigation.
+    fireEvent.click(deletedRemoveButton as Element);
+    expect(removeByPostId['author:post-del']).toHaveBeenCalledTimes(1);
+    expect(removeByPostId['author:post-miss']).not.toHaveBeenCalled();
+    expect(mockNavigateToPost).not.toHaveBeenCalled();
+  });
+
+  it('disables the placeholder Remove CTA while removal is pending', () => {
+    mockUseRemoveDeletedPost.mockReturnValue({
+      canRemove: true,
+      isRemoving: true,
+      remove: vi.fn(),
+    });
+    mockUseVisualFeedTiles.mockReturnValue({
+      rows: [
+        {
+          key: 'row-placeholders',
+          cells: [{ key: 'cell-deleted', size: 'square', tile: createPlaceholderTile('author:post-del', 'deleted') }],
+        },
+      ],
+      tail: [],
+      tiles: [],
+      hasPendingSnapshot: false,
+      hasPendingTiles: false,
+      hasPendingFiles: false,
+      hasPendingPostDetails: false,
+    });
+
+    const { container } = render(
+      <VisualTimelinePosts
+        postIds={['author:post-del']}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={vi.fn()}
+        showUnavailablePosts
+      />,
+    );
+
+    const removeButton = container.querySelector('[data-cy="post-deleted-remove-btn"]');
+    expect(removeButton).toBeDisabled();
+    expect(removeButton).toHaveAttribute('aria-busy', 'true');
   });
 
   it('does not render the filtered empty state while post details are still being ensured', () => {

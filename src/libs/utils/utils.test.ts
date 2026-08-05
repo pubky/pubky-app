@@ -13,6 +13,7 @@ import {
   copyToClipboard,
   daysAgo,
   extractInitials,
+  focusAdjacentGridItem,
   formatInviteCode,
   formatPublicKey,
   formatUSDate,
@@ -1512,6 +1513,149 @@ describe('Utils', () => {
         expect(username.length).toBeGreaterThanOrEqual(11);
         expect(username.length).toBeLessThanOrEqual(25);
       }
+    });
+  });
+
+  describe('focusAdjacentGridItem', () => {
+    it('focuses the next article sibling when present', () => {
+      document.body.innerHTML = `
+        <div role="feed">
+          <article role="article" tabindex="0">
+            <button type="button">Remove</button>
+          </article>
+          <article role="article" tabindex="0" data-testid="next-post-card"></article>
+        </div>
+      `;
+      const button = document.querySelector('button') as HTMLButtonElement;
+      button.focus();
+
+      focusAdjacentGridItem(button);
+
+      expect(document.querySelector('[data-testid="next-post-card"]')).toHaveFocus();
+    });
+
+    it('falls back to the previous article sibling when there is no next sibling', () => {
+      document.body.innerHTML = `
+        <div role="feed">
+          <article role="article" tabindex="0" data-testid="prev-post-card"></article>
+          <article role="article" tabindex="0">
+            <button type="button">Remove</button>
+          </article>
+        </div>
+      `;
+      const button = document.querySelector('button') as HTMLButtonElement;
+      button.focus();
+
+      focusAdjacentGridItem(button);
+
+      expect(document.querySelector('[data-testid="prev-post-card"]')).toHaveFocus();
+    });
+
+    it('focuses the first focusable descendant when the adjacent sibling is not an article', () => {
+      document.body.innerHTML = `
+        <div role="feed">
+          <article role="article" tabindex="0">
+            <button type="button">Remove</button>
+          </article>
+          <div data-testid="adjacent-wrapper">
+            <a href="#next">Next card</a>
+          </div>
+        </div>
+      `;
+      const button = document.querySelector('button') as HTMLButtonElement;
+
+      focusAdjacentGridItem(button);
+
+      expect(document.querySelector('a')).toHaveFocus();
+    });
+
+    it('is a no-op when the button is not inside an article', () => {
+      document.body.innerHTML = `<button type="button">Remove</button>`;
+      const button = document.querySelector('button') as HTMLButtonElement;
+      button.focus();
+
+      focusAdjacentGridItem(button);
+
+      expect(button).toHaveFocus();
+    });
+
+    it('scans past a non-focusable sibling to reach the next article', () => {
+      document.body.innerHTML = `
+        <div role="feed">
+          <article role="article" tabindex="0">
+            <button type="button">Remove</button>
+          </article>
+          <div data-testid="sentinel"></div>
+          <article role="article" tabindex="0" data-testid="next-post-card"></article>
+        </div>
+      `;
+      const button = document.querySelector('button') as HTMLButtonElement;
+
+      focusAdjacentGridItem(button);
+
+      expect(document.querySelector('[data-testid="next-post-card"]')).toHaveFocus();
+    });
+
+    it('falls back to the previous article when following siblings have nothing focusable', () => {
+      document.body.innerHTML = `
+        <div role="feed">
+          <article role="article" tabindex="0" data-testid="prev-post-card"></article>
+          <article role="article" tabindex="0">
+            <button type="button">Remove</button>
+          </article>
+          <div data-testid="sentinel"></div>
+        </div>
+      `;
+      const button = document.querySelector('button') as HTMLButtonElement;
+
+      focusAdjacentGridItem(button);
+
+      expect(document.querySelector('[data-testid="prev-post-card"]')).toHaveFocus();
+    });
+
+    it('never focuses disabled or hidden elements', () => {
+      document.body.innerHTML = `
+        <div role="feed">
+          <article role="article" tabindex="0">
+            <button type="button">Remove</button>
+          </article>
+          <div>
+            <button type="button" disabled data-testid="disabled-btn">Removing</button>
+          </div>
+          <div aria-hidden="true">
+            <button type="button" data-testid="hidden-btn">Hidden</button>
+          </div>
+          <div>
+            <a href="#next" data-testid="reachable-link">Next card</a>
+          </div>
+        </div>
+      `;
+      const button = document.querySelector('button') as HTMLButtonElement;
+
+      focusAdjacentGridItem(button);
+
+      expect(document.querySelector('[data-testid="reachable-link"]')).toHaveFocus();
+    });
+
+    it('hands focus to the adjacent visual-mosaic cell via data-grid-item', () => {
+      document.body.innerHTML = `
+        <div>
+          <div data-grid-item>
+            <div role="button" tabindex="0">
+              <button type="button">Remove</button>
+            </div>
+          </div>
+          <div data-grid-item aria-hidden="true" data-testid="spacer-cell"></div>
+          <div data-grid-item>
+            <div role="button" tabindex="0" data-testid="next-tile"></div>
+          </div>
+        </div>
+      `;
+      const button = document.querySelector('button') as HTMLButtonElement;
+
+      focusAdjacentGridItem(button);
+
+      expect(document.querySelector('[data-testid="next-tile"]')).toHaveFocus();
     });
   });
 });

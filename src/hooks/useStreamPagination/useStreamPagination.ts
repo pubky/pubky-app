@@ -15,13 +15,49 @@ import {
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 import type { UseStreamPaginationOptions, UseStreamPaginationResult } from './useStreamPagination.types';
 
-function resolveDisplayedPostIds(streamPostIds: string[], optimisticPostIds: string[]) {
+function resolveDisplayedPostIds(
+  streamPostIds: string[],
+  optimisticPostIds: string[],
+  hiddenPostIds = new Set<string>(),
+) {
   const streamPostIdsSet = new Set(streamPostIds);
   const filteredOptimisticPostIds = optimisticPostIds.filter((id) => !streamPostIdsSet.has(id));
 
   return {
     optimisticPostIds: filteredOptimisticPostIds,
-    displayedPostIds: [...filteredOptimisticPostIds, ...streamPostIds],
+    displayedPostIds: [
+      ...filteredOptimisticPostIds.filter((id) => !hiddenPostIds.has(id)),
+      ...streamPostIds.filter((id) => !hiddenPostIds.has(id)),
+    ],
+  };
+}
+
+function decrementHiddenPostCounts(hiddenPostCounts: Map<string, number>, postIds: string[]) {
+  postIds.forEach((id) => {
+    const removalCount = hiddenPostCounts.get(id);
+    if (removalCount === undefined) return;
+    if (removalCount === 1) {
+      hiddenPostCounts.delete(id);
+    } else {
+      hiddenPostCounts.set(id, removalCount - 1);
+    }
+  });
+}
+
+function revealPostIds(
+  postIds: string[],
+  hiddenPostCounts: Map<string, number>,
+  streamPostIds: string[],
+  optimisticPostIds: string[],
+) {
+  const revealedPostIds = new Set(postIds.filter((id) => hiddenPostCounts.delete(id)));
+  if (revealedPostIds.size === 0) {
+    return { streamPostIds, optimisticPostIds };
+  }
+
+  return {
+    streamPostIds: streamPostIds.filter((id) => !revealedPostIds.has(id)),
+    optimisticPostIds: optimisticPostIds.filter((id) => !revealedPostIds.has(id)),
   };
 }
 
@@ -47,6 +83,13 @@ export function useStreamPagination({
 
   const postIdsRef = useRef<string[]>([]);
   const optimisticPostIdsRef = useRef<string[]>([]);
+  const hiddenPostCountsRef = useRef<Map<string, number>>(new Map());
+  // Cumulative count of committed-removal stream rows on skip-paginated
+  // streams. A page commit writes the cursor absolutely, derived from the
+  // offset captured when the request STARTED, so a removal committing while a
+  // fetch is in flight would be silently overwritten. Each request snapshots
+  // this counter and the commit subtracts whatever accrued during the flight.
+  const committedRemovalsRef = useRef(0);
   const lastPostIdRef = useRef<string | undefined>(undefined);
   const streamTailRef = useRef(NOT_FOUND_CACHED_STREAM);
   const hasMoreRef = useRef(true);
@@ -73,6 +116,37 @@ export function useStreamPagination({
     setHasMore(value);
   }, []);
 
+  /**
+   * Re-derives what the feed renders from the stream list, the optimistic list
+   * and the pending-removal set. Every mutation ends here so a post hidden by
+   * an in-flight removal can never be re-displayed by an unrelated update.
+   */
+  const syncDisplayedPosts = useCallback(() => {
+    const displayedState = resolveDisplayedPostIds(
+      postIdsRef.current,
+      optimisticPostIdsRef.current,
+      new Set(hiddenPostCountsRef.current.keys()),
+    );
+    optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+    setPostIds(displayedState.displayedPostIds);
+  }, []);
+
+  /**
+   * Skip streams resume from a consumed-raw-rows offset, and a response's
+   * `nextCursor` extends the offset its request captured at start — removals
+   * committed mid-flight are not in it. Re-apply them, or the absolute write
+   * discards their decrements and the next page skips one live row per
+   * removal once the backend reindexes the shorter list. Clamped because a
+   * `clearState` during the flight resets the tally, and a stale resolution
+   * must not over-correct a fresh one.
+   */
+  const resolveStreamTailFromCursor = useCallback((nextCursor: number, committedRemovalsAtRequest: number) => {
+    const removalsDuringFlight = isSkipPaginatedStream(renderedStreamIdRef.current)
+      ? Math.max(0, committedRemovalsRef.current - committedRemovalsAtRequest)
+      : 0;
+    return Math.max(0, nextCursor - removalsDuringFlight);
+  }, []);
+
   const isCurrentRequest = useCallback(
     (generation: number, requestStreamId: PostStreamId) =>
       requestGenerationRef.current === generation && renderedStreamIdRef.current === requestStreamId,
@@ -80,10 +154,10 @@ export function useStreamPagination({
   );
 
   const commitPage = useCallback(
-    (result: TReadPostStreamChunkResponse, isInitialLoad: boolean) => {
+    (result: TReadPostStreamChunkResponse, isInitialLoad: boolean, committedRemovalsAtRequest: number) => {
       // Advance from the response even when stream filters remove the entire page.
       if (result.nextCursor != null) {
-        streamTailRef.current = result.nextCursor;
+        streamTailRef.current = resolveStreamTailFromCursor(result.nextCursor, committedRemovalsAtRequest);
       }
 
       // Empty-but-not-ended pages keep pagination alive because the collector advanced
@@ -100,46 +174,52 @@ export function useStreamPagination({
 
       if (newUniquePostIds.length === 0) return;
 
-      const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
-      postIdsRef.current = updatedPostIds;
-      const displayedState = resolveDisplayedPostIds(updatedPostIds, optimisticPostIdsRef.current);
-      optimisticPostIdsRef.current = displayedState.optimisticPostIds;
-      setPostIds(displayedState.displayedPostIds);
+      postIdsRef.current = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
+      syncDisplayedPosts();
     },
-    [setHasMoreState],
+    [resolveStreamTailFromCursor, setHasMoreState, syncDisplayedPosts],
   );
 
   const commitNetworkReplacement = useCallback(
-    (result: TReadPostStreamChunkResponse) => {
+    (result: TReadPostStreamChunkResponse, committedRemovalsAtRequest: number) => {
       const refreshedPostIds = Array.from(new Set(result.nextPageIds));
       postIdsRef.current = refreshedPostIds;
       lastPostIdRef.current = refreshedPostIds.at(-1);
-      streamTailRef.current = result.nextCursor ?? NOT_FOUND_CACHED_STREAM;
+      streamTailRef.current =
+        result.nextCursor != null
+          ? resolveStreamTailFromCursor(result.nextCursor, committedRemovalsAtRequest)
+          : NOT_FOUND_CACHED_STREAM;
+      // The replacement page recounts consumed rows from the top of the
+      // stream, so every decrement up to now is already reflected in the
+      // cursor just written — start the next flight's tally from scratch.
+      committedRemovalsRef.current = 0;
       setHasMoreState(result.reachedEnd !== true);
 
-      const displayedState = resolveDisplayedPostIds(refreshedPostIds, optimisticPostIdsRef.current);
-      optimisticPostIdsRef.current = displayedState.optimisticPostIds;
-      setPostIds(displayedState.displayedPostIds);
+      syncDisplayedPosts();
     },
-    [setHasMoreState],
+    [resolveStreamTailFromCursor, setHasMoreState, syncDisplayedPosts],
   );
 
   /**
    * Clears all state
    */
   const clearState = useCallback(
-    ({ preserveOptimisticPostIds = false } = {}) => {
+    ({ preserveOptimisticPostIds = false, preserveHiddenPostIds = false } = {}) => {
       postIdsRef.current = [];
+      if (!preserveHiddenPostIds) {
+        hiddenPostCountsRef.current.clear();
+      }
       if (!preserveOptimisticPostIds) {
         optimisticPostIdsRef.current = [];
       }
-      setPostIds(optimisticPostIdsRef.current);
+      syncDisplayedPosts();
       lastPostIdRef.current = undefined;
       streamTailRef.current = NOT_FOUND_CACHED_STREAM;
+      committedRemovalsRef.current = 0;
       setHasMoreState(true);
       setError(null);
     },
-    [setHasMoreState],
+    [setHasMoreState, syncDisplayedPosts],
   );
 
   const runReplacementLoad = useCallback(
@@ -147,10 +227,12 @@ export function useStreamPagination({
       mode,
       clearBeforeLoad = false,
       preserveOptimisticPostIds = false,
+      preserveHiddenPostIds = false,
     }: {
       mode: ReplacementLoadMode;
       clearBeforeLoad?: boolean;
       preserveOptimisticPostIds?: boolean;
+      preserveHiddenPostIds?: boolean;
     }) => {
       const requestStreamId = streamId;
       const owner = Symbol('stream-replacement');
@@ -159,10 +241,11 @@ export function useStreamPagination({
       setLoadingMore(false);
 
       if (clearBeforeLoad) {
-        clearState({ preserveOptimisticPostIds });
+        clearState({ preserveOptimisticPostIds, preserveHiddenPostIds });
       }
 
       const generation = ++requestGenerationRef.current;
+      const committedRemovalsAtRequest = committedRemovalsRef.current;
       setLoadingState(true, true);
       setError(null);
 
@@ -191,9 +274,9 @@ export function useStreamPagination({
         if (!isCurrentRequest(generation, requestStreamId)) return;
 
         if (mode === 'network_refresh') {
-          commitNetworkReplacement(result);
+          commitNetworkReplacement(result, committedRemovalsAtRequest);
         } else {
-          commitPage(result, true);
+          commitPage(result, true, committedRemovalsAtRequest);
         }
       } catch (err) {
         if (!isCurrentRequest(generation, requestStreamId)) return;
@@ -236,6 +319,9 @@ export function useStreamPagination({
       mode: 'local_first',
       clearBeforeLoad: true,
       preserveOptimisticPostIds: isCollectionItemsStream(streamId),
+      // A removal still in flight stays hidden across the refetch; its
+      // `finalize` recounts membership against the refreshed page.
+      preserveHiddenPostIds: true,
     });
   }, [runReplacementLoad, streamId]);
 
@@ -260,6 +346,7 @@ export function useStreamPagination({
     loadMoreOwnerRef.current = owner;
     const requestStreamId = streamId;
     const generation = ++requestGenerationRef.current;
+    const committedRemovalsAtRequest = committedRemovalsRef.current;
     setLoadingState(false, true);
     setError(null);
 
@@ -272,7 +359,7 @@ export function useStreamPagination({
       });
 
       if (!isCurrentRequest(generation, requestStreamId)) return;
-      commitPage(result, false);
+      commitPage(result, false, committedRemovalsAtRequest);
     } catch (err) {
       if (!isCurrentRequest(generation, requestStreamId)) return;
 
@@ -296,36 +383,41 @@ export function useStreamPagination({
    * Maintains chronological order (most recent first) when adding posts
    * @param postIds - A single post ID or array of post IDs to add
    */
-  const prependPosts = useCallback(async (postIds: string | string[]) => {
-    const idsToAdd = Array.isArray(postIds) ? postIds : [postIds];
+  const prependPosts = useCallback(
+    async (postIds: string | string[]) => {
+      const idsToAdd = Array.isArray(postIds) ? postIds : [postIds];
+      const revealedState = revealPostIds(
+        idsToAdd,
+        hiddenPostCountsRef.current,
+        postIdsRef.current,
+        optimisticPostIdsRef.current,
+      );
+      postIdsRef.current = revealedState.streamPostIds;
+      optimisticPostIdsRef.current = revealedState.optimisticPostIds;
 
-    // Filter out posts that already exist to avoid duplicates
-    const existingIds = new Set(postIdsRef.current);
-    const newIds = idsToAdd.filter((id) => !existingIds.has(id));
+      // Filter out posts that already exist to avoid duplicates
+      const existingIds = new Set(postIdsRef.current);
+      const newIds = idsToAdd.filter((id) => !existingIds.has(id));
 
-    if (newIds.length === 0) {
-      return;
-    }
+      if (newIds.length === 0) {
+        return;
+      }
 
-    // Combine new and existing posts
-    const allIds = [...newIds, ...postIdsRef.current];
+      // Combine new and existing posts
+      const allIds = [...newIds, ...postIdsRef.current];
 
-    try {
-      // Fetch post details to get timestamps and sort
-      const sortedIds = await sortPostIdsByTimestamp(allIds);
-      postIdsRef.current = sortedIds;
-      const displayedState = resolveDisplayedPostIds(sortedIds, optimisticPostIdsRef.current);
-      optimisticPostIdsRef.current = displayedState.optimisticPostIds;
-      setPostIds(displayedState.displayedPostIds);
-    } catch (err) {
-      Logger.error('Failed to prepend posts:', err);
-      // Fallback: add without sorting
-      postIdsRef.current = allIds;
-      const displayedState = resolveDisplayedPostIds(allIds, optimisticPostIdsRef.current);
-      optimisticPostIdsRef.current = displayedState.optimisticPostIds;
-      setPostIds(displayedState.displayedPostIds);
-    }
-  }, []);
+      try {
+        // Fetch post details to get timestamps and sort
+        postIdsRef.current = await sortPostIdsByTimestamp(allIds);
+      } catch (err) {
+        Logger.error('Failed to prepend posts:', err);
+        // Fallback: add without sorting
+        postIdsRef.current = allIds;
+      }
+      syncDisplayedPosts();
+    },
+    [syncDisplayedPosts],
+  );
 
   /**
    * Show membership-ordered posts at the top without changing pagination state.
@@ -334,6 +426,15 @@ export function useStreamPagination({
    */
   const prependOptimisticPosts = (postIds: string | string[]) => {
     const idsToAdd = Array.isArray(postIds) ? postIds : [postIds];
+    const revealedState = revealPostIds(
+      idsToAdd,
+      hiddenPostCountsRef.current,
+      postIdsRef.current,
+      optimisticPostIdsRef.current,
+    );
+    postIdsRef.current = revealedState.streamPostIds;
+    optimisticPostIdsRef.current = revealedState.optimisticPostIds;
+
     const currentDisplayedIds = new Set([...optimisticPostIdsRef.current, ...postIdsRef.current]);
     const newIds = idsToAdd.filter((id) => {
       if (currentDisplayedIds.has(id)) {
@@ -348,10 +449,8 @@ export function useStreamPagination({
       return;
     }
 
-    const optimisticPostIds = [...newIds, ...optimisticPostIdsRef.current];
-    const displayedState = resolveDisplayedPostIds(postIdsRef.current, optimisticPostIds);
-    optimisticPostIdsRef.current = displayedState.optimisticPostIds;
-    setPostIds(displayedState.displayedPostIds);
+    optimisticPostIdsRef.current = [...newIds, ...optimisticPostIdsRef.current];
+    syncDisplayedPosts();
   };
 
   /**
@@ -359,17 +458,68 @@ export function useStreamPagination({
    * Used when posts are deleted to immediately remove them from the UI
    * @param postIds - A single post ID or array of post IDs to remove
    */
-  const removePosts = useCallback((postIds: string | string[]) => {
-    const idsToRemove = Array.isArray(postIds) ? postIds : [postIds];
-    const idsToRemoveSet = new Set(idsToRemove);
+  const removePosts = useCallback(
+    (postIds: string | string[]) => {
+      const existingPostIds = new Set([...postIdsRef.current, ...optimisticPostIdsRef.current]);
+      const idsToRemove = [...new Set(Array.isArray(postIds) ? postIds : [postIds])].filter((id) =>
+        existingPostIds.has(id),
+      );
+      const idsToRemoveSet = new Set(idsToRemove);
+      idsToRemove.forEach((id) => hiddenPostCountsRef.current.delete(id));
+      optimisticPostIdsRef.current = optimisticPostIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
+      postIdsRef.current = postIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
+      syncDisplayedPosts();
+    },
+    [syncDisplayedPosts],
+  );
 
-    optimisticPostIdsRef.current = optimisticPostIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
-    const updatedPostIds = postIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
-    postIdsRef.current = updatedPostIds;
-    const displayedState = resolveDisplayedPostIds(updatedPostIds, optimisticPostIdsRef.current);
-    optimisticPostIdsRef.current = displayedState.optimisticPostIds;
-    setPostIds(displayedState.displayedPostIds);
-  }, []);
+  const removePostsOptimistically = (postIds: string | string[]) => {
+    const existingPostIds = new Set([...postIdsRef.current, ...optimisticPostIdsRef.current]);
+    const idsToRemove = [...new Set(Array.isArray(postIds) ? postIds : [postIds])].filter((id) =>
+      existingPostIds.has(id),
+    );
+    const removalStreamId = streamId;
+    idsToRemove.forEach((id) => {
+      hiddenPostCountsRef.current.set(id, (hiddenPostCountsRef.current.get(id) ?? 0) + 1);
+    });
+    syncDisplayedPosts();
+
+    let hasFinalized = false;
+    const finalize = (shouldCommit: boolean) => {
+      if (hasFinalized || renderedStreamIdRef.current !== removalStreamId) return;
+      hasFinalized = true;
+
+      decrementHiddenPostCounts(hiddenPostCountsRef.current, idsToRemove);
+      if (shouldCommit) {
+        const idsToRemoveSet = new Set(idsToRemove);
+        if (isSkipPaginatedStream(removalStreamId)) {
+          // Skip streams resume from a consumed-raw-rows offset. A committed
+          // removal deletes one of those rows server-side, shifting every
+          // later index down — so drop the removed stream rows from the
+          // offset too, or the next loadMore skips one live row per removal
+          // once the backend reindexes the shorter list. Membership is
+          // checked at commit time: rows refetched after a refresh are
+          // already recounted in the new offset, and optimistic prepends
+          // never counted toward it.
+          const removedStreamRowCount = postIdsRef.current.filter((id) => idsToRemoveSet.has(id)).length;
+          if (removedStreamRowCount > 0) {
+            // Also tallied in committedRemovalsRef so a fetch already in
+            // flight re-applies this decrement to the cursor it writes back.
+            committedRemovalsRef.current += removedStreamRowCount;
+            streamTailRef.current = Math.max(0, streamTailRef.current - removedStreamRowCount);
+          }
+        }
+        optimisticPostIdsRef.current = optimisticPostIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
+        postIdsRef.current = postIdsRef.current.filter((id) => !idsToRemoveSet.has(id));
+      }
+      syncDisplayedPosts();
+    };
+
+    return {
+      commit: () => finalize(true),
+      rollback: () => finalize(false),
+    };
+  };
 
   // Initial load and reset when streamId changes
   useEffect(() => {
@@ -396,5 +546,6 @@ export function useStreamPagination({
     prependPosts,
     prependOptimisticPosts,
     removePosts,
+    removePostsOptimistically,
   };
 }
