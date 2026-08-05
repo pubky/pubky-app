@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { TagKind } from '@/application/tag/tag.types';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -13,16 +14,16 @@ import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
+import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import { cn } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
-import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
-import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { PostText } from '@/molecules/PostText/PostText';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
+import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
@@ -280,11 +281,17 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
 
 /**
  * Deleted / not-found collection items keep their mosaic slot as a card-surface
- * placeholder — the same PostDeleted/PostMissing copy Grid and List show — so
- * item counts stay consistent across layouts. Clickable like the Grid/List
- * cards (navigates to the post page); no hover overlay or post actions.
+ * placeholder — the same PostUnavailable copy Grid and List show — so item
+ * counts stay consistent across layouts. Clickable like the Grid/List cards
+ * (navigates to the post page); no hover overlay or post actions. Owners get
+ * the same Remove CTA as Grid/List (`useRemoveDeletedPost` gates it); like the
+ * media tiles' hover overlay, the button lives inside the clickable tile and
+ * stops propagation itself.
  */
 function VisualTimelinePlaceholderTile({ tile, size, onNavigate }: VisualTimelinePlaceholderTileProps) {
+  const t = useTranslations('post');
+  const removal = useRemoveDeletedPost(tile.postId);
+
   const handleNavigate = () => {
     onNavigate(tile.postId);
   };
@@ -308,7 +315,12 @@ function VisualTimelinePlaceholderTile({ tile, size, onNavigate }: VisualTimelin
       className="flex size-full cursor-pointer items-center justify-center rounded-md py-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       style={{ aspectRatio: VISUAL_TILE_ASPECT_RATIOS[size] }}
     >
-      {tile.placeholderKind === 'deleted' ? <PostDeleted /> : <PostMissing />}
+      <PostUnavailable
+        message={tile.placeholderKind === 'deleted' ? t('deleted') : t('missing')}
+        removeDataCy={tile.placeholderKind === 'deleted' ? 'post-deleted-remove-btn' : 'post-missing-remove-btn'}
+        onRemove={removal.canRemove ? () => void removal.remove() : undefined}
+        isRemoving={removal.isRemoving}
+      />
     </Card>
   );
 }
@@ -317,6 +329,10 @@ function VisualTimelineRow({ cell, onNavigate, trailingSlot }: VisualTimelineRow
   return (
     <Container
       overrideDefaults
+      // Anchor for focusAdjacentGridItem: mosaic tiles are `role="button"`, not
+      // `[role="article"]` cards, so the Remove CTA's focus hand-off climbs to
+      // this cell instead.
+      data-grid-item
       className="min-w-0"
       style={{
         gridColumn: `span ${VISUAL_TILE_COLUMN_SPANS[cell.size]} / span ${VISUAL_TILE_COLUMN_SPANS[cell.size]}`,

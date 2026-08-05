@@ -29,7 +29,7 @@ interface TimelineFeedItemProps {
  * The local `usePostDetails` here exists solely to branch before mount:
  * - `undefined` / `null` — kind unknown or post missing; default to `PostMain`
  *   (mixed feeds are mostly non-collection). `PostMain` shows its own skeleton
- *   or `PostMissing`. Replies are omitted until kind is known.
+ *   or `PostUnavailable`. Replies are omitted until kind is known.
  * - `kind === 'collection'` — standalone `CollectionCard` (no replies). Once
  *   mounted, `CollectionCard` reads the same Dexie row and usually skips its
  *   skeleton because the cache is already warm.
