@@ -7,4 +7,6 @@ export interface PostBodyProps {
   attachments: PostDetailsModel['attachments'];
   localAttachments: AttachmentConstructed[] | undefined;
   textClassName?: string;
+  /** Forwarded to `PostText` — see `expandInPlace` there. */
+  expandInPlace?: boolean;
 }

@@ -563,7 +563,8 @@
       "followers": "Followers",
       "following": "Following",
       "friends": "Friends",
-      "tagged": "Tagged"
+      "tagged": "Tagged",
+      "unlocked": "Unlocked"
     },
     "stats": {
       "followers": "Followers",
@@ -640,6 +641,10 @@
     "navigation": {
       "whoToFollow": "Who to Follow",
       "popularUsers": "Popular Users"
+    },
+    "unlocked": {
+      "empty": "You haven't unlocked any content yet.",
+      "error": "Couldn't load your unlocked content. Try again later."
     }
   },
   "dialogs": {

@@ -2,13 +2,14 @@ import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { isAppError, isValidationError } from '@/libs/error/error.utils';
+import { isAppError, isNotFound, isValidationError } from '@/libs/error/error.utils';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocksService } from '@/services/locks/locks';
 import type {
   LockFile,
+  ReplicatedPost,
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
   TFetchLockFileParams,
@@ -18,14 +19,17 @@ import type {
   TRegisterGuardedResourceResult,
   TUnlockedAttachment,
   TUnlockedContent,
+  TUnlockedListItem,
   TUnlockResult,
   TVerificationStatus,
 } from '@/services/locks/locks.types';
 import type {
   TCreateLockContentParams,
   TFetchOwnContentParams,
+  TFetchReplicatedAttachmentsParams,
   TFetchReplicatedContentParams,
   TFetchUnlockedContentParams,
+  TFetchUnlockedListParams,
   TLockContentFile,
   TReplicateUnlockedContentParams,
   TUnlockContentParams,
@@ -228,6 +232,64 @@ export class LocksApplication {
     });
   }
 
+  /**
+   * Lists the reader's unlocked content from `/priv/social/unlocked/`, newest unlock first.
+   * Only locks whose `post.json` marker exists count — a partial replica has none. A corrupt or
+   * concurrently-deleted marker drops that one item so the rest still renders; any other failure
+   * rejects the whole list so the caller can retry.
+   *
+   * TODO:[Locks] #2296 — uncached, so every profile visit re-lists the root and re-GETs each marker.
+   * The reader's unlocked content moves to IndexedDB there, which replaces this with a local read.
+   */
+  static async fetchUnlockedList({ readerPubky }: TFetchUnlockedListParams): Promise<TUnlockedListItem[]> {
+    const files = await HomeserverService.listAll({
+      baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky),
+    });
+
+    const items = await Promise.all(
+      GuardedContentParser.completedLockIds(files).map(async (lockId) => {
+        try {
+          const replicatedPost = await this.readReplicatedMarker(readerPubky, lockId, 'fetchUnlockedList');
+          return replicatedPost ? { lockId, ...replicatedPost } : null;
+        } catch (error) {
+          // Validation = corrupt marker, already reported — drop this item only.
+          // So user will see validated locks but not invalid ones.
+          if (isAppError(error) && isValidationError(error)) return null;
+          throw error;
+        }
+      }),
+    );
+
+    return items.filter((item): item is TUnlockedListItem => item !== null).sort((a, b) => b.unlockedAt - a.unlockedAt);
+  }
+
+  /**
+   * Reads + parses a lock's `post.json` unlock marker. Null when absent — never unlocked, partial
+   * replica, or deleted meanwhile; `getBytesIfExists` swallows the 404 quietly (no error log).
+   * A marker present but corrupt (a 200 with unparseable bytes) is a data error, not "not unlocked" —
+   * reported via throw instead of a silent null.
+   */
+  private static async readReplicatedMarker(
+    readerPubky: string,
+    lockId: string,
+    operation: string,
+  ): Promise<{ post: ReplicatedPost; unlockedAt: number } | null> {
+    const marker = await HomeserverService.getBytesIfExists(GuardedContentParser.unlockedPostUrl(readerPubky, lockId));
+    if (!marker) return null;
+
+    const post = GuardedContentParser.parseReplicatedPost(marker.bytes);
+    if (!post) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'replicated post is not parseable', {
+        service: ErrorService.Locks,
+        operation,
+        context: { lockId },
+      });
+    }
+    // The marker is written once, when the unlock completes, so its server-side write time IS the
+    // unlock time. 0 when the header is missing, which sorts the item oldest.
+    return { post, unlockedAt: marker.modifiedAt ?? 0 };
+  }
+
   /** Already unlocked → load from reader's HS `/priv`. Null if no `post.json` (never unlocked or partial). */
   static async fetchReplicatedContent({
     lockUrl,
@@ -236,36 +298,41 @@ export class LocksApplication {
     const lockId = LockContentParser.lockIdFromUrl(lockUrl);
     if (!lockId) return null;
 
-    // 404 → no marker → not unlocked yet; `getBytesIfExists` returns null quietly (no error log).
-    const postBytes = await HomeserverService.getBytesIfExists(
-      GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
-    );
-    if (!postBytes) return null;
+    const replicatedPost = await this.readReplicatedMarker(readerPubky, lockId, 'fetchReplicatedContent');
+    if (!replicatedPost) return null;
 
-    const replicated = GuardedContentParser.parseReplicatedPost(postBytes);
-    if (!replicated) {
-      // Marker present but corrupt (a 200 with unparseable bytes) — a data error, not "not unlocked".
-      // Report it like the other parse failures instead of a silent null.
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'replicated post is not parseable', {
-        service: ErrorService.Locks,
-        operation: 'fetchReplicatedContent',
-        context: { lockId },
-      });
-    }
-
-    const refs = replicated.attachments ?? [];
-    const attachments = await Promise.all(
-      refs.map(async ({ url, content_type }) => ({
-        id: url.slice(url.lastIndexOf('/') + 1),
-        contentType: content_type,
-        bytes: await HomeserverService.getBytes(url),
-      })),
-    );
-
+    const { post } = replicatedPost;
+    const refs = post.attachments ?? [];
     return {
-      post: { content: replicated.content, kind: replicated.kind, attachments: refs.map((ref) => ref.url) },
-      attachments,
+      post: { content: post.content, kind: post.kind, attachments: refs.map((ref) => ref.url) },
+      attachments: await this.fetchReplicatedAttachments({ post }),
     };
+  }
+
+  /**
+   * Loads the bytes behind a replicated marker's attachments. Split from `fetchReplicatedContent` so
+   * the unlocked list, which already holds the markers, can pull media without re-reading them.
+   *
+   * Missing file (404) → drop it, show the rest. Anything else → throw, so a brief outage does not
+   * look like lost media. Same rule as `readAttachments`.
+   */
+  static async fetchReplicatedAttachments({ post }: TFetchReplicatedAttachmentsParams): Promise<TUnlockedAttachment[]> {
+    const reads = await Promise.all(
+      (post.attachments ?? []).map(async ({ url, content_type }) => {
+        try {
+          return {
+            id: url.slice(url.lastIndexOf('/') + 1),
+            contentType: content_type,
+            bytes: await HomeserverService.getBytes(url),
+          };
+        } catch (error) {
+          // 404 = the replica lost this file; `getBytes` already reported it.
+          if (isAppError(error) && isNotFound(error)) return null;
+          throw error;
+        }
+      }),
+    );
+    return reads.filter((attachment): attachment is TUnlockedAttachment => attachment !== null);
   }
 
   /**

@@ -924,6 +924,36 @@ describe('HomeserverService', () => {
         });
       });
     });
+
+    describe('getBytesIfExists', () => {
+      const ownedUrl = 'pubky://user/priv/social/unlocked/LOCK1/post.json';
+
+      beforeEach(() => {
+        mockState.currentSession = createMockSession();
+      });
+
+      it('reports the server write time, so callers can order by it', async () => {
+        mockState.sessionStorageGet.mockResolvedValue(
+          new Response('bytes', { status: 200, headers: { 'last-modified': 'Wed, 05 Aug 2026 10:00:00 GMT' } }),
+        );
+
+        const result = await HomeserverService.getBytesIfExists(ownedUrl);
+
+        expect(result?.modifiedAt).toBe(Date.UTC(2026, 7, 5, 10, 0, 0));
+      });
+
+      it.each([
+        ['no last-modified header', {}],
+        ['an unparseable last-modified header', { 'last-modified': 'not a date' }],
+      ])('still returns the bytes with a null time given %s', async (_label, headers) => {
+        mockState.sessionStorageGet.mockResolvedValue(new Response('bytes', { status: 200, headers }));
+
+        const result = await HomeserverService.getBytesIfExists(ownedUrl);
+
+        expect(result?.modifiedAt).toBeNull();
+        expect(new TextDecoder().decode(result?.bytes)).toBe('bytes');
+      });
+    });
   });
 
   // ===========================================================================

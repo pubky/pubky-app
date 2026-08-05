@@ -34,6 +34,8 @@ export interface ProfilePageLayoutProps {
   };
   /** Statistics for the profile */
   stats: ProfileStats;
+  /** Unlocked-content count for the sidebar; not part of `stats` (Nexus cannot index `/priv`). */
+  unlockedCount?: number;
   /** Actions handlers for profile interactions */
   actions: ProfilePageLayoutActions;
   /** Currently active page */

@@ -3,20 +3,12 @@
 import { useEffect, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
 import { Logger } from '@/libs/logger/logger';
+import { toUnlockedMedia } from '@/libs/utils/unlockedMedia';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { GuardedPost, TUnlockedContent } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseUnlockedContentParams, UseUnlockedContentResult } from './useUnlockedContent.types';
-
-/** Guarded attachment bytes → object-URL media, matching the creator-preview `localAttachments` shape. */
-const toLocalMedia = (attachments: TUnlockedContent['attachments']): AttachmentConstructed[] =>
-  attachments.map(({ contentType, bytes }, index) => {
-    // `bytes as BlobPart`: the SDK's `Uint8Array<ArrayBufferLike>` doesn't narrow to Blob's expected view.
-    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: contentType }));
-    const isImage = contentType.startsWith('image');
-    return { type: contentType, name: `attachment-${index}`, urls: { main: url, feed: isImage ? url : undefined } };
-  });
 
 /**
  * Resolves the content a reader can see without re-unlocking, and derives whether the lock is the
@@ -45,7 +37,7 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
 
   // Bytes → object URLs here; only post + URLs go to state, so the raw bytes are GC'd once this returns.
   const applyContent = (content: TUnlockedContent) => {
-    setMedia(toLocalMedia(content.attachments));
+    setMedia(toUnlockedMedia(content.attachments));
     setUnlockedPost(content.post);
   };
 

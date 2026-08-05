@@ -151,3 +151,9 @@ export type THandleErrorParams = {
   statusCode?: number;
   alwaysUseHomeserverError?: boolean;
 };
+
+export type THomeserverBytesResult = {
+  bytes: Uint8Array;
+  /** Server-side write time from `Last-Modified`; null when the header is missing or unparseable. */
+  modifiedAt: number | null;
+};

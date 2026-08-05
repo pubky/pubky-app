@@ -300,6 +300,42 @@ exports[`ProfilePageMobileMenu - Snapshots > matches snapshot with default props
         </svg>
       </button>
     </div>
+    <div
+      class="flex flex-1 justify-center border-b px-0 py-1.5 border-border"
+      data-testid="container"
+    >
+      <button
+        aria-label="Unlocked"
+        class="px-2.5 py-2"
+        data-slot="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-lock-open text-muted-foreground"
+          fill="none"
+          height="20"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="11"
+            rx="2"
+            ry="2"
+            width="18"
+            x="3"
+            y="11"
+          />
+          <path
+            d="M7 11V7a5 5 0 0 1 9.9-1"
+          />
+        </svg>
+      </button>
+    </div>
   </div>
 </div>
 `;

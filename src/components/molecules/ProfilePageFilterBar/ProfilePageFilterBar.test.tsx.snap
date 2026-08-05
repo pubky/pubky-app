@@ -424,6 +424,57 @@ exports[`ProfilePageFilterBar - Snapshots > matches snapshot with loading state 
         role="status"
       />
     </button>
+    <button
+      aria-pressed="false"
+      class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left text-muted-foreground hover:text-foreground/80 m-0 h-full w-full items-start justify-between px-0 py-1"
+      data-selected="false"
+      data-slot="filter-item"
+      data-testid="filter-item"
+      type="button"
+    >
+      <div
+        class="flex items-center gap-2"
+        data-cy="profile-filter-item-unlocked"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-lock-open h-5 w-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="11"
+            rx="2"
+            ry="2"
+            width="18"
+            x="3"
+            y="11"
+          />
+          <path
+            d="M7 11V7a5 5 0 0 1 9.9-1"
+          />
+        </svg>
+        <span
+          class=""
+        >
+          Unlocked
+        </span>
+      </div>
+      <div
+        aria-label="Loading"
+        class="animate-spin rounded-full border-b-2 border-brand size-4"
+        data-testid="spinner"
+        role="status"
+      />
+    </button>
   </div>
 </div>
 `;
@@ -817,6 +868,57 @@ exports[`ProfilePageFilterBar - Snapshots > matches snapshot with stats 1`] = `
         3
       </span>
     </button>
+    <button
+      aria-pressed="false"
+      class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left text-muted-foreground hover:text-foreground/80 m-0 h-full w-full items-start justify-between px-0 py-1"
+      data-selected="false"
+      data-slot="filter-item"
+      data-testid="filter-item"
+      type="button"
+    >
+      <div
+        class="flex items-center gap-2"
+        data-cy="profile-filter-item-unlocked"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-lock-open h-5 w-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="11"
+            rx="2"
+            ry="2"
+            width="18"
+            x="3"
+            y="11"
+          />
+          <path
+            d="M7 11V7a5 5 0 0 1 9.9-1"
+          />
+        </svg>
+        <span
+          class=""
+        >
+          Unlocked
+        </span>
+      </div>
+      <div
+        aria-label="Loading"
+        class="animate-spin rounded-full border-b-2 border-brand size-4"
+        data-testid="spinner"
+        role="status"
+      />
+    </button>
   </div>
 </div>
 `;
@@ -1209,6 +1311,57 @@ exports[`ProfilePageFilterBar - Snapshots > matches snapshot with zero stats 1`]
       >
         0
       </span>
+    </button>
+    <button
+      aria-pressed="false"
+      class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left text-muted-foreground hover:text-foreground/80 m-0 h-full w-full items-start justify-between px-0 py-1"
+      data-selected="false"
+      data-slot="filter-item"
+      data-testid="filter-item"
+      type="button"
+    >
+      <div
+        class="flex items-center gap-2"
+        data-cy="profile-filter-item-unlocked"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-lock-open h-5 w-5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="11"
+            rx="2"
+            ry="2"
+            width="18"
+            x="3"
+            y="11"
+          />
+          <path
+            d="M7 11V7a5 5 0 0 1 9.9-1"
+          />
+        </svg>
+        <span
+          class=""
+        >
+          Unlocked
+        </span>
+      </div>
+      <div
+        aria-label="Loading"
+        class="animate-spin rounded-full border-b-2 border-brand size-4"
+        data-testid="spinner"
+        role="status"
+      />
     </button>
   </div>
 </div>

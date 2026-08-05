@@ -173,6 +173,46 @@ describe('GuardedContentParser', () => {
     });
   });
 
+  describe('unlockedRootUrl', () => {
+    it('builds the directory the unlocked list enumerates', () => {
+      expect(GuardedContentParser.unlockedRootUrl('readerpubky')).toBe('pubky://readerpubky/priv/social/unlocked/');
+    });
+  });
+
+  describe('completedLockIds', () => {
+    const url = (tail: string) => `pubky://readerpubky/priv/social/unlocked/${tail}`;
+
+    it('counts a lock once, from its post.json, ignoring the attachments beside it', () => {
+      const files = [url('LOCK1/img1'), url('LOCK1/post.json'), url('LOCK1/img2')];
+
+      expect(GuardedContentParser.completedLockIds(files)).toEqual(['LOCK1']);
+    });
+
+    it('drops a lock whose replication stopped before the marker landed', () => {
+      const files = [url('DONE/post.json'), url('PARTIAL/img1')];
+
+      expect(GuardedContentParser.completedLockIds(files)).toEqual(['DONE']);
+    });
+
+    it('ignores a post.json nested deeper than the lock folder', () => {
+      expect(GuardedContentParser.completedLockIds([url('LOCK1/nested/post.json')])).toEqual([]);
+    });
+
+    it('ignores a post.json sitting directly in the root, which belongs to no lock', () => {
+      expect(GuardedContentParser.completedLockIds([url('post.json')])).toEqual([]);
+    });
+
+    it('skips urls outside the unlocked root', () => {
+      const files = ['pubky://readerpubky/pub/pubky.app/posts/post.json', url('LOCK1/post.json')];
+
+      expect(GuardedContentParser.completedLockIds(files)).toEqual(['LOCK1']);
+    });
+
+    it('returns nothing for an empty listing, which is what a 404 root becomes', () => {
+      expect(GuardedContentParser.completedLockIds([])).toEqual([]);
+    });
+  });
+
   describe('buildUnlockedPost', () => {
     const post: GuardedPost = {
       content: 'secret',

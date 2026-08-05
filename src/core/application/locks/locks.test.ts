@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ServerErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
-import type { LockFile, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
+import type { LockFile, ReplicatedPost, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LocksApplication } from './locks';
 
@@ -20,10 +20,16 @@ const mocks = vi.hoisted(() => ({
   putBlob: vi.fn(),
   getBytes: vi.fn(),
   getBytesIfExists: vi.fn(),
+  listAll: vi.fn(),
 }));
 
 vi.mock('@/services/homeserver/homeserver', () => ({
-  HomeserverService: { putBlob: mocks.putBlob, getBytes: mocks.getBytes, getBytesIfExists: mocks.getBytesIfExists },
+  HomeserverService: {
+    putBlob: mocks.putBlob,
+    getBytes: mocks.getBytes,
+    getBytesIfExists: mocks.getBytesIfExists,
+    listAll: mocks.listAll,
+  },
 }));
 
 vi.mock('@/services/locks/locks', () => ({
@@ -356,10 +362,53 @@ describe('LocksApplication.replicateUnlockedContent', () => {
   });
 });
 
+describe('LocksApplication.fetchReplicatedAttachments', () => {
+  const post = (contentTypes: string[]) =>
+    asOpaque<ReplicatedPost>({
+      content: 'body',
+      kind: 'image',
+      attachments: contentTypes.map((content_type, index) => ({
+        url: `pubky://reader/priv/social/unlocked/LOCK1/file${index}`,
+        content_type,
+      })),
+    });
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('drops an attachment the replica no longer has and keeps the rest renderable', async () => {
+    mocks.getBytes
+      .mockResolvedValueOnce(new Uint8Array([1]))
+      .mockRejectedValueOnce(
+        Err.client(ClientErrorCode.NOT_FOUND, 'gone', { service: ErrorService.Homeserver, operation: 'getBytes' }),
+      )
+      .mockResolvedValueOnce(new Uint8Array([3]));
+
+    const result = await LocksApplication.fetchReplicatedAttachments({
+      post: post(['image/png', 'image/png', 'image/png']),
+    });
+
+    expect(result.map((attachment) => attachment.id)).toEqual(['file0', 'file2']);
+  });
+
+  it('rejects on a transient failure, so an outage is not shown as missing media', async () => {
+    mocks.getBytes.mockRejectedValueOnce(
+      Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'homeserver down', {
+        service: ErrorService.Homeserver,
+        operation: 'getBytes',
+      }),
+    );
+
+    await expect(LocksApplication.fetchReplicatedAttachments({ post: post(['image/png']) })).rejects.toThrow();
+  });
+});
+
 describe('LocksApplication.fetchReplicatedContent', () => {
   const READER = 'pubkyreader123';
   const LOCK_URL = 'pubky://pubkycreator123/pub/locks.app/LOCK1.json';
-  const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+  const marker = (value: unknown, modifiedAt = 1) => ({
+    bytes: new TextEncoder().encode(JSON.stringify(value)),
+    modifiedAt,
+  });
 
   beforeEach(() => vi.clearAllMocks());
 
@@ -375,7 +424,7 @@ describe('LocksApplication.fetchReplicatedContent', () => {
   it('loads the replicated post and its attachments from the reader priv (no lock file needed)', async () => {
     const attachmentUrl = `pubky://${READER}/priv/social/unlocked/LOCK1/img1`;
     mocks.getBytesIfExists.mockResolvedValueOnce(
-      encode({ content: 'secret', kind: 'image', attachments: [{ url: attachmentUrl, content_type: 'image/png' }] }),
+      marker({ content: 'secret', kind: 'image', attachments: [{ url: attachmentUrl, content_type: 'image/png' }] }),
     );
     mocks.getBytes.mockResolvedValueOnce(new Uint8Array([7, 7]));
 
@@ -387,9 +436,53 @@ describe('LocksApplication.fetchReplicatedContent', () => {
   });
 
   it('throws when the marker exists but is not a parseable post (data corruption, not "not unlocked")', async () => {
-    mocks.getBytesIfExists.mockResolvedValueOnce(new TextEncoder().encode('not json'));
+    mocks.getBytesIfExists.mockResolvedValueOnce({ bytes: new TextEncoder().encode('not json'), modifiedAt: 1 });
 
     await expect(LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER })).rejects.toThrow();
+  });
+});
+
+describe('LocksApplication.fetchUnlockedList', () => {
+  const READER = 'pubkyreader123';
+  const markerUrl = (lockId: string) => `pubky://${READER}/priv/social/unlocked/${lockId}/post.json`;
+  const marker = (content: string, modifiedAt: number | null) => ({
+    bytes: new TextEncoder().encode(JSON.stringify({ content, kind: 'short', attachments: null })),
+    modifiedAt,
+  });
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('drops only the corrupt marker and returns the healthy items newest first', async () => {
+    mocks.listAll.mockResolvedValueOnce([markerUrl('LOCK1'), markerUrl('LOCK2'), markerUrl('LOCK3')]);
+    mocks.getBytesIfExists
+      .mockResolvedValueOnce(marker('a', 1))
+      .mockResolvedValueOnce({ bytes: new TextEncoder().encode('not json'), modifiedAt: 2 }) // LOCK2 corrupt
+      .mockResolvedValueOnce(marker('c', 3)); // LOCK3
+
+    const result = await LocksApplication.fetchUnlockedList({ readerPubky: READER });
+
+    expect(result.map((item) => item.lockId)).toEqual(['LOCK3', 'LOCK1']);
+  });
+
+  it('sorts by the homeserver write time', async () => {
+    mocks.listAll.mockResolvedValueOnce([markerUrl('OLD'), markerUrl('NEW')]);
+    mocks.getBytesIfExists.mockResolvedValueOnce(marker('old', 100)).mockResolvedValueOnce(marker('new', 900));
+
+    const result = await LocksApplication.fetchUnlockedList({ readerPubky: READER });
+
+    expect(result.map((item) => [item.lockId, item.unlockedAt])).toEqual([
+      ['NEW', 900],
+      ['OLD', 100],
+    ]);
+  });
+
+  it('sorts a marker with no Last-Modified header oldest instead of dropping it', async () => {
+    mocks.listAll.mockResolvedValueOnce([markerUrl('NOHEADER'), markerUrl('DATED')]);
+    mocks.getBytesIfExists.mockResolvedValueOnce(marker('a', null)).mockResolvedValueOnce(marker('b', 5));
+
+    const result = await LocksApplication.fetchUnlockedList({ readerPubky: READER });
+
+    expect(result.map((item) => item.lockId)).toEqual(['DATED', 'NOHEADER']);
   });
 });
 

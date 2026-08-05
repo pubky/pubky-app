@@ -1324,3 +1324,52 @@ Even more specific information.`}
     expect(container.firstChild).toMatchSnapshot();
   });
 });
+
+describe('PostText - expandInPlace', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUsePathname.mockReturnValue('/profile/unlocked');
+  });
+
+  // Sits past the truncation limit, so it only renders once the body is expanded.
+  const TAIL = 'tail-only-visible-when-expanded';
+  const longContent = () => `${generateContent(600)}${TAIL}`;
+
+  it('leaves the click to the parent by default, so feed cards still navigate to the post', () => {
+    const onParentClick = vi.fn();
+    render(
+      <div onClick={onParentClick}>
+        <PostText content={longContent()} />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show full post content' }));
+
+    expect(onParentClick).toHaveBeenCalledTimes(1);
+    // Still truncated and the button stays: nothing was handled here.
+    expect(screen.queryByText(new RegExp(TAIL))).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show full post content' })).toBeInTheDocument();
+  });
+
+  it('reveals the full text and drops the button when asked to expand in place', () => {
+    render(<PostText content={longContent()} expandInPlace />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show full post content' }));
+
+    expect(screen.getByText(new RegExp(TAIL))).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+  });
+
+  it('stops the click from reaching a parent that would navigate away', () => {
+    const onParentClick = vi.fn();
+    render(
+      <div onClick={onParentClick}>
+        <PostText content={longContent()} expandInPlace />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show full post content' }));
+
+    expect(onParentClick).not.toHaveBeenCalled();
+  });
+});

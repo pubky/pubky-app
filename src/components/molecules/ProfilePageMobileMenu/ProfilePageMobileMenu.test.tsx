@@ -61,6 +61,7 @@ describe('ProfilePageMobileMenu', () => {
       'Friends',
       'Tagged',
       'Collections',
+      'Unlocked',
     ]);
   });
 

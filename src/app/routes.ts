@@ -43,6 +43,7 @@ export enum PROFILE_ROUTES {
   UNIQUE_TAGS = '/profile/tagged',
   PROFILE_PAGE = '/profile/profile',
   COLLECTIONS = '/profile/collections',
+  UNLOCKED = '/profile/unlocked',
 }
 
 export enum SETTINGS_ROUTES {

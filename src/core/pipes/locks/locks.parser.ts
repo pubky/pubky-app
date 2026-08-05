@@ -128,6 +128,31 @@ export class GuardedContentParser {
     return `pubky://${readerPubky}${UNLOCKED_PREFIX}${lockId}/${file}`;
   }
 
+  /** Reader's unlocked root: `pubky://<reader>/priv/social/unlocked/`. */
+  static unlockedRootUrl(readerPubky: string): string {
+    return `pubky://${readerPubky}${UNLOCKED_PREFIX}`;
+  }
+
+  /**
+   * Picks the `<lockId>` out of each unlocked-root file URL, keeping only completed replicas:
+   * ```
+   * pubky://<reader>/priv/social/unlocked/<lockIdA>/post.json  ┐
+   * pubky://<reader>/priv/social/unlocked/<lockIdA>/img1       ┘ → '<lockIdA>'
+   * pubky://<reader>/priv/social/unlocked/<lockIdB>/img1       →   Problem! It will be dropped, because of no post.json
+   * ```
+   * `post.json` is written last, so its absence means replication stopped midway (docs/locks.md).
+   */
+  static completedLockIds(fileUrls: string[]): string[] {
+    const ids: string[] = [];
+    for (const url of fileUrls) {
+      const start = url.indexOf(UNLOCKED_PREFIX);
+      if (start === -1) continue;
+      const segments = url.slice(start + UNLOCKED_PREFIX.length).split('/');
+      if (segments.length === 2 && segments[0] && segments[1] === UNLOCKED_POST_FILE) ids.push(segments[0]);
+    }
+    return ids;
+  }
+
   /** A little helper: the reader's `post.json` URL — the unlock completion marker for a lock. */
   static unlockedPostUrl(readerPubky: string, lockId: string): string {
     return this.unlockedUrl(readerPubky, lockId, UNLOCKED_POST_FILE);

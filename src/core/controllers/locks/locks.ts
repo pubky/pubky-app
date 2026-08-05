@@ -2,8 +2,10 @@ import { LocksApplication } from '@/application/locks/locks';
 import type {
   TCreateLockContentParams,
   TFetchOwnContentParams,
+  TFetchReplicatedAttachmentsParams,
   TFetchReplicatedContentParams,
   TFetchUnlockedContentParams,
+  TFetchUnlockedListParams,
   TReplicateUnlockedContentParams,
   TUnlockContentParams,
 } from '@/application/locks/locks.types';
@@ -15,7 +17,9 @@ import type {
   TFetchLockFileParams,
   TGetConnectUrlParams,
   TLocksSessionResult,
+  TUnlockedAttachment,
   TUnlockedContent,
+  TUnlockedListItem,
   TUnlockResult,
 } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -170,6 +174,16 @@ export class LocksController {
   /** Loads already-unlocked content from the reader's `/priv`, or null if this lock isn't unlocked yet. */
   static fetchReplicatedContent(params: TFetchReplicatedContentParams): Promise<TUnlockedContent | null> {
     return LocksApplication.fetchReplicatedContent(params);
+  }
+
+  /** Loads the media bytes for one already-listed unlocked post. */
+  static fetchReplicatedAttachments(params: TFetchReplicatedAttachmentsParams): Promise<TUnlockedAttachment[]> {
+    return LocksApplication.fetchReplicatedAttachments(params);
+  }
+
+  /** Lists the reader's unlocked content (newest first) from their own `/priv/social/unlocked/`. */
+  static fetchUnlockedList(params: TFetchUnlockedListParams): Promise<TUnlockedListItem[]> {
+    return LocksApplication.fetchUnlockedList(params);
   }
 
   /** Creator reads their own locked content directly from the guarded original (owner == signed-in). */

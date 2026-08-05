@@ -225,6 +225,13 @@ export const replicatedPostSchema = z.object({
 
 export type ReplicatedPost = z.infer<typeof replicatedPostSchema>;
 
+export interface TUnlockedListItem {
+  lockId: string;
+  post: ReplicatedPost;
+  /** Homeserver write time of the marker — the unlock time, and the list's sort key. */
+  unlockedAt: number;
+}
+
 /** One guarded attachment read back after unlock — raw bytes + its content type (for a Blob). */
 export interface TUnlockedAttachment {
   /** Guarded path tail (`/priv/locks.app/content/<uuid>` → `<uuid>`); reused as the filename when replicated. */

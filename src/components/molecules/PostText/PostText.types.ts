@@ -5,6 +5,7 @@ import { ExtraProps } from 'react-markdown';
 export interface PostTextProps {
   content: string;
   isArticle?: boolean;
+  expandInPlace?: boolean;
   onLinkClick?: (url: string, e: React.MouseEvent<HTMLAnchorElement>) => void;
   className?: string;
 }

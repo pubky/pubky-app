@@ -1,4 +1,4 @@
-import type { LockFile, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
+import type { LockFile, ReplicatedPost, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
 
 /** Params for the reader unlock flow. `lockUrl` is the post's public `lock.json` URL. */
 export type TUnlockContentParams = {
@@ -23,6 +23,14 @@ export type TReplicateUnlockedContentParams = {
 export type TFetchReplicatedContentParams = {
   lockUrl: string;
   readerPubky: string;
+};
+
+export type TFetchUnlockedListParams = {
+  readerPubky: string;
+};
+
+export type TFetchReplicatedAttachmentsParams = {
+  post: ReplicatedPost;
 };
 
 export type TFetchOwnContentParams = {

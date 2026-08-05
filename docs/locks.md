@@ -92,6 +92,19 @@ LockedPostContent
 Replication is what makes path 1 work on later views: no Lock Server call, and the content
 survives the creator revoking access.
 
+**Three readers, three sources.** The names differ only by a word, so read them by where the
+bytes come from:
+
+| Method                   | Reads from                                                 | Needs                    |
+| ------------------------ | ---------------------------------------------------------- | ------------------------ |
+| `fetchUnlockedContent`   | creator's guarded storage, via the Lock Server proxy       | access credential        |
+| `fetchReplicatedContent` | the reader's own copy at `/priv/social/unlocked/<lockId>/` | pubky.app session        |
+| `fetchOwnContent`        | the creator's own `/priv/locks.app/content/`               | pubky.app session (a==b) |
+
+Only the first one costs an unlock. `fetchReplicatedAttachments` loads the media for a
+replica whose marker the caller already has — the unlocked list uses it so listing the
+screen does not re-read every marker.
+
 | Layer       | File                                 | Responsibility                                                                           |
 | ----------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
 | hook        | `hooks/usePostLock/usePostLock.ts`   | parse teaser + fetch lock file                                                           |
@@ -113,6 +126,35 @@ Notes:
 - **Single error origin.** Validation throws `Err.validation` in the application (the
   factory logs + reports to Sentry once). Hooks catch and degrade to the lock card.
 - **Read path.** This is a read flow; there is no local-first `commit*` write.
+
+## The Unlocked screen
+
+`/profile/unlocked` lists everything the signed-in reader has unlocked, newest first. Own
+profile only — the data lives in the reader's `/priv`, so another user's profile has none.
+
+```
+profile/(own)/layout.tsx → ProfilePageContainer
+  ├─ useUnlockedList({ enabled: isOwnProfile })   → one read per profile visit
+  │    └─ LocksController.fetchUnlockedList
+  │         └─ listAll(/priv/social/unlocked/) → completedLockIds → read each post.json
+  ├─ unlockedCount → ProfilePageFilterBar (sidebar badge)
+  └─ UnlockedListProvider → ProfileUnlocked (the page)
+       └─ ProfileUnlockedCard → fetchReplicatedAttachments → PostArticle | PostBody
+```
+
+- **One read, two consumers.** The layout survives profile tab navigation, so the hook lives
+  in `ProfilePageContainer` and reaches the page through a context — calling it in both the
+  sidebar and the screen would enumerate `/priv` twice.
+- **`completedLockIds` only counts an exact `<lockId>/post.json` entry.** Anything else under
+  a lock folder is an interrupted replication, which must not appear as unlocked content.
+- **Sorted by the marker's `Last-Modified`.** The homeserver stamps `entry.modified_at` on write,
+  so the ordering key is server-authoritative rather than a number the client puts in the body.
+  It costs no extra request — the header rides along with the marker read. (Path order is no help:
+  `list` sorts by path and a lock id is a hash.)
+- **Media loads per card, not per list.** The list holds only markers; pulling every
+  attachment up front would download the reader's whole unlocked library at once.
+- **Not cached.** Re-entering the profile re-lists the root and re-reads each marker; #2296
+  moves this to IndexedDB.
 
 ## Release-gate markers
 

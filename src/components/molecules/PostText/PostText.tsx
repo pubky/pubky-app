@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -39,11 +39,18 @@ import {
  * Memoization prevents unnecessary re-renders when TTL refreshes update IndexedDB records
  * without changes to the actual post content.
  */
-export const PostText = memo(function PostText({ content, isArticle, onLinkClick, className }: PostTextProps) {
+export const PostText = memo(function PostText({
+  content,
+  isArticle,
+  expandInPlace,
+  onLinkClick,
+  className,
+}: PostTextProps) {
   const pathname = usePathname();
+  const [isExpanded, setIsExpanded] = useState(false);
   const onPostPage = pathname.startsWith(POST_ROUTES.POST);
 
-  const contentTruncated = !isArticle && !onPostPage ? truncatePostPreviewText(content) : null;
+  const contentTruncated = !isArticle && !onPostPage && !isExpanded ? truncatePostPreviewText(content) : null;
   const showMoreButton = Boolean(contentTruncated);
 
   const remarkPlugins = [
@@ -203,12 +210,21 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
         {contentTruncated || content}
       </Markdown>
 
-      {/* No stopPropagation on this element therefore click takes user to post via parent element */}
+      {/* Without `expandInPlace`, no stopPropagation here: the click reaches the parent, which
+          navigates to the post page. */}
       {showMoreButton && (
         <Button
           overrideDefaults
           aria-label="Show full post content"
           data-allow-post-navigation
+          onClick={
+            expandInPlace
+              ? (event) => {
+                  event.stopPropagation();
+                  setIsExpanded(true);
+                }
+              : undefined
+          }
           className="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
         >
           Show more
