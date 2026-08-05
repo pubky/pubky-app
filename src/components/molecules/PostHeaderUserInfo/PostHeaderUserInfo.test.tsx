@@ -468,10 +468,28 @@ describe('PostHeaderUserInfo - Navigation', () => {
     const usernameLink = profileLinks[1];
     const userInfoRoot = usernameLink.parentElement?.parentElement;
 
-    expect(userInfoRoot).toHaveClass('grid', 'w-full', 'max-w-full', 'min-w-0', 'grid-cols-[auto_minmax(0,1fr)]');
+    expect(userInfoRoot).toHaveClass('grid', 'w-fit', 'max-w-full', 'min-w-0', 'grid-cols-[auto_minmax(0,1fr)]');
     expect(usernameLink.parentElement).toHaveClass('max-w-full', 'min-w-0');
-    expect(usernameLink).toHaveClass('block', 'w-full', 'min-w-0', 'max-w-full', 'overflow-hidden');
+    expect(usernameLink).toHaveClass('block', 'w-fit', 'min-w-0', 'max-w-full', 'overflow-hidden');
     expect(screen.getByText(longName)).toHaveClass('w-full', 'truncate', 'max-w-full');
+  });
+
+  it('keeps the popover hover target hugging the user info instead of the whole header row', () => {
+    render(<PostHeaderUserInfo userId="testuser123" userName="Test User" />);
+
+    const userInfoRoot = screen.getByTestId('popover-trigger').firstElementChild;
+
+    expect(userInfoRoot).toHaveClass('w-fit', 'max-w-full');
+    expect(userInfoRoot).not.toHaveClass('w-full');
+  });
+
+  it('keeps the username link hugging its text so it is not clickable across the header row', () => {
+    render(<PostHeaderUserInfo userId="testuser123" userName="Test User" showPopover={false} />);
+
+    const usernameLink = screen.getAllByTestId('profile-link')[1];
+
+    expect(usernameLink).toHaveClass('w-fit', 'max-w-full');
+    expect(usernameLink).not.toHaveClass('w-full');
   });
 });
 
