@@ -17,53 +17,33 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
     />
   </div>
   <div
-    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
+    class="relative w-full"
     data-testid="container"
   >
     <div
-      class="flex gap-4 flex-col"
+      class="w-full"
       data-testid="container"
     >
-      <div
-        data-is-reply="true"
-        data-post-id="user:me"
-        data-size="normal"
-        data-testid="post-header"
-      />
-      <div
-        class="relative"
-        data-testid="container"
+      <button
+        aria-expanded="false"
+        class="flex w-full cursor-pointer items-center rounded-md border border-dashed border-input p-6 text-left transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 gap-3"
+        data-slot="button"
+        data-testid="quick-reply-trigger"
+        type="button"
       >
-        <textarea
-          aria-haspopup="listbox"
-          aria-label="Reply"
-          data-testid="quick-reply-textarea"
-          maxlength="2000"
-          placeholder="What are your thoughts on this?"
-          rows="1"
-          variant="inline"
+        <div
+          data-avatar-url="https://example.com/avatar/user:me"
+          data-name="Test User"
+          data-size="default"
+          data-testid="quick-reply-avatar"
         />
-      </div>
-      <div
-        attachments=""
-        data-testid="post-input-attachments"
-      />
-      <div
-        data-disabled="false"
-        data-post-disabled="true"
-        data-testid="post-input-expandable-section"
-      >
-        <button
-          data-testid="quick-reply-submit"
+        <p
+          class="min-w-0 flex-1 truncate text-left font-medium text-input text-base leading-6"
+          data-testid="quick-reply-placeholder"
         >
-          Submit
-        </button>
-        <button
-          data-testid="quick-reply-image"
-        >
-          Image
-        </button>
-      </div>
+          What are your thoughts on this?
+        </p>
+      </button>
     </div>
   </div>
 </div>
@@ -86,54 +66,33 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
     />
   </div>
   <div
-    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-12 border-input"
+    class="relative w-full"
     data-testid="container"
   >
     <div
-      class="flex gap-4 flex-col"
+      class="w-full"
       data-testid="container"
     >
-      <div
-        data-is-reply="true"
-        data-post-id="user:me"
-        data-size="large"
-        data-testid="post-header"
-      />
-      <div
-        class="relative"
-        data-testid="container"
+      <button
+        aria-expanded="false"
+        class="flex w-full cursor-pointer items-center rounded-md border border-dashed border-input p-6 text-left transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 gap-5"
+        data-slot="button"
+        data-testid="quick-reply-trigger"
+        type="button"
       >
-        <textarea
-          aria-haspopup="listbox"
-          aria-label="Reply"
-          class="text-xl leading-7"
-          data-testid="quick-reply-textarea"
-          maxlength="2000"
-          placeholder="What are your thoughts on this?"
-          rows="1"
-          variant="inline"
+        <div
+          data-avatar-url="https://example.com/avatar/user:me"
+          data-name="Test User"
+          data-size="xl"
+          data-testid="quick-reply-avatar"
         />
-      </div>
-      <div
-        attachments=""
-        data-testid="post-input-attachments"
-      />
-      <div
-        data-disabled="false"
-        data-post-disabled="true"
-        data-testid="post-input-expandable-section"
-      >
-        <button
-          data-testid="quick-reply-submit"
+        <p
+          class="min-w-0 flex-1 truncate text-left font-medium text-input text-xl leading-7"
+          data-testid="quick-reply-placeholder"
         >
-          Submit
-        </button>
-        <button
-          data-testid="quick-reply-image"
-        >
-          Image
-        </button>
-      </div>
+          What are your thoughts on this?
+        </p>
+      </button>
     </div>
   </div>
 </div>

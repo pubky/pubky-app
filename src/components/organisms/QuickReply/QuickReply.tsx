@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
+import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
@@ -16,6 +17,7 @@ import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
+import { QuickReplyCollapsedContent } from './QuickReplyCollapsedContent';
 import { QuickReplyContent } from './QuickReplyContent';
 
 export function QuickReply({
@@ -113,6 +115,21 @@ export function QuickReply({
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
+  const focusTextareaOnExpandRef = React.useRef(false);
+
+  const handleCollapsedExpand = () => {
+    if (isAuthenticated) {
+      focusTextareaOnExpandRef.current = true;
+    }
+    handleExpandWithAuth();
+  };
+
+  React.useEffect(() => {
+    if (!isExpanded || !focusTextareaOnExpandRef.current) return;
+
+    focusTextareaOnExpandRef.current = false;
+    textareaRef.current?.focus();
+  }, [isExpanded, textareaRef]);
 
   const contentProps: QuickReplyContentProps = {
     currentUserPubky,
@@ -154,34 +171,62 @@ export function QuickReply({
 
       <Container
         ref={containerRef}
-        className={cn(
-          'relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200',
-          isWideLayout ? 'p-12' : 'p-4',
-          isDragging ? 'border-brand' : 'border-input',
-        )}
-        onClick={handleExpandWithAuth}
+        overrideDefaults
+        className="relative w-full"
         onDragEnter={(event) => handleDragEventWithAuth(event, handleDragEnter)}
         onDragLeave={(event) => handleDragEventWithAuth(event, handleDragLeave)}
         onDragOver={(event) => handleDragEventWithAuth(event, handleDragOver)}
         onDrop={(event) => handleDragEventWithAuth(event, handleDrop)}
-        overrideDefaults
       >
-        {/* Drag overlay */}
-        {isDragging && (
-          <Container
-            className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
-            overrideDefaults
-          >
-            <Typography className="text-brand">Drop files here</Typography>
-          </Container>
-        )}
+        <Container ref={cardRef} overrideDefaults className="w-full">
+          {isExpanded ? (
+            <Container
+              className={cn(
+                'relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200',
+                isWideLayout ? 'p-12' : 'p-4',
+                isDragging ? 'border-brand' : 'border-input',
+              )}
+              onClick={handleExpandWithAuth}
+              overrideDefaults
+              data-testid="quick-reply-expanded"
+            >
+              {/* Drag overlay */}
+              {isDragging && (
+                <Container
+                  className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
+                  overrideDefaults
+                >
+                  <Typography className="text-brand">Drop files here</Typography>
+                </Container>
+              )}
 
-        <Container
-          ref={cardRef}
-          className={cn('flex gap-4', isAuthenticated ? 'flex-col' : 'flex-row items-center')}
-          overrideDefaults
-        >
-          <QuickReplyContent {...contentProps} layout={effectiveTagsLayout} />
+              <Container
+                className={cn('flex gap-4', isAuthenticated ? 'flex-col' : 'flex-row items-center')}
+                overrideDefaults
+              >
+                <QuickReplyContent {...contentProps} layout={effectiveTagsLayout} />
+              </Container>
+            </Container>
+          ) : (
+            <Button
+              overrideDefaults
+              type="button"
+              className={cn(
+                'flex w-full cursor-pointer items-center rounded-md border border-dashed border-input p-6 text-left',
+                'transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                isWideLayout ? 'gap-5' : 'gap-3',
+              )}
+              onClick={handleCollapsedExpand}
+              aria-expanded={false}
+              data-testid="quick-reply-trigger"
+            >
+              <QuickReplyCollapsedContent
+                currentUserPubky={currentUserPubky}
+                displayPlaceholder={displayPlaceholder}
+                isWideLayout={isWideLayout}
+              />
+            </Button>
+          )}
         </Container>
       </Container>
     </Container>

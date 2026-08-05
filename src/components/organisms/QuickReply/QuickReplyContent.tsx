@@ -21,9 +21,9 @@ interface QuickReplyContentComponentProps extends QuickReplyContentProps {
 }
 
 /**
- * QuickReply content for every layout: PostHeader on top (with character count
- * when expanded), composer textarea, attachments, then the expandable section
- * holding tags and the action bar. Only the body text size varies by layout.
+ * Expanded QuickReply content for every layout: PostHeader on top, composer
+ * textarea, attachments, then the section holding tags and the action bar.
+ * Only the body text size varies by layout.
  */
 export function QuickReplyContent({
   layout,
