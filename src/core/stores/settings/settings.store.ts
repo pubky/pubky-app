@@ -20,7 +20,6 @@ export const useSettingsStore = create<SettingsStore>()(
           notifications: state.notifications,
           privacy: state.privacy,
           muted: state.muted,
-          language: state.language,
           updatedAt: state.updatedAt,
           version: state.version,
         }),

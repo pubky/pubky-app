@@ -5,13 +5,12 @@ import { defineRouting } from 'next-intl/routing';
  *
  * Defines supported locales and routing behavior.
  * Uses 'never' for localePrefix to avoid locale in URLs.
- * Language is determined via cookie instead.
+ * English is currently the only supported language (see issue #2145);
+ * add locales back here to reintroduce runtime language selection.
  */
 export const routing = defineRouting({
-  locales: ['en', 'pt-BR', 'de', 'fr', 'it', 'zh', 'ja', 'ar', 'es'],
+  locales: ['en'],
   defaultLocale: 'en',
   localePrefix: 'never',
   localeDetection: false,
 });
-
-export type Locale = (typeof routing.locales)[number];
