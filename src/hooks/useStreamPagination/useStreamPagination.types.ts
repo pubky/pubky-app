@@ -28,6 +28,11 @@ export interface UseStreamPaginationOptions {
   onError?: (error: unknown) => void;
 }
 
+export interface OptimisticPostRemoval {
+  commit: () => void;
+  rollback: () => void;
+}
+
 export interface UseStreamPaginationResult {
   /**
    * Array of post IDs in the current stream
@@ -73,8 +78,13 @@ export interface UseStreamPaginationResult {
    */
   prependOptimisticPosts: (postIds: string | string[]) => void;
   /**
-   * Function to remove post(s) from the timeline
+   * Function to permanently remove post(s) from the timeline.
    * @param postIds - A single post ID or array of post IDs to remove
    */
   removePosts: (postIds: string | string[]) => void;
+  /**
+   * Function to hide post(s) immediately while persistence is pending.
+   * The returned transaction must be committed or rolled back.
+   */
+  removePostsOptimistically: (postIds: string | string[]) => OptimisticPostRemoval;
 }

@@ -37,11 +37,14 @@ export function PostHeaderUserInfo({
     e.stopPropagation();
   };
 
+  // This container is also the UserInfoPopover hover target, so it must hug the avatar and
+  // name instead of stretching across the header row — otherwise the empty space next to the
+  // timestamp opens the popover. `max-w-full` keeps long names truncating inside tight layouts.
   const content = (
     <Container
       overrideDefaults
       className={cn(
-        'grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center',
+        'grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center',
         size === 'large' ? 'gap-4' : 'gap-3',
       )}
     >
@@ -54,7 +57,7 @@ export function PostHeaderUserInfo({
         />
       </Link>
       <Container overrideDefaults className="max-w-full min-w-0">
-        <Link href={profileUrl} onClick={handleLinkClick} className="block w-full max-w-full min-w-0 overflow-hidden">
+        <Link href={profileUrl} onClick={handleLinkClick} className="block w-fit max-w-full min-w-0 overflow-hidden">
           <Typography
             className={cn(
               'block w-full max-w-full cursor-pointer truncate font-bold text-foreground',

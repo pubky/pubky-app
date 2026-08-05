@@ -514,6 +514,7 @@
       "tagPost": "Tag post ({count})"
     },
     "deleted": "This post has been deleted by its author.",
+    "remove": "Remove",
     "missing": "Post not found.",
     "dropFiles": "Drop files here",
     "articleTitle": "Article Title",
@@ -1028,6 +1029,8 @@
       "removed": "Post removed from bookmarks",
       "addFailed": "Could not add bookmark",
       "removeFailed": "Could not remove bookmark",
+      "removedSyncFailed": "Removed from bookmarks on this device, but syncing failed.",
+      "addedSyncFailed": "Saved to bookmarks on this device, but syncing failed.",
       "loginRequired": "Sign in to bookmark posts"
     },
     "collection": {
@@ -1490,6 +1493,7 @@
     "addedToCollection": "Post added to collection.",
     "removedFromCollection": "Post removed from collection.",
     "updateCollectionFailed": "Failed to update collection.",
+    "removedFromCollectionSyncFailed": "Removed from the collection on this device, but syncing failed.",
     "collectionCreated": "Collection created and post saved.",
     "createCollectionFailed": "Failed to create collection."
   },

@@ -514,6 +514,7 @@
       "tagPost": "投稿にタグを付ける ({count})"
     },
     "deleted": "この投稿は作成者によって削除されました。",
+    "remove": "削除",
     "missing": "投稿が見つかりません。",
     "dropFiles": "ここにファイルをドロップ",
     "articleTitle": "記事タイトル",
@@ -1028,6 +1029,8 @@
       "removed": "ブックマークを削除しました",
       "addFailed": "ブックマークを追加できませんでした",
       "removeFailed": "ブックマークを削除できませんでした",
+      "removedSyncFailed": "この端末ではブックマークを削除しましたが、同期に失敗しました。",
+      "addedSyncFailed": "この端末ではブックマークを追加しましたが、同期に失敗しました。",
       "loginRequired": "投稿を保存するにはサインインしてください"
     },
     "collection": {
@@ -1490,6 +1493,7 @@
     "addedToCollection": "投稿をコレクションに追加しました。",
     "removedFromCollection": "投稿をコレクションから削除しました。",
     "updateCollectionFailed": "コレクションの更新に失敗しました。",
+    "removedFromCollectionSyncFailed": "この端末ではコレクションから投稿を削除しましたが、同期に失敗しました。",
     "collectionCreated": "コレクションを作成し、投稿を保存しました。",
     "createCollectionFailed": "コレクションの作成に失敗しました。"
   },

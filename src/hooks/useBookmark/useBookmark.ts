@@ -116,10 +116,31 @@ export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBo
       }
     } catch (error) {
       Logger.error('[useBookmark] Failed to toggle bookmark', { error, postId, currentUserPubky });
-      toast({
-        variant: 'error',
-        description: isBookmarked ? tBookmark('removeFailed') : tBookmark('addFailed'),
-      });
+      // BookmarkApplication writes local-first, so the local write may have
+      // committed even though the homeserver sync threw — and the bookmarks
+      // feed already reflects local state. Re-read it and mirror it here,
+      // otherwise the button and the feed disagree.
+      let localIsBookmarked = isBookmarked;
+      try {
+        localIsBookmarked = await BookmarkController.exists(postId);
+      } catch {
+        // Unverifiable — keep the pre-toggle state the button already shows.
+      }
+      setIsBookmarked(localIsBookmarked);
+
+      if (localIsBookmarked !== isBookmarked) {
+        // The local write landed and only the sync failed; the button now
+        // shows the new state, so the toast must not claim the action failed.
+        toast({
+          variant: 'warning',
+          description: isBookmarked ? tBookmark('removedSyncFailed') : tBookmark('addedSyncFailed'),
+        });
+      } else {
+        toast({
+          variant: 'error',
+          description: isBookmarked ? tBookmark('removeFailed') : tBookmark('addFailed'),
+        });
+      }
     } finally {
       setIsToggling(false);
     }

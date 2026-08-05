@@ -111,13 +111,14 @@ describe('BookmarkApplication', () => {
 
     it('should throw when local save fails', async () => {
       const mockData = createMockBookmarkData();
-      const { persistSpy, authSpy } = setupMocks();
+      const { persistSpy, requestSpy, authSpy } = setupMocks();
 
       authSpy.mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => testUserId }));
       persistSpy.mockRejectedValue(new Error('Database error'));
 
       await expect(BookmarkApplication.persist(HttpMethod.PUT, mockData)).rejects.toThrow('Database error');
       expect(persistSpy).toHaveBeenCalledOnce();
+      expect(requestSpy).not.toHaveBeenCalled();
     });
 
     it('should throw when homeserver sync fails', async () => {
@@ -178,13 +179,14 @@ describe('BookmarkApplication', () => {
 
     it('should throw when local remove fails', async () => {
       const mockData = createMockDeleteData();
-      const { persistSpy, authSpy } = setupMocks();
+      const { persistSpy, requestSpy, authSpy } = setupMocks();
 
       authSpy.mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => testUserId }));
       persistSpy.mockRejectedValue(new Error('Bookmark not found'));
 
       await expect(BookmarkApplication.persist(HttpMethod.DELETE, mockData)).rejects.toThrow('Bookmark not found');
       expect(persistSpy).toHaveBeenCalledOnce();
+      expect(requestSpy).not.toHaveBeenCalled();
     });
 
     it('should throw when homeserver sync fails', async () => {
@@ -199,6 +201,29 @@ describe('BookmarkApplication', () => {
         'Failed to DELETE from homeserver: 404',
       );
       expect(persistSpy).toHaveBeenCalledOnce();
+      expect(requestSpy).toHaveBeenCalledOnce();
+    });
+
+    it('should finish the local removal before syncing to the homeserver', async () => {
+      const mockData = createMockDeleteData();
+      const { persistSpy, requestSpy, authSpy } = setupMocks();
+      let resolveLocalRemoval: (() => void) | undefined;
+      const localRemoval = new Promise<void>((resolve) => {
+        resolveLocalRemoval = resolve;
+      });
+
+      authSpy.mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => testUserId }));
+      persistSpy.mockReturnValue(localRemoval);
+      requestSpy.mockResolvedValue(undefined);
+
+      const persist = BookmarkApplication.persist(HttpMethod.DELETE, mockData);
+      await Promise.resolve();
+
+      expect(requestSpy).not.toHaveBeenCalled();
+
+      resolveLocalRemoval?.();
+      await persist;
+
       expect(requestSpy).toHaveBeenCalledOnce();
     });
   });

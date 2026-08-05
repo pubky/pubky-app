@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { getUserProfileUrl } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { CardContent } from '@/atoms/Card/Card';
@@ -14,10 +15,10 @@ import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { cn, formatPublicKey, isPostDeleted } from '@/libs/utils/utils';
-import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PostListMediaThumbnail } from '@/molecules/PostListMediaThumbnail/PostListMediaThumbnail';
 import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
+import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { UserInfoPopover } from '@/molecules/UserInfoPopover/UserInfoPopover';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -80,6 +81,7 @@ export function PostMainListRow({
   onReplyClick,
   onRepostClick,
 }: PostMainListRowProps) {
+  const t = useTranslations('post');
   const { postDetails } = usePostDetails(postId);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { isRepost, originalPostId } = useRepostInfo(postId);
@@ -108,7 +110,7 @@ export function PostMainListRow({
   }
 
   if (isPostDeleted(displayPostDetails.content)) {
-    return <PostDeleted />;
+    return <PostUnavailable message={t('deleted')} />;
   }
 
   if (!userDetails) {

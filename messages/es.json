@@ -516,6 +516,7 @@
       "tagPost": "Etiquetar publicación ({count})"
     },
     "deleted": "Esta publicación ha sido eliminada por su autor.",
+    "remove": "Quitar",
     "missing": "Publicación no encontrada.",
     "dropFiles": "Suelta los archivos aqui",
     "articleTitle": "Titulo del articulo",
@@ -1030,6 +1031,8 @@
       "removed": "Publicación eliminada de marcadores",
       "addFailed": "No se pudo agregar el marcador",
       "removeFailed": "No se pudo eliminar el marcador",
+      "removedSyncFailed": "Se eliminó de marcadores en este dispositivo, pero falló la sincronización.",
+      "addedSyncFailed": "Se guardó en marcadores en este dispositivo, pero falló la sincronización.",
       "loginRequired": "Inicia sesión para guardar publicaciones"
     },
     "collection": {
@@ -1494,6 +1497,7 @@
     "addedToCollection": "Publicación añadida a la colección.",
     "removedFromCollection": "Publicación eliminada de la colección.",
     "updateCollectionFailed": "No se pudo actualizar la colección.",
+    "removedFromCollectionSyncFailed": "Se eliminó de la colección en este dispositivo, pero falló la sincronización.",
     "collectionCreated": "Colección creada y publicación guardada.",
     "createCollectionFailed": "No se pudo crear la colección."
   },

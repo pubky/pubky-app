@@ -514,6 +514,7 @@
       "tagPost": "Marcar post ({count})"
     },
     "deleted": "Este post foi excluido pelo autor.",
+    "remove": "Remover",
     "missing": "Post não encontrado.",
     "dropFiles": "Solte os arquivos aqui",
     "articleTitle": "Titulo do Artigo",
@@ -1028,6 +1029,8 @@
       "removed": "Bookmark removido",
       "addFailed": "Não foi possível adicionar o favorito",
       "removeFailed": "Não foi possível remover o favorito",
+      "removedSyncFailed": "Bookmark removido neste dispositivo, mas a sincronização falhou.",
+      "addedSyncFailed": "Bookmark adicionado neste dispositivo, mas a sincronização falhou.",
       "loginRequired": "Entre para salvar publicações"
     },
     "collection": {
@@ -1490,6 +1493,7 @@
     "addedToCollection": "Publicação adicionada à coleção.",
     "removedFromCollection": "Publicação removida da coleção.",
     "updateCollectionFailed": "Falha ao atualizar a coleção.",
+    "removedFromCollectionSyncFailed": "Publicação removida da coleção neste dispositivo, mas a sincronização falhou.",
     "collectionCreated": "Coleção criada e publicação salva.",
     "createCollectionFailed": "Falha ao criar a coleção."
   },

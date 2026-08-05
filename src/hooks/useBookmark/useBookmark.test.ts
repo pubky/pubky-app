@@ -302,4 +302,93 @@ describe('useBookmark', () => {
     // State should not change on error
     expect(result.current.isBookmarked).toBe(false);
   });
+
+  describe('local-first failure reconciliation', () => {
+    it('mirrors the committed local delete and warns when only the sync failed', async () => {
+      // Local-first: the Dexie delete commits before the homeserver call, so
+      // the bookmarks feed already shows the item gone — the button must not
+      // keep claiming it is bookmarked.
+      vi.mocked(BookmarkController.exists).mockResolvedValueOnce(true).mockResolvedValue(false);
+      vi.mocked(BookmarkController.commitDelete).mockRejectedValue(new Error('Homeserver unavailable'));
+
+      const { result } = renderHook(() => useBookmark(mockPostId));
+
+      await waitFor(() => {
+        expect(result.current.isBookmarked).toBe(true);
+      });
+
+      await act(async () => {
+        await result.current.toggle();
+      });
+
+      expect(result.current.isBookmarked).toBe(false);
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'warning',
+        description: 'Removed from bookmarks on this device, but syncing failed.',
+      });
+    });
+
+    it('keeps the bookmarked state and errors when the local delete never committed', async () => {
+      vi.mocked(BookmarkController.exists).mockResolvedValue(true);
+      vi.mocked(BookmarkController.commitDelete).mockRejectedValue(new Error('Database error'));
+
+      const { result } = renderHook(() => useBookmark(mockPostId));
+
+      await waitFor(() => {
+        expect(result.current.isBookmarked).toBe(true);
+      });
+
+      await act(async () => {
+        await result.current.toggle();
+      });
+
+      expect(result.current.isBookmarked).toBe(true);
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not remove bookmark',
+      });
+    });
+
+    it('mirrors the committed local create and warns when only the sync failed', async () => {
+      vi.mocked(BookmarkController.exists).mockResolvedValueOnce(false).mockResolvedValue(true);
+      vi.mocked(BookmarkController.commitCreate).mockRejectedValue(new Error('Homeserver unavailable'));
+
+      const { result } = renderHook(() => useBookmark(mockPostId));
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.toggle();
+      });
+
+      expect(result.current.isBookmarked).toBe(true);
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'warning',
+        description: 'Saved to bookmarks on this device, but syncing failed.',
+      });
+    });
+
+    it('keeps the pre-toggle state and errors when local state cannot be verified', async () => {
+      vi.mocked(BookmarkController.exists).mockResolvedValueOnce(true).mockRejectedValue(new Error('Database error'));
+      vi.mocked(BookmarkController.commitDelete).mockRejectedValue(new Error('Homeserver unavailable'));
+
+      const { result } = renderHook(() => useBookmark(mockPostId));
+
+      await waitFor(() => {
+        expect(result.current.isBookmarked).toBe(true);
+      });
+
+      await act(async () => {
+        await result.current.toggle();
+      });
+
+      expect(result.current.isBookmarked).toBe(true);
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not remove bookmark',
+      });
+    });
+  });
 });

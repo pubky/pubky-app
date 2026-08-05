@@ -514,6 +514,7 @@
       "tagPost": "标记帖子 ({count})"
     },
     "deleted": "此帖子已被作者删除。",
+    "remove": "移除",
     "missing": "未找到帖子。",
     "dropFiles": "将文件拖放到此处",
     "articleTitle": "文章标题",
@@ -1028,6 +1029,8 @@
       "removed": "书签已移除",
       "addFailed": "无法添加书签",
       "removeFailed": "无法移除书签",
+      "removedSyncFailed": "已在此设备上移除书签，但同步失败。",
+      "addedSyncFailed": "已在此设备上添加书签，但同步失败。",
       "loginRequired": "请登录以保存帖子"
     },
     "collection": {
@@ -1484,6 +1487,7 @@
     "addedToCollection": "帖子已添加到收藏。",
     "removedFromCollection": "帖子已从收藏移除。",
     "updateCollectionFailed": "更新收藏集失败。",
+    "removedFromCollectionSyncFailed": "已在此设备上从收藏移除帖子，但同步失败。",
     "collectionCreated": "收藏集已创建并保存帖子。",
     "createCollectionFailed": "创建收藏集失败。"
   },
