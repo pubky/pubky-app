@@ -101,6 +101,9 @@ export function PostHeaderUserInfo({
     </Link>
   );
 
+  // This container is also the UserInfoPopover hover target, so it must hug the avatar and
+  // name instead of stretching across the header row — otherwise the empty space next to the
+  // timestamp opens the popover. `max-w-full` keeps long names truncating inside tight layouts.
   const content = (
     <Container
       overrideDefaults
