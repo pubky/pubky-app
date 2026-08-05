@@ -171,7 +171,7 @@ describe('useDeletePost', () => {
     // After the `LocalPostService.delete` tombstone refactor, a successful
     // local-first write leaves a row with `content === '[DELETED]'` instead
     // of removing it. Without the content-aware check the hook would
-    // restore — bringing back a `PostDeleted` molecule where the user's
+    // restore — bringing back a `PostUnavailable` molecule where the user's
     // post used to be. Verify the tombstone is treated as "local write
     // committed" and the optimistic removal stays in place.
     mockDelete.mockRejectedValue(new Error('homeserver sync failed'));

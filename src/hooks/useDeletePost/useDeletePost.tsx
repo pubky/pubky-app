@@ -86,7 +86,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
       //   - row exists, tombstoned    → local soft-delete committed           → don't restore
       //   - row exists, live content  → local-first never committed           → restore
       //   - check threw ('unknown')   → couldn't verify                       → restore optimistically
-      // Restoring a tombstoned row would just pop a `PostDeleted` /
+      // Restoring a tombstoned row would just pop a `PostUnavailable` /
       // `CollectionDeleted` molecule back into the timeline where the user's
       // post used to be, which is more confusing than the error toast alone.
       let postStillExists: PostDetailsModelSchema | null | 'unknown' = 'unknown';

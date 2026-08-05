@@ -514,6 +514,7 @@
       "tagPost": "Taguer la publication ({count})"
     },
     "deleted": "Cette publication a ete supprimée par son auteur.",
+    "remove": "Retirer",
     "missing": "Publication introuvable.",
     "dropFiles": "Deposez les fichiers ici",
     "articleTitle": "Titre de l'article",
@@ -1028,6 +1029,8 @@
       "removed": "Favori retire",
       "addFailed": "Impossible d'ajouter le favori",
       "removeFailed": "Impossible de retirer le favori",
+      "removedSyncFailed": "Favori retiré sur cet appareil, mais la synchronisation a échoué.",
+      "addedSyncFailed": "Favori ajouté sur cet appareil, mais la synchronisation a échoué.",
       "loginRequired": "Connectez-vous pour enregistrer des publications"
     },
     "collection": {
@@ -1490,6 +1493,7 @@
     "addedToCollection": "Publication ajoutée à la collection.",
     "removedFromCollection": "Publication retirée de la collection.",
     "updateCollectionFailed": "Échec de la mise à jour de la collection.",
+    "removedFromCollectionSyncFailed": "Publication retirée de la collection sur cet appareil, mais la synchronisation a échoué.",
     "collectionCreated": "Collection créée et publication enregistrée.",
     "createCollectionFailed": "Échec de la création de la collection."
   },

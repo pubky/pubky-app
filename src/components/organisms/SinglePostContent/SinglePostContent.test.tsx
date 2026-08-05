@@ -160,9 +160,13 @@ vi.mock('@/atoms/Skeleton/Skeleton', () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/PostDeleted/PostDeleted', () => {
+vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => {
   return {
-    PostDeleted: () => <div data-testid="post-deleted">Post deleted</div>,
+    PostUnavailable: ({ message }: { message: string }) => (
+      <div data-testid="post-unavailable" data-message={message}>
+        Post unavailable
+      </div>
+    ),
   };
 });
 
@@ -342,10 +346,13 @@ describe('SinglePostContent', () => {
       expect(tree).toHaveAttribute('data-show-quick-reply', 'false');
     });
 
-    it('renders PostDeleted component instead of post content when post is deleted', () => {
+    it('renders PostUnavailable instead of post content when post is deleted', () => {
       render(<SinglePostContent postId={mockPostId} postDetails={DELETED_SHORT_POST_DETAILS} />);
 
-      expect(screen.getByTestId('post-deleted')).toBeInTheDocument();
+      expect(screen.getByTestId('post-unavailable')).toHaveAttribute(
+        'data-message',
+        'This post has been deleted by its author.',
+      );
       expect(screen.queryByTestId('post-main')).not.toBeInTheDocument();
       expect(screen.queryByTestId('post-article-detail')).not.toBeInTheDocument();
     });

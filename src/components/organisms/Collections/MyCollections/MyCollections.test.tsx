@@ -163,6 +163,7 @@ const defaultPagination = {
   prependPosts: vi.fn(),
   prependOptimisticPosts: vi.fn(),
   removePosts: vi.fn(),
+  removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
 };
 
 function setup({
