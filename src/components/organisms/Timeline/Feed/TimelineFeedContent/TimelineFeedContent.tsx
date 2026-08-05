@@ -148,6 +148,7 @@ function TimelineFeedContent({
     prependPosts,
     prependOptimisticPosts,
     removePosts,
+    removePostsOptimistically,
   } = useStreamPagination({
     streamId,
   });
@@ -220,6 +221,7 @@ function TimelineFeedContent({
     prependPosts,
     prependOptimisticPosts,
     removePosts,
+    removePostsOptimistically,
   };
   const showEndMessage = variant !== TIMELINE_FEED_VARIANT.COLLECTION && variant !== TIMELINE_FEED_VARIANT.BOOKMARKS;
   // `children` is the composer/filter region on interactive feeds (hidden by the

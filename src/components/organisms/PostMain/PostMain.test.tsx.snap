@@ -354,9 +354,12 @@ exports[`PostMain - Snapshots > matches snapshot with deleted post 1`] = `
     data-testid="card"
   >
     <div
-      data-testid="post-deleted"
+      data-is-removing="false"
+      data-message="This post has been deleted by its author."
+      data-remove-cy="post-deleted-remove-btn"
+      data-testid="post-unavailable"
     >
-      PostDeleted
+      PostUnavailable
     </div>
   </div>
 </div>
@@ -496,6 +499,31 @@ exports[`PostMain - Snapshots > matches snapshot with isReply true 1`] = `
           </button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostMain - Snapshots > matches snapshot with removable deleted post 1`] = `
+<div
+  data-class-name="relative flex min-w-0 @max-xl/grid:h-full cursor-pointer"
+  data-override-defaults="true"
+  data-testid="container"
+>
+  <div
+    data-class-name="min-w-0 flex-1 gap-0 rounded-md py-0"
+    data-testid="card"
+  >
+    <div
+      data-is-removing="false"
+      data-message="This post has been deleted by its author."
+      data-remove-cy="post-deleted-remove-btn"
+      data-testid="post-unavailable"
+    >
+      PostUnavailable
+      <button>
+        Remove unavailable post
+      </button>
     </div>
   </div>
 </div>

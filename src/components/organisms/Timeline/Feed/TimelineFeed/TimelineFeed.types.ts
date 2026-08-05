@@ -1,5 +1,6 @@
 import type { ReactNode, RefObject } from 'react';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
+import type { OptimisticPostRemoval } from '@/hooks/useStreamPagination/useStreamPagination.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { LayoutType } from '@/stores/home/home.types';
 
@@ -120,8 +121,17 @@ export interface TimelineFeedContextValue {
    */
   prependOptimisticPosts: (postIds: string | string[]) => void;
   /**
-   * Remove post(s) from the timeline
+   * Permanently remove post(s) from the timeline.
    * @param postIds - A single post ID or array of post IDs to remove
    */
   removePosts: (postIds: string | string[]) => void;
+  /**
+   * Hide post(s) immediately while persistence is pending.
+   * The returned transaction must be committed or rolled back.
+   *
+   * Optional as a capability flag: consumers (e.g. `useRemoveDeletedPost`)
+   * treat its absence as "this surface does not support transactional
+   * removal" — unlike `UseStreamPaginationResult`, where it is always present.
+   */
+  removePostsOptimistically?: (postIds: string | string[]) => OptimisticPostRemoval;
 }

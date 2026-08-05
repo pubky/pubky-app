@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
@@ -11,10 +12,10 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
-import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
-import { PostMissing } from '@/molecules/PostMissing/PostMissing';
+import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContent } from '../PostContent/PostContent';
@@ -30,6 +31,27 @@ import { WIDE_POST_BODY_TEXT_CLASS } from './PostMainTypography';
 // (so action buttons and tag panels don't trigger a navigate / new-tab open).
 const stopCardPropagation = (event: React.MouseEvent) => event.stopPropagation();
 
+function RemovablePostUnavailable({
+  postId,
+  message,
+  removeDataCy,
+}: {
+  postId: string;
+  message: string;
+  removeDataCy: string;
+}) {
+  const removal = useRemoveDeletedPost(postId);
+
+  return (
+    <PostUnavailable
+      message={message}
+      removeDataCy={removeDataCy}
+      onRemove={removal.canRemove ? () => void removal.remove() : undefined}
+      isRemoving={removal.isRemoving}
+    />
+  );
+}
+
 export function PostMain({
   postId,
   className,
@@ -39,6 +61,7 @@ export function PostMain({
   isNavigable = true,
   showFullContentInListLayout = false,
 }: PostMainProps) {
+  const t = useTranslations('post');
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const isListLayout = effectiveTagsLayout === 'list';
@@ -85,9 +108,9 @@ export function PostMain({
         )}
         <Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
           {isMissing ? (
-            <PostMissing />
+            <RemovablePostUnavailable postId={postId} message={t('missing')} removeDataCy="post-missing-remove-btn" />
           ) : isDeleted ? (
-            <PostDeleted />
+            <RemovablePostUnavailable postId={postId} message={t('deleted')} removeDataCy="post-deleted-remove-btn" />
           ) : (
             <>
               {showRepostHeader && <RepostHeader />}
