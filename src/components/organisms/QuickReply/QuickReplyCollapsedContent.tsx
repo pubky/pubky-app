@@ -12,7 +12,7 @@ interface QuickReplyCollapsedContentProps {
   isWideLayout: boolean;
 }
 
-/** Figma's minimal top-level reply prompt shown before the composer expands. */
+/** Minimal top-level reply prompt shown before the composer expands. */
 export function QuickReplyCollapsedContent({
   currentUserPubky,
   displayPlaceholder,

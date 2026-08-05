@@ -110,8 +110,8 @@ export function QuickReply({
   // Combined keyboard handler: mention popover takes priority, then enter submit
   const handleKeyDown = createKeyDownHandler({ handleMentionKeyDown, enterSubmitHandler });
 
-  // Figma overlays the connector from 1px above to 1px below the card. Keep it
-  // out of normal flow so its geometry cannot add space after QuickReply.
+  // Overlap the card border by 1px at both ends. Keep the connector out of
+  // normal flow so its geometry cannot add space after QuickReply.
   const connectorHeight = cardHeight ? cardHeight + CONNECTOR_BORDER_OVERLAP : undefined;
 
   const effectiveTagsLayout = useEffectiveTagsLayout();

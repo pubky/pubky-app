@@ -375,7 +375,7 @@ describe('QuickReply', () => {
     );
   });
 
-  describe('collapsed Figma layouts', () => {
+  describe('collapsed responsive layouts', () => {
     const mockUseIsMobile = vi.mocked(useIsMobile);
 
     beforeEach(() => {
