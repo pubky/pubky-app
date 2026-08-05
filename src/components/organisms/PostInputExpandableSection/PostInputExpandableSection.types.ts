@@ -2,7 +2,6 @@ import type { ComponentType } from 'react';
 import type { PostInputActionSubmitMode } from '../PostInputActionBar/PostInputActionBar.types';
 
 export interface PostInputExpandableSectionProps {
-  isExpanded: boolean;
   content: string;
   tags: string[];
   isSubmitting: boolean;

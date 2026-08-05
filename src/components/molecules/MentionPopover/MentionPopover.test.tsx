@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
 import { MentionPopover } from './MentionPopover';
@@ -100,6 +100,57 @@ describe('MentionPopover', () => {
     render(<MentionPopover {...defaultProps} />);
 
     expect(screen.getByTestId('mention-popover')).toBeInTheDocument();
+  });
+
+  it('repositions when the anchor resizes', () => {
+    let resizeCallback: ResizeObserverCallback | undefined;
+    const originalResizeObserver = globalThis.ResizeObserver;
+    const observeAnchor = vi.fn();
+    const callbackObserver: ResizeObserver = {
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    const anchor = document.createElement('textarea');
+    const getBoundingClientRect = vi
+      .spyOn(anchor, 'getBoundingClientRect')
+      .mockReturnValueOnce(new DOMRect(20, 80, 320, 20))
+      .mockReturnValue(new DOMRect(24, 80, 320, 44));
+
+    class TestResizeObserver implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback;
+      }
+
+      observe = observeAnchor;
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+
+    Object.defineProperty(globalThis, 'ResizeObserver', {
+      configurable: true,
+      writable: true,
+      value: TestResizeObserver,
+    });
+
+    try {
+      render(<MentionPopover {...defaultProps} anchorRef={{ current: anchor }} />);
+      const popover = screen.getByTestId('mention-popover');
+
+      expect(observeAnchor).toHaveBeenCalledWith(anchor);
+      expect(popover).toHaveStyle({ top: '100px', left: '20px' });
+
+      act(() => resizeCallback?.([], callbackObserver));
+
+      expect(popover).toHaveStyle({ top: '124px', left: '24px' });
+    } finally {
+      Object.defineProperty(globalThis, 'ResizeObserver', {
+        configurable: true,
+        writable: true,
+        value: originalResizeObserver,
+      });
+      getBoundingClientRect.mockRestore();
+    }
   });
 
   describe('MentionPopover - Snapshots', () => {

@@ -18,7 +18,6 @@ const IconsButton = {
 } as const;
 
 export function PostInputExpandableSection({
-  isExpanded,
   content,
   tags,
   isSubmitting,
@@ -46,28 +45,26 @@ export function PostInputExpandableSection({
 
   return (
     <>
-      {isExpanded && (
-        <Container className="gap-4">
-          {hasContent && !isArticle && <PostLinkEmbeds content={content} />}
+      <Container className="gap-4">
+        {hasContent && !isArticle && <PostLinkEmbeds content={content} />}
 
-          <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
+        <PostInputTags tags={tags} onTagsChange={setTags} disabled={isUiDisabled || isEdit} />
 
-          <PostInputActionBar
-            onPostClick={onSubmit}
-            onEmojiClick={() => setShowEmojiPicker(true)}
-            onImageClick={onImageClick}
-            onArticleClick={onArticleClick}
-            isPostDisabled={isPostDisabled}
-            isSubmitting={isSubmitting}
-            postButtonLabel={postButtonLabel}
-            postButtonAriaLabel={postButtonAriaLabel}
-            hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle}
-            isArticle={isArticle}
-            isEdit={isEdit}
-            postButtonIcon={submitIcon ?? IconsButton[submitMode]}
-          />
-        </Container>
-      )}
+        <PostInputActionBar
+          onPostClick={onSubmit}
+          onEmojiClick={() => setShowEmojiPicker(true)}
+          onImageClick={onImageClick}
+          onArticleClick={onArticleClick}
+          isPostDisabled={isPostDisabled}
+          isSubmitting={isSubmitting}
+          postButtonLabel={postButtonLabel}
+          postButtonAriaLabel={postButtonAriaLabel}
+          hideArticleButton={submitMode !== POST_INPUT_VARIANT.POST || !!isArticle}
+          isArticle={isArticle}
+          isEdit={isEdit}
+          postButtonIcon={submitIcon ?? IconsButton[submitMode]}
+        />
+      </Container>
 
       <EmojiPickerDialog
         open={showEmojiPicker && !isUiDisabled}

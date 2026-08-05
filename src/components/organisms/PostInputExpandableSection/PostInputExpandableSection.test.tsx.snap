@@ -1,7 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostInputExpandableSection - Snapshots > matches snapshot when collapsed 1`] = `null`;
-
 exports[`PostInputExpandableSection - Snapshots > matches snapshot when disabled 1`] = `
 <div
   class="gap-4"

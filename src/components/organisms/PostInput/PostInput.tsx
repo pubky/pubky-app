@@ -436,7 +436,6 @@ export function PostInput({
                     variants={dissolveVariants}
                   >
                     <PostInputExpandableSection
-                      isExpanded
                       content={content}
                       tags={tags}
                       isSubmitting={isSubmitting}

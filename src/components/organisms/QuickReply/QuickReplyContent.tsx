@@ -154,7 +154,6 @@ export function QuickReplyContent({
               variants={dissolveVariants}
             >
               <PostInputExpandableSection
-                isExpanded
                 content={content}
                 tags={tags}
                 isSubmitting={isSubmitting}

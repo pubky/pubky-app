@@ -20,18 +20,28 @@ function useAnchorRect(anchorRef: MentionPopoverProps['anchorRef']) {
   const [rect, setRect] = useState<{ top: number; left: number } | null>(null);
 
   useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+
+    if (!anchor) {
+      return;
+    }
+
     const update = () => {
-      const anchorRect = anchorRef?.current?.getBoundingClientRect();
-      setRect({ top: anchorRect?.bottom ?? 0, left: anchorRect?.left ?? 0 });
+      const anchorRect = anchor.getBoundingClientRect();
+      setRect({ top: anchorRect.bottom, left: anchorRect.left });
     };
 
     update();
 
-    // The anchor moves with any scroll (capture: nested scrollers too) or resize.
+    // The anchor moves with any scroll (capture: nested scrollers too), viewport
+    // resize, or autosize change while the user types.
+    const resizeObserver = new ResizeObserver(update);
+    resizeObserver.observe(anchor);
     window.addEventListener('scroll', update, true);
     window.addEventListener('resize', update);
 
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('scroll', update, true);
       window.removeEventListener('resize', update);
     };

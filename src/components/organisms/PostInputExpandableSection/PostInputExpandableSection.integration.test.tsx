@@ -10,7 +10,6 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 const defaultProps = {
-  isExpanded: true,
   content: '',
   tags: [],
   isSubmitting: false,
