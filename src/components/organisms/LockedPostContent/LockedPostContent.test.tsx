@@ -27,6 +27,9 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: { currentUserPubky: string | null; session: object | null }) => unknown) =>
     selector({ currentUserPubky: 'pubkyreader', session: {} }),
 }));
+vi.mock('../PostArticle/PostArticle', () => ({
+  PostArticle: ({ content }: { content: string }) => <div data-testid="post-article">{content}</div>,
+}));
 vi.mock('../PostBody/PostBody', () => ({
   PostBody: ({ content, localAttachments }: { content: string; localAttachments?: unknown[] }) => (
     <div data-testid="post-body" data-media={localAttachments?.length ?? 0}>
@@ -120,6 +123,35 @@ describe('LockedPostContent', () => {
     expect(screen.getByText('the unlocked secret')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Unlock' })).not.toBeInTheDocument();
     expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  it('sends unlocked article content to the article renderer, which keeps its title', async () => {
+    mockUsePostLock({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+    const article = JSON.stringify({ title: 'My Essay', body: 'the body' });
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
+      post: { content: article, kind: 'long', attachments: null },
+      attachments: [],
+    });
+
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+
+    expect(await screen.findByTestId('post-article')).toHaveTextContent('My Essay');
+    // Only the teaser stays on PostBody — the unlocked article must not also render there.
+    expect(screen.getAllByTestId('post-body')).toHaveLength(1);
+    expect(screen.getByTestId('post-body')).not.toHaveTextContent(article);
+  });
+
+  it('keeps plain body text on the body renderer even when the kind is long', async () => {
+    mockUsePostLock({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
+      post: { content: 'not article json', kind: 'long', attachments: null },
+      attachments: [],
+    });
+
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+
+    expect(await screen.findByText('not article json')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
   });
 
   it('renders the unlocked attachments as local object-URL media', async () => {

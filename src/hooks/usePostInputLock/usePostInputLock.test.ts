@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   toast: vi.fn(),
   prependPosts: vi.fn(),
   setPostAttachments: vi.fn(),
+  // Last options handed to useCreateLockContent — the locked post the hook would publish.
+  lockContentOptions: null as { lockedPost: { content: string; kind: unknown } } | null,
 }));
 
 vi.mock('@/config/network', () => ({ getLockServer: () => mocks.lockServer }));
@@ -17,7 +19,10 @@ vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   useLocksAuthStore: { getState: () => ({ selectIsLocksAuthenticated: () => mocks.isAuthed }) },
 }));
 vi.mock('@/hooks/useCreateLockContent/useCreateLockContent', () => ({
-  useCreateLockContent: () => ({ publish: mocks.publish, isPublishing: false }),
+  useCreateLockContent: (options: { lockedPost: { content: string; kind: unknown } }) => {
+    mocks.lockContentOptions = options;
+    return { publish: mocks.publish, isPublishing: false };
+  },
 }));
 vi.mock('@/molecules/Toaster/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
@@ -34,8 +39,8 @@ vi.mock('@/controllers/post/post', () => ({ PostController: { getDetails: vi.fn(
 const file = new File(['x'], 'secret.png', { type: 'image/png' });
 const draft: TLockDraft = { content: 'my secret', attachments: [file], isArticle: true, articleTitle: 'Essay' };
 
-const setup = (isEnabled = true, canEnable = true) => {
-  const captureComposer = vi.fn(() => draft);
+const setup = (isEnabled = true, canEnable = true, draftOverride: TLockDraft = draft) => {
+  const captureComposer = vi.fn(() => draftOverride);
   const restoreComposer = vi.fn();
   const clearComposer = vi.fn();
   const clearTags = vi.fn();
@@ -73,6 +78,27 @@ describe('usePostInputLock', () => {
     mocks.toast.mockReset();
     mocks.prependPosts.mockReset();
     mocks.setPostAttachments.mockReset();
+    mocks.lockContentOptions = null;
+  });
+
+  describe('locked post content', () => {
+    it('serializes an article draft as title + body JSON, like a normal article publish', () => {
+      mocks.isAuthed = true;
+      const { result } = setup();
+
+      configureLock(result);
+
+      expect(mocks.lockContentOptions?.lockedPost.content).toBe(JSON.stringify({ title: 'Essay', body: 'my secret' }));
+    });
+
+    it('passes a plain draft body through untouched', () => {
+      mocks.isAuthed = true;
+      const { result } = setup(true, true, { ...draft, isArticle: false, articleTitle: '' });
+
+      configureLock(result);
+
+      expect(mocks.lockContentOptions?.lockedPost.content).toBe('my secret');
+    });
   });
 
   it('exposes no lock switch when no Lock Server is configured', () => {

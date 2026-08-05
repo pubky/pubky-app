@@ -6,6 +6,7 @@ import { getLockServer } from '@/config/network';
 import { PostController } from '@/controllers/post/post';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
 import { Logger } from '@/libs/logger/logger';
+import { buildArticleContent } from '@/libs/post/articleContent';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { inferPostKindForCreate } from '@/pipes/post/post.kind';
@@ -89,9 +90,13 @@ export function usePostInputLock({
 
   // Once the switch is on the composer holds the announcement; the locked post is the captured draft,
   // whose kind is inferred exactly as a normal post would be (link / image / video / …).
+  // An article draft is serialized the same way a normal publish would (`usePost`): title + body as
+  // one JSON content — `PostArticle` can only render the unlocked copy back from that shape.
   const { publish, isPublishing } = useCreateLockContent({
     lockedPost: {
-      content: lockDraft?.content ?? '',
+      content: lockDraft?.isArticle
+        ? buildArticleContent(lockDraft.articleTitle, lockDraft.content)
+        : (lockDraft?.content ?? ''),
       kind: inferPostKindForCreate({
         content: lockDraft?.content ?? '',
         attachments: lockDraft?.attachments,

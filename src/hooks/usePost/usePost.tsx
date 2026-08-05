@@ -6,6 +6,7 @@ import { ToastAction } from '@/atoms/Toast/Toast';
 import { PostController } from '@/controllers/post/post';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
+import { buildArticleContent } from '@/libs/post/articleContent';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
@@ -98,7 +99,7 @@ export function usePost(): UsePostReturn {
 
     try {
       const createdPostId = await PostController.commitCreate({
-        content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
+        content: isArticle ? buildArticleContent(articleTitle, content) : content.trim(),
         authorId: currentUserId,
         tags: tags.length > 0 ? tags : undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
@@ -189,7 +190,7 @@ export function usePost(): UsePostReturn {
     try {
       await PostController.commitEdit({
         compositePostId: editPostId,
-        content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
+        content: isArticle ? buildArticleContent(articleTitle, content) : content.trim(),
       });
       setContent('');
       setIsArticle(false);

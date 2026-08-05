@@ -7,12 +7,14 @@ import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
 import { usePostLock } from '@/hooks/usePostLock/usePostLock';
 import { useUnlockedContent } from '@/hooks/useUnlockedContent/useUnlockedContent';
+import { isArticleContent } from '@/libs/post/articleContent';
 import { cn } from '@/libs/utils/utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DialogUnlockContent } from '@/molecules/DialogUnlockContent/DialogUnlockContent';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { PostArticle } from '../PostArticle/PostArticle';
 import { PostBody } from '../PostBody/PostBody';
 
 interface LockedPostContentProps {
@@ -101,12 +103,16 @@ export function LockedPostContent({
                 {isOwnLock ? tLock('myLockedContent') : tLock('unlocked')}
               </span>
             </div>
-            <PostBody
-              content={unlockedPost.content}
-              attachments={null}
-              localAttachments={media}
-              textClassName={textClassName}
-            />
+            {unlockedPost.kind === 'long' && isArticleContent(unlockedPost.content) ? (
+              <PostArticle content={unlockedPost.content} attachments={null} localAttachments={media} />
+            ) : (
+              <PostBody
+                content={unlockedPost.content}
+                attachments={null}
+                localAttachments={media}
+                textClassName={textClassName}
+              />
+            )}
           </div>
         </>
       ) : (
