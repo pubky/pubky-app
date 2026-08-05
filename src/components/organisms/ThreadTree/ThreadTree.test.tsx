@@ -227,7 +227,7 @@ describe('ThreadTree', () => {
     expect(expandAll).toHaveBeenCalledTimes(1);
   });
 
-  it('hides show-more button while expand-all is in progress', () => {
+  it('hides show-more and makes the final visible reply terminal while expand-all is in progress', () => {
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,
@@ -240,6 +240,7 @@ describe('ThreadTree', () => {
     render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
 
     expect(screen.queryByTestId('show-more-replies')).not.toBeInTheDocument();
+    expect(screen.getByTestId('reply-with-nested')).toHaveAttribute('data-is-last-reply', 'true');
   });
 });
 

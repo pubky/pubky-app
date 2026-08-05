@@ -60,7 +60,7 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
 
       {/* Level 1 replies */}
       {replyIds.map((replyId, index) => {
-        const isLastReply = index === replyIds.length - 1 && !hasMore;
+        const isLastReply = index === replyIds.length - 1 && (!hasMore || isExpandingAll);
 
         return (
           <Container
