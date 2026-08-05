@@ -246,6 +246,15 @@ describe('QuickReply', () => {
     expect(screen.queryByTestId('quick-reply-textarea')).not.toBeInTheDocument();
   });
 
+  it('overlays the connector without increasing the QuickReply row height', () => {
+    render(<QuickReply parentPostId="author:post1" />);
+
+    expect(screen.getByTestId('quick-reply-connector-column')).toHaveClass('relative', 'w-3', 'shrink-0');
+    expect(screen.getByTestId('quick-reply-connector').parentElement).toHaveClass('absolute', '-inset-y-px', 'left-0');
+    expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('height', '125');
+    expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('variant', 'last');
+  });
+
   it('expands the collapsed trigger through the authentication guard', () => {
     const handleExpand = vi.fn();
     mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { handleExpand }));

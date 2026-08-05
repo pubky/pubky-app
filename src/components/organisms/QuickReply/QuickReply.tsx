@@ -15,10 +15,11 @@ import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
 import { QuickReplyCollapsedContent } from './QuickReplyCollapsedContent';
 import { QuickReplyContent } from './QuickReplyContent';
+
+const CONNECTOR_BORDER_OVERLAP = 2;
 
 export function QuickReply({
   parentPostId,
@@ -109,8 +110,9 @@ export function QuickReply({
   // Combined keyboard handler: mention popover takes priority, then enter submit
   const handleKeyDown = createKeyDownHandler({ handleMentionKeyDown, enterSubmitHandler });
 
-  // Account for spacing between main post and QuickReply in connector calculation
-  const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_SPACER_HEIGHT : undefined;
+  // Figma overlays the connector from 1px above to 1px below the card. Keep it
+  // out of normal flow so its geometry cannot add space after QuickReply.
+  const connectorHeight = cardHeight ? cardHeight + CONNECTOR_BORDER_OVERLAP : undefined;
 
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
@@ -165,8 +167,14 @@ export function QuickReply({
 
   return (
     <Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>
-      <Container overrideDefaults className="-mt-4 w-3 shrink-0">
-        <PostThreadConnector height={connectorHeight} variant={connectorVariant} data-testid="quick-reply-connector" />
+      <Container overrideDefaults className="relative w-3 shrink-0" data-testid="quick-reply-connector-column">
+        <Container overrideDefaults className="absolute -inset-y-px left-0">
+          <PostThreadConnector
+            height={connectorHeight}
+            variant={connectorVariant}
+            data-testid="quick-reply-connector"
+          />
+        </Container>
       </Container>
 
       <Container

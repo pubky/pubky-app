@@ -7,14 +7,19 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
   data-testid="quick-reply"
 >
   <div
-    class="-mt-4 w-3 shrink-0"
-    data-testid="container"
+    class="relative w-3 shrink-0"
+    data-testid="quick-reply-connector-column"
   >
     <div
-      data-testid="quick-reply-connector"
-      height="189"
-      variant="last"
-    />
+      class="absolute -inset-y-px left-0"
+      data-testid="container"
+    >
+      <div
+        data-testid="quick-reply-connector"
+        height="125"
+        variant="last"
+      />
+    </div>
   </div>
   <div
     class="relative w-full"
@@ -56,14 +61,19 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
   data-testid="quick-reply"
 >
   <div
-    class="-mt-4 w-3 shrink-0"
-    data-testid="container"
+    class="relative w-3 shrink-0"
+    data-testid="quick-reply-connector-column"
   >
     <div
-      data-testid="quick-reply-connector"
-      height="189"
-      variant="last"
-    />
+      class="absolute -inset-y-px left-0"
+      data-testid="container"
+    >
+      <div
+        data-testid="quick-reply-connector"
+        height="125"
+        variant="last"
+      />
+    </div>
   </div>
   <div
     class="relative w-full"
