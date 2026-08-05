@@ -264,7 +264,7 @@ exports[`QuickReply - Snapshots > matches snapshot when expanded 1`] = `
     />
   </div>
   <div
-    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-12 border-input"
+    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
     data-state="expanded"
     data-testid="container"
   >
@@ -545,7 +545,7 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
     />
   </div>
   <div
-    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-12 border-input"
+    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
     data-state="collapsed"
     data-testid="container"
   >

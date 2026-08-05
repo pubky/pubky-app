@@ -701,21 +701,22 @@ describe('PostInput', () => {
     expect(mockPostHeader.mock.calls.every(([props]) => props.userDetails === mockCurrentUserDetails)).toBe(true);
   });
 
-  it('retargets the height wrapper when the measured content height changes', async () => {
+  it('retargets the height wrapper from transform-independent layout measurements', async () => {
     let resizeCallback: ResizeObserverCallback | undefined;
     let resizeObserver: ResizeObserver | undefined;
     const OriginalResizeObserver = globalThis.ResizeObserver;
-    const getBoundingClientRect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    const transformedBoundingRect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       width: 600,
-      height: 80,
+      height: 76,
       top: 0,
       right: 600,
-      bottom: 80,
+      bottom: 76,
       left: 0,
       x: 0,
       y: 0,
       toJSON: () => ({}),
     });
+    const layoutHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(80);
 
     class TestResizeObserver {
       constructor(callback: ResizeObserverCallback) {
@@ -740,17 +741,7 @@ describe('PostInput', () => {
       mockUsePostReturn.isExpanded = true;
       rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-      getBoundingClientRect.mockReturnValue({
-        width: 600,
-        height: 260,
-        top: 0,
-        right: 600,
-        bottom: 260,
-        left: 0,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      });
+      layoutHeight.mockReturnValue(260);
 
       act(() => {
         resizeCallback?.([{ contentRect: { height: 260 } as DOMRectReadOnly } as ResizeObserverEntry], resizeObserver!);
@@ -760,7 +751,8 @@ describe('PostInput', () => {
       await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
     } finally {
       globalThis.ResizeObserver = OriginalResizeObserver;
-      getBoundingClientRect.mockRestore();
+      transformedBoundingRect.mockRestore();
+      layoutHeight.mockRestore();
     }
   });
 

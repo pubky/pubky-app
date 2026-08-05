@@ -55,7 +55,7 @@ export function PostHeader({
   const isDeleted = !isReplyInput && isPostDeleted(postDetails?.content);
 
   if (isLoading || isDeleted) {
-    return <PostHeaderSkeleton />;
+    return <PostHeaderSkeleton showUserInfo={showUserInfo} visuallyHideAvatar={visuallyHideAvatar} size={size} />;
   }
 
   const indexedAt = !isReplyInput && postDetails ? new Date(postDetails.indexed_at) : null;

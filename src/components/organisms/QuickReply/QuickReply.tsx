@@ -120,7 +120,6 @@ export function QuickReply({
   const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_SPACER_HEIGHT : undefined;
 
   const effectiveTagsLayout = useEffectiveTagsLayout();
-  const isWideLayout = effectiveTagsLayout === 'side';
   const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
   const heightTransition = getComposerHeightTransition(isExpanded, shouldReduceMotion);
   // Connector animates via CSS, so it takes the same curve as a style instead of a tween.
@@ -181,7 +180,7 @@ export function QuickReply({
           '[&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150',
           'focus-within:[&_textarea::placeholder]:opacity-0',
           'motion-reduce:[&_textarea::placeholder]:transition-none',
-          isWideLayout ? 'p-12' : 'p-6',
+          'p-6',
           isDragging ? 'border-brand' : 'border-input',
         )}
         onClick={handleExpandWithAuth}

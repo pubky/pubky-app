@@ -372,7 +372,7 @@ describe('QuickReply', () => {
       expect(screen.getByTestId('quick-reply-textarea')).not.toHaveAttribute('class');
     });
 
-    it('applies wide padding, extraLarge header, and text-xl body when inheriting side layout', () => {
+    it('keeps compact padding, extraLarge header, and text-xl body when inheriting side layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="side">
           <QuickReply parentPostId="author:post1" />
@@ -380,8 +380,8 @@ describe('QuickReply', () => {
       );
 
       const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
-      expect(inputContainer?.className).toContain('p-12');
-      expect(inputContainer?.className).not.toContain('p-6');
+      expect(inputContainer?.className).toContain('p-6');
+      expect(inputContainer?.className).not.toContain('p-12');
 
       expect(getStablePostHeader()).toHaveAttribute('data-size', 'extraLarge');
       expect(getStablePostHeader()).toHaveAttribute('data-show-user-info', 'false');

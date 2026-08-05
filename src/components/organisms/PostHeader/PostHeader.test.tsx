@@ -260,6 +260,39 @@ describe('PostHeader', () => {
     expect(screen.getAllByRole('generic').some((el) => el.getAttribute('data-slot') === 'skeleton')).toBe(true);
   });
 
+  it('shows only the avatar skeleton when user info is hidden', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: true });
+    mockUseAvatarUrl.mockReturnValue(undefined);
+
+    const { container } = renderPostHeader(
+      <PostHeader postId="userpubkykey" isReplyInput={true} showUserInfo={false} />,
+    );
+
+    const skeletons = container.querySelectorAll('[data-slot="skeleton"]');
+    expect(skeletons).toHaveLength(1);
+    expect(skeletons[0]).toHaveClass('size-10', 'rounded-full');
+  });
+
+  it('keeps an avatar-sized invisible spacer skeleton when the avatar is visually hidden', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+    mockUseUserDetails.mockReturnValue({ userDetails: null, isLoading: true });
+    mockUseAvatarUrl.mockReturnValue(undefined);
+
+    const { container } = renderPostHeader(
+      <PostHeader
+        postId="userpubkykey"
+        isReplyInput={true}
+        showUserInfo={false}
+        visuallyHideAvatar={true}
+        size="extraLarge"
+      />,
+    );
+
+    const skeleton = container.querySelector('[data-slot="skeleton"]');
+    expect(skeleton).toHaveClass('size-16', 'invisible');
+  });
+
   it('renders provided user details without showing a remount skeleton', () => {
     const providedUserDetails = {
       id: 'userpubkykey',
