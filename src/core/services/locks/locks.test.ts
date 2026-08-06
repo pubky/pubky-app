@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => {
     registerGuardedResource: vi.fn(),
     createContentLock: vi.fn(),
     readContentLockWithOptions: vi.fn(async () => ({ version: 1, creator: 'pubkybob' })),
+    generateBundleId: vi.fn(() => ({ toString: () => 'bundle-generated' })),
   };
 });
 
@@ -116,7 +117,7 @@ vi.mock('@pubky/locks-sdk', () => {
     RegisterGuardedResourceOptions,
     CreateContentLockRequestBuilder,
     VerificationTaskHandleOptions,
-    BundleId: { generate: () => ({ toString: () => 'bundle-generated' }) },
+    BundleId: { generate: mocks.generateBundleId },
     Locks: {
       forServerWithOptions: mocks.forServerWithOptions,
       readContentLockWithOptions: mocks.readContentLockWithOptions,
@@ -371,6 +372,16 @@ describe('LocksService (reader unlock)', () => {
 
   it('generateBundleId returns a fresh reader-generated id', async () => {
     await expect(LocksService.generateBundleId()).resolves.toBe('bundle-generated');
+  });
+
+  it('generateBundleId wraps an SDK failure as an AppError', async () => {
+    mocks.generateBundleId.mockImplementationOnce(() => {
+      throw new Error('wasm not ready');
+    });
+
+    const error = await LocksService.generateBundleId().catch((e: unknown) => e);
+    expect(isAppError(error)).toBe(true);
+    expect(error).toMatchObject({ operation: 'LocksService.generateBundleId' });
   });
 
   it('submitProofBundle sends the bundle to the viewer (never the password) and returns the task state', async () => {

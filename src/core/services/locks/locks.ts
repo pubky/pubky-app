@@ -124,8 +124,12 @@ export class LocksService {
 
   /** A fresh reader-generated bundle id — the public handle for the unlock's verification task. */
   static async generateBundleId(): Promise<string> {
-    await ensureLocksSdkReady();
-    return BundleId.generate().toString();
+    try {
+      await ensureLocksSdkReady();
+      return BundleId.generate().toString();
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, 'LocksService.generateBundleId');
+    }
   }
 
   // Reader calls are public (no session) → `toAppError`, not `toLocksError` (a 401 isn't an expired session).
