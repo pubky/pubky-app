@@ -10,7 +10,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot for current user (no 
     data-testid="popover-trigger"
   >
     <div
-      class="grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -36,7 +36,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot for current user (no 
         data-testid="container"
       >
         <a
-          class="block w-fit max-w-full min-w-0 overflow-hidden"
+          class="block w-full max-w-full min-w-0 overflow-hidden"
           data-testid="profile-link"
           href="/profile"
         >
@@ -94,7 +94,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot when following 1`] = 
     data-testid="popover-trigger"
   >
     <div
-      class="grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -120,7 +120,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot when following 1`] = 
         data-testid="container"
       >
         <a
-          class="block w-fit max-w-full min-w-0 overflow-hidden"
+          class="block w-full max-w-full min-w-0 overflow-hidden"
           data-testid="profile-link"
           href="/profile/otherUser123"
         >
@@ -168,6 +168,66 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot when following 1`] = 
 </div>
 `;
 
+exports[`PostHeaderUserInfo - Snapshots > matches snapshot with a visually hidden avatar 1`] = `
+<div
+  class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+  data-override-defaults="true"
+  data-testid="container"
+>
+  <a
+    class="shrink-0 pointer-events-none invisible"
+    data-testid="profile-link"
+    href="/profile/snapshotUserKey"
+  >
+    <div
+      data-size="default"
+      data-testid="avatar"
+    >
+      <img
+        alt="Snapshot User"
+        data-testid="avatar-image"
+        src="https://example.com/avatar.png"
+      />
+      <div
+        data-testid="avatar-fallback"
+      >
+        SN
+      </div>
+    </div>
+  </a>
+  <div
+    class="max-w-full min-w-0"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <a
+      class="block w-full max-w-full min-w-0 overflow-hidden"
+      data-testid="profile-link"
+      href="/profile/snapshotUserKey"
+    >
+      <p
+        class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+        data-testid="typography"
+      >
+        Snapshot User
+      </p>
+    </a>
+    <div
+      class="flex min-w-0 flex-wrap items-center gap-2"
+      data-override-defaults="true"
+      data-testid="container"
+    >
+      <p
+        class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground uppercase"
+        data-testid="typography"
+      >
+        snap...rKey
+      </p>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all new props 1`] = `
 <div
   data-hover="true"
@@ -178,7 +238,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all new props 1`
     data-testid="popover-trigger"
   >
     <div
-      class="grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-4"
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-5"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -209,7 +269,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all new props 1`
         data-testid="container"
       >
         <a
-          class="block w-fit max-w-full min-w-0 overflow-hidden"
+          class="block w-full max-w-full min-w-0 overflow-hidden"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
@@ -272,7 +332,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all props 1`] = 
     data-testid="popover-trigger"
   >
     <div
-      class="grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -303,7 +363,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all props 1`] = 
         data-testid="container"
       >
         <a
-          class="block w-fit max-w-full min-w-0 overflow-hidden"
+          class="block w-full max-w-full min-w-0 overflow-hidden"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
@@ -351,6 +411,30 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with all props 1`] = 
 </div>
 `;
 
+exports[`PostHeaderUserInfo - Snapshots > matches snapshot with avatar-only user info 1`] = `
+<a
+  class="shrink-0"
+  data-testid="profile-link"
+  href="/profile/snapshotUserKey"
+>
+  <div
+    data-size="default"
+    data-testid="avatar"
+  >
+    <img
+      alt="Snapshot User"
+      data-testid="avatar-image"
+      src="https://example.com/avatar.png"
+    />
+    <div
+      data-testid="avatar-fallback"
+    >
+      SN
+    </div>
+  </div>
+</a>
+`;
+
 exports[`PostHeaderUserInfo - Snapshots > matches snapshot with bio 1`] = `
 <div
   data-hover="true"
@@ -361,7 +445,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with bio 1`] = `
     data-testid="popover-trigger"
   >
     <div
-      class="grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -387,12 +471,228 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with bio 1`] = `
         data-testid="container"
       >
         <a
-          class="block w-fit max-w-full min-w-0 overflow-hidden"
+          class="block w-full max-w-full min-w-0 overflow-hidden"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
             class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+            data-testid="typography"
+          >
+            Snapshot User
+          </p>
+        </a>
+        <div
+          class="flex min-w-0 flex-wrap items-center gap-2"
+          data-override-defaults="true"
+          data-testid="container"
+        >
+          <p
+            class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground uppercase"
+            data-testid="typography"
+          >
+            snap...rKey
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-side-offset="1"
+    data-testid="popover-content"
+  >
+    <div
+      data-testid="popover-inner-content"
+    >
+      <div
+        data-testid="avatar"
+      />
+      <div>
+        Snapshot User
+      </div>
+      <div>
+        @
+        snap...rKey
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostHeaderUserInfo - Snapshots > matches snapshot with character count in the metadata row 1`] = `
+<div
+  class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+  data-override-defaults="true"
+  data-testid="container"
+>
+  <a
+    class="shrink-0"
+    data-testid="profile-link"
+    href="/profile/snapshotUserKey"
+  >
+    <div
+      data-size="default"
+      data-testid="avatar"
+    >
+      <div
+        data-testid="avatar-fallback"
+      >
+        SN
+      </div>
+    </div>
+  </a>
+  <div
+    class="max-w-full min-w-0"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <a
+      class="block w-full max-w-full min-w-0 overflow-hidden"
+      data-testid="profile-link"
+      href="/profile/snapshotUserKey"
+    >
+      <p
+        class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+        data-testid="typography"
+      >
+        Snapshot User
+      </p>
+    </a>
+    <div
+      class="flex min-w-0 flex-wrap items-center gap-2"
+      data-override-defaults="true"
+      data-testid="container"
+    >
+      <p
+        class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground uppercase"
+        data-testid="typography"
+      >
+        snap...rKey
+      </p>
+      <p
+        class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums"
+        data-testid="typography"
+      >
+        21
+        /
+        2000
+      </p>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostHeaderUserInfo - Snapshots > matches snapshot with character count in the name row 1`] = `
+<div
+  class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+  data-override-defaults="true"
+  data-testid="container"
+>
+  <a
+    class="shrink-0"
+    data-testid="profile-link"
+    href="/profile/snapshotUserKey"
+  >
+    <div
+      data-size="default"
+      data-testid="avatar"
+    >
+      <div
+        data-testid="avatar-fallback"
+      >
+        SN
+      </div>
+    </div>
+  </a>
+  <div
+    class="max-w-full min-w-0"
+    data-override-defaults="true"
+    data-testid="container"
+  >
+    <div
+      class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+      data-override-defaults="true"
+      data-testid="container"
+    >
+      <a
+        class="block w-full max-w-full min-w-0 overflow-hidden"
+        data-testid="profile-link"
+        href="/profile/snapshotUserKey"
+      >
+        <p
+          class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-base leading-5"
+          data-testid="typography"
+        >
+          Snapshot User
+        </p>
+      </a>
+      <p
+        class="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums"
+        data-testid="typography"
+      >
+        21
+        /
+        2000
+      </p>
+    </div>
+    <div
+      class="flex min-w-0 flex-wrap items-center gap-2"
+      data-override-defaults="true"
+      data-testid="container"
+    >
+      <p
+        class="text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground uppercase"
+        data-testid="typography"
+      >
+        snap...rKey
+      </p>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostHeaderUserInfo - Snapshots > matches snapshot with extraLarge size 1`] = `
+<div
+  data-hover="true"
+  data-testid="popover"
+>
+  <div
+    data-as-child="true"
+    data-testid="popover-trigger"
+  >
+    <div
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-5"
+      data-override-defaults="true"
+      data-testid="container"
+    >
+      <a
+        class="shrink-0"
+        data-testid="profile-link"
+        href="/profile/snapshotUserKey"
+      >
+        <div
+          data-size="xl"
+          data-testid="avatar"
+        >
+          <div
+            data-testid="avatar-fallback"
+          >
+            SN
+          </div>
+        </div>
+      </a>
+      <div
+        class="max-w-full min-w-0"
+        data-override-defaults="true"
+        data-testid="container"
+      >
+        <a
+          class="block w-full max-w-full min-w-0 overflow-hidden"
+          data-testid="profile-link"
+          href="/profile/snapshotUserKey"
+        >
+          <p
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-2xl leading-8"
             data-testid="typography"
           >
             Snapshot User
@@ -445,7 +745,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with large size 1`] =
     data-testid="popover-trigger"
   >
     <div
-      class="grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-4"
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-4"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -455,7 +755,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with large size 1`] =
         href="/profile/snapshotUserKey"
       >
         <div
-          data-size="xl"
+          data-size="lg"
           data-testid="avatar"
         >
           <div
@@ -471,12 +771,12 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with large size 1`] =
         data-testid="container"
       >
         <a
-          class="block w-fit max-w-full min-w-0 overflow-hidden"
+          class="block w-full max-w-full min-w-0 overflow-hidden"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
           <p
-            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-2xl leading-8"
+            class="block w-full max-w-full cursor-pointer truncate font-bold text-foreground text-xl leading-7"
             data-testid="typography"
           >
             Snapshot User
@@ -529,7 +829,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with minimal props 1`
     data-testid="popover-trigger"
   >
     <div
-      class="grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -555,7 +855,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with minimal props 1`
         data-testid="container"
       >
         <a
-          class="block w-fit max-w-full min-w-0 overflow-hidden"
+          class="block w-full max-w-full min-w-0 overflow-hidden"
           data-testid="profile-link"
           href="/profile/user123"
         >
@@ -613,7 +913,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with timeAgo 1`] = `
     data-testid="popover-trigger"
   >
     <div
-      class="grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -639,7 +939,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot with timeAgo 1`] = `
         data-testid="container"
       >
         <a
-          class="block w-fit max-w-full min-w-0 overflow-hidden"
+          class="block w-full max-w-full min-w-0 overflow-hidden"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >
@@ -702,7 +1002,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without avatarUrl 1`]
     data-testid="popover-trigger"
   >
     <div
-      class="grid w-fit max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
+      class="grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3"
       data-override-defaults="true"
       data-testid="container"
     >
@@ -728,7 +1028,7 @@ exports[`PostHeaderUserInfo - Snapshots > matches snapshot without avatarUrl 1`]
         data-testid="container"
       >
         <a
-          class="block w-fit max-w-full min-w-0 overflow-hidden"
+          class="block w-full max-w-full min-w-0 overflow-hidden"
           data-testid="profile-link"
           href="/profile/snapshotUserKey"
         >

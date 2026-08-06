@@ -17,7 +17,7 @@ exports[`PostArticleDetail > matches snapshot in wide layout 1`] = `
     </h1>
     <div
       data-post-id="user123:post456"
-      data-size="large"
+      data-size="extraLarge"
       data-testid="post-header"
       data-time-placement="bottom-left"
     />
@@ -79,7 +79,7 @@ exports[`PostArticleDetail > matches snapshot when blurred 1`] = `
     </h1>
     <div
       data-post-id="user123:post456"
-      data-size="large"
+      data-size="extraLarge"
       data-testid="post-header"
       data-time-placement="bottom-left"
     />
@@ -144,7 +144,7 @@ exports[`PostArticleDetail > matches snapshot with cover image 1`] = `
     </h1>
     <div
       data-post-id="snapshot-user:cover-post"
-      data-size="large"
+      data-size="extraLarge"
       data-testid="post-header"
       data-time-placement="bottom-left"
     />
@@ -217,7 +217,7 @@ exports[`PostArticleDetail > matches snapshot with default props 1`] = `
     </h1>
     <div
       data-post-id="user123:post456"
-      data-size="large"
+      data-size="extraLarge"
       data-testid="post-header"
       data-time-placement="bottom-left"
     />

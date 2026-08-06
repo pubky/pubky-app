@@ -1,5 +1,145 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`QuickReply - Mobile Snapshots > matches expanded snapshot on mobile viewport 1`] = `
+<div
+  aria-busy="false"
+  class="relative flex"
+  data-testid="quick-reply"
+>
+  <div
+    class="-mt-4 w-3 shrink-0"
+    data-testid="container"
+  >
+    <div
+      data-testid="quick-reply-connector"
+      height="310"
+      style="transition: none;"
+      variant="last"
+    />
+  </div>
+  <div
+    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
+    data-state="expanded"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="quick-reply-state-height"
+      style="height: 260px;"
+    >
+      <div
+        class="relative flex min-w-0 flex-col gap-4"
+        data-testid="quick-reply-state-content"
+      >
+        <div
+          class="relative"
+        >
+          <div
+            class="absolute top-0 left-0 z-10"
+            data-testid="quick-reply-stable-avatar"
+          >
+            <div
+              data-is-reply="true"
+              data-post-id="user:me"
+              data-show-user-info="false"
+              data-size="normal"
+              data-testid="post-header"
+              data-user-name="Current User"
+            />
+          </div>
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-testid="container"
+          >
+            <div
+              class="relative flex min-w-0 flex-col gap-4"
+              data-testid="container"
+            >
+              <div
+                data-testid="quick-reply-expanded-header"
+                style="opacity: 1; filter: blur(0px);"
+              >
+                <div
+                  data-character-limit-placement="name-row"
+                  data-count="14"
+                  data-is-reply="true"
+                  data-max="2000"
+                  data-post-id="user:me"
+                  data-show-user-info="true"
+                  data-size="normal"
+                  data-testid="post-header"
+                  data-user-name="Current User"
+                  data-visually-hide-avatar="true"
+                >
+                  <span
+                    data-testid="post-header-character-count"
+                  >
+                    14
+                    /
+                    2000
+                  </span>
+                </div>
+              </div>
+              <div
+                class="flex w-full min-w-0 items-center gap-3"
+                data-testid="container"
+              >
+                <div
+                  class="relative min-w-0 flex-1"
+                  data-testid="container"
+                >
+                  <div
+                    class="relative"
+                    data-testid="container"
+                  >
+                    <textarea
+                      aria-haspopup="listbox"
+                      aria-label="Reply"
+                      data-testid="quick-reply-textarea"
+                      maxlength="2000"
+                      placeholder="What are your thoughts on this?"
+                      rows="1"
+                      variant="inline"
+                    >
+                      Expanded reply
+                    </textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              attachments=""
+              data-testid="post-input-attachments"
+            />
+            <div
+              data-testid="quick-reply-expanded-content"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-disabled="false"
+                data-post-disabled="false"
+                data-testid="post-input-expandable-section"
+              >
+                <button
+                  data-testid="quick-reply-submit"
+                >
+                  Submit
+                </button>
+                <button
+                  data-testid="quick-reply-image"
+                >
+                  Image
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div
   aria-busy="false"
@@ -12,57 +152,366 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
   >
     <div
       data-testid="quick-reply-connector"
-      height="189"
+      height="173"
+      style="transition: none;"
       variant="last"
     />
   </div>
   <div
-    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-4 border-input"
+    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
+    data-state="collapsed"
     data-testid="container"
   >
     <div
-      class="flex gap-4 flex-col"
-      data-testid="container"
+      class="overflow-hidden"
+      data-testid="quick-reply-state-height"
+      style="height: 123px;"
     >
       <div
-        data-is-reply="true"
-        data-post-id="user:me"
-        data-size="normal"
-        data-testid="post-header"
-      />
-      <div
-        class="relative"
-        data-testid="container"
+        class="relative flex min-w-0 flex-col gap-4"
+        data-testid="quick-reply-state-content"
       >
-        <textarea
-          aria-haspopup="listbox"
-          aria-label="Reply"
-          data-testid="quick-reply-textarea"
-          maxlength="2000"
-          placeholder="What are your thoughts on this?"
-          rows="1"
-          variant="inline"
-        />
+        <div
+          class="relative"
+        >
+          <div
+            class="absolute top-0 left-0 z-10"
+            data-testid="quick-reply-stable-avatar"
+          >
+            <div
+              data-is-reply="true"
+              data-post-id="user:me"
+              data-show-user-info="false"
+              data-size="normal"
+              data-testid="post-header"
+              data-user-name="Current User"
+            />
+          </div>
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-testid="container"
+          >
+            <div
+              class="relative flex min-w-0 flex-col gap-4"
+              data-testid="container"
+            >
+              <div
+                class="flex w-full min-w-0 items-center gap-3"
+                data-testid="container"
+              >
+                <div
+                  aria-hidden="true"
+                  class="shrink-0 size-10"
+                  data-testid="quick-reply-collapsed-avatar-placeholder"
+                />
+                <div
+                  class="relative min-w-0 flex-1"
+                  data-testid="container"
+                >
+                  <div
+                    class="relative"
+                    data-testid="container"
+                  >
+                    <textarea
+                      aria-haspopup="listbox"
+                      aria-label="Reply"
+                      data-testid="quick-reply-textarea"
+                      maxlength="2000"
+                      placeholder="What are your thoughts on this?"
+                      rows="1"
+                      variant="inline"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              attachments=""
+              data-testid="post-input-attachments"
+            />
+          </div>
+        </div>
       </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`QuickReply - Snapshots > matches snapshot when expanded 1`] = `
+<div
+  aria-busy="false"
+  class="relative flex"
+  data-testid="quick-reply"
+>
+  <div
+    class="-mt-4 w-3 shrink-0"
+    data-testid="container"
+  >
+    <div
+      data-testid="quick-reply-connector"
+      height="310"
+      style="transition: none;"
+      variant="last"
+    />
+  </div>
+  <div
+    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
+    data-state="expanded"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="quick-reply-state-height"
+      style="height: 260px;"
+    >
       <div
-        attachments=""
-        data-testid="post-input-attachments"
-      />
-      <div
-        data-disabled="false"
-        data-post-disabled="true"
-        data-testid="post-input-expandable-section"
+        class="relative flex min-w-0 flex-col gap-4"
+        data-testid="quick-reply-state-content"
       >
-        <button
-          data-testid="quick-reply-submit"
+        <div
+          class="relative"
         >
-          Submit
-        </button>
-        <button
-          data-testid="quick-reply-image"
+          <div
+            class="absolute top-0 left-0 z-10"
+            data-testid="quick-reply-stable-avatar"
+          >
+            <div
+              data-is-reply="true"
+              data-post-id="user:me"
+              data-show-user-info="false"
+              data-size="extraLarge"
+              data-testid="post-header"
+              data-user-name="Current User"
+            />
+          </div>
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-testid="container"
+          >
+            <div
+              class="relative flex min-w-0 flex-col gap-4"
+              data-testid="container"
+            >
+              <div
+                data-testid="quick-reply-expanded-header"
+                style="opacity: 1; filter: blur(0px);"
+              >
+                <div
+                  data-character-limit-placement="metadata"
+                  data-count="14"
+                  data-is-reply="true"
+                  data-max="2000"
+                  data-post-id="user:me"
+                  data-show-user-info="true"
+                  data-size="extraLarge"
+                  data-testid="post-header"
+                  data-user-name="Current User"
+                  data-visually-hide-avatar="true"
+                >
+                  <span
+                    data-testid="post-header-character-count"
+                  >
+                    14
+                    /
+                    2000
+                  </span>
+                </div>
+              </div>
+              <div
+                class="flex w-full min-w-0 items-center gap-5"
+                data-testid="container"
+              >
+                <div
+                  class="relative min-w-0 flex-1"
+                  data-testid="container"
+                >
+                  <div
+                    class="relative"
+                    data-testid="container"
+                  >
+                    <textarea
+                      aria-haspopup="listbox"
+                      aria-label="Reply"
+                      class="text-xl leading-7"
+                      data-testid="quick-reply-textarea"
+                      maxlength="2000"
+                      placeholder="What are your thoughts on this?"
+                      rows="1"
+                      variant="inline"
+                    >
+                      Expanded reply
+                    </textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              attachments=""
+              data-testid="post-input-attachments"
+            />
+            <div
+              data-testid="quick-reply-expanded-content"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-disabled="false"
+                data-post-disabled="false"
+                data-testid="post-input-expandable-section"
+              >
+                <button
+                  data-testid="quick-reply-submit"
+                >
+                  Submit
+                </button>
+                <button
+                  data-testid="quick-reply-image"
+                >
+                  Image
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`QuickReply - Snapshots > matches snapshot with a logged-out fallback avatar 1`] = `
+<div
+  aria-busy="false"
+  class="relative flex"
+  data-testid="quick-reply"
+>
+  <div
+    class="-mt-4 w-3 shrink-0"
+    data-testid="container"
+  >
+    <div
+      data-testid="quick-reply-connector"
+      height="173"
+      style="transition: none;"
+      variant="last"
+    />
+  </div>
+  <div
+    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
+    data-state="collapsed"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="quick-reply-state-height"
+      style="height: 123px;"
+    >
+      <div
+        class="relative flex min-w-0 flex-col gap-4"
+        data-testid="quick-reply-state-content"
+      >
+        <div
+          class="relative"
         >
-          Image
-        </button>
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-testid="container"
+          >
+            <div
+              class="relative flex min-w-0 flex-col gap-4"
+              data-testid="container"
+            >
+              <div
+                class="flex w-full min-w-0 items-center gap-3"
+                data-testid="container"
+              >
+                <span
+                  class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+                  data-testid="quick-reply-fallback-avatar"
+                >
+                  <span
+                    class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+                  >
+                    <div
+                      class="facehash h-full w-full rounded-full text-background"
+                      data-facehash=""
+                      data-interactive="true"
+                      style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+                    >
+                      <div
+                        data-facehash-gradient=""
+                        style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                      />
+                      <div
+                        data-facehash-face=""
+                        style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(-15deg) rotateY(15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          fill="none"
+                          style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                          viewBox="0 0 63 9"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g
+                            style="animation: facehash-blink 5.7s ease-in-out 3.7s infinite; transform-origin: center center;"
+                          >
+                            <path
+                              d="M0 5.1c0-.1 0-.2 0-.3.1-.5.3-1 .7-1.3.1 0 .1-.1.2-.1C2.4 2.2 6 0 10.5 0S18.6 2.2 20.2 3.3c.1 0 .1.1.1.1.4.3.7.9.7 1.3v.3c0 1 0 1.4 0 1.7-.2 1.3-1.2 1.9-2.5 1.6-.2 0-.7-.3-1.8-.8C15 6.7 12.8 6 10.5 6s-4.5.7-6.3 1.5c-1 .5-1.5.7-1.8.8-1.3.3-2.3-.3-2.5-1.6v-1.7z"
+                              fill="currentColor"
+                            />
+                          </g>
+                          <g
+                            style="animation: facehash-blink 5.7s ease-in-out 3.7s infinite; transform-origin: center center;"
+                          >
+                            <path
+                              d="M42 5.1c0-.1 0-.2 0-.3.1-.5.3-1 .7-1.3.1 0 .1-.1.2-.1C44.4 2.2 48 0 52.5 0S60.6 2.2 62.2 3.3c.1 0 .1.1.1.1.4.3.7.9.7 1.3v.3c0 1 0 1.4 0 1.7-.2 1.3-1.2 1.9-2.5 1.6-.2 0-.7-.3-1.8-.8C57 6.7 54.8 6 52.5 6s-4.5.7-6.3 1.5c-1 .5-1.5.7-1.8.8-1.3.3-2.3-.3-2.5-1.6v-1.7z"
+                              fill="currentColor"
+                            />
+                          </g>
+                        </svg>
+                        <div
+                          data-facehash-mouth=""
+                          style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                        >
+                          <span
+                            data-testid="avatar-fallback-initial"
+                            style="font-size: 26cqw; line-height: 1;"
+                          >
+                            U
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </span>
+                </span>
+                <div
+                  class="relative min-w-0 flex-1"
+                  data-testid="container"
+                >
+                  <div
+                    class="relative"
+                    data-testid="container"
+                  >
+                    <textarea
+                      aria-haspopup="listbox"
+                      aria-label="Reply"
+                      data-testid="quick-reply-textarea"
+                      maxlength="2000"
+                      placeholder="What are your thoughts on this?"
+                      readonly=""
+                      rows="1"
+                      variant="inline"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              attachments=""
+              data-testid="post-input-attachments"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -81,58 +530,86 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
   >
     <div
       data-testid="quick-reply-connector"
-      height="189"
+      height="173"
+      style="transition: none;"
       variant="last"
     />
   </div>
   <div
-    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 p-12 border-input"
+    class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
+    data-state="collapsed"
     data-testid="container"
   >
     <div
-      class="flex gap-4 flex-col"
-      data-testid="container"
+      class="overflow-hidden"
+      data-testid="quick-reply-state-height"
+      style="height: 123px;"
     >
       <div
-        data-is-reply="true"
-        data-post-id="user:me"
-        data-size="large"
-        data-testid="post-header"
-      />
-      <div
-        class="relative"
-        data-testid="container"
+        class="relative flex min-w-0 flex-col gap-4"
+        data-testid="quick-reply-state-content"
       >
-        <textarea
-          aria-haspopup="listbox"
-          aria-label="Reply"
-          class="text-xl leading-7"
-          data-testid="quick-reply-textarea"
-          maxlength="2000"
-          placeholder="What are your thoughts on this?"
-          rows="1"
-          variant="inline"
-        />
-      </div>
-      <div
-        attachments=""
-        data-testid="post-input-attachments"
-      />
-      <div
-        data-disabled="false"
-        data-post-disabled="true"
-        data-testid="post-input-expandable-section"
-      >
-        <button
-          data-testid="quick-reply-submit"
+        <div
+          class="relative"
         >
-          Submit
-        </button>
-        <button
-          data-testid="quick-reply-image"
-        >
-          Image
-        </button>
+          <div
+            class="absolute top-0 left-0 z-10"
+            data-testid="quick-reply-stable-avatar"
+          >
+            <div
+              data-is-reply="true"
+              data-post-id="user:me"
+              data-show-user-info="false"
+              data-size="extraLarge"
+              data-testid="post-header"
+              data-user-name="Current User"
+            />
+          </div>
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-testid="container"
+          >
+            <div
+              class="relative flex min-w-0 flex-col gap-4"
+              data-testid="container"
+            >
+              <div
+                class="flex w-full min-w-0 items-center gap-5"
+                data-testid="container"
+              >
+                <div
+                  aria-hidden="true"
+                  class="shrink-0 size-16"
+                  data-testid="quick-reply-collapsed-avatar-placeholder"
+                />
+                <div
+                  class="relative min-w-0 flex-1"
+                  data-testid="container"
+                >
+                  <div
+                    class="relative"
+                    data-testid="container"
+                  >
+                    <textarea
+                      aria-haspopup="listbox"
+                      aria-label="Reply"
+                      class="text-xl leading-7"
+                      data-testid="quick-reply-textarea"
+                      maxlength="2000"
+                      placeholder="What are your thoughts on this?"
+                      rows="1"
+                      variant="inline"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              attachments=""
+              data-testid="post-input-attachments"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>
