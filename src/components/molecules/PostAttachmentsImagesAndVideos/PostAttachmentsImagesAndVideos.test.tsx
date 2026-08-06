@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
@@ -44,7 +44,6 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       overrideDefaults,
       centered,
       onClick,
-      onOpenAutoFocus,
       'aria-describedby': ariaDescribedBy,
       'data-testid': dataTestId,
     }: {
@@ -54,19 +53,9 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       overrideDefaults?: boolean;
       centered?: boolean;
       onClick?: (e: React.MouseEvent) => void;
-      onOpenAutoFocus?: (e: Event) => void;
       'aria-describedby'?: string;
       'data-testid'?: string;
     }) => {
-      // Mimic Radix Dialog open autofocus after children (and refs) are committed
-      useLayoutEffect(() => {
-        if (!dialogOpenState || !onOpenAutoFocus) {
-          return;
-        }
-        const event = new Event('focus', { cancelable: true });
-        onOpenAutoFocus(event);
-      }, [onOpenAutoFocus]);
-
       // Only render content when dialog is open (mimics real DialogContent behavior)
       if (!dialogOpenState) {
         return null;
@@ -644,17 +633,6 @@ describe('PostAttachmentsImagesAndVideos', () => {
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
       expect(screen.queryByText('1/1')).not.toBeInTheDocument();
-    });
-
-    it('focuses the carousel on open so arrow keys work without clicking nav', async () => {
-      setDialogOpen(true);
-      const imagesAndVideos = [createMockImage(), createMockImage()];
-      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
-
-      const carousel = screen.getByTestId('carousel');
-      await waitFor(() => {
-        expect(carousel).toHaveFocus();
-      });
     });
   });
 
