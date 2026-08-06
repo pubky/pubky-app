@@ -125,6 +125,7 @@ describe('RepliesWithParent', () => {
       prependPosts: vi.fn(),
       prependOptimisticPosts: vi.fn(),
       removePosts: vi.fn(),
+      removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
     });
 
     // Mock useInfiniteScroll
@@ -149,6 +150,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       render(<RepliesWithParent streamId={mockStreamId} />);
@@ -168,6 +170,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       render(<RepliesWithParent streamId={mockStreamId} />);
@@ -189,6 +192,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       render(<RepliesWithParent streamId={mockStreamId} />);
@@ -208,6 +212,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       render(<RepliesWithParent streamId={mockStreamId} />);
@@ -229,6 +234,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       render(<RepliesWithParent streamId={mockStreamId} />);
@@ -249,6 +255,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       render(<RepliesWithParent streamId={mockStreamId} />);
@@ -272,6 +279,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       // Mock useLiveQuery to return null (no parent)
@@ -301,6 +309,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       // Mock useLiveQuery to handle multiple calls:
@@ -332,6 +341,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       mockUseLiveQuery
@@ -365,6 +375,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       // Mock useLiveQuery to handle multiple calls:
@@ -397,6 +408,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       // Mock useLiveQuery to handle multiple calls:
@@ -429,6 +441,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       render(<RepliesWithParent streamId={mockStreamId} />);
@@ -465,6 +478,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       // Mock useLiveQuery to return parent ID but no parent post (triggers fetch)
@@ -503,6 +517,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
@@ -522,6 +537,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
@@ -541,6 +557,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
@@ -560,6 +577,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       // Mock useLiveQuery to handle multiple calls (2 replies × 2 queries each = 4 calls):
@@ -591,6 +609,7 @@ describe('RepliesWithParent', () => {
         prependPosts: vi.fn(),
         prependOptimisticPosts: vi.fn(),
         removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
       });
 
       // Mock useLiveQuery to handle multiple calls (2 replies × 2 queries each = 4 calls):

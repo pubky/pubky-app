@@ -6,7 +6,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { isPostDeleted } from '@/libs/utils/utils';
-import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
+import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { PostArticleDetail } from '@/organisms/PostArticleDetail/PostArticleDetail';
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
@@ -42,7 +42,7 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
       {/* Main post - FULL WIDTH - always visible */}
       {isDeleted ? (
         <Card className="rounded-md py-0">
-          <PostDeleted />
+          <PostUnavailable message={t('deleted')} />
         </Card>
       ) : isArticle ? (
         <PostArticleDetail

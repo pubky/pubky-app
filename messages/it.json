@@ -514,6 +514,7 @@
       "tagPost": "Tagga il post ({count})"
     },
     "deleted": "Questo post e stato eliminato dal suo autore.",
+    "remove": "Rimuovi",
     "missing": "Post non trovato.",
     "dropFiles": "Rilascia i file qui",
     "articleTitle": "Titolo articolo",
@@ -1028,6 +1029,8 @@
       "removed": "Segnalibro rimosso",
       "addFailed": "Impossibile aggiungere il segnalibro",
       "removeFailed": "Impossibile rimuovere il segnalibro",
+      "removedSyncFailed": "Segnalibro rimosso su questo dispositivo, ma la sincronizzazione non è riuscita.",
+      "addedSyncFailed": "Segnalibro aggiunto su questo dispositivo, ma la sincronizzazione non è riuscita.",
       "loginRequired": "Accedi per salvare i post"
     },
     "collection": {
@@ -1490,6 +1493,7 @@
     "addedToCollection": "Post aggiunto alla raccolta.",
     "removedFromCollection": "Post rimosso dalla raccolta.",
     "updateCollectionFailed": "Impossibile aggiornare la collezione.",
+    "removedFromCollectionSyncFailed": "Post rimosso dalla raccolta su questo dispositivo, ma la sincronizzazione non è riuscita.",
     "collectionCreated": "Collezione creata e post salvato.",
     "createCollectionFailed": "Impossibile creare la collezione."
   },

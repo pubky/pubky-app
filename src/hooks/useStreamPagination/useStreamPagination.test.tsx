@@ -518,6 +518,39 @@ describe('useStreamPagination', () => {
       expect(result.current.postIds).toEqual(['optimistic-c0', 'c1', 'c2', 'c3', 'c4', 'c5']);
     });
 
+    it('counts optimistically hidden rows that were already consumed in the collection offset', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['c1', 'c2', 'c3']);
+      });
+      act(() => {
+        result.current.removePostsOptimistically('c2');
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5'],
+        nextCursor: 5,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 3,
+        }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c3', 'c4', 'c5']);
+    });
+
     it('preserves optimistic membership posts across collection refresh without changing the next offset', async () => {
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
@@ -1053,6 +1086,557 @@ describe('useStreamPagination', () => {
       });
 
       expect(result.current.postIds).toEqual(expectedOrder);
+    });
+
+    it('should restore a removed post to its original position', async () => {
+      const { result } = renderHook(() =>
+        useStreamPagination({
+          streamId: mockStreamId,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      const initialPostIds = result.current.postIds;
+      const postToRemove = initialPostIds[1];
+      let rollback: (() => void) | undefined;
+
+      act(() => {
+        rollback = result.current.removePostsOptimistically(postToRemove).rollback;
+      });
+      act(() => rollback?.());
+
+      expect(result.current.postIds).toEqual(initialPostIds);
+
+      act(() => rollback?.());
+      expect(result.current.postIds).toEqual(initialPostIds);
+    });
+
+    it('should preserve concurrent optimistic inserts when restoring a removed post', async () => {
+      const { result } = renderHook(() =>
+        useStreamPagination({
+          streamId: mockStreamId,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      const initialPostIds = result.current.postIds;
+      const postToRemove = initialPostIds[1];
+      let rollback: (() => void) | undefined;
+
+      act(() => {
+        rollback = result.current.removePostsOptimistically(postToRemove).rollback;
+        result.current.prependOptimisticPosts('new-optimistic-post');
+      });
+      act(() => rollback?.());
+
+      expect(result.current.postIds).toEqual(['new-optimistic-post', ...initialPostIds]);
+    });
+
+    it('should restore an optimistically inserted post', async () => {
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+      act(() => {
+        result.current.prependOptimisticPosts('optimistic-post');
+      });
+
+      let rollback: (() => void) | undefined;
+      act(() => {
+        rollback = result.current.removePostsOptimistically('optimistic-post').rollback;
+      });
+      expect(result.current.postIds).not.toContain('optimistic-post');
+
+      act(() => rollback?.());
+      expect(result.current.postIds).toEqual(['optimistic-post', ...mockPostIds]);
+    });
+
+    it('should keep an optimistic removal hidden across refresh', async () => {
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let rollback: (() => void) | undefined;
+      act(() => {
+        rollback = result.current.removePostsOptimistically(mockPostIds[1]).rollback;
+      });
+      await act(async () => {
+        await result.current.refresh();
+      });
+
+      expect(result.current.postIds).toEqual(['post1', 'post3']);
+
+      act(() => rollback?.());
+      expect(result.current.postIds).toEqual(mockPostIds);
+    });
+
+    it('should preserve order when concurrent removals roll back', async () => {
+      const { result } = renderHook(() =>
+        useStreamPagination({
+          streamId: mockStreamId,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      const initialPostIds = result.current.postIds;
+      let rollbackSecond: (() => void) | undefined;
+      let rollbackThird: (() => void) | undefined;
+
+      act(() => {
+        rollbackSecond = result.current.removePostsOptimistically(initialPostIds[1]).rollback;
+        rollbackThird = result.current.removePostsOptimistically(initialPostIds[2]).rollback;
+      });
+      act(() => rollbackSecond?.());
+      act(() => rollbackThird?.());
+
+      expect(result.current.postIds).toEqual(initialPostIds);
+    });
+
+    it('should ignore a rollback after the active stream changes', async () => {
+      const nextStreamId = 'timeline:following:all' as PostStreamId;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockImplementation(async ({ streamId }) => ({
+        nextPageIds: streamId === mockStreamId ? mockPostIds : ['next-stream-post'],
+        nextCursor: Date.now(),
+      }));
+      const { result, rerender } = renderHook(
+        ({ streamId }) =>
+          useStreamPagination({
+            streamId,
+          }),
+        { initialProps: { streamId: mockStreamId } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(mockPostIds);
+      });
+
+      let rollback: (() => void) | undefined;
+      act(() => {
+        rollback = result.current.removePostsOptimistically(mockPostIds[1]).rollback;
+      });
+      rerender({ streamId: nextStreamId });
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['next-stream-post']);
+      });
+      act(() => rollback?.());
+
+      expect(result.current.postIds).toEqual(['next-stream-post']);
+    });
+
+    it('should keep a removed post hidden after commit and ignore a late rollback', async () => {
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let commit: (() => void) | undefined;
+      let rollback: (() => void) | undefined;
+      act(() => {
+        const removal = result.current.removePostsOptimistically(mockPostIds[1]);
+        commit = removal?.commit;
+        rollback = removal?.rollback;
+      });
+      act(() => commit?.());
+
+      expect(result.current.postIds).toEqual(['post1', 'post3']);
+
+      act(() => rollback?.());
+      expect(result.current.postIds).toEqual(['post1', 'post3']);
+    });
+
+    it('should decrement the collection skip offset when a committed removal shrinks the stream', async () => {
+      const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['c1', 'c2', 'c3']);
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically('c2').commit;
+      });
+      act(() => commit?.());
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5'],
+        nextCursor: 4,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // The committed removal shrank the backend collection by one already
+      // consumed row, so the next page resumes one offset earlier — otherwise
+      // the row that shifted into the removed slot is skipped after Nexus
+      // reindexes the edited collection.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 2,
+        }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c3', 'c4', 'c5']);
+    });
+
+    it('should keep the collection skip offset counting rows restored by a rollback', async () => {
+      const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['c1', 'c2', 'c3']);
+      });
+
+      let rollback: (() => void) | undefined;
+      act(() => {
+        rollback = result.current.removePostsOptimistically('c2').rollback;
+      });
+      act(() => rollback?.());
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5'],
+        nextCursor: 5,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // A rolled-back removal never shrank the backend list, so the consumed
+      // offset must stay intact.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 3,
+        }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c2', 'c3', 'c4', 'c5']);
+    });
+
+    it('should not shift the timestamp cursor when a removal commits on a score-paginated stream', async () => {
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: mockPostIds,
+        nextCursor: 1111,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically(mockPostIds[1]).commit;
+      });
+      act(() => commit?.());
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['post4'],
+        nextCursor: 999,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // Timestamp cursors are positions, not row counts — removing a row must
+      // not rewind them.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: mockStreamId,
+          streamTail: 1111,
+        }),
+      );
+    });
+
+    it('should re-apply a commit landing mid-fetch to the skip offset the fetch writes back', async () => {
+      const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['c1', 'c2', 'c3']);
+      });
+
+      let resolveSlice: ((value: { nextPageIds: string[]; nextCursor: number }) => void) | undefined;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValue(
+        new Promise((resolve) => {
+          resolveSlice = resolve;
+        }),
+      );
+      let loadMorePromise: Promise<void> | undefined;
+      act(() => {
+        loadMorePromise = result.current.loadMore();
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically('c2').commit;
+      });
+      act(() => commit?.());
+
+      await act(async () => {
+        resolveSlice?.({ nextPageIds: ['c4', 'c5'], nextCursor: 5 });
+        await loadMorePromise;
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c6'],
+        nextCursor: 5,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // The in-flight page derived nextCursor 5 from the offset captured
+      // before the commit, so its absolute write must re-apply the commit's
+      // decrement instead of silently discarding it.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 4,
+        }),
+      );
+      expect(result.current.postIds).toEqual(['c1', 'c3', 'c4', 'c5', 'c6']);
+    });
+
+    it('should not double-apply a commit that settled before the next fetch started', async () => {
+      const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2', 'c3'],
+        nextCursor: 3,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['c1', 'c2', 'c3']);
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically('c2').commit;
+      });
+      act(() => commit?.());
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c4', 'c5'],
+        nextCursor: 4,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c6'],
+        nextCursor: 5,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // The commit was already folded into the offset the second fetch sent
+      // (streamTail 2 → nextCursor 4); re-subtracting it here would refetch
+      // and dedupe-drop a row on every subsequent page.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: collectionStreamId,
+          streamTail: 4,
+        }),
+      );
+    });
+
+    it('should keep the timestamp cursor from an in-flight fetch when a removal commits mid-flight', async () => {
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: mockPostIds,
+        nextCursor: 1111,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let resolveSlice: ((value: { nextPageIds: string[]; nextCursor: number }) => void) | undefined;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValue(
+        new Promise((resolve) => {
+          resolveSlice = resolve;
+        }),
+      );
+      let loadMorePromise: Promise<void> | undefined;
+      act(() => {
+        loadMorePromise = result.current.loadMore();
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically(mockPostIds[1]).commit;
+      });
+      act(() => commit?.());
+
+      await act(async () => {
+        resolveSlice?.({ nextPageIds: ['post4'], nextCursor: 2222 });
+        await loadMorePromise;
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['post5'],
+        nextCursor: 3333,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      // Score cursors are timestamps, not row counts — a mid-flight commit
+      // must not subtract anything from them.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({
+          streamId: mockStreamId,
+          streamTail: 2222,
+        }),
+      );
+    });
+
+    it('should reveal a committed post again when it is re-added optimistically', async () => {
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically(mockPostIds[1]).commit;
+      });
+      act(() => commit?.());
+      expect(result.current.postIds).toEqual(['post1', 'post3']);
+
+      // A stale hidden count left behind by commit would suppress the post
+      // forever; re-adding it must show it again.
+      act(() => {
+        result.current.prependOptimisticPosts(mockPostIds[1]);
+      });
+      expect(result.current.postIds).toEqual(['post2', 'post1', 'post3']);
+    });
+
+    it('should resolve overlapping removals of the same post independently', async () => {
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let rollbackFirst: (() => void) | undefined;
+      let commitSecond: (() => void) | undefined;
+      act(() => {
+        rollbackFirst = result.current.removePostsOptimistically(mockPostIds[1]).rollback;
+        commitSecond = result.current.removePostsOptimistically(mockPostIds[1]).commit;
+      });
+
+      // One of the two overlapping removals rolling back keeps the post hidden
+      // while the other is still pending.
+      act(() => rollbackFirst?.());
+      expect(result.current.postIds).toEqual(['post1', 'post3']);
+
+      act(() => commitSecond?.());
+      expect(result.current.postIds).toEqual(['post1', 'post3']);
+    });
+
+    it('should keep a pending removal hidden when an in-flight loadMore resolves', async () => {
+      const { result } = renderHook(() => useStreamPagination({ streamId: mockStreamId }));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      let resolveFetch: ((value: { nextPageIds: string[]; nextCursor: number }) => void) | undefined;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveFetch = resolve;
+          }),
+      );
+
+      let loadMorePromise: Promise<void> | undefined;
+      act(() => {
+        loadMorePromise = result.current.loadMore();
+      });
+      act(() => {
+        result.current.removePostsOptimistically(mockPostIds[1]);
+      });
+      expect(result.current.postIds).toEqual(['post1', 'post3']);
+
+      await act(async () => {
+        resolveFetch?.({ nextPageIds: ['post4'], nextCursor: 200 });
+        await loadMorePromise;
+      });
+
+      expect(result.current.postIds).toEqual(['post1', 'post3', 'post4']);
+    });
+
+    it('should ignore a commit after the active stream changes', async () => {
+      const nextStreamId = 'timeline:following:all' as PostStreamId;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockImplementation(async ({ streamId }) => ({
+        nextPageIds: streamId === mockStreamId ? mockPostIds : ['next-stream-post'],
+        nextCursor: Date.now(),
+      }));
+      const { result, rerender } = renderHook(
+        ({ streamId }) =>
+          useStreamPagination({
+            streamId,
+          }),
+        { initialProps: { streamId: mockStreamId } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(mockPostIds);
+      });
+
+      let commit: (() => void) | undefined;
+      act(() => {
+        commit = result.current.removePostsOptimistically(mockPostIds[1]).commit;
+      });
+      rerender({ streamId: nextStreamId });
+
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['next-stream-post']);
+      });
+      act(() => commit?.());
+
+      expect(result.current.postIds).toEqual(['next-stream-post']);
     });
   });
 });
