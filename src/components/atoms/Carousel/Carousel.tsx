@@ -116,7 +116,7 @@ function Carousel({
     >
       <div
         onKeyDownCapture={handleKeyDown}
-        className={cn('relative outline-none', className)}
+        className={cn('relative outline-none focus-visible:ring-2 focus-visible:ring-ring', className)}
         role="region"
         aria-roledescription="carousel"
         data-slot="carousel"

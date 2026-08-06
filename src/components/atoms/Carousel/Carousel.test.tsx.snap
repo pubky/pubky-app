@@ -3,7 +3,7 @@
 exports[`Carousel - Snapshots > matches snapshot for horizontal orientation 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -95,7 +95,7 @@ exports[`Carousel - Snapshots > matches snapshot for horizontal orientation 1`] 
 exports[`Carousel - Snapshots > matches snapshot for vertical orientation 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -187,7 +187,7 @@ exports[`Carousel - Snapshots > matches snapshot for vertical orientation 1`] = 
 exports[`Carousel - Snapshots > matches snapshot with both navigation buttons disabled 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -281,7 +281,7 @@ exports[`Carousel - Snapshots > matches snapshot with both navigation buttons di
 exports[`Carousel - Snapshots > matches snapshot with complex slide content 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -397,7 +397,7 @@ exports[`Carousel - Snapshots > matches snapshot with complex slide content 1`] 
 exports[`Carousel - Snapshots > matches snapshot with custom button sizes 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -489,7 +489,7 @@ exports[`Carousel - Snapshots > matches snapshot with custom button sizes 1`] = 
 exports[`Carousel - Snapshots > matches snapshot with custom button variants 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -581,7 +581,7 @@ exports[`Carousel - Snapshots > matches snapshot with custom button variants 1`]
 exports[`Carousel - Snapshots > matches snapshot with custom className on Carousel 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none custom-carousel"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring custom-carousel"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -609,7 +609,7 @@ exports[`Carousel - Snapshots > matches snapshot with custom className on Carous
 exports[`Carousel - Snapshots > matches snapshot with custom className on CarouselContent 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -637,7 +637,7 @@ exports[`Carousel - Snapshots > matches snapshot with custom className on Carous
 exports[`Carousel - Snapshots > matches snapshot with custom className on CarouselItem 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -665,7 +665,7 @@ exports[`Carousel - Snapshots > matches snapshot with custom className on Carous
 exports[`Carousel - Snapshots > matches snapshot with default props 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -693,7 +693,7 @@ exports[`Carousel - Snapshots > matches snapshot with default props 1`] = `
 exports[`Carousel - Snapshots > matches snapshot with disabled next button 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -754,7 +754,7 @@ exports[`Carousel - Snapshots > matches snapshot with disabled next button 1`] =
 exports[`Carousel - Snapshots > matches snapshot with disabled previous button 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -815,7 +815,7 @@ exports[`Carousel - Snapshots > matches snapshot with disabled previous button 1
 exports[`Carousel - Snapshots > matches snapshot with multiple slides 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"
@@ -859,7 +859,7 @@ exports[`Carousel - Snapshots > matches snapshot with multiple slides 1`] = `
 exports[`Carousel - Snapshots > matches snapshot with navigation buttons 1`] = `
 <div
   aria-roledescription="carousel"
-  class="relative outline-none"
+  class="relative outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-slot="carousel"
   role="region"
   tabindex="0"

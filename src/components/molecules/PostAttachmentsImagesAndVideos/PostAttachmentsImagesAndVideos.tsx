@@ -146,7 +146,7 @@ export const PostAttachmentsImagesAndVideos = ({
                 className={cn(
                   isListVariant ? LIST_TILE_CLASS : 'h-52 w-full max-w-full',
                   isListVariant ? LIST_TILE_FRAME_CLASS : TILE_FRAME_CLASS,
-                  'cursor-pointer outline-none only:static focus:outline-none focus-visible:outline-none',
+                  'cursor-pointer outline-none only:static focus-visible:ring-2 focus-visible:ring-ring',
                 )}
               >
                 <Button overrideDefaults onClick={(e) => openPreview(i, e)}>
