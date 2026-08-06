@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { useEffect, useLayoutEffect } from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
@@ -44,6 +44,7 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       overrideDefaults,
       centered,
       onClick,
+      onOpenAutoFocus,
       'aria-describedby': ariaDescribedBy,
       'data-testid': dataTestId,
     }: {
@@ -53,9 +54,19 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
       overrideDefaults?: boolean;
       centered?: boolean;
       onClick?: (e: React.MouseEvent) => void;
+      onOpenAutoFocus?: (e: Event) => void;
       'aria-describedby'?: string;
       'data-testid'?: string;
     }) => {
+      // Mimic Radix Dialog open autofocus after children (and refs) are committed
+      useLayoutEffect(() => {
+        if (!dialogOpenState || !onOpenAutoFocus) {
+          return;
+        }
+        const event = new Event('focus', { cancelable: true });
+        onOpenAutoFocus(event);
+      }, [onOpenAutoFocus]);
+
       // Only render content when dialog is open (mimics real DialogContent behavior)
       if (!dialogOpenState) {
         return null;
@@ -160,11 +171,15 @@ vi.mock('@/atoms/Carousel/Carousel', () => {
       opts,
       setApi,
       className,
+      ref,
+      tabIndex = 0,
     }: {
       children: React.ReactNode;
       opts?: { startIndex?: number; loop?: boolean; duration?: number; watchDrag?: boolean };
       setApi?: (api: unknown) => void;
       className?: string;
+      ref?: React.Ref<HTMLDivElement>;
+      tabIndex?: number;
     }) => {
       // Simulate setting the API in useEffect to avoid infinite re-renders
       useEffect(() => {
@@ -172,11 +187,14 @@ vi.mock('@/atoms/Carousel/Carousel', () => {
           setApi({
             selectedScrollSnap: () => 0,
             on: vi.fn(),
+            off: vi.fn(),
           });
         }
       }, [setApi]);
       return (
         <div
+          ref={ref}
+          tabIndex={tabIndex}
           data-testid="carousel"
           data-start-index={opts?.startIndex}
           data-loop={opts?.loop}
@@ -626,6 +644,17 @@ describe('PostAttachmentsImagesAndVideos', () => {
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
       expect(screen.queryByText('1/1')).not.toBeInTheDocument();
+    });
+
+    it('focuses the carousel on open so arrow keys work without clicking nav', async () => {
+      setDialogOpen(true);
+      const imagesAndVideos = [createMockImage(), createMockImage()];
+      render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+
+      const carousel = screen.getByTestId('carousel');
+      await waitFor(() => {
+        expect(carousel).toHaveFocus();
+      });
     });
   });
 
