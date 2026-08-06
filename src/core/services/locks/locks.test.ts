@@ -41,7 +41,14 @@ const mocks = vi.hoisted(() => {
     createContentLock: vi.fn(),
     readContentLockWithOptions: vi.fn(async () => ({ version: 1, creator: 'pubkybob' })),
     generateBundleId: vi.fn(() => ({ toString: () => 'bundle-generated' })),
+    ensureLocksSdkReady: vi.fn(async () => {}),
   };
+});
+
+// Real memoization caches the first successful init, so a per-test failure needs the mock.
+vi.mock('./locks.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./locks.utils')>();
+  return { ...actual, ensureLocksSdkReady: mocks.ensureLocksSdkReady };
 });
 
 vi.mock('@/config/network', () => ({
@@ -368,6 +375,16 @@ describe('LocksService (reader unlock)', () => {
       expect.anything(),
     );
     expect(result).toEqual({ version: 1, creator: 'pubkybob' });
+  });
+
+  it('readContentLock wraps a wasm init failure as an AppError', async () => {
+    mocks.ensureLocksSdkReady.mockRejectedValueOnce(new Error('wasm init failed'));
+
+    const error = await LocksService.readContentLock('pubky://creatorb/pub/locks.app/lock1.json').catch(
+      (e: unknown) => e,
+    );
+    expect(isAppError(error)).toBe(true);
+    expect(error).toMatchObject({ operation: 'LocksService.readContentLock' });
   });
 
   it('generateBundleId returns a fresh reader-generated id', async () => {

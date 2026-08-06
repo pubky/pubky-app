@@ -542,7 +542,7 @@ export class HomeserverService {
       // `storage.get` resolves for any status, so the response has to be checked here.
       const response = await owned.session.storage.get(owned.path);
       if (response.status === HttpStatusCode.NOT_FOUND) return null;
-      if (!response.ok) throw httpResponseToError(response, ErrorService.Homeserver, 'getBytesIfExists', url);
+      await assertOk({ response, url, operation: 'getBytesIfExists' });
       return new Uint8Array(await response.arrayBuffer());
     } catch (error) {
       if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;

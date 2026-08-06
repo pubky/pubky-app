@@ -957,6 +957,8 @@ describe('HomeserverService', () => {
       // `storage.get` resolves for any status, so a non-404 failure must not be read as "absent" —
       // the resource may exist and the caller would record a false absence.
       it.each([
+        // 401 must classify as SESSION_EXPIRED like every other read (`assertOk`), not UNAUTHORIZED.
+        [401, ErrorCategory.Auth, AuthErrorCode.SESSION_EXPIRED],
         [403, ErrorCategory.Auth, AuthErrorCode.FORBIDDEN],
         [500, ErrorCategory.Server, ServerErrorCode.INTERNAL_ERROR],
       ])('should reject on a %i response instead of reporting absence', async (status, category, code) => {
