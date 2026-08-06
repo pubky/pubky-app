@@ -91,11 +91,20 @@ export class LocksApplication {
     }
 
     if (task.status !== 'completed') {
-      throw Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, `Unlock verification did not complete (${task.status})`, {
+      const failure = {
         service: ErrorService.Locks,
         operation: 'unlockContent',
         context: { status: task.status, failureMessage: task.failure_message },
-      });
+      };
+      if (task.status === 'failed' || task.status === 'expired') {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, `Unlock verification ${task.status}`, failure);
+      }
+      // Still `pending`/`in_progress` after the last poll — the server may finish it later.
+      throw Err.server(
+        ServerErrorCode.SERVICE_UNAVAILABLE,
+        `Unlock verification did not complete (${task.status})`,
+        failure,
+      );
     }
 
     const credential = await LocksService.issueAccessCredential(creator, bundleId);

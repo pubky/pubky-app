@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ServerErrorCode } from '@/libs/error/error.codes';
+import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
@@ -206,13 +206,34 @@ describe('LocksApplication (reader unlock)', () => {
     expect(mocks.issueAccessCredential).toHaveBeenCalledWith('pubkybob', 'bundle-1');
   });
 
-  it('throws and does not issue a credential when verification fails', async () => {
-    mocks.submitProofBundle.mockResolvedValue({ status: 'pending' });
-    mocks.lookupVerificationTask.mockResolvedValue({ status: 'failed', failure_message: 'nope' });
+  it.each(['failed', 'expired'] as const)(
+    'throws a validation error and issues no credential when verification is %s',
+    async (status) => {
+      mocks.submitProofBundle.mockResolvedValue({ status: 'pending' });
+      mocks.lookupVerificationTask.mockResolvedValue({ status, failure_message: 'nope' });
 
-    await expect(LocksApplication.unlockContent({ lockFile, lockUrl, password: 'pw' })).rejects.toThrow();
-    expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
-  });
+      await expect(LocksApplication.unlockContent({ lockFile, lockUrl, password: 'pw' })).rejects.toMatchObject({
+        code: ValidationErrorCode.INVALID_INPUT,
+        context: { status, failureMessage: 'nope' },
+      });
+      expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['pending', 'in_progress'] as const)(
+    'stops polling and throws a server error when the task is still %s on the last poll',
+    async (status) => {
+      mocks.submitProofBundle.mockResolvedValue({ status: 'pending' });
+      mocks.lookupVerificationTask.mockResolvedValue({ status });
+
+      await expect(LocksApplication.unlockContent({ lockFile, lockUrl, password: 'pw' })).rejects.toMatchObject({
+        code: ServerErrorCode.SERVICE_UNAVAILABLE,
+        context: { status },
+      });
+      expect(mocks.lookupVerificationTask).toHaveBeenCalledTimes(40); // MAX_POLL_ATTEMPTS
+      expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe('LocksApplication.fetchUnlockedContent', () => {
