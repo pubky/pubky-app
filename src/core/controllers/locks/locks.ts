@@ -117,14 +117,14 @@ export class LocksController {
     } catch {
       // Malformed/stale secret — already reported by the service Err factory; clear it so the UI
       // shows unauthenticated rather than a broken session.
-      store.reset();
+      this.clearSession();
       return;
     }
 
     try {
       await LocksApplication.setLockServiceConfig();
     } catch (error) {
-      if (isAppError(error) && isAuthError(error)) store.reset();
+      if (isAppError(error) && isAuthError(error)) this.clearSession();
     }
   }
 
