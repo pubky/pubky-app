@@ -45,7 +45,7 @@ export function useCreateLockContent({
       // The composer is only reachable when signed in, so a missing pubky is a programming error.
       if (!pubky)
         throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No pubky.app session', {
-          service: ErrorService.Locks,
+          service: ErrorService.Local,
           operation: 'useCreateLockContent.publish',
         });
 
@@ -100,7 +100,9 @@ export function useCreateLockContent({
       setError(appError);
       // The Lock Server rejected the session. Restore is offline, so a stale secret would keep the UI
       // looking authenticated — drop it here and tell the caller to reopen the sign-in modal.
-      if (appError.category === ErrorCategory.Auth) {
+      // `service` too — an expired homeserver session also throws Auth here, and Lock Server sign-in
+      // cannot fix that.
+      if (appError.category === ErrorCategory.Auth && appError.service === ErrorService.Locks) {
         LocksController.clearSession();
         return { status: 'auth-expired' };
       }

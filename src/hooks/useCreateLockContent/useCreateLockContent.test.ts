@@ -182,6 +182,21 @@ describe('useCreateLockContent', () => {
     expect(mocks.clearSession).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the Locks session when the homeserver session expires on the announcement', async () => {
+    mocks.commitCreate.mockRejectedValue(
+      Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+        service: ErrorService.Homeserver,
+        operation: 'test',
+      }),
+    );
+    const { result } = renderHook(() => useCreateLockContent(params()));
+
+    const outcome = await act(() => result.current.publish());
+
+    expect(outcome).toEqual({ status: 'failed' });
+    expect(mocks.clearSession).not.toHaveBeenCalled();
+  });
+
   it('keeps the session and does not flag re-auth on a non-auth failure', async () => {
     mocks.createLockContent.mockRejectedValue(new Error('lock server down'));
     const { result } = renderHook(() => useCreateLockContent(params()));
