@@ -61,21 +61,11 @@ export class LocksController {
     const result = await LocksApplication.exchangeSessionCode(params);
     useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
-    // the homeserver's post-auth write. Fire-and-forget: a failure must not drop the established
-    // session (the pointer write is idempotent and retried on the next auth). Runs after `init` —
-    // the service reads the session it just persisted.
-    void this.registerLockServiceConfig();
+    // the homeserver's post-auth write. Fire-and-forget: a failure (already reported to Sentry by the
+    // service Err factory) must not drop the established session — the write is idempotent and
+    // retried on the next auth. Runs after `init` — the service reads the session it just persisted.
+    void LocksApplication.setLockServiceConfig().catch(() => {});
     return result;
-  }
-
-  /** Background lock-service-config write; reports failures to Sentry but never drops the session. */
-  private static async registerLockServiceConfig(): Promise<void> {
-    try {
-      await LocksApplication.setLockServiceConfig();
-    } catch {
-      // Already reported to Sentry by the service Err factory; swallow so the write (idempotent,
-      // retried on the next auth) never drops the established session.
-    }
   }
 
   /**
