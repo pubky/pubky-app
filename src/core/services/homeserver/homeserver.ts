@@ -530,13 +530,19 @@ export class HomeserverService {
    * Bytes of an owned resource, or null when it is absent (404) — WITHOUT logging. For existence
    * checks (e.g. unlock detection) where "not there" is an expected outcome, not an error to report.
    * Calls the SDK directly so a 404 bypasses `handleError`/Sentry, mirroring `list`'s 404 fallback.
+   *
+   * Only a 404 means "absent": every other failure (403, 5xx, network) rejects, since the resource
+   * may well exist and a null would let the caller record a missing file as a confirmed absence.
    */
   static async getBytesIfExists(url: string): Promise<Uint8Array | null> {
     const owned = this.resolveOwnedSessionPath(url);
     // Unreadable without a session — return null rather than fire an unauthenticated request.
     if (!owned) return null;
     try {
+      // `storage.get` resolves for any status, so the response has to be checked here.
       const response = await owned.session.storage.get(owned.path);
+      if (response.status === HttpStatusCode.NOT_FOUND) return null;
+      if (!response.ok) throw httpResponseToError(response, ErrorService.Homeserver, 'getBytesIfExists', url);
       return new Uint8Array(await response.arrayBuffer());
     } catch (error) {
       if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;
