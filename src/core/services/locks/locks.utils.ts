@@ -42,9 +42,14 @@ let sdkReady: Promise<void> | null = null;
  */
 export function ensureLocksSdkReady(): Promise<void> {
   if (!sdkReady) {
-    sdkReady = import('@pubky/locks-sdk').then(async ({ default: init }) => {
-      await init();
-    });
+    sdkReady = import('@pubky/locks-sdk')
+      .then(async ({ default: init }) => {
+        await init();
+      })
+      .catch((error) => {
+        sdkReady = null;
+        throw error;
+      });
   }
   return sdkReady;
 }
