@@ -244,6 +244,12 @@ export interface TFetchLockFileParams {
   lockUrl: string;
 }
 
+/** A fetched lock file plus how its content is gated (null while missing / unsupported). */
+export interface TFetchLockFileResult {
+  lockFile: LockFile | null;
+  verifierType: VerifierType | null;
+}
+
 /** One proof for a lock criterion. `payload` is verifier-specific (dev-static: `{ satisfied: true }`). */
 export interface TProof {
   criterion_id: string;

@@ -5,7 +5,7 @@ import { Check, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
-import { usePostLock } from '@/hooks/usePostLock/usePostLock';
+import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { useUnlockedContent } from '@/hooks/useUnlockedContent/useUnlockedContent';
 import { cn } from '@/libs/utils/utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -28,8 +28,9 @@ interface LockedPostContentProps {
 }
 
 /**
- * Reader view of a lock post: teaser body + shared `LockedPostCard`, fed by `usePostLock`.
- * Its own component so the hook runs only for lock posts, not every post.
+ * Reader view of a lock post: announcement body + shared `LockedPostCard`, built from the parsed
+ * announcement content and the fetched lock file. Its own component so the lock-file fetch runs only
+ * for lock posts, not every post.
  */
 export function LockedPostContent({
   content,
@@ -43,7 +44,8 @@ export function LockedPostContent({
   const [isUnlockOpen, setIsUnlockOpen] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState(false);
-  const { lockContent, lockFile } = usePostLock({ content, lock });
+  const lockContent = LocksController.getLockContent(content);
+  const { lockFile } = useLockFile(lock);
   const { unlockedPost, applyUnlockedContent, media, isOwnLock } = useUnlockedContent({ lock, lockFile, authorId });
   const { toast } = useToast();
   const tToast = useTranslations('toast.post');

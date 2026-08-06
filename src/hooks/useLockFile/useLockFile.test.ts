@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
-import type { LockFile } from '@/services/locks/locks.types';
+import { type LockFile, VerifierType } from '@/services/locks/locks.types';
 import { useLockFile } from './useLockFile';
 
 // TODO:[Locks] #1998 — inline test fixtures (sample lock file + author pubky) are
@@ -31,7 +31,10 @@ const LOCK_URL = `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks/lock.json`;
 
 describe('useLockFile', () => {
   beforeEach(() => {
-    vi.mocked(LocksController.fetchLockFile).mockResolvedValue(MOCK_LOCK_FILE);
+    vi.mocked(LocksController.fetchLockFile).mockResolvedValue({
+      lockFile: MOCK_LOCK_FILE,
+      verifierType: VerifierType.PASSWORD,
+    });
   });
 
   it('fetches the lock file for a url', async () => {

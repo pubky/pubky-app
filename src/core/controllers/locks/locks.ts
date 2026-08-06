@@ -8,11 +8,13 @@ import type {
   TUnlockContentParams,
 } from '@/application/locks/locks.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
+import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
 import type {
-  LockFile,
+  LockPostContent,
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
   TFetchLockFileParams,
+  TFetchLockFileResult,
   TGetConnectUrlParams,
   TLocksSessionResult,
   TUnlockedContent,
@@ -135,11 +137,17 @@ export class LocksController {
   }
 
   /**
-   * Fetch the lock file (`lock.json`) referenced by a post's top-level `lock` URL.
-   * Delegates to the application, which validates the URL and performs the read.
+   * Fetch the lock file (`lock.json`) referenced by a post's top-level `lock` URL and resolve how
+   * its content is gated. Delegates to the application, which validates the URL and performs the read.
    */
-  static async fetchLockFile({ lockUrl }: TFetchLockFileParams): Promise<LockFile | null> {
-    return LocksApplication.fetchLockFile({ lockUrl });
+  static async fetchLockFile(params: TFetchLockFileParams): Promise<TFetchLockFileResult> {
+    const lockFile = await LocksApplication.fetchLockFile(params);
+    return { lockFile, verifierType: LockFileParser.resolveVerifierType(lockFile) };
+  }
+
+  /** Announcement content of a lock post; null when the post's `content` isn't valid announcement JSON. */
+  static getLockContent(content: string): LockPostContent | null {
+    return LockContentParser.parse(content);
   }
 
   /** Reader unlock: submit the proof for a resolved lock file, verify, and return the access credential. */
