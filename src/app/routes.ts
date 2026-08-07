@@ -51,7 +51,6 @@ export enum SETTINGS_ROUTES {
   NOTIFICATIONS = '/settings/notifications',
   PRIVACY_SAFETY = '/settings/privacy-safety',
   MUTED_USERS = '/settings/muted-users',
-  LANGUAGE = '/settings/language',
   HELP = '/settings/help',
 }
 
@@ -83,8 +82,6 @@ export const PUBLIC_ROUTES: string[] = [
   APP_ROUTES.PROFILE,
   // Copyright page should be accessible without authentication
   COPYRIGHT_ROUTES.COPYRIGHT,
-  // Language settings page is public to allow language changes without auth issues
-  SETTINGS_ROUTES.LANGUAGE,
   // Sentry verification harness must be reachable without a session on preview deploys.
   // The page returns 404 in production via isSentryTestHarnessEnabled().
   DEV_ROUTES.SENTRY_TEST,

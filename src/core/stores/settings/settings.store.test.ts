@@ -28,7 +28,6 @@ describe('SettingsStore', () => {
       notifications: defaultNotificationPreferences,
       privacy: defaultPrivacyPreferences,
       muted: [],
-      language: 'en',
       updatedAt: Date.now(),
       version: 1,
     });
@@ -46,7 +45,6 @@ describe('SettingsStore', () => {
         notifications: defaultNotificationPreferences,
         privacy: defaultPrivacyPreferences,
         muted: [],
-        language: 'en',
         updatedAt: initialTimestamp,
         version: 1,
       });
@@ -56,7 +54,6 @@ describe('SettingsStore', () => {
       expect(state.notifications).toEqual(defaultNotificationPreferences);
       expect(state.privacy).toEqual(defaultPrivacyPreferences);
       expect(state.muted).toEqual([]);
-      expect(state.language).toBe('en');
       expect(state.version).toBe(1);
       expect(state.updatedAt).toBeGreaterThanOrEqual(initialTimestamp);
     });
@@ -231,23 +228,6 @@ describe('SettingsStore', () => {
     });
   });
 
-  describe('Language', () => {
-    it('should set language', () => {
-      const store = useSettingsStore.getState();
-
-      store.setLanguage('es');
-      expect(useSettingsStore.getState().language).toBe('es');
-
-      store.setLanguage('fr');
-      expect(useSettingsStore.getState().language).toBe('fr');
-    });
-
-    it('should default to en', () => {
-      const state = useSettingsStore.getState();
-      expect(state.language).toBe('en');
-    });
-  });
-
   describe('Store Reset', () => {
     it('should reset store to default state', () => {
       const store = useSettingsStore.getState();
@@ -256,24 +236,21 @@ describe('SettingsStore', () => {
       store.setNotificationPreference('follow', false);
       store.setShowConfirm(false);
       store.addMutedUser('user-123');
-      store.setLanguage('es');
 
       // Verify state is set
       expect(useSettingsStore.getState().notifications.follow).toBe(false);
       expect(useSettingsStore.getState().privacy.showConfirm).toBe(false);
       expect(useSettingsStore.getState().muted).toContain('user-123');
-      expect(useSettingsStore.getState().language).toBe('es');
 
       // Reset store
       store.reset();
 
       const afterReset = useSettingsStore.getState();
 
-      // Verify state is reset to initial (except language which is preserved as device-level preference)
+      // Verify state is reset to initial
       expect(afterReset.notifications).toEqual(defaultNotificationPreferences);
       expect(afterReset.privacy).toEqual(defaultPrivacyPreferences);
       expect(afterReset.muted).toEqual([]);
-      expect(afterReset.language).toBe('es'); // preserved across store.reset()
       expect(afterReset.version).toBe(1); // Reset to initial
       expect(afterReset.updatedAt).toBe(settingsInitialState.updatedAt); // Reset to 0 so remote wins on next login
     });
@@ -287,7 +264,7 @@ describe('SettingsStore', () => {
       // Wait a bit to ensure timestamp difference
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      store.setLanguage('fr');
+      store.setNotificationPreference('follow', false);
       expect(useSettingsStore.getState().updatedAt).toBeGreaterThan(initialTimestamp);
 
       const beforePrivacy = useSettingsStore.getState().updatedAt;
@@ -307,13 +284,11 @@ describe('SettingsStore', () => {
       store.setShowConfirm(false);
       store.addMutedUser('user-1');
       store.addMutedUser('user-2');
-      store.setLanguage('fr');
 
       const state = useSettingsStore.getState();
       expect(state.notifications.follow).toBe(false);
       expect(state.privacy.showConfirm).toBe(false);
       expect(state.muted).toEqual(['user-1', 'user-2']);
-      expect(state.language).toBe('fr');
     });
 
     it('should maintain state consistency across multiple operations', () => {
