@@ -28,10 +28,13 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
   const stateRef = useRef<string | null>(null);
   // The only origin allowed to post the callback — derived from the connect URL the server returned.
   const lockServerOriginRef = useRef<string | null>(null);
+  // Identifies the current server check, so `prepare()` can drop the answer of an outdated one.
+  const serverCheckRef = useRef(0);
 
   // useCallback IS required here: consumers put `start`/`reset` in a useEffect dep array, so an
   // unstable identity re-runs the effect → re-calls start() → infinite loop. Keep them ref-stable.
   const reset = useCallback(() => {
+    serverCheckRef.current += 1;
     stateRef.current = null;
     lockServerOriginRef.current = null;
     setConnectUrl(null);
@@ -43,12 +46,16 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
   // Run when the modal opens: probe readiness before the user can start, so a dead / not-ready server
   // disables "Continue" (with a message) instead of loading a broken iframe on click.
   const prepare = useCallback(async () => {
+    const serverCheck = (serverCheckRef.current += 1);
+    const isOutdated = () => serverCheck !== serverCheckRef.current;
     setError(null);
     setStatus(LocksAuthFlowStatus.CHECKING_SERVER);
     try {
       const reachable = await LocksController.isServerReachable();
+      if (isOutdated()) return;
       setStatus(reachable ? LocksAuthFlowStatus.IDLE : LocksAuthFlowStatus.SERVER_UNAVAILABLE);
     } catch (caught) {
+      if (isOutdated()) return;
       setError(toAppError(caught, ErrorService.Locks, 'useLocksAuthFlow.prepare'));
       setStatus(LocksAuthFlowStatus.SERVER_UNAVAILABLE);
     }

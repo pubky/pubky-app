@@ -92,6 +92,46 @@ describe('useLocksAuthFlow', () => {
     expect(result.current.connectUrl).toBeNull();
   });
 
+  // The modal stays mounted when closed, so a slow check outlives it and must not overwrite a newer one.
+  it('ignores a slow server check that answers after a newer one', async () => {
+    let resolveSlow: (value: boolean) => void = () => {};
+    mocks.isServerReachable
+      .mockImplementationOnce(() => new Promise<boolean>((resolve) => (resolveSlow = resolve)))
+      .mockResolvedValueOnce(false);
+    const { result } = renderHook(() => useLocksAuthFlow());
+
+    act(() => void result.current.prepare()); // opened — check A, still in flight
+    act(() => result.current.reset()); // closed
+    await act(async () => {
+      await result.current.prepare(); // reopened — check B says the server is down
+    });
+    expect(result.current.status).toBe(LocksAuthFlowStatus.SERVER_UNAVAILABLE);
+
+    await act(async () => {
+      resolveSlow(true); // check A finally answers "reachable"
+    });
+
+    expect(result.current.status).toBe(LocksAuthFlowStatus.SERVER_UNAVAILABLE);
+  });
+
+  it('ignores a slow server check that fails after the modal closed', async () => {
+    let rejectSlow: (reason: Error) => void = () => {};
+    mocks.isServerReachable.mockImplementationOnce(
+      () => new Promise<boolean>((_resolve, reject) => (rejectSlow = reject)),
+    );
+    const { result } = renderHook(() => useLocksAuthFlow());
+
+    act(() => void result.current.prepare());
+    act(() => result.current.reset());
+
+    await act(async () => {
+      rejectSlow(new Error('pkarr timeout'));
+    });
+
+    expect(result.current.status).toBe(LocksAuthFlowStatus.IDLE);
+    expect(result.current.error).toBeNull();
+  });
+
   it('start() requests a connect URL with a generated state', async () => {
     const { result } = renderHook(() => useLocksAuthFlow());
     const state = await startFlow(result);
