@@ -120,6 +120,7 @@ export function PostInput({
     expanded,
     onContentChange,
     onArticleModeChange,
+    hasExternalContent: () => isLockEnabled,
   });
 
   const {

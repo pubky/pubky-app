@@ -30,6 +30,8 @@ export interface UsePostInputOptions {
   onContentChange?: (content: string, tags: string[], attachments: File[], articleTitle: string) => void;
   /** Callback when article mode changes */
   onArticleModeChange?: (isArticle: boolean) => void;
+  /** Optional external work-in-progress check, added to the tracked fields before collapsing */
+  hasExternalContent?: () => boolean;
 }
 
 export interface UsePostInputReturn {

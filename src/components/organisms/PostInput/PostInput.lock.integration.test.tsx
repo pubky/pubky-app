@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   handleSubmit: vi.fn(), // the normal (non-lock) publish path
   toast: vi.fn(),
   post: vi.fn(), // PubkyAppPost constructor spy — records the locked post's content/kind
+  hasExternalContent: undefined as (() => boolean) | undefined,
   locksAuthed: false,
   lockServer: 'lockpubky' as string | undefined,
   // Test handle into the fake composer state, refreshed on every render.
@@ -80,13 +81,14 @@ vi.mock('pubky-app-specs', () => ({
 vi.mock('@/hooks/usePostInput/usePostInput', async () => {
   const { useRef, useState } = await import('react');
   return {
-    usePostInput: () => {
+    usePostInput: (options: { hasExternalContent?: () => boolean }) => {
       const [content, setContent] = useState('');
       const [tags, setTags] = useState<string[]>([]);
       const [attachments, setAttachments] = useState<File[]>([]);
       const [isArticle, setIsArticle] = useState(false);
       const [articleTitle, setArticleTitle] = useState('');
       mocks.composer = { content, setContent, attachments, setAttachments, tags };
+      mocks.hasExternalContent = options.hasExternalContent;
       return {
         textareaRef: useRef(null),
         markdownEditorRef: useRef(null),
@@ -495,6 +497,23 @@ describe('PostInput lock flow (integration)', () => {
 
       expect(postButton()).toBeEnabled();
     });
+  });
+
+  // An empty composer is not always idle — the lock flow holds the draft outside it.
+  // Only the signal is checked here: `usePostInput` is faked, so no collapse runs. The composer
+  // really staying open on an outside click belongs in an e2e test.
+  it('reports work in progress to the collapse guard while the lock is on', () => {
+    renderComposer();
+    expect(mocks.hasExternalContent?.()).toBe(false);
+
+    configureLock();
+
+    expect(mocks.composer.content).toBe(''); // the body moved into the lock draft
+    expect(mocks.hasExternalContent?.()).toBe(true);
+
+    fireEvent.click(lockSwitch()); // back to a normal post
+
+    expect(mocks.hasExternalContent?.()).toBe(false);
   });
 
   it('reopens sign-in and keeps the draft when the Lock Server rejects the session', async () => {

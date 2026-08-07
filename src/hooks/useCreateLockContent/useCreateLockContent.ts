@@ -50,8 +50,7 @@ export function useCreateLockContent({
           operation: 'useCreateLockContent.publish',
         });
 
-      // Before the lock exists, never after — specs rejects an oversized announcement and the lock is
-      // created first, so a late failure orphans it.
+      // Runs before the lock is created, so a rejected announcement cannot orphan one.
       if (!isLockTeaserWithinLimit(announcement.teaser)) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Lock announcement exceeds the post length limit', {
           service: ErrorService.Local,

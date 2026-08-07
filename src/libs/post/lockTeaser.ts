@@ -7,15 +7,12 @@ export type TLockTeaser = {
   teaser_description: string;
 };
 
-/** Destructured, not passed through, so the key order the 41-char reservation assumes cannot drift. */
+/** Picks the two fields by name, so a new field is never published before we count its length. */
 export function buildLockTeaserContent({ lock_title, teaser_description }: TLockTeaser): string {
   return JSON.stringify({ lock_title, teaser_description });
 }
 
-/**
- * Measures the serialized envelope: JSON escaping expands quotes and newlines past the per-field
- * limits. Code points, because that is what the spec counts (`chars().count()`).
- */
+/** Measures the serialized string, because JSON escaping adds characters. Counts code points, as the spec does. */
 export function isLockTeaserWithinLimit(teaser: TLockTeaser): boolean {
   return getCharacterCount(buildLockTeaserContent(teaser)) <= POST_MAX_CHARACTER_LENGTH;
 }

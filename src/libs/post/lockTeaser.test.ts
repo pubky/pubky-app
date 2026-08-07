@@ -24,8 +24,7 @@ describe('buildLockTeaserContent', () => {
     expect(LOCK_TEASER_MAX_CHARACTER_LENGTH).toBe(POST_MAX_CHARACTER_LENGTH - LOCK_TITLE_MAX_CHARACTER_LENGTH - 41);
   });
 
-  // A field added to the envelope must reach the builder, not ride along from the caller: anything
-  // published but unmeasured lets the guard pass a payload the spec rejects, orphaning the lock.
+  // An unmeasured field would pass the guard and then fail the spec, after the lock exists.
   it('drops fields it does not know about', () => {
     const withExtra = { ...teaser('T', 'B'), cover_image: 'x'.repeat(500) };
 
@@ -48,8 +47,7 @@ describe('isLockTeaserWithinLimit', () => {
     expect(isLockTeaserWithinLimit(over)).toBe(false);
   });
 
-  // The reason a serialized measure exists: per-field maxLengths let these through, but escaping
-  // doubles each character and the envelope blows the limit — publishing would orphan the lock.
+  // Why the check measures the serialized string: each of these grows to two characters.
   it('rejects quotes that fit the input but double when escaped', () => {
     const quoted = teaser('', '"'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH));
 
@@ -76,8 +74,7 @@ describe('isLockTeaserWithinLimit', () => {
     expect(isLockTeaserWithinLimit(teaser('', ''))).toBe(true);
   });
 
-  // The spec counts code points (`post.rs` — `content.chars().count()`), so an emoji costs one there
-  // and two under `.length`. Counting UTF-16 units would reject envelopes the spec accepts.
+  // The spec counts code points, so an emoji costs one there and two under `.length`.
   it('counts an emoji once, like the spec does', () => {
     const emojiFilled = teaser('', '👍'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH));
 

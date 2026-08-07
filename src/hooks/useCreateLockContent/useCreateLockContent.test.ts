@@ -238,9 +238,7 @@ describe('useCreateLockContent', () => {
       expect(content.length).toBe(POST_MAX_CHARACTER_LENGTH);
     });
 
-    // The guard only holds while the string it measures is the string that ships. A caller-supplied
-    // field that reached the wire unmeasured would pass the check and then fail the spec — after the
-    // lock exists.
+    // The guard only holds while the string it measures is the string that ships.
     it('publishes exactly the envelope the guard measured', async () => {
       const extra = { ...teaser, cover_image: 'x'.repeat(POST_MAX_CHARACTER_LENGTH) };
       const { result } = renderHook(() => useCreateLockContent(withTeaser(extra)));
