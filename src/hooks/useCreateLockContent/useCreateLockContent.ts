@@ -9,6 +9,7 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
+import { buildLockTeaserContent, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -49,6 +50,15 @@ export function useCreateLockContent({
           operation: 'useCreateLockContent.publish',
         });
 
+      // Before the lock exists, never after — specs rejects an oversized announcement and the lock is
+      // created first, so a late failure orphans it.
+      if (!isLockTeaserWithinLimit(announcement.teaser)) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Lock announcement exceeds the post length limit', {
+          service: ErrorService.Local,
+          operation: 'useCreateLockContent.publish',
+        });
+      }
+
       // Runs once the attachments are uploaded, so the post can point at their guarded paths. The
       // original filenames are dropped with the paths — they live on in the post's own metadata.
       // Attachments live on the Lock-Server-authenticated account (`ownerPubky`, `pubky` prefix
@@ -85,7 +95,7 @@ export function useCreateLockContent({
       // creator. The error reaches Sentry through the `Err.*` factory, but the lock is left behind.
       const announcementPostId = await PostController.commitCreate({
         authorId: pubky,
-        content: JSON.stringify(announcement.teaser),
+        content: buildLockTeaserContent(announcement.teaser),
         attachments: announcement.attachments,
         tags: announcement.tags,
         lock: lockUrl,

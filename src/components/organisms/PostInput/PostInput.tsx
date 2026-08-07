@@ -8,7 +8,12 @@ import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConne
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
-import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import {
+  ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
+  LOCK_TEASER_MAX_CHARACTER_LENGTH,
+  LOCK_TITLE_MAX_CHARACTER_LENGTH,
+  POST_MAX_CHARACTER_LENGTH,
+} from '@/config/posts';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
@@ -16,6 +21,7 @@ import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
 import { parseArticleContent } from '@/libs/post/articleContent';
+import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
@@ -239,7 +245,11 @@ export function PostInput({
   const isValid = () => {
     // `isPublishingLock` counts as submitting: the action-bar button only disables through this check,
     // so leaving it out lets a second click publish a duplicate lock while the first is in flight.
-    return canSubmitPost(variant, content, attachments, isSubmitting || isPublishingLock, isArticle, articleTitle);
+    return (
+      canSubmitPost(variant, content, attachments, isSubmitting || isPublishingLock, isArticle, articleTitle) &&
+      // Blocking the click is what prevents an orphaned lock: the publish creates the lock first.
+      (!isLockEnabled || isLockTeaserWithinLimit({ lock_title: lockTitle, teaser_description: content }))
+    );
   };
 
   const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitOrPublishLock, {
@@ -291,7 +301,9 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);
 
-  const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH };
+  // With the lock on the body is the teaser, sharing the post budget with the title in one envelope.
+  const composerMaxLength = isLockEnabled ? LOCK_TEASER_MAX_CHARACTER_LENGTH : POST_MAX_CHARACTER_LENGTH;
+  const characterLimit = isArticle ? undefined : { count: getCharacterCount(content), max: composerMaxLength };
 
   useEffect(() => {
     onLockModeChange?.(isLockEnabled);
@@ -307,6 +319,7 @@ export function PostInput({
           value={lockTitle}
           onChange={(event) => setLockTitle(event.target.value)}
           placeholder={t('lock.titlePlaceholder')}
+          maxLength={LOCK_TITLE_MAX_CHARACTER_LENGTH}
           disabled={isPublishingLock}
           className="mb-4 h-14 rounded-md border border-dashed border-input px-6 py-4 text-base"
           data-cy="lock-title-input"
@@ -375,7 +388,7 @@ export function PostInput({
                 onFocus={handleExpandWithAuth}
                 onKeyDown={handleKeyDown}
                 onPaste={isEdit ? undefined : handlePasteWithAuth}
-                maxLength={POST_MAX_CHARACTER_LENGTH}
+                maxLength={composerMaxLength}
                 rows={1}
                 disabled={isSubmitting}
                 readOnly={!isAuthenticated}

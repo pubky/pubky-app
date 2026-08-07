@@ -1,5 +1,10 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  LOCK_TEASER_MAX_CHARACTER_LENGTH,
+  LOCK_TITLE_MAX_CHARACTER_LENGTH,
+  POST_MAX_CHARACTER_LENGTH,
+} from '@/config/posts';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -429,6 +434,67 @@ describe('PostInput lock flow (integration)', () => {
     fireEvent.click(inFlight);
 
     expect(mocks.createLockContent).toHaveBeenCalledTimes(1);
+  });
+
+  // Specs rejects an oversized announcement, but the lock is created first — so the composer must
+  // refuse the click rather than let the publish start and strand a lock nothing points at.
+  describe('announcement length', () => {
+    const setTeaser = (value: string) =>
+      fireEvent.change(screen.getByPlaceholderText('Write a short announcement to tease your content.'), {
+        target: { value },
+      });
+    const setTitle = (value: string) => fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value } });
+
+    it('caps the title and teaser inputs at their budgets', () => {
+      renderComposer();
+      configureLock();
+
+      expect(screen.getByPlaceholderText('Title')).toHaveAttribute(
+        'maxLength',
+        String(LOCK_TITLE_MAX_CHARACTER_LENGTH),
+      );
+      expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveAttribute(
+        'maxLength',
+        String(LOCK_TEASER_MAX_CHARACTER_LENGTH),
+      );
+    });
+
+    it('publishes when both fields are filled to their budgets', async () => {
+      renderComposer();
+      configureLock();
+      setTeaser('b'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH));
+      setTitle('a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH));
+
+      fireEvent.click(postButton());
+
+      await waitFor(() => expect(mocks.commitCreate).toHaveBeenCalledTimes(1));
+      const [{ content }] = mocks.commitCreate.mock.calls[0];
+      expect(content.length).toBe(POST_MAX_CHARACTER_LENGTH);
+    });
+
+    it('disables Post and creates no lock when escaping pushes the envelope over', async () => {
+      renderComposer();
+      configureLock();
+      setTeaser('"'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH)); // fits the input, doubles when escaped
+
+      expect(postButton()).toBeDisabled();
+
+      fireEvent.click(postButton());
+
+      await waitFor(() => expect(mocks.createLockContent).not.toHaveBeenCalled());
+      expect(mocks.commitCreate).not.toHaveBeenCalled();
+    });
+
+    it('re-enables Post once the teaser is trimmed back under the limit', () => {
+      renderComposer();
+      configureLock();
+      setTeaser('"'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH));
+      expect(postButton()).toBeDisabled();
+
+      setTeaser('a readable teaser');
+
+      expect(postButton()).toBeEnabled();
+    });
   });
 
   it('reopens sign-in and keeps the draft when the Lock Server rejects the session', async () => {
