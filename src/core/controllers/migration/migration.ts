@@ -1,5 +1,4 @@
 import { MigrationApplication } from '@/application/migration/migration';
-import { setLocaleCookie } from '@/i18n/utils';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
@@ -19,7 +18,6 @@ export class MigrationController {
 
     if (remoteSettings) {
       useSettingsStore.getState().loadFromHomeserver(remoteSettings);
-      setLocaleCookie(remoteSettings.language);
       Logger.info('Settings loaded from homeserver during DB re-sync', { pubky });
     }
   }

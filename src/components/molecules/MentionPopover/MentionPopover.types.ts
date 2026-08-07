@@ -1,3 +1,4 @@
+import type { RefObject } from 'react';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
 
 /**
@@ -12,4 +13,6 @@ export interface MentionPopoverProps {
   onSelect: (userId: string) => void;
   /** Callback when hovering over a user (for keyboard navigation sync) */
   onHover: (index: number) => void;
+  /** Element the popover is positioned under — it renders in a portal, so this is its only anchor */
+  anchorRef: RefObject<HTMLElement | null>;
 }

@@ -74,7 +74,7 @@ export function usePostInput({
   // Hooks
   const t = useTranslations('post.placeholder');
   const tFile = useTranslations('toast.file');
-  const { currentUserPubky } = useCurrentUserProfile();
+  const { currentUserPubky, userDetails: currentUserDetails } = useCurrentUserProfile();
   const {
     content,
     setContent,
@@ -170,18 +170,24 @@ export function usePostInput({
     }
   }, [isExpanded]);
 
-  const resizeTextarea = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, []);
-
-  // Autosize textarea height (Safari doesn't support `field-sizing: content` yet)
+  // Autosize textarea height (Safari doesn't support `field-sizing: content` yet).
+  // Never measure an empty textarea: in a stretched layout its scrollHeight can
+  // equal the available container height and persist that height inline.
   useLayoutEffect(() => {
     if (isArticle) return;
-    resizeTextarea();
-  }, [content, isArticle, resizeTextarea]);
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    if (content.length === 0) {
+      textarea.style.height = '1lh';
+      return;
+    }
+
+    // Measure from a collapsed height so a stretched flex/grid measurement cannot
+    // become the next explicit textarea height.
+    textarea.style.height = '0px';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [content, isArticle, isExpanded]);
 
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
@@ -532,6 +538,7 @@ export function usePostInput({
     hasContent,
     displayPlaceholder,
     currentUserPubky,
+    currentUserDetails,
 
     // Handlers
     handleExpand,

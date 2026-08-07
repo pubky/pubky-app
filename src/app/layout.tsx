@@ -32,7 +32,8 @@ export function generateMetadata() {
   });
 }
 
-// Force dynamic rendering since we use cookies for locale detection
+// Force dynamic rendering since RootContainer serializes runtime config per-request
+// (PUBKY_RUNTIME_* env vars must be read at request time, not baked in at build time)
 export const dynamic = 'force-dynamic';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
-import { setLocaleCookie } from '@/i18n/utils';
 import type { Pubky } from '@/models/models.types';
 import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
@@ -19,14 +18,9 @@ import { mockAuthStore, mockSettingsStore } from '@/test-utils/stores';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SettingsController } from './settings';
 
-vi.mock('@/i18n/utils', () => ({
-  setLocaleCookie: vi.fn(),
-}));
-
 const TEST_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
 const MOCK_LAST_READ = 5000;
 const MOCK_ALLOWED_TYPES = [NotificationType.Follow, NotificationType.Reply];
-const mockSetLocaleCookie = vi.mocked(setLocaleCookie);
 
 const mockNotificationStoreActions = {
   selectLastRead: () => MOCK_LAST_READ,
@@ -44,7 +38,6 @@ const mockStoreActions = {
   setHideActiveFriends: vi.fn(),
   setHideSearch: vi.fn(),
   setNeverShowPosts: vi.fn(),
-  setLanguage: vi.fn(),
   addMutedUser: vi.fn(),
   removeMutedUser: vi.fn(),
   setMutedUsers: vi.fn(),
@@ -52,7 +45,6 @@ const mockStoreActions = {
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
   muted: [] as string[],
-  language: 'en',
   updatedAt: 1000,
   version: 1,
 };
@@ -61,7 +53,6 @@ const mockSettingsState: SettingsState = {
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
   muted: [],
-  language: 'en',
   updatedAt: 1000,
   version: 1,
 };
@@ -72,7 +63,6 @@ describe('SettingsController', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSetLocaleCookie.mockImplementation(() => {});
 
     // Reset pendingCommit between tests to avoid chaining across tests
     // pendingCommit is private; an opaque cast is needed to reset static state between tests
@@ -188,16 +178,6 @@ describe('SettingsController', () => {
       await SettingsController.setBlurCensored(true);
 
       expect(mockStoreActions.setBlurCensored).toHaveBeenCalledWith(true);
-      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
-    });
-  });
-
-  describe('setLanguage', () => {
-    it('should update zustand store, set locale cookie, and sync to homeserver', async () => {
-      await SettingsController.setLanguage('es');
-
-      expect(mockStoreActions.setLanguage).toHaveBeenCalledWith('es');
-      expect(mockSetLocaleCookie).toHaveBeenCalledWith('es');
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });

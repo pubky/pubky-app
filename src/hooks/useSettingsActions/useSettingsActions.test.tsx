@@ -13,7 +13,6 @@ const { mockSettingsController, mockIsAppError } = vi.hoisted(() => ({
     setHideActiveFriends: vi.fn(),
     setHideSearch: vi.fn(),
     setNeverShowPosts: vi.fn(),
-    setLanguage: vi.fn(),
   },
   mockIsAppError: vi.fn(),
 }));
@@ -60,16 +59,6 @@ describe('useSettingsActions', () => {
     });
 
     expect(mockSettingsController.setBlurCensored).toHaveBeenCalledWith(true);
-  });
-
-  it('calls SettingsController.setLanguage', async () => {
-    const { result } = renderHook(() => useSettingsActions());
-
-    await act(async () => {
-      await result.current.setLanguage('es');
-    });
-
-    expect(mockSettingsController.setLanguage).toHaveBeenCalledWith('es');
   });
 
   it('sets error on failure with AppError message', async () => {

@@ -147,42 +147,6 @@ exports[`SettingsMobileMenu - Snapshots > matches snapshot 1`] = `
       data-testid="container"
     >
       <button
-        aria-label="Language"
-        class="px-2.5 py-2"
-        data-slot="button"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-globe text-muted-foreground"
-          fill="none"
-          height="20"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="20"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-          />
-          <path
-            d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"
-          />
-          <path
-            d="M2 12h20"
-          />
-        </svg>
-      </button>
-    </div>
-    <div
-      class="flex flex-1 justify-center border-b px-0 py-1.5 border-border"
-      data-testid="container"
-    >
-      <button
         aria-label="Help"
         class="px-2.5 py-2"
         data-slot="button"

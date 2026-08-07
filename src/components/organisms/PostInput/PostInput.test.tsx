@@ -1,5 +1,6 @@
 import { createRef } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { useReducedMotion } from 'motion/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
@@ -7,7 +8,10 @@ import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
+import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
@@ -22,8 +26,25 @@ const mockSetIsArticle = vi.fn();
 const mockSetArticleTitle = vi.fn();
 const mockSetMentionSelectedIndex = vi.fn();
 const mockHandleMentionSelect = vi.fn();
+const mockCurrentUserDetails = {
+  id: 'test-user-id:pubkey',
+  name: 'Current User',
+  image: null,
+  bio: '',
+  links: null,
+  status: null,
+  indexed_at: 0,
+} as NexusUserDetails;
 const mockRequireAuth = vi.fn((action: () => unknown) => action());
 let mockIsAuthenticated = true;
+
+vi.mock('motion/react', async () => {
+  const actual = await vi.importActual<typeof import('motion/react')>('motion/react');
+  return {
+    ...actual,
+    useReducedMotion: vi.fn(() => false),
+  };
+});
 
 vi.mock('@/atoms/Button/Button', () => {
   return {
@@ -47,6 +68,7 @@ vi.mock('@/atoms/Container/Container', () => {
       onDragLeave,
       onDragOver,
       onDrop,
+      'data-state': dataState,
     }: {
       children: React.ReactNode;
       className?: string;
@@ -57,10 +79,12 @@ vi.mock('@/atoms/Container/Container', () => {
       onDragLeave?: (e: React.DragEvent) => void;
       onDragOver?: (e: React.DragEvent) => void;
       onDrop?: (e: React.DragEvent) => void;
+      'data-state'?: 'collapsed' | 'expanded';
     }) => (
       <div
         ref={ref}
         data-testid="container"
+        data-state={dataState}
         className={className}
         data-override-defaults={overrideDefaults}
         onClick={onClick}
@@ -140,10 +164,10 @@ vi.mock('@/atoms/Textarea/Textarea', () => {
 
 vi.mock('@/atoms/Typography/Typography', () => {
   return {
-    Typography: vi.fn(({ children, as, size, className }) => {
+    Typography: vi.fn(({ children, as, size, className, 'data-testid': dataTestId }) => {
       const Tag = (as || 'p') as React.ElementType;
       return (
-        <Tag data-testid="typography" data-as={as} data-size={size} className={className}>
+        <Tag data-testid={dataTestId ?? 'typography'} data-as={as} data-size={size} className={className}>
           {children}
         </Tag>
       );
@@ -153,16 +177,21 @@ vi.mock('@/atoms/Typography/Typography', () => {
 
 vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
-    PostHeader: vi.fn(({ postId, isReplyInput, characterLimit, size }) => (
-      <div
-        data-testid="post-header"
-        data-post-id={postId}
-        data-is-reply={isReplyInput}
-        data-count={characterLimit?.count}
-        data-max={characterLimit?.max}
-        data-size={size}
-      />
-    )),
+    PostHeader: vi.fn(
+      ({ postId, isReplyInput, characterLimit, characterLimitPlacement, size, showUserInfo, visuallyHideAvatar }) => (
+        <div
+          data-testid="post-header"
+          data-post-id={postId}
+          data-is-reply={isReplyInput}
+          data-count={characterLimit?.count}
+          data-max={characterLimit?.max}
+          data-character-limit-placement={characterLimitPlacement}
+          data-size={size}
+          data-show-user-info={showUserInfo === false ? 'false' : 'true'}
+          data-visually-hide-avatar={visuallyHideAvatar || undefined}
+        />
+      ),
+    ),
   };
 });
 
@@ -249,6 +278,18 @@ vi.mock('@/molecules/MarkdownEditor/MarkdownEditor', () => {
   };
 });
 
+function getStatePostHeader() {
+  return within(screen.getByTestId('post-input-state-content')).getByTestId('post-header');
+}
+
+function getStablePostHeader() {
+  return within(screen.getByTestId('post-input-stable-avatar')).getByTestId('post-header');
+}
+
+afterEach(() => {
+  vi.mocked(useReducedMotion).mockReturnValue(false);
+});
+
 vi.mock('@/molecules/MentionPopover/MentionPopover', () => {
   return {
     MentionPopover: vi.fn(
@@ -332,7 +373,7 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
           data-interactive-actions={String(interactiveActions ?? true)}
           className={className}
         >
-          Original Post: {postId}
+          {`Original Post: ${postId}`}
         </div>
       ),
     ),
@@ -425,6 +466,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
             ? 'Edit post'
             : "What's on your mind?"),
     currentUserPubky: 'test-user-id:pubkey',
+    currentUserDetails: mockCurrentUserDetails,
     handleExpand: vi.fn(),
     handleSubmit: vi.fn(async () => {
       if (options.variant === 'reply') {
@@ -496,6 +538,7 @@ describe('PostInput', () => {
   const mockPost = vi.fn();
   const mockUsePostInput = vi.mocked(usePostInput);
   const mockUseEnterSubmit = vi.mocked(useEnterSubmit);
+  const mockPostHeader = vi.mocked(PostHeader);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -536,46 +579,274 @@ describe('PostInput', () => {
   it('renders with post variant', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    expect(screen.getByTestId('post-header')).toBeInTheDocument();
+    expect(getStatePostHeader()).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText("What's on your mind?")).toBeInTheDocument();
   });
 
-  it('passes characterLimit to header when expanded in non-article mode', () => {
+  it('shows full user info and passes the character count to the header when expanded', () => {
     mockUsePostReturn.content = 'Hello world';
     mockUsePostReturn.isExpanded = true;
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    const postHeader = screen.getByTestId('post-header');
+    const postHeader = getStatePostHeader();
+    expect(postHeader).toHaveAttribute('data-show-user-info', 'true');
     expect(postHeader).toHaveAttribute('data-count', '11');
     expect(postHeader).toHaveAttribute('data-max', POST_MAX_CHARACTER_LENGTH.toString());
+    expect(postHeader).toHaveAttribute('data-character-limit-placement', 'name-row');
   });
 
-  it('does not pass characterLimit to header when collapsed', () => {
+  it('does not show character count when collapsed', () => {
     mockUsePostReturn.content = 'Hello world';
     mockUsePostReturn.isExpanded = false;
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    const postHeader = screen.getByTestId('post-header');
-    expect(postHeader).not.toHaveAttribute('data-count');
-    expect(postHeader).not.toHaveAttribute('data-max');
+    expect(getStablePostHeader()).toHaveAttribute('data-show-user-info', 'false');
+    expect(getStablePostHeader()).not.toHaveAttribute('data-count');
+    expect(screen.getByTestId('post-input-collapsed-avatar-placeholder')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByTestId('post-input-collapsed-avatar-placeholder')).toHaveClass('size-10');
+    expect(screen.queryByTestId('post-input-expanded-header')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('container')[0]).toHaveAttribute('data-state', 'collapsed');
   });
 
-  it('does not pass characterLimit in article mode', () => {
+  it('keeps the focused textarea mounted while expanding', () => {
+    const handleExpand = vi.fn();
+    mockUsePostReturn.isExpanded = false;
+    mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { handleExpand }),
+    );
+
+    const { rerender } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+    const collapsedTextarea = screen.getByTestId('textarea');
+
+    collapsedTextarea.focus();
+    expect(handleExpand).toHaveBeenCalledTimes(1);
+    expect(collapsedTextarea).toHaveFocus();
+
+    mockUsePostReturn.isExpanded = true;
+    rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(screen.getByTestId('textarea')).toBe(collapsedTextarea);
+    expect(collapsedTextarea).toHaveFocus();
+    expect(screen.getAllByTestId('container')[0]).toHaveAttribute('data-state', 'expanded');
+  });
+
+  it('keeps one state wrapper while selectively dissolving the expanded content', async () => {
+    mockUsePostReturn.isExpanded = false;
+    const { rerender } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const stateContent = screen.getByTestId('post-input-state-content');
+    expect(stateContent.style.opacity).toBe('');
+    expect(stateContent.style.filter).toBe('');
+    expect(screen.queryByTestId('post-input-expanded-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-input-expanded-controls')).not.toBeInTheDocument();
+
+    mockUsePostReturn.isExpanded = true;
+    rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(screen.getByTestId('post-input-state-content')).toBe(stateContent);
+    expect(screen.getByTestId('post-input-action-bar')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId('post-input-expanded-header')).toHaveStyle({
+        opacity: '1',
+        filter: 'blur(0px)',
+      }),
+    );
+    expect(screen.getByTestId('post-input-expanded-controls')).toHaveStyle({
+      opacity: '1',
+      filter: 'blur(0px)',
+    });
+    expect(stateContent.style.opacity).toBe('');
+    expect(stateContent.style.filter).toBe('');
+    expect(stateContent.style.height).toBe('');
+    expect(stateContent.style.width).toBe('');
+    expect(stateContent.style.marginTop).toBe('');
+    expect(stateContent.style.transform).toBe('');
+  });
+
+  it('keeps the avatar and textarea outside the selective dissolve layers', () => {
+    mockUsePostReturn.isExpanded = true;
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const stableAvatar = screen.getByTestId('post-input-stable-avatar');
+    const stableHeader = within(stableAvatar).getByTestId('post-header');
+    const textarea = screen.getByTestId('textarea');
+    const expandedHeader = screen.getByTestId('post-input-expanded-header');
+    const expandedControls = screen.getByTestId('post-input-expanded-controls');
+
+    expect(expandedHeader).not.toContainElement(stableAvatar);
+    expect(expandedHeader).not.toContainElement(textarea);
+    expect(expandedControls).not.toContainElement(stableAvatar);
+    expect(expandedControls).not.toContainElement(textarea);
+    expect(stableHeader).not.toHaveAttribute('data-visually-hide-avatar');
+    expect(getStatePostHeader()).toHaveAttribute('data-visually-hide-avatar', 'true');
+    expect(screen.queryByTestId('post-input-collapsed-avatar-placeholder')).not.toBeInTheDocument();
+  });
+
+  it('uses blur-free height shell when reduced motion is requested', async () => {
+    vi.mocked(useReducedMotion).mockReturnValue(true);
+    mockUsePostReturn.isExpanded = true;
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    // Reduced motion disables Framer height control — no locked pixel height.
+    await waitFor(() => expect(screen.getByTestId('post-input-state-height')).not.toHaveClass('overflow-hidden'));
+    expect(screen.getByTestId('post-input-expanded-header')).toHaveStyle({ filter: 'blur(0px)' });
+    expect(screen.getByTestId('post-input-expanded-controls')).toHaveStyle({ filter: 'blur(0px)' });
+  });
+
+  it('keeps a forced-expanded dialog composer free of Framer height locking', async () => {
+    const layoutHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(260);
+
+    try {
+      mockUsePostReturn.isExpanded = true;
+      render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" expanded />);
+
+      await waitFor(() => expect(layoutHeight).toHaveBeenCalled());
+      await act(async () => {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      });
+
+      const heightWrapper = screen.getByTestId('post-input-state-height');
+      // Dialogs must not lock a measured pixel height (avoids empty composer space
+      // when Framer measures during the dialog zoom-in).
+      expect(heightWrapper).not.toHaveClass('overflow-hidden');
+      expect(heightWrapper).not.toHaveStyle({ height: '260px' });
+    } finally {
+      layoutHeight.mockRestore();
+    }
+  });
+
+  it('reuses the resolved current-user profile when returning to the collapsed state', () => {
+    mockUsePostReturn.isExpanded = true;
+    const { rerender } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(mockPostHeader.mock.calls.length).toBeGreaterThan(0);
+    expect(mockPostHeader.mock.calls.every(([props]) => props.userDetails === mockCurrentUserDetails)).toBe(true);
+
+    mockPostHeader.mockClear();
+    mockUsePostReturn.isExpanded = false;
+    rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(mockPostHeader.mock.calls.length).toBeGreaterThan(0);
+    expect(mockPostHeader.mock.calls.every(([props]) => props.userDetails === mockCurrentUserDetails)).toBe(true);
+  });
+
+  it('retargets the height wrapper from transform-independent layout measurements', async () => {
+    let resizeCallback: ResizeObserverCallback | undefined;
+    let resizeObserver: ResizeObserver | undefined;
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    const transformedBoundingRect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 600,
+      height: 76,
+      top: 0,
+      right: 600,
+      bottom: 76,
+      left: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    const layoutHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(80);
+
+    class TestResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback;
+        resizeObserver = asOpaque<ResizeObserver>(this);
+      }
+
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    globalThis.ResizeObserver = asOpaque<typeof ResizeObserver>(TestResizeObserver);
+
+    try {
+      mockUsePostReturn.isExpanded = false;
+      const { rerender } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      const heightWrapper = screen.getByTestId('post-input-state-height');
+
+      await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
+
+      mockUsePostReturn.isExpanded = true;
+      rerender(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      layoutHeight.mockReturnValue(260);
+
+      act(() => {
+        resizeCallback?.([{ contentRect: { height: 260 } as DOMRectReadOnly } as ResizeObserverEntry], resizeObserver!);
+      });
+
+      expect(screen.getByTestId('post-input-state-height')).toBe(heightWrapper);
+      await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
+    } finally {
+      globalThis.ResizeObserver = OriginalResizeObserver;
+      transformedBoundingRect.mockRestore();
+      layoutHeight.mockRestore();
+    }
+  });
+
+  it('snaps measured height when content grows while already expanded', async () => {
+    let resizeCallback: ResizeObserverCallback | undefined;
+    let resizeObserver: ResizeObserver | undefined;
+    const OriginalResizeObserver = globalThis.ResizeObserver;
+    const layoutHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(260);
+
+    class TestResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback;
+        resizeObserver = asOpaque<ResizeObserver>(this);
+      }
+
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+
+    globalThis.ResizeObserver = asOpaque<typeof ResizeObserver>(TestResizeObserver);
+
+    try {
+      mockUsePostReturn.isExpanded = true;
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      const heightWrapper = screen.getByTestId('post-input-state-height');
+
+      await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
+
+      layoutHeight.mockReturnValue(320);
+      act(() => {
+        resizeCallback?.(
+          [
+            asOpaque<ResizeObserverEntry>({
+              contentRect: { height: 320 } as DOMRectReadOnly,
+              borderBoxSize: [{ blockSize: 320, inlineSize: 600 }],
+            }),
+          ],
+          resizeObserver!,
+        );
+      });
+
+      // Line-wrap / attachment growth updates the pixel height with duration 0 (snap).
+      await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '320px' }));
+    } finally {
+      globalThis.ResizeObserver = OriginalResizeObserver;
+      layoutHeight.mockRestore();
+    }
+  });
+
+  it('does not show character count in article mode', () => {
     mockUsePostReturn.isArticle = true;
     mockUsePostReturn.isExpanded = true;
     mockUsePostReturn.content = 'Article body';
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
-    const postHeader = screen.getByTestId('post-header');
-    expect(postHeader).not.toHaveAttribute('data-count');
-    expect(postHeader).not.toHaveAttribute('data-max');
+    expect(getStatePostHeader()).not.toHaveAttribute('data-count');
   });
 
   it('renders with repost variant', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.REPOST} originalPostId="test-post-123" />);
 
-    expect(screen.getByTestId('post-header')).toBeInTheDocument();
+    expect(getStatePostHeader()).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Optional comment')).toBeInTheDocument();
     expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-interactive-actions', 'false');
@@ -585,7 +856,7 @@ describe('PostInput', () => {
   it('renders with reply variant', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" />);
 
-    expect(screen.getByTestId('post-header')).toBeInTheDocument();
+    expect(getStatePostHeader()).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Write a reply...')).toBeInTheDocument();
   });
@@ -636,6 +907,21 @@ describe('PostInput', () => {
     expect(mockRequireAuth).toHaveBeenCalled();
     expect(mockSetContent).not.toHaveBeenCalled();
     expect(textarea).toHaveAttribute('readonly');
+  });
+
+  it('renders a fallback avatar when the user is logged out', () => {
+    mockIsAuthenticated = false;
+    mockUsePostInput.mockImplementationOnce((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { currentUserPubky: null, currentUserDetails: null }),
+    );
+
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const fallbackAvatar = screen.getByTestId('post-input-fallback-avatar');
+    expect(fallbackAvatar).toHaveClass('h-10', 'w-10');
+    expect(within(fallbackAvatar).getByTestId('avatar-fallback-initial')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-input-stable-avatar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
   });
 
   it('opens sign-in and does not submit when an anonymous user clicks Post', async () => {
@@ -878,7 +1164,7 @@ describe('PostInput', () => {
       />,
     );
 
-    expect(screen.getByTestId('post-header')).toBeInTheDocument();
+    expect(getStatePostHeader()).toBeInTheDocument();
     expect(screen.getByTestId('textarea')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Edit post')).toBeInTheDocument();
   });
@@ -916,13 +1202,17 @@ describe('PostInput', () => {
       expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
 
-      const postHeader = screen.getByTestId('post-header');
+      const postHeader = getStatePostHeader();
       expect(postHeader).toHaveAttribute('data-size', 'normal');
+      expect(postHeader).toHaveAttribute('data-show-user-info', 'true');
 
-      expect(screen.getByTestId('textarea')).not.toHaveAttribute('data-class-name');
+      expect(screen.getByTestId('textarea')).toHaveAttribute(
+        'data-class-name',
+        'field-sizing-fixed w-full rounded-none',
+      );
     });
 
-    it('applies wide padding, large header size, and text-xl body when inheriting side layout', () => {
+    it('applies wide padding, extraLarge header size, and text-xl body when inheriting side layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="side">
           <PostInput variant={POST_INPUT_VARIANT.POST} />
@@ -933,13 +1223,18 @@ describe('PostInput', () => {
       expect(outerContainer.className).toContain('p-12');
       expect(outerContainer.className).not.toContain('p-6');
 
-      const postHeader = screen.getByTestId('post-header');
-      expect(postHeader).toHaveAttribute('data-size', 'large');
+      const postHeader = getStatePostHeader();
+      expect(postHeader).toHaveAttribute('data-size', 'extraLarge');
+      expect(postHeader).toHaveAttribute('data-show-user-info', 'true');
+      expect(postHeader).toHaveAttribute('data-character-limit-placement', 'metadata');
 
-      expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
+      expect(screen.getByTestId('textarea')).toHaveAttribute(
+        'data-class-name',
+        'field-sizing-fixed w-full rounded-none text-xl leading-7',
+      );
     });
 
-    it('applies wide PostInput styling when inheriting list layout', () => {
+    it('applies compact padding, list typography, and normal header size when inheriting list layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="list">
           <PostInput variant={POST_INPUT_VARIANT.POST} />
@@ -947,9 +1242,15 @@ describe('PostInput', () => {
       );
 
       const outerContainer = screen.getAllByTestId('container')[0];
-      expect(outerContainer.className).toContain('p-12');
-      expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'large');
-      expect(screen.getByTestId('textarea')).toHaveAttribute('data-class-name', 'text-xl leading-7');
+      expect(outerContainer.className).toContain('p-6');
+      expect(outerContainer.className).not.toContain('p-12');
+      expect(getStatePostHeader()).toHaveAttribute('data-size', 'normal');
+      expect(getStatePostHeader()).toHaveAttribute('data-show-user-info', 'true');
+      expect(getStatePostHeader()).toHaveAttribute('data-character-limit-placement', 'metadata');
+      expect(screen.getByTestId('textarea')).toHaveAttribute(
+        'data-class-name',
+        'field-sizing-fixed w-full rounded-none text-base font-medium leading-5',
+      );
     });
 
     it('uses inline styling when an inline layout override is provided inside a List feed', () => {
@@ -962,8 +1263,12 @@ describe('PostInput', () => {
       const outerContainer = screen.getAllByTestId('container')[0];
       expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
-      expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'normal');
-      expect(screen.getByTestId('textarea')).not.toHaveAttribute('data-class-name');
+      expect(getStatePostHeader()).toHaveAttribute('data-size', 'normal');
+      expect(getStatePostHeader()).toHaveAttribute('data-character-limit-placement', 'name-row');
+      expect(screen.getByTestId('textarea')).toHaveAttribute(
+        'data-class-name',
+        'field-sizing-fixed w-full rounded-none',
+      );
     });
 
     it('falls back to inline layout on mobile even when the inherited layout is side', () => {
@@ -979,9 +1284,12 @@ describe('PostInput', () => {
       expect(outerContainer.className).toContain('p-6');
       expect(outerContainer.className).not.toContain('p-12');
 
-      const postHeader = screen.getByTestId('post-header');
+      const postHeader = getStatePostHeader();
       expect(postHeader).toHaveAttribute('data-size', 'normal');
-      expect(screen.getByTestId('textarea')).not.toHaveAttribute('data-class-name');
+      expect(screen.getByTestId('textarea')).toHaveAttribute(
+        'data-class-name',
+        'field-sizing-fixed w-full rounded-none',
+      );
     });
   });
 
@@ -1016,6 +1324,7 @@ describe('PostInput - autoFocusTextarea', () => {
     mockUsePostReturn.isSubmitting = false;
     mockUsePostReturn.isArticle = false;
     mockUsePostReturn.articleTitle = '';
+    mockUsePostReturn.isExpanded = false;
     mockMarkdownEditorRef.current = null;
   });
 
@@ -1056,6 +1365,7 @@ describe('PostInput - Snapshots', () => {
     mockUsePostReturn.isSubmitting = false;
     mockUsePostReturn.isArticle = false;
     mockUsePostReturn.articleTitle = '';
+    mockUsePostReturn.isExpanded = true;
   });
 
   it('matches snapshot for post variant without content or attachments', () => {
@@ -1064,6 +1374,40 @@ describe('PostInput - Snapshots', () => {
         <PostInput variant={POST_INPUT_VARIANT.POST} />
       </PostMainLayoutProvider>,
     );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for list layout', () => {
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </PostMainLayoutProvider>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for a collapsed post composer', () => {
+    mockUsePostReturn.isExpanded = false;
+
+    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for an expanded post composer', () => {
+    mockUsePostReturn.content = 'Expanded post';
+    mockUsePostReturn.isExpanded = true;
+
+    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with a logged-out fallback avatar', () => {
+    mockIsAuthenticated = false;
+    vi.mocked(usePostInput).mockImplementationOnce((options: UsePostInputOptions) =>
+      createUsePostInputReturn(options, { currentUserPubky: null, currentUserDetails: null, isExpanded: false }),
+    );
+
+    const { container } = render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -1169,6 +1513,7 @@ describe('PostInput - Mobile Snapshots', () => {
     mockUsePostReturn.isSubmitting = false;
     mockUsePostReturn.isArticle = false;
     mockUsePostReturn.articleTitle = '';
+    mockUsePostReturn.isExpanded = true;
     vi.mocked(useIsMobile).mockReturnValue(true);
     setMobileViewport();
   });
@@ -1178,6 +1523,18 @@ describe('PostInput - Mobile Snapshots', () => {
   });
 
   it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostInput variant={POST_INPUT_VARIANT.POST} />
+      </PostMainLayoutProvider>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches expanded snapshot on mobile viewport', () => {
+    mockUsePostReturn.content = 'Expanded post';
+    mockUsePostReturn.isExpanded = true;
+
     const { container } = render(
       <PostMainLayoutProvider tagsLayout="side">
         <PostInput variant={POST_INPUT_VARIANT.POST} />

@@ -219,8 +219,6 @@ describe('settings', () => {
     cy.get('#notification-switch-postEdited').then(checkNotificationIsDisabled);
   });
 
-  it.skip('Language settings: new language can be selected', () => {});
-
   it.skip('Help: FAQ is displayed correctly', () => {});
 
   it.skip('Help: User Guide can be navigated to', () => {});
