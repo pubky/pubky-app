@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { LAYOUT } from '@/stores/home/home.types';
-import { getEffectiveTagsLayout, getTagsLayoutForSurfaceLayout, usesWidePostInput } from './PostMainLayoutRules';
+import {
+  getEffectiveTagsLayout,
+  getTagsLayoutForSurfaceLayout,
+  POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT,
+} from './PostMainLayoutRules';
 
 describe('PostMainLayoutRules', () => {
   describe('getTagsLayoutForSurfaceLayout', () => {
@@ -11,11 +15,11 @@ describe('PostMainLayoutRules', () => {
     });
   });
 
-  describe('usesWidePostInput', () => {
-    it('returns true for side and list layouts', () => {
-      expect(usesWidePostInput('side')).toBe(true);
-      expect(usesWidePostInput('list')).toBe(true);
-      expect(usesWidePostInput('inline')).toBe(false);
+  describe('POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT', () => {
+    it('maps list to normal, wide to extraLarge, and column to normal', () => {
+      expect(POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT.list).toBe('normal');
+      expect(POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT.side).toBe('extraLarge');
+      expect(POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT.inline).toBe('normal');
     });
   });
 

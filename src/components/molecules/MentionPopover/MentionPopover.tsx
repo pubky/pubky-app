@@ -1,13 +1,54 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Container } from '@/atoms/Container/Container';
 import { cn } from '@/libs/utils/utils';
 import { SearchUserSuggestion } from '../SearchUserSuggestion/SearchUserSuggestion';
 import type { MentionPopoverProps } from './MentionPopover.types';
 
 const POPOVER_CLASSNAME =
-  'absolute z-50 mt-1 w-[var(--mention-popover-width)] max-h-[var(--mention-popover-max-height)] overflow-y-auto rounded-md border border-border bg-popover p-2';
+  'fixed z-50 mt-1 w-[var(--mention-popover-width)] max-h-[var(--mention-popover-max-height)] overflow-y-auto rounded-md border border-border bg-popover p-2';
+
+/**
+ * Tracks the anchor's viewport rect so the popover can be rendered in a portal.
+ * The composers live inside clipping ancestors (the height-animating card and
+ * the `lg:overflow-hidden` feed column), so an in-flow absolute popover gets cut
+ * off; a fixed one in `document.body` escapes them all.
+ */
+function useAnchorRect(anchorRef: MentionPopoverProps['anchorRef']) {
+  const [rect, setRect] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+
+    if (!anchor) {
+      return;
+    }
+
+    const update = () => {
+      const anchorRect = anchor.getBoundingClientRect();
+      setRect({ top: anchorRect.bottom, left: anchorRect.left });
+    };
+
+    update();
+
+    // The anchor moves with any scroll (capture: nested scrollers too), viewport
+    // resize, or autosize change while the user types.
+    const resizeObserver = new ResizeObserver(update);
+    resizeObserver.observe(anchor);
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [anchorRef]);
+
+  return rect;
+}
 
 /**
  * MentionPopover
@@ -15,9 +56,10 @@ const POPOVER_CLASSNAME =
  * Displays a popover with user suggestions for mention autocomplete.
  * Used in PostInput and QuickReply when typing @username or pk:id patterns.
  */
-export function MentionPopover({ users, selectedIndex, onSelect, onHover }: MentionPopoverProps) {
+export function MentionPopover({ users, selectedIndex, onSelect, onHover, anchorRef }: MentionPopoverProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
+  const anchorRect = useAnchorRect(anchorRef);
 
   // Scroll selected item into view when using keyboard navigation (ArrowUp/ArrowDown).
   // Without this, items outside the visible area won't be visible when selected.
@@ -41,11 +83,13 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover }: Ment
     }
   }, [selectedIndex]);
 
-  if (users.length === 0) {
+  // `anchorRect` stays null until the layout effect runs, which also keeps the
+  // portal out of the server render.
+  if (users.length === 0 || !anchorRect) {
     return null;
   }
 
-  return (
+  return createPortal(
     <Container
       ref={containerRef}
       role="listbox"
@@ -54,6 +98,7 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover }: Ment
       data-testid="mention-popover"
       overrideDefaults
       className={cn(POPOVER_CLASSNAME)}
+      style={{ top: anchorRect.top, left: anchorRect.left }}
     >
       {users.map((user, index) => (
         <Container
@@ -71,6 +116,7 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover }: Ment
           <SearchUserSuggestion user={user} onClick={() => onSelect(user.id)} />
         </Container>
       ))}
-    </Container>
+    </Container>,
+    document.body,
   );
 }

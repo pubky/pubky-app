@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { useReducedMotion } from 'motion/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
@@ -23,6 +24,15 @@ const mockUsePostInput = vi.fn();
 const mockUseEnterSubmit = vi.fn();
 const mockRequireAuth = vi.fn(<T,>(action: () => T) => action());
 let mockIsAuthenticated = true;
+const { mockElementHeight } = vi.hoisted(() => ({ mockElementHeight: { value: 123 } }));
+
+vi.mock('motion/react', async () => {
+  const actual = await vi.importActual<typeof import('motion/react')>('motion/react');
+  return {
+    ...actual,
+    useReducedMotion: vi.fn(() => false),
+  };
+});
 
 function createUsePostInputReturn(options: unknown, overrides: Record<string, unknown> = {}) {
   return {
@@ -41,6 +51,7 @@ function createUsePostInputReturn(options: unknown, overrides: Record<string, un
     hasContent: false,
     displayPlaceholder: (options as { placeholder?: string })?.placeholder,
     currentUserPubky: 'user:me',
+    currentUserDetails: { id: 'user:me', name: 'Current User' },
     handleExpand: vi.fn(),
     handleSubmit: vi.fn(),
     handleChange: vi.fn(),
@@ -89,44 +100,26 @@ vi.mock('@/atoms/Textarea/Textarea', () => {
   };
 });
 
-vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
-  useUserDetails: (userId: string | null) => ({
-    userDetails: userId ? { id: userId, name: 'Test User', image: 'avatar.png' } : null,
-    isLoading: false,
-  }),
-}));
-
-vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
-  useAvatarUrl: (userDetails: { id?: string } | null) =>
-    userDetails?.id ? `https://example.com/avatar/${userDetails.id}` : undefined,
-}));
-
-vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
-  AvatarWithFallback: ({
-    avatarUrl,
-    name,
-    size,
-    'data-testid': dataTestId,
-  }: {
-    avatarUrl?: string;
-    name: string;
-    size?: string;
-    'data-testid'?: string;
-  }) => <div data-testid={dataTestId} data-avatar-url={avatarUrl} data-name={name} data-size={size} />,
-}));
-
 vi.mock('@/organisms/PostHeader/PostHeader', () => {
   return {
     PostHeader: ({
       postId,
       isReplyInput,
       characterLimit,
+      characterLimitPlacement,
       size,
+      showUserInfo,
+      userDetails,
+      visuallyHideAvatar,
     }: {
       postId?: string;
       isReplyInput?: boolean;
       characterLimit?: { count: number; max: number };
+      characterLimitPlacement?: string;
       size?: string;
+      showUserInfo?: boolean;
+      userDetails?: { name?: string } | null;
+      visuallyHideAvatar?: boolean;
     }) => (
       <div
         data-testid="post-header"
@@ -134,8 +127,18 @@ vi.mock('@/organisms/PostHeader/PostHeader', () => {
         data-is-reply={String(isReplyInput)}
         data-count={characterLimit?.count}
         data-max={characterLimit?.max}
+        data-character-limit-placement={characterLimitPlacement}
         data-size={size}
-      />
+        data-show-user-info={showUserInfo === false ? 'false' : 'true'}
+        data-user-name={userDetails?.name}
+        data-visually-hide-avatar={visuallyHideAvatar || undefined}
+      >
+        {characterLimit && (
+          <span data-testid="post-header-character-count">
+            {characterLimit.count}/{characterLimit.max}
+          </span>
+        )}
+      </div>
     ),
   };
 });
@@ -200,7 +203,7 @@ vi.mock('@/organisms/PostInputExpandableSection/PostInputExpandableSection', () 
 }));
 
 vi.mock('@/hooks/useElementHeight/useElementHeight', () => ({
-  useElementHeight: () => ({ ref: () => null, height: 123 }),
+  useElementHeight: () => ({ ref: () => null, height: mockElementHeight.value }),
 }));
 
 vi.mock('@/hooks/useEnterSubmit/useEnterSubmit', () => ({
@@ -222,17 +225,30 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: vi.fn(() => false),
 }));
 
+function getStablePostHeader() {
+  return within(screen.getByTestId('quick-reply-stable-avatar')).getByTestId('post-header');
+}
+
+function getExpandedPostHeader() {
+  return within(screen.getByTestId('quick-reply-expanded-header')).getByTestId('post-header');
+}
+
+afterEach(() => {
+  vi.mocked(useReducedMotion).mockReturnValue(false);
+});
+
 describe('QuickReply', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     mockIsAuthenticated = true;
+    mockElementHeight.value = 123;
     mockRequireAuth.mockImplementation(<T,>(action: () => T) => action());
     mockUseEnterSubmit.mockReturnValue(() => undefined);
     mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options));
   });
 
-  it('renders a random prompt in the minimal collapsed trigger', () => {
+  it('picks a placeholder from the prompt list on mount', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0); // first prompt
     render(<QuickReply parentPostId="author:post1" />);
 
@@ -242,52 +258,21 @@ describe('QuickReply', () => {
       }),
     );
 
-    expect(screen.getByRole('button', { name: REAL_PROMPTS[0] })).toHaveAttribute('data-testid', 'quick-reply-trigger');
-    expect(screen.queryByTestId('quick-reply-textarea')).not.toBeInTheDocument();
+    expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('placeholder', REAL_PROMPTS[0]);
   });
 
-  it('overlays the connector without increasing the QuickReply row height', () => {
+  it('overlays the animated connector without increasing the QuickReply row height', () => {
     render(<QuickReply parentPostId="author:post1" />);
 
     expect(screen.getByTestId('quick-reply-connector-column')).toHaveClass('relative', 'w-3', 'shrink-0');
     expect(screen.getByTestId('quick-reply-connector').parentElement).toHaveClass('absolute', '-inset-y-px', 'left-0');
-    expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('height', '125');
+    expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('height', '175');
     expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('variant', 'last');
   });
 
-  it('expands the collapsed trigger through the authentication guard', () => {
-    const handleExpand = vi.fn();
-    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { handleExpand }));
-
-    render(<QuickReply parentPostId="author:post1" />);
-
-    fireEvent.click(screen.getByTestId('quick-reply-trigger'));
-
-    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
-    expect(handleExpand).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens sign-in without expanding when a guest activates the collapsed trigger', () => {
-    mockIsAuthenticated = false;
-    mockRequireAuth.mockReturnValue(undefined);
-    const handleExpand = vi.fn();
-    mockUsePostInput.mockImplementation((options: unknown) =>
-      createUsePostInputReturn(options, { currentUserPubky: null, handleExpand }),
-    );
-
-    render(<QuickReply parentPostId="author:post1" />);
-
-    fireEvent.click(screen.getByTestId('quick-reply-trigger'));
-
-    expect(mockRequireAuth).toHaveBeenCalledTimes(1);
-    expect(handleExpand).not.toHaveBeenCalled();
-  });
-
-  it('forwards clipboard paste from the expanded composer to usePostInput', () => {
+  it('forwards clipboard paste to usePostInput handlePaste (image attachments)', () => {
     const handlePaste = vi.fn();
-    mockUsePostInput.mockImplementation((options: unknown) =>
-      createUsePostInputReturn(options, { handlePaste, isExpanded: true }),
-    );
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { handlePaste }));
 
     render(<QuickReply parentPostId="author:post1" />);
 
@@ -296,13 +281,11 @@ describe('QuickReply', () => {
     expect(handlePaste).toHaveBeenCalledTimes(1);
   });
 
-  it('guards content changes if a guest expanded state is rendered', () => {
+  it('opens sign-in and does not mutate content when an anonymous user types', () => {
     mockIsAuthenticated = false;
     mockRequireAuth.mockReturnValue(undefined);
     const handleChange = vi.fn();
-    mockUsePostInput.mockImplementation((options: unknown) =>
-      createUsePostInputReturn(options, { handleChange, isExpanded: true }),
-    );
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { handleChange }));
 
     render(<QuickReply parentPostId="author:post1" />);
 
@@ -316,12 +299,15 @@ describe('QuickReply', () => {
   it('renders a fallback avatar for a logged-out user', () => {
     mockIsAuthenticated = false;
     mockUsePostInput.mockImplementation((options: unknown) =>
-      createUsePostInputReturn(options, { currentUserPubky: null }),
+      createUsePostInputReturn(options, { currentUserPubky: null, currentUserDetails: null }),
     );
 
     render(<QuickReply parentPostId="author:post1" />);
 
-    expect(screen.getByTestId('quick-reply-fallback-avatar')).toBeInTheDocument();
+    const fallbackAvatar = screen.getByTestId('quick-reply-fallback-avatar');
+    expect(fallbackAvatar).toHaveClass('h-10', 'w-10');
+    expect(within(fallbackAvatar).getByTestId('avatar-fallback-initial')).toBeInTheDocument();
+    expect(screen.queryByTestId('quick-reply-stable-avatar')).not.toBeInTheDocument();
   });
 
   it('opens sign-in and does not submit when an anonymous user clicks submit', () => {
@@ -350,7 +336,8 @@ describe('QuickReply', () => {
 
     render(<QuickReply parentPostId="author:post1" />);
 
-    fireEvent.drop(screen.getByTestId('quick-reply-trigger'), {
+    const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
+    fireEvent.drop(inputContainer!, {
       dataTransfer: {
         files: [new File(['avatar'], 'avatar.png', { type: 'image/png' })],
         items: [],
@@ -375,35 +362,39 @@ describe('QuickReply', () => {
     );
   });
 
-  describe('collapsed responsive layouts', () => {
+  describe('wide layout', () => {
     const mockUseIsMobile = vi.mocked(useIsMobile);
 
     beforeEach(() => {
       mockUseIsMobile.mockReturnValue(false);
     });
 
-    it('uses the 88px Column treatment when no provider is present', () => {
+    it('uses inline padding, normal header size, and no body class when no provider is present', () => {
       render(<QuickReply parentPostId="author:post1" />);
 
-      expect(screen.getByTestId('quick-reply-trigger')).toHaveClass('p-6', 'gap-3');
-      expect(screen.getByTestId('quick-reply-avatar')).toHaveAttribute('data-size', 'default');
-      expect(screen.getByTestId('quick-reply-placeholder')).toHaveClass('text-base', 'leading-6');
+      const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
+      expect(inputContainer?.className).toContain('p-6');
+      expect(inputContainer?.className).not.toContain('p-12');
+
+      expect(getStablePostHeader()).toHaveAttribute('data-size', 'normal');
+      expect(getStablePostHeader()).toHaveAttribute('data-show-user-info', 'false');
+      expect(screen.getByTestId('quick-reply-textarea')).not.toHaveAttribute('class');
     });
 
-    it('uses the 112px Wide treatment when inheriting side layout', () => {
+    it('keeps compact padding, extraLarge header, and text-xl body when inheriting side layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="side">
           <QuickReply parentPostId="author:post1" />
         </PostMainLayoutProvider>,
       );
 
-      expect(screen.getByTestId('quick-reply-trigger')).toHaveClass('p-6', 'gap-5');
-      expect(screen.getByTestId('quick-reply-avatar')).toHaveAttribute('data-size', 'xl');
-      expect(screen.getByTestId('quick-reply-avatar')).toHaveAttribute(
-        'data-avatar-url',
-        'https://example.com/avatar/user:me',
-      );
-      expect(screen.getByTestId('quick-reply-placeholder')).toHaveClass('text-xl', 'leading-7');
+      const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
+      expect(inputContainer?.className).toContain('p-6');
+      expect(inputContainer?.className).not.toContain('p-12');
+
+      expect(getStablePostHeader()).toHaveAttribute('data-size', 'extraLarge');
+      expect(getStablePostHeader()).toHaveAttribute('data-show-user-info', 'false');
+      expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-xl leading-7');
     });
 
     it('falls back to inline layout on mobile even when the inherited layout is side', () => {
@@ -415,70 +406,254 @@ describe('QuickReply', () => {
         </PostMainLayoutProvider>,
       );
 
-      expect(screen.getByTestId('quick-reply-trigger')).toHaveClass('p-6', 'gap-3');
-      expect(screen.getByTestId('quick-reply-avatar')).toHaveAttribute('data-size', 'default');
-      expect(screen.getByTestId('quick-reply-placeholder')).toHaveClass('text-base', 'leading-6');
+      const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
+      expect(inputContainer?.className).toContain('p-6');
+      expect(inputContainer?.className).not.toContain('p-12');
+
+      expect(getStablePostHeader()).toHaveAttribute('data-size', 'normal');
+      expect(screen.getByTestId('quick-reply-textarea')).not.toHaveAttribute('class');
+    });
+  });
+
+  describe('list layout', () => {
+    const mockUseIsMobile = vi.mocked(useIsMobile);
+
+    beforeEach(() => {
+      mockUseIsMobile.mockReturnValue(false);
     });
 
-    it('uses the Column treatment when inheriting list layout', () => {
+    it('applies compact padding, normal header, and text-base body when inheriting list layout', () => {
       render(
         <PostMainLayoutProvider tagsLayout="list">
           <QuickReply parentPostId="author:post1" />
         </PostMainLayoutProvider>,
       );
 
-      expect(screen.getByTestId('quick-reply-trigger')).toHaveClass('p-6', 'gap-3');
-      expect(screen.getByTestId('quick-reply-avatar')).toHaveAttribute('data-size', 'default');
-      expect(screen.getByTestId('quick-reply-placeholder')).toHaveClass('text-base', 'leading-6');
+      const inputContainer = screen.getAllByTestId('container').find((c) => c.className?.includes('rounded-md'));
+      expect(inputContainer?.className).toContain('p-6');
+      expect(inputContainer?.className).not.toContain('p-12');
+
+      expect(getStablePostHeader()).toHaveAttribute('data-size', 'normal');
+      expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-base font-medium leading-5');
+    });
+
+    it('hides user info and shows character count beside the input when expanded in list layout', () => {
+      mockUsePostInput.mockImplementation((options: unknown) =>
+        createUsePostInputReturn(options, { content: 'Hello world', isExpanded: true }),
+      );
+
+      render(
+        <PostMainLayoutProvider tagsLayout="list">
+          <QuickReply parentPostId="author:post1" />
+        </PostMainLayoutProvider>,
+      );
+
+      expect(getStablePostHeader()).toHaveAttribute('data-show-user-info', 'false');
+      expect(getExpandedPostHeader()).toHaveAttribute('data-show-user-info', 'true');
+      expect(screen.getByTestId('post-header-character-count')).toHaveTextContent(`11/${POST_MAX_CHARACTER_LENGTH}`);
+      expect(screen.getByTestId('post-input-expandable-section')).toBeInTheDocument();
+      expect(screen.queryByTestId('quick-reply-list-actions')).not.toBeInTheDocument();
     });
   });
 
-  it('preserves the existing Wide styling after the composer expands', () => {
-    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
-
-    render(
-      <PostMainLayoutProvider tagsLayout="side">
-        <QuickReply parentPostId="author:post1" />
-      </PostMainLayoutProvider>,
-    );
-
-    expect(screen.getByTestId('quick-reply-expanded')).toHaveClass('p-12');
-    expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'large');
-    expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('class', 'text-xl leading-7');
-  });
-
-  it('renders PostHeader for the current user after expansion', () => {
-    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
-
+  it('renders PostHeader for the current user as a reply input', () => {
     render(<QuickReply parentPostId="author:post1" />);
 
-    const postHeader = screen.getByTestId('post-header');
+    const postHeader = getStablePostHeader();
     expect(postHeader).toHaveAttribute('data-post-id', 'user:me');
     expect(postHeader).toHaveAttribute('data-is-reply', 'true');
+    expect(postHeader).toHaveAttribute('data-show-user-info', 'false');
+    expect(postHeader).toHaveAttribute('data-user-name', 'Current User');
   });
 
-  it('passes characterLimit to PostHeader when expanded', () => {
+  it('shows character count beside the input when expanded', () => {
     mockUsePostInput.mockImplementation((options: unknown) =>
       createUsePostInputReturn(options, { content: 'Hello world', isExpanded: true }),
     );
 
     render(<QuickReply parentPostId="author:post1" />);
 
-    const postHeader = screen.getByTestId('post-header');
-    expect(postHeader).toHaveAttribute('data-count', '11');
-    expect(postHeader).toHaveAttribute('data-max', POST_MAX_CHARACTER_LENGTH.toString());
+    expect(getExpandedPostHeader()).toHaveAttribute('data-count', '11');
+    expect(getExpandedPostHeader()).toHaveAttribute('data-character-limit-placement', 'name-row');
+    expect(screen.getByTestId('post-header-character-count')).toHaveTextContent(`11/${POST_MAX_CHARACTER_LENGTH}`);
   });
 
-  it('does not render full composer content while collapsed', () => {
+  it('does not show character count when collapsed', () => {
     mockUsePostInput.mockImplementation((options: unknown) =>
       createUsePostInputReturn(options, { content: 'Hello world', isExpanded: false }),
     );
 
     render(<QuickReply parentPostId="author:post1" />);
 
-    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('quick-reply-textarea')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('post-input-expandable-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-header-character-count')).not.toBeInTheDocument();
+    expect(getStablePostHeader()).toHaveAttribute('data-show-user-info', 'false');
+    expect(screen.getByTestId('quick-reply-collapsed-avatar-placeholder')).toBeInTheDocument();
+    expect(screen.queryByTestId('quick-reply-expanded-content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('quick-reply-expanded-header')).not.toBeInTheDocument();
+  });
+
+  it('reveals only the expanded controls while keeping the composer in the stable content wrapper', () => {
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    expect(screen.getByTestId('quick-reply-state-content')).toContainElement(
+      screen.getByTestId('quick-reply-textarea'),
+    );
+    expect(screen.getByTestId('quick-reply-expanded-content')).toContainElement(
+      screen.getByTestId('post-input-expandable-section'),
+    );
+    expect(screen.getByTestId('quick-reply-expanded-content')).toHaveStyle({
+      opacity: '1',
+      filter: 'blur(0px)',
+    });
+    expect(screen.getByTestId('quick-reply-expanded-header')).toHaveStyle({
+      opacity: '1',
+      filter: 'blur(0px)',
+    });
+  });
+
+  it('keeps the focused textarea mounted while expanding', () => {
+    const handleExpand = vi.fn();
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, { content: 'Draft reply', handleExpand, isExpanded: false }),
+    );
+
+    const { rerender } = render(<QuickReply parentPostId="author:post1" />);
+    const collapsedTextarea = screen.getByTestId('quick-reply-textarea');
+    const inputContainer = screen
+      .getAllByTestId('container')
+      .find((element) => element.className?.includes('rounded-md'));
+
+    collapsedTextarea.focus();
+    expect(handleExpand).toHaveBeenCalledTimes(1);
+    expect(collapsedTextarea).toHaveFocus();
+    expect(inputContainer).toHaveAttribute('data-state', 'collapsed');
+
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, { content: 'Draft reply', handleExpand, isExpanded: true }),
+    );
+    rerender(<QuickReply parentPostId="author:post1" />);
+
+    expect(screen.getByTestId('quick-reply-textarea')).toBe(collapsedTextarea);
+    expect(collapsedTextarea).toHaveFocus();
+    expect(collapsedTextarea).toHaveValue('Draft reply');
+    expect(inputContainer).toHaveAttribute('data-state', 'expanded');
+  });
+
+  it('keeps the avatar and textarea outside the selective dissolve layers', () => {
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    const stableAvatar = screen.getByTestId('quick-reply-stable-avatar');
+    const textarea = screen.getByTestId('quick-reply-textarea');
+    const expandedHeader = screen.getByTestId('quick-reply-expanded-header');
+    const expandedControls = screen.getByTestId('quick-reply-expanded-content');
+
+    expect(expandedHeader).not.toContainElement(stableAvatar);
+    expect(expandedHeader).not.toContainElement(textarea);
+    expect(expandedControls).not.toContainElement(stableAvatar);
+    expect(expandedControls).not.toContainElement(textarea);
+    expect(getStablePostHeader()).not.toHaveAttribute('data-visually-hide-avatar');
+    expect(getExpandedPostHeader()).toHaveAttribute('data-visually-hide-avatar', 'true');
+  });
+
+  it('retargets the measured height wrapper when the reply expands', async () => {
+    mockElementHeight.value = 80;
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: false }));
+
+    const { rerender } = render(<QuickReply parentPostId="author:post1" />);
+    const heightWrapper = screen.getByTestId('quick-reply-state-height');
+    const connector = screen.getByTestId('quick-reply-connector');
+
+    // Resting: pixel height with connector CSS transition disabled.
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
+    await waitFor(() => expect(connector).toHaveStyle({ transition: 'none' }));
+    expect(connector).toHaveAttribute('height', '132');
+
+    // Flip expanded first while height is still the collapsed measure so the
+    // tween window is observable before Motion completes in jsdom.
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
+    rerender(<QuickReply parentPostId="author:post1" />);
+
+    expect(screen.getByTestId('quick-reply-state-height')).toBe(heightWrapper);
+    expect(connector).toHaveStyle({ transition: 'height 280ms cubic-bezier(0.25, 1, 0.5, 1)' });
+
+    mockElementHeight.value = 260;
+    rerender(<QuickReply parentPostId="author:post1" />);
+
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
+    expect(connector).toHaveAttribute('height', '312');
+  });
+
+  it('retargets height and exits expanded content when the reply collapses', async () => {
+    mockElementHeight.value = 260;
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
+
+    const { rerender } = render(<QuickReply parentPostId="author:post1" />);
+    const heightWrapper = screen.getByTestId('quick-reply-state-height');
+    const connector = screen.getByTestId('quick-reply-connector');
+
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
+    expect(connector).toHaveStyle({ transition: 'none' });
+    expect(screen.getByTestId('quick-reply-expanded-header')).toBeInTheDocument();
+
+    // Flip collapsed first while height is still the expanded measure.
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: false }));
+    rerender(<QuickReply parentPostId="author:post1" />);
+
+    expect(screen.getByTestId('quick-reply-state-height')).toBe(heightWrapper);
+    expect(connector).toHaveStyle({ transition: 'height 220ms cubic-bezier(0.25, 1, 0.5, 1)' });
+
+    mockElementHeight.value = 80;
+    rerender(<QuickReply parentPostId="author:post1" />);
+
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
+    expect(connector).toHaveAttribute('height', '132');
+    await waitFor(() => expect(screen.queryByTestId('quick-reply-expanded-header')).not.toBeInTheDocument());
+    expect(screen.queryByTestId('quick-reply-expanded-content')).not.toBeInTheDocument();
+  });
+
+  it('does not tween height when content grows while the reply stays expanded', async () => {
+    mockElementHeight.value = 260;
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
+
+    const { rerender } = render(<QuickReply parentPostId="author:post1" />);
+    const heightWrapper = screen.getByTestId('quick-reply-state-height');
+    const connector = screen.getByTestId('quick-reply-connector');
+
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
+    expect(connector).toHaveStyle({ transition: 'none' });
+
+    mockElementHeight.value = 320;
+    rerender(<QuickReply parentPostId="author:post1" />);
+
+    await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '320px' }));
+    expect(connector).toHaveStyle({ transition: 'none' });
+    expect(connector).toHaveAttribute('height', '372');
+  });
+
+  it('disables height and connector motion when reduced motion is requested', async () => {
+    vi.mocked(useReducedMotion).mockReturnValue(true);
+    mockElementHeight.value = 260;
+    mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { isExpanded: true }));
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    await waitFor(() => expect(screen.getByTestId('quick-reply-state-height')).toHaveStyle({ height: 'auto' }));
+    expect(screen.getByTestId('quick-reply-connector')).toHaveStyle({ transition: 'none' });
+    expect(screen.getByTestId('quick-reply-expanded-header')).toHaveStyle({ filter: 'blur(0px)' });
+  });
+
+  it('keeps consistent vertical spacing in the wide composition', () => {
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <QuickReply parentPostId="author:post1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('quick-reply-state-content')).toHaveClass('flex', 'flex-col', 'gap-4');
   });
 });
 
@@ -490,6 +665,7 @@ describe('QuickReply - Snapshots', () => {
     mockUseIsMobile.mockReturnValue(false);
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockIsAuthenticated = true;
+    mockElementHeight.value = 123;
     mockRequireAuth.mockImplementation(<T,>(action: () => T) => action());
     mockUseEnterSubmit.mockReturnValue(() => undefined);
     mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options));
@@ -503,6 +679,30 @@ describe('QuickReply - Snapshots', () => {
     );
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  it('matches snapshot when expanded', () => {
+    mockElementHeight.value = 260;
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, { content: 'Expanded reply', isExpanded: true }),
+    );
+
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <QuickReply parentPostId="author:post1" />
+      </PostMainLayoutProvider>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with a logged-out fallback avatar', () => {
+    mockIsAuthenticated = false;
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, { currentUserPubky: null, currentUserDetails: null }),
+    );
+
+    const { container } = render(<QuickReply parentPostId="author:post1" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 });
 
 describe('QuickReply - Mobile Snapshots', () => {
@@ -514,6 +714,7 @@ describe('QuickReply - Mobile Snapshots', () => {
     setMobileViewport();
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockIsAuthenticated = true;
+    mockElementHeight.value = 123;
     mockRequireAuth.mockImplementation(<T,>(action: () => T) => action());
     mockUseEnterSubmit.mockReturnValue(() => undefined);
     mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options));
@@ -524,6 +725,20 @@ describe('QuickReply - Mobile Snapshots', () => {
   });
 
   it('matches snapshot on mobile viewport', () => {
+    const { container } = render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <QuickReply parentPostId="author:post1" />
+      </PostMainLayoutProvider>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches expanded snapshot on mobile viewport', () => {
+    mockElementHeight.value = 260;
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, { content: 'Expanded reply', isExpanded: true }),
+    );
+
     const { container } = render(
       <PostMainLayoutProvider tagsLayout="side">
         <QuickReply parentPostId="author:post1" />

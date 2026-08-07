@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import type { PostHeaderProps } from '../PostHeader/PostHeader.types';
 
 export interface QuickReplyProps {
@@ -15,6 +16,7 @@ export interface QuickReplyProps {
 export interface QuickReplyContentProps {
   // Current user header
   currentUserPubky: string | null;
+  currentUserDetails?: NexusUserDetails | null;
 
   // Textarea
   textareaRef: RefObject<HTMLTextAreaElement | null>;

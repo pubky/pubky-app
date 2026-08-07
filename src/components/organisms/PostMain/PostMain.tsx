@@ -132,7 +132,7 @@ export function PostMain({
                   <Container className="flex min-w-0 flex-col lg:flex-row">
                     <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
                       {shouldShowPostHeader && (
-                        <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+                        <PostHeader postId={postId} size="extraLarge" timeAgoPlacement="bottom-left" />
                       )}
                       <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
                       {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
