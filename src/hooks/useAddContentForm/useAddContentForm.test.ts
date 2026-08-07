@@ -22,14 +22,6 @@ const mocks = vi.hoisted(() => ({
   commitUpdateCollectionItem: vi.fn(),
   onSuccess: vi.fn(),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations:
-    (namespace: string) =>
-    (key: string): string =>
-      `${namespace}.${key}`,
-}));
-
 vi.mock('@/controllers/bookmark/bookmark', () => ({
   BookmarkController: {
     exists: (...args: unknown[]) => mocks.bookmarkExists(...args),
@@ -109,7 +101,7 @@ describe('useAddContentForm', () => {
     expect(saved).toBe(false);
     expect(mocks.getOrFetchPost).not.toHaveBeenCalled();
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
-      'collections.addContentDialog.errors.invalid',
+      'Enter a valid post URL.',
     );
   });
 
@@ -126,7 +118,7 @@ describe('useAddContentForm', () => {
 
     expect(saved).toBe(false);
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
-      'collections.addContentDialog.errors.notFound',
+      'We could not find that post.',
     );
 
     mocks.getOrFetchPost.mockResolvedValueOnce({ ...livePost(), content: '[DELETED]' });
@@ -138,7 +130,7 @@ describe('useAddContentForm', () => {
 
     expect(saved).toBe(false);
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
-      'collections.addContentDialog.errors.notFound',
+      'We could not find that post.',
     );
   });
 
@@ -156,7 +148,7 @@ describe('useAddContentForm', () => {
     expect(saved).toBe(false);
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
-      'collections.addContentDialog.errors.alreadyAdded',
+      'This post is already added.',
     );
   });
 
@@ -176,7 +168,7 @@ describe('useAddContentForm', () => {
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(mocks.onSuccess).not.toHaveBeenCalled();
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
-      'collections.addContentDialog.errors.collectionNotAllowed',
+      'Collection can not be added to a collection.',
     );
   });
 
@@ -218,7 +210,7 @@ describe('useAddContentForm', () => {
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(mocks.onSuccess).not.toHaveBeenCalled();
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
-      'collections.addContentDialog.errors.collectionNotAllowed',
+      'Collection can not be added to a collection.',
     );
   });
 
@@ -239,7 +231,7 @@ describe('useAddContentForm', () => {
     expect(saved).toBe(false);
     expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
     expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
-      'collections.addContentDialog.errors.alreadyAdded',
+      'This post is already added.',
     );
   });
 

@@ -20,11 +20,6 @@ let mockAuthState: { hasHydrated: boolean; currentUserPubky: string | null } = {
   hasHydrated: false,
   currentUserPubky: null,
 };
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
@@ -141,7 +136,7 @@ describe('FollowedCollections', () => {
 
     render(<FollowedCollections />);
 
-    expect(screen.getByText('collections.followed.title')).toBeInTheDocument();
+    expect(screen.getByText('Followed Collections')).toBeInTheDocument();
     expect(screen.getByTestId('avatar-stack-skeleton')).toHaveAttribute('data-count', '3');
     expect(screen.getAllByTestId('collection-card-skeleton').length).toBeGreaterThan(0);
     expect(mockPrepareStreamForInitialLoad).not.toHaveBeenCalled();
@@ -277,8 +272,8 @@ describe('FollowedCollections', () => {
     await waitFor(() => {
       expect(mockGetOrFetchStreamSlice).toHaveBeenCalled();
     });
-    expect(screen.queryByText('collections.followed.empty')).not.toBeInTheDocument();
-    expect(screen.queryByText('collections.followed.title')).not.toBeInTheDocument();
+    expect(screen.queryByText("You haven't followed any collections yet.")).not.toBeInTheDocument();
+    expect(screen.queryByText('Followed Collections')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
   });
 
@@ -292,7 +287,7 @@ describe('FollowedCollections', () => {
     });
 
     await waitFor(() => {
-      expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+      expect(screen.queryByText('Show more')).not.toBeInTheDocument();
     });
   });
 
@@ -307,7 +302,7 @@ describe('FollowedCollections', () => {
       render(<FollowedCollections />);
     });
 
-    const button = await screen.findByRole('button', { name: 'collections.showMore' });
+    const button = await screen.findByRole('button', { name: 'Show more' });
     expect(button).toBeInTheDocument();
 
     const callsBefore = mockGetOrFetchStreamSlice.mock.calls.length;
@@ -338,9 +333,9 @@ describe('FollowedCollections', () => {
     // consistent across the three Collections sections.
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'collections.loadFailed',
+      description: 'Failed to load collections. Please try again.',
     });
-    expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument();
   });
 
   describe('FollowedCollections - Snapshots', () => {
@@ -360,7 +355,7 @@ describe('FollowedCollections', () => {
 
       const { container } = await act(async () => render(<FollowedCollections />));
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'collections.showMore' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Show more' })).toBeInTheDocument();
       });
 
       expect(container.firstChild).toMatchSnapshot();

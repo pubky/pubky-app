@@ -50,26 +50,6 @@ vi.mock('@/controllers/file/file', () => ({
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(() => undefined),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string, values?: { label?: string }) => {
-    switch (key) {
-      case 'loadFailed':
-        return 'Could not load more tags';
-      case 'added':
-        return values?.label ? `Tag added: ${values.label}` : 'Tag added';
-      case 'removed':
-        return values?.label ? `Tag removed: ${values.label}` : 'Tag removed';
-      case 'addFailed':
-        return `Could not add tag: ${values?.label}`;
-      case 'removeFailed':
-        return `Could not remove tag: ${values?.label}`;
-      default:
-        return key;
-    }
-  },
-}));
-
 // Mock toast
 vi.mock('@/molecules/Toaster/use-toast', () => ({
   toast: mockToast,

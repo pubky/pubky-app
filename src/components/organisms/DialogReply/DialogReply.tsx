@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
@@ -11,7 +9,6 @@ import { PostInput } from '../PostInput/PostInput';
 import type { DialogReplyProps } from './DialogReply.types';
 
 export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyProps) {
-  const t = useTranslations('dialogs.reply');
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
     useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
@@ -22,11 +19,11 @@ export function DialogReply({ postId, open, onOpenChangeAction }: DialogReplyPro
       <DialogContent
         avoidKeyboard
         className="flex max-h-[calc(100dvh-2rem)] w-3xl flex-col"
-        hiddenTitle={t('hiddenTitle')}
+        hiddenTitle={'Reply to post'}
       >
         <DialogHeader>
-          <DialogTitle>{t('title')}</DialogTitle>
-          <DialogDescription className="sr-only">{t('description')}</DialogDescription>
+          <DialogTitle>{'Reply'}</DialogTitle>
+          <DialogDescription className="sr-only">{'Reply dialog'}</DialogDescription>
         </DialogHeader>
         <Container className="min-h-0 flex-1 gap-3 overflow-x-hidden overscroll-contain pr-1">
           {/* Post being replied to */}

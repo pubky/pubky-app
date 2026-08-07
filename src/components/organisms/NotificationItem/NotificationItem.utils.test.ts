@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
-import { getNotificationActionKey, getNotificationLink, hasPostPreview } from './NotificationItem.utils';
+import { getNotificationActionText, getNotificationLink, hasPostPreview } from './NotificationItem.utils';
 
 describe('NotificationItem utilities', () => {
   it('shows the subject preview for edited-collection notifications', () => {
@@ -12,19 +12,19 @@ describe('NotificationItem utilities', () => {
   });
 
   it.each([
-    [NotificationType.TagPost, 'collection', 'taggedCollection'],
-    [NotificationType.TagPost, 'long', 'taggedArticle'],
-    [NotificationType.Reply, 'collection', 'repliedToCollection'],
-    [NotificationType.Reply, 'long', 'repliedToArticle'],
-    [NotificationType.Repost, 'collection', 'repostedCollection'],
-    [NotificationType.Repost, 'long', 'repostedArticle'],
-    [NotificationType.Mention, 'collection', 'mentionedYouInCollection'],
-    [NotificationType.Mention, 'long', 'mentionedYouInArticle'],
-    [NotificationType.PostDeleted, 'collection', 'deletedCollection'],
-    [NotificationType.PostDeleted, 'long', 'deletedArticle'],
-    [NotificationType.PostEdited, 'collection', 'updatedCollection'],
-    [NotificationType.PostEdited, 'long', 'updatedArticle'],
-  ])('uses kind-specific copy for %s notifications about %s posts', (type, postKind, expectedKey) => {
+    [NotificationType.TagPost, 'collection', 'tagged your collection'],
+    [NotificationType.TagPost, 'long', 'tagged your article'],
+    [NotificationType.Reply, 'collection', 'replied to your collection'],
+    [NotificationType.Reply, 'long', 'replied to your article'],
+    [NotificationType.Repost, 'collection', 'reposted your collection'],
+    [NotificationType.Repost, 'long', 'reposted your article'],
+    [NotificationType.Mention, 'collection', 'mentioned you in a collection'],
+    [NotificationType.Mention, 'long', 'mentioned you in an article'],
+    [NotificationType.PostDeleted, 'collection', 'deleted a collection'],
+    [NotificationType.PostDeleted, 'long', 'deleted an article'],
+    [NotificationType.PostEdited, 'collection', 'updated collection'],
+    [NotificationType.PostEdited, 'long', 'updated an article'],
+  ])('uses kind-specific copy for %s notifications about %s posts', (type, postKind, expectedText) => {
     const notification = {
       id: `${type}:123:actor`,
       type,
@@ -32,7 +32,7 @@ describe('NotificationItem utilities', () => {
       post_kind: postKind,
     } as FlatNotification;
 
-    expect(getNotificationActionKey(notification)).toBe(expectedKey);
+    expect(getNotificationActionText(notification)).toBe(expectedText);
   });
 
   it.each([undefined, 'short', 'unknown', 'audio'])('uses generic copy for post kind %s', (postKind) => {
@@ -47,7 +47,7 @@ describe('NotificationItem utilities', () => {
       post_kind: postKind,
     } satisfies FlatNotification;
 
-    expect(getNotificationActionKey(notification)).toBe('editedPost');
+    expect(getNotificationActionText(notification)).toBe('edited a post you have interacted with');
   });
 
   it.each([

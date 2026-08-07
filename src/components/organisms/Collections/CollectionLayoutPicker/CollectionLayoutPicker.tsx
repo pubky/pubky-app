@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Check, ChevronDown, Grip, LayoutGrid, type LucideIcon, Rows4 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -35,12 +34,12 @@ interface CollectionLayoutPickerContentProps {
 
 const COLLECTION_LAYOUT_PICKER_OPTIONS: Array<{
   value: CollectionLayout;
-  labelKey: 'layoutGrid' | 'layoutList' | 'layoutVisual';
+  label: string;
   icon: LucideIcon;
 }> = [
-  { value: COLLECTION_LAYOUT.GRID, labelKey: 'layoutGrid', icon: Grip },
-  { value: COLLECTION_LAYOUT.LIST, labelKey: 'layoutList', icon: Rows4 },
-  { value: COLLECTION_LAYOUT.VISUAL, labelKey: 'layoutVisual', icon: LayoutGrid },
+  { value: COLLECTION_LAYOUT.GRID, label: 'Grid', icon: Grip },
+  { value: COLLECTION_LAYOUT.LIST, label: 'List', icon: Rows4 },
+  { value: COLLECTION_LAYOUT.VISUAL, label: 'Visual', icon: LayoutGrid },
 ];
 
 function getPickerOption(layout: CollectionLayout) {
@@ -79,15 +78,13 @@ function CollectionLayoutOption({
 }
 
 function CollectionLayoutPickerContent({ layout, onSelect }: CollectionLayoutPickerContentProps) {
-  const t = useTranslations('collections.single');
-
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-3">
       {COLLECTION_LAYOUT_PICKER_OPTIONS.map((option) => (
         <CollectionLayoutOption
           key={option.value}
           value={option.value}
-          label={t(option.labelKey)}
+          label={option.label}
           icon={option.icon}
           isSelected={layout === option.value}
           dataCy={`collection-layout-${option.value}`}
@@ -99,10 +96,9 @@ function CollectionLayoutPickerContent({ layout, onSelect }: CollectionLayoutPic
 }
 
 export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLayoutPickerProps) {
-  const t = useTranslations('collections.single');
   const [open, setOpen] = useState(false);
   const activeOption = getPickerOption(layout);
-  const layoutLabel = t(activeOption.labelKey);
+  const layoutLabel = activeOption.label;
   const ActiveIcon = activeOption.icon;
 
   const handleSelect = (nextLayout: CollectionLayout) => {
@@ -114,7 +110,7 @@ export function CollectionLayoutPicker({ layout, onLayoutChange }: CollectionLay
     <Button
       variant="secondary"
       size="icon"
-      aria-label={`${t('layout')}: ${layoutLabel}`}
+      aria-label={`Layout: ${layoutLabel}`}
       data-cy="collection-layout-menu"
       className="hidden lg:inline-flex lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
     >

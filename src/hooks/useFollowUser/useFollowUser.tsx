@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { UserController } from '@/controllers/user/user';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
@@ -33,7 +32,6 @@ import { resolveFollowToastDisplayName } from './useFollowUser.utils';
  * ```
  */
 export function useFollowUser(): UseFollowUserResult {
-  const t = useTranslations('toast.follow');
   const { currentUserPubky } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<UseFollowUserResult['loadingAction']>(null);
@@ -69,7 +67,7 @@ export function useFollowUser(): UseFollowUserResult {
         });
 
         toast({
-          title: isCurrentlyFollowing ? t('unfollowed', { username }) : t('followed', { username }),
+          title: isCurrentlyFollowing ? `Unfollowed ${username}` : `Following ${username}`,
         });
 
         Logger.debug(`[useFollowUser] Successfully ${isCurrentlyFollowing ? 'unfollowed' : 'followed'} user`, {
@@ -79,7 +77,7 @@ export function useFollowUser(): UseFollowUserResult {
         return true;
       } catch (err) {
         // Always a friendly, named message — raw transport/server text never reaches the user.
-        const message = isCurrentlyFollowing ? t('unfollowFailed', { username }) : t('followFailed', { username });
+        const message = isCurrentlyFollowing ? `Failed to unfollow ${username}` : `Failed to follow ${username}`;
         setError(message);
         toast({
           variant: 'error',
@@ -93,7 +91,7 @@ export function useFollowUser(): UseFollowUserResult {
         setLoadingUserId(null);
       }
     },
-    [currentUserPubky, t],
+    [currentUserPubky],
   );
 
   const isUserLoading = useCallback(

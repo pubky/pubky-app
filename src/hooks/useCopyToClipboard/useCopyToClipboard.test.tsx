@@ -21,13 +21,6 @@ vi.mock('@/libs/utils/utils', async () => {
 vi.mock('@/molecules/Toaster/use-toast', () => ({
   toast: mockToast,
 }));
-
-const mockTranslate = vi.hoisted(() => vi.fn((key: string) => key));
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => mockTranslate,
-}));
-
 vi.mock('@/atoms/Button/Button', () => ({
   Button: ({
     children,
@@ -163,7 +156,7 @@ describe('useCopyToClipboard', () => {
     await expect(result.current.copyToClipboard('test text')).resolves.toBe(false);
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'copyFailedDesc',
+      description: 'Could not copy to clipboard',
     });
   });
 });

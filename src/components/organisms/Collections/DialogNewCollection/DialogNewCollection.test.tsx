@@ -10,37 +10,6 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   useAuthoredCollections: vi.fn(),
 }));
-
-const translations: Record<string, string> = {
-  'collections.new.title': 'New Collection',
-  'collections.new.nameLabel': 'Title',
-  'collections.new.namePlaceholder': 'Name your collection',
-  'collections.new.descriptionLabel': 'Description',
-  'collections.new.descriptionPlaceholder': 'What will people find here?',
-  'collections.new.backgroundLabel': 'Background',
-  'collections.new.layoutLabel': 'Layout',
-  'collections.new.layoutGrid': 'Grid',
-  'collections.new.layoutList': 'List',
-  'collections.new.addImage': 'Add image',
-  'collections.new.removeImage': 'Remove image',
-  'collections.new.coverImageInvalid': 'Cover image must be an image file.',
-  'collections.new.coverImageTooLarge': 'Cover image is too large.',
-  'collections.new.nameRequired': 'Collection title is required.',
-  'collections.new.cancel': 'Cancel',
-  'collections.new.save': 'Save collection',
-  'collections.new.saving': 'Saving...',
-  'collections.new.created': 'Collection created',
-  'collections.new.createFailed': 'Failed to create collection.',
-  'collections.intro.title': 'Welcome to Collections',
-  'collections.intro.description':
-    'Save posts worth keeping. Collect the best content from your network. Curate ideas, filter signal from noise, and share what matters.',
-  'collections.intro.imageAlt': 'Collections',
-  'collections.intro.cancel': 'Cancel',
-  'collections.intro.continue': 'Continue',
-  'toast.success': 'Success',
-  'toast.error': 'Error',
-};
-
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mocks.push }),
 }));
@@ -63,19 +32,6 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
     selector({ currentUserPubky: 'current-user' }),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations:
-    (namespace: string) =>
-    (key: string, values?: Record<string, string>): string => {
-      const translation = translations[`${namespace}.${key}`] ?? key;
-      return Object.entries(values ?? {}).reduce(
-        (message, [name, value]) => message.replace(`{${name}}`, value),
-        translation,
-      );
-    },
-}));
-
 describe('DialogNewCollection', () => {
   beforeEach(() => {
     vi.clearAllMocks();

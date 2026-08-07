@@ -1,7 +1,6 @@
 'use client';
 
 import { File, Trash2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
@@ -22,8 +21,6 @@ import { DialogAddLink } from '../DialogAddLink/DialogAddLink';
 import { DialogCropImage } from '../DialogCropImage/DialogCropImage';
 
 export const CreateProfileForm = () => {
-  const t = useTranslations('forms.profile');
-  const tCommon = useTranslations('common');
   const { setShowWelcomeDialog } = useOnboardingStore();
   const authStore = useAuthStore();
   const pubky = authStore.selectCurrentUserPubky();
@@ -48,16 +45,16 @@ export const CreateProfileForm = () => {
           <Container className="w-full gap-6">
             <Container className="gap-3">
               <Heading level={3} size="xl" className="text-2xl">
-                {tCommon('profile')}
+                {'Profile'}
               </Heading>
             </Container>
 
             <Container className="gap-6">
               <Container className="gap-2">
-                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('name')}</Label>
+                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{'NAME*'}</Label>
                 <InputField
                   id="profile-name-input"
-                  placeholder={t('namePlaceholder')}
+                  placeholder={'Enter your name'}
                   variant="dashed"
                   value={state.name}
                   onChange={(e) => handlers.setName(e.target.value)}
@@ -68,10 +65,10 @@ export const CreateProfileForm = () => {
               </Container>
 
               <Container className="gap-2">
-                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('bio')}</Label>
+                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{'BIO'}</Label>
                 <TextareaField
                   id="profile-bio-input"
-                  placeholder={t('bioPlaceholder')}
+                  placeholder={'Tell a bit about yourself.'}
                   value={state.bio}
                   variant="dashed"
                   rows={40}
@@ -88,7 +85,7 @@ export const CreateProfileForm = () => {
           <Container className="mt-6 w-full gap-6 lg:mt-0">
             <Container className="gap-3">
               <Heading level={3} size="xl" className="text-2xl">
-                {t('linksTitle')}
+                {'Links'}
               </Heading>
             </Container>
 
@@ -146,7 +143,7 @@ export const CreateProfileForm = () => {
           <Container className="mt-6 w-full gap-6 lg:mt-0">
             <Container className="gap-3 md:text-center">
               <Heading level={3} size="xl" className="text-2xl">
-                {t('avatarTitle')}
+                {'Avatar'}
               </Heading>
             </Container>
 
@@ -156,17 +153,13 @@ export const CreateProfileForm = () => {
                 className="h-48 w-48 cursor-pointer bg-muted"
                 onClick={handlers.handleChooseFileClick}
                 role="button"
-                aria-label={t('chooseAvatar')}
+                aria-label={'Choose avatar image'}
               >
                 {state.avatarPreview ? (
                   <AvatarImage
                     src={state.avatarPreview}
                     alt={
-                      state.avatarFile
-                        ? t('avatarPreview', {
-                            filename: state.avatarFile.name,
-                          })
-                        : t('avatarPreviewDefault')
+                      state.avatarFile ? `Selected avatar preview: ${state.avatarFile.name}` : 'Selected avatar preview'
                     }
                   />
                 ) : (
@@ -194,12 +187,12 @@ export const CreateProfileForm = () => {
                 {state.avatarPreview ? (
                   <>
                     <Trash2 className="h-4 w-4" />
-                    <span>{tCommon('delete')}</span>
+                    <span>{'Delete'}</span>
                   </>
                 ) : (
                   <>
                     <File className="h-4 w-4" />
-                    <span>{t('chooseFile')}</span>
+                    <span>{'Choose file'}</span>
                   </>
                 )}
               </Button>
@@ -216,7 +209,7 @@ export const CreateProfileForm = () => {
           backButtonDisabled={true}
           continueButtonDisabled={isSubmitDisabled}
           continueButtonLoading={state.isSaving}
-          continueText={t(state.submitTextKey)}
+          continueText={state.submitText}
           onContinue={handlers.handleSubmit}
         />
       </Container>

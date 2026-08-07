@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Key, Loader2, RefreshCw } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -24,7 +23,6 @@ import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 export const ScanContent = () => {
-  const t = useTranslations('onboarding.scan');
   const router = useRouter();
   const inviteCode = useOnboardingStore((state) => state.inviteCode);
   const hasInviteCode = inviteCode.trim().length > 0;
@@ -50,18 +48,18 @@ export const ScanContent = () => {
     <>
       <Loader2 className="mr-2 size-4 animate-spin" />
       <Typography as="span" overrideDefaults aria-live="polite">
-        {isOpeningRing ? t('openingRing') : t('generatingShort')}
+        {isOpeningRing ? 'Opening Pubky Ring...' : 'Generating...'}
       </Typography>
     </>
   ) : isExpired ? (
     <>
       <RefreshCw className="mr-2 size-4" />
-      {t('clickToReload')}
+      {'Click to reload'}
     </>
   ) : (
     <>
       <Key className="mr-2 size-4" />
-      {t('authorize')}
+      {'Authorize with Pubky Ring'}
     </>
   );
   return (
@@ -86,8 +84,8 @@ export const ScanContent = () => {
               isLoading={isLoading}
               isExpired={isExpired}
               url={url}
-              generatingLabel={t('generating')}
-              clickToReloadLabel={t('clickToReload')}
+              generatingLabel={'Generating QR Code...'}
+              clickToReloadLabel={'Click to reload'}
               expiredReloadAction={{ onClick: fetchUrl, ariaLabel: 'Reload sign-up QR code' }}
             />
           </div>
@@ -117,38 +115,41 @@ export const ScanContent = () => {
   );
 };
 export const ScanFooter = () => {
-  const t = useTranslations('onboarding.scan');
   return (
     <FooterLinks className="py-6">
-      {t.rich('authorizeSub', {
-        pubkyRing: (chunks) => (
-          <Link href={getPubkyRingLink()} target="_blank">
-            {chunks}
-          </Link>
-        ),
-        pubkyCore: (chunks) => (
-          <Link href={getPubkyCoreLink()} target="_blank">
-            {chunks}
-          </Link>
-        ),
-      })}
+      {'Use '}
+      <Link href={getPubkyRingLink()} target="_blank">
+        {'Pubky Ring'}
+      </Link>
+      {' or any other '}
+      <Link href={getPubkyCoreLink()} target="_blank">
+        {'Pubky Core'}
+      </Link>
+      {'–powered keychain.'}
     </FooterLinks>
   );
 };
 export const ScanHeader = ({ isMobile }: { isMobile: boolean }) => {
-  const t = useTranslations('onboarding.scan');
   return (
     <PageHeader>
       <PageTitle size="large">
-        {isMobile
-          ? t.rich('titleMobile', {
-              highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-            })
-          : t.rich('titleDesktop', {
-              highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-            })}
+        {isMobile ? (
+          <>
+            {'Tap to '}
+            <span className="text-brand">{'Authorize.'}</span>
+          </>
+        ) : (
+          <>
+            {'Scan '}
+            <span className="text-brand">{'QR Code.'}</span>
+          </>
+        )}
       </PageTitle>
-      <PageSubtitle>{isMobile ? t('subtitleMobile') : t('subtitleDesktop')}</PageSubtitle>
+      <PageSubtitle>
+        {isMobile
+          ? 'Tap the button to open Pubky Ring, and authorize with your pubky.'
+          : "Open Pubky Ring, tap 'add pubky', and scan this QR."}
+      </PageSubtitle>
     </PageHeader>
   );
 };

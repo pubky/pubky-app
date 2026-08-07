@@ -1,7 +1,6 @@
 'use client';
 
 import { Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { PROFILE_ROUTES } from '@/app/routes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
@@ -26,18 +25,16 @@ import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './usePr
  * @returns Menu items array and loading state
  */
 export function useProfileMenuActions(userId: string): UseProfileMenuActionsResult {
-  const t = useTranslations('profile.actions');
-  const tToast = useTranslations('toast');
   const { profile, isLoading: isProfileLoading } = useUserProfile(userId);
   const { isFollowing, isLoading: isFollowingLoading } = useIsFollowing(userId);
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser();
   const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser();
   const { isMuted } = useMutedUsers();
   const { copyToClipboard: copyPubky } = useCopyToClipboard({
-    successTitle: tToast('copy.pubkyCopied'),
+    successTitle: 'Pubky copied to clipboard',
   });
   const { copyToClipboard: copyLink } = useCopyToClipboard({
-    successTitle: tToast('copy.profileLinkCopied'),
+    successTitle: 'Profile link copied to clipboard',
   });
   const isUserMuted = isMuted(userId);
   const rawUsername = profile?.name || userId;
@@ -49,13 +46,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
   // Follow/Unfollow
   menuItems.push({
     id: PROFILE_MENU_ACTION_IDS.FOLLOW,
-    label: isFollowing
-      ? t('unfollowUser', {
-          username,
-        })
-      : t('followUser', {
-          username,
-        }),
+    label: isFollowing ? `Unfollow ${username}` : `Follow ${username}`,
     icon: isFollowing ? UserRoundMinus : UserRoundPlus,
     onClick: async () => {
       // useFollowUser handles all feedback (toast + state) and never throws.
@@ -67,7 +58,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
   // Copy pubky
   menuItems.push({
     id: PROFILE_MENU_ACTION_IDS.COPY_PUBKY,
-    label: t('copyPubky'),
+    label: 'Copy user pubky',
     icon: Key,
     onClick: async () => {
       try {
@@ -75,7 +66,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       } catch (error) {
         toast({
           variant: 'error',
-          description: isAppError(error) ? error.message : tToast('copy.copyFailedDesc'),
+          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
         });
       }
     },
@@ -84,7 +75,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
   // Copy profile link
   menuItems.push({
     id: PROFILE_MENU_ACTION_IDS.COPY_LINK,
-    label: t('copyLink'),
+    label: 'Copy profile link',
     icon: Link,
     onClick: async () => {
       try {
@@ -92,7 +83,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       } catch (error) {
         toast({
           variant: 'error',
-          description: isAppError(error) ? error.message : tToast('copy.copyFailedDesc'),
+          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
         });
       }
     },
@@ -101,24 +92,18 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
   // Mute/Unmute
   menuItems.push({
     id: PROFILE_MENU_ACTION_IDS.MUTE,
-    label: isUserMuted
-      ? t('unmute', {
-          username,
-        })
-      : t('mute', {
-          username,
-        }),
+    label: isUserMuted ? `Unmute ${username}` : `Mute ${username}`,
     icon: isUserMuted ? Megaphone : MegaphoneOff,
     onClick: async () => {
       try {
         await toggleMute(userId, isUserMuted);
         toast({
-          title: isUserMuted ? tToast('mute.unmuted', { username }) : tToast('mute.muted', { username }),
+          title: isUserMuted ? `${username} unmuted` : `${username} muted`,
         });
       } catch (error) {
         toast({
           variant: 'error',
-          description: isAppError(error) ? error.message : tToast('mute.failed'),
+          description: isAppError(error) ? error.message : 'Could not update mute status',
         });
       }
     },

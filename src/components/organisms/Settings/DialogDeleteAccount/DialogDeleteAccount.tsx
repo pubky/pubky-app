@@ -1,6 +1,5 @@
 'use client';
 import { Trash2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -11,8 +10,6 @@ interface DialogDeleteAccountProps {
   onOpenChangeAction: (open: boolean) => void;
 }
 export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDeleteAccountProps) {
-  const t = useTranslations('dialogs.deleteAccount');
-  const tCommon = useTranslations('common');
   const { handleDeleteAccount, isDeleting, progress } = useDeleteAccount();
 
   // Deletion cannot be interrupted, so block dismissal (cancel, X, overlay, Escape) while it runs
@@ -24,12 +21,12 @@ export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDelete
   };
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md sm:max-w-lg" hiddenTitle={t('title')}>
+      <DialogContent className="max-w-md sm:max-w-lg" hiddenTitle={'Delete Account'}>
         <DialogHeader>
-          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogTitle>{'Delete Account'}</DialogTitle>
         </DialogHeader>
         <Typography className="text-base leading-6 font-normal tracking-wide text-white/80">
-          {t('description')}
+          {'Are you sure? Your account information cannot be recovered.'}
         </Typography>
         <DialogFooter>
           <Button
@@ -41,7 +38,7 @@ export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDelete
             className="order-1 sm:order-2"
           >
             <Trash2 className="h-4 w-4" />
-            {isDeleting ? t('buttonLoading', { progress }) : t('button')}
+            {isDeleting ? `Deleting... ${progress}%` : 'Delete Account'}
           </Button>
           <Button
             variant="outline"
@@ -50,7 +47,7 @@ export function DialogDeleteAccount({ isOpen, onOpenChangeAction }: DialogDelete
             disabled={isDeleting}
             className="order-2 sm:order-1"
           >
-            {tCommon('cancel')}
+            {'Cancel'}
           </Button>
         </DialogFooter>
       </DialogContent>

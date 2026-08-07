@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { ProfileController } from '@/controllers/profile/profile';
@@ -39,8 +38,6 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
   const { copyToClipboard } = useCopyToClipboard();
   const authStore = useAuthStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const tLogout = useTranslations('toast.logout');
-  const tStatus = useTranslations('toast.status');
 
   const onEdit = useCallback(() => {
     router.push(SETTINGS_ROUTES.EDIT);
@@ -61,17 +58,17 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
       router.push(AUTH_ROUTES.LOGOUT);
     } catch (error) {
       Logger.error('Failed to logout:', error);
-      toast({ variant: 'error', description: tLogout('failed') });
+      toast({ variant: 'error', description: 'Could not log out. Try again.' });
       setIsLoggingOut(false);
     }
-  }, [router, tLogout]);
+  }, [router]);
 
   const onStatusChange = useCallback(
     async (status: string) => {
       const currentUserPubky = authStore.currentUserPubky;
       if (!currentUserPubky) {
         Logger.error('No authenticated user found');
-        toast({ variant: 'error', description: tStatus('userNotLoaded') });
+        toast({ variant: 'error', description: 'Could not load profile. Try again.' });
         return;
       }
 
@@ -79,10 +76,10 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
         await ProfileController.commitUpdateStatus({ pubky: currentUserPubky, status });
       } catch (error) {
         Logger.error('Failed to update status:', error);
-        toast({ variant: 'error', description: tStatus('updateFailed') });
+        toast({ variant: 'error', description: 'Could not update status. Try again.' });
       }
     },
-    [authStore, tStatus],
+    [authStore],
   );
 
   return {

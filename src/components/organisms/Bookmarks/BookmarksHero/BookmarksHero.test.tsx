@@ -1,32 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import enMessages from '../../../../../messages/en.json';
 import { BookmarksHero } from './BookmarksHero';
 
-const BOOKMARKS_COPY = enMessages.collections.bookmarks;
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) => {
-    if (namespace !== 'collections') {
-      return `${namespace ?? ''}.${key}`;
-    }
-
-    if (key === 'postCount') {
-      return values?.count === 1 ? 'post' : 'posts';
-    }
-
-    const nestedKeys: Record<string, string> = {
-      'bookmarks.title': BOOKMARKS_COPY.title,
-      'bookmarks.description': BOOKMARKS_COPY.description,
-    };
-
-    return nestedKeys[key] ?? `collections.${key}`;
-  },
-  useFormatter: () => ({
-    number: (value: number, _options?: Intl.NumberFormatOptions) => String(value),
-  }),
-}));
-
+const BOOKMARKS_COPY = {
+  title: 'Bookmarks',
+  description: 'Everything you saved for later.',
+};
 vi.mock('@/organisms/HeroOwner/HeroOwner', () => ({
   HeroOwner: ({
     name,

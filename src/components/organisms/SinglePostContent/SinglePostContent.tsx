@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -25,7 +23,6 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  * - Below: two columns with Replies timeline (larger) and Participants sidebar (smaller)
  */
 export function SinglePostContent({ postId, postDetails }: SinglePostContentProps) {
-  const t = useTranslations('post');
   const layout = useHomeStore((state) => state.layout);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
@@ -42,7 +39,7 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
       {/* Main post - FULL WIDTH - always visible */}
       {isDeleted ? (
         <Card className="rounded-md py-0">
-          <PostUnavailable message={t('deleted')} />
+          <PostUnavailable message={'This post has been deleted by its author.'} />
         </Card>
       ) : isArticle ? (
         <PostArticleDetail
@@ -61,7 +58,7 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
       <Container overrideDefaults className="mb-6 flex">
         {/* Left column - Replies thread with QuickReply directly below the parent post (larger) */}
         <Container className="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0">
-          {isArticle && <Typography className="text-2xl font-light text-muted-foreground">{t('replies')}</Typography>}
+          {isArticle && <Typography className="text-2xl font-light text-muted-foreground">{'Replies'}</Typography>}
           <Container overrideDefaults className="ml-3">
             <ThreadTree key={postId} postId={postId} showQuickReply={!isDeleted} />
           </Container>

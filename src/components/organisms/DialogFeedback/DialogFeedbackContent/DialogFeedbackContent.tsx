@@ -1,7 +1,6 @@
 'use client';
 
 import { Loader2, Send } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
@@ -20,8 +19,6 @@ export function DialogFeedbackContent({
   hasContent,
   currentUserPubky,
 }: DialogFeedbackContentProps) {
-  const t = useTranslations('feedback');
-  const tCommon = useTranslations('common');
   const characterLimit =
     feedback.length > 0
       ? {
@@ -32,8 +29,8 @@ export function DialogFeedbackContent({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t('title')}</DialogTitle>
-        <DialogDescription className="sr-only">{t('description')}</DialogDescription>
+        <DialogTitle>{'Provide Feedback'}</DialogTitle>
+        <DialogDescription className="sr-only">{'Feedback dialog'}</DialogDescription>
       </DialogHeader>
       <Container className="gap-3">
         <Container overrideDefaults className="rounded-md border border-dashed border-input p-6">
@@ -46,7 +43,7 @@ export function DialogFeedbackContent({
             />
 
             <Textarea
-              placeholder={t('placeholder')}
+              placeholder={'What do you think about Pubky? Any suggestions?'}
               variant="inline"
               className="px-0 py-2 text-base"
               value={feedback}
@@ -73,7 +70,7 @@ export function DialogFeedbackContent({
                   <Container className="flex items-center gap-2" overrideDefaults>
                     <Send className="size-4 text-secondary-foreground" strokeWidth={2} />
                     <Typography as="span" size="sm" className="text-xs leading-4 font-bold text-secondary-foreground">
-                      {tCommon('send')}
+                      {'Send'}
                     </Typography>
                   </Container>
                 )}

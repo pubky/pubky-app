@@ -32,22 +32,6 @@ vi.mock('next/navigation', () => ({
     push: mocks.mockPush,
   }),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => {
-    const translations: Record<string, string> = {
-      loadingTitle: 'Signing you out...',
-      loadingSubtitle: "We're ending your session securely.",
-      errorTitle: "We couldn't sign you out yet",
-      errorSubtitle: 'Please try again to finish signing out securely.',
-      homepage: 'Homepage',
-      retry: 'Retry',
-    };
-
-    return translations[key] ?? key;
-  },
-}));
-
 vi.mock('@/app/routes', () => ({
   ROOT_ROUTES: '/',
 }));

@@ -1,7 +1,6 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -9,7 +8,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover
 import { cn } from '@/libs/utils/utils';
 
 export function PopoverTradeoffs({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  const t = useTranslations('tradeoffs');
   return (
     <Popover hover>
       <PopoverTrigger asChild>
@@ -21,14 +19,14 @@ export function PopoverTradeoffs({ ...props }: React.HTMLAttributes<HTMLDivEleme
         <Container className="gap-2 px-3 py-2">
           <Container className="gap-2">
             <Heading level={4} size="sm" className="text-popover-foreground">
-              {t('title')}
+              {'Be aware of these tradeoffs:'}
             </Heading>
           </Container>
           <Container className="flex gap-4">
             <ul className="list-inside list-disc text-sm text-muted-foreground">
-              <li>{t('lessSecure')}</li>
-              <li>{t('browserBased')}</li>
-              <li>{t('suboptimalSignIn')}</li>
+              <li>{'Less secure than mobile keychain'}</li>
+              <li>{'Browser-based key generation'}</li>
+              <li>{'Suboptimal sign-in experience'}</li>
             </ul>
           </Container>
         </Container>

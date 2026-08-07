@@ -1,7 +1,6 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { COLLECTION_ROUTES, isCollectionsOverviewRoute, matchSingleCollectionRoute } from '@/app/routes';
 import { useSaveCreatedPostToTarget } from '@/hooks/useSaveCreatedPostToTarget/useSaveCreatedPostToTarget';
 import { buildCompositeId } from '@/models/models.utils';
@@ -32,7 +31,6 @@ export function useFabAction(): FabAction {
   const pathname = usePathname();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const enqueue = useFeedOptimisticStore((state) => state.enqueue);
-  const tFab = useTranslations('fab');
   const saveCreatedPostToTarget = useSaveCreatedPostToTarget();
 
   const makeOnPostCreated =
@@ -45,14 +43,14 @@ export function useFabAction(): FabAction {
       });
 
   if (isCollectionsOverviewRoute(pathname)) {
-    return { kind: 'createCollection', ariaLabel: tFab('newCollection') };
+    return { kind: 'createCollection', ariaLabel: 'New collection' };
   }
 
   if (pathname === COLLECTION_ROUTES.BOOKMARKS) {
     const target: FeedInsertTarget = { type: 'bookmarks' };
     return {
       kind: 'createPost',
-      ariaLabel: tFab('newBookmark'),
+      ariaLabel: 'New bookmark',
       onPostCreated: makeOnPostCreated(target),
     };
   }
@@ -65,10 +63,10 @@ export function useFabAction(): FabAction {
     };
     return {
       kind: 'createPost',
-      ariaLabel: tFab('newPostInCollection'),
+      ariaLabel: 'New post in collection',
       onPostCreated: makeOnPostCreated(target),
     };
   }
 
-  return { kind: 'createPost', ariaLabel: tFab('newPost') };
+  return { kind: 'createPost', ariaLabel: 'New post' };
 }

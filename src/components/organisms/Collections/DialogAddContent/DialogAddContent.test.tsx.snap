@@ -5,7 +5,7 @@ exports[`DialogAddContent - Snapshots > matches the closed grid trigger snapshot
   aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
-  aria-label="collections.single.addContent"
+  aria-label="Add Post"
   class="flex h-full w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
   data-as-child="true"
   data-cy="add-content"
@@ -38,7 +38,7 @@ exports[`DialogAddContent - Snapshots > matches the closed grid trigger snapshot
     class="text-sm font-bold"
     data-testid="typography"
   >
-    collections.single.addContent
+    Add Post
   </span>
 </button>
 `;
@@ -48,7 +48,7 @@ exports[`DialogAddContent - Snapshots > matches the closed list trigger snapshot
   aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
-  aria-label="collections.single.addContent"
+  aria-label="Add Post"
   class="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
   data-as-child="true"
   data-cy="add-content"
@@ -81,7 +81,7 @@ exports[`DialogAddContent - Snapshots > matches the closed list trigger snapshot
     class="text-sm font-bold"
     data-testid="typography"
   >
-    collections.single.addContent
+    Add Post
   </span>
 </button>
 `;
@@ -91,7 +91,7 @@ exports[`DialogAddContent - Snapshots > matches the closed trigger snapshot 1`] 
   aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
-  aria-label="collections.single.content"
+  aria-label="Add Post"
   class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
   data-as-child="true"
   data-cy="add-content"
@@ -133,7 +133,7 @@ exports[`DialogAddContent - Snapshots > matches the closed trigger snapshot 1`] 
     class="hidden lg:inline"
     data-testid="typography"
   >
-    collections.single.content
+    Add Post
   </span>
 </button>
 `;
@@ -143,7 +143,7 @@ exports[`DialogAddContent - Snapshots > matches the closed visual trigger snapsh
   aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
-  aria-label="collections.single.addContent"
+  aria-label="Add Post"
   class="flex h-full w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
   data-as-child="true"
   data-cy="collection-add-content-visual"
@@ -176,7 +176,7 @@ exports[`DialogAddContent - Snapshots > matches the closed visual trigger snapsh
     class="text-sm font-bold"
     data-testid="typography"
   >
-    collections.single.addContent
+    Add Post
   </span>
 </button>
 `;
@@ -201,7 +201,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
       aria-controls="radix-normalized"
       aria-expanded="true"
       aria-haspopup="dialog"
-      aria-label="collections.single.content"
+      aria-label="Add Post"
       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
       data-as-child="true"
       data-cy="add-content"
@@ -243,7 +243,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
         class="hidden lg:inline"
         data-testid="typography"
       >
-        collections.single.content
+        Add Post
       </span>
     </button>
   </div>
@@ -274,7 +274,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
         class="sr-only"
         id="radix-normalized"
       >
-        collections.addContentDialog.title
+        Add Post
       </h2>
       <form
         class="flex w-full flex-col gap-6"
@@ -290,14 +290,14 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
             data-testid="dialog-title"
             id="radix-normalized"
           >
-            collections.addContentDialog.title
+            Add Post
           </h2>
           <p
             class="text-sm leading-normal font-medium text-muted-foreground"
             data-slot="dialog-description"
             id="radix-normalized"
           >
-            collections.addContentDialog.description
+            There are several ways to add posts to your collection.
           </p>
         </div>
         <div
@@ -317,7 +317,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                 class="text-base leading-none font-bold text-card-foreground"
                 data-slot="card-title"
               >
-                collections.addContentDialog.fromFeedTitle
+                Add from feed
               </div>
             </div>
             <div
@@ -329,7 +329,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                 data-testid="container"
               >
                 <button
-                  aria-label="collections.addContentDialog.fromFeedTitle"
+                  aria-label="Add from feed"
                   class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
                   data-cy="add-content-feed-reply-pill"
                   data-slot="button"
@@ -360,7 +360,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                   </span>
                 </button>
                 <button
-                  aria-label="collections.addContentDialog.fromFeedTitle"
+                  aria-label="Add from feed"
                   class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
                   data-cy="add-content-feed-repost-pill"
                   data-slot="button"
@@ -400,7 +400,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                   </span>
                 </button>
                 <button
-                  aria-label="collections.addContentDialog.fromFeedTitle"
+                  aria-label="Add from feed"
                   class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs drop-shadow-[0_0_8px_var(--brand)]"
                   data-cy="add-content-feed-save-pill"
                   data-slot="button"
@@ -449,7 +449,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                 class="text-base leading-none font-bold text-card-foreground"
                 data-slot="card-title"
               >
-                collections.addContentDialog.pasteTitle
+                Paste post url
               </div>
             </div>
             <div
@@ -487,7 +487,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                 class="text-base leading-none font-bold text-card-foreground"
                 data-slot="card-title"
               >
-                collections.addContentDialog.createPostTitle
+                Create new post
               </div>
             </div>
             <div
@@ -567,7 +567,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                   class="min-w-0 flex-1 truncate text-base font-medium text-input"
                   data-testid="typography"
                 >
-                  collections.addContentDialog.createPostPlaceholder
+                  What's on your mind?
                 </p>
               </button>
             </div>

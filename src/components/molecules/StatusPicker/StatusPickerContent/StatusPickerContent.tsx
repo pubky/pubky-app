@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Check, Smile } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
@@ -17,7 +16,6 @@ import { STATUS_OPTIONS } from './StatusPickerContent.constants';
 import { StatusPickerContentProps } from './StatusPickerContent.types';
 
 export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPickerContentProps) {
-  const t = useTranslations('status');
   const [customStatus, setCustomStatus] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -84,7 +82,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
                   isSelected ? 'text-popover-foreground' : 'text-muted-foreground group-hover:text-popover-foreground',
                 )}
               >
-                {t(option.value as Parameters<typeof t>[0])}
+                {option.label}
               </Typography>
             </Container>
             {isSelected && <Check className="size-5 text-popover-foreground" />}
@@ -94,9 +92,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
 
       {/* Custom Status Section */}
       <Container className="gap-2.5 pt-1 pb-0">
-        <Label className="text-xs leading-5 tracking-[1.2px] text-muted-foreground uppercase">
-          {t('customStatus')}
-        </Label>
+        <Label className="text-xs leading-5 tracking-[1.2px] text-muted-foreground uppercase">{'Custom Status'}</Label>
         <Container className="gap-3">
           <Container
             overrideDefaults={true}
@@ -133,7 +129,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
               ref={inputRef}
               type="text"
               value={customStatus}
-              placeholder={t('addStatus')}
+              placeholder={'Add status'}
               maxLength={USER_STATUS_MAX_LENGTH}
               onChange={(e) => setCustomStatus(e.target.value)}
               onKeyDown={handleKeyDown}

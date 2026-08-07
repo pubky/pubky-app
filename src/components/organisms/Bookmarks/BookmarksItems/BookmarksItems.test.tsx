@@ -3,10 +3,6 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { BookmarksItems } from './BookmarksItems';
 
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
   DialogAddContent: ({ dataCy, triggerVariant }: { dataCy?: string; triggerVariant?: string }) => (
     <div data-testid="add-content-dialog" data-cy={dataCy} data-trigger-variant={triggerVariant ?? 'hero'} />

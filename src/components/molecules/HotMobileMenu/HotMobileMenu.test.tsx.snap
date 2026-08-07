@@ -15,7 +15,7 @@ exports[`HotMobileMenu - Snapshots > matches snapshot with default props 1`] = `
     >
       <button
         aria-current="page"
-        aria-label="tags"
+        aria-label="Tags"
         class="px-2.5 py-2 flex items-center gap-2"
         data-slot="button"
       >
@@ -46,7 +46,7 @@ exports[`HotMobileMenu - Snapshots > matches snapshot with default props 1`] = `
           class="text-sm font-medium text-foreground"
           data-testid="typography"
         >
-          tags
+          Tags
         </span>
       </button>
     </div>
@@ -55,7 +55,7 @@ exports[`HotMobileMenu - Snapshots > matches snapshot with default props 1`] = `
       data-testid="container"
     >
       <button
-        aria-label="users"
+        aria-label="Users"
         class="px-2.5 py-2 flex items-center gap-2"
         data-slot="button"
       >
@@ -88,7 +88,7 @@ exports[`HotMobileMenu - Snapshots > matches snapshot with default props 1`] = `
           class="text-sm font-medium text-muted-foreground"
           data-testid="typography"
         >
-          users
+          Users
         </span>
       </button>
     </div>
@@ -97,7 +97,7 @@ exports[`HotMobileMenu - Snapshots > matches snapshot with default props 1`] = `
       data-testid="container"
     >
       <button
-        aria-label="posts"
+        aria-label="Posts"
         class="px-2.5 py-2 flex items-center gap-2"
         data-slot="button"
       >
@@ -125,7 +125,7 @@ exports[`HotMobileMenu - Snapshots > matches snapshot with default props 1`] = `
           class="text-sm font-medium text-muted-foreground"
           data-testid="typography"
         >
-          posts
+          Posts
         </span>
       </button>
     </div>

@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Link } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -16,7 +15,6 @@ import { DialogCheckLink } from '@/organisms/DialogCheckLink/DialogCheckLink';
 import type { ProfilePageLinksProps } from './ProfilePageLinks.types';
 
 export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLinksProps) {
-  const t = useTranslations('profile.sidebar');
   const router = useRouter();
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
   const handleAddLinkClick = () => {
@@ -42,7 +40,7 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
     <>
       <Container>
         <Heading level={2} size="lg" className="font-light text-muted-foreground">
-          {t('links')}
+          {'Links'}
         </Heading>
 
         <Container>
@@ -65,7 +63,7 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
           })}
           {transformedLinks.length === 0 && (
             <Typography as="span" className="text-base font-medium text-muted-foreground">
-              {t('noLinks')}
+              {'No links added yet.'}
             </Typography>
           )}
 
@@ -79,7 +77,7 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
             >
               <Link size={16} className="text-foreground" />
               <Typography as="span" className="text-sm font-bold">
-                {t('addLink')}
+                {'Add Link'}
               </Typography>
             </Button>
           )}

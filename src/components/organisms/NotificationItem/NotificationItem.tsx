@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { PostController } from '@/controllers/post/post';
@@ -25,7 +24,7 @@ import { resolvePubkyToNames } from './NotificationItem.helpers';
 import type { NotificationItemProps } from './NotificationItem.types';
 import {
   formatPreviewText,
-  getNotificationActionKey,
+  getNotificationActionText,
   getNotificationLink,
   getPostUriFromNotification,
   getUserIdFromNotification,
@@ -34,11 +33,6 @@ import {
 } from './NotificationItem.utils';
 
 export function NotificationItem({ notification, isUnread, isMobile = false }: NotificationItemProps) {
-  const t = useTranslations('notifications.actions');
-  const tCommon = useTranslations('common');
-  const tProfile = useTranslations('profile');
-  const tPostToast = useTranslations('toast.post');
-  const tPost = useTranslations('post');
   const router = useRouter();
   const { toast } = useToast();
   const { formatRelativeTime } = useRelativeTime();
@@ -76,7 +70,7 @@ export function NotificationItem({ notification, isUnread, isMobile = false }: N
       .then(async (post) => {
         if (!isCancelled && post?.content) {
           if (isPostDeleted(post.content)) {
-            setPostContent(tPost('deleted'));
+            setPostContent('This post has been deleted by its author.');
           } else if (post.kind === 'long') {
             setPostContent(parseArticleContent(post.content)?.title || post.content);
           } else if (post.kind === 'collection') {
@@ -87,7 +81,7 @@ export function NotificationItem({ notification, isUnread, isMobile = false }: N
               setPostContent(post.content);
               toast({
                 variant: 'error',
-                description: tPostToast('collectionParseError'),
+                description: 'Could not parse collection content',
               });
             }
           } else {
@@ -109,12 +103,11 @@ export function NotificationItem({ notification, isUnread, isMobile = false }: N
   }, [postCompositeId]);
 
   // Get user name and avatar from profile hook
-  const userName = profile?.name || tCommon('user');
+  const userName = profile?.name || 'User';
   const avatarUrl = profile?.avatarUrl;
 
   // Get notification action text (without username, for separate rendering)
-  const actionKey = getNotificationActionKey(notification);
-  const actionText = t(actionKey);
+  const actionText = getNotificationActionText(notification);
 
   // Get post preview text
   const previewText = hasPostPreview(notification.type, postKind) ? formatPreviewText(postContent) : null;
@@ -234,7 +227,7 @@ export function NotificationItem({ notification, isUnread, isMobile = false }: N
           {/* Friend notification extra text */}
           {notification.type === NotificationType.NewFriend && (
             <Typography as="p" className="hidden shrink-0 text-base font-medium text-muted-foreground xl:inline">
-              {tProfile('friendsWithYou')}
+              {'(you follow each other)'}
             </Typography>
           )}
         </Container>

@@ -23,11 +23,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 const COLLECTION_ID = `${VIEWER}:collection-1`;
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mocks.routerPush,
@@ -160,17 +155,14 @@ describe('DialogAddContent', () => {
   it('renders the Content trigger', () => {
     render(<DialogAddContent />);
 
-    expect(screen.getByRole('button', { name: 'collections.single.content' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'collections.single.content' })).toHaveAttribute(
-      'data-cy',
-      'add-content',
-    );
+    expect(screen.getByRole('button', { name: 'Add Post' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Post' })).toHaveAttribute('data-cy', 'add-content');
   });
 
   it('disables the Content trigger and does not open the dialog when disabled', () => {
     render(<DialogAddContent disabled />);
 
-    const trigger = screen.getByRole('button', { name: 'collections.single.content' });
+    const trigger = screen.getByRole('button', { name: 'Add Post' });
     expect(trigger).toBeDisabled();
 
     fireEvent.click(trigger);
@@ -181,7 +173,7 @@ describe('DialogAddContent', () => {
   it('renders the Add Content grid trigger when triggerVariant is grid', () => {
     render(<DialogAddContent triggerVariant="grid" dataCy="bookmarks-add-content-grid" />);
 
-    const trigger = screen.getByRole('button', { name: 'collections.single.addContent' });
+    const trigger = screen.getByRole('button', { name: 'Add Post' });
     expect(trigger).toBeInTheDocument();
     expect(trigger).toHaveAttribute('data-cy', 'bookmarks-add-content-grid');
   });
@@ -189,13 +181,13 @@ describe('DialogAddContent', () => {
   it('disables the Add Content grid trigger when disabled', () => {
     render(<DialogAddContent triggerVariant="grid" disabled />);
 
-    expect(screen.getByRole('button', { name: 'collections.single.addContent' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add Post' })).toBeDisabled();
   });
 
   it('renders a compact full-width Add Content row when triggerVariant is list', () => {
     render(<DialogAddContent triggerVariant="list" dataCy="collection-add-content-list" />);
 
-    const trigger = screen.getByRole('button', { name: 'collections.single.addContent' });
+    const trigger = screen.getByRole('button', { name: 'Add Post' });
     expect(trigger).toHaveAttribute('data-cy', 'collection-add-content-list');
     expect(trigger).toHaveClass('h-16', 'w-full');
     expect(trigger).not.toHaveClass('h-full');
@@ -204,7 +196,7 @@ describe('DialogAddContent', () => {
   it('renders a dashed mosaic tile when triggerVariant is visual', () => {
     render(<DialogAddContent triggerVariant="visual" dataCy="collection-add-content-visual" />);
 
-    const trigger = screen.getByRole('button', { name: 'collections.single.addContent' });
+    const trigger = screen.getByRole('button', { name: 'Add Post' });
     expect(trigger).toHaveAttribute('data-cy', 'collection-add-content-visual');
     expect(trigger).toHaveClass('h-full', 'w-full', 'border-dashed');
     expect(trigger).not.toHaveClass('h-16');
@@ -213,14 +205,14 @@ describe('DialogAddContent', () => {
   it('opens the desktop dialog with feed, URL, and create-post options', () => {
     render(<DialogAddContent />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
 
     expect(screen.getByRole('dialog')).toHaveClass('outline-none', 'focus:outline-none', 'focus-visible:outline-none');
-    expect(screen.getByTestId('dialog-title')).toHaveTextContent('collections.addContentDialog.title');
-    expect(screen.getByText('collections.addContentDialog.fromFeedTitle')).toBeInTheDocument();
-    expect(screen.getByText('collections.addContentDialog.pasteTitle')).toBeInTheDocument();
-    expect(screen.getByText('collections.addContentDialog.createPostTitle')).toBeInTheDocument();
-    expect(screen.getByText('collections.addContentDialog.createPostPlaceholder')).toBeInTheDocument();
+    expect(screen.getByTestId('dialog-title')).toHaveTextContent('Add Post');
+    expect(screen.getByText('Add from feed')).toBeInTheDocument();
+    expect(screen.getByText('Paste post url')).toBeInTheDocument();
+    expect(screen.getByText('Create new post')).toBeInTheDocument();
+    expect(screen.getByText("What's on your mind?")).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
   });
 
@@ -229,7 +221,7 @@ describe('DialogAddContent', () => {
     async (dataCy) => {
       render(<DialogAddContent />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
       const feedPill = document.querySelector(`[data-cy="${dataCy}"]`);
       if (!(feedPill instanceof HTMLElement)) {
         throw new Error(`Expected ${dataCy} to render`);
@@ -245,7 +237,7 @@ describe('DialogAddContent', () => {
   it('stacks URL validation messages below the input', () => {
     render(<DialogAddContent />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
 
     const footer = screen.getByPlaceholderText('https://').closest('[data-slot="card-footer"]');
     expect(footer).toHaveClass('flex-col', 'items-stretch');
@@ -254,14 +246,14 @@ describe('DialogAddContent', () => {
   it('shows a red dashed border when the pasted URL is invalid', async () => {
     render(<DialogAddContent />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => 'not a post url',
       },
     });
 
-    const errorMessage = await screen.findByText('collections.addContentDialog.errors.invalid');
+    const errorMessage = await screen.findByText('Enter a valid post URL.');
     const inputContainer = screen.getByPlaceholderText('https://').closest('[data-testid="container"]');
 
     expect(errorMessage).toBeInTheDocument();
@@ -272,14 +264,14 @@ describe('DialogAddContent', () => {
     mocks.getOrFetchPost.mockResolvedValue(collectionPost());
     render(<DialogAddContent />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => POST_URL,
       },
     });
 
-    expect(await screen.findByText('collections.addContentDialog.errors.collectionNotAllowed')).toBeInTheDocument();
+    expect(await screen.findByText('Collection can not be added to a collection.')).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(mocks.bookmarkExists).not.toHaveBeenCalled();
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
@@ -290,14 +282,14 @@ describe('DialogAddContent', () => {
     mocks.getOrFetchPost.mockResolvedValue(collectionPost());
     render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => POST_URL,
       },
     });
 
-    expect(await screen.findByText('collections.addContentDialog.errors.collectionNotAllowed')).toBeInTheDocument();
+    expect(await screen.findByText('Collection can not be added to a collection.')).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(mocks.getCollectionDetails).not.toHaveBeenCalled();
     expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
@@ -307,7 +299,7 @@ describe('DialogAddContent', () => {
   it('adds pasted bookmark content, prepends it, and closes the dialog', async () => {
     render(<DialogAddContent />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => POST_URL,
@@ -328,7 +320,7 @@ describe('DialogAddContent', () => {
 
     render(<DialogAddContent />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => POST_URL,
@@ -336,7 +328,7 @@ describe('DialogAddContent', () => {
     });
 
     await waitFor(() => {
-      const input = screen.getByDisplayValue('collections.addContentDialog.adding');
+      const input = screen.getByDisplayValue('Adding...');
       expect(input).toBeDisabled();
       expect(input.closest('[data-testid="container"]')).toHaveClass('gap-2');
     });
@@ -348,7 +340,7 @@ describe('DialogAddContent', () => {
   it('adds pasted content to a collection and closes the dialog', async () => {
     render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
     fireEvent.paste(screen.getByPlaceholderText('https://'), {
       clipboardData: {
         getData: () => POST_URL,
@@ -370,8 +362,8 @@ describe('DialogAddContent', () => {
   it('closes Add Content and opens New Post when Create new post is clicked', async () => {
     render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
-    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+    fireEvent.click(screen.getByRole('button', { name: /What's on your mind?/ }));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: 'new post' })).toBeInTheDocument();
@@ -382,8 +374,8 @@ describe('DialogAddContent', () => {
   it('adds a newly created post to a collection and prepends it optimistically', async () => {
     render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
-    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+    fireEvent.click(screen.getByRole('button', { name: /What's on your mind?/ }));
     fireEvent.click(screen.getByRole('button', { name: 'create post success' }));
 
     await waitFor(() =>
@@ -396,16 +388,16 @@ describe('DialogAddContent', () => {
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith('author:new-post');
     expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'toast.success',
-      description: 'fab.addedToCollection',
+      title: 'Success',
+      description: 'Post added to collection.',
     });
   });
 
   it('bookmarks a newly created post and prepends it optimistically', async () => {
     render(<DialogAddContent />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
-    fireEvent.click(screen.getByRole('button', { name: /collections\.addContentDialog\.createPostPlaceholder/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+    fireEvent.click(screen.getByRole('button', { name: /What's on your mind?/ }));
     fireEvent.click(screen.getByRole('button', { name: 'create post success' }));
 
     await waitFor(() =>
@@ -413,7 +405,7 @@ describe('DialogAddContent', () => {
     );
     expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
     expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith('author:new-post');
-    expect(mocks.toast).toHaveBeenCalledWith({ title: 'toast.bookmark.added' });
+    expect(mocks.toast).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
   });
 });
 
@@ -445,7 +437,7 @@ describe('DialogAddContent - Snapshots', () => {
   it('matches the opened desktop dialog snapshot', () => {
     render(<DialogAddContent />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.single.content' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
 
     expect(document.body).toMatchSnapshot();
   });

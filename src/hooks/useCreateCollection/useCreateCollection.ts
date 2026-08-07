@@ -1,7 +1,6 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslations } from 'next-intl';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { PostController } from '@/controllers/post/post';
 import { useCoverImagePicker, type UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useCoverImagePicker';
@@ -49,14 +48,12 @@ type UseCreateCollectionResult = {
  *   navigate to the collection, etc.)
  */
 export function useCreateCollection(): UseCreateCollectionResult {
-  const t = useTranslations('collections.new');
-  const tFile = useTranslations('toast.file');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { toast } = useToast();
   const cover = useCoverImagePicker();
 
   const form = useForm<CreateCollectionFormData>({
-    resolver: zodResolver(createCollectionFormSchema(t)),
+    resolver: zodResolver(createCollectionFormSchema),
     defaultValues: createCollectionFormDefaults,
     // `onChange` (not `all`): we deliberately skip blur-triggered validation so
     // clicking the dialog's X button on an untouched empty title doesn't fire
@@ -89,7 +86,7 @@ export function useCreateCollection(): UseCreateCollectionResult {
           useLocalFilesStore.getState().setCollectionCover(compositeId, blobUrl);
         }
         toast({
-          title: t('created'),
+          title: 'Collection created',
         });
         createdCollectionId = compositeId;
       } catch (error) {
@@ -97,8 +94,8 @@ export function useCreateCollection(): UseCreateCollectionResult {
         toast({
           variant: 'error',
           description:
-            getImageUploadSizeLimitToastMessage(error, tFile) ??
-            (isAppError(error) ? error.message : t('createFailed')),
+            getImageUploadSizeLimitToastMessage(error) ??
+            (isAppError(error) ? error.message : 'Failed to create collection.'),
         });
       }
     })();

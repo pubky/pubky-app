@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { DatabaseZap, RefreshCw, RotateCw } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Spinner } from '@/atoms/Spinner/Spinner';
@@ -18,7 +17,6 @@ interface DatabaseErrorScreenProps {
  * Blocks the broken app from rendering and offers the user a way to recover without losing context.
  */
 export function DatabaseErrorScreen({ onRetry }: DatabaseErrorScreenProps) {
-  const t = useTranslations('errors.database');
   const [isRetrying, setIsRetrying] = useState(false);
 
   const handleRetry = async () => {
@@ -46,21 +44,23 @@ export function DatabaseErrorScreen({ onRetry }: DatabaseErrorScreenProps) {
 
       <Container overrideDefaults className="flex w-full max-w-md flex-col items-center justify-center gap-3">
         <Typography as="h1" size="lg" className="text-center leading-8">
-          {t('title')}
+          {'Storage unavailable'}
         </Typography>
         <Typography as="p" className="text-center text-base leading-6 font-medium text-secondary-foreground">
-          {t('description')}
+          {
+            "We couldn't access your device's local storage. Some mobile browsers, especially in-app browsers, can interrupt it. Please try again or reload the page."
+          }
         </Typography>
       </Container>
 
       <Container overrideDefaults className="flex flex-col flex-wrap items-center justify-center gap-3 sm:flex-row">
         <Button type="button" onClick={handleRetry} disabled={isRetrying}>
           {isRetrying ? <Spinner size="sm" /> : <RotateCw className="size-4 shrink-0" />}
-          {isRetrying ? t('retrying') : t('tryAgain')}
+          {isRetrying ? 'Retrying…' : 'Try again'}
         </Button>
         <Button type="button" variant={ButtonVariant.SECONDARY} onClick={handleReload} disabled={isRetrying}>
           <RefreshCw className="size-4 shrink-0" />
-          {t('reload')}
+          {'Reload page'}
         </Button>
       </Container>
     </Container>

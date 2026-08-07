@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useTranslations } from 'next-intl';
 import { TagKind } from '@/application/tag/tag.types';
 import { TagController } from '@/controllers/tag/tag';
 import { UserController } from '@/controllers/user/user';
@@ -26,7 +25,6 @@ import type { UseTaggedOptions, UseTaggedResult } from './useTagged.types';
  */
 export function useTagged(userId: string | null | undefined, options: UseTaggedOptions = {}): UseTaggedResult {
   const { enablePagination = true, enableStats = true, viewerId: customViewerId } = options;
-  const tTags = useTranslations('toast.tags');
 
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (e.g., during logout or unauthenticated views)
@@ -177,18 +175,18 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         });
 
         toast({
-          title: tTags('added', { label }),
+          title: `Tag added: ${label}`,
         });
         return { success: true };
       } catch {
         toast({
           variant: 'error',
-          description: tTags('addFailed', { label }),
+          description: `Could not add tag: ${label}`,
         });
         return { success: false, error: 'Failed to add tag' };
       }
     },
-    [userId, viewerId, allTags, tTags],
+    [userId, viewerId, allTags],
   );
 
   const handleTagToggle = useCallback(
@@ -231,7 +229,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           await TagController.commitDelete(params);
 
           toast({
-            title: tTags('removed', { label: tag.label }),
+            title: `Tag removed: ${tag.label}`,
           });
         } else {
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
@@ -245,7 +243,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
 
           toast({
-            title: tTags('added', { label: tag.label }),
+            title: `Tag added: ${tag.label}`,
           });
         }
       } catch {
@@ -259,13 +257,11 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         }
         toast({
           variant: 'error',
-          description: userIsTagger
-            ? tTags('removeFailed', { label: tag.label })
-            : tTags('addFailed', { label: tag.label }),
+          description: userIsTagger ? `Could not remove tag: ${tag.label}` : `Could not add tag: ${tag.label}`,
         });
       }
     },
-    [userId, viewerId, allTags, tagOrder, tTags],
+    [userId, viewerId, allTags, tagOrder],
   );
 
   // Use actual total count from stats to determine if there are more tags

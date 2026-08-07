@@ -3,7 +3,6 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { asOpaque } from '@/test-utils/type-assertions';
-import messages from '../../../../messages/en.json';
 import { SignInContent, SignInFooter } from './SignIn';
 
 // Mock Next.js router
@@ -454,7 +453,7 @@ describe('SignInContent', () => {
     expect(mockCopyAuthUrl).toHaveBeenCalled();
     expect(toast).toHaveBeenCalledWith({
       variant: 'error',
-      description: messages.toast.copy.copyFailedDesc,
+      description: 'Could not copy to clipboard',
     });
   });
 
@@ -538,8 +537,8 @@ describe('SignInContent - Progress View', () => {
       render(<SignInContent />);
     });
 
-    expect(screen.getByText(messages.onboarding.signIn.progressTitle)).toBeInTheDocument();
-    expect(screen.getByText(messages.onboarding.signIn.progressSubtitle)).toBeInTheDocument();
+    expect(screen.getByText('Signing in.')).toBeInTheDocument();
+    expect(screen.getByText('Please wait while your Pubky experience loads.')).toBeInTheDocument();
 
     // Should show all 4 step labels
     expect(screen.getByText('Verifying account')).toBeInTheDocument();

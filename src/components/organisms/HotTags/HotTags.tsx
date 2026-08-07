@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { Tag as TagIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Tag } from '@/atoms/Tag/Tag';
@@ -23,8 +22,6 @@ import type { HotTagsProps } from './HotTags.types';
  * and handles routing.
  */
 export function HotTags({ className }: HotTagsProps) {
-  const t = useTranslations('sidebar');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const { tags, isLoading } = useHotTags();
   const displayTags = tags.slice(0, MAX_TAGS);
@@ -36,9 +33,9 @@ export function HotTags({ className }: HotTagsProps) {
   };
   return (
     <SidebarSection
-      title={t('hotTags')}
+      title={'Hot tags'}
       footerIcon={TagIcon}
-      footerText={tCommon('exploreAll')}
+      footerText={'Explore all'}
       onFooterClick={handleSeeAll}
       footerTestId="see-all-button"
       className={className}
@@ -48,7 +45,7 @@ export function HotTags({ className }: HotTagsProps) {
       {isLoading ? (
         <HotTagsSkeleton />
       ) : displayTags.length === 0 ? (
-        <Typography className="font-light text-muted-foreground">{t('noTags')}</Typography>
+        <Typography className="font-light text-muted-foreground">{'No tags to show'}</Typography>
       ) : (
         <Container overrideDefaults className="flex w-full flex-col gap-2" data-cy="hot-tags-list">
           {displayTags.map((tag, index) => (

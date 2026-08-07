@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { useTranslations } from 'next-intl';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/use-toast';
 
@@ -11,11 +10,10 @@ interface UseCopyToClipboardOptions {
 }
 
 export function useCopyToClipboard(options: UseCopyToClipboardOptions = {}) {
-  const tCopy = useTranslations('toast.copy');
   const { onSuccess, onError, successTitle, errorDescription } = options;
 
-  const resolvedSuccessTitle = successTitle ?? tCopy('pubkyCopied');
-  const resolvedErrorDescription = errorDescription ?? tCopy('copyFailedDesc');
+  const resolvedSuccessTitle = successTitle ?? 'Pubky copied to clipboard';
+  const resolvedErrorDescription = errorDescription ?? 'Could not copy to clipboard';
 
   const copyToClipboardHandler = useCallback(
     async (text: string) => {

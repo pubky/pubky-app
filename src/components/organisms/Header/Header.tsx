@@ -1,7 +1,6 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import type { MouseEvent } from 'react';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
@@ -19,7 +18,6 @@ import { pathToStepConfig } from './Header.constants';
 
 export function Header() {
   const pathname = usePathname();
-  const t = useTranslations('onboarding.steps');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const { isCoreExploreRoute, isDynamicPublicRoute } = usePublicRoute();
 
@@ -28,7 +26,7 @@ export function Header() {
   const isCopyrightPage = pathname === '/copyright';
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
-  const currentTitle = stepConfig?.titleKey ? t(stepConfig.titleKey) : undefined;
+  const currentTitle = stepConfig?.title;
 
   // Hide header on mobile when:
   // - User is on a core explore route (/home, /hot, /search, /collections) — MobileHeader + MobileFooter

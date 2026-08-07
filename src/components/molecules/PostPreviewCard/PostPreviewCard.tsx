@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -56,7 +54,6 @@ interface PostPreviewCardProps {
  * - Reply previews: post being replied to in `DialogReply` (non-collection posts only)
  */
 export function PostPreviewCard({ postId, className, interactiveActions = true }: PostPreviewCardProps) {
-  const t = useTranslations('post');
   const { navigateToPost } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
@@ -119,9 +116,9 @@ export function PostPreviewCard({ postId, className, interactiveActions = true }
         aria-label="View original post"
       >
         {isMissing ? (
-          <PostUnavailable message={t('missing')} />
+          <PostUnavailable message={'Post not found.'} />
         ) : isDeleted ? (
-          <PostUnavailable message={t('deleted')} />
+          <PostUnavailable message={'This post has been deleted by its author.'} />
         ) : (
           <CardContent className="flex w-full max-w-full min-w-0 flex-col gap-4 p-6">
             <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" />
