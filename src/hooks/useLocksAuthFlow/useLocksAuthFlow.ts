@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { LocksController } from '@/controllers/locks/locks';
 import type { AppError } from '@/libs/error/error';
@@ -31,9 +31,7 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
   // Identifies the current server check, so `prepare()` can drop the answer of an outdated one.
   const serverCheckRef = useRef(0);
 
-  // useCallback IS required here: consumers put `start`/`reset` in a useEffect dep array, so an
-  // unstable identity re-runs the effect → re-calls start() → infinite loop. Keep them ref-stable.
-  const reset = useCallback(() => {
+  const reset = () => {
     serverCheckRef.current += 1;
     stateRef.current = null;
     lockServerOriginRef.current = null;
@@ -41,11 +39,11 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
     setSession(null);
     setError(null);
     setStatus(LocksAuthFlowStatus.IDLE);
-  }, []);
+  };
 
   // Run when the modal opens: probe readiness before the user can start, so a dead / not-ready server
   // disables "Continue" (with a message) instead of loading a broken iframe on click.
-  const prepare = useCallback(async () => {
+  const prepare = async () => {
     const serverCheck = (serverCheckRef.current += 1);
     const isOutdated = () => serverCheck !== serverCheckRef.current;
     setError(null);
@@ -59,9 +57,9 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
       setError(toAppError(caught, ErrorService.Locks, 'useLocksAuthFlow.prepare'));
       setStatus(LocksAuthFlowStatus.SERVER_UNAVAILABLE);
     }
-  }, []);
+  };
 
-  const start = useCallback(async () => {
+  const start = async () => {
     setError(null);
     setStatus(LocksAuthFlowStatus.CONNECTING);
 
@@ -77,7 +75,7 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
       setError(toAppError(caught, ErrorService.Locks, 'useLocksAuthFlow.start'));
       setStatus(LocksAuthFlowStatus.ERROR);
     }
-  }, []);
+  };
 
   useEffect(() => {
     if (status !== LocksAuthFlowStatus.AWAITING_APPROVAL) return;
