@@ -150,10 +150,9 @@ Three ways the content becomes readable, resolved on mount by `useUnlockedConten
 
 ```
 LockedPostContent
-  ├─ usePostLock(content, lock)
-  │    ├─ LockContentParser.parse(content)   → { lock_title, teaser_description }
-  │    └─ useLockFile(lock)                  → lock.json (LockFile | null)
-  │         └─ LocksController.fetchLockFile → LocksApplication → LocksService.readContentLock
+  ├─ LocksController.getLockContent(content) → { lock_title, teaser_description }
+  ├─ useLockFile(lock)                       → lock.json (LockFile | null)
+  │    └─ LocksController.fetchLockFile      → LocksApplication → LocksService.readContentLock
   │
   └─ useUnlockedContent(lock, lockFile, authorId)
        ├─ 1) already unlocked as a reader → fetchReplicatedContent  (my HS /priv copy)
@@ -194,10 +193,9 @@ screen does not re-read every marker.
 
 | Layer       | File                                 | Responsibility                                                                           |
 | ----------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
-| hook        | `hooks/usePostLock/usePostLock.ts`   | parse teaser + fetch lock file                                                           |
 | hook        | `hooks/useLockFile/useLockFile.ts`   | network-only fetch (`useEffect` + state; no local cache); catch → `hasError`             |
 | hook        | `hooks/useUnlockedContent/…`         | pick the read path (replicated / own / locked) and hold the resolved content             |
-| controller  | `core/controllers/locks/locks.ts`    | thin delegate to the application                                                         |
+| controller  | `core/controllers/locks/locks.ts`    | thin delegate to the application; announcement parse + verifier-type resolve (pipes)     |
 | application | `core/application/locks/locks.ts`    | orchestrate unlock, guarded reads, and replication                                       |
 | service     | `core/services/locks/locks.ts`       | Lock SDK (wasm) boundary: viewer calls, creator session, guarded-resource registration   |
 | pipe        | `core/pipes/locks/locks.parser.ts`   | `LockContentParser`, `LockFileParser`, `GuardedContentParser`, `LockProofBundler` (pure) |

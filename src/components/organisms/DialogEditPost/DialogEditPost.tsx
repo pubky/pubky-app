@@ -25,6 +25,9 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
 
   if (!postDetails) return null;
 
+  // TODO:[Locks] #2312 — a lock announcement is `short`, so it misses this branch and its teaser
+  // envelope reaches the textarea as raw JSON. Needs a dedicated dialog once the post model carries
+  // `lock` (#2027) — collections route the same way.
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const title = isArticle ? 'Edit Article' : 'Edit Post';
 

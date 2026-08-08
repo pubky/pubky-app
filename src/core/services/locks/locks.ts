@@ -112,8 +112,8 @@ export class LocksService {
    * TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
    */
   static async readContentLock(lockUrl: string): Promise<unknown> {
-    await ensureLocksSdkReady();
     try {
+      await ensureLocksSdkReady();
       // `readContentLock` rejects the `pubky://` scheme — pass the bare `<pubky>/pub/...` resource.
       const resource = lockUrl.replace(/^pubky:\/\//, '');
       return await Locks.readContentLockWithOptions(resource, buildLocksOptions());
@@ -124,8 +124,12 @@ export class LocksService {
 
   /** A fresh reader-generated bundle id — the public handle for the unlock's verification task. */
   static async generateBundleId(): Promise<string> {
-    await ensureLocksSdkReady();
-    return BundleId.generate().toString();
+    try {
+      await ensureLocksSdkReady();
+      return BundleId.generate().toString();
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, 'LocksService.generateBundleId');
+    }
   }
 
   // Reader calls are public (no session) → `toAppError`, not `toLocksError` (a 401 isn't an expired session).

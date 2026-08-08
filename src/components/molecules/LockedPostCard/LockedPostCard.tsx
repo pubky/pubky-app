@@ -19,7 +19,7 @@ interface LockedPostCardProps {
    * Composer mode: renders the title as an inline editable input instead of static text. The leading
    * icon shifts StickyNote (idle) → Pencil (hover) → Check (editing). Reader mode ignores this.
    */
-  editableTitle?: { value: string; onChange: (value: string) => void; disabled?: boolean };
+  editableTitle?: { value: string; onChange: (value: string) => void; disabled?: boolean; maxLength?: number };
   className?: string;
 }
 
@@ -102,6 +102,7 @@ export function LockedPostCard({
                 onBlur={() => setIsEditing(false)}
                 placeholder={t('defaultTitle')}
                 disabled={editableTitle.disabled}
+                maxLength={editableTitle.maxLength}
                 aria-label={t('titleLabel')}
                 data-cy="lock-title-input"
                 // Marks the input for the composer's outside-click collapse exclusion (usePostInput).

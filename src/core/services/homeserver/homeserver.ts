@@ -533,6 +533,9 @@ export class HomeserverService {
    * outcome, not an error to report. Calls the SDK directly so a 404 bypasses `handleError`/Sentry,
    * mirroring `list`'s 404 fallback.
    *
+   * Only a 404 means "absent": every other failure (403, 5xx, network) rejects, since the resource
+   * may well exist and a null would let the caller record a missing file as a confirmed absence.
+   *
    * `modifiedAt` is the homeserver's own write timestamp (`entry.modified_at`), so callers get an
    * ordering key the client cannot forge. `null` if the header is missing or unparseable.
    */
@@ -541,7 +544,10 @@ export class HomeserverService {
     // Unreadable without a session — return null rather than fire an unauthenticated request.
     if (!owned) return null;
     try {
+      // `storage.get` resolves for any status, so the response has to be checked here.
       const response = await owned.session.storage.get(owned.path);
+      if (response.status === HttpStatusCode.NOT_FOUND) return null;
+      await assertOk({ response, url, operation: 'getBytesIfExists' });
       const lastModified = Date.parse(response.headers.get('last-modified') ?? '');
       return {
         bytes: new Uint8Array(await response.arrayBuffer()),

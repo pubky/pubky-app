@@ -32,8 +32,9 @@ export function useLockFile(lockUrl: string | null | undefined): UseLockFileResu
     let cancelled = false;
 
     LocksController.fetchLockFile({ lockUrl })
-      .then((file) => {
-        if (!cancelled) setLockFile(file);
+      // `verifierType` is dropped until the payment verifier UI needs it (see `LockedPostCard`).
+      .then((result) => {
+        if (!cancelled) setLockFile(result.lockFile);
       })
       .catch(() => {
         // The AppError was already logged + captured to Sentry by the Err.* factory

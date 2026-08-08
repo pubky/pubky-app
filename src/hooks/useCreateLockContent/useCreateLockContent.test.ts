@@ -1,6 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  LOCK_TEASER_MAX_CHARACTER_LENGTH,
+  LOCK_TITLE_MAX_CHARACTER_LENGTH,
+  POST_MAX_CHARACTER_LENGTH,
+} from '@/config/posts';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -180,6 +185,84 @@ describe('useCreateLockContent', () => {
 
     expect(outcome).toEqual({ status: 'auth-expired' });
     expect(mocks.clearSession).toHaveBeenCalledTimes(1);
+  });
+
+  describe('announcement length guard', () => {
+    const withTeaser = (teaserOverride: { lock_title: string; teaser_description: string }) => ({
+      ...params(),
+      announcement: { teaser: teaserOverride, attachments: [], tags: [] },
+    });
+
+    it('never creates the lock when the serialized announcement exceeds the limit', async () => {
+      const { result } = renderHook(() =>
+        useCreateLockContent(
+          withTeaser({ lock_title: 'T', teaser_description: 'x'.repeat(POST_MAX_CHARACTER_LENGTH) }),
+        ),
+      );
+
+      const outcome = await act(() => result.current.publish());
+
+      expect(outcome).toEqual({ status: 'failed' });
+      // The whole point: the lock must not exist, so nothing can be orphaned.
+      expect(mocks.createLockContent).not.toHaveBeenCalled();
+      expect(mocks.commitCreate).not.toHaveBeenCalled();
+    });
+
+    it('blocks an escaped teaser that fits the raw per-field limits', async () => {
+      const { result } = renderHook(() =>
+        useCreateLockContent(
+          withTeaser({ lock_title: '', teaser_description: '"'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH) }),
+        ),
+      );
+
+      const outcome = await act(() => result.current.publish());
+
+      expect(outcome).toEqual({ status: 'failed' });
+      expect(mocks.createLockContent).not.toHaveBeenCalled();
+    });
+
+    it('publishes when both fields are filled to their maxLengths', async () => {
+      const { result } = renderHook(() =>
+        useCreateLockContent(
+          withTeaser({
+            lock_title: 'a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH),
+            teaser_description: 'b'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH),
+          }),
+        ),
+      );
+
+      const outcome = await act(() => result.current.publish());
+
+      expect(outcome).toEqual({ status: 'published', postId: 'POST1' });
+      const [{ content }] = mocks.commitCreate.mock.calls[0];
+      expect(content.length).toBe(POST_MAX_CHARACTER_LENGTH);
+    });
+
+    // The guard only holds while the string it measures is the string that ships.
+    it('publishes exactly the envelope the guard measured', async () => {
+      const extra = { ...teaser, cover_image: 'x'.repeat(POST_MAX_CHARACTER_LENGTH) };
+      const { result } = renderHook(() => useCreateLockContent(withTeaser(extra)));
+
+      await act(() => result.current.publish());
+
+      const [{ content }] = mocks.commitCreate.mock.calls[0];
+      expect(content).toBe(JSON.stringify(teaser));
+    });
+  });
+
+  it('keeps the Locks session when the homeserver session expires on the announcement', async () => {
+    mocks.commitCreate.mockRejectedValue(
+      Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+        service: ErrorService.Homeserver,
+        operation: 'test',
+      }),
+    );
+    const { result } = renderHook(() => useCreateLockContent(params()));
+
+    const outcome = await act(() => result.current.publish());
+
+    expect(outcome).toEqual({ status: 'failed' });
+    expect(mocks.clearSession).not.toHaveBeenCalled();
   });
 
   it('keeps the session and does not flag re-auth on a non-auth failure', async () => {

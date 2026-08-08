@@ -40,7 +40,15 @@ const mocks = vi.hoisted(() => {
     registerGuardedResource: vi.fn(),
     createContentLock: vi.fn(),
     readContentLockWithOptions: vi.fn(async () => ({ version: 1, creator: 'pubkybob' })),
+    generateBundleId: vi.fn(() => ({ toString: () => 'bundle-generated' })),
+    ensureLocksSdkReady: vi.fn(async () => {}),
   };
+});
+
+// Real memoization caches the first successful init, so a per-test failure needs the mock.
+vi.mock('./locks.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./locks.utils')>();
+  return { ...actual, ensureLocksSdkReady: mocks.ensureLocksSdkReady };
 });
 
 vi.mock('@/config/network', () => ({
@@ -116,7 +124,7 @@ vi.mock('@pubky/locks-sdk', () => {
     RegisterGuardedResourceOptions,
     CreateContentLockRequestBuilder,
     VerificationTaskHandleOptions,
-    BundleId: { generate: () => ({ toString: () => 'bundle-generated' }) },
+    BundleId: { generate: mocks.generateBundleId },
     Locks: {
       forServerWithOptions: mocks.forServerWithOptions,
       readContentLockWithOptions: mocks.readContentLockWithOptions,
@@ -369,8 +377,28 @@ describe('LocksService (reader unlock)', () => {
     expect(result).toEqual({ version: 1, creator: 'pubkybob' });
   });
 
+  it('readContentLock wraps a wasm init failure as an AppError', async () => {
+    mocks.ensureLocksSdkReady.mockRejectedValueOnce(new Error('wasm init failed'));
+
+    const error = await LocksService.readContentLock('pubky://creatorb/pub/locks.app/lock1.json').catch(
+      (e: unknown) => e,
+    );
+    expect(isAppError(error)).toBe(true);
+    expect(error).toMatchObject({ operation: 'LocksService.readContentLock' });
+  });
+
   it('generateBundleId returns a fresh reader-generated id', async () => {
     await expect(LocksService.generateBundleId()).resolves.toBe('bundle-generated');
+  });
+
+  it('generateBundleId wraps an SDK failure as an AppError', async () => {
+    mocks.generateBundleId.mockImplementationOnce(() => {
+      throw new Error('wasm not ready');
+    });
+
+    const error = await LocksService.generateBundleId().catch((e: unknown) => e);
+    expect(isAppError(error)).toBe(true);
+    expect(error).toMatchObject({ operation: 'LocksService.generateBundleId' });
   });
 
   it('submitProofBundle sends the bundle to the viewer (never the password) and returns the task state', async () => {

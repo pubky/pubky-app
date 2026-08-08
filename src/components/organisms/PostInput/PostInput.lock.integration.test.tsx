@@ -1,5 +1,10 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  LOCK_TEASER_MAX_CHARACTER_LENGTH,
+  LOCK_TITLE_MAX_CHARACTER_LENGTH,
+  POST_MAX_CHARACTER_LENGTH,
+} from '@/config/posts';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -22,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   handleSubmit: vi.fn(), // the normal (non-lock) publish path
   toast: vi.fn(),
   post: vi.fn(), // PubkyAppPost constructor spy — records the locked post's content/kind
+  hasExternalContent: undefined as (() => boolean) | undefined,
   locksAuthed: false,
   lockServer: 'lockpubky' as string | undefined,
   // Test handle into the fake composer state, refreshed on every render.
@@ -75,13 +81,14 @@ vi.mock('pubky-app-specs', () => ({
 vi.mock('@/hooks/usePostInput/usePostInput', async () => {
   const { useRef, useState } = await import('react');
   return {
-    usePostInput: () => {
+    usePostInput: (options: { hasExternalContent?: () => boolean }) => {
       const [content, setContent] = useState('');
       const [tags, setTags] = useState<string[]>([]);
       const [attachments, setAttachments] = useState<File[]>([]);
       const [isArticle, setIsArticle] = useState(false);
       const [articleTitle, setArticleTitle] = useState('');
       mocks.composer = { content, setContent, attachments, setAttachments, tags };
+      mocks.hasExternalContent = options.hasExternalContent;
       return {
         textareaRef: useRef(null),
         markdownEditorRef: useRef(null),
@@ -431,6 +438,81 @@ describe('PostInput lock flow (integration)', () => {
     fireEvent.click(inFlight);
 
     expect(mocks.createLockContent).toHaveBeenCalledTimes(1);
+  });
+
+  // Specs rejects an oversized announcement, but the lock is created first — so the composer must
+  // refuse the click rather than let the publish start and strand a lock nothing points at.
+  describe('announcement length', () => {
+    const setTeaser = (value: string) =>
+      fireEvent.change(screen.getByPlaceholderText('Write a short announcement to tease your content.'), {
+        target: { value },
+      });
+    const setTitle = (value: string) => fireEvent.change(screen.getByLabelText('Lock title'), { target: { value } });
+
+    it('caps the title and teaser inputs at their budgets', () => {
+      renderComposer();
+      configureLock();
+
+      expect(screen.getByLabelText('Lock title')).toHaveAttribute('maxLength', String(LOCK_TITLE_MAX_CHARACTER_LENGTH));
+      expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveAttribute(
+        'maxLength',
+        String(LOCK_TEASER_MAX_CHARACTER_LENGTH),
+      );
+    });
+
+    it('publishes when both fields are filled to their budgets', async () => {
+      renderComposer();
+      configureLock();
+      setTeaser('b'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH));
+      setTitle('a'.repeat(LOCK_TITLE_MAX_CHARACTER_LENGTH));
+
+      fireEvent.click(postButton());
+
+      await waitFor(() => expect(mocks.commitCreate).toHaveBeenCalledTimes(1));
+      const [{ content }] = mocks.commitCreate.mock.calls[0];
+      expect(content.length).toBe(POST_MAX_CHARACTER_LENGTH);
+    });
+
+    it('disables Post and creates no lock when escaping pushes the envelope over', async () => {
+      renderComposer();
+      configureLock();
+      setTeaser('"'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH)); // fits the input, doubles when escaped
+
+      expect(postButton()).toBeDisabled();
+
+      fireEvent.click(postButton());
+
+      await waitFor(() => expect(mocks.createLockContent).not.toHaveBeenCalled());
+      expect(mocks.commitCreate).not.toHaveBeenCalled();
+    });
+
+    it('re-enables Post once the teaser is trimmed back under the limit', () => {
+      renderComposer();
+      configureLock();
+      setTeaser('"'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH));
+      expect(postButton()).toBeDisabled();
+
+      setTeaser('a readable teaser');
+
+      expect(postButton()).toBeEnabled();
+    });
+  });
+
+  // An empty composer is not always idle — the lock flow holds the draft outside it.
+  // Only the signal is checked here: `usePostInput` is faked, so no collapse runs. The composer
+  // really staying open on an outside click belongs in an e2e test.
+  it('reports work in progress to the collapse guard while the lock is on', () => {
+    renderComposer();
+    expect(mocks.hasExternalContent?.()).toBe(false);
+
+    configureLock();
+
+    expect(mocks.composer.content).toBe(''); // the body moved into the lock draft
+    expect(mocks.hasExternalContent?.()).toBe(true);
+
+    fireEvent.click(lockSwitch()); // back to a normal post
+
+    expect(mocks.hasExternalContent?.()).toBe(false);
   });
 
   it('reopens sign-in and keeps the draft when the Lock Server rejects the session', async () => {

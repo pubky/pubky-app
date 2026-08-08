@@ -10,11 +10,14 @@ import type {
   TUnlockContentParams,
 } from '@/application/locks/locks.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
+import { sleep } from '@/libs/utils/utils';
+import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
 import type {
-  LockFile,
+  LockPostContent,
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
   TFetchLockFileParams,
+  TFetchLockFileResult,
   TGetConnectUrlParams,
   TLocksSessionResult,
   TUnlockedAttachment,
@@ -23,6 +26,9 @@ import type {
   TUnlockResult,
 } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
+
+/** How long logout waits for the Lock Server before it gives up and clears the device anyway. */
+const SIGNOUT_TIMEOUT_MS = 3000;
 
 /**
  * Entry point for the Lock Server: auth (mirrors `AuthController`), publishing locked content
@@ -65,21 +71,11 @@ export class LocksController {
     const result = await LocksApplication.exchangeSessionCode(params);
     useLocksAuthStore.getState().init({ session: result.session, secret: result.secret });
     // Register the creator's default Lock Server pointer in the background on every auth, mirroring
-    // the homeserver's post-auth write. Fire-and-forget: a failure must not drop the established
-    // session (the pointer write is idempotent and retried on the next auth). Runs after `init` —
-    // the service reads the session it just persisted.
-    void this.registerLockServiceConfig();
+    // the homeserver's post-auth write. Fire-and-forget: a failure (already reported to Sentry by the
+    // service Err factory) must not drop the established session — the write is idempotent and
+    // retried on the next auth. Runs after `init` — the service reads the session it just persisted.
+    void LocksApplication.setLockServiceConfig().catch(() => {});
     return result;
-  }
-
-  /** Background lock-service-config write; reports failures to Sentry but never drops the session. */
-  private static async registerLockServiceConfig(): Promise<void> {
-    try {
-      await LocksApplication.setLockServiceConfig();
-    } catch {
-      // Already reported to Sentry by the service Err factory; swallow so the write (idempotent,
-      // retried on the next auth) never drops the established session.
-    }
   }
 
   /**
@@ -91,7 +87,9 @@ export class LocksController {
     const store = useLocksAuthStore.getState();
     if (store.selectLocksSession()) {
       try {
-        await LocksApplication.signout();
+        // A server that accepts the connection but never answers would otherwise hold logout for as
+        // long as the OS takes to give up, leaving cookies and the local database in place.
+        await Promise.race([LocksApplication.signout(), sleep(SIGNOUT_TIMEOUT_MS)]);
       } catch {
         // Already reported to Sentry by the service Err factory; swallow so local teardown runs.
       }
@@ -129,14 +127,14 @@ export class LocksController {
     } catch {
       // Malformed/stale secret — already reported by the service Err factory; clear it so the UI
       // shows unauthenticated rather than a broken session.
-      store.reset();
+      this.clearSession();
       return;
     }
 
     try {
       await LocksApplication.setLockServiceConfig();
     } catch (error) {
-      if (isAppError(error) && isAuthError(error)) store.reset();
+      if (isAppError(error) && isAuthError(error)) this.clearSession();
     }
   }
 
@@ -149,11 +147,17 @@ export class LocksController {
   }
 
   /**
-   * Fetch the lock file (`lock.json`) referenced by a post's top-level `lock` URL.
-   * Delegates to the application, which validates the URL and performs the read.
+   * Fetch the lock file (`lock.json`) referenced by a post's top-level `lock` URL and resolve how
+   * its content is gated. Delegates to the application, which validates the URL and performs the read.
    */
-  static async fetchLockFile({ lockUrl }: TFetchLockFileParams): Promise<LockFile | null> {
-    return LocksApplication.fetchLockFile({ lockUrl });
+  static async fetchLockFile(params: TFetchLockFileParams): Promise<TFetchLockFileResult> {
+    const lockFile = await LocksApplication.fetchLockFile(params);
+    return { lockFile, verifierType: LockFileParser.resolveVerifierType(lockFile) };
+  }
+
+  /** Announcement content of a lock post; null when the post's `content` isn't valid announcement JSON. */
+  static getLockContent(content: string): LockPostContent | null {
+    return LockContentParser.parse(content);
   }
 
   /** Reader unlock: submit the proof for a resolved lock file, verify, and return the access credential. */

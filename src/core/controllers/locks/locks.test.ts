@@ -4,7 +4,7 @@ import { LocksApplication } from '@/application/locks/locks';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import type { LockFile } from '@/services/locks/locks.types';
+import { type LockFile, VerifierType } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -136,6 +136,23 @@ describe('LocksController (auth)', () => {
       expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
     });
 
+    // A server that connects but never answers must not hold the device in a half-logged-out state.
+    it('clears the store without waiting for a signout that never answers', async () => {
+      vi.useFakeTimers();
+      try {
+        useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+        mocks.signout.mockReturnValue(new Promise(() => {})); // never settles
+
+        const done = LocksController.logout();
+        await vi.advanceTimersByTimeAsync(60_000); // well past the signout timeout
+        await done;
+
+        expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('clears the persisted secret without a network call when no live session exists', async () => {
       useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
 
@@ -262,9 +279,32 @@ describe('LocksController.fetchLockFile', () => {
     vi.mocked(LocksApplication.fetchLockFile).mockResolvedValue(MOCK_LOCK_FILE);
   });
 
-  it('delegates to the application for a valid pubky lock url', async () => {
-    await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual(MOCK_LOCK_FILE);
+  it('delegates to the application and resolves the verifier type', async () => {
+    await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
+      lockFile: MOCK_LOCK_FILE,
+      verifierType: VerifierType.PASSWORD,
+    });
     expect(LocksApplication.fetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL });
+  });
+
+  it('resolves a null verifier type without a lock file', async () => {
+    vi.mocked(LocksApplication.fetchLockFile).mockResolvedValue(null);
+
+    await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
+      lockFile: null,
+      verifierType: null,
+    });
+  });
+});
+
+describe('LocksController.getLockContent', () => {
+  it('parses the announcement content of a lock post', () => {
+    const content = JSON.stringify({ lock_title: 't', teaser_description: 'd' });
+    expect(LocksController.getLockContent(content)?.lock_title).toBe('t');
+  });
+
+  it('returns null for non-lock content', () => {
+    expect(LocksController.getLockContent('not json')).toBeNull();
   });
 });
 

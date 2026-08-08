@@ -149,9 +149,33 @@ describe('locks.utils', () => {
   });
 
   describe('ensureLocksSdkReady', () => {
+    // The init promise is module state, so each test re-imports to start with an empty cache.
+    const freshEnsureLocksSdkReady = async () => {
+      vi.resetModules();
+      return (await import('./locks.utils')).ensureLocksSdkReady;
+    };
+
     it('resolves after running the SDK wasm init', async () => {
       await expect(ensureLocksSdkReady()).resolves.toBeUndefined();
       expect(mocks.init).toHaveBeenCalled();
+    });
+
+    it('runs the wasm init once, however many callers ask', async () => {
+      const ensure = await freshEnsureLocksSdkReady();
+
+      await Promise.all([ensure(), ensure(), ensure()]);
+
+      expect(mocks.init).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries on the next call after a failed init', async () => {
+      const ensure = await freshEnsureLocksSdkReady();
+      mocks.init.mockRejectedValueOnce(new Error('wasm boom'));
+
+      await expect(ensure()).rejects.toThrow('wasm boom');
+      // A cached rejection would leave Locks dead until a page reload.
+      await expect(ensure()).resolves.toBeUndefined();
+      expect(mocks.init).toHaveBeenCalledTimes(2);
     });
   });
 });

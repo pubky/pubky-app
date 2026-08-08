@@ -1,7 +1,9 @@
+import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
+import { LocksApplication } from '@/application/locks/locks';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { MUTE_SYNC_CURSOR_STORAGE_PREFIX } from '@/config/mute-sync';
@@ -25,6 +27,7 @@ import type { AuthStore } from '@/stores/auth/auth.types';
 import { useHomeStore } from '@/stores/home/home.store';
 import { useHotStore } from '@/stores/hot/hot.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import type { NotificationState } from '@/stores/notification/notification.types';
@@ -1357,6 +1360,34 @@ describe('AuthController', () => {
       expect(localFilesStore.reset).toHaveBeenCalled();
       expect(clearCookiesSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    // The Lock Server sits in front of the local teardown, so a silent one must not keep the device
+    // signed in. `LocksController` bounds its own wait; this checks the rest of logout still runs.
+    it('should clear cookies and the database when the Lock Server never answers', async () => {
+      vi.useFakeTimers();
+      try {
+        vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+        vi.spyOn(LocksApplication, 'signout').mockReturnValue(new Promise(() => {})); // never settles
+        useLocksAuthStore.getState().init({ session: asOpaque<LocksSdkSession>({}), secret: 'secret-abc' });
+        const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+        const clearCookiesSpy = await spyOnClearCookies();
+        await spyOnClearAllQueryClients();
+
+        vi.spyOn(useAuthStore, 'getState').mockReturnValue(createAuthStore());
+        vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
+        vi.spyOn(useLocalFilesStore, 'getState').mockReturnValue(createLocalFilesStore());
+
+        const done = AuthController.logout();
+        await vi.advanceTimersByTimeAsync(60_000);
+        await done;
+
+        expect(clearCookiesSpy).toHaveBeenCalled();
+        expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+        expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('should restore a persisted session before homeserver logout when only sessionExport exists', async () => {
