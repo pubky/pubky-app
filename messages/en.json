@@ -1026,7 +1026,9 @@
     },
     "collection": {
       "collectionDeleted": "Your collection has been deleted",
-      "deleteFailed": "Failed to delete collection. Please try again."
+      "deleteFailed": "Failed to delete collection. Please try again.",
+      "orderSaved": "Collection order saved",
+      "orderSaveFailed": "Failed to save the new order. Please try again."
     },
     "copy": {
       "pubkyCopied": "Pubky copied to clipboard",
@@ -1423,6 +1425,9 @@
       "shareTitle": "Share Collection",
       "edit": "Edit",
       "delete": "Delete",
+      "reorder": "Reorder",
+      "saveOrder": "Save order",
+      "cancelReorder": "Cancel",
       "follow": "Follow",
       "unfollow": "Unfollow",
       "content": "Add Post",

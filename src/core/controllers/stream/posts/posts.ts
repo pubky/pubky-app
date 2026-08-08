@@ -89,6 +89,20 @@ export class StreamPostsController {
   }
 
   /**
+   * Warm the local cache for posts referenced by `pubky://` URIs (e.g. a
+   * collection envelope's `items`). Converts URIs to composite ids, skips
+   * posts already persisted, and fetches the rest from Nexus, persisting
+   * posts, authors, and file attachments.
+   */
+  static async fetchMissingPostsByUris({ uris }: { uris: string[] }): Promise<void> {
+    if (uris.length === 0) return;
+    // Access currentUserPubky directly (not selectCurrentUserPubky) so
+    // unauthenticated viewers get null instead of a thrown error.
+    const viewerId = useAuthStore.getState().currentUserPubky;
+    await PostStreamApplication.fetchOriginalPostsByUris({ repostedUris: uris, viewerId });
+  }
+
+  /**
    * Gets the timestamp of the last cached post in a stream.
    *
    * Extracts the indexed_at timestamp from the oldest post in the cached stream.

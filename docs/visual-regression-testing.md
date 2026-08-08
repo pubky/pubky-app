@@ -54,6 +54,11 @@ diffs stand out:
   must not become blank baselines. Swallowing `decode()` alone was not enough
   and caused intermittent blank header logos. Intentionally absent artwork
   should be mocked out of the tree rather than left as a broken `<img>`.
+  **CSS `background-image` is not covered by that wait** — covers and other
+  decorative backgrounds settle only via `toMatchScreenshot` retries unless
+  you preload them first. Always `preloadImages(...)` (decode via `new Image()`)
+  for any CSS background URLs the surface paints, the same way Collections VRT
+  does for card/hero covers before `renderForVRT`.
 - **Avatars** — VRT profile fixtures use `image: null` so every avatar renders
   `FacehashAvatar`. `vrt.setup.ts` sets `globalThis.__VRT__` and stabiliser CSS;
   `FacehashAvatar` disables blink, 3D tilt, and hover when that flag is set.

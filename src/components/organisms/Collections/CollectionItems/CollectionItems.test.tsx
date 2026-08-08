@@ -14,6 +14,15 @@ import { CollectionItems } from './CollectionItems';
 
 const mockUseAuthStore = vi.fn();
 const mockTimelineFeedProps = vi.hoisted(() => vi.fn());
+const mockReorderState = vi.hoisted(() => ({
+  isReorderMode: false,
+  isSaving: false,
+  draftEntries: [] as { uri: string; postId: string | null }[],
+  enterReorder: vi.fn(),
+  moveItem: vi.fn(),
+  saveOrder: vi.fn().mockResolvedValue(undefined),
+  cancelReorder: vi.fn(),
+}));
 
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
@@ -26,6 +35,23 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
 }));
 
+vi.mock('@/hooks/useReorderCollection/useReorderCollection', () => ({
+  useReorderCollection: () => mockReorderState,
+}));
+
+vi.mock('@/organisms/Collections/CollectionReorderGrid/CollectionReorderGrid', () => ({
+  CollectionReorderGrid: ({
+    entries,
+    disabled,
+  }: {
+    entries: { uri: string; postId: string | null }[];
+    onMove: (activeUri: string, overUri: string) => void;
+    disabled?: boolean;
+  }) => (
+    <div data-testid="collection-reorder-grid" data-entry-count={entries.length} data-disabled={String(!!disabled)} />
+  ),
+}));
+
 vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
   CollectionHero: ({
     authorPubky,
@@ -33,12 +59,14 @@ vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
     postDetails,
     layout,
     onLayoutChange,
+    reorder,
   }: {
     authorPubky: string;
     postId: string;
     postDetails?: EnrichedPostDetails | null;
     layout: CollectionLayout;
     onLayoutChange: (layout: CollectionLayout) => void;
+    reorder?: { isActive: boolean };
   }) =>
     postDetails ? (
       <div
@@ -47,6 +75,8 @@ vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
         data-post-id={postId}
         data-has-post-details="true"
         data-layout={layout}
+        data-has-reorder={String(Boolean(reorder))}
+        data-reorder-active={String(reorder?.isActive ?? false)}
       >
         <button type="button" onClick={() => onLayoutChange(COLLECTION_LAYOUT.GRID)}>
           Switch to Grid
@@ -121,7 +151,7 @@ const COLLECTION_CONTENT_EMPTY = JSON.stringify({
   items: [],
 });
 
-function buildPostDetails(content: string): EnrichedPostDetails {
+function buildPostDetails(content: string, { isBlurred = false }: { isBlurred?: boolean } = {}): EnrichedPostDetails {
   return asOpaque<EnrichedPostDetails>({
     id: COMPOSITE_ID,
     content,
@@ -129,8 +159,8 @@ function buildPostDetails(content: string): EnrichedPostDetails {
     indexed_at: 0,
     uri: '',
     attachments: null,
-    is_moderated: false,
-    is_blurred: false,
+    is_moderated: isBlurred,
+    is_blurred: isBlurred,
   });
 }
 
@@ -162,6 +192,9 @@ function renderCollectionItems(options: RenderCollectionItemsOptions = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockTimelineFeedProps.mockClear();
+  mockReorderState.isReorderMode = false;
+  mockReorderState.isSaving = false;
+  mockReorderState.draftEntries = [];
   setAuthStore(null);
 });
 
@@ -365,6 +398,67 @@ describe('CollectionItems', () => {
     expect(screen.getByText('collections.single.empty')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
   });
+
+  describe('reorder mode', () => {
+    it('passes the reorder bridge to the hero for owners only', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const { unmount } = renderCollectionItems();
+      expect(screen.getByTestId('collection-hero')).toHaveAttribute('data-has-reorder', 'true');
+      unmount();
+
+      setAuthStore('some-other-user');
+      renderCollectionItems();
+      expect(screen.getByTestId('collection-hero')).toHaveAttribute('data-has-reorder', 'false');
+    });
+
+    it('replaces the TimelineFeed with the reorder grid while reorder mode is active', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      mockReorderState.isReorderMode = true;
+      mockReorderState.draftEntries = [
+        { uri: 'pubky://author/pub/pubky.app/posts/a', postId: 'author:a' },
+        { uri: 'pubky://author/pub/pubky.app/posts/b', postId: 'author:b' },
+      ];
+
+      renderCollectionItems();
+
+      expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('add-content-dialog')).not.toBeInTheDocument();
+      const grid = screen.getByTestId('collection-reorder-grid');
+      expect(grid).toHaveAttribute('data-entry-count', '2');
+      expect(grid).toHaveAttribute('data-disabled', 'false');
+      expect(screen.getByTestId('collection-hero')).toHaveAttribute('data-reorder-active', 'true');
+    });
+
+    it('disables the reorder grid while the save commit is in flight', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      mockReorderState.isReorderMode = true;
+      mockReorderState.isSaving = true;
+
+      renderCollectionItems();
+
+      expect(screen.getByTestId('collection-reorder-grid')).toHaveAttribute('data-disabled', 'true');
+    });
+
+    it('auto-cancels reorder mode when the collection becomes blurred by moderation', () => {
+      // The blurred hero has no Save/Cancel controls, so staying in reorder
+      // mode would trap the user (and keep the FAB hidden app-wide).
+      setAuthStore(AUTHOR_PUBKY);
+      mockReorderState.isReorderMode = true;
+
+      renderCollectionItems({ postDetails: buildPostDetails(COLLECTION_CONTENT, { isBlurred: true }) });
+
+      expect(mockReorderState.cancelReorder).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not cancel reorder mode while the collection is not blurred', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      mockReorderState.isReorderMode = true;
+
+      renderCollectionItems();
+
+      expect(mockReorderState.cancelReorder).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('CollectionItems - Snapshots', () => {
@@ -388,6 +482,16 @@ describe('CollectionItems - Snapshots', () => {
         }),
       ),
     });
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches the owner reorder-mode snapshot', () => {
+    setAuthStore(AUTHOR_PUBKY);
+    mockReorderState.isReorderMode = true;
+    mockReorderState.draftEntries = [{ uri: 'pubky://author/pub/pubky.app/posts/a', postId: 'author:a' }];
+
+    const { container } = renderCollectionItems();
 
     expect(container.firstChild).toMatchSnapshot();
   });
