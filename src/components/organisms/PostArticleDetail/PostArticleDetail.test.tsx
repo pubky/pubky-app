@@ -220,7 +220,7 @@ describe('PostArticleDetail', () => {
     render(<PostArticleDetail {...defaultProps} />);
 
     expect(screen.getByTestId('post-header')).toHaveAttribute('data-post-id', 'user123:post456');
-    expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'large');
+    expect(screen.getByTestId('post-header')).toHaveAttribute('data-size', 'extraLarge');
     expect(screen.getByTestId('post-header')).toHaveAttribute('data-time-placement', 'bottom-left');
   });
 

@@ -292,6 +292,40 @@ describe('PostHeaderUserInfo', () => {
     expect(screen.getAllByText(`@${formattedPublicKey}`).length).toBeGreaterThan(0);
   });
 
+  it('renders the character count in the public-key metadata row', () => {
+    const formattedPublicKey = formatPublicKey({ key: 'userpubkykey' });
+
+    render(
+      <PostHeaderUserInfo
+        userId="userpubkykey"
+        userName="Test User"
+        showPopover={false}
+        characterLimit={{ count: 21, max: 2000 }}
+      />,
+    );
+
+    const characterCount = screen.getByText('21/2000');
+    expect(characterCount.parentElement).toHaveTextContent(formattedPublicKey);
+  });
+
+  it('renders the character count on the username row when requested', () => {
+    const formattedPublicKey = formatPublicKey({ key: 'userpubkykey' });
+
+    render(
+      <PostHeaderUserInfo
+        userId="userpubkykey"
+        userName="Test User"
+        showPopover={false}
+        characterLimit={{ count: 21, max: 2000 }}
+        characterLimitPlacement="name-row"
+      />,
+    );
+
+    const characterCountRow = screen.getByText('21/2000').parentElement;
+    expect(characterCountRow).toHaveTextContent('Test User');
+    expect(characterCountRow).not.toHaveTextContent(formattedPublicKey);
+  });
+
   it('renders popover content with user info', () => {
     render(<PostHeaderUserInfo userId="user123" userName="Test User" />);
 
@@ -335,6 +369,22 @@ describe('PostHeaderUserInfo', () => {
     expect(popoverProps).not.toHaveProperty('stablePlacement');
   });
 
+  it('renders only the avatar when showUserInfo is false', () => {
+    render(<PostHeaderUserInfo userId="user123" userName="Test User" showPopover={false} showUserInfo={false} />);
+
+    expect(screen.getByTestId('avatar')).toBeInTheDocument();
+    expect(screen.queryByText('Test User')).not.toBeInTheDocument();
+    expect(screen.queryByText(/user123/i)).not.toBeInTheDocument();
+  });
+
+  it('visually hides the avatar while preserving its layout link', () => {
+    render(<PostHeaderUserInfo userId="user123" userName="Test User" showPopover={false} visuallyHideAvatar={true} />);
+
+    const avatarLink = screen.getAllByTestId('profile-link')[0];
+    expect(avatarLink).toHaveClass('invisible', 'pointer-events-none');
+    expect(screen.getByTestId('avatar')).toBeInTheDocument();
+  });
+
   it('renders with normal size by default', () => {
     render(<PostHeaderUserInfo userId="user123" userName="Test User" />);
 
@@ -344,6 +394,13 @@ describe('PostHeaderUserInfo', () => {
 
   it('renders with large size when size prop is "large"', () => {
     render(<PostHeaderUserInfo userId="user123" userName="Test User" size="large" />);
+
+    const avatar = screen.getAllByTestId('avatar')[0];
+    expect(avatar).toHaveAttribute('data-size', 'lg');
+  });
+
+  it('renders with extraLarge size when size prop is "extraLarge"', () => {
+    render(<PostHeaderUserInfo userId="user123" userName="Test User" size="extraLarge" />);
 
     const avatar = screen.getAllByTestId('avatar')[0];
     expect(avatar).toHaveAttribute('data-size', 'xl');
@@ -468,28 +525,33 @@ describe('PostHeaderUserInfo - Navigation', () => {
     const usernameLink = profileLinks[1];
     const userInfoRoot = usernameLink.parentElement?.parentElement;
 
-    expect(userInfoRoot).toHaveClass('grid', 'w-fit', 'max-w-full', 'min-w-0', 'grid-cols-[auto_minmax(0,1fr)]');
+    expect(userInfoRoot).toHaveClass(
+      'grid',
+      'w-full',
+      'max-w-full',
+      'min-w-0',
+      'grid-cols-[auto_minmax(0,1fr)]',
+      'items-center',
+    );
     expect(usernameLink.parentElement).toHaveClass('max-w-full', 'min-w-0');
-    expect(usernameLink).toHaveClass('block', 'w-fit', 'min-w-0', 'max-w-full', 'overflow-hidden');
+    expect(usernameLink).toHaveClass('block', 'w-full', 'min-w-0', 'max-w-full', 'overflow-hidden');
     expect(screen.getByText(longName)).toHaveClass('w-full', 'truncate', 'max-w-full');
   });
 
-  it('keeps the popover hover target hugging the user info instead of the whole header row', () => {
+  it('keeps the popover hover target constrained with max-w-full', () => {
     render(<PostHeaderUserInfo userId="testuser123" userName="Test User" />);
 
     const userInfoRoot = screen.getByTestId('popover-trigger').firstElementChild;
 
-    expect(userInfoRoot).toHaveClass('w-fit', 'max-w-full');
-    expect(userInfoRoot).not.toHaveClass('w-full');
+    expect(userInfoRoot).toHaveClass('w-full', 'max-w-full', 'min-w-0');
   });
 
-  it('keeps the username link hugging its text so it is not clickable across the header row', () => {
+  it('keeps the username link constrained so long names truncate', () => {
     render(<PostHeaderUserInfo userId="testuser123" userName="Test User" showPopover={false} />);
 
     const usernameLink = screen.getAllByTestId('profile-link')[1];
 
-    expect(usernameLink).toHaveClass('w-fit', 'max-w-full');
-    expect(usernameLink).not.toHaveClass('w-full');
+    expect(usernameLink).toHaveClass('w-full', 'max-w-full', 'min-w-0', 'overflow-hidden');
   });
 });
 
@@ -597,6 +659,13 @@ describe('PostHeaderUserInfo - Snapshots', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it('matches snapshot with extraLarge size', () => {
+    const { container } = render(
+      <PostHeaderUserInfo userId="snapshotUserKey" userName="Snapshot User" size="extraLarge" />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches snapshot with timeAgo', () => {
     const { container } = render(
       <PostHeaderUserInfo
@@ -615,9 +684,60 @@ describe('PostHeaderUserInfo - Snapshots', () => {
         userId="snapshotUserKey"
         userName="Snapshot User"
         avatarUrl="https://example.com/avatar.png"
-        size="large"
+        size="extraLarge"
         timeAgo="1h ago"
         indexedAt={new Date('2025-03-01T13:00:00Z')}
+      />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with avatar-only user info', () => {
+    const { container } = render(
+      <PostHeaderUserInfo
+        userId="snapshotUserKey"
+        userName="Snapshot User"
+        avatarUrl="https://example.com/avatar.png"
+        showPopover={false}
+        showUserInfo={false}
+      />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with a visually hidden avatar', () => {
+    const { container } = render(
+      <PostHeaderUserInfo
+        userId="snapshotUserKey"
+        userName="Snapshot User"
+        avatarUrl="https://example.com/avatar.png"
+        showPopover={false}
+        visuallyHideAvatar
+      />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with character count in the metadata row', () => {
+    const { container } = render(
+      <PostHeaderUserInfo
+        userId="snapshotUserKey"
+        userName="Snapshot User"
+        showPopover={false}
+        characterLimit={{ count: 21, max: 2000 }}
+      />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot with character count in the name row', () => {
+    const { container } = render(
+      <PostHeaderUserInfo
+        userId="snapshotUserKey"
+        userName="Snapshot User"
+        showPopover={false}
+        characterLimit={{ count: 21, max: 2000 }}
+        characterLimitPlacement="name-row"
       />,
     );
     expect(container.firstChild).toMatchSnapshot();

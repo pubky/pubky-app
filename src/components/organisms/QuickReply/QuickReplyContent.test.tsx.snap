@@ -1,0 +1,160 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`QuickReplyContent - Snapshots > matches the collapsed snapshot 1`] = `
+<div
+  class="relative"
+>
+  <div
+    class="absolute top-0 left-0 z-10"
+    data-testid="quick-reply-stable-avatar"
+  >
+    <div
+      data-show-user-info="false"
+      data-size="normal"
+      data-testid="post-header"
+    />
+  </div>
+  <div
+    class="relative flex min-w-0 flex-col gap-4"
+    data-testid="container"
+  >
+    <div
+      class="relative flex min-w-0 flex-col gap-4"
+      data-testid="container"
+    >
+      <div
+        class="flex w-full min-w-0 items-center gap-3"
+        data-testid="container"
+      >
+        <div
+          aria-hidden="true"
+          class="shrink-0 size-10"
+          data-testid="quick-reply-collapsed-avatar-placeholder"
+        />
+        <div
+          class="relative min-w-0 flex-1"
+          data-testid="container"
+        >
+          <textarea
+            data-testid="quick-reply-textarea"
+            readonly=""
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      data-count="0"
+      data-testid="post-input-attachments"
+    />
+  </div>
+</div>
+`;
+
+exports[`QuickReplyContent - Snapshots > matches the expanded snapshot 1`] = `
+<div
+  class="relative"
+>
+  <div
+    class="absolute top-0 left-0 z-10"
+    data-testid="quick-reply-stable-avatar"
+  >
+    <div
+      data-show-user-info="false"
+      data-size="normal"
+      data-testid="post-header"
+    />
+  </div>
+  <div
+    class="relative flex min-w-0 flex-col gap-4"
+    data-testid="container"
+  >
+    <div
+      class="relative flex min-w-0 flex-col gap-4"
+      data-testid="container"
+    >
+      <div
+        data-testid="quick-reply-expanded-header"
+        style="opacity: 1; filter: blur(0px);"
+      >
+        <div
+          data-character-limit-placement="name-row"
+          data-count="14"
+          data-max="2000"
+          data-show-user-info="true"
+          data-size="normal"
+          data-testid="post-header"
+          data-visually-hide-avatar="true"
+        />
+      </div>
+      <div
+        class="flex w-full min-w-0 items-center gap-3"
+        data-testid="container"
+      >
+        <div
+          class="relative min-w-0 flex-1"
+          data-testid="container"
+        >
+          <textarea
+            data-testid="quick-reply-textarea"
+            readonly=""
+          >
+            Expanded reply
+          </textarea>
+        </div>
+      </div>
+    </div>
+    <div
+      data-count="0"
+      data-testid="post-input-attachments"
+    />
+    <div
+      data-testid="quick-reply-expanded-content"
+      style="opacity: 1; filter: blur(0px);"
+    >
+      <div
+        data-submit-mode="reply"
+        data-testid="post-input-expandable-section"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`QuickReplyContent - Snapshots > matches the logged-out fallback snapshot 1`] = `
+<div
+  class="relative"
+>
+  <div
+    class="relative flex min-w-0 flex-col gap-4"
+    data-testid="container"
+  >
+    <div
+      class="relative flex min-w-0 flex-col gap-4"
+      data-testid="container"
+    >
+      <div
+        class="flex w-full min-w-0 items-center gap-3"
+        data-testid="container"
+      >
+        <div
+          data-size="default"
+          data-testid="quick-reply-fallback-avatar"
+        />
+        <div
+          class="relative min-w-0 flex-1"
+          data-testid="container"
+        >
+          <textarea
+            data-testid="quick-reply-textarea"
+            readonly=""
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      data-count="0"
+      data-testid="post-input-attachments"
+    />
+  </div>
+</div>
+`;

@@ -65,6 +65,18 @@ describe('PostThreadConnector', () => {
       expect(connector).toHaveStyle({ height: '200px' });
     });
 
+    it('applies custom styles to dialog-reply connectors', () => {
+      const { container } = render(
+        <PostThreadConnector
+          variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY}
+          style={{ transition: 'height 200ms ease' }}
+          data-testid="connector"
+        />,
+      );
+      const connector = container.querySelector('[data-testid="connector"]');
+      expect(connector).toHaveStyle({ transition: 'height 200ms ease' });
+    });
+
     it('uses default height when height is 0', () => {
       const { container } = render(<PostThreadConnector height={0} data-testid="connector" />);
       const connector = container.querySelector('[data-testid="connector"]');

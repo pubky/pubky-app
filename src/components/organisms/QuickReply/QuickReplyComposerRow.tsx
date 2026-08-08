@@ -67,6 +67,7 @@ export function QuickReplyComposerRow({
 
       {mentionIsOpen && (
         <MentionPopover
+          anchorRef={textareaRef}
           users={mentionUsers}
           selectedIndex={mentionSelectedIndex}
           onSelect={onMentionSelect}

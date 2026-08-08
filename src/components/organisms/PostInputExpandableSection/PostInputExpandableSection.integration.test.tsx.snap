@@ -1,0 +1,377 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PostInputExpandableSection - Mobile Snapshots > matches the mobile snapshot with the real action bar 1`] = `
+<div
+  class="mx-auto w-full flex-col flex gap-4"
+  data-testid="container"
+>
+  <div
+    class="flex flex-wrap items-center gap-2"
+    data-testid="container"
+  >
+    <div
+      class="relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm"
+      style="width: 34px; transform-origin: 0% 50% 0;"
+    >
+      <div
+        class="h-full w-full absolute inset-0 inline-flex items-center justify-center"
+        style="opacity: 1;"
+      >
+        <button
+          aria-label="Add new tag"
+          class="inline-flex items-center justify-center whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground gap-1.5 px-3 has-[>svg]:px-3.5 relative size-8 min-w-8! rounded-md bg-transparent p-0! transition-opacity hover:bg-transparent hover:opacity-80 gap-0! px-0! has-[>svg]:px-0! border-transparent shadow-none hover:border-transparent hover:shadow-none"
+          data-cy="post-tag-add-button"
+          data-size="sm"
+          data-slot="button"
+          data-variant="outline"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-plus pointer-events-none absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 opacity-[0.32]"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 12h14"
+            />
+            <path
+              d="M12 5v14"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="flex w-full flex-row items-center justify-between gap-4"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center gap-2"
+      data-testid="container"
+    >
+      <button
+        aria-label="Add emoji"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        data-cy="post-input-action-bar-add-emoji"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-smile size-4 text-secondary-foreground"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M8 14s1.5 2 4 2 4-2 4-2"
+          />
+          <line
+            x1="9"
+            x2="9.01"
+            y1="9"
+            y2="9"
+          />
+          <line
+            x1="15"
+            x2="15.01"
+            y1="9"
+            y2="9"
+          />
+        </svg>
+      </button>
+      <button
+        aria-label="Add image"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        data-cy="post-input-action-bar-add-image"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+        disabled=""
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-image size-4 text-secondary-foreground"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="18"
+            rx="2"
+            ry="2"
+            width="18"
+            x="3"
+            y="3"
+          />
+          <circle
+            cx="9"
+            cy="9"
+            r="2"
+          />
+          <path
+            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+          />
+        </svg>
+      </button>
+    </div>
+    <div
+      class="flex shrink-0 items-center justify-end gap-2"
+      data-testid="container"
+    >
+      <button
+        aria-label="Reply"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-10 gap-1 px-4 py-2 has-[>svg]:px-4"
+        data-cy="post-input-action-bar-reply"
+        data-size="default"
+        data-slot="button"
+        data-variant="default"
+        disabled=""
+      >
+        <div
+          class="flex items-center gap-2"
+          data-testid="container"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-message-circle size-4 text-brand"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"
+            />
+          </svg>
+          <span
+            class="text-sm font-medium text-brand"
+            data-testid="typography"
+          >
+            Reply
+          </span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostInputExpandableSection - Snapshots > matches the desktop snapshot with the real action bar 1`] = `
+<div
+  class="mx-auto w-full flex-col flex gap-4"
+  data-testid="container"
+>
+  <div
+    class="flex flex-wrap items-center gap-2"
+    data-testid="container"
+  >
+    <div
+      class="relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm"
+      style="width: 34px; transform-origin: 0% 50% 0;"
+    >
+      <div
+        class="h-full w-full absolute inset-0 inline-flex items-center justify-center"
+        style="opacity: 1;"
+      >
+        <button
+          aria-label="Add new tag"
+          class="inline-flex items-center justify-center whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground gap-1.5 px-3 has-[>svg]:px-3.5 relative size-8 min-w-8! rounded-md bg-transparent p-0! transition-opacity hover:bg-transparent hover:opacity-80 gap-0! px-0! has-[>svg]:px-0! border-transparent shadow-none hover:border-transparent hover:shadow-none"
+          data-cy="post-tag-add-button"
+          data-size="sm"
+          data-slot="button"
+          data-variant="outline"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-plus pointer-events-none absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 opacity-[0.32]"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 12h14"
+            />
+            <path
+              d="M12 5v14"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="flex w-full flex-row items-center justify-between gap-4"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center gap-2"
+      data-testid="container"
+    >
+      <button
+        aria-label="Add emoji"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        data-cy="post-input-action-bar-add-emoji"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-smile size-4 text-secondary-foreground"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M8 14s1.5 2 4 2 4-2 4-2"
+          />
+          <line
+            x1="9"
+            x2="9.01"
+            y1="9"
+            y2="9"
+          />
+          <line
+            x1="15"
+            x2="15.01"
+            y1="9"
+            y2="9"
+          />
+        </svg>
+      </button>
+      <button
+        aria-label="Add image"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        data-cy="post-input-action-bar-add-image"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+        disabled=""
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-image size-4 text-secondary-foreground"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect
+            height="18"
+            rx="2"
+            ry="2"
+            width="18"
+            x="3"
+            y="3"
+          />
+          <circle
+            cx="9"
+            cy="9"
+            r="2"
+          />
+          <path
+            d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"
+          />
+        </svg>
+      </button>
+    </div>
+    <div
+      class="flex shrink-0 items-center justify-end gap-2"
+      data-testid="container"
+    >
+      <button
+        aria-label="Reply"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        data-cy="post-input-action-bar-reply"
+        data-size="sm"
+        data-slot="button"
+        data-variant="default"
+        disabled=""
+      >
+        <div
+          class="flex items-center gap-2"
+          data-testid="container"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-message-circle size-4 text-brand"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"
+            />
+          </svg>
+          <span
+            class="text-sm font-medium text-brand"
+            data-testid="typography"
+          >
+            Reply
+          </span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+`;
