@@ -134,6 +134,23 @@ describe('LocksController (auth)', () => {
       expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
     });
 
+    // A server that connects but never answers must not hold the device in a half-logged-out state.
+    it('clears the store without waiting for a signout that never answers', async () => {
+      vi.useFakeTimers();
+      try {
+        useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+        mocks.signout.mockReturnValue(new Promise(() => {})); // never settles
+
+        const done = LocksController.logout();
+        await vi.advanceTimersByTimeAsync(60_000); // well past the signout timeout
+        await done;
+
+        expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('clears the persisted secret without a network call when no live session exists', async () => {
       useLocksAuthStore.getState().init({ session: null, secret: 'secret-abc' });
 

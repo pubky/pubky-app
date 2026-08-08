@@ -9,6 +9,7 @@ import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
+import { buildLockTeaserContent, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -45,9 +46,17 @@ export function useCreateLockContent({
       // The composer is only reachable when signed in, so a missing pubky is a programming error.
       if (!pubky)
         throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No pubky.app session', {
-          service: ErrorService.Locks,
+          service: ErrorService.Local,
           operation: 'useCreateLockContent.publish',
         });
+
+      // Runs before the lock is created, so a rejected announcement cannot orphan one.
+      if (!isLockTeaserWithinLimit(announcement.teaser)) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Lock announcement exceeds the post length limit', {
+          service: ErrorService.Local,
+          operation: 'useCreateLockContent.publish',
+        });
+      }
 
       // Runs once the attachments are uploaded, so the post can point at their guarded paths. The
       // original filenames are dropped with the paths — they live on in the post's own metadata.
@@ -85,7 +94,7 @@ export function useCreateLockContent({
       // creator. The error reaches Sentry through the `Err.*` factory, but the lock is left behind.
       const announcementPostId = await PostController.commitCreate({
         authorId: pubky,
-        content: JSON.stringify(announcement.teaser),
+        content: buildLockTeaserContent(announcement.teaser),
         attachments: announcement.attachments,
         tags: announcement.tags,
         lock: lockUrl,
@@ -100,7 +109,9 @@ export function useCreateLockContent({
       setError(appError);
       // The Lock Server rejected the session. Restore is offline, so a stale secret would keep the UI
       // looking authenticated — drop it here and tell the caller to reopen the sign-in modal.
-      if (appError.category === ErrorCategory.Auth) {
+      // `service` too — an expired homeserver session also throws Auth here, and Lock Server sign-in
+      // cannot fix that.
+      if (appError.category === ErrorCategory.Auth && appError.service === ErrorService.Locks) {
         LocksController.clearSession();
         return { status: 'auth-expired' };
       }

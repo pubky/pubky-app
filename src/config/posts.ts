@@ -21,6 +21,13 @@ export const ARTICLE_TITLE_MAX_CHARACTER_LENGTH = 100;
 export const ARTICLE_MAX_CHARACTER_LENGTH =
   validationLimits.postLongContentMaxLength - ARTICLE_TITLE_MAX_CHARACTER_LENGTH - 22;
 
+/** Maximum character length for a lock announcement title */
+export const LOCK_TITLE_MAX_CHARACTER_LENGTH = 100;
+
+/** Maximum character length for a lock announcement teaser (41 characters reserved for JSON string) */
+export const LOCK_TEASER_MAX_CHARACTER_LENGTH =
+  validationLimits.postShortContentMaxLength - LOCK_TITLE_MAX_CHARACTER_LENGTH - 41;
+
 /** Maximum character length for a tag */
 export const TAG_MAX_LENGTH = validationLimits.tagLabelMaxLength;
 

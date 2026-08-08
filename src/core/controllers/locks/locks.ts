@@ -8,6 +8,7 @@ import type {
   TUnlockContentParams,
 } from '@/application/locks/locks.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
+import { sleep } from '@/libs/utils/utils';
 import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
 import type {
   LockPostContent,
@@ -21,6 +22,9 @@ import type {
   TUnlockResult,
 } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
+
+/** How long logout waits for the Lock Server before it gives up and clears the device anyway. */
+const SIGNOUT_TIMEOUT_MS = 3000;
 
 /**
  * Entry point for the Lock Server: auth (mirrors `AuthController`), publishing locked content
@@ -79,7 +83,9 @@ export class LocksController {
     const store = useLocksAuthStore.getState();
     if (store.selectLocksSession()) {
       try {
-        await LocksApplication.signout();
+        // A server that accepts the connection but never answers would otherwise hold logout for as
+        // long as the OS takes to give up, leaving cookies and the local database in place.
+        await Promise.race([LocksApplication.signout(), sleep(SIGNOUT_TIMEOUT_MS)]);
       } catch {
         // Already reported to Sentry by the service Err factory; swallow so local teardown runs.
       }

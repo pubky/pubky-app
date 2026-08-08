@@ -1,11 +1,6 @@
 import type { PubkyAppPostKind } from 'pubky-app-specs';
 import type { AppError } from '@/libs/error/error';
-
-/** JSON envelope stored (stringified) in the announcement's `content`. Owned by pubky.app, not the spec. */
-type TLockTeaser = {
-  lock_title: string;
-  teaser_description: string;
-};
+import type { TLockTeaser } from '@/libs/post/lockTeaser';
 
 /** The content being locked, captured from the composer when the lock switch went on. */
 type TLockedPost = {

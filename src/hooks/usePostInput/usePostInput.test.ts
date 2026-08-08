@@ -1169,6 +1169,83 @@ describe('usePostInput', () => {
       removeEventListenerSpy.mockRestore();
     });
 
+    it('stays expanded on an outside click while an external source reports work in progress', () => {
+      mockContent = '';
+      mockTags = [];
+      mockAttachments = [];
+      mockArticleTitle = '';
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          expanded: false,
+          hasExternalContent: () => true,
+        }),
+      );
+
+      act(() => {
+        result.current.handleExpand();
+      });
+
+      act(() => {
+        document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      });
+
+      expect(result.current.isExpanded).toBe(true);
+    });
+
+    // The call result decides, not the presence of the callback.
+    it('collapses when the external source reports nothing and the fields are empty', () => {
+      mockContent = '';
+      mockTags = [];
+      mockAttachments = [];
+      mockArticleTitle = '';
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          expanded: false,
+          hasExternalContent: () => false,
+        }),
+      );
+
+      act(() => {
+        result.current.handleExpand();
+      });
+
+      act(() => {
+        document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      });
+
+      expect(result.current.isExpanded).toBe(false);
+    });
+
+    // The external check adds to the tracked fields, it does not replace them.
+    it('still honours the tracked fields when the external source reports nothing', () => {
+      mockContent = 'Some content';
+      mockTags = [];
+      mockAttachments = [];
+      mockArticleTitle = '';
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          expanded: false,
+          hasExternalContent: () => false,
+        }),
+      );
+
+      act(() => {
+        result.current.handleExpand();
+      });
+
+      act(() => {
+        document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      });
+
+      expect(result.current.isExpanded).toBe(true);
+    });
+
     it('collapses when clicking outside with no content', () => {
       mockContent = '';
       mockTags = [];
