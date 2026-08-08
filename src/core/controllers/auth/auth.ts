@@ -14,7 +14,6 @@ import { NotificationCoordinator } from '@/coordinators/notifications/notificati
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
-import { setLocaleCookie } from '@/i18n/utils';
 import type { AppError } from '@/libs/error/error';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
@@ -131,10 +130,9 @@ export class AuthController {
     const notification = await BootstrapApplication.initialize({ pubky, lastReadUrl: url, allowedTypes }, onProgress);
     useNotificationStore.getState().setState(notification);
 
-    // Apply remote settings to store + cookie (store mutation stays in Controller layer)
+    // Apply remote settings to store (store mutation stays in Controller layer)
     if (remoteSettings) {
       useSettingsStore.getState().loadFromHomeserver(remoteSettings);
-      setLocaleCookie(remoteSettings.language);
       Logger.info('Settings loaded from homeserver', { pubky });
     }
   }
@@ -283,8 +281,6 @@ export class AuthController {
     clearAllQueryClients();
 
     // Reset all Zustand stores.
-    // Settings reset() keeps `language`,
-    // so the "/logout" page stays in the chosen language while remote settings still win on next login.
     useOnboardingStore.getState().reset();
     useAuthStore.getState().reset();
     useSignInStore.getState().reset();
@@ -295,8 +291,8 @@ export class AuthController {
     useNotificationStore.getState().reset();
     useSettingsStore.getState().reset();
 
-    // Clear cookies (locale cookie excluded — device-level UI preference, not sensitive data)
-    clearCookies(['locale']);
+    // Clear cookies (also drops any stale `locale` cookie from the removed language selection)
+    clearCookies();
 
     await clearDatabase();
     // Skip post-migration resync — full cleanup resets all state

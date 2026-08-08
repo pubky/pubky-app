@@ -35,6 +35,11 @@ export function EmojiPickerDialog({
         // clickable/linked ancestor (e.g. a collection card's `Link`) and
         // trigger navigation. Stop clicks at the dialog content boundary.
         onClick={(e) => e.stopPropagation()}
+        // Radix Dialog RemoveScroll intercepts wheel/touchmove before emoji-mart's
+        // Shadow DOM scroller can use them, so scrolling fails until the picker is
+        // clicked. Stop propagation at the dialog boundary (emoji-mart#752).
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         <DialogDescription className="sr-only">Select an emoji</DialogDescription>
         <Container overrideDefaults={true} className="flex justify-center overflow-hidden">

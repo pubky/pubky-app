@@ -21,7 +21,6 @@ describe('SettingsNormalizer', () => {
     notifications: defaultNotificationPreferences,
     privacy: defaultPrivacyPreferences,
     muted: [],
-    language: 'en',
     updatedAt: 1700000000000,
     version: 1,
     ...overrides,
@@ -31,7 +30,6 @@ describe('SettingsNormalizer', () => {
     it('should extract settings state from store object', () => {
       const input = createMockSettingsState({
         muted: ['user1', 'user2'],
-        language: 'es',
       });
 
       const result = SettingsNormalizer.extractState(input);
@@ -40,7 +38,6 @@ describe('SettingsNormalizer', () => {
         notifications: input.notifications,
         privacy: input.privacy,
         muted: ['user1', 'user2'],
-        language: 'es',
         updatedAt: input.updatedAt,
         version: input.version,
       });
@@ -58,15 +55,15 @@ describe('SettingsNormalizer', () => {
       // Simulate a store with actions
       const storeWithActions = {
         ...createMockSettingsState(),
-        setLanguage: vi.fn(),
+        setShowConfirm: vi.fn(),
         syncToHomeserver: vi.fn(),
       };
 
       const result = SettingsNormalizer.extractState(storeWithActions);
 
-      expect(result).not.toHaveProperty('setLanguage');
+      expect(result).not.toHaveProperty('setShowConfirm');
       expect(result).not.toHaveProperty('syncToHomeserver');
-      expect(Object.keys(result)).toHaveLength(6);
+      expect(Object.keys(result)).toHaveLength(5);
     });
   });
 
@@ -110,15 +107,12 @@ describe('SettingsNormalizer', () => {
     });
 
     it('should include all settings fields in result', () => {
-      const settings = createMockSettingsState({
-        language: 'fr',
-      });
+      const settings = createMockSettingsState();
 
       const result = SettingsNormalizer.to(settings, TEST_PUBKY.USER_1);
 
       expect(result.settings.notifications).toEqual(settings.notifications);
       expect(result.settings.privacy).toEqual(settings.privacy);
-      expect(result.settings.language).toBe('fr');
       expect(result.settings.updatedAt).toBe(settings.updatedAt);
       expect(result.settings.version).toBe(settings.version);
     });
@@ -159,7 +153,6 @@ describe('SettingsNormalizer', () => {
           ...defaultPrivacyPreferences,
           blurCensored: false,
         },
-        language: 'de',
         updatedAt: 1700000000000,
         version: 2,
       };
@@ -169,9 +162,20 @@ describe('SettingsNormalizer', () => {
       expect(result.notifications.follow).toBe(false);
       expect(result.privacy.blurCensored).toBe(false);
       expect(result.muted).toEqual([]); // Muted is not synced, always empty from homeserver
-      expect(result.language).toBe('de');
       expect(result.updatedAt).toBe(1700000000000);
       expect(result.version).toBe(2);
+    });
+
+    it('should ignore the legacy language field written by older clients', () => {
+      const json = {
+        updatedAt: 1700000000000,
+        language: 'fr',
+      };
+
+      const result = SettingsNormalizer.from(json);
+
+      expect(result).not.toHaveProperty('language');
+      expect(result.updatedAt).toBe(1700000000000);
     });
 
     it('should apply default notification preferences for missing fields', () => {
@@ -197,12 +201,6 @@ describe('SettingsNormalizer', () => {
       expect(result.privacy.blurCensored).toBe(defaultPrivacyPreferences.blurCensored);
     });
 
-    it('should default language to en', () => {
-      const result = SettingsNormalizer.from({});
-
-      expect(result.language).toBe('en');
-    });
-
     it('should default version to 1', () => {
       const result = SettingsNormalizer.from({});
 
@@ -225,7 +223,6 @@ describe('SettingsNormalizer', () => {
         notifications: defaultNotificationPreferences,
         privacy: defaultPrivacyPreferences,
         muted: [],
-        language: 'en',
         updatedAt: expect.any(Number),
         version: 1,
       });
@@ -244,7 +241,6 @@ describe('SettingsNormalizer', () => {
         notifications: { ...defaultNotificationPreferences, follow: false },
         privacy: { ...defaultPrivacyPreferences, showConfirm: false },
         muted: ['user1'], // This won't be preserved - muted is not synced to homeserver
-        language: 'ja',
         version: 3,
       });
 

@@ -2,13 +2,15 @@
 
 exports[`PostHeader - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div
-  class="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3"
+  class="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 items-start"
   data-testid="container"
 >
   <div
     class="w-full max-w-full min-w-0"
   >
     <div
+      data-character-limit-placement="metadata"
+      data-show-user-info="true"
       data-size="normal"
       data-testid="post-header-user-info"
     >
@@ -62,13 +64,15 @@ exports[`PostHeader - Mobile Snapshots > matches snapshot on mobile viewport 1`]
 
 exports[`PostHeader - Snapshots > matches snapshot in loaded state 1`] = `
 <div
-  class="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3"
+  class="grid w-full max-w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 items-start"
   data-testid="container"
 >
   <div
     class="w-full max-w-full min-w-0"
   >
     <div
+      data-character-limit-placement="metadata"
+      data-show-user-info="true"
       data-size="normal"
       data-testid="post-header-user-info"
     >

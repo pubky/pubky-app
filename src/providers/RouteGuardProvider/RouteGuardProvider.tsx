@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { isDynamicPublicRoute, matchesAllowedRoute, PUBLIC_ROUTES } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { AuthController } from '@/controllers/auth/auth';
@@ -16,7 +16,6 @@ import { Logger } from '@/libs/logger/logger';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
-import { useSettingsStore } from '@/stores/settings/settings.store';
 
 // Migration resync timeout in milliseconds
 const MIGRATION_RESYNC_TIMEOUT_MS = 10_000;
@@ -50,9 +49,6 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   const sessionExport = useAuthStore((state) => state.sessionExport);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const wasDbReset = useMigrationStore((state) => state.wasDbReset);
-  const serverLocale = useLocale();
-
-  const storeLanguage = useSettingsStore((state) => state.language);
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
@@ -117,16 +113,6 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
     runResync();
   }, [wasDbReset, hasHydrated, currentUserPubky]);
-
-  // Refresh server components when store language diverges from server locale.
-  // Covers login bootstrap and migration resync loading a different language.
-  // pathname is included so the effect re-fires after post-login redirect lands,
-  // since the initial router.refresh() gets cancelled by the competing router.push().
-  useEffect(() => {
-    if (storeLanguage && storeLanguage !== serverLocale) {
-      router.refresh();
-    }
-  }, [storeLanguage, serverLocale, pathname, router]);
 
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = useMemo(() => {

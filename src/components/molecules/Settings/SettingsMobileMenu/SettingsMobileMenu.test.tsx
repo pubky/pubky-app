@@ -19,7 +19,6 @@ describe('SettingsMobileMenu', () => {
     expect(screen.getByLabelText('Notifications')).toBeInTheDocument();
     expect(screen.getByLabelText('Privacy & Safety')).toBeInTheDocument();
     expect(screen.getByLabelText('Muted Users')).toBeInTheDocument();
-    expect(screen.getByLabelText('Language')).toBeInTheDocument();
     expect(screen.getByLabelText('Help')).toBeInTheDocument();
   });
 

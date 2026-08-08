@@ -63,8 +63,6 @@ export function useSettingsActions(): UseSettingsActionsResult {
   const setNeverShowPosts = (neverShowPosts: boolean) =>
     run(() => SettingsController.setNeverShowPosts(neverShowPosts));
 
-  const setLanguage = (language: string) => run(() => SettingsController.setLanguage(language));
-
   return {
     setNotificationPreference,
     setShowConfirm,
@@ -75,7 +73,6 @@ export function useSettingsActions(): UseSettingsActionsResult {
     setHideActiveFriends,
     setHideSearch,
     setNeverShowPosts,
-    setLanguage,
     error,
   };
 }

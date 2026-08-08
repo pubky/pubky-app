@@ -7,6 +7,7 @@ import type { PostThreadConnectorVariant } from './PostThreadConnector.types';
 interface PostThreadConnectorProps {
   height?: number;
   variant?: PostThreadConnectorVariant;
+  style?: React.CSSProperties;
   'data-testid'?: string;
 }
 const DEFAULT_HEIGHT = 96; // Default height in pixels (6rem = 96px)
@@ -22,9 +23,15 @@ const ThreadLine = () => {
 };
 
 // Base container props shared by height-based variants
-const getBaseContainerProps = (effectiveHeight: number, variant: PostThreadConnectorVariant, dataTestId?: string) => ({
+const getBaseContainerProps = (
+  effectiveHeight: number,
+  variant: PostThreadConnectorVariant,
+  dataTestId?: string,
+  style?: React.CSSProperties,
+) => ({
   className: 'flex w-3 flex-col items-start',
   style: {
+    ...style,
     height: `${effectiveHeight}px`,
   } as React.CSSProperties,
   overrideDefaults: true as const,
@@ -46,8 +53,13 @@ const InnerContainer = ({ children, className = '' }: { children: React.ReactNod
 const Spacer = () => <Container className="min-h-px w-3 min-w-px shrink-0 grow basis-0" overrideDefaults />;
 
 // Dialog reply variant - completely different structure, doesn't need height
-const DialogReplyVariant = ({ dataTestId }: { dataTestId?: string }) => (
-  <Container overrideDefaults data-testid={dataTestId} data-variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY}>
+const DialogReplyVariant = ({ dataTestId, style }: { dataTestId?: string; style?: React.CSSProperties }) => (
+  <Container
+    overrideDefaults
+    style={style}
+    data-testid={dataTestId}
+    data-variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY}
+  >
     {/* Vertical line - 35px long from the post-card edge to the horizontal connector */}
     <Container className="absolute top-[-13px] -left-3 h-[35px] w-px border-l border-secondary" overrideDefaults />
     {/* Horizontal connector at avatar level */}
@@ -59,16 +71,17 @@ const DialogReplyVariant = ({ dataTestId }: { dataTestId?: string }) => (
 export const PostThreadConnector = ({
   height,
   variant = POST_THREAD_CONNECTOR_VARIANTS.REGULAR,
+  style,
   'data-testid': dataTestId,
 }: PostThreadConnectorProps) => {
   // Dialog reply is special - doesn't need height calculation
   if (variant === POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY) {
-    return <DialogReplyVariant dataTestId={dataTestId} />;
+    return <DialogReplyVariant dataTestId={dataTestId} style={style} />;
   }
 
   // Calculate effective height for variants that need it
   const effectiveHeight = height || DEFAULT_HEIGHT;
-  const baseProps = getBaseContainerProps(effectiveHeight, variant, dataTestId);
+  const baseProps = getBaseContainerProps(effectiveHeight, variant, dataTestId, style);
   switch (variant) {
     case POST_THREAD_CONNECTOR_VARIANTS.LAST:
       // Last variant - shows a rounded corner at the end, aligned with action buttons

@@ -424,6 +424,12 @@ function HomeWithLayout() {
   );
 }
 
+async function waitForComposerMotion() {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 350);
+  });
+}
+
 describe('Home (global feed) — visual regression', () => {
   it('renders the global feed at desktop viewport', async () => {
     const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
@@ -436,5 +442,25 @@ describe('Home (global feed) — visual regression', () => {
   it('renders the global feed at mobile viewport', async () => {
     const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-mobile');
+  });
+
+  it('renders an expanded QuickReply at desktop viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+
+    await screen.getByTestId('quick-reply-textarea').first().click();
+    await expect(screen.getByTestId('quick-reply-expanded-content')).toBeVisible();
+    await waitForComposerMotion();
+
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-quick-reply-expanded-desktop');
+  });
+
+  it('renders an expanded QuickReply at mobile viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+
+    await screen.getByTestId('quick-reply-textarea').first().click();
+    await expect(screen.getByTestId('quick-reply-expanded-content')).toBeVisible();
+    await waitForComposerMotion();
+
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-quick-reply-expanded-mobile');
   });
 });

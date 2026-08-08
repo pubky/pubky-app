@@ -180,7 +180,6 @@ function createTranslationFunction(namespace: string) {
 // Mock next-intl globally for all tests
 vi.mock('next-intl', () => ({
   useTranslations: (namespace?: string) => createTranslationFunction(namespace ?? ''),
-  useLocale: () => 'en',
   useMessages: () => enMessages,
   useTimeZone: () => 'UTC',
   useNow: () => new Date(),

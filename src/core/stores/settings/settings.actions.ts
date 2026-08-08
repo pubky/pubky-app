@@ -177,21 +177,9 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
     set(withTimestamp({ muted: [] }), false, SettingsActionTypes.CLEAR_MUTED_USERS);
   },
 
-  // Language actions
-  setLanguage: (language) => {
-    set(withTimestamp({ language }), false, SettingsActionTypes.SET_LANGUAGE);
-  },
-
   // General actions
   reset: () => {
-    set(
-      (state) => ({
-        ...settingsInitialState,
-        language: state.language, // device-level preference, not sensitive data
-      }),
-      false,
-      SettingsActionTypes.RESET,
-    );
+    set({ ...settingsInitialState }, false, SettingsActionTypes.RESET);
   },
 
   // Homeserver sync action, used by bootstrap to load remote settings
@@ -201,7 +189,6 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
         notifications: settings.notifications,
         privacy: settings.privacy,
         muted: settings.muted,
-        language: settings.language,
         updatedAt: settings.updatedAt,
         version: settings.version,
       },

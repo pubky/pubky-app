@@ -13,8 +13,8 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/organisms/QuickReply/QuickReply', () => {
   return {
-    QuickReply: ({ parentPostId }: { parentPostId: string }) => (
-      <div data-testid="quick-reply" data-parent-post-id={parentPostId} />
+    QuickReply: ({ parentPostId, connectorVariant = 'last' }: { parentPostId: string; connectorVariant?: string }) => (
+      <div data-testid="quick-reply" data-parent-post-id={parentPostId} data-connector-variant={connectorVariant} />
     ),
   };
 });
@@ -49,7 +49,7 @@ describe('ThreadTree', () => {
     vi.clearAllMocks();
   });
 
-  it('renders quick reply only when no replies and quick reply is enabled', () => {
+  it('renders a terminal quick reply when there are no replies', () => {
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: [],
       totalCount: 0,
@@ -62,6 +62,7 @@ describe('ThreadTree', () => {
     render(<ThreadTree postId="author:post-1" showQuickReply={true} />);
 
     expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-parent-post-id', 'author:post-1');
+    expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-connector-variant', 'last');
     expect(screen.queryByTestId('reply-with-nested')).not.toBeInTheDocument();
   });
 
@@ -80,7 +81,7 @@ describe('ThreadTree', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders replies and show-more with expected props', () => {
+  it('renders quick reply before replies and makes show-more terminal', () => {
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1', 'author:reply-2'],
       totalCount: 5,
@@ -90,14 +91,54 @@ describe('ThreadTree', () => {
       expandAll: vi.fn(async () => {}),
     });
 
-    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+    render(<ThreadTree postId="author:post-1" showQuickReply={true} />);
 
+    const quickReply = screen.getByTestId('quick-reply');
     const replies = screen.getAllByTestId('reply-with-nested');
     expect(replies).toHaveLength(2);
+    expect(quickReply).toHaveAttribute('data-connector-variant', 'regular');
+    expect(quickReply.compareDocumentPosition(replies[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(replies[0]).toHaveAttribute('data-reply-id', 'author:reply-1');
     expect(replies[1]).toHaveAttribute('data-reply-id', 'author:reply-2');
+    expect(replies[1]).toHaveAttribute('data-is-last-reply', 'false');
     expect(screen.getByTestId('show-more-replies')).toHaveAttribute('data-count', '3');
     expect(screen.getByTestId('show-more-replies')).toHaveAttribute('data-is-last', 'true');
+  });
+
+  it('makes the final reply terminal when quick reply appears before it', () => {
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1', 'author:reply-2'],
+      totalCount: 2,
+      hasMore: false,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={true} />);
+
+    const quickReply = screen.getByTestId('quick-reply');
+    const replies = screen.getAllByTestId('reply-with-nested');
+    expect(quickReply).toHaveAttribute('data-connector-variant', 'regular');
+    expect(quickReply.compareDocumentPosition(replies[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(replies[0]).toHaveAttribute('data-is-last-reply', 'false');
+    expect(replies[1]).toHaveAttribute('data-is-last-reply', 'true');
+  });
+
+  it('renders a reply-only layout when quick reply is disabled', () => {
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1'],
+      totalCount: 1,
+      hasMore: false,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll: vi.fn(async () => {}),
+    });
+
+    render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+
+    expect(screen.queryByTestId('quick-reply')).not.toBeInTheDocument();
+    expect(screen.getByTestId('reply-with-nested')).toHaveAttribute('data-is-last-reply', 'true');
   });
 
   it('keeps reply cards tabbable and uses total reply count for aria-setsize', () => {
@@ -186,7 +227,7 @@ describe('ThreadTree', () => {
     expect(expandAll).toHaveBeenCalledTimes(1);
   });
 
-  it('hides show-more button while expand-all is in progress', () => {
+  it('hides show-more and makes the final visible reply terminal while expand-all is in progress', () => {
     vi.mocked(useThreadReplies).mockReturnValue({
       replyIds: ['author:reply-1'],
       totalCount: 2,
@@ -199,6 +240,7 @@ describe('ThreadTree', () => {
     render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
 
     expect(screen.queryByTestId('show-more-replies')).not.toBeInTheDocument();
+    expect(screen.getByTestId('reply-with-nested')).toHaveAttribute('data-is-last-reply', 'true');
   });
 });
 
@@ -213,7 +255,7 @@ describe('ThreadTree - Snapshots', () => {
       expandAll: vi.fn(async () => {}),
     });
 
-    const { container } = render(<ThreadTree postId="author:post-1" showQuickReply={false} />);
+    const { container } = render(<ThreadTree postId="author:post-1" showQuickReply={true} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
