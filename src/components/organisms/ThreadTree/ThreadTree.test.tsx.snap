@@ -7,6 +7,24 @@ exports[`ThreadTree - Snapshots > matches snapshot with replies and show-more 1`
   role="feed"
 >
   <div
+    class="flex h-3"
+    data-testid="container"
+  >
+    <div
+      class="w-3 border-l border-border"
+      data-testid="container"
+    />
+    <div
+      class="flex-1"
+      data-testid="container"
+    />
+  </div>
+  <div
+    data-connector-variant="regular"
+    data-parent-post-id="author:post-1"
+    data-testid="quick-reply"
+  />
+  <div
     aria-posinset="1"
     aria-setsize="2"
     class="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"

@@ -7,15 +7,20 @@ exports[`QuickReply - Mobile Snapshots > matches expanded snapshot on mobile vie
   data-testid="quick-reply"
 >
   <div
-    class="-mt-4 w-3 shrink-0"
-    data-testid="container"
+    class="relative w-3 shrink-0"
+    data-testid="quick-reply-connector-column"
   >
     <div
-      data-testid="quick-reply-connector"
-      height="310"
-      style="transition: none;"
-      variant="last"
-    />
+      class="absolute -inset-y-px left-0"
+      data-testid="container"
+    >
+      <div
+        data-testid="quick-reply-connector"
+        height="312"
+        style="transition: none;"
+        variant="last"
+      />
+    </div>
   </div>
   <div
     class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
@@ -147,15 +152,20 @@ exports[`QuickReply - Mobile Snapshots > matches snapshot on mobile viewport 1`]
   data-testid="quick-reply"
 >
   <div
-    class="-mt-4 w-3 shrink-0"
-    data-testid="container"
+    class="relative w-3 shrink-0"
+    data-testid="quick-reply-connector-column"
   >
     <div
-      data-testid="quick-reply-connector"
-      height="173"
-      style="transition: none;"
-      variant="last"
-    />
+      class="absolute -inset-y-px left-0"
+      data-testid="container"
+    >
+      <div
+        data-testid="quick-reply-connector"
+        height="175"
+        style="transition: none;"
+        variant="last"
+      />
+    </div>
   </div>
   <div
     class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
@@ -244,15 +254,20 @@ exports[`QuickReply - Snapshots > matches snapshot when expanded 1`] = `
   data-testid="quick-reply"
 >
   <div
-    class="-mt-4 w-3 shrink-0"
-    data-testid="container"
+    class="relative w-3 shrink-0"
+    data-testid="quick-reply-connector-column"
   >
     <div
-      data-testid="quick-reply-connector"
-      height="310"
-      style="transition: none;"
-      variant="last"
-    />
+      class="absolute -inset-y-px left-0"
+      data-testid="container"
+    >
+      <div
+        data-testid="quick-reply-connector"
+        height="312"
+        style="transition: none;"
+        variant="last"
+      />
+    </div>
   </div>
   <div
     class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
@@ -385,15 +400,20 @@ exports[`QuickReply - Snapshots > matches snapshot with a logged-out fallback av
   data-testid="quick-reply"
 >
   <div
-    class="-mt-4 w-3 shrink-0"
-    data-testid="container"
+    class="relative w-3 shrink-0"
+    data-testid="quick-reply-connector-column"
   >
     <div
-      data-testid="quick-reply-connector"
-      height="173"
-      style="transition: none;"
-      variant="last"
-    />
+      class="absolute -inset-y-px left-0"
+      data-testid="container"
+    >
+      <div
+        data-testid="quick-reply-connector"
+        height="175"
+        style="transition: none;"
+        variant="last"
+      />
+    </div>
   </div>
   <div
     class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"
@@ -525,15 +545,20 @@ exports[`QuickReply - Snapshots > matches snapshot with default props 1`] = `
   data-testid="quick-reply"
 >
   <div
-    class="-mt-4 w-3 shrink-0"
-    data-testid="container"
+    class="relative w-3 shrink-0"
+    data-testid="quick-reply-connector-column"
   >
     <div
-      data-testid="quick-reply-connector"
-      height="173"
-      style="transition: none;"
-      variant="last"
-    />
+      class="absolute -inset-y-px left-0"
+      data-testid="container"
+    >
+      <div
+        data-testid="quick-reply-connector"
+        height="175"
+        style="transition: none;"
+        variant="last"
+      />
+    </div>
   </div>
   <div
     class="relative w-full cursor-pointer rounded-md border border-dashed transition-colors duration-200 [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none p-6 border-input"

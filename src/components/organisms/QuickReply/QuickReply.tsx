@@ -16,7 +16,7 @@ import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { QUICK_REPLY_CONNECTOR_SPACER_HEIGHT } from './QuickReply.constants';
+import { QUICK_REPLY_CONNECTOR_HEIGHT_OFFSET } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
 import { QuickReplyContent } from './QuickReplyContent';
 
@@ -117,8 +117,9 @@ export function QuickReply({
   // Combined keyboard handler: mention popover takes priority, then enter submit
   const handleKeyDown = createKeyDownHandler({ handleMentionKeyDown, enterSubmitHandler });
 
-  // Account for spacing between main post and QuickReply in connector calculation
-  const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_SPACER_HEIGHT : undefined;
+  // The measured height covers the composer content. Extend through the card
+  // chrome and overlap its border by 1px at both ends for a seamless thread line.
+  const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_HEIGHT_OFFSET : undefined;
 
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
@@ -158,13 +159,15 @@ export function QuickReply({
 
   return (
     <Container overrideDefaults className="relative flex" data-testid="quick-reply" aria-busy={isSubmitting}>
-      <Container overrideDefaults className="-mt-4 w-3 shrink-0">
-        <PostThreadConnector
-          height={connectorHeight}
-          variant={connectorVariant}
-          style={heightTransitionStyle}
-          data-testid="quick-reply-connector"
-        />
+      <Container overrideDefaults className="relative w-3 shrink-0" data-testid="quick-reply-connector-column">
+        <Container overrideDefaults className="absolute -inset-y-px left-0">
+          <PostThreadConnector
+            height={connectorHeight}
+            variant={connectorVariant}
+            style={heightTransitionStyle}
+            data-testid="quick-reply-connector"
+          />
+        </Container>
       </Container>
 
       <Container
