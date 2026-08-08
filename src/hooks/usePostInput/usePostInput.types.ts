@@ -2,6 +2,7 @@ import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import type { RefObject } from 'react';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 
 export interface UsePostInputOptions {
   /** Variant determines if this is a reply, repost, or a new post */
@@ -66,6 +67,7 @@ export interface UsePostInputReturn {
   hasContent: boolean;
   displayPlaceholder: string;
   currentUserPubky: string | null;
+  currentUserDetails?: NexusUserDetails | null;
 
   // Handlers
   handleExpand: () => void;

@@ -66,7 +66,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         {title}
       </Typography>
 
-      <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+      <PostHeader postId={postId} size="extraLarge" timeAgoPlacement="bottom-left" />
 
       <PostActionsBar
         postId={postId}

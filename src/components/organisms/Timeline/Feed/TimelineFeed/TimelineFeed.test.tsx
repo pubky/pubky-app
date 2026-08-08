@@ -218,6 +218,7 @@ const defaultPaginationResult = {
   prependPosts: mockPrependPosts,
   prependOptimisticPosts: mockPrependOptimisticPosts,
   removePosts: vi.fn(),
+  removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
 };
 
 const visualLayoutResolution = {

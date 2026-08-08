@@ -1,6 +1,5 @@
 import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
-import { setLocaleCookie } from '@/i18n/utils';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -139,14 +138,5 @@ export class SettingsController {
 
   static clearMutedUsers(): void {
     useSettingsStore.getState().clearMutedUsers();
-  }
-
-  /**
-   * Updates language preference and syncs to homeserver.
-   */
-  static async setLanguage(language: string): Promise<void> {
-    useSettingsStore.getState().setLanguage(language);
-    setLocaleCookie(language);
-    await this.commitUpdate();
   }
 }

@@ -39,7 +39,6 @@ describe('SettingsApplication', () => {
     notifications: defaultNotificationPreferences,
     privacy: defaultPrivacyPreferences,
     muted: [],
-    language: 'en',
     updatedAt: 1700000000000,
     version: 1,
     ...overrides,
@@ -49,7 +48,6 @@ describe('SettingsApplication', () => {
     settings: {
       notifications: settings.notifications,
       privacy: settings.privacy,
-      language: settings.language,
       updatedAt: settings.updatedAt,
       version: settings.version,
     },
@@ -111,14 +109,13 @@ describe('SettingsApplication', () => {
 
   describe('fetchFromHomeserver', () => {
     it('should fetch and return settings from homeserver', async () => {
-      const remoteSettings = createMockSettingsState({ language: 'fr' });
+      const remoteSettings = createMockSettingsState({ version: 2 });
       const { requestSpy, normalizerBuildUrlSpy, normalizerFromSpy } = setupMocks();
 
       normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
       requestSpy.mockResolvedValue({
         notifications: remoteSettings.notifications,
         privacy: remoteSettings.privacy,
-        language: 'fr',
         updatedAt: remoteSettings.updatedAt,
         version: remoteSettings.version,
       });
@@ -205,7 +202,7 @@ describe('SettingsApplication', () => {
 
     it('should return remote settings when they are newer (higher version)', async () => {
       const localSettings = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
-      const remoteSettings = createMockSettingsState({ version: 2, updatedAt: 1700000000000, language: 'fr' });
+      const remoteSettings = createMockSettingsState({ version: 2, updatedAt: 1700000000000 });
       const { requestSpy, normalizerBuildUrlSpy, normalizerFromSpy } = setupMocks();
 
       normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);
@@ -219,7 +216,7 @@ describe('SettingsApplication', () => {
 
     it('should return remote settings when they are newer (same version, newer timestamp)', async () => {
       const localSettings = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
-      const remoteSettings = createMockSettingsState({ version: 1, updatedAt: 1800000000000, language: 'de' });
+      const remoteSettings = createMockSettingsState({ version: 1, updatedAt: 1800000000000 });
       const { requestSpy, normalizerBuildUrlSpy, normalizerFromSpy } = setupMocks();
 
       normalizerBuildUrlSpy.mockReturnValue(`pubky://${testPubky}/pub/pubky.app/settings.json`);

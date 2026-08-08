@@ -15,8 +15,8 @@ vi.mock('@/organisms/PostMain/PostMain', () => ({
   },
 }));
 
-vi.mock('@/molecules/PostMissing/PostMissing', () => ({
-  PostMissing: () => <div data-testid="post-missing" />,
+vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => ({
+  PostUnavailable: ({ message }: { message: string }) => <div data-testid="post-unavailable" data-message={message} />,
 }));
 
 const ENTRY: ReorderDraftEntry = {
@@ -51,10 +51,10 @@ describe('CollectionReorderCard', () => {
     expect(screen.queryByTestId('post-missing')).not.toBeInTheDocument();
   });
 
-  it('falls back to PostMissing when the URI has no composite id', () => {
+  it('falls back to PostUnavailable when the URI has no composite id', () => {
     renderCard({ uri: 'https://example.com/not-a-post', postId: null });
 
-    expect(screen.getByTestId('post-missing')).toBeInTheDocument();
+    expect(screen.getByTestId('post-unavailable')).toBeInTheDocument();
     expect(mockPostMainProps).not.toHaveBeenCalled();
   });
 

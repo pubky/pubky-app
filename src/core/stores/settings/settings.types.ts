@@ -25,7 +25,6 @@ export interface SettingsState {
   notifications: NotificationPreferences;
   privacy: PrivacyPreferences;
   muted: string[];
-  language: string;
   updatedAt: number;
   version: number;
 }
@@ -48,8 +47,6 @@ export interface SettingsActions {
   removeMutedUser: (userId: string) => void;
   setMutedUsers: (userIds: string[]) => void;
   clearMutedUsers: () => void;
-  // Language actions
-  setLanguage: (language: string) => void;
   // General actions
   reset: () => void;
   // Homeserver sync action, used by bootstrap to load remote settings
@@ -85,7 +82,6 @@ export const settingsInitialState: SettingsState = {
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
   muted: [],
-  language: 'en',
   updatedAt: 0,
   version: 1,
 };
@@ -105,7 +101,6 @@ export enum SettingsActionTypes {
   REMOVE_MUTED_USER = 'REMOVE_MUTED_USER',
   SET_MUTED_USERS = 'SET_MUTED_USERS',
   CLEAR_MUTED_USERS = 'CLEAR_MUTED_USERS',
-  SET_LANGUAGE = 'SET_LANGUAGE',
   RESET = 'RESET',
   LOAD_FROM_HOMESERVER = 'LOAD_FROM_HOMESERVER',
 }

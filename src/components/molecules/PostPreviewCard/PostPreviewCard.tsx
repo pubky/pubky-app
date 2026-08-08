@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -7,9 +8,8 @@ import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
-import { PostDeleted } from '@/molecules/PostDeleted/PostDeleted';
-import { PostMissing } from '@/molecules/PostMissing/PostMissing';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
@@ -56,6 +56,7 @@ interface PostPreviewCardProps {
  * - Reply previews: post being replied to in `DialogReply` (non-collection posts only)
  */
 export function PostPreviewCard({ postId, className, interactiveActions = true }: PostPreviewCardProps) {
+  const t = useTranslations('post');
   const { navigateToPost } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
@@ -65,8 +66,8 @@ export function PostPreviewCard({ postId, className, interactiveActions = true }
   // A settled `null` means the original post 404'd. Handle it at the card level
   // (not just in PostContentBase): the PostHeader below also waits on
   // `postDetails`, so it would skeleton forever for a missing original. Render
-  // PostMissing as a direct Card child (it IS a CardContent) so it isn't nested
-  // inside the inner CardContent — matching how PostMain renders PostDeleted.
+  // PostUnavailable as a direct Card child (it IS a CardContent) so it isn't nested
+  // inside the inner CardContent — matching how PostMain renders unavailable posts.
   const isMissing = postDetails === null && !isLoading;
   // Deleted originals are also handled at the card level so the header is
   // hidden — matching PostMain's isMissing → isDeleted → content ladder.
@@ -118,9 +119,9 @@ export function PostPreviewCard({ postId, className, interactiveActions = true }
         aria-label="View original post"
       >
         {isMissing ? (
-          <PostMissing />
+          <PostUnavailable message={t('missing')} />
         ) : isDeleted ? (
-          <PostDeleted />
+          <PostUnavailable message={t('deleted')} />
         ) : (
           <CardContent className="flex w-full max-w-full min-w-0 flex-col gap-4 p-6">
             <PostHeader postId={postId} showPopover={false} timeAgoPlacement="bottom-left" />

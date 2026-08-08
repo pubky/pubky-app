@@ -189,50 +189,6 @@ exports[`SettingsMenu - Snapshots > matches snapshot 1`] = `
         </button>
       </a>
       <a
-        data-cy="settings-menu-item-language"
-        href="/settings/language"
-      >
-        <button
-          aria-pressed="false"
-          class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
-          data-selected="false"
-          data-slot="filter-item"
-          data-testid="filter-item"
-          type="button"
-        >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-globe h-5 w-5"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-            />
-            <path
-              d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"
-            />
-            <path
-              d="M2 12h20"
-            />
-          </svg>
-          <span
-            class=""
-          >
-            Language
-          </span>
-        </button>
-      </a>
-      <a
         data-cy="settings-menu-item-help"
         href="/settings/help"
       >

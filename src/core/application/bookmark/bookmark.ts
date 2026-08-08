@@ -7,13 +7,16 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 /**
  * Bookmark application service.
  *
- * **Parallel Write Pattern:**
- * Both `create` and `delete` methods update the local IndexedDB and homeserver
- * in parallel for optimal performance.
+ * **Local-first write pattern:**
+ * Both `create` and `delete` methods update IndexedDB before syncing the
+ * homeserver.
  *
  * **Failure Handling:**
- * If either operation fails, the entire operation fails. Callers should handle
- * errors and potentially retry or implement compensation logic.
+ * Local failures stop the operation before network sync. Homeserver failures
+ * are rethrown with the local write left in place — there is no compensating
+ * rollback or retry queue. Callers that surface bookmark state must re-read
+ * local state after a failure (`useBookmark.toggle` and `useRemoveDeletedPost`
+ * reconcile via `BookmarkController.exists`).
  */
 export class BookmarkApplication {
   /**
@@ -49,10 +52,7 @@ export class BookmarkApplication {
 
     const { postId, bookmarkUrl, bookmarkJson } = params;
 
-    // Execute local and homeserver operations in parallel
-    await Promise.all([
-      LocalBookmarkService.persist(action, { userId, postId }),
-      HomeserverService.request({ method: action, url: bookmarkUrl, bodyJson: bookmarkJson }),
-    ]);
+    await LocalBookmarkService.persist(action, { userId, postId });
+    await HomeserverService.request({ method: action, url: bookmarkUrl, bodyJson: bookmarkJson });
   }
 }

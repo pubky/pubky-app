@@ -171,7 +171,6 @@
       "notifications": "Notifications",
       "privacySafety": "Privacy & Safety",
       "mutedUsers": "Muted Users",
-      "language": "Language",
       "help": "Help"
     },
     "account": {
@@ -217,11 +216,6 @@
       "title": "Muted users",
       "description": "Here is an overview of all users you muted. You can choose to unmute users if you want."
     },
-    "language": {
-      "title": "Language",
-      "description": "Choose your preferred language for the Pubky interface.",
-      "displayLanguage": "Display language"
-    },
     "backup": {
       "title": "Backup",
       "dialogTitle": "Back up your pubky",
@@ -235,9 +229,6 @@
       "alertShort": "Back up now",
       "alertFull": "Back up now to avoid losing your account!"
     }
-  },
-  "language": {
-    "displayLanguage": "Display language"
   },
   "onboarding": {
     "steps": {
@@ -514,6 +505,7 @@
       "tagPost": "Tag post ({count})"
     },
     "deleted": "This post has been deleted by its author.",
+    "remove": "Remove",
     "missing": "Post not found.",
     "dropFiles": "Drop files here",
     "articleTitle": "Article Title",
@@ -1028,6 +1020,8 @@
       "removed": "Post removed from bookmarks",
       "addFailed": "Could not add bookmark",
       "removeFailed": "Could not remove bookmark",
+      "removedSyncFailed": "Removed from bookmarks on this device, but syncing failed.",
+      "addedSyncFailed": "Saved to bookmarks on this device, but syncing failed.",
       "loginRequired": "Sign in to bookmark posts"
     },
     "collection": {
@@ -1495,6 +1489,7 @@
     "addedToCollection": "Post added to collection.",
     "removedFromCollection": "Post removed from collection.",
     "updateCollectionFailed": "Failed to update collection.",
+    "removedFromCollectionSyncFailed": "Removed from the collection on this device, but syncing failed.",
     "collectionCreated": "Collection created and post saved.",
     "createCollectionFailed": "Failed to create collection."
   },

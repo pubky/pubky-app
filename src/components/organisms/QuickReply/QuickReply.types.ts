@@ -1,11 +1,12 @@
 import type { RefObject } from 'react';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import type { PostHeaderProps } from '../PostHeader/PostHeader.types';
 
 export interface QuickReplyProps {
   parentPostId: string;
-  /** Thread connector variant - defaults to LAST (for use after replies) */
+  /** Thread connector variant - defaults to LAST for terminal thread positions */
   connectorVariant?: typeof POST_THREAD_CONNECTOR_VARIANTS.LAST | typeof POST_THREAD_CONNECTOR_VARIANTS.REGULAR;
   /** Callback when reply is successfully submitted */
   onReplySubmitted?: (replyId: string) => void;
@@ -15,6 +16,7 @@ export interface QuickReplyProps {
 export interface QuickReplyContentProps {
   // Current user header
   currentUserPubky: string | null;
+  currentUserDetails?: NexusUserDetails | null;
 
   // Textarea
   textareaRef: RefObject<HTMLTextAreaElement | null>;
