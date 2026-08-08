@@ -86,8 +86,8 @@ export default defineConfig({
                 comparatorOptions: {
                   allowedMismatchedPixelRatio: 0.001,
                 },
-                // Home feed desktop (WebKit/Linux) needs extra headroom for
-                // layout to settle after fonts/images decode.
+                // Image-heavy suites (Home, Collections) on WebKit/Linux need
+                // extra headroom for layout to settle after fonts/images decode.
                 timeout: 15_000,
               },
             },

@@ -190,6 +190,11 @@ function CollectionHeroContent({
     <Card
       data-cy="collection-hero"
       className={cn(
+        // `isolate` keeps the -z-10 cover inside this card's stacking context
+        // (same pattern as CollectionCard). Without it the cover joins the page
+        // root stacking context, where engines disagree on whether it paints
+        // above or below the page background once desktop ancestors add
+        // `lg:overflow-hidden` — leaving the hero blank in some browsers.
         'relative isolate gap-0 overflow-hidden rounded-md py-0',
         coverImage && 'border-transparent bg-card/40',
         className,
@@ -199,7 +204,6 @@ function CollectionHeroContent({
         <Container
           overrideDefaults
           aria-hidden="true"
-          data-testid="collection-cover"
           className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.6) 45%, rgba(0,0,0,0.2) 100%), url(${coverImage})`,

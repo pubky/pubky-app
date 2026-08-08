@@ -670,6 +670,9 @@ async function renderSingleCollection(
   const collection = f.singleCollections[layout];
   routeState.pathname = `/collections/${collection.details.author}/${collection.postId}`;
   routeState.params = { userId: collection.details.author, postId: collection.postId };
+  // Hero cover is a CSS `background-image`; `renderForVRT` only awaits `<img>`.
+  // Preload so readiness is explicit instead of relying on toMatchScreenshot retries.
+  await preloadImages(Object.values(f.collectionCoverUrls));
 
   const screen = await renderForVRT(<CollectionWithHeader postId={collection.compositeId} />, { viewport });
   await expect.element(screen.getByRole('heading', { name: 'Signals from the field' })).toBeVisible();
