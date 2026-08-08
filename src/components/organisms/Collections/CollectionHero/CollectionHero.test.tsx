@@ -239,6 +239,12 @@ const COLLECTION_CONTENT_NO_COVER = JSON.stringify({
   items: [],
 });
 
+const COLLECTION_CONTENT_ONE_ITEM = JSON.stringify({
+  name: 'Single item',
+  description: null,
+  items: ['pubky://author/pub/pubky.app/posts/only'],
+});
+
 const mockUseUserProfile = vi.mocked(useUserProfile);
 const mockUseBookmark = vi.mocked(useBookmark);
 const mockUsePostCounts = vi.mocked(usePostCounts);
@@ -615,6 +621,103 @@ describe('CollectionHero', () => {
     });
   });
 
+  describe('CTA — reorder', () => {
+    function buildReorderProps(overrides: Partial<NonNullable<CollectionHeroProps['reorder']>> = {}) {
+      return {
+        isActive: false,
+        isSaving: false,
+        onEnter: vi.fn(),
+        onSave: vi.fn(),
+        onCancel: vi.fn(),
+        ...overrides,
+      };
+    }
+
+    it('renders an enabled Reorder button between Share and Edit for owners of multi-item collections', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const reorder = buildReorderProps();
+
+      renderHero({ reorder });
+
+      const button = screen.getByLabelText('collections.single.reorder');
+      expect(button).toBeEnabled();
+      expect(
+        screen.getByLabelText('collections.single.share').compareDocumentPosition(button) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        button.compareDocumentPosition(screen.getByLabelText('collections.single.edit')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      fireEvent.click(button);
+      expect(reorder.onEnter).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables the Reorder button when the collection has fewer than two items', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      setPostDetails(COLLECTION_CONTENT_ONE_ITEM);
+
+      renderHero({ reorder: buildReorderProps() });
+
+      expect(screen.getByLabelText('collections.single.reorder')).toBeDisabled();
+    });
+
+    it('disables the Reorder button while a delete is in flight', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      mockDeleteState.isDeleting = true;
+
+      renderHero({ reorder: buildReorderProps() });
+
+      expect(screen.getByLabelText('collections.single.reorder')).toBeDisabled();
+    });
+
+    it('does not render reorder actions for non-owners', () => {
+      setAuthStore('some-other-user');
+
+      renderHero({ reorder: buildReorderProps() });
+
+      expect(screen.queryByLabelText('collections.single.reorder')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('collections.single.saveOrder')).not.toBeInTheDocument();
+    });
+
+    it('swaps Reorder for Save order + Cancel and disables every other action while active', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const reorder = buildReorderProps({ isActive: true });
+
+      renderHero({ reorder });
+
+      expect(screen.queryByLabelText('collections.single.reorder')).not.toBeInTheDocument();
+
+      const saveButton = screen.getByLabelText('collections.single.saveOrder');
+      const cancelButton = screen.getByLabelText('collections.single.cancelReorder');
+      expect(saveButton).toHaveAttribute('data-variant', 'default');
+      expect(cancelButton).toHaveAttribute('data-variant', 'destructive-soft');
+
+      fireEvent.click(saveButton);
+      fireEvent.click(cancelButton);
+      expect(reorder.onSave).toHaveBeenCalledTimes(1);
+      expect(reorder.onCancel).toHaveBeenCalledTimes(1);
+
+      expect(screen.getByLabelText('collections.single.content')).toBeDisabled();
+      expect(screen.getByLabelText('collections.single.share')).toBeDisabled();
+      expect(screen.getByLabelText('collections.single.edit')).toBeDisabled();
+      expect(screen.getByLabelText('collections.single.delete')).toBeDisabled();
+      expect(screen.getByLabelText('post.actions.tagPost')).toBeDisabled();
+    });
+
+    it('disables Save order and Cancel and swaps the check for a spinner while the commit is in flight', () => {
+      setAuthStore(AUTHOR_PUBKY);
+
+      renderHero({ reorder: buildReorderProps({ isActive: true, isSaving: true }) });
+
+      const saveButton = screen.getByLabelText('collections.single.saveOrder');
+      expect(saveButton).toBeDisabled();
+      expect(screen.getByLabelText('collections.single.cancelReorder')).toBeDisabled();
+      expect(saveButton.querySelector('.animate-spin')).not.toBeNull();
+      expect(saveButton.querySelector('.lucide-check')).toBeNull();
+    });
+  });
+
   describe('CTA — non-owner', () => {
     it('renders a Follow button when the post is not bookmarked', () => {
       setAuthStore('some-other-user');
@@ -752,6 +855,15 @@ describe('CollectionHero - Snapshots', () => {
     setAuthStore(AUTHOR_PUBKY);
 
     const { container } = renderHero();
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches the snapshot for the owner reorder-active state', () => {
+    setAuthStore(AUTHOR_PUBKY);
+
+    const { container } = renderHero({
+      reorder: { isActive: true, isSaving: false, onEnter: vi.fn(), onSave: vi.fn(), onCancel: vi.fn() },
+    });
     expect(container.firstChild).toMatchSnapshot();
   });
 

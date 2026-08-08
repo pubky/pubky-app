@@ -16,8 +16,10 @@ exports[`CollectionItems - Snapshots > matches the owner Visual layout snapshot 
     <div
       data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
       data-has-post-details="true"
+      data-has-reorder="true"
       data-layout="visual"
       data-post-id="0034BBBDFK83G"
+      data-reorder-active="false"
       data-testid="collection-hero"
     >
       <button
@@ -89,8 +91,10 @@ exports[`CollectionItems - Snapshots > matches the owner non-empty snapshot 1`] 
     <div
       data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
       data-has-post-details="true"
+      data-has-reorder="true"
       data-layout="grid"
       data-post-id="0034BBBDFK83G"
+      data-reorder-active="false"
       data-testid="collection-hero"
     >
       <button
@@ -142,6 +146,34 @@ exports[`CollectionItems - Snapshots > matches the owner non-empty snapshot 1`] 
     data-cy="collection-add-content-grid"
     data-testid="add-content-dialog"
     data-trigger-variant="grid"
+  />
+</div>
+`;
+
+exports[`CollectionItems - Snapshots > matches the owner reorder-mode snapshot 1`] = `
+<div
+  class="flex w-full flex-col gap-6"
+  data-testid="container"
+>
+  <div
+    data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+    data-has-post-details="true"
+    data-has-reorder="true"
+    data-layout="grid"
+    data-post-id="0034BBBDFK83G"
+    data-reorder-active="true"
+    data-testid="collection-hero"
+  >
+    <button
+      type="button"
+    >
+      Switch to Grid
+    </button>
+  </div>
+  <div
+    data-disabled="false"
+    data-entry-count="1"
+    data-testid="collection-reorder-grid"
   />
 </div>
 `;

@@ -1032,7 +1032,9 @@
     },
     "collection": {
       "collectionDeleted": "La tua raccolta è stata eliminata",
-      "deleteFailed": "Eliminazione raccolta fallita. Riprova."
+      "deleteFailed": "Eliminazione raccolta fallita. Riprova.",
+      "orderSaved": "Ordine della raccolta salvato",
+      "orderSaveFailed": "Salvataggio del nuovo ordine fallito. Riprova."
     },
     "copy": {
       "pubkyCopied": "Pubky copiato negli appunti",
@@ -1429,6 +1431,9 @@
       "shareTitle": "Condividi raccolta",
       "edit": "Modifica",
       "delete": "Elimina",
+      "reorder": "Riordina",
+      "saveOrder": "Salva ordine",
+      "cancelReorder": "Annulla",
       "follow": "Segui",
       "unfollow": "Smetti di seguire",
       "content": "Aggiungi post",

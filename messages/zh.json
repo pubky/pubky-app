@@ -1032,7 +1032,9 @@
     },
     "collection": {
       "collectionDeleted": "您的收藏集已被删除",
-      "deleteFailed": "删除收藏集失败。请重试。"
+      "deleteFailed": "删除收藏集失败。请重试。",
+      "orderSaved": "收藏集排序已保存",
+      "orderSaveFailed": "保存新排序失败。请重试。"
     },
     "copy": {
       "pubkyCopied": "Pubky 已复制到剪贴板",
@@ -1423,6 +1425,9 @@
       "shareTitle": "分享收藏",
       "edit": "编辑",
       "delete": "删除",
+      "reorder": "重新排序",
+      "saveOrder": "保存排序",
+      "cancelReorder": "取消",
       "follow": "关注",
       "unfollow": "取消关注",
       "content": "添加帖子",

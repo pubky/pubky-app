@@ -1032,7 +1032,9 @@
     },
     "collection": {
       "collectionDeleted": "Votre collection a été supprimée",
-      "deleteFailed": "Échec de la suppression de la collection. Veuillez réessayer."
+      "deleteFailed": "Échec de la suppression de la collection. Veuillez réessayer.",
+      "orderSaved": "Ordre de la collection enregistré",
+      "orderSaveFailed": "Échec de l'enregistrement du nouvel ordre. Veuillez réessayer."
     },
     "copy": {
       "pubkyCopied": "Pubky copie dans le presse-papiers",
@@ -1429,6 +1431,9 @@
       "shareTitle": "Partager la collection",
       "edit": "Modifier",
       "delete": "Supprimer",
+      "reorder": "Réorganiser",
+      "saveOrder": "Enregistrer l'ordre",
+      "cancelReorder": "Annuler",
       "follow": "Suivre",
       "unfollow": "Ne plus suivre",
       "content": "Ajouter une publication",

@@ -1034,7 +1034,9 @@
     },
     "collection": {
       "collectionDeleted": "Tu colección ha sido eliminada",
-      "deleteFailed": "Error al eliminar la colección. Inténtalo de nuevo."
+      "deleteFailed": "Error al eliminar la colección. Inténtalo de nuevo.",
+      "orderSaved": "Orden de la colección guardado",
+      "orderSaveFailed": "Error al guardar el nuevo orden. Inténtalo de nuevo."
     },
     "copy": {
       "pubkyCopied": "Pubky copiado al portapapeles",
@@ -1433,6 +1435,9 @@
       "shareTitle": "Compartir colección",
       "edit": "Editar",
       "delete": "Eliminar",
+      "reorder": "Reordenar",
+      "saveOrder": "Guardar orden",
+      "cancelReorder": "Cancelar",
       "follow": "Seguir",
       "unfollow": "Dejar de seguir",
       "content": "Añadir publicación",

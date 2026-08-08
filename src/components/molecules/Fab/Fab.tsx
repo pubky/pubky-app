@@ -10,6 +10,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
 import { DialogNewCollection } from '@/organisms/Collections/DialogNewCollection/DialogNewCollection';
 import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
+import { useCollectionReorderStore } from '@/stores/collectionReorder/collectionReorder.store';
 
 /**
  * Floating Action Button (FAB).
@@ -25,6 +26,9 @@ import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
  * - Shows for authenticated users (opens the context dialog)
  * - Shows for unauthenticated users on public explore routes (opens sign-in)
  * - Hidden on landing page and other non-public routes for unauthenticated users
+ * - Hidden while a collection is in reorder mode (reorder mode is for
+ *   reordering, not adding posts; the flag bridges from the page via the
+ *   `collectionReorder` store since the FAB lives outside the page tree)
  *
  * Positioning:
  * - On small screens (sm), the button sits directly on top of the menu bar by design.
@@ -37,10 +41,11 @@ export function Fab() {
   const { isPublicExploreRoute } = usePublicRoute();
   const { requireAuth } = useRequireAuth();
   const action = useFabAction();
+  const isReorderActive = useCollectionReorderStore((state) => state.activeCollectionId !== null);
 
   // Show FAB for authenticated users OR unauthenticated users on public explore routes
   const shouldShow = isFullyAuthenticated || isPublicExploreRoute;
-  if (isLoading || !shouldShow) {
+  if (isLoading || !shouldShow || isReorderActive) {
     return null;
   }
   const buttonClasses = cn(

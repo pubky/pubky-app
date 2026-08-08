@@ -1034,7 +1034,9 @@
     },
     "collection": {
       "collectionDeleted": "Ihre Sammlung wurde gelöscht",
-      "deleteFailed": "Sammlung konnte nicht gelöscht werden. Bitte erneut versuchen."
+      "deleteFailed": "Sammlung konnte nicht gelöscht werden. Bitte erneut versuchen.",
+      "orderSaved": "Reihenfolge der Sammlung gespeichert",
+      "orderSaveFailed": "Neue Reihenfolge konnte nicht gespeichert werden. Bitte erneut versuchen."
     },
     "copy": {
       "pubkyCopied": "Pubky in Zwischenablage kopiert",
@@ -1431,6 +1433,9 @@
       "shareTitle": "Sammlung teilen",
       "edit": "Bearbeiten",
       "delete": "Löschen",
+      "reorder": "Neu anordnen",
+      "saveOrder": "Reihenfolge speichern",
+      "cancelReorder": "Abbrechen",
       "follow": "Folgen",
       "unfollow": "Entfolgen",
       "content": "Beitrag hinzufügen",

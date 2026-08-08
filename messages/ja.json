@@ -1032,7 +1032,9 @@
     },
     "collection": {
       "collectionDeleted": "あなたのコレクションが削除されました",
-      "deleteFailed": "コレクションの削除に失敗しました。もう一度お試しください。"
+      "deleteFailed": "コレクションの削除に失敗しました。もう一度お試しください。",
+      "orderSaved": "コレクションの順序を保存しました",
+      "orderSaveFailed": "新しい順序の保存に失敗しました。もう一度お試しください。"
     },
     "copy": {
       "pubkyCopied": "pubkyをクリップボードにコピーしました",
@@ -1429,6 +1431,9 @@
       "shareTitle": "コレクションを共有",
       "edit": "編集",
       "delete": "削除",
+      "reorder": "並べ替え",
+      "saveOrder": "順序を保存",
+      "cancelReorder": "キャンセル",
       "follow": "フォロー",
       "unfollow": "フォロー解除",
       "content": "投稿を追加",

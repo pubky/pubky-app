@@ -2,6 +2,16 @@ import type { EnrichedPostDetails } from '@/application/moderation/moderation.ty
 import type { CollectionLayout } from '@/config/collections';
 import type { Pubky } from '@/models/models.types';
 
+export interface CollectionHeroReorderProps {
+  /** True while the page is in reorder mode. */
+  isActive: boolean;
+  /** True while the reorder commit is in flight. */
+  isSaving: boolean;
+  onEnter: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
 export interface CollectionHeroProps {
   /** Collection owner pubky. */
   authorPubky: Pubky;
@@ -13,6 +23,8 @@ export interface CollectionHeroProps {
   layout: CollectionLayout;
   /** Updates the temporary viewer selection without persisting it. */
   onLayoutChange: (layout: CollectionLayout) => void;
+  /** Reorder-mode bridge from the page (owner-only affordance; ignored otherwise). */
+  reorder?: CollectionHeroReorderProps;
   className?: string;
 }
 

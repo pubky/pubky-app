@@ -1032,7 +1032,9 @@
     },
     "collection": {
       "collectionDeleted": "Sua coleção foi excluída",
-      "deleteFailed": "Falha ao excluir a coleção. Tente novamente."
+      "deleteFailed": "Falha ao excluir a coleção. Tente novamente.",
+      "orderSaved": "Ordem da coleção salva",
+      "orderSaveFailed": "Falha ao salvar a nova ordem. Tente novamente."
     },
     "copy": {
       "pubkyCopied": "Pubky copiado para área de transferência",
@@ -1429,6 +1431,9 @@
       "shareTitle": "Compartilhar coleção",
       "edit": "Editar",
       "delete": "Excluir",
+      "reorder": "Reordenar",
+      "saveOrder": "Salvar ordem",
+      "cancelReorder": "Cancelar",
       "follow": "Seguir",
       "unfollow": "Deixar de seguir",
       "content": "Adicionar post",
