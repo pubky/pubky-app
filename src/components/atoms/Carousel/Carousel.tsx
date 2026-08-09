@@ -114,12 +114,14 @@ function Carousel({
         canScrollNext,
       }}
     >
+      {/* Focus ring intentionally suppressed on the lightbox container; inner controls keep theirs (#2311). */}
       <div
         onKeyDownCapture={handleKeyDown}
-        className={cn('relative', className)}
+        className={cn('relative outline-none', className)}
         role="region"
         aria-roledescription="carousel"
         data-slot="carousel"
+        tabIndex={0}
         {...props}
       >
         {children}

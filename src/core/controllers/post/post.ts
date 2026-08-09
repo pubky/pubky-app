@@ -14,6 +14,7 @@ import type {
   TFetchPostTaggersParams,
   TFileAttachmentsParams,
   TNormalizeTagsParams,
+  TReorderCollectionItemsParams,
   TUpdateCollectionItemParams,
 } from '@/controllers/post/post.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
@@ -453,6 +454,46 @@ export class PostController {
     const nextContent = shouldAdd
       ? CollectionPostContent.addItem(currentContent, itemUri)
       : CollectionPostContent.removeItem(currentContent, itemUri);
+
+    if (nextContent.items === currentContent.items) return;
+
+    const { post, meta } = await PostNormalizer.toEdit({
+      compositePostId: collectionId,
+      content: JSON.stringify(nextContent),
+      currentUserPubky,
+    });
+
+    await PostApplication.commitEdit({
+      compositePostId: collectionId,
+      post,
+      postUrl: meta.url,
+    });
+  }
+
+  static async commitReorderCollectionItems({ collectionId, items }: TReorderCollectionItemsParams): Promise<void> {
+    const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
+    const collection = await PostApplication.getDetails({ compositeId: collectionId });
+
+    // Tombstoned collections are not-found. See `commitEditCollection` above
+    // for the rationale.
+    if (!collection || isPostDeleted(collection.content)) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
+        service: ErrorService.Local,
+        operation: 'commitReorderCollectionItems',
+        context: { collectionId },
+      });
+    }
+
+    const currentContent = CollectionPostContent.parse(collection.content);
+    if (!currentContent) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Collection content is invalid', {
+        service: ErrorService.Local,
+        operation: 'commitReorderCollectionItems',
+        context: { collectionId },
+      });
+    }
+
+    const nextContent = CollectionPostContent.reorderItems(currentContent, items);
 
     if (nextContent.items === currentContent.items) return;
 

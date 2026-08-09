@@ -395,6 +395,27 @@ describe('StreamPostsController', () => {
     });
   });
 
+  describe('fetchMissingPostsByUris', () => {
+    it('delegates to PostStreamApplication.fetchOriginalPostsByUris with the viewer id', async () => {
+      const fetchOriginalPostsSpy = vi
+        .spyOn(PostStreamApplication, 'fetchOriginalPostsByUris')
+        .mockResolvedValue(undefined);
+      const uris = ['pubky://author_a/pub/pubky.app/posts/aaa', 'pubky://author_b/pub/pubky.app/posts/bbb'];
+
+      await StreamPostsController.fetchMissingPostsByUris({ uris });
+
+      expect(fetchOriginalPostsSpy).toHaveBeenCalledWith({ repostedUris: uris, viewerId });
+    });
+
+    it('short-circuits without calling the application layer when no URIs are given', async () => {
+      const fetchOriginalPostsSpy = vi.spyOn(PostStreamApplication, 'fetchOriginalPostsByUris');
+
+      await StreamPostsController.fetchMissingPostsByUris({ uris: [] });
+
+      expect(fetchOriginalPostsSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('filterStreamPosts', () => {
     it('should delegate stream-aware filtering to PostStreamApplication', async () => {
       const postIds = ['user-1:post-1', 'user-1:post-2'];

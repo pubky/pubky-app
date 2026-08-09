@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Minus, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react';
+import { Check, Loader2, Minus, Move, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
 import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
@@ -52,6 +52,7 @@ export function CollectionHero({
   postDetails,
   layout,
   onLayoutChange,
+  reorder,
   className,
 }: CollectionHeroProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
@@ -75,6 +76,7 @@ export function CollectionHero({
       postDetails={postDetails}
       layout={layout}
       onLayoutChange={onLayoutChange}
+      reorder={reorder}
       className={className}
     />
   );
@@ -86,6 +88,7 @@ function CollectionHeroContent({
   postDetails,
   layout,
   onLayoutChange,
+  reorder,
   className,
 }: CollectionHeroContentProps) {
   const { profile: ownerProfile } = useUserProfile(authorPubky);
@@ -170,13 +173,16 @@ function CollectionHeroContent({
     await deletePost(compositeId);
     router.replace(APP_ROUTES.COLLECTIONS);
   };
+  // While reorder mode is active, every other owner action is disabled so the
+  // hero reads as "you are reordering" — only Save order / Cancel stay live.
+  const isReorderActive = reorder?.isActive ?? false;
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const tagToggle = (
     <PostTagToggleButton
       postId={compositeId}
       expanded={tagsExpanded}
       onToggle={() => setTagsExpanded((prev) => !prev)}
-      disabled={isOwn && isDeleting}
+      disabled={isOwn && (isDeleting || isReorderActive)}
     />
   );
 
@@ -184,7 +190,12 @@ function CollectionHeroContent({
     <Card
       data-cy="collection-hero"
       className={cn(
-        'relative gap-0 overflow-hidden rounded-md py-0',
+        // `isolate` keeps the -z-10 cover inside this card's stacking context
+        // (same pattern as CollectionCard). Without it the cover joins the page
+        // root stacking context, where engines disagree on whether it paints
+        // above or below the page background once desktop ancestors add
+        // `lg:overflow-hidden` — leaving the hero blank in some browsers.
+        'relative isolate gap-0 overflow-hidden rounded-md py-0',
         coverImage && 'border-transparent bg-card/40',
         className,
       )}
@@ -249,7 +260,7 @@ function CollectionHeroContent({
               <DialogAddContent
                 target={{ type: 'collection', collectionId: compositeId }}
                 dataCy="collection-add-content"
-                disabled={isDeleting}
+                disabled={isDeleting || isReorderActive}
               />
               {/* While a delete is in flight, disable owner actions so the
                   user knows something is happening and those actions cannot race
@@ -258,7 +269,7 @@ function CollectionHeroContent({
                 variant="secondary"
                 size="icon"
                 onClick={handleShare}
-                disabled={isDeleting}
+                disabled={isDeleting || isReorderActive}
                 aria-label={'Share'}
                 data-cy="collection-hero-share-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
@@ -268,11 +279,59 @@ function CollectionHeroContent({
                   {'Share'}
                 </Typography>
               </Button>
+              {reorder &&
+                (isReorderActive ? (
+                  <>
+                    <Button
+                      variant="default"
+                      size="icon"
+                      onClick={reorder.onSave}
+                      disabled={reorder.isSaving}
+                      aria-label={'Save order'}
+                      data-cy="collection-hero-save-order-btn"
+                      className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+                    >
+                      {reorder.isSaving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                      <Typography as="span" overrideDefaults className="hidden lg:inline">
+                        {'Save order'}
+                      </Typography>
+                    </Button>
+                    <Button
+                      variant="destructive-soft"
+                      size="icon"
+                      onClick={reorder.onCancel}
+                      disabled={reorder.isSaving}
+                      aria-label={'Cancel'}
+                      data-cy="collection-hero-cancel-reorder-btn"
+                      className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+                    >
+                      <X className="size-4" />
+                      <Typography as="span" overrideDefaults className="hidden lg:inline">
+                        {'Cancel'}
+                      </Typography>
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={reorder.onEnter}
+                    disabled={isDeleting || itemCount < 2}
+                    aria-label={'Reorder'}
+                    data-cy="collection-hero-reorder-btn"
+                    className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+                  >
+                    <Move className="size-4" />
+                    <Typography as="span" overrideDefaults className="hidden lg:inline">
+                      {'Reorder'}
+                    </Typography>
+                  </Button>
+                ))}
               <Button
                 variant="secondary"
                 size="icon"
                 onClick={handleEdit}
-                disabled={isDeleting}
+                disabled={isDeleting || isReorderActive}
                 aria-label={'Edit'}
                 data-cy="collection-hero-edit-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
@@ -286,7 +345,7 @@ function CollectionHeroContent({
                 variant="secondary"
                 size="icon"
                 onClick={handleDelete}
-                disabled={isDeleting}
+                disabled={isDeleting || isReorderActive}
                 aria-label={'Delete'}
                 data-cy="collection-hero-delete-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"

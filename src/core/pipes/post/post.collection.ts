@@ -229,4 +229,34 @@ export class CollectionPostContent {
       coverImage: collection.cover_image,
     });
   }
+
+  /**
+   * Replace the item order with `orderedItems`, merged against the current
+   * envelope so a stale draft cannot clobber concurrent edits: items added
+   * since the draft was taken are kept (leading, matching `addItem`'s prepend
+   * semantics) and drafted URIs that were removed in the meantime are dropped
+   * rather than resurrected. Returns the same collection reference when the
+   * merge produces no change.
+   */
+  static reorderItems(collection: CollectionContent, orderedItems: string[]): CollectionContent {
+    const currentItems = collection.items ?? [];
+    const trimmedOrder = orderedItems.map((item) => item.trim());
+    const orderedSet = new Set(trimmedOrder);
+    const currentSet = new Set(currentItems);
+
+    const merged = [
+      ...currentItems.filter((item) => !orderedSet.has(item)),
+      ...trimmedOrder.filter((item) => currentSet.has(item)),
+    ];
+
+    if (merged.length === currentItems.length && merged.every((item, index) => item === currentItems[index])) {
+      return collection;
+    }
+
+    return this.normalize({
+      ...collection,
+      items: merged,
+      coverImage: collection.cover_image,
+    });
+  }
 }

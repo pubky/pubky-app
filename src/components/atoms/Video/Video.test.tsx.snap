@@ -2,7 +2,7 @@
 
 exports[`Video - Snapshots > matches snapshot with MP4 video 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   preload="metadata"
@@ -12,7 +12,7 @@ exports[`Video - Snapshots > matches snapshot with MP4 video 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with OGG video 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   preload="metadata"
@@ -22,7 +22,7 @@ exports[`Video - Snapshots > matches snapshot with OGG video 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with WebM video 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   preload="metadata"
@@ -33,7 +33,7 @@ exports[`Video - Snapshots > matches snapshot with WebM video 1`] = `
 exports[`Video - Snapshots > matches snapshot with autoPlay and muted 1`] = `
 <video
   autoplay=""
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   preload="metadata"
@@ -43,7 +43,7 @@ exports[`Video - Snapshots > matches snapshot with autoPlay and muted 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with controls disabled 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   data-testid="video"
   preload="metadata"
   src="/video.mp4"
@@ -52,7 +52,7 @@ exports[`Video - Snapshots > matches snapshot with controls disabled 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with custom className 1`] = `
 <video
-  class="h-auto max-w-full bg-black rounded-lg shadow-lg"
+  class="h-auto max-w-full bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg shadow-lg"
   controls=""
   data-testid="video"
   preload="metadata"
@@ -62,7 +62,7 @@ exports[`Video - Snapshots > matches snapshot with custom className 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with data-testid prop 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="custom-test-id"
   preload="metadata"
@@ -72,7 +72,7 @@ exports[`Video - Snapshots > matches snapshot with data-testid prop 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with id prop 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   id="hero-video"
@@ -83,7 +83,7 @@ exports[`Video - Snapshots > matches snapshot with id prop 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with loop 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   loop=""
@@ -95,7 +95,7 @@ exports[`Video - Snapshots > matches snapshot with loop 1`] = `
 exports[`Video - Snapshots > matches snapshot with multiple custom attributes 1`] = `
 <video
   autoplay=""
-  class="h-auto max-w-full bg-black rounded-xl border-2"
+  class="h-auto max-w-full bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl border-2"
   controls=""
   data-testid="video"
   height="720"
@@ -110,7 +110,7 @@ exports[`Video - Snapshots > matches snapshot with multiple custom attributes 1`
 
 exports[`Video - Snapshots > matches snapshot with playsInline 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   playsinline=""
@@ -121,7 +121,7 @@ exports[`Video - Snapshots > matches snapshot with playsInline 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with poster 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   poster="/thumbnail.jpg"
@@ -132,7 +132,7 @@ exports[`Video - Snapshots > matches snapshot with poster 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with preload attribute 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   preload="none"
@@ -142,7 +142,7 @@ exports[`Video - Snapshots > matches snapshot with preload attribute 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with required props 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   preload="metadata"
@@ -152,7 +152,7 @@ exports[`Video - Snapshots > matches snapshot with required props 1`] = `
 
 exports[`Video - Snapshots > matches snapshot with width and height 1`] = `
 <video
-  class="h-auto max-w-full rounded-md bg-black"
+  class="h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring"
   controls=""
   data-testid="video"
   height="600"

@@ -38,7 +38,10 @@ export const Video = forwardRef<HTMLVideoElement, VideoProps>(function Video(
         }
       }}
       data-testid={dataTestId || 'video'}
-      className={cn('h-auto max-w-full rounded-md bg-black', className)}
+      className={cn(
+        'h-auto max-w-full rounded-md bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        className,
+      )}
       src={src}
       controls={controls}
       preload={preload}

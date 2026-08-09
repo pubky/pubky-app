@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FabAction } from '@/hooks/useFabAction/useFabAction.types';
+import { useCollectionReorderStore } from '@/stores/collectionReorder/collectionReorder.store';
 import { Fab } from './Fab';
 
 const mockUseAuthStatus = vi.fn(() => ({
@@ -108,6 +109,7 @@ describe('Fab', () => {
     mockIsPublicExploreRoute.mockReturnValue(false);
     mockRequireAuth.mockImplementation((action: () => void) => action());
     mockUseFabAction.mockReturnValue({ kind: 'createPost', ariaLabel: 'New post' });
+    useCollectionReorderStore.setState({ activeCollectionId: null });
   });
 
   it('renders the button with the stable test/cypress ids and the action aria-label', () => {
@@ -116,6 +118,22 @@ describe('Fab', () => {
     expect(button).toBeInTheDocument();
     expect(button).toHaveAttribute('data-cy', 'new-post-btn');
     expect(button).toHaveAttribute('aria-label', 'New post');
+  });
+
+  it('returns null while a collection is in reorder mode', () => {
+    useCollectionReorderStore.setState({ activeCollectionId: 'author:collection123' });
+    const { container } = render(<Fab />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('reappears when reorder mode exits', () => {
+    useCollectionReorderStore.setState({ activeCollectionId: 'author:collection123' });
+    const { container } = render(<Fab />);
+    expect(container.firstChild).toBeNull();
+
+    act(() => useCollectionReorderStore.getState().exit());
+
+    expect(screen.getByTestId('new-post-cta')).toBeInTheDocument();
   });
 
   it('returns null when unauthenticated and not on a public explore route', () => {

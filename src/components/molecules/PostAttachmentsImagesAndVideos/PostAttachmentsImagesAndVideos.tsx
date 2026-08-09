@@ -1,5 +1,5 @@
 'use client';
-import { type MouseEvent, type ReactNode, useEffect, useState } from 'react';
+import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Maximize, X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import {
@@ -51,6 +51,7 @@ export const PostAttachmentsImagesAndVideos = ({
   const [api, setApi] = useState<CarouselApi>();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const openPreview = (index: number, event?: MouseEvent) => {
     event?.stopPropagation();
@@ -73,9 +74,14 @@ export const PostAttachmentsImagesAndVideos = ({
     if (!api) {
       return;
     }
-    api.on('settle', () => {
+    const onSelect = () => {
       setCurrentIndex(api.selectedScrollSnap());
-    });
+    };
+    onSelect();
+    api.on('select', onSelect);
+    return () => {
+      api.off('select', onSelect);
+    };
   }, [api]);
 
   // Disable carousel swipe when in fullscreen mode
@@ -137,7 +143,7 @@ export const PostAttachmentsImagesAndVideos = ({
                 className={cn(
                   isListVariant ? LIST_TILE_CLASS : 'h-52 w-full max-w-full',
                   isListVariant ? LIST_TILE_FRAME_CLASS : TILE_FRAME_CLASS,
-                  'cursor-pointer only:static',
+                  'cursor-pointer outline-none only:static focus-visible:ring-2 focus-visible:ring-ring',
                 )}
               >
                 <Button overrideDefaults onClick={(e) => openPreview(i, e)}>
@@ -196,6 +202,10 @@ export const PostAttachmentsImagesAndVideos = ({
         showCloseButton={false}
         overrideDefaults
         centered
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          carouselRef.current?.focus();
+        }}
         onClick={(e) => {
           e.stopPropagation();
         }}
@@ -205,6 +215,7 @@ export const PostAttachmentsImagesAndVideos = ({
         </DialogClose>
 
         <Carousel
+          ref={carouselRef}
           opts={{
             startIndex: currentIndex,
             loop: true,
