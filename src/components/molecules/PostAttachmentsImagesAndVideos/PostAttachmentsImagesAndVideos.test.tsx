@@ -160,11 +160,15 @@ vi.mock('@/atoms/Carousel/Carousel', () => {
       opts,
       setApi,
       className,
+      ref,
+      tabIndex = 0,
     }: {
       children: React.ReactNode;
       opts?: { startIndex?: number; loop?: boolean; duration?: number; watchDrag?: boolean };
       setApi?: (api: unknown) => void;
       className?: string;
+      ref?: React.Ref<HTMLDivElement>;
+      tabIndex?: number;
     }) => {
       // Simulate setting the API in useEffect to avoid infinite re-renders
       useEffect(() => {
@@ -172,11 +176,14 @@ vi.mock('@/atoms/Carousel/Carousel', () => {
           setApi({
             selectedScrollSnap: () => 0,
             on: vi.fn(),
+            off: vi.fn(),
           });
         }
       }, [setApi]);
       return (
         <div
+          ref={ref}
+          tabIndex={tabIndex}
           data-testid="carousel"
           data-start-index={opts?.startIndex}
           data-loop={opts?.loop}

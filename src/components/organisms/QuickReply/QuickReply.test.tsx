@@ -261,6 +261,15 @@ describe('QuickReply', () => {
     expect(screen.getByTestId('quick-reply-textarea')).toHaveAttribute('placeholder', REAL_PROMPTS[0]);
   });
 
+  it('overlays the animated connector without increasing the QuickReply row height', () => {
+    render(<QuickReply parentPostId="author:post1" />);
+
+    expect(screen.getByTestId('quick-reply-connector-column')).toHaveClass('relative', 'w-3', 'shrink-0');
+    expect(screen.getByTestId('quick-reply-connector').parentElement).toHaveClass('absolute', '-inset-y-px', 'left-0');
+    expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('height', '175');
+    expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('variant', 'last');
+  });
+
   it('forwards clipboard paste to usePostInput handlePaste (image attachments)', () => {
     const handlePaste = vi.fn();
     mockUsePostInput.mockImplementation((options: unknown) => createUsePostInputReturn(options, { handlePaste }));
@@ -561,7 +570,7 @@ describe('QuickReply', () => {
     // Resting: pixel height with connector CSS transition disabled.
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
     await waitFor(() => expect(connector).toHaveStyle({ transition: 'none' }));
-    expect(connector).toHaveAttribute('height', '130');
+    expect(connector).toHaveAttribute('height', '132');
 
     // Flip expanded first while height is still the collapsed measure so the
     // tween window is observable before Motion completes in jsdom.
@@ -575,7 +584,7 @@ describe('QuickReply', () => {
     rerender(<QuickReply parentPostId="author:post1" />);
 
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '260px' }));
-    expect(connector).toHaveAttribute('height', '310');
+    expect(connector).toHaveAttribute('height', '312');
   });
 
   it('retargets height and exits expanded content when the reply collapses', async () => {
@@ -601,7 +610,7 @@ describe('QuickReply', () => {
     rerender(<QuickReply parentPostId="author:post1" />);
 
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '80px' }));
-    expect(connector).toHaveAttribute('height', '130');
+    expect(connector).toHaveAttribute('height', '132');
     await waitFor(() => expect(screen.queryByTestId('quick-reply-expanded-header')).not.toBeInTheDocument());
     expect(screen.queryByTestId('quick-reply-expanded-content')).not.toBeInTheDocument();
   });
@@ -622,7 +631,7 @@ describe('QuickReply', () => {
 
     await waitFor(() => expect(heightWrapper).toHaveStyle({ height: '320px' }));
     expect(connector).toHaveStyle({ transition: 'none' });
-    expect(connector).toHaveAttribute('height', '370');
+    expect(connector).toHaveAttribute('height', '372');
   });
 
   it('disables height and connector motion when reduced motion is requested', async () => {

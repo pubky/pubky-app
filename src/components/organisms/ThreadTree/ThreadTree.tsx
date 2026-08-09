@@ -1,6 +1,7 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
+import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
@@ -12,7 +13,7 @@ import { ReplyWithNested } from '../ReplyWithNested/ReplyWithNested';
 interface ThreadTreeProps {
   /** The composite post ID of the parent (Level 0) post */
   postId: string;
-  /** Whether to show the QuickReply input at the end */
+  /** Whether to show the QuickReply input before the replies */
   showQuickReply?: boolean;
 }
 
@@ -49,9 +50,17 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
 
   return (
     <Container overrideDefaults role="feed" onKeyDown={onListKeyDown}>
+      {/* Quick reply directly below the parent post */}
+      {showQuickReply && (
+        <>
+          <PostThreadSpacer />
+          <QuickReply parentPostId={postId} connectorVariant={POST_THREAD_CONNECTOR_VARIANTS.REGULAR} />
+        </>
+      )}
+
       {/* Level 1 replies */}
       {replyIds.map((replyId, index) => {
-        const isLastReply = index === replyIds.length - 1 && !hasMore && !showQuickReply;
+        const isLastReply = index === replyIds.length - 1 && (!hasMore || isExpandingAll);
 
         return (
           <Container
@@ -72,15 +81,7 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
       })}
 
       {/* "+N more replies" button for Level 1 */}
-      {hasMore && !isExpandingAll && <ShowMoreReplies count={remaining} onClick={expandAll} isLast={!showQuickReply} />}
-
-      {/* Quick reply at the end */}
-      {showQuickReply && (
-        <>
-          <PostThreadSpacer />
-          <QuickReply parentPostId={postId} />
-        </>
-      )}
+      {hasMore && !isExpandingAll && <ShowMoreReplies count={remaining} onClick={expandAll} isLast />}
     </Container>
   );
 }

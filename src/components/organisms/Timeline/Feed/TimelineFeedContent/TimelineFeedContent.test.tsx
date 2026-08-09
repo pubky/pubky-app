@@ -2,6 +2,7 @@ import { createRef, type ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
@@ -105,6 +106,7 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
     }) => (
       <div
         data-testid="timeline-posts"
+        data-post-ids={postIds.join(',')}
         data-has-trailing-slot={trailingSlot ? 'true' : undefined}
         data-show-end-message={showEndMessage === undefined ? undefined : String(showEndMessage)}
       >
@@ -320,6 +322,190 @@ describe('TimelineFeedContent', () => {
       expect(screen.queryByTestId('child')).not.toBeInTheDocument();
       expect(screen.getByTestId('persistent-header')).toBeInTheDocument();
       expect(screen.getByTestId('visual-timeline-posts')).toBeInTheDocument();
+    });
+  });
+
+  describe('collection full-membership loading', () => {
+    it('requests the Nexus max page size for the collection variant', () => {
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        />,
+      );
+
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({
+        streamId: COLLECTION_STREAM_ID,
+        limit: NEXUS_STREAM_MAX_LIMIT,
+      });
+    });
+
+    it('eagerly loads the next page while the collection stream has more', () => {
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        />,
+      );
+
+      expect(mockLoadMore).toHaveBeenCalled();
+    });
+
+    it('stops eager loading once the collection stream reaches its end', () => {
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: false });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        />,
+      );
+
+      expect(mockLoadMore).not.toHaveBeenCalled();
+    });
+
+    it('does not eager-load while the initial page or a next page is still in flight', () => {
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, loading: true, hasMore: true });
+      const { unmount } = render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        />,
+      );
+      expect(mockLoadMore).not.toHaveBeenCalled();
+      unmount();
+
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, loadingMore: true, hasMore: true });
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        />,
+      );
+      expect(mockLoadMore).not.toHaveBeenCalled();
+    });
+
+    it('caps eager loading as a defensive bound against a misreported stream end', () => {
+      // Simulate completed rounds by toggling loadingMore across rerenders while
+      // the (mocked) stream keeps claiming more pages exist.
+      const renderFeed = () => (
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        />
+      );
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true });
+      const { rerender } = render(renderFeed());
+
+      for (let round = 0; round < 6; round++) {
+        mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true, loadingMore: true });
+        rerender(renderFeed());
+        mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true, loadingMore: false });
+        rerender(renderFeed());
+      }
+
+      // ceil(COLLECTION_ITEMS_MAX_COUNT / NEXUS_STREAM_MAX_LIMIT) + 1 = 3.
+      expect(mockLoadMore).toHaveBeenCalledTimes(3);
+    });
+
+    it('resets the eager-load budget when the stream restarts from an initial load', () => {
+      const renderFeed = () => (
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        />
+      );
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true });
+      const { rerender } = render(renderFeed());
+
+      for (let round = 0; round < 6; round++) {
+        mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true, loadingMore: true });
+        rerender(renderFeed());
+        mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true, loadingMore: false });
+        rerender(renderFeed());
+      }
+      expect(mockLoadMore).toHaveBeenCalledTimes(3);
+
+      // A refresh (pull-to-refresh / unmute) restarts the stream with an
+      // initial `loading` phase, which must re-arm the eager budget.
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true, loading: true });
+      rerender(renderFeed());
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true, loading: false });
+      rerender(renderFeed());
+
+      expect(mockLoadMore).toHaveBeenCalledTimes(4);
+    });
+
+    it('keeps lazy pagination and the default page size for non-collection variants', () => {
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: true });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+        />,
+      );
+
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({ streamId: PostStreamTypes.TIMELINE_ALL_ALL });
+      expect(mockLoadMore).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('transformPostIds', () => {
+    it('applies the transform to the deduped stream ids before rendering', () => {
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['post1', 'post2', 'post1', 'post3'],
+      });
+      const transformPostIds = vi.fn((postIds: string[]) => [...postIds].reverse());
+
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+          transformPostIds={transformPostIds}
+        />,
+      );
+
+      expect(transformPostIds).toHaveBeenCalledWith(['post1', 'post2', 'post3']);
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post3,post2,post1');
+    });
+
+    it('renders the deduped ids as-is when no transform is provided', () => {
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['post1', 'post2', 'post1'],
+      });
+
+      render(
+        <TimelineFeedWithStream
+          streamId={COLLECTION_STREAM_ID}
+          variant={TIMELINE_FEED_VARIANT.COLLECTION}
+          tagsLayout="inline"
+          collectionId="author-pubky:collection-post"
+        />,
+      );
+
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post2');
     });
   });
 

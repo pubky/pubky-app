@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -10,6 +11,7 @@ import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStream
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import {
   buildAuthorCollectionsStreamId,
+  buildCollectionItemsStreamId,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
@@ -29,16 +31,32 @@ const mockUsePullToRefresh = vi.hoisted(() =>
   ),
 );
 
+// Route params default to empty; the Collection variant tests override this to
+// simulate the `/collections/[userId]/[postId]` route.
+const mockUseParams = vi.hoisted(() => vi.fn((): Record<string, string> => ({ id: '' })));
+
 // Mock next/navigation for useSearchParams used by useSearchStreamId
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: () => null,
   }),
   usePathname: () => '/',
-  useParams: () => ({ id: '' }),
+  useParams: mockUseParams,
   useRouter: () => ({
     push: vi.fn(),
   }),
+}));
+
+// Controllable envelope for the Collection variant's envelope-order sort;
+// `{ postDetails: undefined }` keeps every other variant unaffected.
+const mockUsePostDetails = vi.hoisted(() =>
+  vi.fn((): { postDetails: { content: string } | null | undefined; isLoading: boolean } => ({
+    postDetails: undefined,
+    isLoading: false,
+  })),
+);
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: mockUsePostDetails,
 }));
 
 // Mock dependencies
@@ -144,7 +162,7 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       error: string | null;
       hasMore: boolean;
     }) => (
-      <div data-feed-renderer="columns" data-testid="timeline-posts">
+      <div data-feed-renderer="columns" data-testid="timeline-posts" data-post-ids={postIds.join(',')}>
         <span data-testid="post-count">{postIds.length}</span>
         <span data-testid="loading">{loading.toString()}</span>
         <span data-testid="loading-more">{loadingMore.toString()}</span>
@@ -664,6 +682,65 @@ describe('TimelineFeed', () => {
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
         streamId: buildAuthorCollectionsStreamId(profilePubky),
       });
+    });
+  });
+
+  describe('Collection Variant', () => {
+    const collectionAuthor = 'author-pubky';
+    const collectionPost = 'collection-post';
+
+    beforeEach(() => {
+      mockUseParams.mockReturnValue({ userId: collectionAuthor, postId: collectionPost });
+    });
+
+    afterEach(() => {
+      // Restore the hoisted defaults so overrides don't leak into other variants.
+      mockUseParams.mockImplementation(() => ({ id: '' }));
+      mockUsePostDetails.mockImplementation(() => ({ postDetails: undefined, isLoading: false }));
+    });
+
+    it('paginates the collection items stream at the max page size and reads the envelope by composite id', () => {
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
+
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({
+        streamId: buildCollectionItemsStreamId(collectionAuthor, collectionPost),
+        limit: NEXUS_STREAM_MAX_LIMIT,
+      });
+      expect(mockUsePostDetails).toHaveBeenCalledWith(`${collectionAuthor}:${collectionPost}`);
+    });
+
+    it('sorts the stream by the envelope items order, appending ids outside the envelope', () => {
+      mockUsePostDetails.mockReturnValue({
+        postDetails: {
+          content: JSON.stringify({
+            name: 'Ordered',
+            items: ['pubky://author_a/pub/pubky.app/posts/post_a', 'pubky://author_b/pub/pubky.app/posts/post_b'],
+          }),
+        },
+        isLoading: false,
+      });
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['author_b:post_b', 'author_a:post_a', 'stranger:post_x'],
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
+
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
+        'data-post-ids',
+        'author_a:post_a,author_b:post_b,stranger:post_x',
+      );
+    });
+
+    it('leaves the stream order untouched while the envelope has not resolved', () => {
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['author_b:post_b', 'author_a:post_a'],
+      });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
+
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'author_b:post_b,author_a:post_a');
     });
   });
 

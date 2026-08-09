@@ -59,7 +59,7 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
 
       {/* Replies section */}
       <Container overrideDefaults className="mb-6 flex">
-        {/* Left column - Replies thread with QuickReply at the end (larger) */}
+        {/* Left column - Replies thread with QuickReply directly below the parent post (larger) */}
         <Container className="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0">
           {isArticle && <Typography className="text-2xl font-light text-muted-foreground">{t('replies')}</Typography>}
           <Container overrideDefaults className="ml-3">

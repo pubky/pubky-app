@@ -35,6 +35,16 @@ export interface TUpdateCollectionItemParams {
   shouldAdd: boolean;
 }
 
+export interface TReorderCollectionItemsParams {
+  collectionId: string;
+  /**
+   * Full item-URI order as drafted by the user. Merged against the live
+   * envelope on commit (see `CollectionPostContent.reorderItems`), so a stale
+   * draft cannot resurrect removed items or drop concurrently added ones.
+   */
+  items: string[];
+}
+
 export interface TEditCollectionParams {
   compositeCollectionId: string;
   name: string;
