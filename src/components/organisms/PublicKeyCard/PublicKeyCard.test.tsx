@@ -10,12 +10,6 @@ import { PublicKeyCard } from './PublicKeyCard';
 //   },
 // });
 
-// Hoisted mocks so they can be used inside vi.mock factories
-const { mockToast, mockDismiss } = vi.hoisted(() => ({
-  mockToast: vi.fn(),
-  mockDismiss: vi.fn(),
-}));
-
 interface ImageProps {
   src: string;
   alt: string;
@@ -116,15 +110,6 @@ vi.mock('@/molecules/PopoverPublicKey/PopoverPublicKey', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({
-      toast: mockToast,
-    }),
-    toast: mockToast,
-  };
-});
-
 // Mock atoms
 vi.mock('@/atoms/Button/Button', () => {
   return {
@@ -204,43 +189,13 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
   useCopyToClipboard: mockUseCopyToClipboard,
 }));
 
-const { mockShareWithFallback } = vi.hoisted(() => ({
-  mockShareWithFallback: vi.fn(),
-}));
-
-const { mockLoggerError, mockLoggerInfo } = vi.hoisted(() => ({
-  mockLoggerError: vi.fn(),
-  mockLoggerInfo: vi.fn(),
-}));
-
-vi.mock('@/libs/share/share', async () => {
-  const actual = await vi.importActual<typeof import('@/libs/share/share')>('@/libs/share/share');
-  return {
-    ...actual,
-    shareWithFallback: mockShareWithFallback,
-  };
-});
-vi.mock('@/libs/logger/logger', async () => {
-  const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
-  return {
-    ...actual,
-    Logger: {
-      ...actual.Logger,
-      error: mockLoggerError,
-      info: mockLoggerInfo,
-    },
-  };
-});
-
 describe('PublicKeyCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockToast.mockReturnValue({ dismiss: mockDismiss });
     mockCopyToClipboard.mockResolvedValue(true);
     mockUseCopyToClipboard.mockReturnValue({
       copyToClipboard: mockCopyToClipboard,
     });
-    mockShareWithFallback.mockResolvedValue({ success: true, method: 'native' });
     mockUseOnboardingStore.mockReturnValue({
       secretKey: 'test-secret-key',
       setKeypair: mockSetKeypair,
@@ -274,33 +229,13 @@ describe('PublicKeyCard', () => {
     expect(screen.getByTestId('popover-public-key')).toBeInTheDocument();
   });
 
-  it('renders action section with copy button and share button when Web Share is available', () => {
+  it('renders action section with only the copy button', () => {
     render(<PublicKeyCard />);
 
     expect(screen.getByTestId('action-section')).toBeInTheDocument();
     expect(screen.getByTestId('action-button-0')).toBeInTheDocument();
-    expect(screen.getByTestId('action-button-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('action-button-1')).not.toBeInTheDocument();
     expect(screen.getByText('Copy to clipboard')).toBeInTheDocument();
-    expect(document.querySelector('.lucide-share')).toBeInTheDocument();
-  });
-
-  it('always renders share button with responsive visibility class', () => {
-    render(<PublicKeyCard />);
-
-    expect(screen.getByTestId('action-section')).toBeInTheDocument();
-    expect(screen.getByTestId('action-button-0')).toBeInTheDocument();
-    // Share button is ALWAYS rendered regardless of Web Share API support.
-    // Visibility is controlled by responsive CSS (md:hidden), not by API availability.
-    // When Web Share API is unavailable, the handler falls back to clipboard copy.
-    expect(screen.getByTestId('action-button-1')).toBeInTheDocument();
-    expect(screen.getByTestId('action-button-1').className).toContain('md:hidden');
-  });
-
-  it('hides the share button on medium screens and larger via responsive classes', () => {
-    render(<PublicKeyCard />);
-
-    const shareButton = screen.getByTestId('action-button-1');
-    expect(shareButton.className).toContain('md:hidden');
   });
 
   it('renders input field with public key', () => {
@@ -365,81 +300,6 @@ describe('PublicKeyCard', () => {
     expect(copyButton).toHaveAttribute('data-variant', 'secondary');
   });
 
-  it('has correct share button variant', () => {
-    render(<PublicKeyCard />);
-
-    const shareButton = screen.getByTestId('action-button-1');
-    expect(shareButton).toHaveAttribute('data-variant', 'secondary');
-  });
-
-  it('handles share action with native sharing', async () => {
-    render(<PublicKeyCard />);
-
-    const shareButton = screen.getByTestId('action-button-1');
-    fireEvent.click(shareButton);
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(mockShareWithFallback).toHaveBeenCalledWith(
-      {
-        title: 'My Pubky',
-        text: `Here is my Pubky:\n${mockPubky}`,
-      },
-      expect.objectContaining({
-        onFallback: expect.any(Function),
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
-      }),
-    );
-  });
-
-  it('handles share action with fallback to clipboard', async () => {
-    // Mock shareWithFallback to simulate fallback scenario
-    mockShareWithFallback.mockImplementation(async (_data, options) => {
-      // Simulate fallback being called
-      await options.onFallback?.();
-      // Simulate success callback with fallback method
-      options.onSuccess?.({ success: true, method: 'fallback' });
-      return { success: true, method: 'fallback' };
-    });
-
-    render(<PublicKeyCard />);
-
-    const shareButton = screen.getByTestId('action-button-1');
-    fireEvent.click(shareButton);
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(mockShareWithFallback).toHaveBeenCalled();
-    expect(mockCopyToClipboard).toHaveBeenCalledWith(mockPubky);
-    expect(mockToast).toHaveBeenCalledWith({
-      variant: 'warning',
-      title: 'Sharing unavailable, pubky copied',
-    });
-  });
-
-  it('handles share action error', async () => {
-    // Mock shareWithFallback to simulate error scenario
-    mockShareWithFallback.mockImplementation(async (_data, options) => {
-      const error = new Error('Share failed');
-      options.onError?.(error);
-      throw error;
-    });
-
-    render(<PublicKeyCard />);
-
-    const shareButton = screen.getByTestId('action-button-1');
-    fireEvent.click(shareButton);
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(mockShareWithFallback).toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith({
-      variant: 'error',
-      description: 'Could not share. Try again.',
-    });
-  });
-
   it('disables actions when pubky is empty', () => {
     // Mock selectPublicKey to throw (triggers keypair generation)
     // But Identity.generateKeypair is mocked to return test values
@@ -486,53 +346,12 @@ describe('PublicKeyCard', () => {
     expect(screen.getByTestId('loading')).toBeInTheDocument();
     expect(screen.getByText('Generating pubky...')).toBeInTheDocument();
   });
-
-  it('uses existing pubky for share action', async () => {
-    // This test verifies that when selectPublicKey returns a valid key,
-    // the share action uses that key
-    render(<PublicKeyCard />);
-
-    const shareButton = screen.getByTestId('action-button-1');
-    fireEvent.click(shareButton);
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    // shareWithFallback should be called with the pubky from selectPublicKey
-    expect(mockShareWithFallback).toHaveBeenCalledWith(
-      {
-        title: 'My Pubky',
-        text: `Here is my Pubky:\n${mockPubky}`,
-      },
-      expect.objectContaining({
-        onFallback: expect.any(Function),
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
-      }),
-    );
-  });
-
-  it('logs unexpected share errors using Logger', async () => {
-    // Mock shareWithFallback to throw an unexpected error
-    const unexpectedError = new Error('Unexpected error');
-    mockShareWithFallback.mockRejectedValueOnce(unexpectedError);
-
-    render(<PublicKeyCard />);
-
-    const shareButton = screen.getByTestId('action-button-1');
-    fireEvent.click(shareButton);
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(mockLoggerError).toHaveBeenCalledWith('Unexpected share error', { error: unexpectedError });
-  });
 });
 
 describe('PublicKeyCard - Key Generation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockToast.mockReturnValue({ dismiss: mockDismiss });
     mockCopyToClipboard.mockResolvedValue(true);
-    mockShareWithFallback.mockResolvedValue({ success: true, method: 'native' });
     mockUseOnboardingStore.mockReturnValue({
       secretKey: 'test-secret-key',
       setKeypair: mockSetKeypair,

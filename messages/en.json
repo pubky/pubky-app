@@ -407,13 +407,7 @@
       "uniqueTitle": "Your unique <highlight>pubky.</highlight>",
       "uniqueSubtitle": "Share your pubky with your friends so they can follow you.",
       "copy": "Copy to clipboard",
-      "share": "Share",
       "generating": "Generating pubky...",
-      "myPubky": "My Pubky",
-      "shareText": "Here is my Pubky:\n{displayPubky}",
-      "shareUnavailable": "Sharing unavailable, pubky copied",
-      "shareFailed": "Share failed",
-      "shareFailedDescription": "Could not share. Try again.",
       "signUpFailed": "Error - Failed to sign up",
       "signUpError": "Could not sign up. Try again.",
       "invalidInvite": "Invite code is invalid or expired."
