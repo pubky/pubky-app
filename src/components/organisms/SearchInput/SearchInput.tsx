@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
@@ -25,8 +24,6 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const t = useTranslations('search');
-
   const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = useTagSearch();
   const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = useSearchStore();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
@@ -34,7 +31,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
 
   const handleEnter = (value: string) => {
     if (!isValidTagLabel(value.trim().toLowerCase())) {
-      toast({ variant: 'error', description: t('invalidTag') });
+      toast({ variant: 'error', description: 'Tags can be max 20 chars and cannot contain special characters' });
       return false;
     }
 

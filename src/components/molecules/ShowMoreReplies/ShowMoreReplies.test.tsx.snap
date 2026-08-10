@@ -97,7 +97,7 @@ exports[`ShowMoreReplies - Snapshots > matches snapshot with count of 1 1`] = `
           />
         </svg>
         <span>
-          {count, plural, one {# more reply} other {# more replies}}
+          1 more reply
         </span>
       </button>
     </div>
@@ -202,7 +202,7 @@ exports[`ShowMoreReplies - Snapshots > matches snapshot with count of 5 1`] = `
           />
         </svg>
         <span>
-          {count, plural, one {# more reply} other {# more replies}}
+          5 more replies
         </span>
       </button>
     </div>
@@ -307,7 +307,7 @@ exports[`ShowMoreReplies - Snapshots > matches snapshot with isLast=true 1`] = `
           />
         </svg>
         <span>
-          {count, plural, one {# more reply} other {# more replies}}
+          3 more replies
         </span>
       </button>
     </div>

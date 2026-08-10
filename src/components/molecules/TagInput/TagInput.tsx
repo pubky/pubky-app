@@ -2,7 +2,6 @@
 
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Smile, X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
@@ -44,9 +43,8 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   },
   ref,
 ) {
-  const t = useTranslations('post');
-  const defaultPlaceholder = placeholder ?? t('addTag');
-  const defaultLimitReachedPlaceholder = limitReachedPlaceholder ?? t('limitReached');
+  const defaultPlaceholder = placeholder ?? 'add tag';
+  const defaultLimitReachedPlaceholder = limitReachedPlaceholder ?? 'limit reached';
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Combine exclusions for API suggestions

@@ -5,15 +5,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { HOT_MOBILE_MENU_ITEMS, HotMobileMenu } from './HotMobileMenu';
 import { HotSection } from './HotMobileMenu.types';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
 describe('HotMobileMenu', () => {
   it('renders all menu items', () => {
     render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
     HOT_MOBILE_MENU_ITEMS.forEach((item) => {
-      expect(screen.getByLabelText(item.section)).toBeInTheDocument();
+      expect(screen.getByLabelText(item.label)).toBeInTheDocument();
     });
   });
 
@@ -27,7 +23,7 @@ describe('HotMobileMenu', () => {
     const { container } = render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={() => {}} />);
 
     HOT_MOBILE_MENU_ITEMS.forEach((item) => {
-      expect(screen.getByText(item.section)).toBeInTheDocument();
+      expect(screen.getByText(item.label)).toBeInTheDocument();
     });
 
     const icons = container.querySelectorAll('svg');
@@ -57,7 +53,7 @@ describe('HotMobileMenu', () => {
     const { container } = render(<HotMobileMenu activeSection={HotSection.USERS} onSectionChange={() => {}} />);
     const activeButton = container.querySelector('button[aria-current="page"]');
     expect(activeButton).toBeInTheDocument();
-    expect(activeButton).toHaveAttribute('aria-label', 'users');
+    expect(activeButton).toHaveAttribute('aria-label', 'Users');
   });
 
   it('calls onSectionChange with correct section when clicked', async () => {
@@ -66,13 +62,13 @@ describe('HotMobileMenu', () => {
 
     render(<HotMobileMenu activeSection={HotSection.TAGS} onSectionChange={onSectionChange} />);
 
-    await user.click(screen.getByLabelText('users'));
+    await user.click(screen.getByLabelText('Users'));
     expect(onSectionChange).toHaveBeenCalledWith(HotSection.USERS);
 
-    await user.click(screen.getByLabelText('posts'));
+    await user.click(screen.getByLabelText('Posts'));
     expect(onSectionChange).toHaveBeenCalledWith(HotSection.POSTS);
 
-    await user.click(screen.getByLabelText('tags'));
+    await user.click(screen.getByLabelText('Tags'));
     expect(onSectionChange).toHaveBeenCalledWith(HotSection.TAGS);
 
     expect(onSectionChange).toHaveBeenCalledTimes(3);

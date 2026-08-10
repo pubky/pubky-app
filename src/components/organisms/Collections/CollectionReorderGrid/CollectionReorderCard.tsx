@@ -2,7 +2,6 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useTranslations } from 'next-intl';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { cn } from '@/libs/utils/utils';
@@ -27,7 +26,6 @@ import type { CollectionReorderCardProps } from './CollectionReorderGrid.types';
  * slot in the draft.
  */
 export function CollectionReorderCard({ entry, disabled = false }: CollectionReorderCardProps) {
-  const t = useTranslations('post');
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: entry.uri,
     disabled,
@@ -56,7 +54,7 @@ export function CollectionReorderCard({ entry, disabled = false }: CollectionReo
           <PostMain postId={entry.postId} isReply={false} isNavigable={false} />
         ) : (
           <Card className="min-w-0 flex-1 justify-center gap-0 rounded-md py-2">
-            <PostUnavailable message={t('missing')} />
+            <PostUnavailable message={'Post not found.'} />
           </Card>
         )}
       </Container>

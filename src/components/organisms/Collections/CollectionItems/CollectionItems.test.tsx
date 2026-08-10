@@ -24,13 +24,6 @@ const mockReorderState = vi.hoisted(() => ({
   cancelReorder: vi.fn(),
 }));
 
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-  useFormatter: () => ({
-    number: (value: number, _options?: Intl.NumberFormatOptions) => String(value),
-  }),
-}));
-
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => mockUseAuthStore(selector),
 }));
@@ -395,7 +388,7 @@ describe('CollectionItems', () => {
     renderCollectionItems({ postDetails: buildPostDetails(COLLECTION_CONTENT_EMPTY) });
 
     expect(screen.getByTestId('collection-hero')).toBeInTheDocument();
-    expect(screen.getByText('collections.single.empty')).toBeInTheDocument();
+    expect(screen.getByText('This collection is empty.')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
   });
 

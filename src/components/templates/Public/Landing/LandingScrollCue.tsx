@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { cn } from '@/libs/utils/utils';
 import {
   LANDING_FINAL_SECTION_ID,
@@ -13,7 +12,6 @@ import {
 } from './Landing.constants';
 
 export function LandingScrollCue() {
-  const t = useTranslations('landing');
   const [targetSectionId, setTargetSectionId] = useState(LANDING_NEXT_SECTION_ID);
   const [isBackToTop, setIsBackToTop] = useState(false);
   const [showCueOnMobile, setShowCueOnMobile] = useState(true);
@@ -102,7 +100,7 @@ export function LandingScrollCue() {
         'landing-scroll-cue group fixed bottom-12 left-1/2 z-20 flex size-12 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-300 hover:text-brand focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none sm:bottom-6',
         !showCueOnMobile && 'max-sm:hidden',
       )}
-      aria-label={isBackToTop ? t('scrollToTop') : t('scrollToNext')}
+      aria-label={isBackToTop ? 'Scroll to top' : 'Scroll to next section'}
       onClick={handleClick}
     >
       <span className={cn('transition-transform duration-300', isBackToTop && 'rotate-180')}>

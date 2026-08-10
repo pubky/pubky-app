@@ -126,7 +126,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       data-testid="container"
     >
       <button
-        aria-label="collections.single.follow"
+        aria-label="Follow"
         class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
         data-cy="collection-hero-follow-btn"
         data-size="sm"
@@ -153,10 +153,10 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
             d="M12 5v14"
           />
         </svg>
-        collections.single.follow
+        Follow
       </button>
       <button
-        aria-label="collections.single.share"
+        aria-label="Share"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-size="icon"
         data-slot="button"
@@ -186,12 +186,12 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.share
+          Share
         </span>
       </button>
       <button
         aria-expanded="false"
-        aria-label="post.actions.tagPost"
+        aria-label="Tag post (3)"
         class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
         data-cy="post-tag-btn"
         data-size="sm"
@@ -231,7 +231,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       <button
         aria-expanded="false"
         aria-haspopup="menu"
-        aria-label="collections.single.layout: collections.single.layoutGrid"
+        aria-label="Layout: Grid"
         class="items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 hidden lg:inline-flex lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-layout-menu"
         data-size="icon"
@@ -304,7 +304,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.layoutGrid
+          Grid
         </span>
         <svg
           aria-hidden="true"
@@ -458,15 +458,15 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
       data-testid="container"
     >
       <button
-        aria-label="collections.single.content"
+        aria-label="Add Post"
         data-testid="collection-add-content"
         disabled=""
         type="button"
       >
-        collections.single.content
+        Add Post
       </button>
       <button
-        aria-label="collections.single.share"
+        aria-label="Share"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-hero-share-btn"
         data-size="icon"
@@ -498,11 +498,11 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.share
+          Share
         </span>
       </button>
       <button
-        aria-label="collections.single.saveOrder"
+        aria-label="Save order"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-hero-save-order-btn"
         data-size="icon"
@@ -530,11 +530,11 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.saveOrder
+          Save order
         </span>
       </button>
       <button
-        aria-label="collections.single.cancelReorder"
+        aria-label="Cancel"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-destructive/16 text-destructive hover:!bg-destructive/30 border-destructive size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-hero-cancel-reorder-btn"
         data-size="icon"
@@ -565,11 +565,11 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.cancelReorder
+          Cancel
         </span>
       </button>
       <button
-        aria-label="collections.single.edit"
+        aria-label="Edit"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-hero-edit-btn"
         data-size="icon"
@@ -601,11 +601,11 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.edit
+          Edit
         </span>
       </button>
       <button
-        aria-label="collections.single.delete"
+        aria-label="Delete"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-hero-delete-btn"
         data-size="icon"
@@ -646,12 +646,12 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.delete
+          Delete
         </span>
       </button>
       <button
         aria-expanded="false"
-        aria-label="post.actions.tagPost"
+        aria-label="Tag post (3)"
         class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
         data-cy="post-tag-btn"
         data-size="sm"
@@ -823,14 +823,14 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
       data-testid="container"
     >
       <button
-        aria-label="collections.single.content"
+        aria-label="Add Post"
         data-testid="collection-add-content"
         type="button"
       >
-        collections.single.content
+        Add Post
       </button>
       <button
-        aria-label="collections.single.share"
+        aria-label="Share"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-hero-share-btn"
         data-size="icon"
@@ -861,11 +861,11 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.share
+          Share
         </span>
       </button>
       <button
-        aria-label="collections.single.edit"
+        aria-label="Edit"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-hero-edit-btn"
         data-size="icon"
@@ -896,11 +896,11 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.edit
+          Edit
         </span>
       </button>
       <button
-        aria-label="collections.single.delete"
+        aria-label="Delete"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-hero-delete-btn"
         data-size="icon"
@@ -940,12 +940,12 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.delete
+          Delete
         </span>
       </button>
       <button
         aria-expanded="false"
-        aria-label="post.actions.tagPost"
+        aria-label="Tag post (3)"
         class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
         data-cy="post-tag-btn"
         data-size="sm"
@@ -1104,7 +1104,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       data-testid="container"
     >
       <button
-        aria-label="collections.single.follow"
+        aria-label="Follow"
         class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 px-3 has-[>svg]:px-3.5 gap-2 text-xs"
         data-cy="collection-hero-follow-btn"
         data-size="sm"
@@ -1131,10 +1131,10 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
             d="M12 5v14"
           />
         </svg>
-        collections.single.follow
+        Follow
       </button>
       <button
-        aria-label="collections.single.share"
+        aria-label="Share"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-size="icon"
         data-slot="button"
@@ -1164,12 +1164,12 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.share
+          Share
         </span>
       </button>
       <button
         aria-expanded="false"
-        aria-label="post.actions.tagPost"
+        aria-label="Tag post (3)"
         class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
         data-cy="post-tag-btn"
         data-size="sm"
@@ -1209,7 +1209,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
       <button
         aria-expanded="false"
         aria-haspopup="menu"
-        aria-label="collections.single.layout: collections.single.layoutGrid"
+        aria-label="Layout: Grid"
         class="items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 hidden lg:inline-flex lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         data-cy="collection-layout-menu"
         data-size="icon"
@@ -1282,7 +1282,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
           class="hidden lg:inline"
           data-testid="typography"
         >
-          collections.single.layoutGrid
+          Grid
         </span>
         <svg
           aria-hidden="true"

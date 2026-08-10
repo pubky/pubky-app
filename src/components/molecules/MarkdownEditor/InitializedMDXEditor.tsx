@@ -30,7 +30,6 @@ import {
   UndoRedo,
 } from '@mdxeditor/editor';
 import { AlertTriangle, Smile, Type } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Textarea } from '@/atoms/Textarea/Textarea';
@@ -79,7 +78,6 @@ export default function InitializedMDXEditor({
 }: {
   editorRef: ForwardedRef<MDXEditorMethods> | null;
 } & MDXEditorProps) {
-  const t = useTranslations('markdownEditor');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [maxLengthWarning, setMaxLengthWarning] = useState<null | 'approaching' | 'reached'>(null);
   const [mode, setMode] = useState<EditorMode>('richtext');
@@ -146,13 +144,13 @@ export default function InitializedMDXEditor({
           overrideDefaults
           className="flex min-h-10.75 cursor-auto flex-wrap items-center gap-2 rounded-md border bg-background px-2.5 py-1.5"
           role="toolbar"
-          aria-label={t('toolbarAriaLabel')}
+          aria-label={'Markdown editing toolbar'}
           data-testid="markdown-toolbar"
         >
           <Button
             variant="ghost"
             size="icon"
-            title={t('emoji')}
+            title={'Emoji'}
             onClick={() => setShowEmojiPicker(true)}
             disabled={readOnly}
             className="size-7 cursor-default rounded"
@@ -164,7 +162,7 @@ export default function InitializedMDXEditor({
           <Button
             variant="ghost"
             size="icon"
-            title={t('richText')}
+            title={'Rich Text'}
             onClick={switchToRichTextMode}
             disabled={readOnly}
             className="size-7 cursor-default rounded"
@@ -179,7 +177,7 @@ export default function InitializedMDXEditor({
           value={markdownText}
           onChange={(e) => handleMarkdownTextChange(e.target.value)}
           readOnly={readOnly}
-          placeholder={t('placeholder')}
+          placeholder={'Start writing your masterpiece'}
           maxLength={ARTICLE_MAX_CHARACTER_LENGTH}
           variant="inline"
           className="max-h-[60dvh] min-h-11 rounded-none pt-4 font-normal text-foreground placeholder:text-muted-foreground/70"
@@ -192,7 +190,7 @@ export default function InitializedMDXEditor({
       {/* Rich text mode: MDXEditor (includes its own toolbar) — hidden via CSS in markdown mode */}
       <MDXEditor
         readOnly={readOnly}
-        placeholder={t('placeholder')}
+        placeholder={'Start writing your masterpiece'}
         className={cn('dark-theme cursor-auto', mode === 'markdown' && 'hidden')}
         contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
         plugins={[
@@ -209,10 +207,10 @@ export default function InitializedMDXEditor({
                 <CreateLink />
                 <CodeToggle />
                 <InsertCodeBlock />
-                <ButtonWithTooltip title={t('emoji')} onClick={() => setShowEmojiPicker(true)}>
+                <ButtonWithTooltip title={'Emoji'} onClick={() => setShowEmojiPicker(true)}>
                   <Smile className="size-6" />
                 </ButtonWithTooltip>
-                <ButtonWithTooltip title={t('markdown')} onClick={switchToMarkdownMode}>
+                <ButtonWithTooltip title={'Markdown'} onClick={switchToMarkdownMode}>
                   <MarkdownMark className="size-6" />
                 </ButtonWithTooltip>
               </>
@@ -257,8 +255,8 @@ export default function InitializedMDXEditor({
           <AlertTriangle className="size-4 shrink-0" />
 
           <Typography overrideDefaults className="text-sm">
-            {maxLengthWarning === 'approaching' && t('warningApproaching')}
-            {maxLengthWarning === 'reached' && t('warningReached')}
+            {maxLengthWarning === 'approaching' && "You're approaching the maximum character limit."}
+            {maxLengthWarning === 'reached' && "You've reached the maximum character limit."}
           </Typography>
         </Container>
       )}

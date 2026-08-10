@@ -7,10 +7,6 @@ import type { UseCoverImagePickerResult } from '@/hooks/useCoverImagePicker/useC
 import type { CreateCollectionFormData } from '@/hooks/useCreateCollection/useCreateCollection.types';
 import { DialogCollectionForm } from './DialogCollectionForm';
 
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 const COVER_INPUT_ID = 'test-collection-cover-image';
 
 type Overrides = Partial<{
@@ -105,10 +101,10 @@ describe('DialogCollectionForm', () => {
   it('defaults to Grid and lets the creator select List', () => {
     render(<Harness layoutLabel="Default layout" />);
 
-    const grid = screen.getByRole('radio', { name: 'collections.new.layoutGrid' });
-    const list = screen.getByRole('radio', { name: 'collections.new.layoutList' });
+    const grid = screen.getByRole('radio', { name: 'Grid' });
+    const list = screen.getByRole('radio', { name: 'List' });
     const layoutLabel = screen.getByText('Default layout');
-    const backgroundLabel = screen.getByText('collections.new.backgroundLabel');
+    const backgroundLabel = screen.getByText('Background');
 
     expect(screen.getAllByRole('radio')).toHaveLength(3);
     expect(grid).toHaveAttribute('aria-checked', 'true');
@@ -128,8 +124,8 @@ describe('DialogCollectionForm', () => {
   it('lets the creator select Visual', () => {
     render(<Harness />);
 
-    const grid = screen.getByRole('radio', { name: 'collections.new.layoutGrid' });
-    const visual = screen.getByRole('radio', { name: 'collections.new.layoutVisual' });
+    const grid = screen.getByRole('radio', { name: 'Grid' });
+    const visual = screen.getByRole('radio', { name: 'Visual' });
 
     expect(visual).toHaveAttribute('aria-checked', 'false');
     expect(visual).toHaveAttribute('data-cy', 'collection-layout-visual');
@@ -144,8 +140,8 @@ describe('DialogCollectionForm', () => {
   it('preselects Visual when editing a Visual collection', () => {
     render(<Harness initialLayout={COLLECTION_LAYOUT.VISUAL} />);
 
-    expect(screen.getByRole('radio', { name: 'collections.new.layoutVisual' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('radio', { name: 'collections.new.layoutGrid' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('radio', { name: 'Visual' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Grid' })).toHaveAttribute('aria-checked', 'false');
   });
 
   it('disables the save button while the name is empty', () => {
@@ -157,7 +153,7 @@ describe('DialogCollectionForm', () => {
   it('enables the save button once the name has a non-whitespace value', () => {
     render(<Harness submitLabel="Save" />);
 
-    fireEvent.change(screen.getByLabelText('collections.new.nameLabel'), { target: { value: 'Reading list' } });
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Reading list' } });
 
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
@@ -167,7 +163,7 @@ describe('DialogCollectionForm', () => {
 
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
 
-    fireEvent.change(screen.getByLabelText('collections.new.nameLabel'), { target: { value: '   ' } });
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: '   ' } });
 
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
@@ -178,12 +174,12 @@ describe('DialogCollectionForm', () => {
     // Inputs + cover picker are blocked from interaction while the envelope
     // hasn't propagated yet; the save button stays disabled because the name
     // hasn't been prefilled yet.
-    expect(screen.getByLabelText('collections.new.nameLabel')).toBeDisabled();
-    expect(screen.getByLabelText('collections.new.descriptionLabel')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'collections.new.addImage' })).toBeDisabled();
+    expect(screen.getByLabelText('Title')).toBeDisabled();
+    expect(screen.getByLabelText('Description')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add image' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     // Cancel stays enabled so the user can back out while the load is in flight.
-    expect(screen.getByRole('button', { name: 'collections.new.cancel' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
   });
 
   it('keeps the save button disabled even with a non-empty name while isLoading is true', () => {
@@ -198,10 +194,10 @@ describe('DialogCollectionForm', () => {
     render(<Harness title="Edit Collection" submitLabel="Save changes" isSaving initialName="Reading list" />);
 
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'collections.new.saving' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'collections.new.cancel' })).toBeDisabled();
-    expect(screen.getByLabelText('collections.new.nameLabel')).toBeDisabled();
-    expect(screen.getByLabelText('collections.new.descriptionLabel')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    expect(screen.getByLabelText('Title')).toBeDisabled();
+    expect(screen.getByLabelText('Description')).toBeDisabled();
   });
 
   it('invokes onSubmit when the primary button is clicked with a valid name', () => {
@@ -217,7 +213,7 @@ describe('DialogCollectionForm', () => {
     const onOpenChange = vi.fn();
     render(<Harness onOpenChange={onOpenChange} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.new.cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
@@ -225,15 +221,15 @@ describe('DialogCollectionForm', () => {
   it('renders the cover-picker action as "Add image" when no preview URL is present', () => {
     render(<Harness coverPreviewUrl={null} />);
 
-    expect(screen.getByRole('button', { name: 'collections.new.addImage' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'collections.new.removeImage' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add image' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove image' })).not.toBeInTheDocument();
   });
 
   it('renders the cover-picker action as "Remove image" when a preview URL is present', () => {
     render(<Harness coverPreviewUrl="blob:preview" />);
 
-    expect(screen.getByRole('button', { name: 'collections.new.removeImage' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'collections.new.addImage' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove image' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add image' })).not.toBeInTheDocument();
   });
 
   it('paints the cover preview as a background-image when previewUrl is set', () => {
@@ -246,13 +242,13 @@ describe('DialogCollectionForm', () => {
   it('surfaces the invalid-type cover error message', () => {
     render(<Harness coverError="invalid-type" />);
 
-    expect(screen.getByText('collections.new.coverImageInvalid')).toBeInTheDocument();
+    expect(screen.getByText('Cover image must be an image file.')).toBeInTheDocument();
   });
 
   it('surfaces the too-large cover error message', () => {
     render(<Harness coverError="too-large" />);
 
-    expect(screen.getByText('collections.new.coverImageTooLarge')).toBeInTheDocument();
+    expect(screen.getByText('Cover image is too large. Maximum size is 20MB.')).toBeInTheDocument();
   });
 
   it('disables the save button while a cover error is showing, even with a valid name', () => {
@@ -268,7 +264,7 @@ describe('DialogCollectionForm', () => {
     expect(fileInput).not.toBeNull();
     expect(fileInput.tagName).toBe('INPUT');
     expect(fileInput.type).toBe('file');
-    expect(screen.getByText('collections.new.backgroundLabel')).toHaveAttribute('for', COVER_INPUT_ID);
+    expect(screen.getByText('Background')).toHaveAttribute('for', COVER_INPUT_ID);
   });
 
   it('routes choose cover and remove cover clicks to the picker handlers', () => {
@@ -276,12 +272,12 @@ describe('DialogCollectionForm', () => {
     const onRemoveCover = vi.fn();
     const { rerender } = render(<Harness onChooseCover={onChooseCover} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.new.addImage' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add image' }));
     expect(onChooseCover).toHaveBeenCalledTimes(1);
 
     rerender(<Harness coverPreviewUrl="blob:preview" onRemoveCover={onRemoveCover} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.new.removeImage' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove image' }));
     expect(onRemoveCover).toHaveBeenCalledTimes(1);
   });
 });

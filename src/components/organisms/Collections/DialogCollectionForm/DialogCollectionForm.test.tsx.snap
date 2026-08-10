@@ -66,7 +66,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
             data-slot="label"
             for="name"
           >
-            collections.new.nameLabel
+            Title
           </label>
           <div
             class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0 min-w-0 overflow-hidden"
@@ -80,7 +80,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
               id="name"
               maxlength="100"
               name="name"
-              placeholder="collections.new.namePlaceholder"
+              placeholder="Name your collection"
               type="text"
               value=""
             />
@@ -95,7 +95,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
             data-slot="label"
             for="description"
           >
-            collections.new.descriptionLabel
+            Description
           </label>
           <div
             class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0 min-w-0 overflow-hidden"
@@ -109,7 +109,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
               id="description"
               maxlength="500"
               name="description"
-              placeholder="collections.new.descriptionPlaceholder"
+              placeholder="What will people find here?"
               type="text"
               value=""
             />
@@ -134,7 +134,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
           >
             <button
               aria-checked="true"
-              aria-label="collections.new.layoutGrid"
+              aria-label="Grid"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-foreground text-foreground"
               data-cy="collection-layout-grid"
               data-slot="button"
@@ -204,7 +204,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
             </button>
             <button
               aria-checked="false"
-              aria-label="collections.new.layoutList"
+              aria-label="List"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
               data-cy="collection-layout-list"
               data-slot="button"
@@ -245,7 +245,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
             </button>
             <button
               aria-checked="false"
-              aria-label="collections.new.layoutVisual"
+              aria-label="Visual"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
               data-cy="collection-layout-visual"
               data-slot="button"
@@ -307,14 +307,14 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
             data-slot="label"
             for="test-collection-cover-image"
           >
-            collections.new.backgroundLabel
+            Background
           </label>
           <div
             class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-md bg-card bg-cover bg-center"
             data-testid="test-collection-cover-image"
           >
             <button
-              aria-label="collections.new.addImage"
+              aria-label="Add image"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 rounded-full"
               data-size="sm"
               data-slot="button"
@@ -354,7 +354,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
               <span
                 data-testid="typography"
               >
-                collections.new.addImage
+                Add image
               </span>
             </button>
             <input
@@ -385,7 +385,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the default (no 
           data-slot="button"
           data-variant="outline"
         >
-          collections.new.cancel
+          Cancel
         </button>
       </div>
       <button
@@ -498,7 +498,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
             data-slot="label"
             for="name"
           >
-            collections.new.nameLabel
+            Title
           </label>
           <div
             class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0 min-w-0 overflow-hidden"
@@ -513,7 +513,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
               id="name"
               maxlength="100"
               name="name"
-              placeholder="collections.new.namePlaceholder"
+              placeholder="Name your collection"
               type="text"
               value="Reading list"
             />
@@ -528,7 +528,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
             data-slot="label"
             for="description"
           >
-            collections.new.descriptionLabel
+            Description
           </label>
           <div
             class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0 min-w-0 overflow-hidden"
@@ -543,7 +543,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
               id="description"
               maxlength="500"
               name="description"
-              placeholder="collections.new.descriptionPlaceholder"
+              placeholder="What will people find here?"
               type="text"
               value=""
             />
@@ -568,7 +568,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
           >
             <button
               aria-checked="true"
-              aria-label="collections.new.layoutGrid"
+              aria-label="Grid"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-foreground text-foreground"
               data-cy="collection-layout-grid"
               data-slot="button"
@@ -639,7 +639,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
             </button>
             <button
               aria-checked="false"
-              aria-label="collections.new.layoutList"
+              aria-label="List"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
               data-cy="collection-layout-list"
               data-slot="button"
@@ -681,7 +681,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
             </button>
             <button
               aria-checked="false"
-              aria-label="collections.new.layoutVisual"
+              aria-label="Visual"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
               data-cy="collection-layout-visual"
               data-slot="button"
@@ -744,14 +744,14 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
             data-slot="label"
             for="test-collection-cover-image"
           >
-            collections.new.backgroundLabel
+            Background
           </label>
           <div
             class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-md bg-card bg-cover bg-center"
             data-testid="test-collection-cover-image"
           >
             <button
-              aria-label="collections.new.addImage"
+              aria-label="Add image"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 rounded-full"
               data-size="sm"
               data-slot="button"
@@ -792,7 +792,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
               <span
                 data-testid="typography"
               >
-                collections.new.addImage
+                Add image
               </span>
             </button>
             <input
@@ -816,7 +816,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
           data-slot="button"
           disabled=""
         >
-          collections.new.saving
+          Saving...
         </button>
         <button
           class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground bg-input/30 border-input hover:bg-input/50 h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal order-2 sm:order-1"
@@ -825,7 +825,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot in the saving state
           data-variant="outline"
           disabled=""
         >
-          collections.new.cancel
+          Cancel
         </button>
       </div>
       <button
@@ -938,7 +938,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
             data-slot="label"
             for="name"
           >
-            collections.new.nameLabel
+            Title
           </label>
           <div
             class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0 min-w-0 overflow-hidden"
@@ -952,7 +952,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
               id="name"
               maxlength="100"
               name="name"
-              placeholder="collections.new.namePlaceholder"
+              placeholder="Name your collection"
               type="text"
               value=""
             />
@@ -967,7 +967,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
             data-slot="label"
             for="description"
           >
-            collections.new.descriptionLabel
+            Description
           </label>
           <div
             class="flex !bg-alpha-90/10 mx-0 w-full cursor-pointer flex-row items-center gap-0 rounded-md border bg-transparent pl-2 border-dashed h-14 text-lg mb-0 min-w-0 overflow-hidden"
@@ -981,7 +981,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
               id="description"
               maxlength="500"
               name="description"
-              placeholder="collections.new.descriptionPlaceholder"
+              placeholder="What will people find here?"
               type="text"
               value=""
             />
@@ -1006,7 +1006,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
           >
             <button
               aria-checked="true"
-              aria-label="collections.new.layoutGrid"
+              aria-label="Grid"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-foreground text-foreground"
               data-cy="collection-layout-grid"
               data-slot="button"
@@ -1076,7 +1076,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
             </button>
             <button
               aria-checked="false"
-              aria-label="collections.new.layoutList"
+              aria-label="List"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
               data-cy="collection-layout-list"
               data-slot="button"
@@ -1117,7 +1117,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
             </button>
             <button
               aria-checked="false"
-              aria-label="collections.new.layoutVisual"
+              aria-label="Visual"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border hover:text-accent-foreground hover:bg-accent/50 border-none gap-1 px-4 py-2 has-[>svg]:px-4 -mb-px h-12 flex-1 rounded-none !border-x-0 !border-t-0 !border-b !border-solid bg-transparent shadow-none border-transparent text-muted-foreground"
               data-cy="collection-layout-visual"
               data-slot="button"
@@ -1179,7 +1179,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
             data-slot="label"
             for="test-collection-cover-image"
           >
-            collections.new.backgroundLabel
+            Background
           </label>
           <div
             class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-md bg-card bg-cover bg-center"
@@ -1187,7 +1187,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
             style="background-image: url(\\"blob:preview\\");"
           >
             <button
-              aria-label="collections.new.removeImage"
+              aria-label="Remove image"
               class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 rounded-full"
               data-size="sm"
               data-slot="button"
@@ -1226,7 +1226,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
               <span
                 data-testid="typography"
               >
-                collections.new.removeImage
+                Remove image
               </span>
             </button>
             <input
@@ -1257,7 +1257,7 @@ exports[`DialogCollectionForm - Snapshots > matches snapshot with a cover previe
           data-slot="button"
           data-variant="outline"
         >
-          collections.new.cancel
+          Cancel
         </button>
       </div>
       <button

@@ -7,10 +7,6 @@ import { ErrorService } from '@/libs/error/error.types';
 import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
 import { useMigrationStore } from '@/stores/migration/migration.store';
 
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 describe('DatabaseProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -86,7 +82,7 @@ describe('DatabaseProvider', () => {
 
     // Click "Try again" on the recovery screen (wired to DatabaseContext.retry).
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'errors.database.tryAgain' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
       await vi.runAllTimersAsync();
     });
 

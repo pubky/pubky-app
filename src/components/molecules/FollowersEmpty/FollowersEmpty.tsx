@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Plus, UsersRound } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -11,7 +10,6 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
 
 export function FollowersEmpty() {
-  const t = useTranslations('profile.empty.followers');
   const [newPostOpen, setNewPostOpen] = useState(false);
   const { requireAuth } = useRequireAuth();
 
@@ -25,7 +23,7 @@ export function FollowersEmpty() {
         {/* Background image */}
         <Image
           src="/images/connections-empty-state.webp"
-          alt={t('alt')}
+          alt={'Followers - Empty state'}
           fill
           className="pointer-events-none object-contain object-center"
           aria-hidden="true"
@@ -39,11 +37,11 @@ export function FollowersEmpty() {
         {/* Title and subtitle */}
         <Container className="items-center gap-6">
           <Typography as="h3" size="lg">
-            {t('title')}
+            {'Looking for followers?'}
           </Typography>
 
           <Typography className="text-center text-base leading-6 font-medium text-secondary-foreground">
-            {t('subtitle')
+            {'When someone follows this account, their profile will appear here.\nStart posting and engaging with others to grow your followers!'
               .split('\n')
               .map((line, i) => (
                 <span key={i}>
@@ -65,7 +63,7 @@ export function FollowersEmpty() {
         >
           <Plus className="size-4" />
           <Typography as="span" overrideDefaults={true}>
-            {t('createPost')}
+            {'Create a Post'}
           </Typography>
         </Button>
       </Container>

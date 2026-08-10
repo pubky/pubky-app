@@ -3,13 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
-import { REPORT_ISSUE_LABEL_KEYS, REPORT_ISSUE_TYPE_VALUES, REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
+import { REPORT_ISSUE_LABELS, REPORT_ISSUE_TYPE_VALUES, REPORT_ISSUE_TYPES } from '@/pipes/report/report.constants';
 import type { ReportIssueType } from '@/pipes/report/report.types';
 import { ISSUE_TYPE_ICONS } from './DialogReportPostIssueStep.constants';
 import type { DialogReportPostIssueStepProps } from './DialogReportPostIssueStep.types';
@@ -19,9 +18,6 @@ export function DialogReportPostIssueStep({
   onCancel,
   onOpenChange,
 }: DialogReportPostIssueStepProps) {
-  const t = useTranslations('report');
-  const tIssues = useTranslations('report.issues');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<ReportIssueType | null>(null);
   const handleSelect = (issueType: ReportIssueType) => {
@@ -43,16 +39,15 @@ export function DialogReportPostIssueStep({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t('issueStep.title')}</DialogTitle>
-        <DialogDescription>{t('issueStep.question')}</DialogDescription>
+        <DialogTitle>{'Report Post'}</DialogTitle>
+        <DialogDescription>{'What sort of issue are you reporting?'}</DialogDescription>
       </DialogHeader>
 
-      <Container className="gap-1 py-2" role="listbox" aria-label={t('issueStep.label')}>
+      <Container className="gap-1 py-2" role="listbox" aria-label={'Issue types'}>
         {REPORT_ISSUE_TYPE_VALUES.map((issueType) => {
           const Icon = ISSUE_TYPE_ICONS[issueType as ReportIssueType];
           const isSelected = selectedType === issueType;
-          const labelKey = REPORT_ISSUE_LABEL_KEYS[issueType as ReportIssueType];
-          const label = tIssues(labelKey);
+          const label = REPORT_ISSUE_LABELS[issueType as ReportIssueType];
           return (
             <Button
               key={issueType}
@@ -83,9 +78,9 @@ export function DialogReportPostIssueStep({
           variant="secondary"
           size="lg"
           onClick={onCancel}
-          aria-label={tCommon('cancel')}
+          aria-label={'Cancel'}
         >
-          {tCommon('cancel')}
+          {'Cancel'}
         </Button>
         <Button
           data-cy="report-issue-step-next"
@@ -93,9 +88,9 @@ export function DialogReportPostIssueStep({
           size="lg"
           onClick={handleNext}
           disabled={!selectedType}
-          aria-label={tCommon('next')}
+          aria-label={'Next'}
         >
-          {tCommon('next')}
+          {'Next'}
         </Button>
       </DialogFooter>
     </>

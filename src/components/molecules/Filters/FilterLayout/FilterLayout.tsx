@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { Columns3, LayoutGrid, Rows2, Rows4 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps, FilterListItem } from '../Filters.types';
@@ -17,28 +16,27 @@ export function FilterLayout({
   disabled,
   showVisual = false,
 }: FilterLayoutProps) {
-  const t = useTranslations('filters.layout');
   const displaySelectedTab = !showVisual && selectedTab === LAYOUT.VISUAL ? LAYOUT.COLUMNS : selectedTab;
   const items = React.useMemo(
     () =>
       [
         {
           key: LAYOUT.COLUMNS,
-          label: t('columns'),
+          label: 'Columns',
           icon: Columns3,
           disabled,
           dataCy: 'columns-layout-toggle',
         },
         {
           key: LAYOUT.WIDE,
-          label: t('wide'),
+          label: 'Wide',
           icon: Rows2,
           disabled,
           dataCy: 'wide-layout-toggle',
         },
         {
           key: LAYOUT.LIST,
-          label: t('list'),
+          label: 'List',
           icon: Rows4,
           disabled,
           dataCy: 'list-layout-toggle',
@@ -46,18 +44,18 @@ export function FilterLayout({
         showVisual
           ? {
               key: LAYOUT.VISUAL,
-              label: t('visual'),
+              label: 'Visual',
               icon: LayoutGrid,
               disabled,
               dataCy: 'visual-layout-toggle',
             }
           : null,
       ].filter(Boolean) as FilterListItem<LayoutType>[],
-    [t, disabled, showVisual],
+    [disabled, showVisual],
   );
   return (
     <FilterRadioGroup
-      title={t('title')}
+      title={'Layout'}
       items={items}
       selectedValue={displaySelectedTab}
       defaultValue={defaultSelectedTab}

@@ -1,7 +1,6 @@
 'use client';
 
 import { Repeat } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 
@@ -13,7 +12,6 @@ import { Typography } from '@/atoms/Typography/Typography';
  * Only shown on simple reposts (no content) by current user.
  */
 export function RepostHeader() {
-  const t = useTranslations('post');
   return (
     <Container
       className="flex items-center gap-3 rounded-t-md bg-muted px-4 py-3"
@@ -22,7 +20,7 @@ export function RepostHeader() {
     >
       <Repeat className="size-5" aria-label="Repeat" />
       <Typography as="span" className="text-base font-bold text-foreground" overrideDefaults>
-        {t('youReposted')}
+        {'You reposted'}
       </Typography>
     </Container>
   );

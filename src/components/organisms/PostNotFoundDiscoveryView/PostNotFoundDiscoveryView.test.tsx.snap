@@ -18,7 +18,7 @@ exports[`PostNotFoundDiscoveryView - Snapshots > matches snapshot when composite
     <h5
       data-testid="trending-heading"
     >
-      hot.trendingPosts
+      Trending posts
     </h5>
     <div
       data-testid="timeline-feed"
@@ -45,7 +45,7 @@ exports[`PostNotFoundDiscoveryView - Snapshots > matches snapshot when composite
     <h5
       data-testid="trending-heading"
     >
-      hot.trendingPosts
+      Trending posts
     </h5>
     <div
       data-testid="timeline-feed"

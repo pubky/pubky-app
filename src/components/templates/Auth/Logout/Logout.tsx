@@ -2,7 +2,6 @@
 
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { ROOT_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
@@ -34,7 +33,6 @@ async function handleRouteLogout(setViewState: Dispatch<SetStateAction<LogoutVie
 
 export function Logout() {
   const router = useRouter();
-  const t = useTranslations('logout');
   const onboardingHasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const session = useAuthStore((state) => state.session);
@@ -74,8 +72,8 @@ export function Logout() {
   const renderLoadingState = () => (
     <Container size="container" className="mb-6">
       <PageHeader>
-        <PageTitle size="large">{t('loadingTitle')}</PageTitle>
-        <PageSubtitle>{t('loadingSubtitle')}</PageSubtitle>
+        <PageTitle size="large">{'Signing you out...'}</PageTitle>
+        <PageSubtitle>{"We're ending your session securely."}</PageSubtitle>
       </PageHeader>
       <ContentCard layout="column">
         <Container className="items-center justify-center gap-4 py-10">
@@ -89,15 +87,15 @@ export function Logout() {
     <>
       <Container size="container" className="mb-6">
         <PageHeader>
-          <PageTitle size="large">{t('errorTitle')}</PageTitle>
-          <PageSubtitle>{t('errorSubtitle')}</PageSubtitle>
+          <PageTitle size="large">{"We couldn't sign you out yet"}</PageTitle>
+          <PageSubtitle>{'Please try again to finish signing out securely.'}</PageSubtitle>
         </PageHeader>
       </Container>
       <div className="onboarding-nav mt-auto w-full lg:mt-0">
         <ButtonsNavigation
           id="logout-error-navigation"
-          backText={t('homepage')}
-          continueText={t('retry')}
+          backText={'Homepage'}
+          continueText={'Retry'}
           onHandleBackButton={onHandleHome}
           onHandleContinueButton={onHandleRetry}
         />

@@ -18,8 +18,7 @@ import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { usePostInput } from './usePostInput';
 
-// next-intl is mocked globally in src/config/test.ts
-// Real placeholders from messages/en.json for test assertions
+// Literal copies of POST_INPUT_PLACEHOLDER keep assertions independent of the component constants
 const REAL_PLACEHOLDERS = {
   reply: 'Write a reply...',
   post: "What's on your mind?",

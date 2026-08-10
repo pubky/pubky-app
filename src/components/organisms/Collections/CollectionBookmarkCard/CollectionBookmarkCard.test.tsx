@@ -2,38 +2,17 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTION_ROUTES } from '@/app/routes';
 import { useBookmarksCollectionSummary } from '@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary';
-import enMessages from '../../../../../messages/en.json';
 import { CollectionBookmarkCard } from './CollectionBookmarkCard';
 
-const BOOKMARKS_COPY = enMessages.collections.bookmarks;
+const BOOKMARKS_COPY = {
+  title: 'Bookmarks',
+  description: 'Everything you saved for later.',
+};
 const CURRENT_USER_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) => {
-    if (namespace !== 'collections') {
-      return `${namespace ?? ''}.${key}`;
-    }
-
-    if (key === 'postCount') {
-      return values?.count === 1 ? 'post' : 'posts';
-    }
-
-    const nestedKeys: Record<string, string> = {
-      'bookmarks.title': BOOKMARKS_COPY.title,
-      'bookmarks.description': BOOKMARKS_COPY.description,
-    };
-
-    return nestedKeys[key] ?? `collections.${key}`;
-  },
-  useFormatter: () => ({
-    number: (value: number, _options?: Intl.NumberFormatOptions) => String(value),
-  }),
-}));
-
 vi.mock('@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary', () => ({
   useBookmarksCollectionSummary: vi.fn(),
 }));

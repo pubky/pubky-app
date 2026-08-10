@@ -1,7 +1,6 @@
 'use client';
 import React, { useState } from 'react';
 import { ArrowRight, RefreshCcw } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
@@ -17,7 +16,6 @@ import { useToast } from '@/molecules/Toaster/use-toast';
 import type { HumanPhoneCodeProps } from './HumanPhoneCode.types';
 
 export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCodeProps) => {
-  const t = useTranslations('onboarding.phoneCode');
   const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const { toast } = useToast();
@@ -46,20 +44,20 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
       });
       if (result.valid && result.signupCode) {
         toast({
-          title: t('valid'),
+          title: 'Verification code valid',
         });
         onSuccess(result.signupCode);
       } else {
         toast({
           variant: 'warning',
-          title: t('invalid'),
+          title: 'Verification Code Invalid. Try again.',
         });
         setIsVerifyingCode(false);
       }
     } catch {
       toast({
         variant: 'error',
-        description: t('verifyFailedDescription'),
+        description: 'Could not verify code. Try again later.',
       });
       setIsVerifyingCode(false);
     }
@@ -69,15 +67,10 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
     <React.Fragment>
       <PageHeader>
         <PageTitle size="large">
-          {t.rich('title', {
-            highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-          })}
+          {'Enter '}
+          <span className="text-brand">{'Code.'}</span>
         </PageTitle>
-        <PageSubtitle>
-          {t('subtitle', {
-            phoneNumber,
-          })}
-        </PageSubtitle>
+        <PageSubtitle>{`We sent a 6-digit verification code to ${phoneNumber}.`}</PageSubtitle>
       </PageHeader>
 
       {/* Verification code card */}
@@ -95,16 +88,14 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
       >
         <div className="flex w-full flex-col items-start gap-3 text-left">
           <Typography as="h3" className="text-2xl leading-[32px] font-semibold text-foreground">
-            {t('label')}
+            {'Verification code'}
           </Typography>
           <div className="w-full text-base leading-6 font-medium text-secondary-foreground/80">
             <Typography as="p" overrideDefaults className="leading-6">
-              {t('hint', {
-                phoneNumber,
-              })}
+              {`Enter the code you received on ${phoneNumber}.`}
             </Typography>
             <Typography as="p" overrideDefaults className="leading-6">
-              {t('hintChannels')}
+              {'It was likely sent by SMS, WhatsApp, or Telegram.'}
             </Typography>
           </div>
         </div>
@@ -128,11 +119,7 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
           onClick={onBack}
         >
           <RefreshCcw className="mr-2 h-4 w-4" />
-          {resendTimer > 0
-            ? t('resendTimer', {
-                seconds: resendTimer,
-              })
-            : t('resend')}
+          {resendTimer > 0 ? `Resend Code (${resendTimer}s)` : 'Resend Code'}
         </Button>
         <Button
           data-testid="human-phone-send-code-btn"
@@ -144,7 +131,7 @@ export const HumanPhoneCode = ({ phoneNumber, onBack, onSuccess }: HumanPhoneCod
           onClick={() => isCodeComplete && !isVerifyingCode && onVerifyCode()}
         >
           <ArrowRight className="mr-2 h-4 w-4" />
-          {t('verify')}
+          {'Verify Code'}
         </Button>
       </Container>
     </React.Fragment>

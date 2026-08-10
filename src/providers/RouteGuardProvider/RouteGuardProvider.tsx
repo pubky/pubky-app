@@ -2,7 +2,6 @@
 
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { isDynamicPublicRoute, matchesAllowedRoute, PUBLIC_ROUTES } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { AuthController } from '@/controllers/auth/auth';
@@ -40,7 +39,6 @@ interface RouteGuardProviderProps {
  * - NEEDS_PROFILE_CREATION users → profile creation route
  */
 export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
-  const t = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
   const { status, isLoading } = useAuthStatus();
@@ -177,7 +175,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <Spinner className="mx-auto" />
-          <p className="mt-2 text-muted-foreground">{isLoading || wasDbReset ? t('loading') : t('redirecting')}</p>
+          <p className="mt-2 text-muted-foreground">{isLoading || wasDbReset ? 'Loading...' : 'Redirecting...'}</p>
         </div>
       </div>
     );

@@ -1,7 +1,6 @@
 'use client';
 import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Maximize, X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import {
   Carousel,
@@ -54,8 +53,6 @@ export const PostAttachmentsImagesAndVideos = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const tFullscreen = useTranslations('toast.fullscreen');
-
   const openPreview = (index: number, event?: MouseEvent) => {
     event?.stopPropagation();
     setCurrentIndex(index);
@@ -68,7 +65,7 @@ export const PostAttachmentsImagesAndVideos = ({
       currentMedia.requestFullscreen().catch((error: unknown) => {
         toast({
           variant: 'error',
-          description: error instanceof Error ? error.message : tFullscreen('error'),
+          description: error instanceof Error ? error.message : 'Could not enter fullscreen.',
         });
       });
     }

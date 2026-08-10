@@ -1,7 +1,6 @@
 import { Inter_Tight } from 'next/font/google';
 import Script from 'next/script';
 import { Container } from '@/atoms/Container/Container';
-import { isRtlLocale } from '@/i18n/constants';
 import {
   getPlausibleDomain,
   getPlausibleScriptUrl,
@@ -16,16 +15,14 @@ const interTight = Inter_Tight({
 
 interface RootContainerProps {
   children: React.ReactNode;
-  locale?: string;
 }
 
-export function RootContainer({ children, locale = 'en' }: RootContainerProps) {
-  const dir = isRtlLocale(locale) ? 'rtl' : 'ltr';
+export function RootContainer({ children }: RootContainerProps) {
   const plausibleDomain = getPlausibleDomain();
   const plausibleScriptUrl = getPlausibleScriptUrl();
 
   return (
-    <Container as="html" lang={locale} dir={dir}>
+    <Container as="html" lang="en-US" dir="ltr">
       <Container as="body" className={`${interTight.variable} antialiased`}>
         {/*
           Publish runtime config before any Next.js bundle executes. This must stay a RAW
@@ -44,8 +41,9 @@ export function RootContainer({ children, locale = 'en' }: RootContainerProps) {
             src={plausibleScriptUrl}
             strategy="afterInteractive"
             // Plausible's pageview-props script extension reads `event-*` attributes off the
-            // script tag and attaches them as custom properties to every pageview.
-            {...{ 'event-locale': locale }}
+            // script tag and attaches them as custom properties to every pageview. The app is
+            // US-English only; the constant keeps dashboard continuity for the locale prop.
+            {...{ 'event-locale': 'en-US' }}
           />
         )}
         <PageContainer>{children}</PageContainer>

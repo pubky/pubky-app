@@ -1,7 +1,6 @@
 'use client';
 
 import { Loader2, X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import type { MouseEvent } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { CardContent } from '@/atoms/Card/Card';
@@ -33,8 +32,6 @@ export const PostUnavailable = ({
   isRemoving = false,
   removeDataCy = 'post-unavailable-remove-btn',
 }: PostUnavailableProps) => {
-  const t = useTranslations('post');
-
   const handleRemove = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     focusAdjacentGridItem(event.currentTarget);
@@ -58,7 +55,7 @@ export const PostUnavailable = ({
           data-cy={removeDataCy}
         >
           {isRemoving ? <Loader2 aria-hidden="true" className="animate-spin" /> : <X aria-hidden="true" />}
-          {t('remove')}
+          {'Remove'}
         </Button>
       ) : null}
     </CardContent>

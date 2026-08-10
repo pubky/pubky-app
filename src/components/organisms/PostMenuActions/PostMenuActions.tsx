@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/atoms/Sheet/Sheet';
@@ -18,7 +17,6 @@ import type { PostMenuActionsProps } from './PostMenuActions.types';
 import { PostMenuActionsContent } from './PostMenuActionsContent/PostMenuActionsContent';
 
 export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
-  const t = useTranslations('post.actions');
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -67,7 +65,7 @@ export function PostMenuActions({ postId, trigger }: PostMenuActionsProps) {
           <SheetTrigger asChild>{trigger}</SheetTrigger>
           <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
             <SheetHeader>
-              <SheetTitle className="sr-only">{t('title')}</SheetTitle>
+              <SheetTitle className="sr-only">{'Post Actions'}</SheetTitle>
             </SheetHeader>
             <Container overrideDefaults className="flex flex-col gap-2">
               <PostMenuActionsContent

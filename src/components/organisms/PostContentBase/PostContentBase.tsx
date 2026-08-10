@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
@@ -25,7 +23,6 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  * `CollectionCard` with `presentation="embed"`.
  */
 export function PostContentBase({ postId, className, textClassName, mediaVariant = 'default' }: PostContentBaseProps) {
-  const t = useTranslations('post');
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
   // Fetch post details for content
@@ -34,7 +31,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
   if (!postDetails) {
     // `undefined`/in-flight → skeleton; a settled `null` means the post 404'd,
     // so show the terminal "not found" message instead of skeletoning forever.
-    return isLoading ? <PostContentBaseSkeleton /> : <PostUnavailable message={t('missing')} />;
+    return isLoading ? <PostContentBaseSkeleton /> : <PostUnavailable message={'Post not found.'} />;
   }
 
   const isDeleted = isPostDeleted(postDetails.content);
@@ -44,7 +41,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
   const hasAttachments = (postDetails.attachments?.length ?? 0) > 0 || (localAttachments?.length ?? 0) > 0;
   const isCollection = postDetails.kind === 'collection';
 
-  if (isDeleted) return <PostUnavailable message={t('deleted')} />;
+  if (isDeleted) return <PostUnavailable message={'This post has been deleted by its author.'} />;
 
   if (isBlurred) return <PostContentBlurred postId={postId} className={className} />;
 

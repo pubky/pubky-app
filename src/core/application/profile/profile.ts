@@ -196,8 +196,8 @@ export class ProfileApplication {
    * Automatically triggers a browser download of the generated ZIP file.
    *
    * NOTE: This export flow is not reachable from the UI yet. The Settings → Account
-   * "Download your data" section (translations already exist under `settings.account.download`)
-   * still needs to be built and wired to `ProfileController.downloadData`.
+   * "Download your data" section still needs to be built and wired to
+   * `ProfileController.downloadData`.
    * @param params - Parameters containing user's public key and optional progress callback
    */
   static async downloadData({ pubky, setProgress }: TDownloadDataParams) {

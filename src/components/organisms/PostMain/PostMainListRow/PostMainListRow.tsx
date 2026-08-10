@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { getUserProfileUrl } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { CardContent } from '@/atoms/Card/Card';
@@ -81,7 +80,6 @@ export function PostMainListRow({
   onReplyClick,
   onRepostClick,
 }: PostMainListRowProps) {
-  const t = useTranslations('post');
   const { postDetails } = usePostDetails(postId);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { isRepost, originalPostId } = useRepostInfo(postId);
@@ -110,7 +108,7 @@ export function PostMainListRow({
   }
 
   if (isPostDeleted(displayPostDetails.content)) {
-    return <PostUnavailable message={t('deleted')} />;
+    return <PostUnavailable message={'This post has been deleted by its author.'} />;
   }
 
   if (!userDetails) {

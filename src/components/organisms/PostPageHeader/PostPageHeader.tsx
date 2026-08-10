@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -32,7 +31,6 @@ import type { PostPageHeaderProps } from './PostPageHeader.types';
  * ```
  */
 export function PostPageHeader({ postId }: PostPageHeaderProps) {
-  const t = useTranslations('post');
   const { ancestors, isLoading: ancestorsLoading } = usePostAncestors(postId);
   const { navigateToPost } = usePostNavigation();
 
@@ -67,7 +65,7 @@ export function PostPageHeader({ postId }: PostPageHeaderProps) {
     return <PostPageHeaderSkeleton />;
   }
 
-  const titlePrefix = hasParents ? t('replyBy') : t('postBy');
+  const titlePrefix = hasParents ? 'Reply by' : 'Post by';
 
   return (
     <PageHeader data-testid="post-page-header" className="pt-0 pb-3">

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
@@ -20,7 +19,6 @@ export function StatusPickerWrapper({
   onStatusChange,
   sideOffset = DEFAULT_POPOVER_SIDE_OFFSET,
 }: StatusPickerWrapperProps) {
-  const t = useTranslations('status');
   const [open, setOpen] = useState(false);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
   const isMobile = useIsMobile();
@@ -28,8 +26,8 @@ export function StatusPickerWrapper({
   // Use local status if set, otherwise use prop
   const currentStatus = localStatus ?? status;
   const parsed = parseStatus(currentStatus, emoji);
-  // Get translated text for predefined statuses
-  const displayText = parsed.key ? t(parsed.key as Parameters<typeof t>[0]) : parsed.text;
+  // parseStatus resolves predefined statuses to their STATUS_LABELS copy
+  const displayText = parsed.text;
   const handleStatusSelect = (selectedStatus: string) => {
     setLocalStatus(selectedStatus);
     onStatusChange?.(selectedStatus);
@@ -52,8 +50,8 @@ export function StatusPickerWrapper({
         <SheetTrigger asChild>{triggerButton}</SheetTrigger>
         <SheetContent side="bottom" onOpenAutoFocus={(e) => e.preventDefault()}>
           <SheetHeader>
-            <SheetTitle>{t('selectStatus')}</SheetTitle>
-            <SheetDescription className="sr-only">{t('selectStatusDescription')}</SheetDescription>
+            <SheetTitle>{'Select Status'}</SheetTitle>
+            <SheetDescription className="sr-only">{'Choose a status to display on your profile'}</SheetDescription>
           </SheetHeader>
           <Container overrideDefaults className="mt-4">
             <StatusPickerContent onStatusSelect={handleStatusSelect} currentStatus={currentStatus} />

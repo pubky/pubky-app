@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { ArrowRight, Download } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -26,15 +25,13 @@ import { calculatePasswordStrength, PASSPHRASE_MIN_LENGTH } from '@/libs/passwor
 
 const PASSPHRASE_LINK_URL = 'https://www.useapassphrase.com';
 
-type PasswordStrengthKey = 'veryWeak' | 'weak' | 'moderate' | 'strong' | 'veryStrong';
-
-function getStrengthText(strength: number, t: (key: PasswordStrengthKey) => string): string {
+function getStrengthText(strength: number): string {
   if (strength === 0) return '';
-  if (strength === 1) return t('veryWeak');
-  if (strength === 2) return t('weak');
-  if (strength === 3) return t('moderate');
-  if (strength === 4) return t('strong');
-  return t('veryStrong');
+  if (strength === 1) return 'Very weak';
+  if (strength === 2) return 'Weak';
+  if (strength === 3) return 'Moderate';
+  if (strength === 4) return 'Strong';
+  return 'Very strong';
 }
 
 function getStrengthColor(strength: number): string {
@@ -48,9 +45,6 @@ interface DialogBackupEncryptedProps {
   children?: React.ReactNode;
 }
 function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
-  const t = useTranslations('onboarding.backupEncrypted');
-  const tCommon = useTranslations('common');
-  const tPassword = useTranslations('password');
   const [passphrase, setPassphrase] = useState('');
   const [confirmPassphrase, setConfirmPassphrase] = useState('');
   const passphraseStrength = calculatePasswordStrength(passphrase);
@@ -68,12 +62,14 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t('title')}</DialogTitle>
+        <DialogTitle>{'Backup as encrypted file'}</DialogTitle>
         <DialogDescription>
-          {t('subtitle')}{' '}
+          {
+            'Encrypt your recovery file below with a secure password, download it, and save it to your computer or cloud provider.'
+          }{' '}
           <span className="font-bold text-foreground">
-            <span className="hidden sm:inline">{t('neverShareDesktop')}</span>
-            <span className="sm:hidden">{t('neverShareMobile')}</span>
+            <span className="hidden sm:inline">{'Never share this file with anyone.'}</span>
+            <span className="sm:hidden">{'Never share this file and password with anyone.'}</span>
           </span>
         </DialogDescription>
       </DialogHeader>
@@ -81,7 +77,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
       <Container className="gap-6">
         <Container>
           <Label htmlFor="password" className="pb-4 text-xs font-medium tracking-widest text-muted-foreground">
-            {t('password')}
+            {'PASSWORD'}
           </Label>
           <Container>
             <Container className="relative pb-3">
@@ -92,20 +88,18 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
                 onChange={(e) => setPassphrase(e.target.value)}
                 onKeyDown={handleKeyDown}
                 className="bg-opacity-90 h-14 rounded-md border border-dashed px-5 py-4 shadow-sm"
-                placeholder={t('passwordPlaceholder')}
+                placeholder={'Enter a strong password'}
                 autoComplete="new-password"
                 aria-describedby="password-help"
               />
             </Container>
             <Typography id="password-help" size="sm" className="text-xs leading-none font-medium text-muted-foreground">
-              {t.rich('passwordHint', {
-                passphraseLink: (chunks) => (
-                  <Link href={PASSPHRASE_LINK_URL} target="_blank" rel="noopener noreferrer">
-                    {chunks}
-                  </Link>
-                ),
-                minLen: (chunks) => <span className={showWeakWarning ? 'text-destructive' : undefined}>{chunks}</span>,
-              })}
+              We recommend using a long{' '}
+              <Link href={PASSPHRASE_LINK_URL} target="_blank" rel="noopener noreferrer">
+                passphrase
+              </Link>{' '}
+              <span className={showWeakWarning ? 'text-destructive' : undefined}>over 16 characters</span> for better
+              security.
             </Typography>
           </Container>
         </Container>
@@ -124,7 +118,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
                 role="status"
                 aria-live="polite"
               >
-                {getStrengthText(passphraseStrength.strength, tPassword)}
+                {getStrengthText(passphraseStrength.strength)}
               </span>
             </Container>
           )}
@@ -132,7 +126,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
 
         <Container>
           <Label htmlFor="confirmPassword" className="pb-4 text-xs font-medium tracking-widest text-muted-foreground">
-            {t('repeatPassword')}
+            {'REPEAT PASSWORD'}
           </Label>
           <Container className="pb-3">
             <Input
@@ -142,7 +136,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
               onChange={(e) => setConfirmPassphrase(e.target.value)}
               onKeyDown={handleKeyDown}
               className={`bg-opacity-90 h-14 rounded-md border border-dashed px-5 py-4 shadow-sm ${confirmPassphrase && !passphraseMatch ? 'border-destructive' : ''}`}
-              placeholder={t('repeatPasswordPlaceholder')}
+              placeholder={'Repeat your password'}
               autoComplete="new-password"
               aria-invalid={Boolean(confirmPassphrase && !passphraseMatch)}
               aria-describedby={confirmPassphrase && !passphraseMatch ? 'confirm-password-error' : undefined}
@@ -153,7 +147,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
                 size="sm"
                 className="pt-3 text-xs leading-3 font-medium text-destructive"
               >
-                {t('passwordsDoNotMatch')}
+                {'Passwords do not match'}
               </Typography>
             )}
           </Container>
@@ -169,7 +163,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
           className="order-2 sm:order-1"
         >
           <Download className="h-4 w-4" />
-          {t('downloadFile')}
+          {'Download file'}
         </Button>
         <DialogClose asChild>
           <Button
@@ -180,7 +174,7 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
             }}
             className="order-1 sm:order-2"
           >
-            {tCommon('cancel')}
+            {'Cancel'}
           </Button>
         </DialogClose>
       </DialogFooter>
@@ -188,13 +182,13 @@ function RecoveryStep1({ setStep }: { setStep: (step: number) => void }) {
   );
 }
 function RecoveryStep2({ handleClose }: { handleClose: () => void }) {
-  const t = useTranslations('onboarding.backupEncrypted');
-  const tCommon = useTranslations('common');
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t('completeTitle')}</DialogTitle>
-        <DialogDescription>{t('completeSubtitle')}</DialogDescription>
+        <DialogTitle>{'Backup complete'}</DialogTitle>
+        <DialogDescription>
+          {'You can use your backed up encrypted file to restore your account again later.'}
+        </DialogDescription>
       </DialogHeader>
 
       <Container>
@@ -206,13 +200,13 @@ function RecoveryStep2({ handleClose }: { handleClose: () => void }) {
       <DialogFooter>
         <DialogClose asChild>
           <Button variant="outline" size="lg" onClick={handleClose}>
-            {tCommon('cancel')}
+            {'Cancel'}
           </Button>
         </DialogClose>
         <DialogClose asChild>
           <Button id="backup-successful-ok-btn" size="lg" onClick={handleClose}>
             <ArrowRight className="h-4 w-4" />
-            {tCommon('finish')}
+            {'Finish'}
           </Button>
         </DialogClose>
       </DialogFooter>

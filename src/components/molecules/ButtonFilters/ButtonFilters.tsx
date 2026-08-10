@@ -19,6 +19,7 @@ export function ButtonFilters({ onClick, className, position = 'left' }: ButtonF
         variant="secondary"
         size="icon"
         onClick={onClick}
+        data-cy={`button-filters-${position}`}
         className={cn(
           'hidden bg-secondary px-4 py-3 shadow-xl hover:bg-secondary/90 lg:inline-flex',
           roundedClasses,
