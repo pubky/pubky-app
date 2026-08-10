@@ -1,14 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { CollectionCountBadge } from './CollectionCountBadge';
-
-vi.mock('next-intl', () => ({
-  useFormatter: () => ({
-    number: (value: number, _options?: Intl.NumberFormatOptions) => String(value),
-  }),
-  useTranslations: () => (key: string, values?: { count?: number }) =>
-    key === 'postCount' ? (values?.count === 1 ? 'post' : 'posts') : key,
-}));
 
 describe('CollectionCountBadge', () => {
   it('renders the formatted count with a pluralized label from sm breakpoint up', () => {

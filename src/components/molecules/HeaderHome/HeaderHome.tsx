@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { BookOpen, Eye, UserRoundPlus } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES, AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -15,7 +14,6 @@ import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 
 export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const router = useRouter();
-  const t = useTranslations('landing');
   const pathname = usePathname();
   const [showJoinButton, setShowJoinButton] = React.useState(false);
 
@@ -76,7 +74,7 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
           className="hidden gap-2 md:inline-flex"
         >
           <BookOpen className="size-4" />
-          {t('learn')}
+          {'Learn'}
         </Button>
         <Button
           id="header-explore-btn"
@@ -86,7 +84,7 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
           className="hidden gap-2 md:inline-flex"
         >
           <Eye className="size-4" />
-          {t('explore')}
+          {'Explore'}
         </Button>
         <HeaderButtonSignIn />
       </Container>
@@ -113,7 +111,7 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
                 className="size-10 shrink-0 gap-0 px-0 whitespace-nowrap sm:h-10 sm:w-auto sm:gap-2 sm:px-4"
               >
                 <UserRoundPlus className="size-4" />
-                <span className="sr-only sm:not-sr-only">{t('join')}</span>
+                <span className="sr-only sm:not-sr-only">{'Join'}</span>
               </Button>
             </div>
           </motion.div>

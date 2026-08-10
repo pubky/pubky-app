@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { getUserProfileUrl } from '@/app/routes';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
@@ -55,7 +54,6 @@ function ParticipantItem({
  * Uses SidebarSection + UserListItem for consistent layout with other sidebar components.
  */
 export function SinglePostParticipants({ postId, className }: SinglePostParticipantsProps) {
-  const t = useTranslations('common');
   const router = useRouter();
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const { participants, isLoading } = usePostParticipants(postId, { limit: 10 });
@@ -79,7 +77,7 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
   }
 
   return (
-    <SidebarSection title={t('participants')} className={className} data-testid="single-post-participants">
+    <SidebarSection title={'Participants'} className={className} data-testid="single-post-participants">
       {participants.map((participant) => (
         <ParticipantItem
           key={participant.id}

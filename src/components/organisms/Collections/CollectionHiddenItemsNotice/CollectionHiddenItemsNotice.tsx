@@ -1,7 +1,6 @@
 'use client';
 
 import { Info } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 
@@ -12,8 +11,6 @@ import { Typography } from '@/atoms/Typography/Typography';
  * hero) so it reads as part of the page rather than a faint tint.
  */
 export function CollectionHiddenItemsNotice() {
-  const t = useTranslations('collections.single');
-
   return (
     <Container
       overrideDefaults
@@ -23,7 +20,7 @@ export function CollectionHiddenItemsNotice() {
     >
       <Info aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
       <Typography overrideDefaults className="text-sm font-medium text-muted-foreground">
-        {t('hiddenItemsNotice')}
+        {'Some items in this collection are hidden due to the selected layout type.'}
       </Typography>
     </Container>
   );

@@ -4,10 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE, PUBKY_INVALID_TOO_LONG } from '@/test-utils/pubky';
 import { PostNotFoundDiscoveryView } from './PostNotFoundDiscoveryView';
 
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
   TimelineFeed: () => <div data-testid="timeline-feed" />,
 }));
@@ -48,7 +44,7 @@ describe('PostNotFoundDiscoveryView', () => {
 
     expect(screen.queryByTestId('hot-discovery-content-layout')).not.toBeInTheDocument();
     expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
-    expect(screen.getByTestId('trending-heading')).toHaveTextContent('hot.trendingPosts');
+    expect(screen.getByTestId('trending-heading')).toHaveTextContent('Trending posts');
   });
 
   it('passes postId to PostNotFound', () => {

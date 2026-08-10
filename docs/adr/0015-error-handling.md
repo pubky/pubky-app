@@ -57,7 +57,7 @@ This ADR describes the **intended architecture**, but some observability feature
 │               │                                     │                                      │                        │
 │               │                                     │                                      │                        │
 │     • Wrap all errors                     • Coordinate retries                   • Show toast                       │
-│     • Create typed AppError (`Err.*`)     • Cross-domain handling                • Map to i18n                      │
+│     • Create typed AppError (`Err.*`)     • Cross-domain handling                • Map to copy                      │
 │     • Log once (current: factory)         • Re-throw AppError unchanged          • Redirect on 401/403              │
 │     • Set service/operation               • Re-throw errors                      • Redirect on 401                  │
 │     • Preserve cause                      • Wrap with context                    • Empty states                     │

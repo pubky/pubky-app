@@ -15,22 +15,6 @@ const mockGetAuthUrl = vi.fn();
 const mockGetSignupAuthUrl = vi.fn();
 const mockInitializeAuthenticatedSession = vi.fn();
 const mockCancelActiveAuthFlow = vi.fn();
-const mockTranslations = vi.fn((key: string) => {
-  const t: Record<string, string> = {
-    authInitFailedTitle: 'Sign in failed. Try again.',
-    authInitFailedDescription: 'Sign in failed. Try again.',
-    authNotCompletedTitle: 'Authorization was not completed',
-    authNotCompletedDescription: 'Authorization failed. Try again.',
-    qrGenerationFailedTitle: 'QR code generation failed',
-    qrGenerationFailedDescription: 'Could not generate QR. Refresh and try again.',
-  };
-  return t[key] ?? key;
-});
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => mockTranslations,
-}));
-
 vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: (...args: unknown[]) => mockToast(...args),

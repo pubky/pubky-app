@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { ToastAction } from '@/atoms/Toast/Toast';
 import { PostController } from '@/controllers/post/post';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
@@ -49,8 +48,6 @@ export function usePost(): UsePostReturn {
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
   const { toast } = useToast();
-  const tPost = useTranslations('toast.post');
-  const tFile = useTranslations('toast.file');
 
   const reply = async ({ postId, onSuccess }: UsePostReplyOptions) => {
     // allow empty content and attachments
@@ -70,7 +67,7 @@ export function usePost(): UsePostReturn {
       setTags([]);
       setAttachments([]);
       toast({
-        title: tPost('replyPosted'),
+        title: 'Reply posted',
         dismissButton: true,
       });
       onSuccess?.(createdPostId);
@@ -78,7 +75,7 @@ export function usePost(): UsePostReturn {
       Logger.error('[usePost] Failed to submit reply:', err);
       toast({
         variant: 'error',
-        description: getImageUploadSizeLimitToastMessage(err, tFile) ?? tPost('replyFailed'),
+        description: getImageUploadSizeLimitToastMessage(err) ?? 'Could not post reply. Try again.',
       });
     } finally {
       setIsSubmitting(false);
@@ -110,14 +107,14 @@ export function usePost(): UsePostReturn {
       setIsArticle(false);
       setArticleTitle('');
       toast({
-        title: tPost('postCreated'),
+        title: 'Post published',
       });
       onSuccess?.(createdPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to create post:', err);
       toast({
         variant: 'error',
-        description: getImageUploadSizeLimitToastMessage(err, tFile) ?? tPost('postFailed'),
+        description: getImageUploadSizeLimitToastMessage(err) ?? 'Could not create post. Try again.',
       });
     } finally {
       setIsSubmitting(false);
@@ -148,21 +145,17 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
 
       const toastInstance = toast({
-        title:
-          successToastTitle ??
-          (originalAuthorName
-            ? tPost('repostSuccess', { author: originalAuthorName })
-            : tPost('repostSuccessFallback')),
+        title: successToastTitle ?? (originalAuthorName ? `Reposted ${originalAuthorName}'s post` : 'Reposted'),
         action: (
           <ToastAction
             variant={'info'}
-            altText={tPost('repostUndo')}
+            altText={'Undo'}
             onClick={() => {
               toastInstance.dismiss();
               onUndo(createdPostId);
             }}
           >
-            {tPost('repostUndo')}
+            {'Undo'}
           </ToastAction>
         ),
       });
@@ -172,7 +165,7 @@ export function usePost(): UsePostReturn {
       Logger.error('[usePost] Failed to repost:', err);
       toast({
         variant: 'error',
-        description: getImageUploadSizeLimitToastMessage(err, tFile) ?? tPost('repostFailed'),
+        description: getImageUploadSizeLimitToastMessage(err) ?? 'Could not repost. Try again.',
       });
     } finally {
       setIsSubmitting(false);
@@ -195,12 +188,12 @@ export function usePost(): UsePostReturn {
       setIsArticle(false);
       setArticleTitle('');
       toast({
-        title: tPost('postEdited'),
+        title: 'Post updated',
       });
       onSuccess?.(editPostId);
     } catch (err) {
       Logger.error('[usePost] Failed to edit post:', err);
-      toast({ variant: 'error', description: tPost('editFailed') });
+      toast({ variant: 'error', description: 'Could not update post. Try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -211,12 +204,12 @@ export function usePost(): UsePostReturn {
     if (isArticle && attachments.length > 0) {
       toast({
         variant: 'warning',
-        title: tPost('attachmentsCleared'),
+        title: 'Articles support one cover image',
       });
       setAttachments([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only trigger on isArticle change, not attachments
-  }, [isArticle, tPost]);
+  }, [isArticle]);
 
   return {
     content,

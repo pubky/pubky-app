@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
-import { useTranslations } from 'next-intl';
 import { useDebounceCallback } from 'usehooks-ts';
 import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
@@ -27,7 +26,7 @@ import { usePost } from '@/hooks/usePost/usePost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
-import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { postKindBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -72,8 +71,6 @@ export function usePostInput({
   const dragCounterRef = useRef(0);
 
   // Hooks
-  const t = useTranslations('post.placeholder');
-  const tFile = useTranslations('toast.file');
   const { currentUserPubky, userDetails: currentUserDetails } = useCurrentUserProfile();
   const {
     content,
@@ -356,7 +353,7 @@ export function usePostInput({
       if (availableSlots <= 0) {
         toast({
           variant: 'error',
-          description: tFile('maxFiles', { max: ATTACHMENT_MAX_FILES }),
+          description: `Maximum ${ATTACHMENT_MAX_FILES} files allowed`,
         });
         return;
       }
@@ -366,14 +363,14 @@ export function usePostInput({
 
       for (const file of files) {
         if (validFiles.length >= availableSlots) {
-          errors.push(tFile('maxFilesPartial', { max: ATTACHMENT_MAX_FILES }));
+          errors.push(`Maximum ${ATTACHMENT_MAX_FILES} files allowed. Some files were not added.`);
           break;
         }
 
         // Check against specific supported MIME types from pubky-app-specs
         const isAcceptedType = SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type);
         if (!isAcceptedType) {
-          errors.push(tFile('unsupportedType', { name: file.name, type: file.type, formats: SUPPORTED_FILE_TYPES }));
+          errors.push(`Unsupported file type for ${file.name}. Supported: ${SUPPORTED_FILE_TYPES}.`);
           continue;
         }
 
@@ -382,12 +379,12 @@ export function usePostInput({
         const maxOtherSizeLabel = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
 
         if (isImage && file.size > IMAGE_MAX_RAW_SIZE) {
-          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxImageSizeLabel }));
+          errors.push(`${file.name} exceeds the ${maxImageSizeLabel} limit.`);
           continue;
         }
 
         if (!isImage && file.size > ATTACHMENT_MAX_OTHER_SIZE) {
-          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxOtherSizeLabel }));
+          errors.push(`${file.name} exceeds the ${maxOtherSizeLabel} limit.`);
           continue;
         }
 
@@ -405,7 +402,7 @@ export function usePostInput({
         setAttachments((prev) => [...prev, ...validFiles]);
       }
     },
-    [isArticle, isSubmitting, attachments.length, setAttachments, toast, tFile],
+    [isArticle, isSubmitting, attachments.length, setAttachments, toast],
   );
 
   // Drag and drop handlers
@@ -502,7 +499,7 @@ export function usePostInput({
 
   // Derived values
   const hasContent = content.trim().length > 0;
-  const displayPlaceholder = placeholder ?? t(variant);
+  const displayPlaceholder = placeholder ?? POST_INPUT_PLACEHOLDER[variant];
 
   return {
     // Refs

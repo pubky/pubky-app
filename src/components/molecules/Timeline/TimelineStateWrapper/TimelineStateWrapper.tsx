@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { TimelineLoading } from '../TimelineLoading';
@@ -38,8 +37,6 @@ export function TimelineStateWrapper({
   errorComponent,
   emptyComponent,
 }: TimelineStateWrapperProps) {
-  const t = useTranslations('empty');
-
   if (loading) {
     return <>{loadingComponent ?? <TimelineLoading />}</>;
   }
@@ -73,7 +70,7 @@ export function TimelineStateWrapper({
         {emptyComponent ?? (
           <Container data-cy="timeline-container" className="flex items-center justify-center py-8">
             <Typography size="md" className="text-muted-foreground">
-              {t('noPosts')}
+              {'No posts found'}
             </Typography>
           </Container>
         )}

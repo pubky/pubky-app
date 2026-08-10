@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { UsersRound } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
@@ -25,8 +24,6 @@ const USERS_LIMIT = 3;
  * Note: This is an Organism because it interacts with data hooks (useUserStream, useFollowUser).
  */
 export function ActiveUsers() {
-  const t = useTranslations('sidebar');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { users, isLoading: isStreamLoading } = useUserStream({
@@ -47,9 +44,9 @@ export function ActiveUsers() {
   };
   return (
     <SidebarSection
-      title={t('activeUsers')}
+      title={'Active users'}
       footerIcon={UsersRound}
-      footerText={tCommon('seeAll')}
+      footerText={'See all'}
       onFooterClick={handleSeeAll}
       data-testid="active-users"
     >
@@ -58,7 +55,7 @@ export function ActiveUsers() {
           length: USERS_LIMIT,
         }).map((_, index) => <CompactUserListItemSkeleton key={`active-users-skeleton-${index}`} />)
       ) : users.length === 0 ? (
-        <Typography className="font-light text-muted-foreground">{t('noUsers')}</Typography>
+        <Typography className="font-light text-muted-foreground">{'No users to show'}</Typography>
       ) : (
         users.map((user) => (
           <UserListItem

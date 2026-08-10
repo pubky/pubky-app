@@ -1,7 +1,6 @@
 'use client';
 
 import { Key } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
@@ -13,7 +12,6 @@ import { PopoverPublicKey } from '@/molecules/PopoverPublicKey/PopoverPublicKey'
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export const CreateProfileHeader = () => {
-  const t = useTranslations('onboarding.createProfile');
   const authStore = useAuthStore();
   const pubky = authStore.selectCurrentUserPubky();
   const { copyToClipboard } = useCopyToClipboard();
@@ -26,12 +24,11 @@ export const CreateProfileHeader = () => {
   return (
     <PageHeader>
       <PageTitle size="large">
-        {t.rich('title', {
-          highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-        })}
+        {'Create your '}
+        <span className="text-brand">{'profile.'}</span>
       </PageTitle>
       <Container className="m-0 w-auto flex-col gap-4 md:flex-row md:items-center">
-        <PageSubtitle>{t('subtitle')}</PageSubtitle>
+        <PageSubtitle>{'Add your name, bio, links, and avatar.'}</PageSubtitle>
         <Container className="mx-0 w-auto flex-row items-center gap-2">
           <Button
             variant="secondary"

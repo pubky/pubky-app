@@ -29,6 +29,12 @@ Single source of truth for all project standards, conventions, and architectural
 | `environment.md`           | Environment variable configuration                                                                    |
 | `adr-guidelines.md`        | When and how to write ADRs                                                                            |
 
+### Migrations
+
+| File                                     | Description                                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `migrations/2305-i18n-conflict-guide.md` | Resolving branch conflicts against the i18n removal (delete after the open-PR wave clears) |
+
 ## Architecture Decision Records
 
 Stored in `adr/`. See `architecture.md` for the full index.

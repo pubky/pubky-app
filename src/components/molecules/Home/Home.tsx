@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
@@ -43,22 +42,17 @@ export const HomeActions = () => {
 };
 
 export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
-  const tFooter = useTranslations('onboarding.footer');
   return (
     <Container className={cn('flex-1 flex-col items-start justify-end gap-1', className)} {...props}>
       <FooterLinks>
-        {tFooter.rich('agreement', {
-          pubky: () => <span className="text-brand">Pubky</span>,
-        })}{' '}
-        <DialogTerms />, <DialogPrivacy />
-        {tFooter('andConfirmAge')} <DialogAge />{' '}
-        {tFooter.rich('copyright', {
-          pubkyCore: (chunks) => (
-            <Link href={getPubkyCoreLink()} target="_blank">
-              {chunks}
-            </Link>
-          ),
-        })}
+        {'By creating a '}
+        <span className="text-brand">Pubky</span>
+        {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
+        {', and confirm you are'} <DialogAge /> {'Pubky is powered by '}
+        <Link href={getPubkyCoreLink()} target="_blank">
+          {'Pubky Core'}
+        </Link>
+        {' and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.'}
       </FooterLinks>
       <HomeBrandFooter className="mt-2" />
     </Container>
@@ -91,28 +85,21 @@ export const HomeBrandFooter = ({ className, ...props }: React.HTMLAttributes<HT
 };
 
 export const HomeSectionTitle = () => {
-  const t = useTranslations('landing');
   return (
     <Container className="flex-row items-start gap-2">
       <Typography as="h2" overrideDefaults className="self-center text-xl font-light text-muted-foreground sm:text-3xl">
-        {t('subtitle')}
+        {'Your keys, your content, your rules.'}
       </Typography>
     </Container>
   );
 };
 
 export const HomePageHeading = () => {
-  const t = useTranslations('landing');
   return (
     <Heading level={1} size="2xl" className="lg:max-xl:text-[104px]">
-      {t.rich('title', {
-        highlight: (chunks) => (
-          <>
-            <span className="text-brand">{chunks}</span>
-            <br />
-          </>
-        ),
-      })}
+      <span className="text-brand">{'Unlock'}</span>
+      <br />
+      {' the web.'}
     </Heading>
   );
 };

@@ -1,6 +1,5 @@
 'use client';
 import { Check, TriangleAlert, Wallet } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -14,7 +13,6 @@ import { HumanBitcoinCardSkeleton, PriceSkeleton } from './HumanBitcoinCard.skel
 import type { HumanBitcoinCardProps } from './HumanBitcoinCard.types';
 
 export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
-  const t = useTranslations('onboarding.bitcoin');
   const satUsdRate = useBtcRate()?.satUsd;
   const lnInfo = useLnVerificationInfo();
 
@@ -57,7 +55,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
               className="size-48"
             />
             <Typography as="p" className="text-center text-xs font-medium tracking-[1.2px] text-brand uppercase">
-              {t('morePrivate')}
+              {'(More private)'}
             </Typography>
           </>
         }
@@ -68,7 +66,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
               as="h3"
               className="m-0 text-[20px] leading-none font-bold text-foreground lg:text-2xl lg:leading-8"
             >
-              {t('title')}
+              {'Bitcoin Payment'}
             </Typography>
             {dataAvailable ? (
               <Badge
@@ -108,10 +106,10 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
 
           <Container className="hidden flex-col lg:flex">
             <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {t('storage')}
+              {'1GB storage'}
             </Typography>
             <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {t('speedLimit')}
+              {'1MB/s speed limit'}
             </Typography>
           </Container>
         </Container>
@@ -120,13 +118,13 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
           <Container className="flex-row items-center gap-2">
             <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
             <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {t('storage')}
+              {'1GB storage'}
             </Typography>
           </Container>
           <Container className="flex-row items-center gap-2">
             <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
             <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {t('speedLimit')}
+              {'1MB/s speed limit'}
             </Typography>
           </Container>
         </Container>
@@ -138,7 +136,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
           disabled={!dataAvailable || isUnavailable}
         >
           <Wallet className="mr-2 size-4" />
-          {t('payOnce')}
+          {'Pay Once'}
         </Button>
       </IllustratedCard>
 
@@ -153,7 +151,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
             <TriangleAlert className="size-4 text-destructive-foreground" />
           </Container>
           <Typography overrideDefaults className="text-sm font-semibold whitespace-nowrap text-destructive-foreground">
-            {t('notAvailable')}
+            {'Currently not available in your country'}
           </Typography>
         </Container>
       )}
@@ -169,7 +167,7 @@ export const HumanBitcoinCard = ({ onClick }: HumanBitcoinCardProps) => {
             <TriangleAlert className="size-4 text-destructive-foreground" />
           </Container>
           <Typography overrideDefaults className="text-sm font-semibold whitespace-nowrap text-destructive-foreground">
-            {t('unavailable')}
+            {'Service temporarily unavailable'}
           </Typography>
         </Container>
       )}

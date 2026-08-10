@@ -27,11 +27,6 @@ const mockUsePullToRefresh = vi.hoisted(() =>
     }),
   ),
 );
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
 }));

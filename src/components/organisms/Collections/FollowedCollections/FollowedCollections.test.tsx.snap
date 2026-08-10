@@ -14,7 +14,7 @@ exports[`FollowedCollections > FollowedCollections - Snapshots > matches the sna
       class="text-2xl font-light text-muted-foreground"
       data-testid="heading-2"
     >
-      collections.followed.title
+      Followed Collections
     </h2>
     <div
       data-pubkys="authorA,authorB"
@@ -48,7 +48,7 @@ exports[`FollowedCollections > FollowedCollections - Snapshots > matches the sna
       data-slot="button"
       data-variant="default"
     >
-      collections.showMore
+      Show more
     </button>
   </div>
 </div>
@@ -68,7 +68,7 @@ exports[`FollowedCollections > FollowedCollections - Snapshots > matches the sna
       class="text-2xl font-light text-muted-foreground"
       data-testid="heading-2"
     >
-      collections.followed.title
+      Followed Collections
     </h2>
     <div
       data-count="3"

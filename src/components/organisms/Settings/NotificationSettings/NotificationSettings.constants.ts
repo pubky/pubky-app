@@ -1,17 +1,17 @@
 import type { NotificationType } from './NotificationSettings.types';
 
 /**
- * Translation keys for notification settings labels
- * Maps each notification preference key to its i18n key in 'notifications.settings' namespace
+ * Display labels for notification settings switches.
+ * Maps each notification preference key to its label copy.
  */
-export const NOTIFICATION_LABEL_KEYS: Record<NotificationType, string> = {
-  follow: 'newFollower',
-  newFriend: 'newFriend',
-  tagPost: 'taggedPost',
-  tagProfile: 'taggedProfile',
-  mention: 'mentionedProfile',
-  reply: 'newReply',
-  repost: 'newRepost',
-  postDeleted: 'deletedPost',
-  postEdited: 'editedPost',
+export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
+  follow: 'New follower',
+  newFriend: 'New friend',
+  tagPost: 'Someone tagged your post',
+  tagProfile: 'Someone tagged your profile',
+  mention: 'Someone mentioned your profile',
+  reply: 'New reply to your post',
+  repost: 'New repost to your post',
+  postDeleted: 'Someone deleted the post you interacted with',
+  postEdited: 'Someone edited the post you interacted with',
 };

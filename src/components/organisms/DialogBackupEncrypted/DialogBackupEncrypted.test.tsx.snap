@@ -91,7 +91,17 @@ exports[`DialogBackupEncrypted - Snapshots > matches snapshot for default Dialog
             data-size="sm"
             data-testid="typography"
           >
-            We recommend using a long ,[object Object], 
+            We recommend using a long
+             
+            <a
+              class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+              href="https://www.useapassphrase.com"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              passphrase
+            </a>
+             
             <span
               class="text-destructive"
             >

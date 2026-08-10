@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -28,7 +27,6 @@ import type { HotTagsCardsSectionProps } from './HotTagsCardsSection.types';
  * Fetches hot tags based on reach and timeframe filters from the hot store.
  */
 export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
-  const t = useTranslations('hot');
   const router = useRouter();
   const { reach, timeframe } = useHotStore();
   const { isMuted } = useMutedUsers();
@@ -85,9 +83,9 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
     return (
       <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)}>
         <Heading level={5} size="lg" className="font-light text-muted-foreground">
-          {t('hotTags')}
+          {'Hot tags'}
         </Heading>
-        <Typography className="text-destructive">{t('failedToLoadTags')}</Typography>
+        <Typography className="text-destructive">{'Failed to load tags'}</Typography>
       </Container>
     );
   }
@@ -96,7 +94,7 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
     return (
       <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)}>
         <Heading level={5} size="lg" className="font-light text-muted-foreground">
-          {t('hotTags')}
+          {'Hot tags'}
         </Heading>
         <HotTagsCardsSectionSkeleton maxAvatars={maxAvatars} />
       </Container>
@@ -110,10 +108,10 @@ export function HotTagsCardsSection({ className }: HotTagsCardsSectionProps) {
       data-testid="hot-tags-cards-section"
     >
       <Heading level={5} size="lg" className="font-light text-muted-foreground">
-        {t('hotTags')}
+        {'Hot tags'}
       </Heading>
       {featuredTags.length === 0 ? (
-        <Typography className="font-light text-muted-foreground">{t('noTagsToShow')}</Typography>
+        <Typography className="font-light text-muted-foreground">{'No tags to show'}</Typography>
       ) : (
         <Container overrideDefaults className="flex flex-col gap-3 sm:flex-row">
           {featuredTags.map((tag, index) => (

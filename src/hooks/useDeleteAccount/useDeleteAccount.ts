@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { AUTH_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { ProfileController } from '@/controllers/profile/profile';
@@ -26,7 +25,6 @@ interface UseDeleteAccountResult {
 export function useDeleteAccount(): UseDeleteAccountResult {
   const router = useRouter();
   const { toast } = useToast();
-  const tErrors = useTranslations('errors');
   const [isDeleting, setIsDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -46,7 +44,7 @@ export function useDeleteAccount(): UseDeleteAccountResult {
       Logger.error('Failed to delete account:', { error });
       toast({
         variant: 'error',
-        description: tErrors('deleteAccountFailed'),
+        description: 'Failed to delete account. Please try again.',
       });
       setIsDeleting(false);
       setProgress(0);

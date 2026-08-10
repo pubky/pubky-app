@@ -27,11 +27,6 @@ const {
   mockUseCopyToClipboard: vi.fn(),
 }));
 
-// Mock next-intl
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace: string) => mockUseTranslations(namespace),
-}));
-
 // Mock Hooks
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: mockUseUserProfile,

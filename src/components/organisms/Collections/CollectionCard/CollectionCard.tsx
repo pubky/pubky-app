@@ -2,7 +2,6 @@
 
 import { type MouseEvent, useState } from 'react';
 import { Library, Minus, Plus, Trash2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { getCollectionRoute } from '@/app/routes';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { Button } from '@/atoms/Button/Button';
@@ -167,9 +166,6 @@ function CollectionCardContent({
 }: CollectionCardContentProps) {
   const isEmbed = presentation === 'embed';
   const showTagAddButton = interactiveActions && !isEmbed;
-  const t = useTranslations('collections.card');
-  const tCardToast = useTranslations('collections.card.toast');
-
   const { profile: ownerProfile } = useUserProfile(authorPubky);
 
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
@@ -187,8 +183,8 @@ function CollectionCardContent({
   // Follow / Unfollow reads as a collection action.
   const { isBookmarked, isToggling, toggle } = useBookmark(compositeId, {
     toastMessages: {
-      added: tCardToast('followed'),
-      removed: tCardToast('unfollowed'),
+      added: "You've followed this collection",
+      removed: "You've unfollowed this collection",
     },
     initialIsBookmarked,
   });
@@ -231,13 +227,11 @@ function CollectionCardContent({
   // Collection-specific toast copy so success / failure reads as "Collection
   // deleted" rather than "Post deleted". `useDeletePost` falls back to the
   // generic `toast.post.*` strings for any field we omit.
-  const tCollectionToast = useTranslations('toast.collection');
-  const tDeleteCollection = useTranslations('dialogs.deleteCollection');
-  const deleteCollectionDescription = tDeleteCollection('description', { name: title || authorPubky });
+  const deleteCollectionDescription = `Are you sure you want to delete '${title || authorPubky}'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.`;
   const { deletePost, isDeleting } = useDeletePost({
     toastMessages: {
-      deleted: tCollectionToast('collectionDeleted'),
-      deleteFailed: tCollectionToast('deleteFailed'),
+      deleted: 'Your collection has been deleted',
+      deleteFailed: 'Failed to delete collection. Please try again.',
     },
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -363,12 +357,12 @@ function CollectionCardContent({
                       size="sm"
                       onClick={handleDelete}
                       disabled={isDeleting}
-                      aria-label={t('delete')}
+                      aria-label={'Delete'}
                       data-cy="collection-card-delete-btn"
                       className={embeddedMutedActionClass}
                     >
                       <Trash2 className="size-4" />
-                      <span className="md:hidden">{t('delete')}</span>
+                      <span className="md:hidden">{'Delete'}</span>
                     </Button>
                   ) : canFollow ? (
                     <Button
@@ -376,12 +370,12 @@ function CollectionCardContent({
                       size="sm"
                       onClick={handleFollowToggle}
                       disabled={isToggling}
-                      aria-label={isBookmarked ? t('unfollow') : t('follow')}
+                      aria-label={isBookmarked ? 'Unfollow' : 'Follow'}
                       data-cy="collection-card-follow-btn"
                       className={embeddedMutedActionClass}
                     >
                       {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
-                      {isBookmarked ? t('unfollow') : t('follow')}
+                      {isBookmarked ? 'Unfollow' : 'Follow'}
                     </Button>
                   ) : null}
                 </Container>
@@ -394,7 +388,7 @@ function CollectionCardContent({
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         onConfirm={handleDeleteConfirm}
-        i18nNamespace="dialogs.deleteCollection"
+        title="Delete collection?"
         description={deleteCollectionDescription}
       />
     </>

@@ -50,7 +50,7 @@ exports[`PostContentBlurred - Snapshots > matches snapshot with compact variant 
       data-override-defaults="true"
       data-testid="typography"
     >
-      moderation.postContentModerated
+      Post content moderated.
     </p>
   </div>
 </button>
@@ -106,7 +106,7 @@ exports[`PostContentBlurred - Snapshots > matches snapshot with custom className
       data-override-defaults="true"
       data-testid="typography"
     >
-      moderation.postContentModerated
+      Post content moderated.
     </p>
   </div>
 </button>
@@ -162,7 +162,7 @@ exports[`PostContentBlurred - Snapshots > matches snapshot with default props 1`
       data-override-defaults="true"
       data-testid="typography"
     >
-      moderation.postContentModerated
+      Post content moderated.
     </p>
   </div>
 </button>

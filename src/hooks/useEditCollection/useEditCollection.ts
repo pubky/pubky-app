@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslations } from 'next-intl';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { PostController } from '@/controllers/post/post';
@@ -50,9 +49,6 @@ type UseEditCollectionResult = {
  * stay in `collections.new`.
  */
 export function useEditCollection({ compositeCollectionId }: UseEditCollectionParams): UseEditCollectionResult {
-  const tEdit = useTranslations('collections.edit');
-  const tForm = useTranslations('collections.new');
-  const tFile = useTranslations('toast.file');
   const { toast } = useToast();
 
   const { postDetails } = usePostDetails(compositeCollectionId);
@@ -75,7 +71,7 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
   const cover = useCoverImagePicker({ initialPreviewUrl });
 
   const form = useForm<CreateCollectionFormData>({
-    resolver: zodResolver(createCollectionFormSchema(tForm)),
+    resolver: zodResolver(createCollectionFormSchema),
     defaultValues: createCollectionFormDefaults,
     // See useCreateCollection for the rationale — `onChange` (not `all`) keeps
     // blur from firing validation, so closing the dialog doesn't risk a
@@ -153,7 +149,7 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
         }
 
         toast({
-          title: tEdit('updated'),
+          title: 'Collection updated',
         });
         ok = true;
       } catch (error) {
@@ -161,8 +157,8 @@ export function useEditCollection({ compositeCollectionId }: UseEditCollectionPa
         toast({
           variant: 'error',
           description:
-            getImageUploadSizeLimitToastMessage(error, tFile) ??
-            (isAppError(error) ? error.message : tEdit('updateFailed')),
+            getImageUploadSizeLimitToastMessage(error) ??
+            (isAppError(error) ? error.message : 'Failed to update collection.'),
         });
       }
     })();

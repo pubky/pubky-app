@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
-import { useTranslations } from 'next-intl';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { Logger } from '@/libs/logger/logger';
@@ -40,7 +39,6 @@ export function useReorderCollection({
   // for "did the user actually change anything" at save time.
   const enterSnapshotRef = useRef<string[]>([]);
   const { toast } = useToast();
-  const t = useTranslations('toast.collection');
 
   const isReorderMode = draftItems !== null;
 
@@ -96,12 +94,12 @@ export function useReorderCollection({
     setIsSaving(true);
     try {
       await PostController.commitReorderCollectionItems({ collectionId: compositeCollectionId, items: draftItems });
-      toast({ title: t('orderSaved'), dismissButton: true });
+      toast({ title: 'Collection order saved', dismissButton: true });
       exitReorderMode();
     } catch (error) {
       Logger.error('[useReorderCollection] Failed to save collection order', { compositeCollectionId, error });
       // Keep the mode and draft so the user can retry or cancel explicitly.
-      toast({ variant: 'error', description: t('orderSaveFailed') });
+      toast({ variant: 'error', description: 'Failed to save the new order. Please try again.' });
     } finally {
       setIsSaving(false);
     }

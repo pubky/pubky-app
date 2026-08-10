@@ -2,7 +2,6 @@
 
 import { type MouseEvent } from 'react';
 import { Tag } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -27,7 +26,6 @@ export function PostTagToggleButton({
   className,
   onMutedSurface = false,
 }: PostTagToggleButtonProps) {
-  const t = useTranslations('post.actions');
   const { postCounts, isLoading } = usePostCounts(postId);
   const tagCount = postCounts?.unique_tags ?? 0;
 
@@ -42,7 +40,7 @@ export function PostTagToggleButton({
       onClick={onToggle}
       disabled={disabled}
       aria-expanded={expanded}
-      aria-label={t('tagPost', { count: tagCount })}
+      aria-label={`Tag post (${tagCount})`}
       data-cy="post-tag-btn"
       className={cn(
         'border-none shadow-xs',

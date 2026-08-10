@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -10,18 +9,40 @@ import { LANDING_FREEDOM_SECTION_ID } from './Landing.constants';
 
 const SLIDE_DURATION_MS = 6000;
 
-type FeatureKey = 'creation' | 'browsing' | 'feeds' | 'tagging' | 'collections';
-
-const FEATURES: Array<{ key: FeatureKey; backgroundImage: string }> = [
-  { key: 'creation', backgroundImage: '/images/landing-experience1.png' },
-  { key: 'browsing', backgroundImage: '/images/landing-experience2.png' },
-  { key: 'feeds', backgroundImage: '/images/landing-experience3.png' },
-  { key: 'tagging', backgroundImage: '/images/landing-experience4.png' },
-  { key: 'collections', backgroundImage: '/images/landing-experience5.png' },
+const FEATURES: Array<{ key: string; backgroundImage: string; title: string; description: string }> = [
+  {
+    key: 'creation',
+    backgroundImage: '/images/landing-experience1.png',
+    title: 'Create without limits',
+    description: 'Post anything: thoughts, articles, photos, videos, links. Your content starts with you, and stays with you.',
+  },
+  {
+    key: 'browsing',
+    backgroundImage: '/images/landing-experience2.png',
+    title: 'Browse your way',
+    description: 'Switch between layouts or change your reach to filter out the noise, and focus on what matters.',
+  },
+  {
+    key: 'feeds',
+    backgroundImage: '/images/landing-experience3.png',
+    title: 'Shape perspectives',
+    description: 'Build dynamic feeds that update in real time and stay saved as reusable perspectives.',
+  },
+  {
+    key: 'tagging',
+    backgroundImage: '/images/landing-experience4.png',
+    title: 'Tag everything',
+    description: 'Tag posts, media, and profiles to add context, find better content, discover people, and react quickly.',
+  },
+  {
+    key: 'collections',
+    backgroundImage: '/images/landing-experience5.png',
+    title: 'Collect what matters',
+    description: 'Save posts worth keeping, curate your own ideas, and share your collections with others.',
+  },
 ];
 
 export function LandingFreedomSection() {
-  const t = useTranslations('landing.freedom');
   const sectionRef = useRef<HTMLElement>(null);
   const [activeSlide, setActiveSlide] = useState(0);
   const [isSectionVisible, setIsSectionVisible] = useState(false);
@@ -73,20 +94,16 @@ export function LandingFreedomSection() {
       <Container size="container" className="gap-10 px-6">
         <Container className="mx-0 max-w-[760px] gap-5">
           <Typography as="span" size="xs" className="text-brand tracking-[1.2px] uppercase">
-            {t('eyebrow')}
+            {'Built for freedom'}
           </Typography>
           <Heading level={2} size="xl" className="max-w-[680px] text-4xl sm:text-6xl lg:max-w-none lg:whitespace-nowrap">
-            {t.rich('title', {
-              highlight: (chunks) => (
-                <>
-                  <br className="sm:hidden" />
-                  <span className="text-brand">{chunks}</span>
-                </>
-              ),
-            })}
+            {'You are '}
+            <br className="sm:hidden" />
+            <span className="text-brand">{'the algorithm'}</span>
+            {'.'}
           </Heading>
           <Typography size="md" className="max-w-[680px] text-muted-foreground sm:text-xl">
-            {t('description')}
+            {'Nobody feeds you. Create, shape, and experience the web on your terms.'}
           </Typography>
         </Container>
         <article className="relative min-h-[560px] overflow-hidden rounded-md bg-card/80 p-12 shadow-sm backdrop-blur-sm md:min-h-[368px]">
@@ -113,10 +130,10 @@ export function LandingFreedomSection() {
             </div>
             <div className="min-w-0">
               <Typography as="h3" size="lg" className="text-xl">
-                {t(`features.${activeFeature.key}.title`)}
+                {activeFeature.title}
               </Typography>
               <Typography size="sm" className="mt-1 text-muted-foreground sm:text-base">
-                {t(`features.${activeFeature.key}.description`)}
+                {activeFeature.description}
               </Typography>
             </div>
           </div>
@@ -124,7 +141,7 @@ export function LandingFreedomSection() {
             type="button"
             className="absolute right-8 bottom-8 z-20 flex size-12 cursor-pointer items-center justify-center text-brand transition-all duration-200 hover:scale-110 hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none md:right-10 md:bottom-10"
             onClick={handleNextSlide}
-            aria-label={t('nextSlide')}
+            aria-label={'Next slide'}
           >
             <ChevronRight className="size-10" strokeWidth={2.5} />
           </button>

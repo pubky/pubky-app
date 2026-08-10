@@ -1,18 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { PullToRefreshIndicator } from './PullToRefreshIndicator';
-
-// Mock next-intl
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => {
-    const translations: Record<string, string> = {
-      pullToRefresh: 'Pull to refresh',
-      releaseToRefresh: 'Release to refresh',
-      refreshing: 'Refreshing...',
-    };
-    return translations[key] || key;
-  },
-}));
 
 describe('PullToRefreshIndicator', () => {
   describe('Rendering', () => {

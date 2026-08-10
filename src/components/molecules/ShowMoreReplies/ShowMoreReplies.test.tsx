@@ -7,14 +7,14 @@ describe('ShowMoreReplies', () => {
     const onClick = vi.fn();
     render(<ShowMoreReplies count={5} onClick={onClick} />);
 
-    expect(screen.getByText('{count, plural, one {# more reply} other {# more replies}}')).toBeInTheDocument();
+    expect(screen.getByText('5 more replies')).toBeInTheDocument();
   });
 
   it('renders with correct count text for singular', () => {
     const onClick = vi.fn();
     render(<ShowMoreReplies count={1} onClick={onClick} />);
 
-    expect(screen.getByText('{count, plural, one {# more reply} other {# more replies}}')).toBeInTheDocument();
+    expect(screen.getByText('1 more reply')).toBeInTheDocument();
   });
 
   it('calls onClick when clicked', () => {

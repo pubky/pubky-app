@@ -2,7 +2,7 @@ import { goToCollectionsPage } from './header';
 import { fastTagPost, waitForFeedToLoad } from './posts';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
-// error copy from messages/en.json 'collections.addContentDialog.errors'
+// error copy rendered by the add-content dialog (see useAddContentForm)
 export const ADD_CONTENT_URL_INVALID_ERROR = 'Enter a valid post URL.';
 export const ADD_CONTENT_URL_DUPLICATE_ERROR = 'This post is already added.';
 

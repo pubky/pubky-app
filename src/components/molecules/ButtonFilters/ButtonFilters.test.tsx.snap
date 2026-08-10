@@ -3,6 +3,7 @@
 exports[`ButtonFilters - Snapshots > matches snapshot for button element 1`] = `
 <button
   class="hidden bg-secondary px-4 py-3 shadow-xl hover:bg-secondary/90 lg:inline-flex rounded-l-none rounded-r-full"
+  data-cy="button-filters-left"
   data-size="icon"
   data-variant="secondary"
 >
@@ -45,6 +46,7 @@ exports[`ButtonFilters - Snapshots > matches snapshot with custom className 1`] 
 >
   <button
     class="hidden bg-secondary px-4 py-3 shadow-xl hover:bg-secondary/90 lg:inline-flex rounded-l-none rounded-r-full custom-filters"
+    data-cy="button-filters-left"
     data-size="icon"
     data-variant="secondary"
   >
@@ -88,6 +90,7 @@ exports[`ButtonFilters - Snapshots > matches snapshot with default props 1`] = `
 >
   <button
     class="hidden bg-secondary px-4 py-3 shadow-xl hover:bg-secondary/90 lg:inline-flex rounded-l-none rounded-r-full"
+    data-cy="button-filters-left"
     data-size="icon"
     data-variant="secondary"
   >
@@ -131,6 +134,7 @@ exports[`ButtonFilters - Snapshots > matches snapshot with left position 1`] = `
 >
   <button
     class="hidden bg-secondary px-4 py-3 shadow-xl hover:bg-secondary/90 lg:inline-flex rounded-l-none rounded-r-full"
+    data-cy="button-filters-left"
     data-size="icon"
     data-variant="secondary"
   >
@@ -174,6 +178,7 @@ exports[`ButtonFilters - Snapshots > matches snapshot with right position 1`] = 
 >
   <button
     class="hidden bg-secondary px-4 py-3 shadow-xl hover:bg-secondary/90 lg:inline-flex rounded-r-none rounded-l-full"
+    data-cy="button-filters-right"
     data-size="icon"
     data-variant="secondary"
   >

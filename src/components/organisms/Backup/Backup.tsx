@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
@@ -31,15 +30,13 @@ export const BackupNavigation = () => {
 };
 
 export const BackupPageHeader = () => {
-  const t = useTranslations('onboarding.backup');
   return (
     <PageHeader data-testid="backup-page-header">
       <PageTitle size="large">
-        {t.rich('title', {
-          highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-        })}
+        {'Back up your '}
+        <span className="text-brand">{'pubky.'}</span>
       </PageTitle>
-      <PageSubtitle>{t('subtitle')}</PageSubtitle>
+      <PageSubtitle>{'You need a backup to restore access to your account later.'}</PageSubtitle>
     </PageHeader>
   );
 };

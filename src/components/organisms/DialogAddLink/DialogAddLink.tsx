@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Clipboard, Link } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -35,8 +34,6 @@ interface DialogAddLinkProps {
   disabled?: boolean;
 }
 export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) {
-  const t = useTranslations('dialogs.addLink');
-  const tCommon = useTranslations('common');
   const [label, setLabel] = useState('');
   const [url, setUrl] = useState('');
   const [labelError, setLabelError] = useState<string | null>(null);
@@ -82,20 +79,20 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
       <DialogTrigger asChild>
         <Button data-cy="edit-profile-add-link-btn" variant="secondary" size="sm" className="w-fit rounded-full">
           <Link className="h-4 w-4" />
-          <span>{t('title')}</span>
+          <span>{'Add link'}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent avoidKeyboard className="w-xl max-w-xl" hiddenTitle={t('title')}>
+      <DialogContent avoidKeyboard className="w-xl max-w-xl" hiddenTitle={'Add link'}>
         <DialogHeader className="pr-6">
-          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogTitle>{'Add link'}</DialogTitle>
         </DialogHeader>
 
         <Container className="gap-6">
           <Container className="gap-2">
-            <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('labelField')}</Label>
+            <Label className="text-xs font-medium tracking-wide text-muted-foreground">{'LABEL'}</Label>
             <InputField
               dataCy="add-profile-link-label-input"
-              placeholder={t('labelPlaceholder')}
+              placeholder={'Twitter'}
               variant="dashed"
               value={label}
               onChange={(e) => {
@@ -112,10 +109,10 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
           </Container>
 
           <Container className="gap-2">
-            <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('urlField')}</Label>
+            <Label className="text-xs font-medium tracking-wide text-muted-foreground">{'URL'}</Label>
             <InputField
               dataCy="add-profile-link-url-input"
-              placeholder={t('urlPlaceholder')}
+              placeholder={'https://twitter.com/satoshi'}
               variant="dashed"
               value={url}
               onChange={(e) => {
@@ -148,7 +145,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
               size="lg"
               className="sm:size-default flex-1 rounded-full border border-border bg-background"
             >
-              {tCommon('cancel')}
+              {'Cancel'}
             </Button>
           </DialogClose>
           <DialogClose asChild>
@@ -159,7 +156,7 @@ export function DialogAddLink({ onSave, disabled = false }: DialogAddLinkProps) 
               onClick={handleSave}
               disabled={!isValid}
             >
-              {t('saveButton')}
+              {'Save link'}
             </Button>
           </DialogClose>
         </DialogFooter>

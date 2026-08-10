@@ -54,10 +54,9 @@ describe('imageUploadSizeLimit', () => {
     expect(getImageUploadSizeLimitLabelMb('gif')).toBe('5MB');
   });
 
-  it('resolves a localized toast message from a size-limit error', () => {
-    const tFile = (key: string, values: { maxSize: string }) => `${key}:${values.maxSize}`;
-    const message = getImageUploadSizeLimitToastMessage(new Error('IMAGE_UPLOAD_SIZE_LIMIT:gif'), tFile);
+  it('resolves a toast message from a size-limit error', () => {
+    const message = getImageUploadSizeLimitToastMessage(new Error('IMAGE_UPLOAD_SIZE_LIMIT:gif'));
 
-    expect(message).toBe('imageTooLargeGif:5MB');
+    expect(message).toBe('This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.');
   });
 });

@@ -63,7 +63,7 @@ describe('EditProfileForm', () => {
         avatarPreview: null,
         avatarFile: null,
         isSaving: false,
-        submitTextKey: 'save',
+        submitText: 'Save Profile',
       },
       errors: {
         nameError: null,
@@ -129,7 +129,7 @@ describe('EditProfileForm - Snapshots', () => {
         avatarPreview: null,
         avatarFile: null,
         isSaving: false,
-        submitTextKey: 'save',
+        submitText: 'Save Profile',
       },
       errors: {
         nameError: null,

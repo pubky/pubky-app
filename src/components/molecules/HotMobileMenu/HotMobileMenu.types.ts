@@ -9,6 +9,7 @@ export enum HotSection {
 export interface HotMobileMenuItem {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   section: HotSection;
+  label: string;
 }
 
 export interface HotMobileMenuProps {
