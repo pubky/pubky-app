@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -13,7 +12,6 @@ import { DialogFeedback } from '../DialogFeedback/DialogFeedback';
 import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';
 
 export function FeedbackCard() {
-  const t = useTranslations('feedback');
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const { requireAuth } = useRequireAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -23,7 +21,7 @@ export function FeedbackCard() {
     return <FeedbackCardSkeleton />;
   }
 
-  const name = userDetails?.name || t('defaultName');
+  const name = userDetails?.name || 'Your Name';
 
   return (
     <>
@@ -33,7 +31,7 @@ export function FeedbackCard() {
         className="flex w-full max-w-(--filter-bar-width) flex-col gap-2"
       >
         <Heading level={2} size="lg" className="font-light text-muted-foreground">
-          {t('cardTitle')}
+          {'Feedback'}
         </Heading>
 
         <Container
@@ -60,7 +58,7 @@ export function FeedbackCard() {
             overrideDefaults
             className="w-full cursor-pointer text-left text-base leading-normal font-medium wrap-break-word text-muted-foreground"
           >
-            {t('cardButton')}
+            {'What do you think about Pubky?'}
           </Button>
         </Container>
       </Container>

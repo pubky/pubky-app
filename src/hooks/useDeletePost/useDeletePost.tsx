@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { PostController } from '@/controllers/post/post';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
@@ -33,14 +32,13 @@ import type { UseDeletePostOptions, UseDeletePostResult } from './useDeletePost.
 export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
-  const tPost = useTranslations('toast.post');
   const timelineFeed = useTimelineFeedContext();
 
   // Resolve toast copy with caller overrides so callers like CollectionCard /
   // CollectionHero can swap in collection-specific copy without forking the hook.
   // Missing fields fall back to the generic `toast.post.*` strings.
-  const deletedTitle = options?.toastMessages?.deleted ?? tPost('postDeleted');
-  const deleteFailedDesc = options?.toastMessages?.deleteFailed ?? tPost('deleteFailed');
+  const deletedTitle = options?.toastMessages?.deleted ?? 'Post deleted';
+  const deleteFailedDesc = options?.toastMessages?.deleteFailed ?? 'Could not delete post. Try again.';
 
   const deletePost = async (postId: string) => {
     if (isDeleting) {
@@ -52,7 +50,7 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
       Logger.error('[useDeletePost] Invalid post ID provided', { postId });
       toast({
         variant: 'error',
-        description: tPost('invalidPostId'),
+        description: 'Invalid post. Try again.',
       });
       return;
     }

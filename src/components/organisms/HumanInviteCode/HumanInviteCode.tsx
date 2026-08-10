@@ -9,7 +9,6 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CircleCheck, Loader2, Server } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
@@ -31,8 +30,6 @@ import type { HumanInviteCodeProps, InviteCodeVerificationResult } from './Human
 import { formatInviteCode } from './HumanInviteCode.utils';
 
 export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCodeProps) => {
-  const t = useTranslations('onboarding.inviteCode');
-  const tCommon = useTranslations('common');
   const [inviteCode, setInviteCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -115,12 +112,12 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
     <React.Fragment>
       <PageHeader>
         <PageTitle size="large">
-          {t.rich('title', {
-            highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-          })}
+          {/* \u00A0 keeps "Use" and "Invite." on one line, as the original copy did */}
+          {'Use\u00A0'}
+          <span className="text-brand">{'Invite.'}</span>
         </PageTitle>
         <Container className="flex-row items-center gap-3">
-          <PageSubtitle>{t('subtitle')}</PageSubtitle>
+          <PageSubtitle>{'Phone or payment verification not available? Ask us for an invite code.'}</PageSubtitle>
           <Link href={getTwitterLink()} target="_blank" className="text-muted-foreground hover:text-brand">
             <XTwitter className="h-6 w-6" />
           </Link>
@@ -138,12 +135,12 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
         <Container className="flex-col gap-3">
           <Container className="flex-row items-center gap-1">
             <Typography as="h3" className="text-2xl leading-8 font-bold text-foreground">
-              {t('label')}
+              {'Enter invite code'}
             </Typography>
             <PopoverInviteHomeserver className="h-6 w-6 opacity-80" />
           </Container>
           <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-            {t('hint')}
+            {'You get 1GB of storage, used for your posts, photos, videos, and your profile.'}
           </Typography>
         </Container>
 
@@ -166,7 +163,7 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
               autoFocus
               value={inviteCode}
               onChange={(e) => setInviteCode(formatInviteCode(e.target.value))}
-              placeholder={t('placeholder')}
+              placeholder={'XXXX-XXXX-XXXX'}
               maxLength={14}
               className={cn(
                 'h-auto flex-1 border-none bg-transparent p-0 text-base font-medium placeholder:text-muted-foreground focus:ring-0 focus:outline-none',
@@ -187,13 +184,13 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
               variant="secondary"
               className="shrink-0 rounded-full opacity-40"
               disabled
-              aria-label={t('customHomeserver')}
+              aria-label={'Custom homeserver'}
             >
               <Server className="mr-2 h-4 w-4" />
-              {t('customHomeserver')}
+              {'Custom homeserver'}
             </Button>
             <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground">
-              {t('customHomeserverHint')}
+              {'Using a different homeserver will be possible soon.'}
             </Typography>
           </Container>
         </Container>
@@ -211,7 +208,7 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
           onClick={onBack}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          {tCommon('back')}
+          {'Back'}
         </Button>
         <Button
           id="human-invite-continue-btn"
@@ -223,7 +220,7 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
           onClick={handleSubmit}
         >
           <ArrowRight className="mr-2 h-4 w-4" />
-          {tCommon('continue')}
+          {'Continue'}
         </Button>
       </Container>
     </React.Fragment>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -33,7 +32,6 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
  * On desktop, all sections are always visible.
  */
 export function Hot() {
-  const t = useTranslations('hot');
   const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState<HotSection>(HotSection.TAGS);
 
@@ -58,7 +56,7 @@ export function Hot() {
       {/* Trending Posts - hidden via CSS when another tab is active on mobile */}
       <Container overrideDefaults className={cn('flex flex-col gap-2', hidePosts && 'hidden')}>
         <Heading level={5} size="lg" className="font-light text-muted-foreground">
-          {t('trendingPosts')}
+          {'Trending posts'}
         </Heading>
         <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOT} />
       </Container>

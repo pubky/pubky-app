@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Loader2, Minus, Move, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
@@ -92,9 +91,6 @@ function CollectionHeroContent({
   reorder,
   className,
 }: CollectionHeroContentProps) {
-  const t = useTranslations('collections.single');
-  const tCardToast = useTranslations('collections.card.toast');
-
   const { profile: ownerProfile } = useUserProfile(authorPubky);
   // Gate the owner name on the resolved profile so the hero doesn't flash the
   // raw pubky (the `|| authorPubky` fallback) before the name loads on refresh.
@@ -125,8 +121,8 @@ function CollectionHeroContent({
   // collection action (matches `CollectionCard`).
   const { isBookmarked, isToggling, toggle } = useBookmark(compositeId, {
     toastMessages: {
-      added: tCardToast('followed'),
-      removed: tCardToast('unfollowed'),
+      added: "You've followed this collection",
+      removed: "You've unfollowed this collection",
     },
   });
 
@@ -141,10 +137,10 @@ function CollectionHeroContent({
   // dialog but override its copy/icon so it reads as a collection share (title,
   // submit button matching the hero's Share button, success toast).
   const { openRepostDialog, dialogs } = usePostReplyRepostDialogs(compositeId, {
-    title: t('shareTitle'),
-    submitLabel: t('share'),
+    title: 'Share Collection',
+    submitLabel: 'Share',
     submitIcon: StickyNote,
-    successToastTitle: tCardToast('shared'),
+    successToastTitle: "You've shared this collection",
   });
   const handleShare = () => {
     requireAuth(openRepostDialog);
@@ -164,13 +160,11 @@ function CollectionHeroContent({
   // deleted page. Collection-specific toast copy so the success / failure
   // toast reads as "Collection deleted" not "Post deleted".
   const router = useRouter();
-  const tCollectionToast = useTranslations('toast.collection');
-  const tDeleteCollection = useTranslations('dialogs.deleteCollection');
-  const deleteCollectionDescription = tDeleteCollection('description', { name: title || authorPubky });
+  const deleteCollectionDescription = `Are you sure you want to delete '${title || authorPubky}'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.`;
   const { deletePost, isDeleting } = useDeletePost({
     toastMessages: {
-      deleted: tCollectionToast('collectionDeleted'),
-      deleteFailed: tCollectionToast('deleteFailed'),
+      deleted: 'Your collection has been deleted',
+      deleteFailed: 'Failed to delete collection. Please try again.',
     },
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -276,13 +270,13 @@ function CollectionHeroContent({
                 size="icon"
                 onClick={handleShare}
                 disabled={isDeleting || isReorderActive}
-                aria-label={t('share')}
+                aria-label={'Share'}
                 data-cy="collection-hero-share-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <StickyNote className="size-4" />
                 <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {t('share')}
+                  {'Share'}
                 </Typography>
               </Button>
               {reorder &&
@@ -293,13 +287,13 @@ function CollectionHeroContent({
                       size="icon"
                       onClick={reorder.onSave}
                       disabled={reorder.isSaving}
-                      aria-label={t('saveOrder')}
+                      aria-label={'Save order'}
                       data-cy="collection-hero-save-order-btn"
                       className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
                     >
                       {reorder.isSaving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                       <Typography as="span" overrideDefaults className="hidden lg:inline">
-                        {t('saveOrder')}
+                        {'Save order'}
                       </Typography>
                     </Button>
                     <Button
@@ -307,13 +301,13 @@ function CollectionHeroContent({
                       size="icon"
                       onClick={reorder.onCancel}
                       disabled={reorder.isSaving}
-                      aria-label={t('cancelReorder')}
+                      aria-label={'Cancel'}
                       data-cy="collection-hero-cancel-reorder-btn"
                       className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
                     >
                       <X className="size-4" />
                       <Typography as="span" overrideDefaults className="hidden lg:inline">
-                        {t('cancelReorder')}
+                        {'Cancel'}
                       </Typography>
                     </Button>
                   </>
@@ -323,13 +317,13 @@ function CollectionHeroContent({
                     size="icon"
                     onClick={reorder.onEnter}
                     disabled={isDeleting || itemCount < 2}
-                    aria-label={t('reorder')}
+                    aria-label={'Reorder'}
                     data-cy="collection-hero-reorder-btn"
                     className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
                   >
                     <Move className="size-4" />
                     <Typography as="span" overrideDefaults className="hidden lg:inline">
-                      {t('reorder')}
+                      {'Reorder'}
                     </Typography>
                   </Button>
                 ))}
@@ -338,13 +332,13 @@ function CollectionHeroContent({
                 size="icon"
                 onClick={handleEdit}
                 disabled={isDeleting || isReorderActive}
-                aria-label={t('edit')}
+                aria-label={'Edit'}
                 data-cy="collection-hero-edit-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Pencil className="size-4" />
                 <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {t('edit')}
+                  {'Edit'}
                 </Typography>
               </Button>
               <Button
@@ -352,13 +346,13 @@ function CollectionHeroContent({
                 size="icon"
                 onClick={handleDelete}
                 disabled={isDeleting || isReorderActive}
-                aria-label={t('delete')}
+                aria-label={'Delete'}
                 data-cy="collection-hero-delete-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Trash2 className="size-4" />
                 <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {t('delete')}
+                  {'Delete'}
                 </Typography>
               </Button>
               {tagToggle}
@@ -370,23 +364,23 @@ function CollectionHeroContent({
                 size="sm"
                 onClick={handleFollowToggle}
                 disabled={isToggling}
-                aria-label={isBookmarked ? t('unfollow') : t('follow')}
+                aria-label={isBookmarked ? 'Unfollow' : 'Follow'}
                 data-cy="collection-hero-follow-btn"
                 className="gap-2 text-xs"
               >
                 {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
-                {isBookmarked ? t('unfollow') : t('follow')}
+                {isBookmarked ? 'Unfollow' : 'Follow'}
               </Button>
               <Button
                 variant="secondary"
                 size="icon"
                 onClick={handleShare}
-                aria-label={t('share')}
+                aria-label={'Share'}
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <StickyNote className="size-4" />
                 <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {t('share')}
+                  {'Share'}
                 </Typography>
               </Button>
               {tagToggle}
@@ -407,7 +401,7 @@ function CollectionHeroContent({
             open={deleteConfirmOpen}
             onOpenChange={setDeleteConfirmOpen}
             onConfirm={() => void handleDeleteConfirm()}
-            i18nNamespace="dialogs.deleteCollection"
+            title="Delete collection?"
             description={deleteCollectionDescription}
           />
         </>

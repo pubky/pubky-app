@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -25,7 +23,6 @@ interface CollectionHeroBlurredProps {
  * how `PostContentBlurred` handles moderated posts.
  */
 export function CollectionHeroBlurred({ compositeId, className }: CollectionHeroBlurredProps) {
-  const t = useTranslations('moderation');
   return (
     <Button
       overrideDefaults
@@ -79,7 +76,7 @@ export function CollectionHeroBlurred({ compositeId, className }: CollectionHero
         </CardContent>
 
         {/* Unblur overlay */}
-        <ModerationBlurOverlay label={t('collectionContentModerated')} />
+        <ModerationBlurOverlay label={'Collection content moderated.'} />
       </Card>
     </Button>
   );

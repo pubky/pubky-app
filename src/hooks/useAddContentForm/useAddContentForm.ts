@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslations } from 'next-intl';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
@@ -33,12 +32,11 @@ interface UseAddContentFormResult {
 }
 
 export function useAddContentForm({ target, onSuccess }: UseAddContentFormOptions): UseAddContentFormResult {
-  const t = useTranslations('collections.addContentDialog');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const [isPending, setIsPending] = useState(false);
 
   const form = useForm<AddContentFormData>({
-    resolver: zodResolver(addContentFormSchema(t)),
+    resolver: zodResolver(addContentFormSchema),
     defaultValues: addContentFormDefaults,
     mode: 'onChange',
   });
@@ -69,12 +67,12 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
 
     const parsed = parsePostReference(form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL));
     if (!parsed) {
-      setFieldError(t('errors.invalid'));
+      setFieldError('Enter a valid post URL.');
       return false;
     }
 
     if (!currentUserPubky) {
-      setFieldError(t('errors.failure'));
+      setFieldError('Could not add this post.');
       return false;
     }
 
@@ -87,18 +85,18 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
       });
 
       if (!post || isPostDeleted(post.content)) {
-        setFieldError(t('errors.notFound'));
+        setFieldError('We could not find that post.');
         return false;
       }
 
       if (post.kind === 'collection') {
-        setFieldError(t('errors.collectionNotAllowed'));
+        setFieldError('Collection can not be added to a collection.');
         return false;
       }
 
       const alreadyAdded = await isAlreadyAdded({ target, postId: parsed.compositeId, postUri: parsed.postUri });
       if (alreadyAdded) {
-        setFieldError(t('errors.alreadyAdded'));
+        setFieldError('This post is already added.');
         return false;
       }
 
@@ -124,7 +122,7 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
         target,
         postId: parsed.compositeId,
       });
-      setFieldError(t('errors.failure'));
+      setFieldError('Could not add this post.');
       return false;
     } finally {
       setIsPending(false);

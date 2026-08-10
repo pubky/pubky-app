@@ -18,11 +18,6 @@ import { MyCollections } from './MyCollections';
 // ---------------------------------------------------------------------------
 
 let mockLocalAvatarUrl: string | null | undefined = null;
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
@@ -200,12 +195,12 @@ describe('MyCollections', () => {
 
     render(<MyCollections />);
 
-    expect(screen.getByText('collections.my.title')).toBeInTheDocument();
+    expect(screen.getByText('My Collections')).toBeInTheDocument();
     const skeleton = screen.getByTestId('avatar-stack-skeleton');
     expect(skeleton).toHaveAttribute('data-count', '1');
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'collections.new.cta' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New Collection' })).not.toBeInTheDocument();
     expect(mockUseStreamPagination).not.toHaveBeenCalled();
   });
 
@@ -218,17 +213,17 @@ describe('MyCollections', () => {
 
     render(<MyCollections />);
 
-    expect(screen.getByText('collections.my.title')).toBeInTheDocument();
+    expect(screen.getByText('My Collections')).toBeInTheDocument();
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Alice');
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'collections.new.cta' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'New Collection' })).toHaveAttribute(
       'data-cy',
       'new-collection-card-cta',
     );
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-card-skeleton')).not.toBeInTheDocument();
-    expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument();
   });
 
   it('renders one CollectionCard per stream post id with parsed author/postId; no Show More when hasMore=false', () => {
@@ -256,11 +251,11 @@ describe('MyCollections', () => {
     expect(cards[1]).toHaveAttribute('data-post-id', 'p2');
     expect(cards[1]).toHaveAttribute('data-show-delete-action', 'true');
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'collections.new.cta' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'New Collection' })).toHaveAttribute(
       'data-cy',
       'new-collection-card-cta',
     );
-    expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument();
   });
 
   it('renders skeletons next to the pinned card on cold load (loading=true, empty postIds)', () => {
@@ -274,7 +269,7 @@ describe('MyCollections', () => {
 
     expect(screen.getByTestId('collection-bookmark-card')).toBeInTheDocument();
     expect(screen.getAllByTestId('collection-card-skeleton')).toHaveLength(COLLECTIONS_MY_SECTION_SKELETON_COUNT);
-    expect(screen.getByRole('button', { name: 'collections.new.cta' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'New Collection' })).toHaveAttribute(
       'data-cy',
       'new-collection-card-cta',
     );
@@ -315,7 +310,7 @@ describe('MyCollections', () => {
 
     render(<MyCollections />);
 
-    const button = screen.getByRole('button', { name: 'collections.showMore' });
+    const button = screen.getByRole('button', { name: 'Show more' });
     expect(button).not.toBeDisabled();
     fireEvent.click(button);
     expect(loadMore).toHaveBeenCalledTimes(1);
@@ -339,7 +334,7 @@ describe('MyCollections', () => {
     expect(button).not.toBeNull();
     expect(button?.querySelector('.animate-spin')).not.toBeNull();
     // The showMore label stays visible alongside the spinner during loading.
-    expect(screen.getByText('collections.showMore')).toBeInTheDocument();
+    expect(screen.getByText('Show more')).toBeInTheDocument();
   });
 
   it('passes buildAuthorCollectionsStreamId(currentUserPubky) + COLLECTIONS_SECTION_PAGE_SIZE to useStreamPagination', () => {
@@ -353,7 +348,7 @@ describe('MyCollections', () => {
     expect(mockUseStreamPagination).toHaveBeenCalledWith({
       streamId: buildAuthorCollectionsStreamId(asOpaque<Pubky>(CURRENT_USER_PUBKY)),
       limit: COLLECTIONS_SECTION_PAGE_SIZE,
-      // `onError` is wired up to surface a `collections.loadFailed` toast on
+      // `onError` is wired up to surface a load-failed toast on
       // stream failures (sibling sections fire the same toast inline). We
       // only assert its presence here — the toast behaviour itself is
       // covered by the next test.
@@ -388,7 +383,7 @@ describe('MyCollections', () => {
     expect(mockToast).toHaveBeenCalledTimes(1);
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'collections.loadFailed',
+      description: 'Failed to load collections. Please try again.',
     });
   });
 

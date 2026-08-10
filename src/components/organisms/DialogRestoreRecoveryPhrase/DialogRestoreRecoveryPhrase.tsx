@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from 'react';
 import { AlertCircle, FileText, Loader2, RotateCcw } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -24,7 +23,6 @@ interface DialogRestoreRecoveryPhraseProps {
   onRestore?: () => void;
 }
 export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecoveryPhraseProps) {
-  const t = useTranslations('onboarding.signIn');
   const [userWords, setUserWords] = useState<string[]>(Array(12).fill(''));
   const [isRestoring, setIsRestoring] = useState(false);
   const [errors, setErrors] = useState<boolean[]>(Array(12).fill(false));
@@ -57,7 +55,7 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
       // show error toast
       toast({
         variant: 'error',
-        description: t('restoreRecoveryPhrase.errorDescription'),
+        description: 'Could not sign in. Try again.',
       });
       setIsRestoring(false);
     }
@@ -79,10 +77,10 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
           className="w-full rounded-full sm:w-auto md:flex-none"
         >
           <FileText className="mr-2 h-4 w-4" />
-          {t('useRecoveryPhrase')}
+          {'Use recovery phrase'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="gap-6 p-8" hiddenTitle={t('restoreRecoveryPhrase.title')}>
+      <DialogContent className="gap-6 p-8" hiddenTitle={'Restore with recovery phrase'}>
         <RestoreForm
           userWords={userWords}
           errors={errors}
@@ -116,7 +114,6 @@ function RestoreForm({
   onTouchedChange: (touched: boolean[]) => void;
   onRestore: () => void;
 }) {
-  const t = useTranslations('onboarding.signIn.restoreRecoveryPhrase');
   const handleWordChange = useCallback(
     (index: number, value: string) => {
       // Check if the value contains multiple words (e.g. pasted from clipboard or inserted from Android keyboard suggestions)
@@ -193,8 +190,10 @@ function RestoreForm({
   return (
     <>
       <DialogHeader className="space-y-1.5 pr-6">
-        <DialogTitle className="text-2xl font-bold sm:text-[24px]">{t('title')}</DialogTitle>
-        <DialogDescription className="text-sm text-muted-foreground">{t('description')}</DialogDescription>
+        <DialogTitle className="text-2xl font-bold sm:text-[24px]">{'Restore with recovery phrase'}</DialogTitle>
+        <DialogDescription className="text-sm text-muted-foreground">
+          {'Use your 12 words (recovery phrase) to restore your account and sign in.'}
+        </DialogDescription>
       </DialogHeader>
 
       <Container className="space-y-6">
@@ -223,9 +222,11 @@ function RestoreForm({
           <Container className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
             <div className="flex items-center gap-2 text-red-500">
               <AlertCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">{t('invalidWords')}</span>
+              <span className="text-sm font-medium">{'Invalid words detected'}</span>
             </div>
-            <p className="mt-1 text-sm text-red-500/80">{t('invalidWordsHint')}</p>
+            <p className="mt-1 text-sm text-red-500/80">
+              {'Please check that all words are valid and contain only lowercase letters.'}
+            </p>
           </Container>
         )}
       </Container>
@@ -233,7 +234,7 @@ function RestoreForm({
       <DialogFooter>
         <DialogClose asChild>
           <Button variant="outline" size="lg" className="order-2 sm:order-1">
-            {t('cancel')}
+            {'Cancel'}
           </Button>
         </DialogClose>
         <Button
@@ -246,12 +247,12 @@ function RestoreForm({
           {isRestoring ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {t('restoring')}
+              {'Restoring...'}
             </>
           ) : (
             <>
               <RotateCcw className="mr-2 h-4 w-4 rotate-180" />
-              {t('restore')}
+              {'Restore'}
             </>
           )}
         </Button>

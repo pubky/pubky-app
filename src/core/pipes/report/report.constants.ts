@@ -22,24 +22,8 @@ export const REPORT_ISSUE_TYPES = {
 } as const;
 
 /**
- * Report issue translation keys for i18n
- * Maps each issue type to its translation key in 'report.issues' namespace
- */
-export const REPORT_ISSUE_LABEL_KEYS: Record<ReportIssueType, string> = {
-  [REPORT_ISSUE_TYPES.PERSONAL_INFO]: 'personalInfoLeak',
-  [REPORT_ISSUE_TYPES.HATE_SPEECH]: 'hateSpeech',
-  [REPORT_ISSUE_TYPES.HARASSMENT]: 'harassment',
-  [REPORT_ISSUE_TYPES.CHILD_ABUSE]: 'childAbuse',
-  [REPORT_ISSUE_TYPES.TERRORISM]: 'terrorism',
-  [REPORT_ISSUE_TYPES.VIOLENCE]: 'violence',
-  [REPORT_ISSUE_TYPES.ILLEGAL_SALES]: 'illegalSales',
-  [REPORT_ISSUE_TYPES.SEXUAL_CONTENT]: 'sexualContent',
-  [REPORT_ISSUE_TYPES.COPYRIGHT]: 'copyright',
-};
-
-/**
- * Report issue labels in English (for server-side use, e.g., Chatwoot messages)
- * These are the actual display labels, not translation keys
+ * Report issue display labels (used in the report dialog UI and server-side,
+ * e.g., Chatwoot messages)
  */
 export const REPORT_ISSUE_LABELS: Record<ReportIssueType, string> = {
   [REPORT_ISSUE_TYPES.PERSONAL_INFO]: 'Personal Info Leak',

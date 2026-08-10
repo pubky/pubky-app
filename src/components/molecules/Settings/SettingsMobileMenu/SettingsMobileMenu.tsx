@@ -1,7 +1,6 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { MobileTabBar } from '../../MobileTabBar/MobileTabBar';
 import type { MobileTabBarItem } from '../../MobileTabBar/MobileTabBar.types';
 import { SETTINGS_MOBILE_ITEMS } from './SettingsMobileMenu.constants';
@@ -13,7 +12,7 @@ import { SETTINGS_MOBILE_ITEMS } from './SettingsMobileMenu.constants';
  * Owns settings-specific semantics:
  * - Selection derived from `usePathname`.
  * - Click handler uses `router.push` to navigate between settings subpages.
- * - Labels come from the `settings.menu.*` i18n namespace.
+ * - Labels come from `SETTINGS_MOBILE_ITEMS`.
  * - Uses `position='fixed'` so the bar sits outside the settings layout's
  *   flow (existing behavior preserved).
  *
@@ -24,12 +23,11 @@ import { SETTINGS_MOBILE_ITEMS } from './SettingsMobileMenu.constants';
 export function SettingsMobileMenu() {
   const pathname = usePathname();
   const router = useRouter();
-  const t = useTranslations('settings.menu');
 
   const items: MobileTabBarItem[] = SETTINGS_MOBILE_ITEMS.map((item) => ({
     key: item.path,
     icon: item.icon,
-    label: t(item.labelKey),
+    label: item.label,
     isActive: pathname === item.path,
     onSelect: () => router.push(item.path),
   }));

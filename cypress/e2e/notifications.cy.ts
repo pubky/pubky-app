@@ -37,11 +37,10 @@ import { goToCollectionsPage, goToProfilePageFromHeader } from '../support/heade
 
 const uniqueSuffix = String(Date.now()).slice(-5);
 
+// Profiles use a unique suffix so @mention autocomplete does not match stale accounts from earlier runs.
 // profile 1 and 2 are used for enabled notifications, profile 3 is used for disabled notifications
 // todo: use space in username after bug fixed https://github.com/pubky/pubky-app/issues/1638
-const profile1 = { username: 'Notif#1', pubkyAlias: 'pubky_1' };
-// profile 2 and 3 have a unique suffix to avoid conflicts when mentioning profile 2 and 3 in new posts across test runs
-// todo: use space in username after bug fixed https://github.com/pubky/pubky-app/issues/1638
+const profile1 = { username: `Notif#1${uniqueSuffix}`, pubkyAlias: 'pubky_1' };
 const profile2 = { username: `Notif#2${uniqueSuffix}`, pubkyAlias: 'pubky_2' };
 const profile3 = { username: `Notif#3${uniqueSuffix}`, pubkyAlias: 'pubky_3' };
 

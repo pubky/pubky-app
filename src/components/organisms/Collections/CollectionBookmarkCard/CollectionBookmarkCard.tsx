@@ -1,7 +1,6 @@
 'use client';
 
 import { Bookmark } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { COLLECTION_ROUTES } from '@/app/routes';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -32,11 +31,10 @@ interface CollectionBookmarkCardProps {
  * private in the current stack, so the label was misleading.
  */
 export function CollectionBookmarkCard({ className }: CollectionBookmarkCardProps) {
-  const t = useTranslations('collections');
   const { avatarName, avatarSeed, avatarUrl, bookmarkCount } = useBookmarksCollectionSummary();
 
-  const title = t('bookmarks.title');
-  const description = t('bookmarks.description');
+  const title = 'Bookmarks';
+  const description = 'Everything you saved for later.';
 
   return (
     <Link

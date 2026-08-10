@@ -36,11 +36,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mocks.pathname,
 }));
 
-// Mock next-intl
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
 vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
   useAuthStatus: () => ({ status: mocks.status, isLoading: mocks.isLoading }),
 }));
@@ -338,7 +333,7 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('loading')).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   it('shows redirecting text when route is inaccessible and not loading', () => {
@@ -353,7 +348,7 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
   });
 
   it('allows unauthenticated users to render core explore routes after auth loading resolves', () => {
@@ -416,7 +411,7 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
     expect(screen.queryByText('Bookmarks Content')).not.toBeInTheDocument();
   });
 
@@ -448,7 +443,7 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
     expect(screen.queryByText('Bookmarks Content')).not.toBeInTheDocument();
   });
 
@@ -463,7 +458,7 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
     expect(screen.queryByText('Explore Content')).not.toBeInTheDocument();
     expect(mocks.mockRouterPush).toHaveBeenCalledWith('/create-profile');
   });

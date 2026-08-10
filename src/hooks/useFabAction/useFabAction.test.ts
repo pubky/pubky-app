@@ -37,14 +37,6 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
 vi.mock('@/molecules/Toaster/use-toast', () => ({
   useToast: () => ({ toast: mocks.toast }),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations:
-    (namespace: string) =>
-    (key: string): string =>
-      `${namespace}.${key}`,
-}));
-
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
@@ -67,13 +59,13 @@ describe('useFabAction', () => {
     it('creates a collection on the collections overview route', () => {
       mocks.pathname = '/collections';
       const { result } = renderHook(() => useFabAction());
-      expect(result.current).toEqual({ kind: 'createCollection', ariaLabel: 'fab.newCollection' });
+      expect(result.current).toEqual({ kind: 'createCollection', ariaLabel: 'New collection' });
     });
 
     it('defaults to a plain new post on unrelated routes', () => {
       mocks.pathname = '/home';
       const { result } = renderHook(() => useFabAction());
-      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'fab.newPost' });
+      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'New post' });
       if (result.current.kind === 'createPost') {
         expect(result.current.onPostCreated).toBeUndefined();
       }
@@ -82,7 +74,7 @@ describe('useFabAction', () => {
     it('targets the bookmarks feed on the bookmarks route', () => {
       mocks.pathname = '/collections/bookmarks';
       const { result } = renderHook(() => useFabAction());
-      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'fab.newBookmark' });
+      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'New bookmark' });
       if (result.current.kind === 'createPost') {
         expect(result.current.onPostCreated).toBeTypeOf('function');
       }
@@ -91,7 +83,7 @@ describe('useFabAction', () => {
     it('targets the collection on an owned single-collection route', () => {
       mocks.pathname = `/collections/${ME}/post1`;
       const { result } = renderHook(() => useFabAction());
-      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'fab.newPostInCollection' });
+      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'New post in collection' });
       if (result.current.kind === 'createPost') {
         expect(result.current.onPostCreated).toBeTypeOf('function');
       }
@@ -100,7 +92,7 @@ describe('useFabAction', () => {
     it('falls back to a plain post on a non-owned collection route', () => {
       mocks.pathname = '/collections/other-pubky/post1';
       const { result } = renderHook(() => useFabAction());
-      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'fab.newPost' });
+      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'New post' });
       if (result.current.kind === 'createPost') {
         expect(result.current.onPostCreated).toBeUndefined();
       }
@@ -110,7 +102,7 @@ describe('useFabAction', () => {
       mocks.currentUserPubky = null;
       mocks.pathname = `/collections/${ME}/post1`;
       const { result } = renderHook(() => useFabAction());
-      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'fab.newPost' });
+      expect(result.current).toMatchObject({ kind: 'createPost', ariaLabel: 'New post' });
     });
   });
 
@@ -132,7 +124,7 @@ describe('useFabAction', () => {
         shouldAdd: true,
       });
       expect(useFeedOptimisticStore.getState().pendingByKey[`collection:${ME}:post1`]).toEqual(['author:newpost']);
-      expect(mocks.toast).toHaveBeenCalledWith({ title: 'toast.success', description: 'fab.addedToCollection' });
+      expect(mocks.toast).toHaveBeenCalledWith({ title: 'Success', description: 'Post added to collection.' });
     });
 
     it('bookmarks the created post, enqueues it, and toasts', async () => {
@@ -148,7 +140,7 @@ describe('useFabAction', () => {
 
       expect(mocks.commitCreate).toHaveBeenCalledWith({ postId: 'author:bp', userId: ME });
       expect(useFeedOptimisticStore.getState().pendingByKey.bookmarks).toEqual(['author:bp']);
-      expect(mocks.toast).toHaveBeenCalledWith({ title: 'toast.bookmark.added' });
+      expect(mocks.toast).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
     });
 
     it('surfaces an error and skips bookmarking when the pubky is missing', async () => {
@@ -167,7 +159,7 @@ describe('useFabAction', () => {
 
       expect(mocks.commitCreate).not.toHaveBeenCalled();
       expect(useFeedOptimisticStore.getState().pendingByKey.bookmarks).toBeUndefined();
-      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'toast.bookmark.loginRequired' });
+      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Sign in to bookmark posts' });
     });
 
     it('shows an error toast and does not enqueue when the collection save fails', async () => {
@@ -182,7 +174,7 @@ describe('useFabAction', () => {
         await onPostCreated('author:x');
       });
 
-      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'postSave.updateCollectionFailed' });
+      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Failed to update collection.' });
       expect(useFeedOptimisticStore.getState().pendingByKey[`collection:${ME}:post1`]).toBeUndefined();
     });
   });

@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { Flame, SquareAsterisk } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { SORT, type SortType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps } from '../Filters.types';
@@ -13,27 +12,26 @@ export function FilterSort({
   onTabChange,
   disabled,
 }: BaseFilterProps<SortType>) {
-  const t = useTranslations('filters.sort');
   const items = React.useMemo(
     () => [
       {
         key: SORT.TIMELINE,
-        label: t('recent'),
+        label: 'Recent',
         icon: SquareAsterisk,
         disabled,
       },
       {
         key: SORT.ENGAGEMENT,
-        label: t('popularity'),
+        label: 'Popularity',
         icon: Flame,
         disabled,
       },
     ],
-    [t, disabled],
+    [disabled],
   );
   return (
     <FilterRadioGroup
-      title={t('title')}
+      title={'Sort'}
       items={items}
       selectedValue={selectedTab}
       defaultValue={defaultSelectedTab}

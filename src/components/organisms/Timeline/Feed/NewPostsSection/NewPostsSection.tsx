@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
@@ -48,7 +46,6 @@ export function NewPostsSection({
   prependPosts,
 }: NewPostsSectionProps) {
   const { unreadPostIds } = useUnreadPosts({ streamId });
-  const t = useTranslations('toast.post');
   const isScrolled = useIsScrolledFromTop();
 
   const displayedPostIds = new Set(postIds);
@@ -90,7 +87,7 @@ export function NewPostsSection({
       Logger.error('Failed to load new posts:', error);
       toast({
         variant: 'error',
-        description: t('failedToLoadPosts'),
+        description: 'Could not load new posts',
       });
     }
   };

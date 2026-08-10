@@ -9,10 +9,6 @@ import type { Pubky } from '@/models/models.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { NewPostsSection } from './NewPostsSection';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
 vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
   useIsScrolledFromTop: vi.fn(() => false),
 }));

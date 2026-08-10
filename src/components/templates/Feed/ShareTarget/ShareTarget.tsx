@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -16,8 +15,6 @@ import { ShareTargetSkeleton } from './ShareTarget.skeleton';
 export function ShareTarget() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const t = useTranslations('share');
-
   const [initialContent, setInitialContent] = useState('');
   const [initialAttachments, setInitialAttachments] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,10 +59,10 @@ export function ShareTarget() {
       <Container className="mx-auto w-full max-w-2xl gap-4 p-4">
         <Container className="flex-row items-center justify-between" overrideDefaults>
           <Typography as="h2" size="lg">
-            {t('title')}
+            {'Share to Pubky'}
           </Typography>
           <Button variant="ghost" size="sm" onClick={handleCancel}>
-            {t('cancel')}
+            {'Cancel'}
           </Button>
         </Container>
 

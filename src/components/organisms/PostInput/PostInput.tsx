@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
@@ -61,8 +60,6 @@ export function PostInput({
   initialAttachments,
   layoutOverride,
 }: PostInputProps) {
-  const t = useTranslations('post');
-  const tToast = useTranslations('toast.post');
   const {
     textareaRef,
     markdownEditorRef,
@@ -191,7 +188,7 @@ export function PostInput({
         } else {
           toast({
             variant: 'error',
-            description: tToast('parseError'),
+            description: 'Could not parse article content',
           });
         }
       } else {
@@ -250,7 +247,7 @@ export function PostInput({
           className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
           overrideDefaults
         >
-          <Typography className="text-brand">{t('dropFiles')}</Typography>
+          <Typography className="text-brand">{'Drop files here'}</Typography>
         </Container>
       )}
 
@@ -289,7 +286,7 @@ export function PostInput({
             <div data-testid="post-input-state-content" className="relative flex min-w-0 flex-col gap-4">
               {isArticle && (
                 <Input
-                  placeholder={t('articleTitle')}
+                  placeholder={'Article Title'}
                   defaultValue={articleTitle}
                   onChange={handleArticleTitleChangeWithAuth}
                   maxLength={ARTICLE_TITLE_MAX_CHARACTER_LENGTH}

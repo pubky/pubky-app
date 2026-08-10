@@ -5,7 +5,17 @@
 export const QUICK_REPLY_CONNECTOR_HEIGHT_OFFSET = 52;
 
 /**
- * Number of prompts available for the quick reply placeholder.
- * This should match the number of prompts in the translations file (messages/en.json -> quickReply.prompts).
+ * Prompts for the quick reply placeholder. One is picked at random per mount.
  */
-export const QUICK_REPLY_PROMPTS_COUNT = 5;
+export const QUICK_REPLY_PROMPTS = [
+  'What are your thoughts on this?',
+  'What do you think?',
+  'Do you agree?',
+  'Any additional insights?',
+  'How would you respond?',
+] as const;
+
+/**
+ * Number of prompts available for the quick reply placeholder.
+ */
+export const QUICK_REPLY_PROMPTS_COUNT = QUICK_REPLY_PROMPTS.length;

@@ -265,24 +265,30 @@ describe('collections', () => {
     cy.signOut(HasBackedUp.Yes);
   });
 
-  it('persists the creator List default and keeps viewer overrides temporary', () => {
+  it('list layout: creator default, hidden replies, home post layout, temporary viewer override', () => {
     const collectionName = `List collection ${Date.now()}`;
     const postContent = `A post in List layout ${Date.now()}`;
     const replyContent = `A reply hidden from the collection ${Date.now()}`;
 
+    // set Home to columns so the single-post assertions below can distinguish
+    // "uses Home preference" from "inherits collection List layout"
     goToHomePage();
     cy.get('[data-cy="columns-layout-toggle"]').filter(':visible').click();
+
+    // * creator List default is persisted; owner has no temporary layout menu
     goToCollectionsPage();
     createCollection(collectionName, 'List by default.', { layout: 'list' });
     createPostInCollection(postContent);
     replyToPost({ replyContent, filterText: postContent });
 
     cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
-    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', replyContent);
     cy.get('[data-cy="timeline-posts-grid"]').should('not.exist');
     cy.get('[data-cy="collection-layout-menu"]').should('not.exist');
 
-    // * posts opened from List collections use the Home layout and reveal their replies
+    // * List collection feeds hide inline replies (full thread lives on the post page)
+    cy.get('[data-cy="timeline-posts"]').should('not.contain.text', replyContent);
+
+    // * opening a post from List uses the Home layout (no ?layout= query) and shows replies
     cy.get('[data-cy="timeline-posts"]').contains(postContent).click();
     cy.location('pathname').should('match', /^\/post\/[^/]+\/[^/]+$/);
     cy.location('search').should('eq', '');
@@ -290,16 +296,20 @@ describe('collections', () => {
     cy.contains(replyContent).should('be.visible');
     cy.get('[data-cy="columns-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
 
-    // * changing the post layout updates Home state without adding another Back step
+    // * changing layout on the post page updates Home state without a new history entry,
+    // so one Back returns to the List collection (still without the inline reply)
     cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').click();
     cy.location('search').should('eq', '');
+    // wide shell hides the inline sidebar; reopen it via the filter button to confirm Wide is selected
+    cy.get('[data-cy="button-filters-left"]').should('be.visible').click();
     cy.get('[data-cy="wide-layout-toggle"]').filter(':visible').should('have.attr', 'aria-checked', 'true');
     cy.go('back');
+    // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2235
+    cy.reload();
     cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
     cy.get('[data-cy="timeline-posts"]').should('not.contain.text', replyContent);
 
-    // * a viewer can override the creator default without persisting it
-    cy.wait(1000);
+    // * a non-owner can switch to Grid for this visit (temporary viewer override)
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(follower.username));
     goToCollectionsPage();
@@ -307,10 +317,12 @@ describe('collections', () => {
     selectCollectionViewerLayout('grid');
     cy.get('[data-cy="timeline-posts-grid"]').should('contain.text', postContent);
 
+    // * reload drops the in-memory override and restores the creator List default
     cy.reload();
     cy.get('[data-cy="timeline-posts"]').should('contain.text', postContent);
     cy.get('[data-cy="timeline-posts-grid"]').should('not.exist');
 
+    // clean up so the collection does not linger in other users' Discover section
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(curator.username));
     openCollectionFromMyCollections(collectionName);

@@ -1,7 +1,6 @@
 'use client';
 
 import { BookOpen, Eye, UserRoundPlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { cn } from '@/libs/utils/utils';
@@ -14,7 +13,6 @@ interface ActionButtonsProps {
 }
 
 export function ActionButtons({ className, onLearn, onCreateAccount, onExplore, ...props }: ActionButtonsProps) {
-  const t = useTranslations('landing');
   const hasBothSecondaryActions = Boolean(onLearn && onExplore);
   const secondaryActionClassName = cn('w-full sm:w-auto', !hasBothSecondaryActions && 'col-span-2 sm:col-span-1');
 
@@ -34,7 +32,7 @@ export function ActionButtons({ className, onLearn, onCreateAccount, onExplore, 
           onClick={onLearn}
         >
           <BookOpen className="h-4 w-4" />
-          {t('learn')}
+          {'Learn'}
         </Button>
       )}
       {onExplore && (
@@ -47,7 +45,7 @@ export function ActionButtons({ className, onLearn, onCreateAccount, onExplore, 
           onClick={onExplore}
         >
           <Eye className="h-4 w-4" />
-          {t('explore')}
+          {'Explore'}
         </Button>
       )}
       <Button
@@ -58,7 +56,7 @@ export function ActionButtons({ className, onLearn, onCreateAccount, onExplore, 
         onClick={onCreateAccount}
       >
         <UserRoundPlus className="h-4 w-4" />
-        {t('join')}
+        {'Join'}
       </Button>
     </Container>
   );

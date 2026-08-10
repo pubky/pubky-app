@@ -1,7 +1,6 @@
 'use client';
 
 import { Check, Loader2, UserMinus, UserRoundPlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
 
@@ -11,7 +10,6 @@ interface UserInfoPopoverFollowButtonProps {
   onClick: (e: React.MouseEvent) => void;
 }
 export function UserInfoPopoverFollowButton({ isFollowing, isLoading, onClick }: UserInfoPopoverFollowButtonProps) {
-  const t = useTranslations('userList');
   return (
     <Button
       variant="secondary"
@@ -19,7 +17,7 @@ export function UserInfoPopoverFollowButton({ isFollowing, isLoading, onClick }:
       className="group gap-2"
       onClick={onClick}
       disabled={isLoading}
-      aria-label={isFollowing ? t('unfollow') : t('follow')}
+      aria-label={isFollowing ? 'Unfollow' : 'Follow'}
     >
       {isLoading ? (
         <Loader2 className="size-4 animate-spin" />
@@ -27,18 +25,18 @@ export function UserInfoPopoverFollowButton({ isFollowing, isLoading, onClick }:
         <>
           <Check className="size-4 group-hover:hidden" />
           <Typography className="text-xs leading-4 font-bold group-hover:hidden" overrideDefaults>
-            {t('following')}
+            {'Following'}
           </Typography>
           <UserMinus className="hidden size-4 group-hover:block" />
           <Typography className="hidden text-xs leading-4 font-bold group-hover:block" overrideDefaults>
-            {t('unfollow')}
+            {'Unfollow'}
           </Typography>
         </>
       ) : (
         <>
           <UserRoundPlus className="size-4" />
           <Typography className="text-xs leading-4 font-bold" overrideDefaults>
-            {t('follow')}
+            {'Follow'}
           </Typography>
         </>
       )}

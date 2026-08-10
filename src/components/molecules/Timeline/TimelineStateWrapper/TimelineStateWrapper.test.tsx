@@ -2,10 +2,6 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TimelineStateWrapper } from './TimelineStateWrapper';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
 vi.mock('../TimelineLoading', () => ({
   TimelineLoading: () => <div data-testid="default-loading">Default Loading...</div>,
 }));
@@ -74,7 +70,7 @@ describe('TimelineStateWrapper', () => {
       );
 
       expect(screen.getByTestId('default-loading')).toBeInTheDocument();
-      expect(screen.queryByText('noPosts')).not.toBeInTheDocument();
+      expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
     });
   });
 
@@ -121,7 +117,7 @@ describe('TimelineStateWrapper', () => {
       );
 
       expect(screen.getByText(/some error/i)).toBeInTheDocument();
-      expect(screen.queryByText('noPosts')).not.toBeInTheDocument();
+      expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
     });
   });
 
@@ -133,7 +129,7 @@ describe('TimelineStateWrapper', () => {
         </TimelineStateWrapper>,
       );
 
-      expect(screen.getByText('noPosts')).toBeInTheDocument();
+      expect(screen.getByText('No posts found')).toBeInTheDocument();
       expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
     });
 
@@ -147,7 +143,7 @@ describe('TimelineStateWrapper', () => {
       );
 
       expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
-      expect(screen.queryByText('noPosts')).not.toBeInTheDocument();
+      expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
       expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
     });
   });
@@ -162,7 +158,7 @@ describe('TimelineStateWrapper', () => {
 
       expect(screen.getByTestId('mock-children')).toBeInTheDocument();
       expect(screen.queryByTestId('default-loading')).not.toBeInTheDocument();
-      expect(screen.queryByText('noPosts')).not.toBeInTheDocument();
+      expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
     });
 
     it('should render children when has items even with error', () => {
@@ -184,7 +180,7 @@ describe('TimelineStateWrapper', () => {
         </TimelineStateWrapper>,
       );
 
-      expect(screen.getByText('noPosts')).toBeInTheDocument();
+      expect(screen.getByText('No posts found')).toBeInTheDocument();
     });
 
     it('should handle empty string error', () => {
@@ -194,7 +190,7 @@ describe('TimelineStateWrapper', () => {
         </TimelineStateWrapper>,
       );
 
-      expect(screen.getByText('noPosts')).toBeInTheDocument();
+      expect(screen.getByText('No posts found')).toBeInTheDocument();
     });
 
     it('should handle multiple children', () => {

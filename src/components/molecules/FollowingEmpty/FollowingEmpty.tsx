@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { UserRoundPlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -11,8 +10,6 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 
 export function FollowingEmpty() {
-  const t = useTranslations('profile.empty.following');
-  const tNav = useTranslations('profile.navigation');
   const router = useRouter();
   const { requireAuth } = useRequireAuth();
 
@@ -29,7 +26,7 @@ export function FollowingEmpty() {
       {/* Background image */}
       <Image
         src="/images/connections-empty-state.webp"
-        alt={t('alt')}
+        alt={'Following - Empty state'}
         fill
         className="pointer-events-none object-contain object-center"
         aria-hidden="true"
@@ -43,11 +40,11 @@ export function FollowingEmpty() {
       {/* Title and subtitle */}
       <Container className="items-center gap-6">
         <Typography as="h3" size="lg">
-          {t('title')}
+          {'You are the algorithm'}
         </Typography>
 
         <Typography className="text-center text-base leading-6 font-medium text-secondary-foreground">
-          {t('subtitle')
+          {'Following account is a simple way to curate your timeline.\nStay updated on the topics and people that interest you.'
             .split('\n')
             .map((line, i) => (
               <span key={i}>
@@ -70,7 +67,7 @@ export function FollowingEmpty() {
         >
           <UserRoundPlus className="size-4" />
           <Typography as="span" overrideDefaults={true}>
-            {tNav('whoToFollow')}
+            {'Who to Follow'}
           </Typography>
         </Button>
         <Button
@@ -83,7 +80,7 @@ export function FollowingEmpty() {
         >
           <UserRoundPlus className="size-4" />
           <Typography as="span" overrideDefaults={true}>
-            {tNav('popularUsers')}
+            {'Popular Users'}
           </Typography>
         </Button>
       </Container>

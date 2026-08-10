@@ -3,20 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
 import { CollectionLayoutPicker } from './CollectionLayoutPicker';
 
-const translations: Record<string, string> = {
-  'collections.single.layout': 'Layout',
-  'collections.single.layoutGrid': 'Grid',
-  'collections.single.layoutList': 'List',
-  'collections.single.layoutVisual': 'Visual',
-};
-
-vi.mock('next-intl', () => ({
-  useTranslations:
-    (namespace: string) =>
-    (key: string): string =>
-      translations[`${namespace}.${key}`] ?? key,
-}));
-
 function renderPicker({
   layout = COLLECTION_LAYOUT.GRID,
   onLayoutChange = vi.fn(),

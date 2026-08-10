@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { flushSync } from 'react-dom';
-import { useTranslations } from 'next-intl';
 import { useEditCollection } from '@/hooks/useEditCollection/useEditCollection';
 import { DialogCollectionForm } from '@/organisms/Collections/DialogCollectionForm/DialogCollectionForm';
 
@@ -14,7 +13,6 @@ type DialogEditCollectionProps = {
 };
 
 export function DialogEditCollection({ open, onOpenChange, compositeCollectionId }: DialogEditCollectionProps) {
-  const t = useTranslations('collections.edit');
   // Local saving flag, flipped synchronously via `flushSync` so the "Saving..."
   // state paints before any heavy work (e.g. cover image canvas re-encoding)
   // begins. RHF's own `formState.isSubmitting` would otherwise be batched.
@@ -44,9 +42,9 @@ export function DialogEditCollection({ open, onOpenChange, compositeCollectionId
     <DialogCollectionForm
       open={open}
       onOpenChange={handleOpenChange}
-      title={t('title')}
-      submitLabel={t('save')}
-      layoutLabel={t('defaultLayoutLabel')}
+      title={'Edit Collection'}
+      submitLabel={'Save changes'}
+      layoutLabel={'Default layout'}
       form={form}
       cover={cover}
       onSubmit={handleSave}

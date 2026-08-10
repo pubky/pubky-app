@@ -1,21 +1,18 @@
 'use client';
 
 import { Tag } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
 import { TagInput } from '../TagInput/TagInput';
 import type { TaggedEmptyProps } from './TaggedEmpty.types';
 
 export function TaggedEmpty({ onTagAdd }: TaggedEmptyProps) {
-  const t = useTranslations('profile.empty.tagged');
-
   return (
     <IllustratedEmptyState
       imageSrc="/images/tagged-empty-state.webp"
-      imageAlt={t('alt')}
+      imageAlt={'Tagged - Empty state'}
       icon={Tag}
-      title={t('title')}
-      subtitle={t('subtitle')}
+      title={'Discover who tagged you'}
+      subtitle={'No one has tagged you yet.\nTip: You can add tags to your own profile too.'}
     >
       {onTagAdd && <TagInput onTagAdd={onTagAdd} enableApiSuggestions addOnSuggestionClick />}
     </IllustratedEmptyState>

@@ -3,7 +3,6 @@
 import { type ReactNode, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { Slot } from 'radix-ui';
 import { getCollectionRoute } from '@/app/routes';
 import { useAuthoredCollections } from '@/hooks/useAuthoredCollections/useAuthoredCollections';
@@ -26,7 +25,6 @@ export function DialogNewCollection({
   open: openProp,
   onOpenChange: onOpenChangeProp,
 }: DialogNewCollectionProps) {
-  const t = useTranslations('collections.new');
   const router = useRouter();
   const [openState, setOpenState] = useState(false);
   const isControlled = openProp !== undefined;
@@ -91,9 +89,9 @@ export function DialogNewCollection({
       <DialogCollectionForm
         open={formOpen}
         onOpenChange={handleDismiss}
-        title={t('title')}
-        submitLabel={t('save')}
-        layoutLabel={t('layoutLabel')}
+        title={'New Collection'}
+        submitLabel={'Save collection'}
+        layoutLabel={'Layout'}
         form={form}
         cover={cover}
         onSubmit={handleSave}

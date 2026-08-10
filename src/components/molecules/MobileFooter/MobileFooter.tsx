@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Flame, Home, Library, Search, Settings, UserRoundPlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
@@ -33,8 +32,6 @@ export interface MobileFooterProps {
  */
 export function MobileFooter({ className }: MobileFooterProps) {
   const pathname = usePathname();
-  const tHeader = useTranslations('header');
-  const tCommon = useTranslations('common');
   const isAuthenticated = useAuthStore((state) => Boolean(state.currentUserPubky));
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
   const { isPublicExploreRoute } = usePublicRoute();
@@ -43,7 +40,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
   const { isKeyboardVisible, keyboardOffset } = useKeyboardOffset();
   const { showCollectionsNew, markCollectionsNavSeen } = useCollectionsNavDiscovery();
-  const collectionsNewLabel = tHeader('new');
+  const collectionsNewLabel = 'New';
 
   // Get avatar URL and fallback initial - same logic as desktop header
   const avatarUrl =
@@ -56,31 +53,31 @@ export function MobileFooter({ className }: MobileFooterProps) {
     {
       href: APP_ROUTES.HOME,
       icon: Home,
-      label: tHeader('home'),
+      label: 'Home',
       isFeedRoute: true,
     },
     {
       href: APP_ROUTES.SEARCH,
       icon: Search,
-      label: tHeader('search'),
+      label: 'Search',
       isFeedRoute: true,
     },
     {
       href: APP_ROUTES.HOT,
       icon: Flame,
-      label: tHeader('hot'),
+      label: 'Hot',
     },
     {
       href: APP_ROUTES.COLLECTIONS,
       activePrefix: APP_ROUTES.COLLECTIONS,
       icon: Library,
-      label: tHeader('collections'),
+      label: 'Collections',
     },
     {
       href: SETTINGS_ROUTES.ACCOUNT,
       activePrefix: APP_ROUTES.SETTINGS,
       icon: Settings,
-      label: tHeader('settings'),
+      label: 'Settings',
     },
   ];
   const protectedNavHrefs = new Set<string>([SETTINGS_ROUTES.ACCOUNT]);
@@ -156,7 +153,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           <Link
             data-cy="footer-nav-profile-btn"
             href={APP_ROUTES.PROFILE}
-            aria-label={tCommon('profile')}
+            aria-label={'Profile'}
             className="relative shrink-0 rounded-full"
           >
             <AvatarWithFallback
@@ -165,7 +162,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
               fallbackSeed={currentUserPubky || avatarName}
               size="lg"
               className="cursor-pointer"
-              alt={tCommon('profile')}
+              alt={'Profile'}
             />
             {unreadNotifications > 0 && (
               <Badge

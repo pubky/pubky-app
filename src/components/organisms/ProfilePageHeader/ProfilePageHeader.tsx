@@ -12,7 +12,6 @@ import {
   UserRoundPlus,
   UsersRound,
 } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
 import { AvatarEmojiBadge } from '@/atoms/AvatarEmojiBadge/AvatarEmojiBadge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -42,11 +41,10 @@ import type { ProfilePageHeaderProps } from './ProfilePageHeader.types';
 // sit in their natural JSX order in a flex row.
 const ACTION_BUTTON_GRID_CELL = 'min-w-0 justify-center lg:order-0';
 
+// Compact notation (e.g. 1.2K, 3M) keeps long follower counts from blowing out the row.
+const compactNumber = new Intl.NumberFormat('en-US', { notation: 'compact' });
+
 export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userId, stats }: ProfilePageHeaderProps) {
-  const t = useTranslations('profile.actions');
-  const tStatus = useTranslations('status');
-  const tUserList = useTranslations('userList');
-  const format = useFormatter();
   const { avatarUrl, emoji = '🌴', name, bio, publicKey, status } = profile;
   const {
     onEdit,
@@ -72,17 +70,17 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     key: publicKey,
   });
   const displayEmoji = extractEmojiFromStatus(status || '', emoji);
-  const followersLabel = stats
-    ? `${format.number(stats.followers, { notation: 'compact' })} ${tUserList('followers')}`
-    : null;
+  const followersLabel = stats ? `${compactNumber.format(stats.followers)} FOLLOWERS` : null;
   const getLoadingFollowText = () => {
     if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
-      return t('unfollowing');
+      return 'Unfollowing...';
     }
     if (followLoadingAction === FOLLOW_ACTIONS.FOLLOW) {
-      return t('followingProgress');
+      return 'Following...';
     }
-    return t('loading');
+    // The old 'profile.actions.loading' key never existed in the catalog, so this
+    // branch rendered the raw key path; 'Loading...' is the intended copy.
+    return 'Loading...';
   };
   const copyPublicKeyButton = (
     <Button
@@ -101,8 +99,10 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
       return null;
     }
 
+    // For predefined statuses parseStatus already resolves `text` from STATUS_LABELS,
+    // which carries the same copy the status.* translation keys held.
     const parsedStatus = parseStatus(status, displayEmoji);
-    const statusText = parsedStatus.key ? tStatus(parsedStatus.key) : parsedStatus.text;
+    const statusText = parsedStatus.text;
 
     return (
       <Container overrideDefaults={true} className="flex h-8 items-center gap-1">
@@ -202,7 +202,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 onClick={onEdit}
               >
                 <Pencil className="size-4" />
-                {t('editProfile')}
+                {'Edit profile'}
               </Button>
               {copyPublicKeyButton}
               <Button
@@ -212,7 +212,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 onClick={onCopyLink}
               >
                 <Link className="size-4" />
-                {t('profileLink')}
+                {'Profile link'}
               </Button>
               <Button
                 className={cn('order-4', ACTION_BUTTON_GRID_CELL)}
@@ -225,12 +225,12 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                 {isLoggingOut ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    {t('loggingOut')}
+                    {'Logging out...'}
                   </>
                 ) : (
                   <>
                     <LogOut className="size-4" />
-                    {t('signOut')}
+                    {'Sign out'}
                   </>
                 )}
               </Button>
@@ -265,17 +265,17 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                     <>
                       <Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
                         <Check className="size-4" />
-                        {t('followingButton')}
+                        {'Following'}
                       </Container>
                       <Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
                         <UserMinus className="size-4" />
-                        {t('unfollow')}
+                        {'Unfollow'}
                       </Container>
                     </>
                   ) : (
                     <>
                       <UserRoundPlus className="size-4" />
-                      {t('follow')}
+                      {'Follow'}
                     </>
                   )}
                 </Button>
@@ -283,7 +283,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               {copyPublicKeyButton}
               <Button className={ACTION_BUTTON_GRID_CELL} variant="secondary" size="sm" onClick={onCopyLink}>
                 <Link className="size-4" />
-                {t('link')}
+                {'Link'}
               </Button>
               {/* Three-dot menu with additional profile actions */}
               <ProfileMenuActions

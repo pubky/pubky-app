@@ -32,17 +32,6 @@ vi.mock('@/libs/logger/logger', () => ({
 vi.mock('@/molecules/Toaster/use-toast', () => ({
   toast: (props: unknown) => mockToast(props),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string, values?: { username?: string }) => {
-    if (key === 'followed') return `Following ${values?.username ?? ''}`;
-    if (key === 'unfollowed') return `Unfollowed ${values?.username ?? ''}`;
-    if (key === 'followFailed') return `Failed to follow ${values?.username ?? ''}`;
-    if (key === 'unfollowFailed') return `Failed to unfollow ${values?.username ?? ''}`;
-    return key;
-  },
-}));
-
 describe('useFollowUser', () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -18,7 +18,6 @@
  * ```
  */
 import { ChevronDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -26,7 +25,6 @@ import { cn } from '@/libs/utils/utils';
 import type { PullToRefreshIndicatorProps } from './PullToRefreshIndicator.types';
 
 export function PullToRefreshIndicator({ state, pullDistance }: PullToRefreshIndicatorProps) {
-  const t = useTranslations('pullToRefresh');
   const isReady = state === 'ready';
   const isRefreshing = state === 'refreshing';
   const isVisible = state !== 'idle';
@@ -37,7 +35,7 @@ export function PullToRefreshIndicator({ state, pullDistance }: PullToRefreshInd
   }
 
   // Determine label text based on state
-  const labelText = isRefreshing ? t('refreshing') : isReady ? t('releaseToRefresh') : t('pullToRefresh');
+  const labelText = isRefreshing ? 'Refreshing...' : isReady ? 'Release to refresh' : 'Pull to refresh';
   return (
     <Container
       overrideDefaults
