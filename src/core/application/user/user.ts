@@ -1,4 +1,9 @@
-import type { TUserApplicationFollowParams, TUserCountsOrFetchResult } from '@/application/user/user.types';
+import { baseUriBuilder } from 'pubky-app-specs';
+import type {
+  TEnsureModerationFollowParams,
+  TUserApplicationFollowParams,
+  TUserCountsOrFetchResult,
+} from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -6,6 +11,7 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
+import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFollowService } from '@/services/local/follow/follow';
 import { LocalProfileService } from '@/services/local/profile/profile';
@@ -254,6 +260,37 @@ export class UserApplication {
       await LocalFollowService.delete({ follower, followee, activeStreamId });
     }
     await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+  }
+
+  /**
+   * Applies the moderation-bot default follow once per account. The homeserver marker preserves
+   * explicit unfollows, while the canonical follow resource makes retries idempotent.
+   */
+  static async ensureModerationFollow({ follower, moderationId }: TEnsureModerationFollowParams): Promise<void> {
+    if (!moderationId || follower === moderationId) return;
+
+    const markerUrl = `${baseUriBuilder(follower)}migrations/moderation-follow/v1/${moderationId}.json`;
+
+    if (await HomeserverService.exists(markerUrl)) return;
+
+    const { meta, follow } = FollowNormalizer.to({ follower, followee: moderationId });
+    const followExists = await HomeserverService.exists(meta.url);
+    if (!followExists) {
+      await this.commitFollow({
+        eventType: HttpMethod.PUT,
+        followUrl: meta.url,
+        followJson: follow.toJson(),
+        follower,
+        followee: moderationId,
+        activeStreamId: undefined,
+      });
+    }
+
+    await HomeserverService.request({
+      method: HttpMethod.PUT,
+      url: markerUrl,
+      bodyJson: { moderationId, completedAt: Date.now() },
+    });
   }
 
   /**

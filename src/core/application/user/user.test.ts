@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { HttpMethod } from '@/libs/http/http.types';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppError } from '@/libs/error/error';
+import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
+import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFollowService } from '@/services/local/follow/follow';
 import { LocalProfileService } from '@/services/local/profile/profile';
@@ -16,7 +20,7 @@ import type {
 } from '@/services/nexus/nexus.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { NexusUserService } from '@/services/nexus/user/user';
-import { asInvalid } from '@/test-utils/type-assertions';
+import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import { UserApplication } from './user';
 
 describe('UserApplication.commitFollow', () => {
@@ -140,6 +144,225 @@ describe('UserApplication.commitFollow', () => {
     ).rejects.toThrow('homeserver-fail');
 
     expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: followUrl, bodyJson: followJson });
+  });
+});
+
+describe('UserApplication.ensureModerationFollow', () => {
+  const follower = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
+  const moderationId = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro' as Pubky;
+  const followUrl = `pubky://${follower}/pub/pubky.app/follows/${moderationId}`;
+  const markerUrl = `pubky://${follower}/pub/pubky.app/migrations/moderation-follow/v1/${moderationId}.json`;
+  const followJson = { created_at: 1234 };
+
+  const mockFollowNormalizer = () => {
+    const toJson = vi.fn(() => followJson);
+    const normalize = vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
+      asOpaque<ReturnType<typeof FollowNormalizer.to>>({
+        meta: { url: followUrl },
+        follow: { toJson },
+      }),
+    );
+    return { normalize, toJson };
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('skips all work when moderation is disabled', async () => {
+    const normalize = vi.spyOn(FollowNormalizer, 'to');
+    const exists = vi.spyOn(HomeserverService, 'exists');
+    const request = vi.spyOn(HomeserverService, 'request');
+    const localCreate = vi.spyOn(LocalFollowService, 'create');
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId: undefined });
+
+    expect(normalize).not.toHaveBeenCalled();
+    expect(exists).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+    expect(localCreate).not.toHaveBeenCalled();
+  });
+
+  it('skips all work instead of following the signed-in account', async () => {
+    const normalize = vi.spyOn(FollowNormalizer, 'to');
+    const exists = vi.spyOn(HomeserverService, 'exists');
+    const request = vi.spyOn(HomeserverService, 'request');
+    const localCreate = vi.spyOn(LocalFollowService, 'create');
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId: follower });
+
+    expect(normalize).not.toHaveBeenCalled();
+    expect(exists).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+    expect(localCreate).not.toHaveBeenCalled();
+  });
+
+  it('honors a completed marker and preserves an explicit unfollow', async () => {
+    const normalize = vi.spyOn(FollowNormalizer, 'to');
+    const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(true);
+    const request = vi.spyOn(HomeserverService, 'request');
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId });
+
+    expect(exists).toHaveBeenCalledOnce();
+    expect(exists).toHaveBeenCalledWith(markerUrl);
+    expect(normalize).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+    expect(localCreate).not.toHaveBeenCalled();
+  });
+
+  it('writes only the marker when the canonical follow already exists', async () => {
+    mockFollowNormalizer();
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+    const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const request = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId });
+
+    expect(exists).toHaveBeenNthCalledWith(1, markerUrl);
+    expect(exists).toHaveBeenNthCalledWith(2, followUrl);
+    expect(request).toHaveBeenCalledOnce();
+    expect(request).toHaveBeenCalledWith({
+      method: HttpMethod.PUT,
+      url: markerUrl,
+      bodyJson: { moderationId, completedAt: expect.any(Number) },
+    });
+    expect(localCreate).not.toHaveBeenCalled();
+  });
+
+  it('creates the local follow, writes it remotely, then writes the marker', async () => {
+    const events: string[] = [];
+    const { toJson } = mockFollowNormalizer();
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockImplementation(() => {
+      events.push('local-follow');
+      return Promise.resolve();
+    });
+    const exists = vi.spyOn(HomeserverService, 'exists').mockImplementation((url) => {
+      events.push(`${HttpMethod.GET}:${url}`);
+      return Promise.resolve(false);
+    });
+    const request = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
+      events.push(`${method}:${url}`);
+      return Promise.resolve(undefined);
+    });
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId });
+
+    expect(events).toEqual([
+      `${HttpMethod.GET}:${markerUrl}`,
+      `${HttpMethod.GET}:${followUrl}`,
+      'local-follow',
+      `${HttpMethod.PUT}:${followUrl}`,
+      `${HttpMethod.PUT}:${markerUrl}`,
+    ]);
+    expect(localCreate).toHaveBeenCalledWith({ follower, followee: moderationId, activeStreamId: undefined });
+    expect(exists).toHaveBeenCalledTimes(2);
+    expect(toJson).toHaveBeenCalledOnce();
+    expect(request).toHaveBeenNthCalledWith(1, {
+      method: HttpMethod.PUT,
+      url: followUrl,
+      bodyJson: followJson,
+    });
+  });
+
+  it('aborts without writes when the marker read fails ambiguously', async () => {
+    const normalize = vi.spyOn(FollowNormalizer, 'to');
+    const failure = new AppError({
+      category: ErrorCategory.Client,
+      code: ClientErrorCode.BAD_REQUEST,
+      message: 'Unexpected marker response',
+      service: ErrorService.Homeserver,
+      operation: 'readMarker',
+      context: { statusCode: HttpStatusCode.BAD_REQUEST },
+    });
+    const exists = vi.spyOn(HomeserverService, 'exists').mockRejectedValue(failure);
+    const request = vi.spyOn(HomeserverService, 'request');
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+
+    await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toBe(failure);
+
+    expect(exists).toHaveBeenCalledOnce();
+    expect(normalize).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+    expect(localCreate).not.toHaveBeenCalled();
+  });
+
+  it('aborts without writes when the follow read fails ambiguously', async () => {
+    mockFollowNormalizer();
+    const failure = new AppError({
+      category: ErrorCategory.Server,
+      code: ServerErrorCode.SERVICE_UNAVAILABLE,
+      message: 'Homeserver unavailable',
+      service: ErrorService.Homeserver,
+      operation: 'readFollow',
+      context: { statusCode: HttpStatusCode.SERVICE_UNAVAILABLE },
+    });
+    const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValueOnce(false).mockRejectedValueOnce(failure);
+    const request = vi.spyOn(HomeserverService, 'request');
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+
+    await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toBe(failure);
+
+    expect(exists).toHaveBeenCalledTimes(2);
+    expect(request).not.toHaveBeenCalled();
+    expect(localCreate).not.toHaveBeenCalled();
+  });
+
+  it('stops before homeserver writes when the local follow fails', async () => {
+    mockFollowNormalizer();
+    const failure = new Error('local follow failed');
+    vi.spyOn(LocalFollowService, 'create').mockRejectedValue(failure);
+    const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
+    const request = vi.spyOn(HomeserverService, 'request');
+
+    await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toBe(failure);
+
+    expect(exists).toHaveBeenCalledTimes(2);
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('does not write the marker when the homeserver follow write fails', async () => {
+    mockFollowNormalizer();
+    const failure = new Error('follow write failed');
+    vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+    vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
+    const request = vi.spyOn(HomeserverService, 'request').mockRejectedValueOnce(failure);
+
+    await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toBe(failure);
+
+    expect(request).toHaveBeenCalledOnce();
+    expect(request).not.toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT, url: markerUrl }));
+  });
+
+  it('retries only the marker after a marker-write failure', async () => {
+    mockFollowNormalizer();
+    const failure = new Error('marker write failed');
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+    const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
+    const request = vi
+      .spyOn(HomeserverService, 'request')
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(failure);
+
+    await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toBe(failure);
+
+    exists.mockReset();
+    exists.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    request.mockReset();
+    request.mockResolvedValueOnce(undefined);
+    await UserApplication.ensureModerationFollow({ follower, moderationId });
+
+    expect(localCreate).toHaveBeenCalledOnce();
+    expect(exists).toHaveBeenNthCalledWith(1, markerUrl);
+    expect(exists).toHaveBeenNthCalledWith(2, followUrl);
+    expect(request).toHaveBeenCalledOnce();
+    expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT, url: markerUrl }));
   });
 });
 

@@ -4,6 +4,8 @@ import type { TBootstrapParams } from '@/application/bootstrap/bootstrap.types';
 import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
+import { UserApplication } from '@/application/user/user';
+import { getModerationId } from '@/config/moderation';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -278,6 +280,7 @@ describe('BootstrapApplication', () => {
     vi.spyOn(NotificationNormalizer, 'toFlatNotification').mockImplementation((n) =>
       createFlatNotification(n.timestamp),
     );
+    vi.spyOn(UserApplication, 'ensureModerationFollow').mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -594,6 +597,71 @@ describe('BootstrapApplication', () => {
         lastRead: MOCK_LAST_READ,
         lastPolledTimestamp: undefined,
       });
+    });
+
+    it('starts the moderation follow only after bootstrap persistence completes', async () => {
+      let resolvePersistUsers!: (value: []) => void;
+      const persistUsersPending = new Promise<[]>((resolve) => {
+        resolvePersistUsers = resolve;
+      });
+      setupMocks();
+      const persistUsers = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockReturnValue(persistUsersPending);
+      const ensureModerationFollow = vi.mocked(UserApplication.ensureModerationFollow);
+
+      const initialize = BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      await vi.waitFor(() => expect(persistUsers).toHaveBeenCalled());
+      expect(ensureModerationFollow).not.toHaveBeenCalled();
+
+      resolvePersistUsers([]);
+      await initialize;
+
+      expect(ensureModerationFollow).toHaveBeenCalledWith({
+        follower: TEST_PUBKY,
+        moderationId: getModerationId(),
+      });
+    });
+
+    it('completes bootstrap while the moderation follow remains in flight', async () => {
+      setupMocks();
+      const ensureModerationFollow = vi
+        .mocked(UserApplication.ensureModerationFollow)
+        .mockReturnValue(new Promise<void>(() => {}));
+
+      await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).resolves.toEqual({
+        unread: 0,
+        lastRead: MOCK_LAST_READ,
+        lastPolledTimestamp: undefined,
+      });
+      expect(ensureModerationFollow).toHaveBeenCalledOnce();
+    });
+
+    it('does not reject bootstrap or re-log an AppError from the moderation follow', async () => {
+      setupMocks();
+      const failure = Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'Homeserver unavailable', {
+        service: ErrorService.Homeserver,
+        operation: 'ensureModerationFollow',
+      });
+      vi.mocked(UserApplication.ensureModerationFollow).mockRejectedValue(failure);
+      const loggerWarn = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).resolves.toBeDefined();
+
+      await vi.waitFor(() => expect(UserApplication.ensureModerationFollow).toHaveBeenCalledOnce());
+      expect(loggerWarn).not.toHaveBeenCalledWith('Unexpected moderation-follow bootstrap failure', expect.anything());
+    });
+
+    it('does not reject bootstrap and warns for an unreported moderation-follow failure', async () => {
+      setupMocks();
+      const failure = new Error('unexpected failure');
+      vi.mocked(UserApplication.ensureModerationFollow).mockRejectedValue(failure);
+      const loggerWarn = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).resolves.toBeDefined();
+
+      await vi.waitFor(() =>
+        expect(loggerWarn).toHaveBeenCalledWith('Unexpected moderation-follow bootstrap failure', { error: failure }),
+      );
     });
 
     it('should fetch muted users during bootstrap (persist is inside fetchMutedUsers)', async () => {

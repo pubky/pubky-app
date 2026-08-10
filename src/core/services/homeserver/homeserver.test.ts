@@ -4,6 +4,7 @@ import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 // =============================================================================
@@ -214,6 +215,7 @@ describe('HomeserverService', () => {
         'list',
         'delete',
         'get',
+        'exists',
         'generateSignupToken',
         'subscribeUserEventStreamForPath',
       ] as const;
@@ -919,6 +921,62 @@ describe('HomeserverService', () => {
         mockState.publicStorageGet.mockRejectedValue(networkError);
 
         await expect(HomeserverService.get(testUrl)).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.INTERNAL_ERROR,
+        });
+      });
+    });
+
+    describe('exists', () => {
+      const testUrl = 'pubky://user/pub/resource.json';
+
+      it('should return true for an owned resource that exists', async () => {
+        mockState.currentSession = createMockSession();
+        mockState.sessionStorageGet.mockResolvedValue(new Response('{}', { status: 200 }));
+
+        await expect(HomeserverService.exists(testUrl)).resolves.toBe(true);
+
+        expect(mockState.sessionStorageGet).toHaveBeenCalledWith('/pub/resource.json');
+        expect(mockState.publicStorageGet).not.toHaveBeenCalled();
+      });
+
+      it('should return false without error logging when owned storage resolves with 404', async () => {
+        mockState.currentSession = createMockSession();
+        mockState.sessionStorageGet.mockResolvedValue(new Response('', { status: 404 }));
+
+        await expect(HomeserverService.exists(testUrl)).resolves.toBe(false);
+
+        expect(Logger.error).not.toHaveBeenCalled();
+      });
+
+      it('should return false without error logging when owned storage rejects with 404', async () => {
+        mockState.currentSession = createMockSession();
+        mockState.sessionStorageGet.mockRejectedValue({
+          name: 'RequestError',
+          message: 'Not found',
+          data: { statusCode: 404 },
+        });
+
+        await expect(HomeserverService.exists(testUrl)).resolves.toBe(false);
+
+        expect(Logger.error).not.toHaveBeenCalled();
+      });
+
+      it('should preserve session-expiration handling for resolved non-404 responses', async () => {
+        mockState.currentSession = createMockSession();
+        mockState.sessionStorageGet.mockResolvedValue(new Response('Session expired', { status: 401 }));
+
+        await expect(HomeserverService.exists(testUrl)).rejects.toMatchObject({
+          category: ErrorCategory.Auth,
+          code: AuthErrorCode.SESSION_EXPIRED,
+        });
+      });
+
+      it('should normalize unexpected owned-storage rejections', async () => {
+        mockState.currentSession = createMockSession();
+        mockState.sessionStorageGet.mockRejectedValue(new Error('Network failure'));
+
+        await expect(HomeserverService.exists(testUrl)).rejects.toMatchObject({
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
         });

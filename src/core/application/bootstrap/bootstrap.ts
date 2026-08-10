@@ -3,8 +3,10 @@ import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
 import { NotificationApplication } from '@/application/notification/notification';
+import { UserApplication } from '@/application/user/user';
+import { getModerationId } from '@/config/moderation';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
-import { hasHttpStatus } from '@/libs/error/error.utils';
+import { hasHttpStatus, isAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
@@ -98,10 +100,23 @@ export class BootstrapApplication {
       LocalStreamTagsService.upsert(TagStreamTypes.TODAY_ALL, bootstrapData.ids.hot_tags),
     ]);
     onProgress?.('dataPersisted'); // Step 4 complete (80%)
+    void this.ensureModerationFollow(pubky);
     // TODO: We will not have that step, but we will add HomeserverSignIn step before step 1 to catch errors
     onProgress?.('homeserverSynced'); // Step 5 complete (100%)
 
     return { unread, lastRead: userLastRead, lastPolledTimestamp: nextPollCursor };
+  }
+
+  /** Keep the one-time default follow off the authentication critical path. */
+  private static async ensureModerationFollow(pubky: string): Promise<void> {
+    try {
+      await UserApplication.ensureModerationFollow({ follower: pubky, moderationId: getModerationId() });
+    } catch (error) {
+      // AppError factories already report at their origin. Only unexpected raw failures need a warning.
+      if (!isAppError(error)) {
+        Logger.warn('Unexpected moderation-follow bootstrap failure', { error });
+      }
+    }
   }
 
   /**

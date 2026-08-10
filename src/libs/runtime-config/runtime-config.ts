@@ -172,7 +172,7 @@ export const getTtlBatchIntervalMs = (): number => getRuntimeConfig().ttlBatchIn
 export const getTtlPostMaxBatchSize = (): number => getRuntimeConfig().ttlPostMaxBatchSize;
 export const getTtlUserMaxBatchSize = (): number => getRuntimeConfig().ttlUserMaxBatchSize;
 export const getTtlRetryDelayMs = (): number => getRuntimeConfig().ttlRetryDelayMs;
-export const getModerationId = (): string => getRuntimeConfig().moderationId;
+export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;
 export const getPreludeSdkKey = (): string | undefined => getRuntimeConfig().preludeSdkKey;

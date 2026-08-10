@@ -1,5 +1,6 @@
 import type { TFollowParams } from '@/controllers/user/user.type';
 import { HttpMethod } from '@/libs/http/http.types';
+import type { Pubky } from '@/models/models.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { NexusUserCounts } from '@/services/nexus/nexus.types';
@@ -12,4 +13,9 @@ export type TUserApplicationFollowParams = TFollowParams & {
   followUrl: string;
   followJson: Record<string, unknown>;
   activeStreamId?: PostStreamId | null;
+};
+
+export type TEnsureModerationFollowParams = {
+  follower: Pubky;
+  moderationId?: Pubky;
 };
