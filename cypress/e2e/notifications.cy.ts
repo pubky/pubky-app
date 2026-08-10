@@ -494,6 +494,7 @@ describe('notifications', () => {
     createQuickPostWithMention(profile1.username);
 
     // * profile 1 checks the counter shows 3 and all three notifications are listed
+    cy.wait(500); // wait for notifications to be indexed
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     verifyNotificationCounter(3);
