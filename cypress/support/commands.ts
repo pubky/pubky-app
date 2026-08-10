@@ -263,6 +263,9 @@ Cypress.Commands.add('deleteFile', (filePath: string) => {
 });
 
 Cypress.Commands.add('renameFile', (fromPath: string, toPath: string) => {
+  // Downloads (e.g. recovery.pkarr) can lag behind the click that triggers them in CI.
+  // Retry until the source file exists, then rename.
+  cy.task<boolean>('fileExists', fromPath, { timeout: 10_000, log: false }).should('eq', true);
   cy.task('renameFile', { fromPath, toPath }).then(() => {
     cy.log(`File has been renamed from ${fromPath} to ${toPath}`);
   });

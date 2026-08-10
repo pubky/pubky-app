@@ -1,7 +1,7 @@
 import { defineConfig } from 'cypress';
 import { config } from 'dotenv';
 
-import { readdirSync, rm, unlink, rename, appendFileSync } from 'fs';
+import { appendFileSync, existsSync, readdirSync, rename, rm, unlink } from 'fs';
 import { defaultMs } from './support/slow-down';
 
 config({ path: '../.env' });
@@ -97,6 +97,10 @@ export default defineConfig({
               resolve(null);
             });
           });
+        },
+
+        fileExists(filePath) {
+          return existsSync(filePath);
         },
 
         checkFileExistsWithSuffix({ folder, suffix }) {
