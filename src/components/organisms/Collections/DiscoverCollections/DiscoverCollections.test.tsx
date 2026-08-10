@@ -217,7 +217,7 @@ describe('DiscoverCollections', () => {
       render(<DiscoverCollections />);
     });
 
-    const button = await screen.findByRole('button', { name: 'collections.showMore' });
+    const button = await screen.findByRole('button', { name: 'Show more' });
     await act(async () => {
       button.click();
     });

@@ -161,7 +161,7 @@ describe('TimelineStateWrapper', () => {
 
       expect(screen.getByTestId('default-loading')).toBeInTheDocument();
       expect(screen.getByTestId('mock-children')).toBeInTheDocument();
-      expect(screen.queryByText('noPosts')).not.toBeInTheDocument();
+      expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
     });
 
     it('does not show the empty component while hasMore is true', () => {
@@ -184,7 +184,7 @@ describe('TimelineStateWrapper', () => {
         </TimelineStateWrapper>,
       );
 
-      expect(screen.getByText('noPosts')).toBeInTheDocument();
+      expect(screen.getByText('No posts found')).toBeInTheDocument();
       expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
     });
 

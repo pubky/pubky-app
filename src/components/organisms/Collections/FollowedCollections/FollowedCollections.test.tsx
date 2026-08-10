@@ -332,7 +332,7 @@ describe('FollowedCollections', () => {
       render(<FollowedCollections />);
     });
 
-    const button = await screen.findByRole('button', { name: 'collections.showMore' });
+    const button = await screen.findByRole('button', { name: 'Show more' });
     const callsBefore = mockGetOrFetchStreamSlice.mock.calls.length;
     await act(async () => {
       button.click();
