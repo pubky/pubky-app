@@ -24,11 +24,6 @@ vi.mock('next/navigation', () => ({
     push: vi.fn(),
   }),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
-
 vi.mock('@/stores/hot/hot.store', () => ({
   useHotStore: vi.fn(() => ({
     reach: 'all',
@@ -157,6 +152,6 @@ describe('HotActiveUsers', () => {
     render(<HotActiveUsers />);
 
     expect(screen.queryByTestId('hot-active-user-only-user')).not.toBeInTheDocument();
-    expect(screen.getByText('noUsersToShow')).toBeInTheDocument();
+    expect(screen.getByText('No users to show')).toBeInTheDocument();
   });
 });

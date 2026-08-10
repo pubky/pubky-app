@@ -26,17 +26,6 @@ const mocks = vi.hoisted(() => ({
     reset: vi.fn(),
   },
 }));
-
-const translations: Record<string, string> = {
-  'collections.new.nameRequired': 'Collection title is required.',
-  'collections.edit.updated': 'Collection updated',
-  'collections.edit.updateFailed': 'Failed to update collection.',
-  'toast.file.imageTooLargeGif':
-    'This GIF exceeds the {maxSize} upload limit and cannot be compressed. Please use a smaller GIF.',
-  'toast.success': 'Success',
-  'toast.error': 'Error',
-};
-
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitEditCollection: (...args: unknown[]) => mocks.commitEditCollection(...args),
@@ -67,17 +56,6 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
     },
   ),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations:
-    (namespace: string) =>
-    (key: string, values?: Record<string, string>): string =>
-      Object.entries(values ?? {}).reduce(
-        (msg, [n, v]) => msg.replace(`{${n}}`, v),
-        translations[`${namespace}.${key}`] ?? key,
-      ),
-}));
-
 const collectionContent = (overrides?: {
   name?: string;
   description?: string;

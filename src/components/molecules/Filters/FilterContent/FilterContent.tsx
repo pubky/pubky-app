@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { CirclePlay, Download, Image, Layers, Library, Link, Newspaper, StickyNote } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { CONTENT, type ContentType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps } from '../Filters.types';
@@ -17,7 +16,6 @@ export function FilterContent({
   disabled,
   disabledTabs = [],
 }: FilterContentProps) {
-  const t = useTranslations('filters.content');
   const disabledSet = React.useMemo(() => new Set(disabledTabs), [disabledTabs]);
   const isDisabled = React.useCallback(
     (contentType: ContentType) => {
@@ -29,58 +27,58 @@ export function FilterContent({
     () => [
       {
         key: CONTENT.ALL,
-        label: t('all'),
+        label: 'All',
         icon: Layers,
         disabled: isDisabled(CONTENT.ALL),
       },
       {
         key: CONTENT.SHORT,
-        label: t('posts'),
+        label: 'Posts',
         icon: StickyNote,
         disabled: isDisabled(CONTENT.SHORT),
       },
       {
         key: CONTENT.LONG,
-        label: t('articles'),
+        label: 'Articles',
         icon: Newspaper,
         disabled: isDisabled(CONTENT.LONG),
       },
       {
         key: CONTENT.COLLECTIONS,
-        label: t('collections'),
+        label: 'Collections',
         icon: Library,
         disabled: isDisabled(CONTENT.COLLECTIONS),
       },
       {
         key: CONTENT.IMAGES,
-        label: t('images'),
+        label: 'Images',
         icon: Image,
         disabled: isDisabled(CONTENT.IMAGES),
       },
       {
         key: CONTENT.VIDEOS,
-        label: t('videos'),
+        label: 'Videos',
         icon: CirclePlay,
         disabled: isDisabled(CONTENT.VIDEOS),
       },
       {
         key: CONTENT.LINKS,
-        label: t('links'),
+        label: 'Links',
         icon: Link,
         disabled: isDisabled(CONTENT.LINKS),
       },
       {
         key: CONTENT.FILES,
-        label: t('files'),
+        label: 'Files',
         icon: Download,
         disabled: isDisabled(CONTENT.FILES),
       },
     ],
-    [t, isDisabled],
+    [isDisabled],
   );
   return (
     <FilterRadioGroup
-      title={t('title')}
+      title={'Content'}
       items={items}
       selectedValue={selectedTab}
       defaultValue={defaultSelectedTab}

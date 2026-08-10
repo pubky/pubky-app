@@ -8,6 +8,7 @@ exports[`TimelineFeed - Mobile Snapshots > matches snapshot on mobile viewport 1
   >
     <div
       data-feed-renderer="columns"
+      data-post-ids="post1,post2,post3"
       data-testid="timeline-posts"
     >
       <span
@@ -93,6 +94,7 @@ exports[`TimelineFeed - Snapshots > matches snapshot for home with feed children
     </aside>
     <div
       data-feed-renderer="columns"
+      data-post-ids="post1,post2,post3"
       data-testid="timeline-posts"
     >
       <span

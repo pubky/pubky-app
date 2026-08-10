@@ -1,7 +1,7 @@
 import { defineConfig } from 'cypress';
 import { config } from 'dotenv';
 
-import { readdirSync, rm, unlink, rename, appendFileSync } from 'fs';
+import { appendFileSync, existsSync, readdirSync, rename, rm, unlink } from 'fs';
 import { defaultMs } from './support/slow-down';
 
 config({ path: '../.env' });
@@ -84,18 +84,38 @@ export default defineConfig({
           });
         },
 
-        // Task to rename a file
+        // Task to rename a file. Polls for the source path first because browser
+        // downloads (e.g. recovery.pkarr) can land after the click that triggers them.
         renameFile({ fromPath, toPath }) {
+          const timeoutMs = 10_000;
+          const pollMs = 100;
           console.log('renaming file from %s to %s', fromPath, toPath);
 
           return new Promise((resolve, reject) => {
-            rename(fromPath, toPath, (err) => {
-              if (err) {
+            const startedAt = Date.now();
+
+            const attempt = () => {
+              if (existsSync(fromPath)) {
+                rename(fromPath, toPath, (err) => {
+                  if (err) {
+                    console.error(err);
+                    return reject(err);
+                  }
+                  resolve(null);
+                });
+                return;
+              }
+
+              if (Date.now() - startedAt >= timeoutMs) {
+                const err = new Error(`Timed out waiting for file to exist before rename: ${fromPath}`);
                 console.error(err);
                 return reject(err);
               }
-              resolve(null);
-            });
+
+              setTimeout(attempt, pollMs);
+            };
+
+            attempt();
           });
         },
 

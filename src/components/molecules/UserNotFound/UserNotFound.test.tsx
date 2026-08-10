@@ -13,11 +13,6 @@ vi.mock('next/navigation', () => ({
     prefetch: vi.fn(),
   }),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 describe('UserNotFound', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,16 +21,16 @@ describe('UserNotFound', () => {
   it('renders the user not found message and actions', () => {
     render(<UserNotFound />);
 
-    expect(screen.getByText('profile.notFound.title')).toBeInTheDocument();
-    expect(screen.getByText('profile.notFound.subtitle')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'profile.notFound.backToFeed' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'profile.notFound.exploreTags' })).toBeInTheDocument();
+    expect(screen.getByText('User Not Found')).toBeInTheDocument();
+    expect(screen.getByText("The user you're looking for doesn't exist or may have been removed.")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to Feed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explore Tags' })).toBeInTheDocument();
   });
 
   it('renders the background image with correct alt text', () => {
     render(<UserNotFound />);
 
-    const image = screen.getByAltText('profile.notFound.imageAlt');
+    const image = screen.getByAltText('User Not Found');
     expect(image).toBeInTheDocument();
   });
 
@@ -43,10 +38,10 @@ describe('UserNotFound', () => {
     const user = userEvent.setup();
     render(<UserNotFound />);
 
-    await user.click(screen.getByRole('button', { name: 'profile.notFound.backToFeed' }));
+    await user.click(screen.getByRole('button', { name: 'Back to Feed' }));
     expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOME);
 
-    await user.click(screen.getByRole('button', { name: 'profile.notFound.exploreTags' }));
+    await user.click(screen.getByRole('button', { name: 'Explore Tags' }));
     expect(mockPush).toHaveBeenCalledWith(APP_ROUTES.HOT);
   });
 

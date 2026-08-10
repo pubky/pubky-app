@@ -1,7 +1,6 @@
 'use client';
 
 import { Library } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -26,7 +25,6 @@ interface CollectionCardBlurredProps {
  * `PostContentBlurred` handles moderated posts.
  */
 export function CollectionCardBlurred({ compositeId, className }: CollectionCardBlurredProps) {
-  const t = useTranslations('moderation');
   return (
     <Button
       overrideDefaults
@@ -82,7 +80,7 @@ export function CollectionCardBlurred({ compositeId, className }: CollectionCard
         </CardContent>
 
         {/* Unblur overlay */}
-        <ModerationBlurOverlay label={t('collectionContentModerated')} />
+        <ModerationBlurOverlay label={'Collection content moderated.'} />
       </Card>
     </Button>
   );

@@ -10,7 +10,7 @@ exports[`CollectionItemsEmpty - Snapshots > matches the snapshot 1`] = `
     class="text-center text-base font-medium text-muted-foreground"
     data-testid="typography"
   >
-    collections.single.empty
+    This collection is empty.
   </p>
 </div>
 `;

@@ -1,11 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
-import enMessages from '../../messages/en.json';
 import { freezeNow } from './vrt.clock';
 import type { VrtViewport } from './vrt.viewports';
 
@@ -33,15 +31,13 @@ function VRTProviders({ children, viewport, queryClient }: VRTProvidersProps) {
   };
 
   return (
-    <NextIntlClientProvider locale="en" messages={enMessages}>
-      <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
-        <QueryClientProvider client={queryClient}>
-          <div data-testid={VRT_ROOT_TESTID} style={rootStyle}>
-            {children}
-          </div>
-        </QueryClientProvider>
-      </TooltipProvider>
-    </NextIntlClientProvider>
+    <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
+      <QueryClientProvider client={queryClient}>
+        <div data-testid={VRT_ROOT_TESTID} style={rootStyle}>
+          {children}
+        </div>
+      </QueryClientProvider>
+    </TooltipProvider>
   );
 }
 

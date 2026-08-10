@@ -9,31 +9,6 @@ const mocks = vi.hoisted(() => ({
   toast: vi.fn(),
   postDetails: null as { content: string } | null,
 }));
-
-const translations: Record<string, string> = {
-  'collections.edit.title': 'Edit Collection',
-  'collections.edit.save': 'Save changes',
-  'collections.edit.updated': 'Collection updated',
-  'collections.edit.updateFailed': 'Failed to update collection.',
-  'collections.new.nameLabel': 'Title',
-  'collections.new.namePlaceholder': 'Name your collection',
-  'collections.new.descriptionLabel': 'Description',
-  'collections.new.descriptionPlaceholder': 'What will people find here?',
-  'collections.new.backgroundLabel': 'Background',
-  'collections.new.layoutLabel': 'Layout',
-  'collections.new.layoutGrid': 'Grid',
-  'collections.new.layoutList': 'List',
-  'collections.new.addImage': 'Add image',
-  'collections.new.removeImage': 'Remove image',
-  'collections.new.coverImageInvalid': 'Cover image must be an image file.',
-  'collections.new.coverImageTooLarge': 'Cover image is too large.',
-  'collections.new.nameRequired': 'Collection title is required.',
-  'collections.new.cancel': 'Cancel',
-  'collections.new.saving': 'Saving...',
-  'toast.success': 'Success',
-  'toast.error': 'Error',
-};
-
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitEditCollection: (...args: unknown[]) => mocks.commitEditCollection(...args),
@@ -57,16 +32,6 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
     },
   ),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations:
-    (namespace: string) =>
-    (key: string, values?: Record<string, string>): string => {
-      const translation = translations[`${namespace}.${key}`] ?? key;
-      return Object.entries(values ?? {}).reduce((msg, [n, v]) => msg.replace(`{${n}}`, v), translation);
-    },
-}));
-
 const COMPOSITE_ID = 'pk:author/posts/c1';
 
 const collectionContent = (overrides?: {

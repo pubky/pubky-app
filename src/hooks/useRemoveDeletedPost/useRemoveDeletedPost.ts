@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { postUriBuilder } from 'pubky-app-specs';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
@@ -67,9 +66,6 @@ export function useRemoveDeletedPost(postId: string): UseRemoveDeletedPostResult
   const target = resolveRemovalTarget(feed, currentUserPubky);
   const [isRemoving, setIsRemoving] = useState(false);
   const isRemovingRef = useRef(false);
-  const tBookmark = useTranslations('toast.bookmark');
-  const tSave = useTranslations('postSave');
-
   const remove = async (): Promise<boolean> => {
     if (!feed?.removePostsOptimistically || !target || !currentUserPubky || isRemovingRef.current) return false;
 
@@ -80,14 +76,14 @@ export function useRemoveDeletedPost(postId: string): UseRemoveDeletedPostResult
     try {
       if (target.type === 'bookmarks') {
         await BookmarkController.commitDelete({ postId, userId: currentUserPubky });
-        toast({ title: tBookmark('removed') });
+        toast({ title: 'Post removed from bookmarks' });
       } else {
         await PostController.commitUpdateCollectionItem({
           collectionId: target.collectionId,
           postId,
           shouldAdd: false,
         });
-        toast({ title: tSave('removedFromCollection') });
+        toast({ title: 'Post removed from collection.' });
       }
 
       optimisticRemoval.commit();
@@ -117,10 +113,10 @@ export function useRemoveDeletedPost(postId: string): UseRemoveDeletedPostResult
           variant: 'error',
           description:
             target.type === 'bookmarks'
-              ? tBookmark('removeFailed')
+              ? 'Could not remove bookmark'
               : isAppError(error)
                 ? error.message
-                : tSave('updateCollectionFailed'),
+                : 'Failed to update collection.',
         });
       } else {
         // The local write committed and only the homeserver sync failed, so
@@ -130,7 +126,9 @@ export function useRemoveDeletedPost(postId: string): UseRemoveDeletedPostResult
         toast({
           variant: 'warning',
           description:
-            target.type === 'bookmarks' ? tBookmark('removedSyncFailed') : tSave('removedFromCollectionSyncFailed'),
+            target.type === 'bookmarks'
+              ? 'Removed from bookmarks on this device, but syncing failed.'
+              : 'Removed from the collection on this device, but syncing failed.',
         });
       }
       return false;

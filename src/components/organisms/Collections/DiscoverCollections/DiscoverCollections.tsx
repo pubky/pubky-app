@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -80,7 +79,6 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  * click gets feedback instead of silently rendering nothing.
  */
 export function DiscoverCollections() {
-  const t = useTranslations('collections');
   const { toast } = useToast();
   // The stream layer filters own collections against the viewer read from the
   // auth store, so a viewer switch must reset and refetch (effect dep below).
@@ -169,7 +167,7 @@ export function DiscoverCollections() {
       if (!isInitial && fresh.length === 0 && result.reachedEnd !== true) {
         toast({
           variant: 'warning',
-          description: t('discover.noNewResults'),
+          description: 'No new collections found right now. Try again later.',
         });
       }
     } catch (error) {
@@ -179,7 +177,7 @@ export function DiscoverCollections() {
       // three Collections sections fail consistently from the user's POV.
       toast({
         variant: 'error',
-        description: t('loadFailed'),
+        description: 'Failed to load collections. Please try again.',
       });
       // Give up on this action so the spinner clears.
       setReachedEnd(true);
@@ -284,14 +282,14 @@ export function DiscoverCollections() {
     <Container overrideDefaults data-cy="discover-collections-section" className="flex w-full flex-col gap-4">
       <Container overrideDefaults className="flex items-center gap-3">
         <Heading level={2} size="lg" className="font-light text-muted-foreground">
-          {t('discover.title')}
+          {'Discover Collections'}
         </Heading>
         {showSkeletons ? <AvatarStackSkeleton count={3} size="md" /> : <AvatarStack pubkys={headerPubkys} />}
       </Container>
 
       {showEmpty ? (
         <Typography overrideDefaults className="text-sm text-muted-foreground">
-          {t('discover.empty')}
+          {'No collections to discover right now.'}
         </Typography>
       ) : (
         <Container overrideDefaults className="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6">
@@ -315,7 +313,7 @@ export function DiscoverCollections() {
             disabled={loadingMore}
           >
             {loadingMore && <Loader2 className="size-4 animate-spin" />}
-            {t('showMore')}
+            {'Show more'}
           </Button>
         </Container>
       )}

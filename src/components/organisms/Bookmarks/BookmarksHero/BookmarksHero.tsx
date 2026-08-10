@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -23,8 +21,6 @@ export function BookmarksHero({
   bookmarkCount,
   isProfileResolved,
 }: BookmarksHeroProps) {
-  const t = useTranslations('collections');
-
   return (
     <Card data-cy="bookmarks-hero" className="relative overflow-hidden rounded-md py-0">
       <Container
@@ -39,7 +35,7 @@ export function BookmarksHero({
           overrideDefaults
           className="min-w-0 text-5xl leading-none font-bold text-foreground md:text-6xl"
         >
-          {t('bookmarks.title')}
+          {'Bookmarks'}
         </Typography>
 
         <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:gap-6">
@@ -58,7 +54,7 @@ export function BookmarksHero({
           overrideDefaults
           className="max-w-full text-xl leading-7 font-light text-muted-foreground md:text-2xl md:leading-8"
         >
-          {t('bookmarks.description')}
+          {'Everything you saved for later.'}
         </Typography>
 
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">

@@ -8,10 +8,7 @@ import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { QuickReply } from './QuickReply';
 import { QUICK_REPLY_PROMPTS_COUNT } from './QuickReply.constants';
 
-// next-intl is mocked globally in src/config/test.ts
-// The global mock uses real translations from messages/en.json
-
-// Real prompts from messages/en.json for test assertions
+// Literal copies of QUICK_REPLY_PROMPTS keep assertions independent of the component constants
 const REAL_PROMPTS = [
   'What are your thoughts on this?',
   'What do you think?',

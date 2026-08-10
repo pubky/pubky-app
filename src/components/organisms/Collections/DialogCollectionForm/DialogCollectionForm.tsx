@@ -2,7 +2,6 @@
 
 import { type ReactNode } from 'react';
 import { Grip, Image as ImageIcon, LayoutGrid, Rows4, Trash2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Controller, type UseFormReturn, useWatch } from 'react-hook-form';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -93,7 +92,6 @@ export function DialogCollectionForm({
   disableOpenAutoFocus = false,
   children,
 }: DialogCollectionFormProps) {
-  const t = useTranslations('collections.new');
   const {
     previewUrl: coverPreviewUrl,
     error: coverError,
@@ -110,16 +108,16 @@ export function DialogCollectionForm({
   // while the user is still staring at a validation error.
   const canSubmit = !!watchedName.trim() && !areInputsDisabled && !coverError;
   const layoutOptions = [
-    { value: COLLECTION_LAYOUT.GRID, label: t('layoutGrid'), icon: Grip },
-    { value: COLLECTION_LAYOUT.LIST, label: t('layoutList'), icon: Rows4 },
-    { value: COLLECTION_LAYOUT.VISUAL, label: t('layoutVisual'), icon: LayoutGrid },
+    { value: COLLECTION_LAYOUT.GRID, label: 'Grid', icon: Grip },
+    { value: COLLECTION_LAYOUT.LIST, label: 'List', icon: Rows4 },
+    { value: COLLECTION_LAYOUT.VISUAL, label: 'Visual', icon: LayoutGrid },
   ];
 
   const coverErrorMessage =
     coverError === 'invalid-type'
-      ? t('coverImageInvalid')
+      ? 'Cover image must be an image file.'
       : coverError === 'too-large'
-        ? t('coverImageTooLarge', { maxSize: `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB` })
+        ? `Cover image is too large. Maximum size is ${`${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`}.`
         : null;
 
   return (
@@ -137,8 +135,8 @@ export function DialogCollectionForm({
           <ControlledInputField
             name={CREATE_COLLECTION_FORM_FIELDS.NAME}
             control={form.control}
-            label={t('nameLabel')}
-            placeholder={t('namePlaceholder')}
+            label={'Title'}
+            placeholder={'Name your collection'}
             maxLength={COLLECTION_NAME_MAX_CHARACTER_LENGTH}
             variant="dashed"
             size="lg"
@@ -151,8 +149,8 @@ export function DialogCollectionForm({
           <ControlledInputField
             name={CREATE_COLLECTION_FORM_FIELDS.DESCRIPTION}
             control={form.control}
-            label={t('descriptionLabel')}
-            placeholder={t('descriptionPlaceholder')}
+            label={'Description'}
+            placeholder={'What will people find here?'}
             maxLength={COLLECTION_DESCRIPTION_MAX_CHARACTER_LENGTH}
             variant="dashed"
             size="lg"
@@ -206,7 +204,7 @@ export function DialogCollectionForm({
 
           <Container overrideDefaults className="flex flex-col gap-2">
             <Label htmlFor={coverInputId} className={FORM_LABEL_CLASSES}>
-              {t('backgroundLabel')}
+              {'Background'}
             </Label>
             <Container
               overrideDefaults
@@ -222,11 +220,11 @@ export function DialogCollectionForm({
                   className="rounded-full"
                   onClick={removeCover}
                   disabled={areInputsDisabled}
-                  aria-label={t('removeImage')}
+                  aria-label={'Remove image'}
                 >
                   <Trash2 className="size-4" />
                   <Typography as="span" overrideDefaults>
-                    {t('removeImage')}
+                    {'Remove image'}
                   </Typography>
                 </Button>
               ) : (
@@ -237,11 +235,11 @@ export function DialogCollectionForm({
                   className="rounded-full"
                   onClick={chooseCover}
                   disabled={areInputsDisabled}
-                  aria-label={t('addImage')}
+                  aria-label={'Add image'}
                 >
                   <ImageIcon className="size-4" />
                   <Typography as="span" overrideDefaults>
-                    {t('addImage')}
+                    {'Add image'}
                   </Typography>
                 </Button>
               )}
@@ -271,7 +269,7 @@ export function DialogCollectionForm({
             className="order-1 sm:order-2"
             data-cy="collection-form-save-btn"
           >
-            {isSaving ? t('saving') : submitLabel}
+            {isSaving ? 'Saving...' : submitLabel}
           </Button>
           <Button
             variant="outline"
@@ -280,7 +278,7 @@ export function DialogCollectionForm({
             disabled={isSaving}
             className="order-2 sm:order-1"
           >
-            {t('cancel')}
+            {'Cancel'}
           </Button>
         </DialogFooter>
       </DialogContent>

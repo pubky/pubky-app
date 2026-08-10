@@ -12,18 +12,18 @@ const IMAGE_UPLOAD_SIZE_LIMIT_MESSAGE_PREFIX = 'IMAGE_UPLOAD_SIZE_LIMIT:';
 
 const IMAGE_UPLOAD_SIZE_LIMIT_KIND_SET = new Set<string>(IMAGE_UPLOAD_SIZE_LIMIT_KINDS);
 
-/** next-intl keys under `toast.file` for each size-limit kind. */
-export const IMAGE_UPLOAD_SIZE_LIMIT_I18N_KEYS = {
-  raw: 'imageTooLargeRaw',
-  gif: 'imageTooLargeGif',
-  'animated-webp': 'imageTooLargeAnimatedWebp',
-  svg: 'imageTooLargeSvg',
-  raster: 'imageTooLargeRaster',
-} as const satisfies Record<ImageUploadSizeLimitKind, string>;
-
-export type ImageUploadSizeLimitI18nKey = (typeof IMAGE_UPLOAD_SIZE_LIMIT_I18N_KEYS)[ImageUploadSizeLimitKind];
-
-type TranslateFileToast = (key: ImageUploadSizeLimitI18nKey, values: { maxSize: string }) => string;
+/** Toast copy for each size-limit kind. */
+const IMAGE_UPLOAD_SIZE_LIMIT_MESSAGES = {
+  raw: (maxSize: string) => `Image is too large. Maximum size is ${maxSize}.`,
+  gif: (maxSize: string) =>
+    `This GIF exceeds the ${maxSize} upload limit and cannot be compressed. Please use a smaller GIF.`,
+  'animated-webp': (maxSize: string) =>
+    `This animated WebP exceeds the ${maxSize} upload limit and cannot be compressed. Please use a smaller file.`,
+  svg: (maxSize: string) =>
+    `This SVG exceeds the ${maxSize} upload limit after sanitization. Please use a smaller file.`,
+  raster: (maxSize: string) =>
+    `Image could not be compressed below ${maxSize}. Please use a smaller or lower-resolution image.`,
+} as const satisfies Record<ImageUploadSizeLimitKind, (maxSize: string) => string>;
 
 export function getImageUploadSizeLimitLabelMb(kind: ImageUploadSizeLimitKind): string {
   const bytes = kind === 'raw' ? IMAGE_MAX_RAW_SIZE : IMAGE_MAX_UPLOAD_SIZE;
@@ -44,7 +44,7 @@ function parseImageUploadSizeLimitKindFromMessage(message: string): ImageUploadS
 
 /**
  * Throws a plain Error whose message encodes the size-limit kind so callers can
- * map it to a localized toast without English copy in core.
+ * map it to a toast message without coupling core to UI copy.
  */
 export function throwImageUploadSizeLimit(kind: ImageUploadSizeLimitKind): never {
   throw new Error(`${IMAGE_UPLOAD_SIZE_LIMIT_MESSAGE_PREFIX}${kind}`);
@@ -85,13 +85,11 @@ export function getImageUploadSizeLimitKind(error: unknown): ImageUploadSizeLimi
 }
 
 /**
- * Resolves a localized image size-limit toast, or `null` when the error is unrelated.
+ * Resolves an image size-limit toast message, or `null` when the error is unrelated.
  */
-export function getImageUploadSizeLimitToastMessage(error: unknown, tFile: TranslateFileToast): string | null {
+export function getImageUploadSizeLimitToastMessage(error: unknown): string | null {
   const kind = getImageUploadSizeLimitKind(error);
   if (!kind) return null;
 
-  return tFile(IMAGE_UPLOAD_SIZE_LIMIT_I18N_KEYS[kind], {
-    maxSize: getImageUploadSizeLimitLabelMb(kind),
-  });
+  return IMAGE_UPLOAD_SIZE_LIMIT_MESSAGES[kind](getImageUploadSizeLimitLabelMb(kind));
 }

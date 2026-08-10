@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 import { HOME_ROUTES, PROFILE_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { USER_BIO_MAX_LENGTH, USER_NAME_MAX_LENGTH, USER_NAME_MIN_LENGTH } from '@/config/user';
@@ -18,7 +17,13 @@ import { generateRandomUsername } from '@/libs/utils/utils';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { UserValidator } from '@/pipes/user/user.validator';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
-import type { ProfileLink, SubmitTextKey, UseProfileFormProps, UseProfileFormReturn } from './useProfileForm.types';
+import {
+  PROFILE_SUBMIT_TEXT,
+  type ProfileLink,
+  type SubmitText,
+  type UseProfileFormProps,
+  type UseProfileFormReturn,
+} from './useProfileForm.types';
 
 const DEFAULT_LINKS: ProfileLink[] = [
   { label: 'WEBSITE', url: '' },
@@ -43,8 +48,6 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
   const router = useRouter();
   const { toast } = useToast();
-  const tProfile = useTranslations('toast.profile');
-  const tFile = useTranslations('toast.file');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Generate a stable initial username for create mode (only generated once)
@@ -58,7 +61,9 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(mode === 'edit');
-  const [submitTextKey, setSubmitTextKey] = useState<SubmitTextKey>(mode === 'create' ? 'finish' : 'saveProfile');
+  const [submitText, setSubmitText] = useState<SubmitText>(
+    mode === 'create' ? PROFILE_SUBMIT_TEXT.finish : PROFILE_SUBMIT_TEXT.saveProfile,
+  );
 
   // Edit mode specific state
   const [originalAvatarUrl, setOriginalAvatarUrl] = useState<string | null>(null);
@@ -272,12 +277,12 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     if (!pubky) return;
 
     setIsSaving(true);
-    setSubmitTextKey('saving');
+    setSubmitText(PROFILE_SUBMIT_TEXT.saving);
 
     try {
       const user = validateUser();
       if (!user) {
-        setSubmitTextKey(mode === 'create' ? 'finish' : 'saveProfile');
+        setSubmitText(mode === 'create' ? PROFILE_SUBMIT_TEXT.finish : PROFILE_SUBMIT_TEXT.saveProfile);
         return;
       }
 
@@ -286,10 +291,10 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
       if (mode === 'create') {
         if (avatarFile) {
-          setSubmitTextKey('uploadingAvatar');
+          setSubmitText(PROFILE_SUBMIT_TEXT.uploadingAvatar);
           image = await FileController.commitCreate({ file: avatarFile, pubky });
           if (!image) {
-            setSubmitTextKey('tryAgain');
+            setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
             return;
           }
         }
@@ -299,10 +304,10 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
         if (avatarChanged) {
           if (avatarFile) {
-            setSubmitTextKey('uploadingAvatar');
+            setSubmitText(PROFILE_SUBMIT_TEXT.uploadingAvatar);
             const uploadedImage = await FileController.commitCreate({ file: avatarFile, pubky });
             if (!uploadedImage) {
-              setSubmitTextKey('tryAgain');
+              setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
               return;
             }
             image = uploadedImage;
@@ -312,7 +317,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         }
       }
 
-      setSubmitTextKey('savingProfile');
+      setSubmitText(PROFILE_SUBMIT_TEXT.savingProfile);
 
       if (mode === 'create') {
         await ProfileController.commitCreate({ profile: user, image, pubky });
@@ -345,14 +350,14 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           }
         }
         toast({
-          title: tProfile('updated'),
+          title: 'Profile updated',
         });
         router.push(PROFILE_ROUTES.PROFILE);
       }
     } catch (error) {
-      const sizeLimitMessage = getImageUploadSizeLimitToastMessage(error, tFile);
+      const sizeLimitMessage = getImageUploadSizeLimitToastMessage(error);
       if (sizeLimitMessage) {
-        setSubmitTextKey('tryAgain');
+        setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
         toast({
           variant: 'error',
           description: sizeLimitMessage,
@@ -364,10 +369,10 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         // Handle session expiration - user needs to re-authenticate
         if (requiresLogin(error)) {
           Logger.error('Session expired while saving profile', error);
-          setSubmitTextKey('tryAgain');
+          setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
           toast({
             variant: 'error',
-            description: tProfile('sessionExpiredDesc'),
+            description: 'Session expired. Please sign in.',
           });
           return;
         }
@@ -375,19 +380,19 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         // Handle auth errors from homeserver
         if (isAuthError(error)) {
           Logger.error('Failed to save profile in Homeserver', error);
-          setSubmitTextKey('tryAgain');
+          setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
           toast({
             variant: 'error',
-            description: tProfile('saveFailed'),
+            description: 'Could not save profile',
           });
           return;
         }
       }
 
-      setSubmitTextKey('tryAgain');
+      setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
       toast({
         variant: 'error',
-        description: mode === 'create' ? tProfile('fetchFailedDesc') : tProfile('updateFailed'),
+        description: mode === 'create' ? 'Could not refresh profile' : 'Could not update profile',
       });
     } finally {
       setIsSaving(false);
@@ -403,8 +408,6 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     setShowWelcomeDialog,
     router,
     toast,
-    tFile,
-    tProfile,
   ]);
 
   const handleCancel = useCallback(() => {
@@ -436,7 +439,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       avatarPreview,
       isSaving,
       isLoading,
-      submitTextKey,
+      submitText,
     },
     errors: {
       nameError,

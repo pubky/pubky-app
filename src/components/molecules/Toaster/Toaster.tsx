@@ -1,15 +1,10 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Toast, ToastAction, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/atoms/Toast/Toast';
 import { TOAST_ICONS, toastIconVariants } from '@/atoms/Toast/Toast.variants';
 import { useToast } from './use-toast';
 
 export function Toaster() {
   const { toasts, dismiss } = useToast();
-  const tCommon = useTranslations('common');
-  const tToast = useTranslations('toast');
-
   return (
     <ToastProvider>
       {toasts.map(function ({
@@ -26,7 +21,7 @@ export function Toaster() {
         const toastVariant = variant ?? 'default';
         const effectiveActionVariant = actionVariant ?? toastVariant;
         const Icon = TOAST_ICONS[toastVariant];
-        const effectiveTitle = title ?? (toastVariant === 'error' ? tToast('genericErrorTitle') : undefined);
+        const effectiveTitle = title ?? (toastVariant === 'error' ? 'Error' : undefined);
 
         return (
           <Toast key={id} variant={toastVariant} data-cy="toast" className={className} {...props}>
@@ -38,8 +33,8 @@ export function Toaster() {
             <div className="flex shrink-0 items-center gap-2">
               {action}
               {dismissButton && (
-                <ToastAction altText={tCommon('ok')} variant={effectiveActionVariant} onClick={() => dismiss(id)}>
-                  {tCommon('ok')}
+                <ToastAction altText={'OK'} variant={effectiveActionVariant} onClick={() => dismiss(id)}>
+                  {'OK'}
                 </ToastAction>
               )}
             </div>

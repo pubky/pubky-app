@@ -7,22 +7,20 @@
  * Guides the user on how to search for posts.
  */
 import { Search } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
 
 export function SearchEmptyState() {
-  const t = useTranslations('search.empty');
   return (
     <IllustratedEmptyState
       imageSrc="/images/tagged-empty-state.webp"
-      imageAlt={t('alt')}
+      imageAlt={'Search - Empty state'}
       icon={Search}
-      title={t('title')}
+      title={'Search for posts by tags'}
       subtitle={
         <>
-          {t('subtitle1')}
+          {'Use the search bar or click on a tag to discover posts.'}
           <br />
-          {t('subtitle2')}
+          {'You can search for multiple tags separated by commas.'}
         </>
       }
     />

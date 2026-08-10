@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { PubkyAppFeedReach } from 'pubky-app-specs';
 import { Container } from '@/atoms/Container/Container';
 import { Label } from '@/atoms/Label/Label';
@@ -24,7 +22,6 @@ interface CustomFeedFiltersProps {
 
 export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
   const customFeed = useCustomFeed();
-  const tDialog = useTranslations('dialogs.customFeed');
   const reach: ReachFilterValue | undefined =
     customFeed?.reach === PubkyAppFeedReach.Wot && customFeed.domain_tags.length > 0
       ? TAGGED_AS_FILTER_KEY
@@ -46,7 +43,7 @@ export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
 
       {customFeed?.tags.length ? (
         <Container overrideDefaults className="flex flex-col gap-2" data-testid="custom-feed-post-tags">
-          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('filterTags')}</Label>
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Filter on Content Tags'}</Label>
           <Container overrideDefaults className="flex flex-wrap gap-2">
             {customFeed.tags.map((tag) => (
               <PostTag key={tag} label={tag} aria-disabled tabIndex={-1} />
@@ -57,7 +54,7 @@ export function CustomFeedFilters({ variant }: CustomFeedFiltersProps) {
 
       {customFeed?.domain_tags.length ? (
         <Container overrideDefaults className="flex flex-col gap-2" data-testid="custom-feed-profile-tags">
-          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{tDialog('profileTags')}</Label>
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Profile Tags'}</Label>
           <Container overrideDefaults className="flex flex-wrap gap-2">
             {customFeed.domain_tags.map((tag) => (
               <PostTag key={tag} label={tag} aria-disabled tabIndex={-1} />

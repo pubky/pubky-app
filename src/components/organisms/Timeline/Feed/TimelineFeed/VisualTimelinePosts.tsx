@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useTranslations } from 'next-intl';
 import { TagKind } from '@/application/tag/tag.types';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -289,7 +288,6 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
  * stops propagation itself.
  */
 function VisualTimelinePlaceholderTile({ tile, size, onNavigate }: VisualTimelinePlaceholderTileProps) {
-  const t = useTranslations('post');
   const removal = useRemoveDeletedPost(tile.postId);
 
   const handleNavigate = () => {
@@ -316,7 +314,7 @@ function VisualTimelinePlaceholderTile({ tile, size, onNavigate }: VisualTimelin
       style={{ aspectRatio: VISUAL_TILE_ASPECT_RATIOS[size] }}
     >
       <PostUnavailable
-        message={tile.placeholderKind === 'deleted' ? t('deleted') : t('missing')}
+        message={tile.placeholderKind === 'deleted' ? 'This post has been deleted by its author.' : 'Post not found.'}
         removeDataCy={tile.placeholderKind === 'deleted' ? 'post-deleted-remove-btn' : 'post-missing-remove-btn'}
         onRemove={removal.canRemove ? () => void removal.remove() : undefined}
         isRemoving={removal.isRemoving}

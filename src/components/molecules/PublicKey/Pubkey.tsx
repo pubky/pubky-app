@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
@@ -12,15 +11,13 @@ import { ButtonsNavigation } from '../ButtonsNavigation/ButtonsNavigation';
 import { PageTitle } from '../Page/Page';
 
 export const PublicKeyHeader = () => {
-  const t = useTranslations('onboarding.pubky');
   return (
     <PageHeader>
       <PageTitle size="large">
-        {t.rich('uniqueTitle', {
-          highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-        })}
+        {'Your unique '}
+        <span className="text-brand">{'pubky.'}</span>
       </PageTitle>
-      <PageSubtitle>{t('uniqueSubtitle')}</PageSubtitle>
+      <PageSubtitle>{'Share your pubky with your friends so they can follow you.'}</PageSubtitle>
     </PageHeader>
   );
 };

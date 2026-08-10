@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import {
   Dialog,
@@ -32,16 +31,18 @@ type DialogCollectionsIntroProps = {
  * transition are owned by `DialogNewCollection`.
  */
 export function DialogCollectionsIntro({ open, onOpenChange, onContinue }: DialogCollectionsIntroProps) {
-  const t = useTranslations('collections.intro');
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-xl border-border bg-popover">
         <DialogHeader>
-          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogTitle>{'Welcome to Collections'}</DialogTitle>
         </DialogHeader>
 
-        <DialogDescription className="text-base text-secondary-foreground">{t('description')}</DialogDescription>
+        <DialogDescription className="text-base text-secondary-foreground">
+          {
+            'Save posts worth keeping. Collect the best content from your network. Curate ideas, filter signal from noise, and share what matters.'
+          }
+        </DialogDescription>
 
         {/* `loading="eager"` + `unoptimized` so the art shows the instant the modal
             opens: `unoptimized` serves the raw 22KB webp directly instead of the
@@ -49,7 +50,7 @@ export function DialogCollectionsIntro({ open, onOpenChange, onContinue }: Dialo
             the default lazy-loading so the fetch starts as soon as the modal mounts. */}
         <Image
           src={COLLECTIONS_INTRO_IMAGE}
-          alt={t('imageAlt')}
+          alt={'Collections'}
           width={192}
           height={192}
           loading="eager"
@@ -58,12 +59,12 @@ export function DialogCollectionsIntro({ open, onOpenChange, onContinue }: Dialo
         />
 
         <Typography size="sm" className="font-normal text-muted-foreground">
-          {t('publicNote')}
+          {'Please note: collections are public and discoverable.'}
         </Typography>
 
         <DialogFooter>
           <Button size="lg" onClick={onContinue} className="order-1 sm:order-2" data-cy="collections-intro-continue">
-            {t('continue')}
+            {'Continue'}
           </Button>
           <Button
             variant="outline"
@@ -72,7 +73,7 @@ export function DialogCollectionsIntro({ open, onOpenChange, onContinue }: Dialo
             className="order-2 sm:order-1"
             data-cy="collections-intro-cancel"
           >
-            {t('cancel')}
+            {'Cancel'}
           </Button>
         </DialogFooter>
       </DialogContent>

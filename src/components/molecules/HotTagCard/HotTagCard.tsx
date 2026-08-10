@@ -1,20 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { cn, generateRandomColor } from '@/libs/utils/utils';
-import { TIMEFRAME } from '@/stores/hot/hot.types';
+import { TIMEFRAME, type TimeframeType } from '@/stores/hot/hot.types';
 import { AvatarGroup } from '../AvatarGroup/AvatarGroup';
 import type { HotTagCardProps } from './HotTagCard.types';
 
-const TIMEFRAME_TRANSLATION_KEY = {
-  [TIMEFRAME.TODAY]: 'postsCountToday',
-  [TIMEFRAME.THIS_WEEK]: 'postsCountThisWeek',
-  [TIMEFRAME.THIS_MONTH]: 'postsCountThisMonth',
-  [TIMEFRAME.ALL_TIME]: 'postsCountAllTime',
-} as const;
+const TIMEFRAME_POST_COUNT_LABEL: Record<TimeframeType, (count: string) => string> = {
+  [TIMEFRAME.TODAY]: (count) => `${count} posts today`,
+  [TIMEFRAME.THIS_WEEK]: (count) => `${count} posts this week`,
+  [TIMEFRAME.THIS_MONTH]: (count) => `${count} posts this month`,
+  [TIMEFRAME.ALL_TIME]: (count) => `${count} posts`,
+};
 
 /**
  * HotTagCard
@@ -33,7 +32,6 @@ export function HotTagCard({
   className,
   'data-testid': dataTestId,
 }: HotTagCardProps) {
-  const t = useTranslations('hot');
   const tagColor = React.useMemo(() => generateRandomColor(tagName), [tagName]);
 
   const handleClick = () => {
@@ -94,7 +92,7 @@ export function HotTagCard({
 
         {/* Post Count */}
         <Typography size="md" className="text-secondary-foreground">
-          {t(TIMEFRAME_TRANSLATION_KEY[timeframe], { count: postCount.toLocaleString() })}
+          {TIMEFRAME_POST_COUNT_LABEL[timeframe](postCount.toLocaleString())}
         </Typography>
       </Container>
 

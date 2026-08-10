@@ -1,0 +1,24 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CollectionReorderCard > matches snapshot 1`] = `
+<div
+  aria-describedby="DndDescribedBy"
+  aria-disabled="false"
+  aria-roledescription="sortable"
+  class="mx-auto w-full flex-col flex @container/grid rounded-md border border-dashed border-foreground/60 cursor-grab touch-manipulation outline-none select-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
+  data-cy="collection-reorder-card"
+  data-testid="container"
+  role="button"
+  tabindex="0"
+>
+  <div
+    class="pointer-events-none flex min-w-0 flex-col [&>*:first-child]:flex-1"
+    data-testid="container"
+    inert=""
+  >
+    <div
+      data-testid="post-author_a:post_a"
+    />
+  </div>
+</div>
+`;

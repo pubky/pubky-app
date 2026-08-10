@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Minus, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { Check, Loader2, Minus, Move, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
 import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
@@ -53,6 +52,7 @@ export function CollectionHero({
   postDetails,
   layout,
   onLayoutChange,
+  reorder,
   className,
 }: CollectionHeroProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
@@ -76,6 +76,7 @@ export function CollectionHero({
       postDetails={postDetails}
       layout={layout}
       onLayoutChange={onLayoutChange}
+      reorder={reorder}
       className={className}
     />
   );
@@ -87,11 +88,9 @@ function CollectionHeroContent({
   postDetails,
   layout,
   onLayoutChange,
+  reorder,
   className,
 }: CollectionHeroContentProps) {
-  const t = useTranslations('collections.single');
-  const tCardToast = useTranslations('collections.card.toast');
-
   const { profile: ownerProfile } = useUserProfile(authorPubky);
   // Gate the owner name on the resolved profile so the hero doesn't flash the
   // raw pubky (the `|| authorPubky` fallback) before the name loads on refresh.
@@ -122,8 +121,8 @@ function CollectionHeroContent({
   // collection action (matches `CollectionCard`).
   const { isBookmarked, isToggling, toggle } = useBookmark(compositeId, {
     toastMessages: {
-      added: tCardToast('followed'),
-      removed: tCardToast('unfollowed'),
+      added: "You've followed this collection",
+      removed: "You've unfollowed this collection",
     },
   });
 
@@ -138,10 +137,10 @@ function CollectionHeroContent({
   // dialog but override its copy/icon so it reads as a collection share (title,
   // submit button matching the hero's Share button, success toast).
   const { openRepostDialog, dialogs } = usePostReplyRepostDialogs(compositeId, {
-    title: t('shareTitle'),
-    submitLabel: t('share'),
+    title: 'Share Collection',
+    submitLabel: 'Share',
     submitIcon: StickyNote,
-    successToastTitle: tCardToast('shared'),
+    successToastTitle: "You've shared this collection",
   });
   const handleShare = () => {
     requireAuth(openRepostDialog);
@@ -161,13 +160,11 @@ function CollectionHeroContent({
   // deleted page. Collection-specific toast copy so the success / failure
   // toast reads as "Collection deleted" not "Post deleted".
   const router = useRouter();
-  const tCollectionToast = useTranslations('toast.collection');
-  const tDeleteCollection = useTranslations('dialogs.deleteCollection');
-  const deleteCollectionDescription = tDeleteCollection('description', { name: title || authorPubky });
+  const deleteCollectionDescription = `Are you sure you want to delete '${title || authorPubky}'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.`;
   const { deletePost, isDeleting } = useDeletePost({
     toastMessages: {
-      deleted: tCollectionToast('collectionDeleted'),
-      deleteFailed: tCollectionToast('deleteFailed'),
+      deleted: 'Your collection has been deleted',
+      deleteFailed: 'Failed to delete collection. Please try again.',
     },
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -176,13 +173,16 @@ function CollectionHeroContent({
     await deletePost(compositeId);
     router.replace(APP_ROUTES.COLLECTIONS);
   };
+  // While reorder mode is active, every other owner action is disabled so the
+  // hero reads as "you are reordering" — only Save order / Cancel stay live.
+  const isReorderActive = reorder?.isActive ?? false;
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const tagToggle = (
     <PostTagToggleButton
       postId={compositeId}
       expanded={tagsExpanded}
       onToggle={() => setTagsExpanded((prev) => !prev)}
-      disabled={isOwn && isDeleting}
+      disabled={isOwn && (isDeleting || isReorderActive)}
     />
   );
 
@@ -190,7 +190,12 @@ function CollectionHeroContent({
     <Card
       data-cy="collection-hero"
       className={cn(
-        'relative gap-0 overflow-hidden rounded-md py-0',
+        // `isolate` keeps the -z-10 cover inside this card's stacking context
+        // (same pattern as CollectionCard). Without it the cover joins the page
+        // root stacking context, where engines disagree on whether it paints
+        // above or below the page background once desktop ancestors add
+        // `lg:overflow-hidden` — leaving the hero blank in some browsers.
+        'relative isolate gap-0 overflow-hidden rounded-md py-0',
         coverImage && 'border-transparent bg-card/40',
         className,
       )}
@@ -255,7 +260,7 @@ function CollectionHeroContent({
               <DialogAddContent
                 target={{ type: 'collection', collectionId: compositeId }}
                 dataCy="collection-add-content"
-                disabled={isDeleting}
+                disabled={isDeleting || isReorderActive}
               />
               {/* While a delete is in flight, disable owner actions so the
                   user knows something is happening and those actions cannot race
@@ -264,42 +269,90 @@ function CollectionHeroContent({
                 variant="secondary"
                 size="icon"
                 onClick={handleShare}
-                disabled={isDeleting}
-                aria-label={t('share')}
+                disabled={isDeleting || isReorderActive}
+                aria-label={'Share'}
                 data-cy="collection-hero-share-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <StickyNote className="size-4" />
                 <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {t('share')}
+                  {'Share'}
                 </Typography>
               </Button>
+              {reorder &&
+                (isReorderActive ? (
+                  <>
+                    <Button
+                      variant="default"
+                      size="icon"
+                      onClick={reorder.onSave}
+                      disabled={reorder.isSaving}
+                      aria-label={'Save order'}
+                      data-cy="collection-hero-save-order-btn"
+                      className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+                    >
+                      {reorder.isSaving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                      <Typography as="span" overrideDefaults className="hidden lg:inline">
+                        {'Save order'}
+                      </Typography>
+                    </Button>
+                    <Button
+                      variant="destructive-soft"
+                      size="icon"
+                      onClick={reorder.onCancel}
+                      disabled={reorder.isSaving}
+                      aria-label={'Cancel'}
+                      data-cy="collection-hero-cancel-reorder-btn"
+                      className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+                    >
+                      <X className="size-4" />
+                      <Typography as="span" overrideDefaults className="hidden lg:inline">
+                        {'Cancel'}
+                      </Typography>
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={reorder.onEnter}
+                    disabled={isDeleting || itemCount < 2}
+                    aria-label={'Reorder'}
+                    data-cy="collection-hero-reorder-btn"
+                    className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+                  >
+                    <Move className="size-4" />
+                    <Typography as="span" overrideDefaults className="hidden lg:inline">
+                      {'Reorder'}
+                    </Typography>
+                  </Button>
+                ))}
               <Button
                 variant="secondary"
                 size="icon"
                 onClick={handleEdit}
-                disabled={isDeleting}
-                aria-label={t('edit')}
+                disabled={isDeleting || isReorderActive}
+                aria-label={'Edit'}
                 data-cy="collection-hero-edit-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Pencil className="size-4" />
                 <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {t('edit')}
+                  {'Edit'}
                 </Typography>
               </Button>
               <Button
                 variant="secondary"
                 size="icon"
                 onClick={handleDelete}
-                disabled={isDeleting}
-                aria-label={t('delete')}
+                disabled={isDeleting || isReorderActive}
+                aria-label={'Delete'}
                 data-cy="collection-hero-delete-btn"
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <Trash2 className="size-4" />
                 <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {t('delete')}
+                  {'Delete'}
                 </Typography>
               </Button>
               {tagToggle}
@@ -311,23 +364,23 @@ function CollectionHeroContent({
                 size="sm"
                 onClick={handleFollowToggle}
                 disabled={isToggling}
-                aria-label={isBookmarked ? t('unfollow') : t('follow')}
+                aria-label={isBookmarked ? 'Unfollow' : 'Follow'}
                 data-cy="collection-hero-follow-btn"
                 className="gap-2 text-xs"
               >
                 {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
-                {isBookmarked ? t('unfollow') : t('follow')}
+                {isBookmarked ? 'Unfollow' : 'Follow'}
               </Button>
               <Button
                 variant="secondary"
                 size="icon"
                 onClick={handleShare}
-                aria-label={t('share')}
+                aria-label={'Share'}
                 className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
               >
                 <StickyNote className="size-4" />
                 <Typography as="span" overrideDefaults className="hidden lg:inline">
-                  {t('share')}
+                  {'Share'}
                 </Typography>
               </Button>
               {tagToggle}
@@ -348,7 +401,7 @@ function CollectionHeroContent({
             open={deleteConfirmOpen}
             onOpenChange={setDeleteConfirmOpen}
             onConfirm={() => void handleDeleteConfirm()}
-            i18nNamespace="dialogs.deleteCollection"
+            title="Delete collection?"
             description={deleteCollectionDescription}
           />
         </>

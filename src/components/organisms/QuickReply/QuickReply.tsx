@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
@@ -16,7 +15,7 @@ import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
-import { QUICK_REPLY_CONNECTOR_HEIGHT_OFFSET } from './QuickReply.constants';
+import { QUICK_REPLY_CONNECTOR_HEIGHT_OFFSET, QUICK_REPLY_PROMPTS } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
 import { QuickReplyContent } from './QuickReplyContent';
 
@@ -25,11 +24,8 @@ export function QuickReply({
   connectorVariant = POST_THREAD_CONNECTOR_VARIANTS.LAST,
   onReplySubmitted,
 }: QuickReplyProps) {
-  const t = useTranslations();
-  const rawPrompts = t.raw('quickReply.prompts');
-  const prompts = Array.isArray(rawPrompts) ? rawPrompts : ['What are your thoughts on this?'];
-  const [promptIndex] = React.useState(() => Math.floor(Math.random() * prompts.length));
-  const prompt = prompts[promptIndex] || prompts[0];
+  const [promptIndex] = React.useState(() => Math.floor(Math.random() * QUICK_REPLY_PROMPTS.length));
+  const prompt = QUICK_REPLY_PROMPTS[promptIndex] || QUICK_REPLY_PROMPTS[0];
 
   const {
     textareaRef,

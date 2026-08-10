@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LockKeyhole, LogOut, Pencil, Trash2, UserRound } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import { useSignOut } from '@/hooks/useSignOut/useSignOut';
 import { SettingsDivider } from '@/molecules/Settings/SettingsDivider/SettingsDivider';
@@ -13,7 +12,6 @@ import { DialogDeleteAccount } from '@/organisms/Settings/DialogDeleteAccount/Di
 
 export function Account() {
   const router = useRouter();
-  const t = useTranslations('settings.account');
   const { handleSignOut, isLoading: loadingSignOut } = useSignOut();
   const [disposableAccount] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -25,11 +23,11 @@ export function Account() {
   };
   return (
     <>
-      <SettingsSectionCard icon={UserRound} title={t('title')}>
+      <SettingsSectionCard icon={UserRound} title={'Account'}>
         <SettingsSection
-          title={t('signOut.title')}
-          description={t('signOut.description')}
-          buttonText={loadingSignOut ? t('signOut.buttonLoading') : t('signOut.button')}
+          title={'Sign out from Pubky'}
+          description={'Sign out to protect your account from unauthorized access.'}
+          buttonText={loadingSignOut ? 'Signing out...' : 'Sign out'}
           buttonIcon={LogOut}
           buttonId="sign-out-btn"
           buttonDisabled={loadingSignOut}
@@ -39,9 +37,9 @@ export function Account() {
         <SettingsDivider />
 
         <SettingsSection
-          title={t('editProfile.title')}
-          description={t('editProfile.description')}
-          buttonText={t('editProfile.button')}
+          title={'Edit your profile'}
+          description={'Update your bio or user picture, so friends can find you easier.'}
+          buttonText={'Edit profile'}
           buttonIcon={Pencil}
           buttonId="edit-profile-btn"
           buttonOnClick={handleEditProfile}
@@ -50,9 +48,13 @@ export function Account() {
         <SettingsDivider />
 
         <SettingsSection
-          title={t('backup.title')}
-          description={disposableAccount ? t('backup.descriptionNeeded') : t('backup.descriptionDone')}
-          buttonText={t('backup.button')}
+          title={'Backup your account'}
+          description={
+            disposableAccount
+              ? 'Without a backup you lose your account if you close your browser!'
+              : 'You have already completed the backup, or closed your browser before doing so. Your recovery file and seed phrase have been deleted.'
+          }
+          buttonText={'Back up'}
           buttonIcon={LockKeyhole}
           buttonId="backup-account-btn"
           buttonDisabled={!disposableAccount}
@@ -62,9 +64,11 @@ export function Account() {
         <SettingsDivider />
 
         <SettingsSection
-          title={t('deleteAccount.title')}
-          description={t('deleteAccount.description')}
-          buttonText={t('deleteAccount.button')}
+          title={'Delete your account'}
+          description={
+            'Deleting your account will remove all of your posts, tags, profile information, contacts, custom streams, and settings or preferences.'
+          }
+          buttonText={'Delete Account'}
           buttonIcon={Trash2}
           buttonId="delete-account-btn"
           buttonVariant="destructive"

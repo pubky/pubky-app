@@ -42,18 +42,6 @@ vi.mock('@/molecules/Toaster/use-toast', () => {
     useToast: () => ({ toast: mockToast }),
   };
 });
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => {
-    const t: Record<string, string> = {
-      signUpFailed: 'Error - Failed to sign up',
-      signUpError: 'Could not sign up. Try again.',
-      invalidInvite: 'Invite code is invalid or expired.',
-    };
-    return t[key] ?? key;
-  },
-}));
-
 vi.mock('@/libs/error/error.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/libs/error/error.utils')>();
   return {

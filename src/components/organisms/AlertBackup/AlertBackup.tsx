@@ -9,7 +9,6 @@
  */
 import { useEffect, useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -19,7 +18,6 @@ import { DialogConfirmBackup } from '../DialogConfirmBackup/DialogConfirmBackup'
 export const AlertBackup = () => {
   const { secretKey } = useOnboardingStore();
   const [showAlert, setShowAlert] = useState(false);
-  const t = useTranslations('settings.backup');
   useEffect(() => {
     if (secretKey) {
       setShowAlert(true);
@@ -38,8 +36,8 @@ export const AlertBackup = () => {
       <Container className="flex-1 flex-row items-center gap-3">
         <TriangleAlert className="h-4 w-4 font-bold text-primary-foreground" />
         <Typography size="sm" className="font-bold whitespace-nowrap text-primary-foreground">
-          <span className="md:hidden">{t('alertShort')}</span>
-          <span className="hidden md:inline">{t('alertFull')}</span>
+          <span className="md:hidden">{'Back up now'}</span>
+          <span className="hidden md:inline">{'Back up now to avoid losing your account!'}</span>
         </Typography>
       </Container>
       <DialogBackup />

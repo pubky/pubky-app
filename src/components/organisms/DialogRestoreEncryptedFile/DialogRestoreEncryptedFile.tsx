@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { FileText, FileUp, Loader2, RotateCcw } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import {
@@ -25,8 +24,6 @@ import { ErrorService } from '@/libs/error/error.types';
 import { formatFileName } from '@/libs/utils/utils';
 
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
-  const t = useTranslations('onboarding.signIn');
-  const tRestore = useTranslations('onboarding.signIn.restoreEncryptedFile');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [password, setPassword] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
@@ -40,7 +37,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
     if (file) {
       // Validate file extension
       if (!file.name.toLowerCase().endsWith('.pkarr')) {
-        setError(tRestore('invalidFileType'));
+        setError('Please select a .pkarr file');
         return;
       }
       setSelectedFile(file);
@@ -51,7 +48,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
     // Guard against double-submit race condition
     if (isRestoring) return;
     if (!selectedFile) {
-      setError(tRestore('missingFields'));
+      setError('Please select a file');
       return;
     }
     setIsRestoring(true);
@@ -73,16 +70,16 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           errorMessage.includes('authentication') ||
           errorMessage.includes('cipher')
         ) {
-          setError(tRestore('invalidPassword'));
+          setError('Invalid password or corrupted file. Please check your password and try again.');
         } else if (error instanceof AppError && error.service === ErrorService.Nexus) {
-          setError(tRestore('nexusError'));
+          setError('Something went wrong with nexus. Please try again.');
         } else {
-          setError(tRestore('restoreError'));
+          setError('Failed to restore from file. Please check your file and try again.');
         }
       } else if (typeof error === 'string' && error.toLowerCase().includes('aead')) {
-        setError(tRestore('invalidPassword'));
+        setError('Invalid password or corrupted file. Please check your password and try again.');
       } else {
-        setError(tRestore('unexpectedError'));
+        setError('Unexpected error occurred.');
       }
       setIsRestoring(false);
     }
@@ -110,22 +107,24 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
           className="w-full rounded-full sm:w-auto md:flex-none"
         >
           <FileUp className="mr-2 h-4 w-4" />
-          <span>{t('useEncryptedFile')}</span>
+          <span>{'Use encrypted file'}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-full gap-6 overflow-hidden p-8" hiddenTitle={tRestore('title')}>
+      <DialogContent className="max-w-full gap-6 overflow-hidden p-8" hiddenTitle={'Restore with encrypted file'}>
         <DialogHeader className="space-y-1.5 pr-6">
           <DialogTitle className="text-2xl leading-8 font-bold sm:text-xl sm:leading-7">
-            {tRestore('title')}
+            {'Restore with encrypted file'}
           </DialogTitle>
-          <DialogDescription className="text-sm leading-5">{tRestore('description')}</DialogDescription>
+          <DialogDescription className="text-sm leading-5">
+            {'Use your encrypted backup file to restore your account and sign in.'}
+          </DialogDescription>
         </DialogHeader>
 
         <Container className="gap-6">
           {/* File Upload Section */}
           <Container className="space-y-2">
             <Label className="text-xs font-medium tracking-widest text-muted-foreground">
-              {tRestore('uploadLabel')}
+              {'UPLOAD ENCRYPTED FILE'}
             </Label>
 
             <Container
@@ -150,7 +149,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
                 }}
               >
                 <FileText className="h-4 w-4" />
-                {tRestore('selectFile')}
+                {'Select file'}
               </Button>
             </Container>
 
@@ -161,14 +160,14 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               accept=".pkarr"
               onChange={handleFileChange}
               className="hidden"
-              aria-label={tRestore('selectFile')}
+              aria-label={'Select file'}
             />
           </Container>
 
           {/* Password Section */}
           <Container className="space-y-2">
             <Label htmlFor="restore-password" className="text-xs font-medium tracking-widest text-muted-foreground">
-              {tRestore('passwordLabel')}
+              {'ENTER PASSWORD'}
             </Label>
             <Input
               id="restore-password"
@@ -177,7 +176,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={handleKeyDown}
               className="bg-opacity-90 h-14 rounded-md border border-dashed p-4 shadow-sm"
-              placeholder={tRestore('passwordPlaceholder')}
+              placeholder={'Enter your password'}
               autoComplete="current-password"
               disabled={isRestoring}
             />
@@ -203,7 +202,7 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
               onClick={handleReset}
               disabled={isRestoring}
             >
-              {tRestore('cancel')}
+              {'Cancel'}
             </Button>
           </DialogClose>
           <Button
@@ -216,12 +215,12 @@ export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => voi
             {isRestoring ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {tRestore('restoring')}
+                {'Restoring...'}
               </>
             ) : (
               <>
                 <RotateCcw className="mr-2 h-4 w-4 rotate-180" />
-                {tRestore('restore')}
+                {'Restore'}
               </>
             )}
           </Button>

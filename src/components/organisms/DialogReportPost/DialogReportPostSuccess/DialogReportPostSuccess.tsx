@@ -1,19 +1,16 @@
 'use client';
 
 import { Check } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { DialogClose, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import type { DialogReportPostSuccessProps } from './DialogReportPostSuccess.types';
 
 export function DialogReportPostSuccess({ onOpenChange }: DialogReportPostSuccessProps) {
-  const t = useTranslations('report.success');
-  const tCommon = useTranslations('common');
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t('title')}</DialogTitle>
-        <DialogDescription>{t('description')}</DialogDescription>
+        <DialogTitle>{'Report Sent'}</DialogTitle>
+        <DialogDescription>{'Your report will be reviewed soon. Thank you.'}</DialogDescription>
       </DialogHeader>
       <DialogFooter>
         <DialogClose asChild>
@@ -22,10 +19,10 @@ export function DialogReportPostSuccess({ onOpenChange }: DialogReportPostSucces
             variant="dark-outline"
             size="lg"
             onClick={() => onOpenChange(false)}
-            aria-label={tCommon('close')}
+            aria-label={'Close'}
           >
             <Check className="size-4" aria-hidden="true" />
-            {tCommon('yourWelcome')}
+            {"You're welcome!"}
           </Button>
         </DialogClose>
       </DialogFooter>

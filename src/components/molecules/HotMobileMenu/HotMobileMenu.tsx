@@ -1,15 +1,14 @@
 'use client';
 
 import { StickyNote, Tag, UsersRound } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { MobileTabBar } from '../MobileTabBar/MobileTabBar';
 import type { MobileTabBarItem } from '../MobileTabBar/MobileTabBar.types';
 import { type HotMobileMenuItem, type HotMobileMenuProps, HotSection } from './HotMobileMenu.types';
 
 export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
-  { icon: Tag, section: HotSection.TAGS },
-  { icon: UsersRound, section: HotSection.USERS },
-  { icon: StickyNote, section: HotSection.POSTS },
+  { icon: Tag, section: HotSection.TAGS, label: 'Tags' },
+  { icon: UsersRound, section: HotSection.USERS, label: 'Users' },
+  { icon: StickyNote, section: HotSection.POSTS, label: 'Posts' },
 ];
 
 /**
@@ -23,12 +22,10 @@ export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
  *   so the menu stretches full-width edge-to-edge.
  */
 export function HotMobileMenu({ activeSection, onSectionChange }: HotMobileMenuProps) {
-  const t = useTranslations('hot');
-
   const items: MobileTabBarItem[] = HOT_MOBILE_MENU_ITEMS.map((item) => ({
     key: item.section,
     icon: item.icon,
-    label: t(item.section),
+    label: item.label,
     isActive: item.section === activeSection,
     onSelect: () => onSectionChange(item.section),
   }));

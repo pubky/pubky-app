@@ -1,5 +1,4 @@
 import { CheckCircle2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import type * as React from 'react';
 import { Image } from '@/atoms/Image/Image';
 import { Input } from '@/atoms/Input/Input';
@@ -29,8 +28,7 @@ export const HumanPhoneInputField = ({
   error,
   onEnter,
 }: HumanPhoneInputFieldProps) => {
-  const t = useTranslations('onboarding.phone');
-  const defaultPlaceholder = t('placeholder');
+  const defaultPlaceholder = '+316XXXXXXXX';
   return (
     <IllustratedCard
       data-testid="human-phone-input-card"
@@ -45,11 +43,11 @@ export const HumanPhoneInputField = ({
     >
       <div className="flex flex-col gap-3">
         <Typography as="h3" className="text-2xl leading-[32px] font-semibold text-foreground sm:text-[28px]">
-          {t('phoneNumber')}
+          {'Phone number'}
         </Typography>
 
         <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-          {t('phoneHint')}
+          {'Enter your phone number, including country code (e.g. +1 for US).'}
         </Typography>
       </div>
 

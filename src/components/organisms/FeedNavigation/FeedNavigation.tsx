@@ -5,7 +5,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 // Module-level cache: survives remounts within the session so that
 // navigating between /home and /feed/[id] doesn't flash empty tabs.
 import { Home, Pencil, PlusCircle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -26,8 +25,6 @@ interface FeedNavigationProps {
 }
 export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const pathname = usePathname();
-  const tHeader = useTranslations('header');
-  const tDialog = useTranslations('dialogs.customFeed');
   const { isAuthenticated, requireAuth } = useRequireAuth();
   const customFeeds = useLiveQuery(
     async () => {
@@ -56,7 +53,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   }));
   const feeds = [
     {
-      name: tHeader('home'),
+      name: 'Home',
       icon: <Home className="size-5 shrink-0" />,
       href: APP_ROUTES.HOME,
     },
@@ -65,7 +62,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   return (
     <Container className={cn('overflow-x-auto lg:flex-row', className)}>
       <Heading level={2} size="lg" className="mb-2 font-light text-muted-foreground lg:hidden">
-        {tHeader('feed')}
+        {'Feed'}
       </Heading>
 
       {feeds.map((f) => (
@@ -109,7 +106,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
             <PlusCircle className="size-5 shrink-0" />
 
             <Typography overrideDefaults className="font-medium lg:text-sm">
-              {tDialog('createTitle')}
+              {'Create Feed'}
             </Typography>
           </Button>
         </CustomFeedDialog>
@@ -122,7 +119,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           <PlusCircle className="size-5 shrink-0" />
 
           <Typography overrideDefaults className="font-medium lg:text-sm">
-            {tDialog('createTitle')}
+            {'Create Feed'}
           </Typography>
         </Button>
       )}

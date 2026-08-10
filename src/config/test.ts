@@ -1,12 +1,9 @@
 import '@testing-library/jest-dom';
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
-import React from 'react';
 import { cleanup } from '@testing-library/react';
 import { expect, vi } from 'vitest';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
-// Import English messages for i18n mock
-import enMessages from '../../messages/en.json';
 
 // =============================================================================
 // IMPORTANT: Set environment variables BEFORE importing any app code
@@ -50,146 +47,6 @@ const { db } = await import('@/database/franky/franky');
 // See: https://github.com/pubky/pubky-app/issues/1101
 const { radixIdSerializer } = await import('@/libs/utils/utils');
 expect.addSnapshotSerializer(radixIdSerializer);
-
-/**
- * Get a nested value from an object using a dot-separated key path.
- * @param obj - The object to search in
- * @param path - The dot-separated key path (e.g., "common.back")
- * @returns The value at the path, or undefined if not found
- */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((acc: unknown, key: string) => {
-    if (acc && typeof acc === 'object' && key in (acc as Record<string, unknown>)) {
-      return (acc as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
-}
-
-/**
- * Create a translation function that looks up keys in the messages object.
- * Supports interpolation of variables in the format {variable}.
- */
-function createTranslationFunction(namespace: string) {
-  const t = (key: string, params?: Record<string, string | number>): string => {
-    const fullPath = namespace ? `${namespace}.${key}` : key;
-    const value = getNestedValue(enMessages as Record<string, unknown>, fullPath);
-
-    if (typeof value === 'string') {
-      // Handle interpolation
-      if (params) {
-        const interpolated = Object.entries(params).reduce((str, [paramKey, paramValue]) => {
-          return str.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramValue));
-        }, value);
-        // Mirror ICU MessageFormat apostrophe escaping ('' → ') used in locale strings.
-        return interpolated.replace(/''/g, "'");
-      }
-      return value;
-    }
-
-    // Return the key if not found
-    return key;
-  };
-
-  // Add raw method for accessing arrays or objects directly
-  t.raw = (key: string): unknown => {
-    const fullPath = namespace ? `${namespace}.${key}` : key;
-    return getNestedValue(enMessages as Record<string, unknown>, fullPath) ?? key;
-  };
-
-  // Add rich method for formatted text with rich text tags support
-  t.rich = (
-    key: string,
-    values?: Record<string, string | number | ((chunks: React.ReactNode) => React.ReactNode)>,
-  ): React.ReactNode => {
-    const fullPath = namespace ? `${namespace}.${key}` : key;
-    const value = getNestedValue(enMessages as Record<string, unknown>, fullPath);
-
-    if (typeof value !== 'string') {
-      return key;
-    }
-
-    // If no values with render functions, just return the plain string
-    if (!values) {
-      return value;
-    }
-
-    // Check if there are any render functions in values
-    const renderFunctions = Object.entries(values).filter(([, v]) => typeof v === 'function') as [
-      string,
-      (chunks: React.ReactNode) => React.ReactNode,
-    ][];
-
-    if (renderFunctions.length === 0) {
-      // Just handle interpolation for non-function values
-      return Object.entries(values).reduce((str, [paramKey, paramValue]) => {
-        return str.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramValue));
-      }, value);
-    }
-
-    // Parse rich text tags and apply render functions
-    // This handles patterns like <tagName>content</tagName>
-    let result: React.ReactNode = value;
-
-    for (const [tagName, renderFn] of renderFunctions) {
-      const tagPattern = new RegExp(`<${tagName}>([^<]*)</${tagName}>`, 'g');
-      const str = typeof result === 'string' ? result : String(result);
-
-      // Check if there's a match
-      const match = tagPattern.exec(str);
-      if (match) {
-        const [fullMatch, content] = match;
-        const parts = str.split(fullMatch);
-
-        // Build React nodes array
-        const nodes: React.ReactNode[] = [];
-        if (parts[0]) nodes.push(parts[0]);
-        nodes.push(renderFn(content));
-        if (parts[1]) nodes.push(parts[1]);
-
-        // If multiple nodes, wrap in fragment-like array with keys
-        if (nodes.length === 1) {
-          result = nodes[0];
-        } else {
-          // For testing, we return an array which React can render
-          result = nodes.map((node, i) => {
-            // Leave strings and primitives as-is
-            if (typeof node === 'string' || typeof node === 'number' || node === null || node === undefined) {
-              return node;
-            }
-            // Use React.cloneElement for valid React elements to add keys
-            if (React.isValidElement(node)) {
-              return React.cloneElement(node, { key: i });
-            }
-            // For other objects (edge case), return as-is
-            return node;
-          });
-        }
-      }
-    }
-
-    return result;
-  };
-
-  // Add markup method (returns same as t for testing)
-  t.markup = t;
-
-  return t;
-}
-
-// Mock next-intl globally for all tests
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => createTranslationFunction(namespace ?? ''),
-  useMessages: () => enMessages,
-  useTimeZone: () => 'UTC',
-  useNow: () => new Date(),
-  useFormatter: () => ({
-    dateTime: (date: Date) => date.toISOString(),
-    number: (num: number) => String(num),
-    relativeTime: () => 'now',
-  }),
-  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
 
 // Polyfill IntersectionObserver for jsdom
 class MockIntersectionObserver implements IntersectionObserver {

@@ -9,7 +9,7 @@ exports[`TimelineStateWrapper > Snapshots > should match snapshot for empty stat
     <span
       class="text-muted-foreground"
     >
-      noPosts
+      No posts found
     </span>
   </div>
 </div>

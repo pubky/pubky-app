@@ -251,7 +251,7 @@ exports[`EditProfileForm - Snapshots > matches snapshot 1`] = `
       data-slot="button"
       data-testid="save-profile-button"
     >
-      save
+      Save Profile
     </button>
   </div>
 </div>

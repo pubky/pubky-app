@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { FileController } from '@/controllers/file/file';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
@@ -18,8 +17,6 @@ export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 
   const [genericFiles, setGenericFiles] = useState<AttachmentConstructed[]>([]);
 
   const { toast } = useToast();
-  const tPost = useTranslations('toast.post');
-
   useEffect(() => {
     const constructAttachments = async () => {
       if (!attachments?.length) return;
@@ -34,7 +31,7 @@ export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 
       } catch {
         toast({
           variant: 'error',
-          description: tPost('attachmentsLoadFailed'),
+          description: 'Could not load attachments',
         });
       }
     };

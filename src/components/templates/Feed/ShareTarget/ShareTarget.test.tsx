@@ -16,17 +16,6 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock next-intl
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => {
-    const translations: Record<string, string> = {
-      title: 'Share to Pubky',
-      cancel: 'Cancel',
-    };
-    return translations[key] || key;
-  },
-}));
-
 const { mockGetSharedFiles } = vi.hoisted(() => ({
   mockGetSharedFiles: vi.fn(),
 }));

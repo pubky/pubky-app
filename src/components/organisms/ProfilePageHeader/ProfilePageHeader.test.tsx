@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
-import enMessages from '../../../../messages/en.json';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
 
@@ -162,7 +161,7 @@ describe('ProfilePageHeader', () => {
     expect(screen.getByText('Profile link')).toBeInTheDocument();
     expect(screen.getByText('Sign out')).toBeInTheDocument();
     expect(screen.getByText('Vacationing')).toBeInTheDocument();
-    expect(screen.getByText(`83 ${enMessages.userList.followers}`)).toBeInTheDocument();
+    expect(screen.getByText('83 FOLLOWERS')).toBeInTheDocument();
   });
 
   it('renders the status picker when own profile has no status', () => {

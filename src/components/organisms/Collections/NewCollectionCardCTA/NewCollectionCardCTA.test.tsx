@@ -5,11 +5,6 @@ import { NewCollectionCardCTA } from './NewCollectionCardCTA';
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitCreateCollection: vi.fn(),
@@ -37,7 +32,7 @@ describe('NewCollectionCardCTA', () => {
   it('renders the new collection trigger', () => {
     render(<NewCollectionCardCTA />);
 
-    const trigger = screen.getByRole('button', { name: 'collections.new.cta' });
+    const trigger = screen.getByRole('button', { name: 'New Collection' });
     expect(trigger).toBeInTheDocument();
     expect(trigger).toHaveAttribute('data-cy', 'new-collection-card-cta');
   });
@@ -45,10 +40,10 @@ describe('NewCollectionCardCTA', () => {
   it('opens the new collection dialog when the trigger is clicked', () => {
     render(<NewCollectionCardCTA />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'collections.new.cta' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New Collection' }));
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'collections.new.title' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'New Collection' })).toBeInTheDocument();
   });
 });
 

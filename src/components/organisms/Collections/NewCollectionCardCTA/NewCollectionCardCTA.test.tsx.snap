@@ -2,7 +2,7 @@
 
 exports[`NewCollectionCardCTA - Snapshots > matches the closed trigger snapshot 1`] = `
 <button
-  aria-label="collections.new.cta"
+  aria-label="New Collection"
   class="flex h-full w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
   data-cy="new-collection-card-cta"
   data-slot="button"
@@ -32,7 +32,7 @@ exports[`NewCollectionCardCTA - Snapshots > matches the closed trigger snapshot 
     class="text-sm font-bold"
     data-testid="typography"
   >
-    collections.new.cta
+    New Collection
   </span>
 </button>
 `;

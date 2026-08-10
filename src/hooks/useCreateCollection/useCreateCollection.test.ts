@@ -24,17 +24,6 @@ const mocks = vi.hoisted(() => ({
     reset: vi.fn(),
   },
 }));
-
-const translations: Record<string, string> = {
-  'collections.new.nameRequired': 'Collection title is required.',
-  'collections.new.created': 'Collection created',
-  'collections.new.createFailed': 'Failed to create collection.',
-  'toast.file.imageTooLargeGif':
-    'This GIF exceeds the {maxSize} upload limit and cannot be compressed. Please use a smaller GIF.',
-  'toast.success': 'Success',
-  'toast.error': 'Error',
-};
-
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitCreateCollection: (...args: unknown[]) => mocks.commitCreateCollection(...args),
@@ -59,17 +48,6 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
     getState: () => ({ setCollectionCover: mocks.setCollectionCover }),
   },
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations:
-    (namespace: string) =>
-    (key: string, values?: Record<string, string>): string =>
-      Object.entries(values ?? {}).reduce(
-        (msg, [n, v]) => msg.replace(`{${n}}`, v),
-        translations[`${namespace}.${key}`] ?? key,
-      ),
-}));
-
 describe('useCreateCollection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
