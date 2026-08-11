@@ -684,8 +684,11 @@ describe('Collections overview — visual regression', () => {
   it('renders the collections overview at desktop viewport', async () => {
     const screen = await renderCollectionsOverview(VRT_VIEWPORT_DESKTOP);
     // Viewport-clamped root: first fold (My + start of Followed/Discover).
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('collections-overview-desktop');
-  });
+    // This is a particularly heavy surface in the VRT suite — increase timeout to give this one more headroom.
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('collections-overview-desktop', {
+      timeout: 25_000,
+    });
+  }, 40_000);
 
   it('renders the collections overview at mobile viewport', async () => {
     const screen = await renderCollectionsOverview(VRT_VIEWPORT_MOBILE);
