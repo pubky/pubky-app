@@ -77,9 +77,7 @@ describe('Profile (onboarding) — visual regression', () => {
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-profile-desktop');
   });
 
-  // Skipped: the mobile Finish button overflows the viewport (known bug #1975).
-  // No baseline is committed while broken; re-enable and generate it once fixed.
-  it.skip('renders the create-profile page at mobile viewport', async () => {
+  it('renders the create-profile page at mobile viewport', async () => {
     const screen = await renderForVRT(<ProfileWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-profile-mobile');
   });
