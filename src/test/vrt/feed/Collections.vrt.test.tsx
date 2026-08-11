@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -623,20 +623,6 @@ function BookmarksWithHeader() {
       <Header />
       <BookmarksCollection />
     </>
-  );
-}
-
-async function preloadImages(urls: readonly string[]) {
-  await Promise.all(
-    urls.map(async (url) => {
-      const image = new Image();
-      await new Promise<void>((resolve, reject) => {
-        image.addEventListener('load', () => resolve(), { once: true });
-        image.addEventListener('error', () => reject(new Error(`Failed to preload VRT image: ${url}`)), { once: true });
-        image.src = url;
-      });
-      await image.decode();
-    }),
   );
 }
 
