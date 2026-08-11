@@ -162,7 +162,7 @@ export const APP_RUNTIME_DEFAULTS = {
   ttlPostMaxBatchSize: 20,
   ttlUserMaxBatchSize: 20,
   ttlRetryDelayMs: 60_000,
-  moderationId: 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro',
+  moderationId: 'nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy',
   moderatedTags: ['nudity'],
   exchangeRateApi: 'https://api1.blocktank.to/api/fx/rates/btc',
   preludeSdkTimeoutMs: 5_000,

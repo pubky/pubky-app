@@ -60,6 +60,8 @@ spec:
               value: '["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
             - name: PUBKY_RUNTIME_DEFAULT_HTTP_RELAY
               value: "https://httprelay.staging.pubky.app/inbox"
+            - name: PUBKY_RUNTIME_MODERATION_ID
+              value: "nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy"
             # Optional Sentry tier (DSNs are public client-side values, not secrets).
             # Mirrors the GitHub `SENTRY_DSN` repo variable.
             - name: PUBKY_RUNTIME_SENTRY_DSN
