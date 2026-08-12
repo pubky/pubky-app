@@ -12,7 +12,7 @@ Complex user workflows often require coordinating operations across multiple dom
 2. **Post creation** (PostApplication)
 3. **Tag association** (TagApplication)
 
-These operations must be orchestrated as a single cohesive workflow with proper ordering (files before post, post before tags) and transactional semantics.
+These operations must be orchestrated as a single cohesive workflow with proper ordering (files before post, post before tags) and explicit partial-failure handling.
 
 Under the current architecture (ADR-0004), the allowed dependencies are:
 
@@ -42,7 +42,7 @@ The fundamental issue: **Where does cross-domain orchestration belong?**
 
 ### Core Rules
 
-1. **Horizontal calls permitted**: Application classes MAY call other Application classes within the same layer
+1. **Horizontal calls permitted**: Applications with orchestration privilege MAY call other Application classes within the same layer
 2. **Acyclic dependency graph**: Circular dependencies between Application classes are FORBIDDEN
 3. **Maximum call depth of 1 by default**: If Application A calls Application B, then B MUST NOT call another Application within that execution flow. The only permitted depth-2 paths start from `PostApplication`, `NotificationApplication`, or `TtlApplication`, continue through `PostStreamApplication`, and end at `FileApplication` for attachment persistence inside `fetchMissingPostsFromNexus()` or `fetchOriginalPostsByUris()`. All other depth-2 paths and every path of depth 3 or greater are FORBIDDEN.
 4. **Orchestration privilege**: Only the Applications listed below may call other Application classes. All other Application classes (`FileApplication`, `TagApplication`, `BookmarkApplication`, `UserApplication`, etc.) MUST NOT call other Application classes. This keeps specialized domains independent and prevents reverse dependencies on core orchestrators.
@@ -61,7 +61,7 @@ The fundamental issue: **Where does cross-domain orchestration belong?**
 
 #### Root-node orchestrators
 
-`BootstrapApplication` and `MigrationApplication` are **source nodes (in-degree 0)** in the Application dependency DAG: Controllers invoke them; no Application may call them. That structural position prevents cycles and satisfies max depth 1 (orchestrator → leaf).
+`BootstrapApplication` and `MigrationApplication` are **source nodes (in-degree 0)** in the Application dependency DAG: Controllers invoke them, and no Application may call them, preventing cycles through these roots. Their current execution paths stop after one cross-Application hop, so they remain at depth 1.
 
 ### Example
 
@@ -94,9 +94,8 @@ A → B → A                                  // cycle
 **We rely on:**
 
 1. **Code Reviews**: Reviewers MUST check for circular dependencies, the call-depth rule and its single explicit exception, orchestration privilege (Allowed orchestrators table), and the root-node invariant (no Application may call `BootstrapApplication` or `MigrationApplication`)
-2. **Documentation**: This ADR as the source of truth
-3. **Testing**: Integration tests to catch violations at runtime
-4. **Code Comments**: Developers MUST document cross-Application calls with ADR reference
+2. **Automated Review**: The `cross-domain-app-restriction` rule in `.greptile/config.json` mirrors the allowlist and call-depth constraints
+3. **Documentation**: This ADR is the source of truth
 
 **Future Tooling** (optional, not required now):
 
@@ -109,7 +108,7 @@ A → B → A                                  // cycle
 **When TO use cross-Application calls:**
 
 - ✅ Single user action requires multi-domain coordination
-- ✅ Complex workflow with ordering/transactional requirements
+- ✅ Complex workflow with ordering or explicit partial-failure handling
 - ✅ Avoiding code duplication of orchestration logic
 - ✅ Only from an **allowed orchestrator** (rule 4)
 
@@ -150,7 +149,7 @@ A → B → A                                  // cycle
 
 Move from static Application classes to instance-based classes with constructor injection.
 
-**Pros**: Explicit dependencies in constructors; cycles fail at wiring time; easier mocking; possible typed call-depth enforcement.
+**Pros**: Explicit dependencies in constructors; a composition root or DI container can detect cycles; easier mocking; possible typed call-depth enforcement.
 
 **Cons**: Large refactor across Controllers / Applications / Services; DI container or manual wiring; more boilerplate and init complexity; little immediate product value.
 
@@ -174,7 +173,7 @@ Have Controllers call several Application classes in sequence for one user/syste
 
 **Cons**: Places cross-domain business ordering alongside Controller concerns such as session and store management. Other Applications cannot reuse the workflow without duplicating it or introducing a forbidden Application → Controller dependency.
 
-**Why not chosen**: Cross-domain business invariants belong in Application. Controllers select workflows and reconcile their results with UI state.
+**Why not chosen**: Cross-domain business invariants belong in Application. Controllers select workflows and reconcile their results with UI state. They may sequence Applications for controller-owned session or store coordination, but must not own reusable cross-domain business invariants.
 
 ### Alternative 4: Duplicate Orchestration Logic
 

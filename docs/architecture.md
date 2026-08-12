@@ -158,8 +158,10 @@ static async commitCreate({ fileAttachments }) {
 // FORBIDDEN: No circular dependencies
 PostApplication → FileApplication → PostApplication  // VIOLATION
 
-// ONLY ALLOWED DEPTH-2 PATH: attachment persistence in PostStreamApplication
-PostApplication → PostStreamApplication → FileApplication
+// ONLY ALLOWED DEPTH-2 PATHS: attachment persistence via PostStreamApplication
+PostApplication | NotificationApplication | TtlApplication
+  → PostStreamApplication
+    → FileApplication
 
 // FORBIDDEN: Every other depth-2 path and all paths of depth 3 or greater
 PostApplication → FileApplication → ImageProcessorApplication  // VIOLATION
