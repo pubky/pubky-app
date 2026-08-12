@@ -12,7 +12,8 @@ import {
   repostPost,
   waitForFeedToLoad,
 } from '../support/posts';
-import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
+import { followFromPostMenu, searchAndFollowProfile, searchForProfileByPubky } from '../support/contacts';
+import { addProfileTags } from '../support/profile';
 import { BackupType, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
 import { fastMs, slowMs } from '../support/slow-down';
 
@@ -50,6 +51,13 @@ const profile4 = {
   pubkyAlias: 'pubky_4',
   postText: `Profile 4's post ${Date.now()}`,
 };
+
+// Profile 1 is 2 hops from Profile 3 (Profile 3 -> Profile 2 -> Profile 1), so tagging Profile 4's
+// profile with this label proves 'Tagged as' considers taggers within the viewer's web of trust.
+const taggedAsLabelInNetwork = 'taggedbyp1';
+// Profile 4 is 3 hops from Profile 3 (outside their web of trust), so tagging Profile 1's profile
+// with this label proves 'Tagged as' does not consider taggers outside the viewer's web of trust.
+const taggedAsLabelOutsideNetwork = 'taggedbyp4';
 
 describe('feed and filters', () => {
   before(() => {
@@ -90,6 +98,13 @@ describe('feed and filters', () => {
     fastTagPostInFeed(['p3tag1', 'p3tag2', 'p3tag3', 'p3tag4', 'p3tag5'], profile3.postText);
     // tag profile 2's post 4 times to make it the second most popular
     fastTagPostInFeed(['p2tag1', 'p2tag2', 'p2tag3', 'p2tag4'], profile2.postText);
+    // profile 4 is outside profile 3's 2-hop network, so tagging profile 1's profile here
+    // proves 'Tagged as' does not consider taggers outside the viewer's web of trust
+    cy.get(`@${profile1.pubkyAlias}`).then((pubky) => {
+      searchForProfileByPubky(`${pubky}`, profile1.username);
+    });
+    cy.get('[data-cy="profile-tag-btn"]').click();
+    addProfileTags([taggedAsLabelOutsideNetwork]);
     cy.signOut(HasBackedUp.Yes);
 
     // * sign back in as profile 1 and follow profile 2, 3 and 4.
@@ -99,6 +114,11 @@ describe('feed and filters', () => {
         searchAndFollowProfile(`${pubky}`, profile.username);
       });
     });
+    // profile 1 is 2 hops from profile 3, so tagging profile 4's profile here (already on
+    // their page after the follow loop above) proves 'Tagged as' considers taggers within
+    // the viewer's web of trust
+    cy.get('[data-cy="profile-tag-btn"]').click();
+    addProfileTags([taggedAsLabelInNetwork]);
     cy.signOut(HasBackedUp.Yes);
   });
 
@@ -256,6 +276,75 @@ describe('feed and filters', () => {
     // cannot see own post when no one else's posts are seen in friends filter
     cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile4.postText);
+  });
+
+  it('can filter to view only own posts', () => {
+    // * sign in as profile 2 and view Reach Me, only own post and repost can be seen
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Me"]').click();
+    waitForFeedToLoad();
+
+    cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
+    // profile 1's second post only appears embedded as the quoted post inside profile 2's own repost
+    countPostsInFeed(profile1.postText2, 1);
+    cannotFindPostInFeed(profile1.postText1);
+    cannotFindPostInFeed(profile1.postText3);
+    cannotFindPostInFeed(profile1.postText4);
+    cannotFindPostInFeed(profile1.postText5);
+    cannotFindPostInFeed(profile3.postText);
+    cannotFindPostInFeed(profile4.postText);
+  });
+
+  it('can filter to view posts from your web of trust', () => {
+    // slow down execution locally to avoid seeing wrong profile in filtered feed
+    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
+    slowCypressDown(slowCy);
+
+    // * sign in as profile 3 and view Reach My network
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="My network"]').click();
+    waitForFeedToLoad();
+
+    // profile 1 is 2 hops away (profile 3 -> profile 2 -> profile 1) so their posts are included
+    cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText3).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText4).should('be.visible');
+    cy.findFirstPostInFeedFiltered(profile1.postText5).should('be.visible');
+    // profile 2 is followed directly (1 hop)
+    cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
+    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
+    // unlike Following/Friends, My network does not include the viewer's own posts
+    cannotFindPostInFeed(profile3.postText);
+    // profile 4 is 3 hops away (profile 3 -> profile 2 -> profile 1 -> profile 4), outside the network
+    cannotFindPostInFeed(profile4.postText);
+  });
+
+  it('can filter to view posts by users tagged as chosen profile tags', () => {
+    // slow down execution locally to avoid seeing wrong profile in filtered feed
+    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
+    slowCypressDown(slowCy);
+
+    // * sign in as profile 3 and view Reach Tagged as
+    cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Tagged as"]').click();
+
+    // * select the tag applied by profile 4, who is outside profile 3's 2-hop network - not honored
+    cy.get('[data-cy="add-tag-input"]').type(`${taggedAsLabelOutsideNetwork}{enter}`);
+    waitForFeedToLoad();
+    cy.get('[data-cy="timeline-container"]').should('contain.text', 'No posts found');
+
+    // * swap to the tag applied by profile 1, who is within profile 3's 2-hop network - honored,
+    // even though the tagged profile (profile 4) is otherwise outside profile 3's reach
+    cy.get(`[aria-label="Remove ${taggedAsLabelOutsideNetwork} tag"]`).click();
+    cy.get('[data-cy="add-tag-input"]').type(`${taggedAsLabelInNetwork}{enter}`);
+    waitForFeedToLoad();
+
+    cy.findFirstPostInFeedFiltered(profile4.postText).should('be.visible');
+    cannotFindPostInFeed(profile1.postText1);
+    cannotFindPostInFeed(profile2.postText);
+    cannotFindPostInFeed(profile3.postText);
   });
 
   it('"who to follow" does not suggest users you are already following', () => {
