@@ -40,15 +40,6 @@ function Popover({
     }
   };
 
-  const blurActiveElement = () => {
-    setTimeout(() => {
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement?.blur) {
-        activeElement.blur();
-      }
-    }, 0);
-  };
-
   const handleMouseEnter = () => {
     // Cancel any pending close
     if (closeTimeoutRef.current) {
@@ -90,11 +81,9 @@ function Popover({
       if (hoverCloseDelay > 0) {
         closeTimeoutRef.current = setTimeout(() => {
           handleOpenChange?.(false);
-          blurActiveElement();
         }, hoverCloseDelay);
       } else {
         handleOpenChange?.(false);
-        blurActiveElement();
       }
     }
   };
