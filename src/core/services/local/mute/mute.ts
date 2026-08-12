@@ -34,14 +34,12 @@ export class LocalMuteService {
     const isMuting = action === 'mute';
 
     try {
-      let statusChanged = false;
-
       await db.transaction('rw', [UserStreamModel.table], async () => {
         // Check current muted stream for idempotency (read + write atomic to avoid race when two mute/unmute run at once)
         const mutedStream = await LocalStreamUsersService.findById(UserStreamTypes.MUTED);
         const isCurrentlyMuted = mutedStream?.stream.includes(mutee) ?? false;
 
-        statusChanged = isMuting !== isCurrentlyMuted;
+        const statusChanged = isMuting !== isCurrentlyMuted;
         if (!statusChanged) {
           Logger.debug(isMuting ? 'Mute created successfully' : 'Unmute completed successfully', { muter, mutee });
           return;

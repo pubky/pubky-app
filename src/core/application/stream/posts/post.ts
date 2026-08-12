@@ -326,7 +326,6 @@ export class PostStreamApplication {
     const isDiscover = isDiscoverCollectionsStream(streamId);
     const bookmarkedIds = isDiscover ? new Set(await BookmarkModel.findAll()) : new Set<string>();
 
-    let isFirstFetch = true;
     let lastReturnedPostId: string | undefined = lastPostId;
 
     const { posts, cacheMissIds, nextCursor, reachedEnd } = await postStreamQueue.collect(streamId, {
@@ -354,14 +353,15 @@ export class PostStreamApplication {
         // This ensures we exhaust cache before going to Nexus
         const result = await this.fetchStreamSliceInternal({
           streamId,
-          streamHead: isFirstFetch ? streamHead : SKIP_FETCH_NEW_POSTS,
+          // Head-polls (streamHead > 0) bypass collect() above, so every fetch here
+          // is a pagination read below the head.
+          streamHead: SKIP_FETCH_NEW_POSTS,
           streamTail: cursor,
           lastPostId: lastReturnedPostId,
           limit,
           viewerId,
           order,
         });
-        isFirstFetch = false;
 
         // Track last returned post for cache continuation
         if (result.nextPageIds.length > 0) {
