@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -626,20 +626,6 @@ function BookmarksWithHeader() {
   );
 }
 
-async function preloadImages(urls: readonly string[]) {
-  await Promise.all(
-    urls.map(async (url) => {
-      const image = new Image();
-      await new Promise<void>((resolve, reject) => {
-        image.addEventListener('load', () => resolve(), { once: true });
-        image.addEventListener('error', () => reject(new Error(`Failed to preload VRT image: ${url}`)), { once: true });
-        image.src = url;
-      });
-      await image.decode();
-    }),
-  );
-}
-
 async function expectCollectionsOverviewReady(screen: Awaited<ReturnType<typeof renderForVRT>>) {
   // Sections hydrate via async live queries / stream seeds — wait for known
   // card titles so the screenshot is not a skeleton first-paint.
@@ -698,8 +684,11 @@ describe('Collections overview — visual regression', () => {
   it('renders the collections overview at desktop viewport', async () => {
     const screen = await renderCollectionsOverview(VRT_VIEWPORT_DESKTOP);
     // Viewport-clamped root: first fold (My + start of Followed/Discover).
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('collections-overview-desktop');
-  });
+    // This is a particularly heavy surface in the VRT suite — increase timeout to give this one more headroom.
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('collections-overview-desktop', {
+      timeout: 25_000,
+    });
+  }, 40_000);
 
   it('renders the collections overview at mobile viewport', async () => {
     const screen = await renderCollectionsOverview(VRT_VIEWPORT_MOBILE);

@@ -139,6 +139,31 @@ async function waitForHtmlImageReady(img: HTMLImageElement, src: string): Promis
   }
 }
 
+/**
+ * Preload static assets (e.g. logo SVGs) into the browser's image cache before
+ * mounting. `waitForImagesReady` already waits for every `<img>` under the VRT
+ * root, but a cold fetch racing the initial paint is what caused the
+ * intermittent blank Pubky / Synonym / "a tether. company" logos in CI (see
+ * `docs/visual-regression-testing.md`). Preloading first means the `<img>` the
+ * component renders resolves from cache immediately, removing that race
+ * instead of only reacting to it after the fact.
+ */
+export async function preloadImages(urls: readonly string[]) {
+  await Promise.all(
+    urls.map(async (url) => {
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.addEventListener('load', () => resolve(), { once: true });
+        image.addEventListener('error', () => reject(new Error(`Failed to preload VRT image: ${url}`)), {
+          once: true,
+        });
+        image.src = url;
+      });
+      await image.decode();
+    }),
+  );
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number, message: () => string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(message())), ms);
