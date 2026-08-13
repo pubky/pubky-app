@@ -44,7 +44,7 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
 
   return (
-    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
+    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0} hasMore={hasMore}>
       <Container>
         <Container overrideDefaults role="feed" className="space-y-4" onKeyDown={onListKeyDown}>
           {postIds.map((postId: string, index: number) => (
@@ -63,8 +63,9 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
             </Container>
           ))}
 
-          {/* Loading More Indicator */}
-          {loadingMore && <TimelineLoadingMore />}
+          {/* Loading More Indicator — suppressed while the list is empty: the wrapper's
+              skeleton already covers loading there (empty-but-hasMore chaining rounds). */}
+          {postIds.length > 0 && loadingMore && <TimelineLoadingMore />}
 
           {/* Error on loading more */}
           {error && postIds.length > 0 && <TimelineError message={error} />}

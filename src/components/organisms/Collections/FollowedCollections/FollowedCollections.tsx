@@ -10,6 +10,7 @@ import { COLLECTIONS_SECTION_PAGE_SIZE, COLLECTIONS_SECTION_SKELETON_COUNT } fro
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { resolveResumeAnchor } from '@/controllers/stream/posts/posts.utils';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
@@ -84,9 +85,10 @@ export function FollowedCollections() {
         limit: COLLECTIONS_SECTION_PAGE_SIZE,
       });
 
-      const nextLastId = result.nextPageIds[result.nextPageIds.length - 1];
+      // A fully-filtered slice (e.g. a run of deleted bookmarked collections) must
+      // still advance the cache walk, so the anchor resolves from the raw scan.
       cursorRef.current = {
-        lastPostId: nextLastId ?? cursorRef.current.lastPostId,
+        lastPostId: resolveResumeAnchor(result) ?? cursorRef.current.lastPostId,
         streamTail: result.nextCursor ?? cursorRef.current.streamTail,
       };
       setReachedEnd(result.reachedEnd === true);

@@ -486,6 +486,10 @@ describe('TimelineFeed', () => {
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
         postIds: [],
+        // A genuinely empty feed ends with reachedEnd → hasMore false. While hasMore
+        // is still true, the wrapper keeps loading + the sentinel mounted instead of
+        // showing the empty state (filtered stream regions may yet surface posts).
+        hasMore: false,
       });
       mockUseFeedLayoutResolution.mockReturnValue({
         requestedLayout: 'columns',
