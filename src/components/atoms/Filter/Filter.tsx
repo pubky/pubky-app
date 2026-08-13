@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Check } from 'lucide-react';
 import { cn } from '@/libs/utils/utils';
 import { Button } from '../Button/Button';
 import { Container } from '../Container/Container';
@@ -71,26 +72,34 @@ function FilterItem({
   children: React.ReactNode;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <Button
-      type="button"
-      data-slot="filter-item"
-      data-testid="filter-item"
-      data-selected={isSelected ? 'true' : 'false'}
-      aria-pressed={isSelected}
+    <Container
       overrideDefaults
-      className={cn(
-        'flex cursor-pointer gap-2 text-base font-medium transition-colors',
-        'border-0 bg-transparent p-0 text-left',
-        'items-center justify-normal',
-        isSelected ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/80',
-        'm-0 h-full px-0 py-1',
-        className,
-      )}
-      onClick={onClick}
-      {...props}
+      data-slot="filter-item-container"
+      data-testid="filter-item-container"
+      className="flex items-center justify-between"
     >
-      {children}
-    </Button>
+      <Button
+        type="button"
+        data-slot="filter-item"
+        data-testid="filter-item"
+        data-selected={isSelected ? 'true' : 'false'}
+        aria-pressed={isSelected}
+        overrideDefaults
+        className={cn(
+          'flex cursor-pointer gap-2 text-base font-medium transition-colors',
+          'border-0 bg-transparent p-0 text-left',
+          'items-center justify-normal',
+          isSelected ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/80',
+          'm-0 h-full px-0 py-1',
+          className,
+        )}
+        onClick={onClick}
+        {...props}
+      >
+        {children}
+      </Button>
+      {isSelected && <Check></Check>}
+    </Container>
   );
 }
 
