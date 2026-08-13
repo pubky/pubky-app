@@ -98,7 +98,7 @@ function FilterItem({
       >
         {children}
       </Button>
-      {isSelected && <Check></Check>}
+      {isSelected && <Check className="lg:hidden"></Check>}
     </Container>
   );
 }
