@@ -74,7 +74,7 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
 
   return (
     <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)} data-testid="hot-active-users">
-      <Heading level={5} size="lg" className="font-light text-muted-foreground">
+      <Heading level={5} size="lg" className="hidden font-light text-muted-foreground lg:block">
         {'Active users'}
       </Heading>
       {error ? (
