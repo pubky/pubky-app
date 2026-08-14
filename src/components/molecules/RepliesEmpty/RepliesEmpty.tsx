@@ -21,7 +21,7 @@ export function RepliesEmpty() {
   return (
     <>
       <IllustratedEmptyState
-        imageSrc="/images/notifications-empty-state.webp"
+        imageSrc="/images/posts-replies-empty-state.webp"
         imageAlt={'Replies - Empty state'}
         icon={UsersRound}
         title={'No replies yet'}

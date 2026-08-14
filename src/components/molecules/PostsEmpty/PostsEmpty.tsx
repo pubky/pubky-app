@@ -21,7 +21,7 @@ export function PostsEmpty() {
   return (
     <>
       <IllustratedEmptyState
-        imageSrc="/images/notifications-empty-state.webp"
+        imageSrc="/images/posts-replies-empty-state.webp"
         imageAlt={'Posts - Empty state'}
         icon={File}
         title={'No posts yet'}

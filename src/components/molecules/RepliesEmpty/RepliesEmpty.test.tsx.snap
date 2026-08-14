@@ -6,7 +6,7 @@ exports[`RepliesEmpty - Snapshots > matches snapshot on another user profile 1`]
 >
   <div
     data-alt="Replies - Empty state"
-    data-src="/images/notifications-empty-state.webp"
+    data-src="/images/posts-replies-empty-state.webp"
     data-testid="image"
   />
   <svg
@@ -50,7 +50,7 @@ exports[`RepliesEmpty - Snapshots > matches snapshot on own profile 1`] = `
 >
   <div
     data-alt="Replies - Empty state"
-    data-src="/images/notifications-empty-state.webp"
+    data-src="/images/posts-replies-empty-state.webp"
     data-testid="image"
   />
   <svg

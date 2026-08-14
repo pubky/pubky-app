@@ -82,7 +82,7 @@ describe('PostsEmpty', () => {
     render(<PostsEmpty />);
     expect(screen.getByTestId('file-icon')).toBeInTheDocument();
     const image = screen.getByTestId('image');
-    expect(image).toHaveAttribute('data-src', '/images/notifications-empty-state.webp');
+    expect(image).toHaveAttribute('data-src', '/images/posts-replies-empty-state.webp');
     expect(image).toHaveAttribute('data-alt', 'Posts - Empty state');
   });
 

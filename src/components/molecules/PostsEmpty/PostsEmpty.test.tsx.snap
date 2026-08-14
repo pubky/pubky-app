@@ -6,7 +6,7 @@ exports[`PostsEmpty - Snapshots > matches snapshot on another user profile 1`] =
 >
   <div
     data-alt="Posts - Empty state"
-    data-src="/images/notifications-empty-state.webp"
+    data-src="/images/posts-replies-empty-state.webp"
     data-testid="image"
   />
   <svg
@@ -45,7 +45,7 @@ exports[`PostsEmpty - Snapshots > matches snapshot on own profile 1`] = `
 >
   <div
     data-alt="Posts - Empty state"
-    data-src="/images/notifications-empty-state.webp"
+    data-src="/images/posts-replies-empty-state.webp"
     data-testid="image"
   />
   <svg
