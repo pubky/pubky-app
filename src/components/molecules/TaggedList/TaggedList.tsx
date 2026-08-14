@@ -1,28 +1,21 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { TagKind } from '@/application/tag/tag.types';
+import { useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
+import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { TaggedItem } from '../TaggedItem/TaggedItem';
+import { TagWithAvatars } from '../TaggedItem/TaggedItem.types';
 import type { TaggedListProps } from './TaggedList.types';
 
-export function TaggedList({
-  tags,
-  taggedId,
-  taggedKind,
-  hasMore = false,
-  isLoadingMore = false,
-  onLoadMore,
-  onTagToggle,
-}: TaggedListProps) {
+export function TaggedList({ tags, hasMore = false, isLoadingMore = false, onLoadMore, onTagToggle }: TaggedListProps) {
   // Track which tag is currently expanded (only one at a time - accordion behavior)
   const [expandedTagLabel, setExpandedTagLabel] = useState<string | null>(null);
-
-  const shouldFetchTaggers = taggedKind === TagKind.POST && !!taggedId;
-  const { taggersByLabel, taggerStates, fetchAllTaggers } = usePostTaggers(shouldFetchTaggers ? taggedId : null);
+  const [tagsState, setTagsState] = useState<TagWithAvatars[]>(tags);
+  const { fetchTaggedList } = usePostTaggers(null);
+  const { pubky } = useProfileContext();
 
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: onLoadMore || (() => {}),
@@ -32,34 +25,32 @@ export function TaggedList({
     debounceMs: 300,
   });
 
-  const handleExpandToggle = (tagLabel: string) => {
+  const handleExpandToggle = async (tagLabel: string) => {
     // Toggle: if clicking the same tag, collapse it; otherwise expand the new one
     setExpandedTagLabel((prev) => (prev === tagLabel ? null : tagLabel));
+
+    if (tagLabel === expandedTagLabel) return;
+    const selectedTag = tags.find((tag) => tag.label === tagLabel);
+    const selectedTagsRef = tagsState.find((tag) => tag.label === tagLabel);
+    if (!selectedTag || !pubky) return;
+
+    // Fetch tagger details only once.
+    if (selectedTagsRef?.taggers_count === selectedTagsRef?.taggers.length) return;
+
+    const response = await fetchTaggedList(tagLabel, pubky, selectedTag.taggers);
+    if (!response?.allTaggers) {
+      return;
+    }
+    const upadtedTagsState = tagsState.map((tag) =>
+      tag.label === tagLabel ? { ...tag, taggers: [...tag.taggers, ...response.allTaggers] } : tag,
+    );
+    setTagsState(upadtedTagsState);
   };
-
-  // Use ref for tags to avoid re-triggering the fetch effect when tags update
-  const tagsRef = useRef(tags);
-  useEffect(() => {
-    tagsRef.current = tags;
-  }, [tags]);
-
-  useEffect(() => {
-    if (!expandedTagLabel || !shouldFetchTaggers) return;
-    const selectedTag = tagsRef.current.find((tag) => tag.label === expandedTagLabel);
-    if (!selectedTag) return;
-    const initialIds = selectedTag.taggers.map((tagger) => tagger.id);
-    void fetchAllTaggers(expandedTagLabel, initialIds, selectedTag.taggers_count);
-  }, [expandedTagLabel, shouldFetchTaggers, fetchAllTaggers]);
 
   return (
     <Container className="gap-2">
-      {tags.map((tag) => {
-        const tagLabelKey = tag.label.toLowerCase();
+      {tagsState.map((tag) => {
         const isExpanded = expandedTagLabel === tag.label;
-        const expandedTaggerIds = taggersByLabel.get(tagLabelKey);
-        const taggerState = taggerStates.get(tagLabelKey);
-        const isLoadingTaggers = taggerState?.isLoading ?? false;
-
         return (
           <TaggedItem
             key={tag.label}
@@ -67,8 +58,6 @@ export function TaggedList({
             onTagClick={onTagToggle}
             isExpanded={isExpanded}
             onExpandToggle={handleExpandToggle}
-            expandedTaggerIds={expandedTaggerIds}
-            isLoadingTaggers={isLoadingTaggers}
           />
         );
       })}
