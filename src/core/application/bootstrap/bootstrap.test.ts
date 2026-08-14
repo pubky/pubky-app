@@ -270,9 +270,13 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
   expect(mocks.countFilteredUnreadSince).toHaveBeenCalledWith(MOCK_LAST_READ, MOCK_ALLOWED_TYPES);
 };
 
+afterEach(() => {
+  BootstrapApplication.cancelModerationFollow();
+  vi.restoreAllMocks();
+});
+
 describe('BootstrapApplication', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
     vi.clearAllMocks();
     vi.spyOn(NotificationNormalizer, 'to').mockReturnValue({
       meta: { url: MOCK_LAST_READ_URL },
@@ -281,11 +285,6 @@ describe('BootstrapApplication', () => {
       createFlatNotification(n.timestamp),
     );
     vi.spyOn(UserApplication, 'ensureModerationFollow').mockResolvedValue(undefined);
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-    vi.restoreAllMocks();
   });
 
   describe('read', () => {
@@ -616,17 +615,61 @@ describe('BootstrapApplication', () => {
       resolvePersistUsers([]);
       await initialize;
 
-      expect(ensureModerationFollow).toHaveBeenCalledWith({
-        follower: TEST_PUBKY,
-        moderationId: getModerationId(),
+      expect(ensureModerationFollow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          follower: TEST_PUBKY,
+          moderationId: getModerationId(),
+          signal: expect.any(AbortSignal),
+        }),
+      );
+    });
+
+    it('invalidates an older detached moderation follow when a new bootstrap starts', async () => {
+      setupMocks();
+      const signals: AbortSignal[] = [];
+      vi.mocked(UserApplication.ensureModerationFollow).mockImplementation(({ signal }) => {
+        if (signal) signals.push(signal);
+        return new Promise<void>((resolve) => signal?.addEventListener('abort', () => resolve(), { once: true }));
       });
+
+      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+      expect(signals).toHaveLength(1);
+      expect(signals[0]?.aborted).toBe(false);
+
+      await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+      expect(signals).toHaveLength(2);
+      expect(signals[0]?.aborted).toBe(true);
+      expect(signals[1]?.aborted).toBe(false);
+    });
+
+    it('cancels the controller captured before bootstrap awaits complete', async () => {
+      let resolveBootstrap!: (value: NexusBootstrapResponse) => void;
+      const bootstrapPending = new Promise<NexusBootstrapResponse>((resolve) => {
+        resolveBootstrap = resolve;
+      });
+      setupMocks();
+      vi.spyOn(NexusBootstrapService, 'fetch').mockReturnValue(bootstrapPending);
+      const ensureModerationFollow = vi.mocked(UserApplication.ensureModerationFollow);
+
+      const initialize = BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+      BootstrapApplication.cancelModerationFollow();
+      resolveBootstrap(emptyBootstrap());
+      await initialize;
+
+      expect(ensureModerationFollow).toHaveBeenCalledWith(
+        expect.objectContaining({ signal: expect.objectContaining({ aborted: true }) }),
+      );
     });
 
     it('completes bootstrap while the moderation follow remains in flight', async () => {
       setupMocks();
       const ensureModerationFollow = vi
         .mocked(UserApplication.ensureModerationFollow)
-        .mockReturnValue(new Promise<void>(() => {}));
+        .mockImplementation(
+          ({ signal }) =>
+            new Promise<void>((resolve) => signal?.addEventListener('abort', () => resolve(), { once: true })),
+        );
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).resolves.toEqual({
         unread: 0,

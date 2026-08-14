@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
-import { getRuntimeConfig } from '@/libs/runtime-config/runtime-config';
+import { getRuntimeConfig, warnIfModerationDisabled } from '@/libs/runtime-config/runtime-config';
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
@@ -7,7 +7,8 @@ export async function register() {
     // instrumentation errors, so explicitly terminate the Node process to fail deploy health checks
     // instead of serving HTTP 500s from a "ready" container.
     try {
-      getRuntimeConfig();
+      const config = getRuntimeConfig();
+      warnIfModerationDisabled(config);
     } catch (error) {
       console.error(error);
       process.exit(1);

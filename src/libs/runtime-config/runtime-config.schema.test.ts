@@ -164,6 +164,15 @@ describe('runtimeEnvInputSchema', () => {
       'Expected a 52-character z-base-32 Pubky',
     );
   });
+
+  it('trims a padded valid moderation Pubky before validation', () => {
+    const parsed = runtimeEnvInputSchema.parse({
+      ...VALID_ENV_INPUT,
+      moderationId: `  ${VALID_MODERATION_ID}\n`,
+    });
+
+    expect(parsed.moderationId).toBe(VALID_MODERATION_ID);
+  });
 });
 
 describe('runtimeConfigValueSchema', () => {
@@ -193,6 +202,15 @@ describe('runtimeConfigValueSchema', () => {
     });
 
     expect(parsed.moderationId).toBe(moderationId);
+  });
+
+  it('trims a padded valid moderation Pubky in parsed runtime values', () => {
+    const parsed = runtimeConfigValueSchema.parse({
+      ...NETWORK_RUNTIME_DEFAULTS,
+      moderationId: `\t${VALID_MODERATION_ID} `,
+    });
+
+    expect(parsed.moderationId).toBe(VALID_MODERATION_ID);
   });
 
   it('rejects invalid moderation Pubkys', () => {

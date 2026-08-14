@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getModerationId } from '@/config/moderation';
 import { AppError } from '@/libs/error/error';
-import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
@@ -23,15 +24,20 @@ import { NexusUserService } from '@/services/nexus/user/user';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 import { UserApplication } from './user';
 
+vi.mock('@/config/moderation', () => ({ getModerationId: vi.fn() }));
+
+const getModerationIdMock = vi.mocked(getModerationId);
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  getModerationIdMock.mockReset();
+});
+
 describe('UserApplication.commitFollow', () => {
   const follower = 'pubky_follower' as Pubky;
   const followee = 'pubky_followee' as Pubky;
   const followUrl = 'pubky://follower/pub/pubky.app/follow';
   const followJson = { foo: 'bar' } as Record<string, unknown>;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
 
   it('should update local state on PUT and call homeserver', async () => {
     const createSpy = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
@@ -69,6 +75,78 @@ describe('UserApplication.commitFollow', () => {
     expect(deleteSpy).toHaveBeenCalledWith({ follower, followee, activeStreamId: undefined });
     expect(createSpy).not.toHaveBeenCalled();
     expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: followUrl, bodyJson: followJson });
+  });
+
+  it('does not write a marker for an ordinary unfollow', async () => {
+    getModerationIdMock.mockReturnValue('another-followee' as Pubky);
+    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(undefined);
+    const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+
+    await UserApplication.commitFollow({
+      eventType: HttpMethod.DELETE,
+      followUrl,
+      followJson,
+      follower,
+      followee,
+      activeStreamId: undefined,
+    });
+
+    expect(deleteSpy).toHaveBeenCalledOnce();
+    expect(requestSpy).toHaveBeenCalledOnce();
+    expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: followUrl, bodyJson: followJson });
+  });
+
+  it('writes the durable marker before deleting the moderation-bot follow', async () => {
+    const moderationId = followee;
+    const markerUrl = `pubky://${follower}/pub/pubky.app/migrations/moderation-follow/v1/${moderationId}.json`;
+    const events: string[] = [];
+    getModerationIdMock.mockReturnValue(moderationId);
+    vi.spyOn(LocalFollowService, 'delete').mockImplementation(() => {
+      events.push('local-delete');
+      return Promise.resolve();
+    });
+    const requestSpy = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
+      events.push(`${method}:${url}`);
+      return Promise.resolve(undefined);
+    });
+
+    await UserApplication.commitFollow({
+      eventType: HttpMethod.DELETE,
+      followUrl,
+      followJson,
+      follower,
+      followee,
+      activeStreamId: undefined,
+    });
+
+    expect(events).toEqual([`${HttpMethod.PUT}:${markerUrl}`, 'local-delete', `${HttpMethod.DELETE}:${followUrl}`]);
+    expect(requestSpy).toHaveBeenNthCalledWith(1, {
+      method: HttpMethod.PUT,
+      url: markerUrl,
+      bodyJson: { moderationId, completedAt: expect.any(Number) },
+    });
+  });
+
+  it('leaves follow state unchanged when the moderation opt-out marker fails', async () => {
+    getModerationIdMock.mockReturnValue(followee);
+    const failure = new Error('marker-fail');
+    const deleteSpy = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(undefined);
+    const requestSpy = vi.spyOn(HomeserverService, 'request').mockRejectedValueOnce(failure);
+
+    await expect(
+      UserApplication.commitFollow({
+        eventType: HttpMethod.DELETE,
+        followUrl,
+        followJson,
+        follower,
+        followee,
+        activeStreamId: undefined,
+      }),
+    ).rejects.toBe(failure);
+
+    expect(deleteSpy).not.toHaveBeenCalled();
+    expect(requestSpy).toHaveBeenCalledOnce();
+    expect(requestSpy).not.toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.DELETE }));
   });
 
   it('should not update local state for non-mutate methods but still call homeserver', async () => {
@@ -165,15 +243,6 @@ describe('UserApplication.ensureModerationFollow', () => {
     return { normalize, toJson };
   };
 
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('skips all work when moderation is disabled', async () => {
     const normalize = vi.spyOn(FollowNormalizer, 'to');
     const exists = vi.spyOn(HomeserverService, 'exists');
@@ -200,6 +269,18 @@ describe('UserApplication.ensureModerationFollow', () => {
     expect(exists).not.toHaveBeenCalled();
     expect(request).not.toHaveBeenCalled();
     expect(localCreate).not.toHaveBeenCalled();
+  });
+
+  it('skips all work when the bootstrap task was already cancelled', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const normalize = vi.spyOn(FollowNormalizer, 'to');
+    const exists = vi.spyOn(HomeserverService, 'exists');
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId, signal: controller.signal });
+
+    expect(normalize).not.toHaveBeenCalled();
+    expect(exists).not.toHaveBeenCalled();
   });
 
   it('honors a completed marker and preserves an explicit unfollow', async () => {
@@ -269,6 +350,110 @@ describe('UserApplication.ensureModerationFollow', () => {
       url: followUrl,
       bodyJson: followJson,
     });
+  });
+
+  it('stops after the marker probe when the bootstrap task is cancelled', async () => {
+    const controller = new AbortController();
+    const normalize = vi.spyOn(FollowNormalizer, 'to');
+    const exists = vi.spyOn(HomeserverService, 'exists').mockImplementation(() => {
+      controller.abort();
+      return Promise.resolve(false);
+    });
+    const request = vi.spyOn(HomeserverService, 'request');
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId, signal: controller.signal });
+
+    expect(exists).toHaveBeenCalledOnce();
+    expect(normalize).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('stops after the follow probe when the bootstrap task is cancelled', async () => {
+    const controller = new AbortController();
+    mockFollowNormalizer();
+    const exists = vi
+      .spyOn(HomeserverService, 'exists')
+      .mockResolvedValueOnce(false)
+      .mockImplementationOnce(() => {
+        controller.abort();
+        return Promise.resolve(false);
+      });
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+    const request = vi.spyOn(HomeserverService, 'request');
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId, signal: controller.signal });
+
+    expect(exists).toHaveBeenCalledTimes(2);
+    expect(localCreate).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('stops between the local and remote follow writes when cancelled', async () => {
+    const controller = new AbortController();
+    mockFollowNormalizer();
+    vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockImplementation(() => {
+      controller.abort();
+      return Promise.resolve();
+    });
+    const request = vi.spyOn(HomeserverService, 'request');
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId, signal: controller.signal });
+
+    expect(localCreate).toHaveBeenCalledOnce();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('stops before the marker when cancelled after the remote follow write and retries safely', async () => {
+    const controller = new AbortController();
+    mockFollowNormalizer();
+    vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
+    vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+    const request = vi.spyOn(HomeserverService, 'request').mockImplementation(({ url }) => {
+      if (url === followUrl) controller.abort();
+      return Promise.resolve(undefined);
+    });
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId, signal: controller.signal });
+
+    expect(request).toHaveBeenCalledOnce();
+    expect(request).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: followUrl, bodyJson: followJson });
+
+    vi.mocked(HomeserverService.exists).mockReset().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    request.mockReset().mockResolvedValue(undefined);
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId });
+
+    expect(request).toHaveBeenCalledOnce();
+    expect(request).toHaveBeenCalledWith({
+      method: HttpMethod.PUT,
+      url: markerUrl,
+      bodyJson: { moderationId, completedAt: expect.any(Number) },
+    });
+  });
+
+  it('rejects a normalized follow resource owned by a different account', async () => {
+    const wrongFollowUrl = `pubky://${moderationId}/pub/pubky.app/follows/${moderationId}`;
+    const toJson = vi.fn(() => followJson);
+    vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
+      asOpaque<ReturnType<typeof FollowNormalizer.to>>({
+        meta: { url: wrongFollowUrl },
+        follow: { toJson },
+      }),
+    );
+    const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
+    const request = vi.spyOn(HomeserverService, 'request');
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+
+    await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toMatchObject({
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
+    });
+
+    expect(exists).toHaveBeenCalledOnce();
+    expect(localCreate).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+    expect(toJson).not.toHaveBeenCalled();
   });
 
   it('aborts without writes when the marker read fails ambiguously', async () => {
@@ -363,6 +548,61 @@ describe('UserApplication.ensureModerationFollow', () => {
     expect(exists).toHaveBeenNthCalledWith(2, followUrl);
     expect(request).toHaveBeenCalledOnce();
     expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT, url: markerUrl }));
+  });
+
+  it('does not re-follow when a manual unfollow records the marker after migration marker failure', async () => {
+    getModerationIdMock.mockReturnValue(moderationId);
+    mockFollowNormalizer();
+    let markerExists = false;
+    let followExists = false;
+    let failFirstMarker = true;
+    const exists = vi.spyOn(HomeserverService, 'exists').mockImplementation((url) => {
+      return Promise.resolve(url === markerUrl ? markerExists : followExists);
+    });
+    const localCreate = vi.spyOn(LocalFollowService, 'create').mockResolvedValue(undefined);
+    const localDelete = vi.spyOn(LocalFollowService, 'delete').mockResolvedValue(undefined);
+    const request = vi.spyOn(HomeserverService, 'request').mockImplementation(({ method, url }) => {
+      if (method === HttpMethod.PUT && url === followUrl) {
+        followExists = true;
+        return Promise.resolve(undefined);
+      }
+      if (method === HttpMethod.PUT && url === markerUrl) {
+        if (failFirstMarker) {
+          failFirstMarker = false;
+          return Promise.reject(new Error('marker write failed'));
+        }
+        markerExists = true;
+        return Promise.resolve(undefined);
+      }
+      if (method === HttpMethod.DELETE && url === followUrl) {
+        followExists = false;
+      }
+      return Promise.resolve(undefined);
+    });
+
+    await expect(UserApplication.ensureModerationFollow({ follower, moderationId })).rejects.toThrow(
+      'marker write failed',
+    );
+    expect(followExists).toBe(true);
+    expect(markerExists).toBe(false);
+
+    await UserApplication.commitFollow({
+      eventType: HttpMethod.DELETE,
+      followUrl,
+      followJson,
+      follower,
+      followee: moderationId,
+      activeStreamId: undefined,
+    });
+    expect(markerExists).toBe(true);
+    expect(followExists).toBe(false);
+
+    await UserApplication.ensureModerationFollow({ follower, moderationId });
+
+    expect(localCreate).toHaveBeenCalledOnce();
+    expect(localDelete).toHaveBeenCalledOnce();
+    expect(exists).toHaveBeenLastCalledWith(markerUrl);
+    expect(request).toHaveBeenCalledTimes(4);
   });
 });
 

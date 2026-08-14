@@ -36,6 +36,7 @@ const positiveIntValue = z.number().int().positive();
 const nonEmptyStringValue = z.string().min(1);
 const pubkyValue = z
   .string()
+  .trim()
   .regex(/^[ybndrfg8ejkmcpqxot1uwisza345h769]{52}$/, 'Expected a 52-character z-base-32 Pubky');
 
 /** Parse a JSON-array-of-strings env value into a string[]. Throws on malformed input. */

@@ -12,6 +12,7 @@ import {
   resetRuntimeConfigForTests,
   RUNTIME_CONFIG_WINDOW_KEY,
   serializeRuntimeConfig,
+  warnIfModerationDisabled,
 } from './runtime-config';
 import {
   NETWORK_RUNTIME_DEFAULTS,
@@ -173,6 +174,41 @@ describe('runtime-config resolver', () => {
       simulateDeployedEnv();
       vi.stubEnv('NEXT_PHASE', 'phase-production-build');
       expect(() => readServerConfig()).not.toThrow();
+    });
+
+    it('warns once when deployed configuration leaves moderation disabled', () => {
+      simulateDeployedEnv();
+      setNetworkRuntimeEnv();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const config = readServerConfig();
+
+      expect(config.moderationId).toBeUndefined();
+      warnIfModerationDisabled(config);
+      warnIfModerationDisabled(config);
+
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledWith(
+        '[runtime-config] PUBKY_RUNTIME_MODERATION_ID is unset; moderation matching and the default follow are disabled.',
+      );
+    });
+
+    it('does not warn for a configured deployed moderation identity', () => {
+      simulateDeployedEnv();
+      setNetworkRuntimeEnv();
+      process.env[PUBKY_RUNTIME_ENV_NAMES.moderationId] = 'nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy';
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      warnIfModerationDisabled(readServerConfig());
+
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('does not warn when lenient parsing supplies the staging moderation identity', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      warnIfModerationDisabled(readServerConfig());
+
+      expect(warn).not.toHaveBeenCalled();
     });
   });
 

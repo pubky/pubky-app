@@ -13,9 +13,11 @@ export type TUserApplicationFollowParams = TFollowParams & {
   followUrl: string;
   followJson: Record<string, unknown>;
   activeStreamId?: PostStreamId | null;
+  signal?: AbortSignal;
 };
 
 export type TEnsureModerationFollowParams = {
   follower: Pubky;
   moderationId?: Pubky;
+  signal?: AbortSignal;
 };
