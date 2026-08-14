@@ -69,6 +69,8 @@ export function NewPostsSection({
         Gate optimistic prepend by content kind (e.g. do not show a `short` post
         after "New posts" on `timeline:…:collection`). `!kind` keeps cache misses
         so a not-yet-indexed post can still appear; mirrors `usePostInput`.
+        Intentionally NOT gated by WoT source (unlike `usePostInput`, #2308):
+        unread ids come from polling this exact stream, so they belong in it.
       */
       if (postsToAdd.length > 0) {
         const details = await PostController.getDetailsByIds({ compositeIds: postsToAdd });

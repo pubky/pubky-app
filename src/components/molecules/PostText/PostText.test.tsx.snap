@@ -1013,8 +1013,8 @@ exports[`PostText - Snapshots > matches snapshot for truncated content with Show
   <button
     aria-label="Show full post content"
     class="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
-    data-allow-post-navigation="true"
     data-override-defaults="true"
+    type="button"
   >
     Show more
   </button>
