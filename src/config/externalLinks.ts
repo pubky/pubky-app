@@ -27,7 +27,7 @@ export const getPubkyRingLink = getPubkyRingUrl;
 export const getPubkyCoreLink = getPubkyCoreUrl;
 
 // Public, read-only Cypher gateway to the Pubky social graph — surfaced to AI agents via
-// structured data on the landing page so they know where to query it (see `LandingStructuredData`).
+// StructuredData in the root layout so they know where to query it.
 export const getNexusScoutLink = getNexusScoutUrl;
 
 // Social media links

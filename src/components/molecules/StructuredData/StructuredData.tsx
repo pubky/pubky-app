@@ -8,12 +8,6 @@ import { escapeForInlineScript } from '@/libs/runtime-config/runtime-config';
  * tags, ...) can be queried through nexus-scout — a public, read-only Cypher API — and where its
  * full usage guide lives. `WebAPI` is the schema.org type for exactly this: an API accessible
  * over web technologies, described via its `documentation` link.
- *
- * Rendered from the root layout, OUTSIDE `DatabaseProvider` / `RouteGuardProvider`: those are
- * client components that gate `{children}` behind IndexedDB/auth readiness (rendering a spinner
- * first), so anything placed inside them is invisible to a client that does not execute
- * JavaScript. Sitting here instead guarantees this block ships in the initial server-rendered
- * HTML, on every route, the same way the `<head>` metadata already does.
  */
 export function StructuredData() {
   const siteUrl = getDefaultUrl();
