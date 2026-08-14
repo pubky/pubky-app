@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
@@ -16,6 +16,10 @@ export function TaggedList({ tags, hasMore = false, isLoadingMore = false, onLoa
   const [tagsState, setTagsState] = useState<TagWithAvatars[]>(tags);
   const { fetchTaggedList } = usePostTaggers(null);
   const { pubky } = useProfileContext();
+
+  useEffect(() => {
+    setTagsState(tags);
+  }, [tags]);
 
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: onLoadMore || (() => {}),
