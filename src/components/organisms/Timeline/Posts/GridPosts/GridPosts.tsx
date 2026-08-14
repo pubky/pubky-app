@@ -90,6 +90,7 @@ export function TimelineGridPosts({
       loading={loading}
       error={error}
       hasItems={hasGridContent}
+      hasMore={hasMore}
       loadingComponent={<GridPostsSkeleton />}
       emptyComponent={emptyState}
     >
@@ -128,7 +129,9 @@ export function TimelineGridPosts({
           ) : null}
         </Container>
 
-        {loadingMore && <TimelineLoadingMore />}
+        {/* Suppressed while the grid is empty: the wrapper's skeleton already covers
+            loading there (empty-but-hasMore chaining rounds). */}
+        {postIds.length > 0 && loadingMore && <TimelineLoadingMore />}
 
         {error && postIds.length > 0 && <TimelineError message={error} />}
 

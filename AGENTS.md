@@ -21,7 +21,7 @@ Import modules through the path aliases in `tsconfig.json` (for example `@/hooks
 - Coordinators NEVER call Application — go through Controllers
 - Application NEVER accesses Stores — only Controllers manage stores
 - Pipes are pure — NO IO, NO side effects
-- Only PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, TtlApplication may call other Applications (max depth 1, no cycles)
+- Only PostApplication, NotificationApplication, BootstrapApplication, MigrationApplication, HotApplication, PostStreamApplication, TtlApplication may call other Applications (max depth 1 by default; only PostApplication/NotificationApplication/TtlApplication → PostStreamApplication → FileApplication attachment persistence may reach depth 2; no cycles)
 
 ### Controller naming
 

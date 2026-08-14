@@ -399,9 +399,13 @@ export function VisualTimelinePosts({
       });
   }, [loadMore, shouldBackfillInitialRows]);
 
+  // `hasRows` keeps the observer quiet while the tile pipeline resolves rows for
+  // existing postIds (the backfill effect owns that case). A fully-filtered stream
+  // region leaves postIds itself empty — there the sentinel must stay armed so
+  // load rounds keep chaining toward the first visible posts.
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
-    hasMore: hasMore && hasRows,
+    hasMore: hasMore && (hasRows || postIds.length === 0),
     isLoading: loadingMore || isInitialLoading,
     threshold: 3000,
     debounceMs: 20,
@@ -431,6 +435,7 @@ export function VisualTimelinePosts({
       loading={isInitialLoading}
       error={error}
       hasItems={(hasRows && !showFilteredEmptyState) || hasExtras}
+      hasMore={hasMore}
       loadingComponent={<VisualTimelinePostsSkeleton />}
       emptyComponent={emptyState}
     >

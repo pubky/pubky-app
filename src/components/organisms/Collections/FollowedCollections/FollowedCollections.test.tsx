@@ -103,12 +103,14 @@ function makeSlice({
   nextPageIds = [],
   reachedEnd = true,
   nextCursor = 0,
+  lastRawPostId,
 }: {
   nextPageIds?: string[];
   reachedEnd?: boolean;
   nextCursor?: number;
+  lastRawPostId?: string;
 } = {}) {
-  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor });
+  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor, lastRawPostId });
 }
 
 beforeEach(() => {
@@ -315,6 +317,33 @@ describe('FollowedCollections', () => {
     // The follow-up fetch must resume from the cursor threaded back by the first page (42),
     // proving the timestamp->nextCursor rename actually feeds pagination.
     expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 42 });
+  });
+
+  it('Show More resumes the cache walk from lastRawPostId, not the last visible id', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockUseLiveQuery.mockReturnValue(['a:p1']);
+    // The slice's raw scan ended past the visible page — e.g. a filtered tail of
+    // deleted bookmarked collections. The next request must anchor on the raw id.
+    mockGetOrFetchStreamSlice.mockResolvedValue(
+      makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, nextCursor: 42, lastRawPostId: 'a:deleted-9' }),
+    );
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    const button = await screen.findByRole('button', { name: 'Show more' });
+    const callsBefore = mockGetOrFetchStreamSlice.mock.calls.length;
+    await act(async () => {
+      button.click();
+    });
+    await waitFor(() => {
+      expect(mockGetOrFetchStreamSlice.mock.calls.length).toBeGreaterThan(callsBefore);
+    });
+    expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({
+      lastPostId: 'a:deleted-9',
+      streamTail: 42,
+    });
   });
 
   it('on seed-fetch failure: logs an error, fires the load-failed toast, and hides Show More (reachedEnd flips true)', async () => {
