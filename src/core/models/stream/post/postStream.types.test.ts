@@ -13,7 +13,9 @@ import {
   isAuthorStreamSkippingMuteFilter,
   isCollectionItemsStream,
   isSkipPaginatedStream,
+  isViewerExcludedWotStream,
   isWotDomainStream,
+  isWotStream,
 } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -171,6 +173,32 @@ describe('isCollectionItemsStream', () => {
     expect(isCollectionItemsStream(buildCollectionItemsStreamId(TEST_PUBKY, TEST_POST_ID))).toBe(true);
     expect(isCollectionItemsStream(buildAuthorCollectionsStreamId(TEST_PUBKY))).toBe(false);
     expect(isCollectionItemsStream('timeline:bookmarks:collection')).toBe(false);
+  });
+});
+
+describe('isWotStream', () => {
+  it('returns true only for wot-sourced stream ids', () => {
+    expect(isWotStream('timeline:wot:all')).toBe(true);
+    expect(isWotStream('total_engagement:wot:image')).toBe(true);
+    expect(isWotStream('timeline:wot_domain:2:all:bitcoin')).toBe(false);
+    expect(isWotStream('timeline:following:all')).toBe(false);
+    expect(isWotStream(`timeline:author:${TEST_PUBKY}:all`)).toBe(false);
+    expect(isWotStream(`author:${TEST_PUBKY}`)).toBe(false);
+  });
+});
+
+describe('isViewerExcludedWotStream', () => {
+  it('returns true for wot (My network) and wot_domain (Tagged as) streams', () => {
+    expect(isViewerExcludedWotStream('timeline:wot:all')).toBe(true);
+    expect(isViewerExcludedWotStream(buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['bitcoin']))).toBe(true);
+  });
+
+  it('returns false for streams that carry the viewer own posts', () => {
+    expect(isViewerExcludedWotStream('timeline:all:all')).toBe(false);
+    expect(isViewerExcludedWotStream('timeline:following:all')).toBe(false);
+    expect(isViewerExcludedWotStream('timeline:friends:short')).toBe(false);
+    expect(isViewerExcludedWotStream(buildSortedAuthorStreamId(StreamSorting.TIMELINE, TEST_PUBKY, 'all'))).toBe(false);
+    expect(isViewerExcludedWotStream(`author:${TEST_PUBKY}`)).toBe(false);
   });
 });
 
