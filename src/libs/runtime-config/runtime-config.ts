@@ -189,6 +189,7 @@ export const getCreator = (): string => getRuntimeConfig().creator;
 export const getDefaultUrl = (): string => getRuntimeConfig().defaultUrl;
 export const getPubkyRingUrl = (): string => getRuntimeConfig().pubkyRingUrl;
 export const getPubkyCoreUrl = (): string => getRuntimeConfig().pubkyCoreUrl;
+export const getNexusScoutUrl = (): string => getRuntimeConfig().nexusScoutUrl;
 export const getTwitterUrl = (): string => getRuntimeConfig().twitterUrl;
 export const getTwitterGetpubkyUrl = (): string => getRuntimeConfig().twitterGetpubkyUrl;
 export const getTelegramUrl = (): string => getRuntimeConfig().telegramUrl;
