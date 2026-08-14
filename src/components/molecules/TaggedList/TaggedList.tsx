@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
@@ -10,14 +11,27 @@ import { TaggedItem } from '../TaggedItem/TaggedItem';
 import { TagWithAvatars } from '../TaggedItem/TaggedItem.types';
 import type { TaggedListProps } from './TaggedList.types';
 
-export function TaggedList({ tags, hasMore = false, isLoadingMore = false, onLoadMore, onTagToggle }: TaggedListProps) {
+export function TaggedList({
+  tags,
+  hasMore = false,
+  taggedId,
+  taggedKind,
+  isLoadingMore = false,
+  onLoadMore,
+  onTagToggle,
+}: TaggedListProps) {
   // Track which tag is currently expanded (only one at a time - accordion behavior)
   const [expandedTagLabel, setExpandedTagLabel] = useState<string | null>(null);
   const [tagsState, setTagsState] = useState<TagWithAvatars[]>(tags);
-  const { fetchTaggedList } = usePostTaggers(null);
+  const shouldFetchTaggers = taggedKind === TagKind.POST && !!taggedId;
+  const { taggersByLabel, taggerStates, fetchAllTaggers, fetchTaggedList } = usePostTaggers(
+    shouldFetchTaggers ? taggedId : null,
+  );
   const { pubky } = useProfileContext();
-
+  // Use ref for tags to avoid re-triggering the fetch effect when tags update
+  const tagsRef = useRef(tags);
   useEffect(() => {
+    tagsRef.current = tags;
     setTagsState(tags);
   }, [tags]);
 
@@ -29,17 +43,24 @@ export function TaggedList({ tags, hasMore = false, isLoadingMore = false, onLoa
     debounceMs: 300,
   });
 
+  useEffect(() => {
+    if (!expandedTagLabel || !shouldFetchTaggers) return;
+    const selectedTagRef = tagsRef.current.find((tag) => tag.label === expandedTagLabel);
+    if (!selectedTagRef) return;
+    const initialIds = selectedTagRef.taggers.map((tagger) => tagger.id);
+    void fetchAllTaggers(expandedTagLabel, initialIds, selectedTagRef.taggers_count);
+  }, [expandedTagLabel, shouldFetchTaggers, fetchAllTaggers]);
+
   const handleExpandToggle = async (tagLabel: string) => {
     // Toggle: if clicking the same tag, collapse it; otherwise expand the new one
     setExpandedTagLabel((prev) => (prev === tagLabel ? null : tagLabel));
 
     if (tagLabel === expandedTagLabel) return;
     const selectedTag = tags.find((tag) => tag.label === tagLabel);
-    const selectedTagsRef = tagsState.find((tag) => tag.label === tagLabel);
+    const selectedTagsState = tagsState.find((tag) => tag.label === tagLabel);
     if (!selectedTag || !pubky) return;
-
     // Fetch tagger details only once.
-    if (selectedTagsRef?.taggers_count === selectedTagsRef?.taggers.length) return;
+    if (selectedTagsState?.taggers_count === selectedTagsState?.taggers.length) return;
 
     const response = await fetchTaggedList(tagLabel, pubky, selectedTag.taggers);
     if (!response?.allTaggers) {
@@ -48,13 +69,19 @@ export function TaggedList({ tags, hasMore = false, isLoadingMore = false, onLoa
     const upadtedTagsState = tagsState.map((tag) =>
       tag.label === tagLabel ? { ...tag, taggers: [...tag.taggers, ...response.allTaggers] } : tag,
     );
+
     setTagsState(upadtedTagsState);
   };
 
   return (
     <Container className="gap-2">
       {tagsState.map((tag) => {
+        const tagLabelKey = tag.label.toLowerCase();
         const isExpanded = expandedTagLabel === tag.label;
+        const expandedTaggerIds = taggersByLabel.get(tagLabelKey);
+        const taggerState = taggerStates.get(tagLabelKey);
+        const isLoadingTaggers = taggerState?.isLoading ?? false;
+
         return (
           <TaggedItem
             key={tag.label}
@@ -62,6 +89,8 @@ export function TaggedList({ tags, hasMore = false, isLoadingMore = false, onLoa
             onTagClick={onTagToggle}
             isExpanded={isExpanded}
             onExpandToggle={handleExpandToggle}
+            expandedTaggerIds={expandedTaggerIds}
+            isLoadingTaggers={isLoadingTaggers}
           />
         );
       })}
