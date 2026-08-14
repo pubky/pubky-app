@@ -14,7 +14,7 @@ vi.mock('@/services/nexus/file/file.api', () => ({
   },
 }));
 
-const { buildAvatarUrl, fetchImageAsDataUri, fetchProfileForMetadata, resolvePostAttachmentUrl } =
+const { buildAvatarUrl, fetchImageAsDataUri, fetchPostTags, fetchProfileForMetadata, resolvePostAttachmentUrl } =
   await import('./ogData');
 
 const jsonResponse = (body: unknown) =>
@@ -102,6 +102,39 @@ describe('fetchProfileForMetadata', () => {
     expect(result?.user.name).toBe('Alice');
     expect(result?.counts.posts).toBe(0);
     expect(result?.counts.followers).toBe(0);
+  });
+});
+
+describe('fetchPostTags', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns the tags list, requesting the given post tags endpoint and limit', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(jsonResponse([{ label: 'ai', taggers_count: 21 }]));
+
+    const tags = await fetchPostTags('author', 'post1', 3);
+
+    expect(tags).toEqual([{ label: 'ai', taggers_count: 21 }]);
+    const url = String(fetchSpy.mock.calls[0][0]);
+    // Path asserts author/post order — swapped arguments would silently fetch
+    // a nonexistent post's tags and every card would render without tags.
+    expect(url).toContain('/v0/post/author/post1/tags');
+    expect(url).toContain('limit_tags=3');
+  });
+
+  it('returns an empty list on 404', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Not Found', { status: 404 }));
+
+    expect(await fetchPostTags('author', 'post1', 3)).toEqual([]);
+  });
+
+  it('returns an empty list when the fetch fails (non-fatal)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'));
+
+    expect(await fetchPostTags('author', 'post1', 3)).toEqual([]);
   });
 });
 

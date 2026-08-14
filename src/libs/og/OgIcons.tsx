@@ -72,6 +72,28 @@ export function UsersRoundIcon({ size = 48, color = OG_TOKENS.foreground }: { si
   );
 }
 
+/** lucide `library` (collection), inlined with an explicit stroke color. */
+export function LibraryIcon({ size = 40, color = OG_TOKENS.foreground }: { size?: number; color?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={LUCIDE_STROKE_WIDTH}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="m16 6 4 14" />
+      <path d="M12 6v14" />
+      <path d="M8 8v12" />
+      <path d="M4 4v16" />
+    </svg>
+  );
+}
+
 /** lucide `newspaper` (article), inlined with an explicit stroke color. */
 export function NewspaperIcon({ size = 64, color = OG_TOKENS.foreground }: { size?: number; color?: string }) {
   return (

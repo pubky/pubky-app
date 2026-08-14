@@ -6,7 +6,8 @@ import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { filesApi } from '@/services/nexus/file/file.api';
 import { FileVariant } from '@/services/nexus/file/file.types';
-import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
 import { OG_REVALIDATE } from './ogConstants';
 
@@ -50,6 +51,24 @@ export async function fetchProfileForMetadata(
 
   if (!user) return null;
   return { user, counts: counts ?? EMPTY_COUNTS };
+}
+
+/**
+ * Fetches a post's tags for the collection OG card. Failures are non-fatal —
+ * the card simply renders without the tag row — so any error (404, network,
+ * Nexus outage) collapses to an empty list instead of propagating.
+ */
+export async function fetchPostTags(userId: string, postId: string, limit: number): Promise<NexusTag[]> {
+  try {
+    const tags = await fetchWithValidation<NexusTag[]>(
+      postApi.tags({ author_id: userId, post_id: postId, limit_tags: limit }),
+      'fetchPostTags',
+    );
+    return tags ?? [];
+  } catch (error) {
+    Logger.warn('[ogData] Failed to fetch post tags for OG', { userId, postId, error });
+    return [];
+  }
 }
 
 /**
