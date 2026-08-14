@@ -48,13 +48,13 @@ export function TaggedList({
     const selectedTagRef = tagsRef.current.find((tag) => tag.label === expandedTagLabel);
     if (!selectedTagRef) return;
     const initialIds = selectedTagRef.taggers.map((tagger) => tagger.id);
+
     void fetchAllTaggers(expandedTagLabel, initialIds, selectedTagRef.taggers_count);
   }, [expandedTagLabel, shouldFetchTaggers, fetchAllTaggers]);
 
   const handleExpandToggle = async (tagLabel: string) => {
     // Toggle: if clicking the same tag, collapse it; otherwise expand the new one
     setExpandedTagLabel((prev) => (prev === tagLabel ? null : tagLabel));
-
     if (tagLabel === expandedTagLabel) return;
     const selectedTag = tags.find((tag) => tag.label === tagLabel);
     const selectedTagsState = tagsState.find((tag) => tag.label === tagLabel);
@@ -66,11 +66,11 @@ export function TaggedList({
     if (!response?.allTaggers) {
       return;
     }
-    const upadtedTagsState = tagsState.map((tag) =>
+    const updatedTagsState = tagsState.map((tag) =>
       tag.label === tagLabel ? { ...tag, taggers: [...tag.taggers, ...response.allTaggers] } : tag,
     );
 
-    setTagsState(upadtedTagsState);
+    setTagsState(updatedTagsState);
   };
 
   return (
