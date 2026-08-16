@@ -429,10 +429,9 @@ describe('FeedNavigation', () => {
     const homeLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/home');
     expect(homeLink).toHaveClass('min-h-12', 'w-full', 'min-w-40', 'lg:flex-1');
 
-    const customTab = screen
-      .getAllByTestId('link')
-      .find((link) => link.getAttribute('href') === '/feed/feed-1')?.parentElement;
-    expect(customTab).toHaveClass('min-h-12', 'w-full', 'min-w-40', 'lg:flex-1');
+    const customLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-1');
+    expect(customLink).toHaveClass('h-full', 'w-full');
+    expect(customLink?.parentElement).toHaveClass('min-h-12', 'w-full', 'min-w-40', 'lg:flex-1');
 
     screen.getAllByTestId('typography').forEach((label) => {
       expect(label).toHaveClass('text-sm', 'leading-5');
