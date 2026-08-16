@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -16,14 +16,26 @@ import { Search } from '@/templates/Feed/Search/Search';
 // no synchronous require(), so each factory loads its fixture via async import
 // the first time the mocked module is consumed.
 const fixtures = vi.hoisted(async () => {
-  const [postsModule, profilesModule, whoToFollowModule, navModule, mockApp] = await Promise.all([
+  const [postsModule, profilesModule, whoToFollowModule, navModule, collectionsModule, mockApp] = await Promise.all([
     import('@/test/fixtures/feed/posts'),
     import('@/test/fixtures/feed/profiles'),
     import('@/test/fixtures/feed/whoToFollow'),
     import('@/test/fixtures/feed/feedNavigation'),
+    import('@/test/fixtures/feed/collections'),
     import('@/test/mocks/feedApplication'),
   ]);
-  const postsByCompositeId = new Map(postsModule.VRT_FEED_POSTS.map((post) => [post.compositeId, post]));
+  // Tagged-results case renders the SearchCollections section: 5 fixtures give
+  // a deterministic preview-of-4 plus a visible "See all" pill.
+  const searchCollections = [
+    ...collectionsModule.VRT_MY_COLLECTIONS,
+    ...collectionsModule.VRT_DISCOVER_COLLECTIONS.slice(0, 3),
+  ];
+  const searchCollectionIds = searchCollections.map((collection) => collection.compositeId);
+  type SearchVrtEntry = (typeof postsModule.VRT_FEED_POSTS)[number] | (typeof searchCollections)[number];
+  const postsByCompositeId = new Map<string, SearchVrtEntry>([
+    ...postsModule.VRT_FEED_POSTS.map((post) => [post.compositeId, post] as const),
+    ...searchCollections.map((collection) => [collection.compositeId, collection] as const),
+  ]);
   // Tagged-results case searches `pubky` + `design` — only return posts that carry those labels.
   const taggedSearchCompositeIds = postsModule.VRT_FEED_POSTS.filter((post) =>
     post.tags.some((tag) => tag.label === 'pubky' || tag.label === 'design'),
@@ -48,6 +60,8 @@ const fixtures = vi.hoisted(async () => {
   return {
     postsByCompositeId,
     taggedSearchCompositeIds,
+    searchCollectionIds,
+    collectionCoverUrls: collectionsModule.VRT_COLLECTION_COVER_URLS,
     profiles: profilesModule.VRT_AUTHOR_PROFILES,
     viewerPubky,
     whoToFollow: whoToFollowModule.VRT_WHO_TO_FOLLOW,
@@ -150,6 +164,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: createZustandLikeHook({
     profile: null,
     posts: {} as Record<string, never>,
+    collections: {} as Record<string, never>,
   }),
 }));
 
@@ -161,20 +176,31 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
   usePublicRoute: () => ({ isPublicRoute: false }),
 }));
 
+// SearchCollections queries the tagged collection stream; the posts feed
+// queries everything else. Route by stream shape so each surface gets its own
+// stable fixture slice.
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
   const f = await fixtures;
-  const result = {
-    postIds: f.taggedSearchCompositeIds,
-    loading: false,
-    loadingMore: false,
-    error: null,
-    hasMore: false,
-    loadMore: async () => {},
-    refresh: async () => {},
-    prependPosts: async () => {},
-    removePosts: () => {},
+  const cache = new Map<string, unknown>();
+  return {
+    useStreamPagination: ({ streamId }: { streamId: string }) => {
+      const cached = cache.get(streamId);
+      if (cached) return cached;
+      const result = {
+        postIds: streamId.includes(':collection:') ? f.searchCollectionIds : f.taggedSearchCompositeIds,
+        loading: false,
+        loadingMore: false,
+        error: null,
+        hasMore: false,
+        loadMore: async () => {},
+        refresh: async () => {},
+        prependPosts: async () => {},
+        removePosts: () => {},
+      };
+      cache.set(streamId, result);
+      return result;
+    },
   };
-  return { useStreamPagination: () => result };
 });
 
 vi.mock('@/hooks/useUserStream/useUserStream', async () => {
@@ -300,6 +326,47 @@ vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
   useAvatarUrl: (userDetails: { image: string | null } | null | undefined) => userDetails?.image ?? null,
 }));
 
+// CollectionCard resolves its author through useUserProfile.
+vi.mock('@/hooks/useUserProfile/useUserProfile', async () => {
+  const f = await fixtures;
+  const cache = new Map<string, { profile: unknown; isLoading: false }>();
+  return {
+    useUserProfile: (userId: string) => {
+      const cached = cache.get(userId);
+      if (cached) return cached;
+      const details = f.profiles[userId];
+      const result = {
+        profile: details
+          ? {
+              name: details.name ?? '',
+              bio: details.bio ?? '',
+              publicKey: `pk:${userId}`,
+              emoji: '🌴',
+              status: details.status ?? '',
+              avatarUrl: undefined,
+              link: `/profile/${userId}`,
+              links: details.links,
+            }
+          : null,
+        isLoading: false as const,
+      };
+      cache.set(userId, result);
+      return result;
+    },
+  };
+});
+
+vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
+  useDeletePost: () => ({ deletePost: async () => {}, isDeleting: false }),
+}));
+
+vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    requireAuth: (action: () => void) => action(),
+    isAuthenticated: true,
+  }),
+}));
+
 vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => {
   const result = { formatRelativeTime: formatStableRelative };
   return { useRelativeTime: () => result };
@@ -318,8 +385,10 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
     usePostHeaderVisibility: (compositeId: string) => {
       const cached = cache.get(compositeId);
       if (cached) return cached;
+      // Collection fixtures carry no relationships — only feed posts can repost.
+      const entry = f.postsByCompositeId.get(compositeId);
       const result = {
-        showRepostHeader: !!f.postsByCompositeId.get(compositeId)?.relationships.reposted,
+        showRepostHeader: !!(entry && 'relationships' in entry && entry.relationships.reposted),
         shouldShowPostHeader: true,
       };
       cache.set(compositeId, result);
@@ -451,11 +520,18 @@ vi.mock('@/application/feed/feed', async () => {
   return { FeedApplication: f.mockFeedApplication };
 });
 
-vi.mock('@/controllers/file/file', () => ({
-  FileController: {
-    getAvatarUrl: (userDetails: { image: string | null } | null | undefined) => userDetails?.image ?? null,
-  },
-}));
+vi.mock('@/controllers/file/file', async () => {
+  const f = await fixtures;
+  return {
+    FileController: {
+      getAvatarUrl: (userDetails: { image: string | null } | null | undefined) => userDetails?.image ?? null,
+      // Collection card covers resolve through getFileUrl.
+      getFileUrl: ({ fileId }: { fileId: string }) => f.collectionCoverUrls[fileId] ?? null,
+      getMetadata: async () => [],
+      fetchFiles: async () => [],
+    },
+  };
+});
 
 const searchShellConfig = tryResolveFeedsShellConfig('/search')!;
 
@@ -496,20 +572,34 @@ describe('Search (empty state) — visual regression', () => {
   });
 });
 
+// Tagged results = Collections section (preview + "See all") above the posts
+// feed. Card covers are CSS backgrounds `renderForVRT` cannot await, so they
+// are preloaded; explicit waits keep the screenshot off the skeleton first-paint.
+async function renderTaggedSearch(viewport: { width: number; height: number }) {
+  const f = await fixtures;
+  await preloadImages(Object.values(f.collectionCoverUrls));
+
+  const screen = await renderForVRT(<SearchWithLayout />, { viewport });
+  await expect.element(screen.getByRole('heading', { name: 'Collections' })).toBeVisible();
+  await expect.element(screen.getByText('Local-first notes')).toBeVisible();
+  await expect.element(screen.getByRole('heading', { name: 'Posts' })).toBeVisible();
+  return screen;
+}
+
 describe('Search (tagged results) — visual regression', () => {
-  // Tags mirror labels on VRT feed fixtures (`pubky`, `design`) so the results
-  // header reads as a realistic `/search?tags=…` query.
+  // Tags mirror labels on VRT feed fixtures (`pubky`, `design`) so the section
+  // content reads as a realistic `/search?tags=…` query.
   beforeEach(() => {
     setSearchTags(['pubky', 'design']);
   });
 
   it('renders tagged search results at desktop viewport', async () => {
-    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    const screen = await renderTaggedSearch(VRT_VIEWPORT_DESKTOP);
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-desktop');
   });
 
   it('renders tagged search results at mobile viewport', async () => {
-    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    const screen = await renderTaggedSearch(VRT_VIEWPORT_MOBILE);
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-mobile');
   });
 });
