@@ -430,7 +430,7 @@ describe('FeedNavigation', () => {
     expect(homeLink).toHaveClass('min-h-12', 'w-full', 'min-w-40', 'lg:flex-1');
 
     const customLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-1');
-    expect(customLink).toHaveClass('h-full', 'w-full');
+    expect(customLink).toHaveClass('absolute', 'inset-0');
     expect(customLink?.parentElement).toHaveClass('min-h-12', 'w-full', 'min-w-40', 'lg:flex-1');
 
     screen.getAllByTestId('typography').forEach((label) => {

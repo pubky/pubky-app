@@ -51,7 +51,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
     class="group relative flex min-h-12 w-full min-w-40 items-center justify-center gap-2 border-b py-1.5 lg:flex-1 border-white"
   >
     <a
-      class="flex h-full w-full min-w-0 items-center justify-center pr-6 text-white"
+      class="absolute inset-0 flex min-w-0 items-center justify-center pr-6 text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/feed/feed-active"
@@ -191,7 +191,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     class="group relative flex min-h-12 w-full min-w-40 items-center justify-center gap-2 border-b py-1.5 lg:flex-1 border-border"
   >
     <a
-      class="flex h-full w-full min-w-0 items-center justify-center pr-6 text-muted-foreground group-hover:text-white"
+      class="absolute inset-0 flex min-w-0 items-center justify-center pr-6 text-muted-foreground group-hover:text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/feed/feed-1"
@@ -239,7 +239,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     class="group relative flex min-h-12 w-full min-w-40 items-center justify-center gap-2 border-b py-1.5 lg:flex-1 border-border"
   >
     <a
-      class="flex h-full w-full min-w-0 items-center justify-center pr-6 text-muted-foreground group-hover:text-white"
+      class="absolute inset-0 flex min-w-0 items-center justify-center pr-6 text-muted-foreground group-hover:text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/feed/feed-2"
@@ -379,7 +379,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     class="group relative flex min-h-12 w-full min-w-40 items-center justify-center gap-2 border-b py-1.5 lg:flex-1 border-border"
   >
     <a
-      class="flex h-full w-full min-w-0 items-center justify-center pr-6 text-muted-foreground group-hover:text-white"
+      class="absolute inset-0 flex min-w-0 items-center justify-center pr-6 text-muted-foreground group-hover:text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/feed/feed-1"
@@ -427,7 +427,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     class="group relative flex min-h-12 w-full min-w-40 items-center justify-center gap-2 border-b py-1.5 lg:flex-1 border-white"
   >
     <a
-      class="flex h-full w-full min-w-0 items-center justify-center pr-6 text-white"
+      class="absolute inset-0 flex min-w-0 items-center justify-center pr-6 text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/feed/feed-2"
@@ -475,7 +475,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     class="group relative flex min-h-12 w-full min-w-40 items-center justify-center gap-2 border-b py-1.5 lg:flex-1 border-border"
   >
     <a
-      class="flex h-full w-full min-w-0 items-center justify-center pr-6 text-muted-foreground group-hover:text-white"
+      class="absolute inset-0 flex min-w-0 items-center justify-center pr-6 text-muted-foreground group-hover:text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/feed/feed-3"

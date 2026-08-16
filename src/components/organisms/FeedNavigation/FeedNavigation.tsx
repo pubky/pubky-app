@@ -98,7 +98,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 })
               }
               className={cn(
-                'flex h-full w-full min-w-0 items-center justify-center pr-6',
+                'absolute inset-0 flex min-w-0 items-center justify-center pr-6',
                 isActive ? 'text-white' : 'text-muted-foreground group-hover:text-white',
               )}
             >
