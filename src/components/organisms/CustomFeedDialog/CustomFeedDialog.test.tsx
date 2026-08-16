@@ -439,6 +439,19 @@ describe('CustomFeedDialog', () => {
     expect(input).toBeDisabled();
   });
 
+  it('uses the feed prop in edit mode instead of the route feed', () => {
+    mockUseCustomFeed.mockReturnValue(createMockFeed({ id: 'route-feed', name: 'Route Feed' }));
+
+    render(
+      <CustomFeedDialog mode="edit" feed={createMockFeed({ id: 'passed-feed', name: 'Passed Feed' })}>
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    expect(screen.getByTestId('feed-name-input')).toHaveValue('Passed Feed');
+    expect(screen.getByTestId('custom-feed-dialog-trigger')).toHaveAttribute('data-disabled', 'false');
+  });
+
   it('renders feed name input as enabled in create mode', () => {
     render(
       <CustomFeedDialog mode="create">

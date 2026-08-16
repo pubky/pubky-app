@@ -198,9 +198,7 @@ describe('FeedNavigation', () => {
 
     // Home link should always be present
     expect(screen.getByText('Home')).toBeInTheDocument();
-
-    // Create Feed button should always be present
-    expect(screen.getByText('Create Feed')).toBeInTheDocument();
+    expect(screen.getByTestId('custom-feed-dialog-create')).toHaveTextContent('Feed');
   });
 
   // ── Home feed link ──────────────────────────────────────────────────────
@@ -271,8 +269,7 @@ describe('FeedNavigation', () => {
     const typographies = screen.getAllByTestId('typography');
     const feedNames = typographies.map((t) => t.textContent);
 
-    // Home is first, then custom feeds, then Create Feed
-    expect(feedNames).toEqual(['Home', 'Alpha Feed', 'Beta Feed', 'Gamma Feed', 'Create Feed']);
+    expect(feedNames).toEqual(['Home', 'Alpha Feed', 'Beta Feed', 'Gamma Feed', 'Feed']);
   });
 
   // ── Active / Inactive custom feed styling ───────────────────────────────
@@ -283,10 +280,9 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    const links = screen.getAllByTestId('link');
-    const activeLink = links.find((link) => link.getAttribute('href') === '/feed/feed-active');
-    expect(activeLink).toHaveClass('border-white');
+    const activeLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-active');
     expect(activeLink).toHaveClass('text-white');
+    expect(activeLink?.parentElement).toHaveClass('border-white');
   });
 
   it('applies muted styling to a custom feed when its route does not match pathname', () => {
@@ -295,36 +291,64 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    const links = screen.getAllByTestId('link');
-    const inactiveLink = links.find((link) => link.getAttribute('href') === '/feed/feed-inactive');
-    expect(inactiveLink).toHaveClass('border-border');
-    expect(inactiveLink).toHaveClass('text-muted-foreground');
+    const inactiveLink = screen
+      .getAllByTestId('link')
+      .find((link) => link.getAttribute('href') === '/feed/feed-inactive');
+    expect(inactiveLink).toHaveClass('text-muted-foreground', 'group-hover:text-white');
+    expect(inactiveLink?.parentElement).toHaveClass('border-border');
+    expect(inactiveLink?.parentElement).not.toHaveClass('hover:text-white');
   });
 
-  // ── Edit dialog for active custom feed ──────────────────────────────────
+  // ── Edit dialog for custom feeds ────────────────────────────────────────
 
-  it('wraps custom feed icon in edit dialog when feed is active', () => {
+  it('wraps the right-side pencil in an edit dialog for every custom feed', () => {
+    mockCustomFeeds = [
+      createMockFeed({ id: 'feed-edit', name: 'Editable Feed' }),
+      createMockFeed({ id: 'feed-other', name: 'Other Feed' }),
+    ];
+    mockUsePathname.mockReturnValue('/feed/feed-edit');
+
+    render(<FeedNavigation />);
+
+    const editDialogs = screen.getAllByTestId('custom-feed-dialog-edit');
+    expect(editDialogs).toHaveLength(2);
+
+    editDialogs.forEach((editDialog) => {
+      const editButton = editDialog.querySelector('[data-testid="button"]');
+      expect(editButton).toBeInTheDocument();
+      expect(editButton).toHaveClass(
+        'absolute',
+        'right-3',
+        'text-muted-foreground',
+        'lg:opacity-0',
+        'lg:group-hover:opacity-100',
+      );
+      expect(editButton?.querySelector('svg')).toHaveClass('size-3');
+    });
+  });
+
+  it('keeps the pencil outside the feed link so it does not navigate', () => {
     mockCustomFeeds = [createMockFeed({ id: 'feed-edit', name: 'Editable Feed' })];
     mockUsePathname.mockReturnValue('/feed/feed-edit');
 
     render(<FeedNavigation />);
 
-    const editDialog = screen.getByTestId('custom-feed-dialog-edit');
-    expect(editDialog).toBeInTheDocument();
-
-    // The edit dialog should contain a button with the pencil icon
-    const editButton = editDialog.querySelector('[data-testid="button"]');
-    expect(editButton).toBeInTheDocument();
+    const feedLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-edit');
+    expect(feedLink?.querySelector('.lucide-pencil')).not.toBeInTheDocument();
+    expect(screen.getByTestId('custom-feed-dialog-edit').querySelector('.lucide-pencil')).toBeInTheDocument();
   });
 
-  it('does not show edit dialog for inactive custom feed', () => {
-    mockCustomFeeds = [createMockFeed({ id: 'feed-noedit', name: 'No Edit Feed' })];
+  it('whitens only the custom feed name on hover, not the pencil', () => {
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
     mockUsePathname.mockReturnValue('/home');
 
     render(<FeedNavigation />);
 
-    // There should be a create dialog but no edit dialog
-    expect(screen.queryByTestId('custom-feed-dialog-edit')).not.toBeInTheDocument();
+    const feedLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-1');
+    expect(feedLink).toHaveClass('group-hover:text-white');
+    expect(screen.getByTestId('custom-feed-dialog-edit').querySelector('[data-testid="button"]')).toHaveClass(
+      'text-muted-foreground',
+    );
   });
 
   it('does not show edit dialog for Home feed even when active', () => {
@@ -337,15 +361,15 @@ describe('FeedNavigation', () => {
 
   // ── Create Feed button ──────────────────────────────────────────────────
 
-  it('renders Create Feed button inside a create dialog', () => {
+  it('renders Feed button inside a create dialog', () => {
     render(<FeedNavigation />);
 
     const createDialog = screen.getByTestId('custom-feed-dialog-create');
     expect(createDialog).toBeInTheDocument();
-    expect(createDialog).toHaveTextContent('Create Feed');
+    expect(createDialog).toHaveTextContent('Feed');
   });
 
-  it('renders Create Feed button with PlusCircle icon', () => {
+  it('renders Feed button with PlusCircle icon', () => {
     render(<FeedNavigation />);
 
     const createDialog = screen.getByTestId('custom-feed-dialog-create');
@@ -371,7 +395,7 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    fireEvent.click(screen.getByText('Create Feed'));
+    fireEvent.click(screen.getByTestId('button'));
 
     expect(mockRequireAuth).toHaveBeenCalledTimes(1);
   });
@@ -384,9 +408,8 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    // Should still render Home and Create Feed even when getList fails
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Create Feed')).toBeInTheDocument();
+    expect(screen.getByTestId('custom-feed-dialog-create')).toHaveTextContent('Feed');
   });
 
   // ── Container and layout ────────────────────────────────────────────────
@@ -399,15 +422,38 @@ describe('FeedNavigation', () => {
     expect(container).toHaveClass('overflow-x-auto');
   });
 
-  it('renders all links with min-w-40 and h-12 classes', () => {
+  it('renders tabs with Figma chrome classes', () => {
     mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
     render(<FeedNavigation />);
 
-    const links = screen.getAllByTestId('link');
-    links.forEach((link) => {
-      expect(link).toHaveClass('min-w-40');
-      expect(link).toHaveClass('min-h-12');
+    const homeLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/home');
+    expect(homeLink).toHaveClass('min-h-12', 'w-full', 'min-w-40', 'lg:flex-1');
+
+    const customTab = screen
+      .getAllByTestId('link')
+      .find((link) => link.getAttribute('href') === '/feed/feed-1')?.parentElement;
+    expect(customTab).toHaveClass('min-h-12', 'w-full', 'min-w-40', 'lg:flex-1');
+
+    screen.getAllByTestId('typography').forEach((label) => {
+      expect(label).toHaveClass('text-sm', 'leading-5');
     });
+  });
+
+  it('does not use a left-side pencil as the custom feed icon', () => {
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
+    render(<FeedNavigation />);
+
+    const customLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-1');
+    expect(customLink?.querySelector('svg')).not.toBeInTheDocument();
+  });
+
+  it('does not show a pencil on Home or Create Feed', () => {
+    render(<FeedNavigation />);
+
+    const homeLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/home');
+    expect(homeLink?.querySelector('svg')).toHaveClass('lucide-house');
+    expect(homeLink?.querySelector('.lucide-pencil')).not.toBeInTheDocument();
+    expect(screen.getByTestId('custom-feed-dialog-create').querySelector('.lucide-pencil')).not.toBeInTheDocument();
   });
 });
 

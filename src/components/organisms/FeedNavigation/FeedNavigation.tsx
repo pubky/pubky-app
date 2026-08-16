@@ -19,10 +19,17 @@ import { cn } from '@/libs/utils/utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
 
+const FEED_TAB_CLASS =
+  'relative flex min-h-12 w-full min-w-40 items-center justify-center gap-2 border-b py-1.5 lg:flex-1';
+const FEED_TAB_LABEL_CLASS = 'truncate text-sm font-medium leading-5';
+const FEED_TAB_PENCIL_CLASS =
+  'absolute top-1/2 right-3 z-10 -translate-y-1/2 cursor-pointer text-muted-foreground transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100';
+
 let cachedFeeds: FeedModelSchema[] = [];
 interface FeedNavigationProps {
   className?: string;
 }
+
 export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const pathname = usePathname();
   const { isAuthenticated, requireAuth } = useRequireAuth();
@@ -46,80 +53,89 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
     [isAuthenticated],
     isAuthenticated ? cachedFeeds : [],
   );
-  const customFeedsMapped = customFeeds.map((f) => ({
-    name: f.name,
-    icon: <Pencil className="size-5 shrink-0" />,
-    href: APP_ROUTES.FEED + '/' + f.id,
-  }));
-  const feeds = [
-    {
-      name: 'Home',
-      icon: <Home className="size-5 shrink-0" />,
-      href: APP_ROUTES.HOME,
-    },
-    ...customFeedsMapped,
-  ];
+
   return (
-    <Container className={cn('overflow-x-auto lg:flex-row', className)}>
+    <Container className={cn('w-full overflow-x-auto lg:flex-row', className)}>
       <Heading level={2} size="lg" className="mb-2 font-light text-muted-foreground lg:hidden">
         {'Feed'}
       </Heading>
 
-      {feeds.map((f) => (
-        <Link
-          overrideDefaults
-          key={f.href}
-          href={f.href}
-          onClick={(event) =>
-            handleFeedNavClick(event, {
-              isActive: pathname === f.href,
-              smoothScrollWhenActive: f.href === APP_ROUTES.HOME,
-            })
-          }
-          className={cn(
-            'flex min-h-12 w-full min-w-40 items-center gap-x-2 border-b transition-colors hover:text-white lg:justify-center',
-            pathname === f.href ? 'border-white text-white' : 'border-border text-muted-foreground',
-          )}
-        >
-          {f.href !== APP_ROUTES.HOME && f.href === pathname ? (
-            <CustomFeedDialog mode="edit">
-              <Button overrideDefaults className="cursor-pointer">
-                {f.icon}
+      <Link
+        overrideDefaults
+        href={APP_ROUTES.HOME}
+        onClick={(event) =>
+          handleFeedNavClick(event, {
+            isActive: pathname === APP_ROUTES.HOME,
+            smoothScrollWhenActive: true,
+          })
+        }
+        className={cn(
+          FEED_TAB_CLASS,
+          pathname === APP_ROUTES.HOME
+            ? 'border-white text-white'
+            : 'border-border text-muted-foreground hover:text-white',
+        )}
+      >
+        <Home className="size-5 shrink-0" />
+        <Typography overrideDefaults className={FEED_TAB_LABEL_CLASS}>
+          {'Home'}
+        </Typography>
+      </Link>
+
+      {customFeeds.map((feed) => {
+        const href = `${APP_ROUTES.FEED}/${feed.id}`;
+        const isActive = pathname === href;
+
+        return (
+          <div key={href} className={cn('group', FEED_TAB_CLASS, isActive ? 'border-white' : 'border-border')}>
+            <Link
+              overrideDefaults
+              href={href}
+              onClick={(event) =>
+                handleFeedNavClick(event, {
+                  isActive,
+                  smoothScrollWhenActive: false,
+                })
+              }
+              className={cn(
+                'flex max-w-full min-w-0 items-center justify-center pr-6',
+                isActive ? 'text-white' : 'text-muted-foreground group-hover:text-white',
+              )}
+            >
+              <Typography overrideDefaults className={FEED_TAB_LABEL_CLASS}>
+                {feed.name}
+              </Typography>
+            </Link>
+            <CustomFeedDialog mode="edit" feed={feed}>
+              <Button overrideDefaults type="button" aria-label={`Edit ${feed.name}`} className={FEED_TAB_PENCIL_CLASS}>
+                <Pencil className="size-3" />
               </Button>
             </CustomFeedDialog>
-          ) : (
-            f.icon
-          )}
-
-          <Typography overrideDefaults className="font-medium lg:text-sm">
-            {f.name}
-          </Typography>
-        </Link>
-      ))}
+          </div>
+        );
+      })}
 
       {isAuthenticated ? (
         <CustomFeedDialog mode="create">
           <Button
             overrideDefaults
-            className="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-border text-muted-foreground transition-colors hover:text-white lg:justify-center"
+            className={cn(FEED_TAB_CLASS, 'cursor-pointer border-border text-muted-foreground hover:text-white')}
           >
             <PlusCircle className="size-5 shrink-0" />
-
-            <Typography overrideDefaults className="font-medium lg:text-sm">
-              {'Create Feed'}
+            <Typography overrideDefaults className={FEED_TAB_LABEL_CLASS}>
+              {'Feed'}
             </Typography>
           </Button>
         </CustomFeedDialog>
       ) : (
         <Button
           overrideDefaults
-          className="flex min-h-12 w-full min-w-40 cursor-pointer items-center gap-x-2 border-b border-border text-muted-foreground transition-colors hover:text-white lg:justify-center"
+          className={cn(FEED_TAB_CLASS, 'cursor-pointer border-border text-muted-foreground hover:text-white')}
           onClick={() => requireAuth(() => undefined)}
         >
           <PlusCircle className="size-5 shrink-0" />
-
-          <Typography overrideDefaults className="font-medium lg:text-sm">
-            {'Create Feed'}
+          <Typography overrideDefaults className={FEED_TAB_LABEL_CLASS}>
+            {'Feed'}
           </Typography>
         </Button>
       )}

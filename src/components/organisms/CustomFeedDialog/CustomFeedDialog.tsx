@@ -38,6 +38,7 @@ import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useCustomFeedMutation } from '@/hooks/useCustomFeedMutation/useCustomFeedMutation';
 import { UsersRound2 } from '@/icons';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
+import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
@@ -47,6 +48,7 @@ import { HOME_PROFILE_TAGS_MAX_SELECTED } from '@/stores/home/home.types';
 type CustomFeedDialogProps = {
   mode: 'create' | 'edit';
   children: ReactNode;
+  feed?: FeedModelSchema;
 };
 type CustomFeedDialogContent = PubkyAppPostKind | 'ALL';
 type CustomFeedReachValue = PubkyAppFeedReach | typeof TAGGED_AS_FILTER_KEY;
@@ -54,10 +56,11 @@ type CustomFeedReachValue = PubkyAppFeedReach | typeof TAGGED_AS_FILTER_KEY;
 function isVisualCustomFeedContentSupported(content?: CustomFeedDialogContent): boolean {
   return content === 'ALL' || content === PubkyAppPostKind.Image || content === PubkyAppPostKind.Video;
 }
-export const CustomFeedDialog = ({ mode, children }: CustomFeedDialogProps) => {
+export const CustomFeedDialog = ({ mode, children, feed }: CustomFeedDialogProps) => {
   const router = useRouter();
   const { toast } = useToast();
-  const customFeed = useCustomFeed();
+  const routeFeed = useCustomFeed();
+  const customFeed = feed ?? routeFeed;
   const { commitCreate, commitUpdate, commitDelete, loading } = useCustomFeedMutation();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
