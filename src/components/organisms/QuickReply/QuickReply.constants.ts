@@ -1,24 +1,21 @@
 /**
- * Height of PostThreadSpacer component in pixels.
- * Matches the h-4 Tailwind class (16px = 1rem).
+ * Vertical card chrome outside the measured composer content (p-6 plus borders),
+ * with a 1px connector overlap at the top and bottom of the card.
  */
-const POST_THREAD_SPACER_HEIGHT = 16;
+export const QUICK_REPLY_CONNECTOR_HEIGHT_OFFSET = 52;
 
 /**
- * Approximate gap between the main post card and replies section in pixels.
- * This accounts for the visual spacing in the layout.
+ * Prompts for the quick reply placeholder. One is picked at random per mount.
  */
-const SINGLE_POST_REPLIES_GAP = 50;
-
-/**
- * Height in pixels to account for spacing between main post and QuickReply in connector calculation.
- * The connector needs to extend upward to cover the gap.
- * This ensures the connector properly connects from the main post to QuickReply
- */
-export const QUICK_REPLY_CONNECTOR_SPACER_HEIGHT = POST_THREAD_SPACER_HEIGHT + SINGLE_POST_REPLIES_GAP;
+export const QUICK_REPLY_PROMPTS = [
+  'What are your thoughts on this?',
+  'What do you think?',
+  'Do you agree?',
+  'Any additional insights?',
+  'How would you respond?',
+] as const;
 
 /**
  * Number of prompts available for the quick reply placeholder.
- * This should match the number of prompts in the translations file (messages/en.json -> quickReply.prompts).
  */
-export const QUICK_REPLY_PROMPTS_COUNT = 5;
+export const QUICK_REPLY_PROMPTS_COUNT = QUICK_REPLY_PROMPTS.length;

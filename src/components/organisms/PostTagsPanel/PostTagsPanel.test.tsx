@@ -20,14 +20,6 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
     requireAuth: mockRequireAuth,
   }),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => {
-    if (key === 'seeAll') return 'See all';
-    return key;
-  },
-}));
-
 vi.mock('@/application/tag/tag.types', () => ({
   TagKind: { POST: 'post' },
 }));

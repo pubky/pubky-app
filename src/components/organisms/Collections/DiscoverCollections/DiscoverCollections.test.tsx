@@ -17,11 +17,6 @@ let mockAuthState: { hasHydrated: boolean; currentUserPubky: string | null } = {
   hasHydrated: false,
   currentUserPubky: null,
 };
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
@@ -88,12 +83,14 @@ function makeSlice({
   nextPageIds = [],
   reachedEnd = true,
   nextCursor = 0,
+  lastRawPostId,
 }: {
   nextPageIds?: string[];
   reachedEnd?: boolean;
   nextCursor?: number;
+  lastRawPostId?: string;
 } = {}) {
-  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor });
+  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor, lastRawPostId });
 }
 
 beforeEach(() => {
@@ -122,7 +119,7 @@ describe('DiscoverCollections', () => {
 
     render(<DiscoverCollections />);
 
-    expect(screen.getByText('collections.discover.title')).toBeInTheDocument();
+    expect(screen.getByText('Discover Collections')).toBeInTheDocument();
     expect(screen.getByTestId('avatar-stack-skeleton')).toHaveAttribute('data-count', '3');
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
     expect(mockPrepareStreamForInitialLoad).not.toHaveBeenCalled();
@@ -163,10 +160,10 @@ describe('DiscoverCollections', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('collections.discover.empty')).toBeInTheDocument();
+      expect(screen.getByText('No collections to discover right now.')).toBeInTheDocument();
     });
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
-    expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument();
   });
 
   it('clicking Show More resumes from the raw skip offset threaded back as nextCursor', async () => {
@@ -186,7 +183,7 @@ describe('DiscoverCollections', () => {
       render(<DiscoverCollections />);
     });
 
-    const button = await screen.findByRole('button', { name: 'collections.showMore' });
+    const button = await screen.findByRole('button', { name: 'Show more' });
     await act(async () => {
       button.click();
     });
@@ -205,6 +202,35 @@ describe('DiscoverCollections', () => {
     });
   });
 
+  it('Show More anchors the next request on lastRawPostId when the slice threads one back', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    // The raw scan ended past the visible page (filtered tail) — the follow-up
+    // request must anchor on the raw id, not the last visible one.
+    mockGetOrFetchStreamSlice.mockResolvedValueOnce(
+      makeSlice({ nextPageIds: ['other:p1'], reachedEnd: false, nextCursor: 26, lastRawPostId: 'other:raw-26' }),
+    );
+    mockGetOrFetchStreamSlice.mockResolvedValueOnce(
+      makeSlice({ nextPageIds: ['other:more'], reachedEnd: true, nextCursor: 30 }),
+    );
+
+    await act(async () => {
+      render(<DiscoverCollections />);
+    });
+
+    const button = await screen.findByRole('button', { name: 'Show more' });
+    await act(async () => {
+      button.click();
+    });
+
+    await waitFor(() => {
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+    });
+    expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({
+      lastPostId: 'other:raw-26',
+      streamTail: 26,
+    });
+  });
+
   it('Show More cap-hit (empty page, stream not exhausted): fires the no-new-results toast and keeps the button', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockGetOrFetchStreamSlice.mockResolvedValueOnce(
@@ -218,7 +244,7 @@ describe('DiscoverCollections', () => {
       render(<DiscoverCollections />);
     });
 
-    const button = await screen.findByRole('button', { name: 'collections.showMore' });
+    const button = await screen.findByRole('button', { name: 'Show more' });
     expect(mockToast).not.toHaveBeenCalled();
     await act(async () => {
       button.click();
@@ -227,20 +253,20 @@ describe('DiscoverCollections', () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'warning',
-        description: 'collections.discover.noNewResults',
+        description: 'No new collections found right now. Try again later.',
       });
     });
     expect(mockToast).toHaveBeenCalledTimes(1);
     // The card list is unchanged and the button survives for another attempt,
     // which will resume from the advanced offset (420) — no dead-end, no stall.
     expect(screen.getAllByTestId('collection-card')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'collections.showMore' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show more' })).toBeInTheDocument();
 
     mockGetOrFetchStreamSlice.mockResolvedValueOnce(
       makeSlice({ nextPageIds: ['other:p2'], reachedEnd: true, nextCursor: 440 }),
     );
     await act(async () => {
-      screen.getByRole('button', { name: 'collections.showMore' }).click();
+      screen.getByRole('button', { name: 'Show more' }).click();
     });
     await waitFor(() => {
       expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 420 });
@@ -258,13 +284,13 @@ describe('DiscoverCollections', () => {
       render(<DiscoverCollections />);
     });
 
-    const button = await screen.findByRole('button', { name: 'collections.showMore' });
+    const button = await screen.findByRole('button', { name: 'Show more' });
     await act(async () => {
       button.click();
     });
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'collections.showMore' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
     });
     expect(mockToast).not.toHaveBeenCalled();
     // Existing cards stay; the exhausted stream simply stops offering more.
@@ -347,13 +373,13 @@ describe('DiscoverCollections', () => {
     // consistent across the three Collections sections.
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'collections.loadFailed',
+      description: 'Failed to load collections. Please try again.',
     });
     // No spinner, no Show More, no cards.
-    expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
     // Empty state surfaces.
-    expect(screen.getByText('collections.discover.empty')).toBeInTheDocument();
+    expect(screen.getByText('No collections to discover right now.')).toBeInTheDocument();
   });
 
   describe('DiscoverCollections - Snapshots', () => {
@@ -384,7 +410,7 @@ describe('DiscoverCollections', () => {
 
       const { container } = await act(async () => render(<DiscoverCollections />));
       await waitFor(() => {
-        expect(screen.getByText('collections.discover.empty')).toBeInTheDocument();
+        expect(screen.getByText('No collections to discover right now.')).toBeInTheDocument();
       });
 
       expect(container.firstChild).toMatchSnapshot();

@@ -34,9 +34,6 @@ const mocks = vi.hoisted(() => {
     isLoading: false,
     // Route defaults
     pathname: '/feed',
-    // Locale defaults
-    serverLocale: 'en',
-    storeLanguage: 'en' as string | null,
   };
 });
 
@@ -44,12 +41,6 @@ const mocks = vi.hoisted(() => {
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mocks.mockRouterPush, refresh: mocks.mockRouterRefresh }),
   usePathname: () => mocks.pathname,
-}));
-
-// Mock next-intl
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-  useLocale: () => mocks.serverLocale,
 }));
 
 vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
@@ -120,10 +111,6 @@ vi.mock('@/stores/migration/migration.store', () => ({
     },
   ),
 }));
-vi.mock('@/stores/settings/settings.store', () => ({
-  useSettingsStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({ language: mocks.storeLanguage }),
-}));
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     restorePersistedSession: mocks.restorePersistedSession,
@@ -149,8 +136,6 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.status = 'AUTHENTICATED';
     mocks.isLoading = false;
     mocks.pathname = '/feed';
-    mocks.serverLocale = 'en';
-    mocks.storeLanguage = 'en';
     mocks.mockResync.mockReset();
     mocks.mockRouterRefresh.mockReset();
     mocks.resetMigrationStore.mockReset();
@@ -362,7 +347,7 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('loading')).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   it('shows redirecting text when route is inaccessible and not loading', () => {
@@ -377,7 +362,7 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
   });
 
   it('allows unauthenticated users to render core explore routes after auth loading resolves', () => {
@@ -440,7 +425,7 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
     expect(screen.queryByText('Bookmarks Content')).not.toBeInTheDocument();
   });
 
@@ -472,7 +457,7 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
     expect(screen.queryByText('Bookmarks Content')).not.toBeInTheDocument();
   });
 
@@ -487,48 +472,9 @@ describe('RouteGuardProvider — migration resync', () => {
       </RouteGuardProvider>,
     );
 
-    expect(screen.getByText('redirecting')).toBeInTheDocument();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
     expect(screen.queryByText('Explore Content')).not.toBeInTheDocument();
     expect(mocks.mockRouterPush).toHaveBeenCalledWith('/create-profile');
-  });
-
-  it('calls router.refresh() when storeLanguage differs from serverLocale', () => {
-    mocks.storeLanguage = 'es';
-    mocks.serverLocale = 'en';
-
-    render(
-      <RouteGuardProvider>
-        <div>Protected Content</div>
-      </RouteGuardProvider>,
-    );
-
-    expect(mocks.mockRouterRefresh).toHaveBeenCalled();
-  });
-
-  it('does NOT call router.refresh() when storeLanguage is null', () => {
-    mocks.storeLanguage = null;
-    mocks.serverLocale = 'en';
-
-    render(
-      <RouteGuardProvider>
-        <div>Protected Content</div>
-      </RouteGuardProvider>,
-    );
-
-    expect(mocks.mockRouterRefresh).not.toHaveBeenCalled();
-  });
-
-  it('does NOT call router.refresh() when storeLanguage matches serverLocale', () => {
-    mocks.storeLanguage = 'en';
-    mocks.serverLocale = 'en';
-
-    render(
-      <RouteGuardProvider>
-        <div>Protected Content</div>
-      </RouteGuardProvider>,
-    );
-
-    expect(mocks.mockRouterRefresh).not.toHaveBeenCalled();
   });
 });
 
@@ -543,8 +489,6 @@ describe('RouteGuardProvider — session restore', () => {
     mocks.status = 'UNAUTHENTICATED';
     mocks.isLoading = false;
     mocks.pathname = '/home';
-    mocks.serverLocale = 'en';
-    mocks.storeLanguage = 'en';
     mocks.mockToast.mockReset();
     mocks.restorePersistedSession.mockReset();
     mocks.restorePersistedSession.mockResolvedValue(true);
@@ -570,7 +514,7 @@ describe('RouteGuardProvider — session restore', () => {
 
     expect(mocks.mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'wrongEnvironmentHomeserverDescription',
+      description: 'This key is linked to a different homeserver. Use a staging account on this site.',
     });
     expect(Logger.error).not.toHaveBeenCalled();
   });

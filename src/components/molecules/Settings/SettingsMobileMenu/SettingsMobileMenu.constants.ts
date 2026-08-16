@@ -1,36 +1,36 @@
-import { Bell, CircleHelp, Globe, MegaphoneOff, Shield, UserRound } from 'lucide-react';
+import { Bell, CircleHelp, MegaphoneOff, Shield, UserRound } from 'lucide-react';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import type { SettingsMenuItem } from '../SettingsMenu/SettingsMenu.types';
 
 export const SETTINGS_MOBILE_ITEMS: SettingsMenuItem[] = [
   {
     icon: UserRound,
-    labelKey: 'account',
+    id: 'account',
+    label: 'Account',
     path: SETTINGS_ROUTES.ACCOUNT,
   },
   {
     icon: Bell,
-    labelKey: 'notifications',
+    id: 'notifications',
+    label: 'Notifications',
     path: SETTINGS_ROUTES.NOTIFICATIONS,
   },
   {
     icon: Shield,
-    labelKey: 'privacySafety',
+    id: 'privacySafety',
+    label: 'Privacy & Safety',
     path: SETTINGS_ROUTES.PRIVACY_SAFETY,
   },
   {
     icon: MegaphoneOff,
-    labelKey: 'mutedUsers',
+    id: 'mutedUsers',
+    label: 'Muted Users',
     path: SETTINGS_ROUTES.MUTED_USERS,
   },
   {
-    icon: Globe,
-    labelKey: 'language',
-    path: SETTINGS_ROUTES.LANGUAGE,
-  },
-  {
     icon: CircleHelp,
-    labelKey: 'help',
+    id: 'help',
+    label: 'Help',
     path: SETTINGS_ROUTES.HELP,
   },
 ];

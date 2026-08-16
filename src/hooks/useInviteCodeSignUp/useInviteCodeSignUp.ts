@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { AuthController } from '@/controllers/auth/auth';
 import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -32,8 +30,6 @@ const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;
  */
 export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
   const { toast } = useToast();
-  const t = useTranslations('onboarding.pubky');
-
   const getRetryDelayMs = (attempt: number, retryAfterSeconds?: number): number => {
     if (typeof retryAfterSeconds === 'number' && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
       return Math.min(retryAfterSeconds * 1000, SIGN_UP_RETRY_MAX_DELAY_MS);
@@ -52,7 +48,7 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
     let lastError: unknown;
 
     for (let attempt = 0; attempt < SIGN_UP_MAX_ATTEMPTS; attempt += 1) {
-      let description = t('signUpError');
+      let description = 'Could not sign up. Try again.';
 
       try {
         await AuthController.signUp({ secretKey, signupToken: inviteCode });
@@ -74,7 +70,7 @@ export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
 
         if (isAppError(error)) {
           if (isAuthError(error)) {
-            description = t('invalidInvite');
+            description = 'Invite code is invalid or expired.';
           } else if (error.message) {
             description = error.message;
           }

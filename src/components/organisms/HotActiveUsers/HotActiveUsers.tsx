@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -48,7 +47,6 @@ function useActiveUsersStreamId(): UserStreamId {
  * - FRIENDS: Influencers among the current user's friends
  */
 export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotActiveUsersProps) {
-  const t = useTranslations('hot');
   const router = useRouter();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const streamId = useActiveUsersStreamId();
@@ -77,10 +75,10 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
   return (
     <Container overrideDefaults className={cn('flex w-full flex-col gap-2', className)} data-testid="hot-active-users">
       <Heading level={5} size="lg" className="font-light text-muted-foreground">
-        {t('activeUsers')}
+        {'Active users'}
       </Heading>
       {error ? (
-        <Typography className="text-destructive">{t('failedToLoadUsers')}</Typography>
+        <Typography className="text-destructive">{'Failed to load users'}</Typography>
       ) : isLoading ? (
         <Container className="gap-3.5 rounded-md py-2 lg:gap-3">
           {Array.from({ length: limit }).map((_, index) => (
@@ -88,7 +86,7 @@ export function HotActiveUsers({ limit = DEFAULT_USERS_LIMIT, className }: HotAc
           ))}
         </Container>
       ) : visibleUsers.length === 0 ? (
-        <Typography className="font-light text-muted-foreground">{t('noUsersToShow')}</Typography>
+        <Typography className="font-light text-muted-foreground">{'No users to show'}</Typography>
       ) : (
         <Container className="gap-3.5 rounded-md py-2 lg:gap-3">
           {visibleUsers.map((user) => (

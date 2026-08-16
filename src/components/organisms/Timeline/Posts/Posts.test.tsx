@@ -57,17 +57,26 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
       loading,
       error,
       hasItems,
+      hasMore,
       children,
       emptyComponent,
     }: {
       loading: boolean;
       error: string | null;
       hasItems: boolean;
+      hasMore?: boolean;
       children: React.ReactNode;
       emptyComponent?: React.ReactNode;
     }) => {
       if (loading) return <div data-testid="timeline-loading">Loading...</div>;
       if (error && !hasItems) return <div data-testid="timeline-initial-error">Error: {error}</div>;
+      if (!hasItems && hasMore)
+        return (
+          <>
+            <div data-testid="timeline-loading">Loading...</div>
+            {children}
+          </>
+        );
       if (!hasItems) return <>{emptyComponent ?? <div data-testid="timeline-empty">No posts</div>}</>;
       return <>{children}</>;
     },
@@ -173,6 +182,28 @@ describe('TimelinePosts', () => {
   });
 
   describe('Empty States', () => {
+    it('keeps loading and the sentinel mounted when empty but hasMore (filtered stream region)', () => {
+      // Regression: a fully-filtered first load round returns zero visible posts with
+      // hasMore=true. Showing the empty state would unmount the infinite-scroll
+      // sentinel and stall the feed permanently ("No posts found" one round away
+      // from real posts). The wrapper must keep loading + children mounted instead.
+      render(
+        <TimelinePosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+      expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
+      // Children mounted → the feed container (and with it the sentinel) exists.
+      expect(screen.getByRole('feed')).toBeInTheDocument();
+    });
+
     it('should render empty state when no posts are returned', async () => {
       render(
         <TimelinePosts

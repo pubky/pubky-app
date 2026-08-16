@@ -1,84 +1,485 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+exports[`PostInput - Mobile Snapshots > matches expanded snapshot on mobile viewport 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="0"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        placeholder="What's on your mind?"
-      />
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="true"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="13"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                >
+                  Expanded post
+                </textarea>
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-            disabled=""
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
+  data-testid="container"
+>
+  <div
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="post-input-state-height"
+      style="height: auto;"
+    >
+      <div
+        class="relative"
+      >
+        <div
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
+        >
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Post
-          </button>
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
+          >
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
+          >
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="true"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                  disabled=""
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostInput - Snapshots > matches snapshot for a collapsed post composer 1`] = `
+<div
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="collapsed"
+  data-testid="container"
+>
+  <div
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="post-input-state-height"
+      style="height: auto;"
+    >
+      <div
+        class="relative"
+      >
+        <div
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
+        >
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
+          >
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                aria-hidden="true"
+                class="shrink-0 self-start size-10"
+                data-testid="post-input-collapsed-avatar-placeholder"
+              />
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
+          >
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostInput - Snapshots > matches snapshot for an expanded post composer 1`] = `
+<div
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
+  data-testid="container"
+>
+  <div
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="post-input-state-height"
+      style="height: auto;"
+    >
+      <div
+        class="relative"
+      >
+        <div
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
+        >
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
+          >
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="13"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                >
+                  Expanded post
+                </textarea>
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
+          >
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
+          >
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -89,82 +490,99 @@ exports[`PostInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] 
 exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
-    <input
-      class="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
-      data-testid="input"
-      placeholder="Article Title"
-      value="Test Article Title"
-    />
-    <div
-      data-is-reply="true"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      data-is-article="true"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
-      contenteditable="true"
-      data-readonly="false"
-      data-testid="markdown-editor"
-    >
-      Article body content
-    </div>
     <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="false"
-          data-testid="post-input-action-bar"
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <input
+            class="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
+            data-testid="input"
+            placeholder="Article Title"
+            value="Test Article Title"
+          />
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+          <div
+            data-is-article="true"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            contenteditable="true"
+            data-readonly="false"
+            data-testid="markdown-editor"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            Article body content
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-          >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -175,72 +593,121 @@ exports[`PostInput - Snapshots > matches snapshot for article mode 1`] = `
 exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="21"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        placeholder="Edit post"
-      >
-        Existing post content
-      </textarea>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="true"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="false"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="21"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="Edit post"
+                >
+                  Existing post content
+                </textarea>
+              </div>
+            </div>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
-          >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-          >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="true"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -251,71 +718,223 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
 exports[`PostInput - Snapshots > matches snapshot for edit variant with article mode 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
-    <input
-      class="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
-      data-testid="input"
-      placeholder="Article Title"
-      value="Existing Article Title"
-    />
-    <div
-      data-is-reply="true"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      contenteditable="true"
-      data-readonly="false"
-      data-testid="markdown-editor"
-    >
-      Existing article body
-    </div>
     <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="true"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="false"
-          data-testid="post-input-action-bar"
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <input
+            class="h-auto border-none p-0 text-3xl font-bold md:text-6xl"
+            data-testid="input"
+            placeholder="Article Title"
+            value="Existing Article Title"
+          />
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+          <div
+            contenteditable="true"
+            data-readonly="false"
+            data-testid="markdown-editor"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            Existing article body
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="true"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostInput - Snapshots > matches snapshot for list layout 1`] = `
+<div
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
+  data-testid="container"
+>
+  <div
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="post-input-state-height"
+      style="height: auto;"
+    >
+      <div
+        class="relative"
+      >
+        <div
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
+        >
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="metadata"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none text-base font-medium leading-5"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Post
-          </button>
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
+          >
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="true"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                  disabled=""
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -326,6 +945,7 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
 exports[`PostInput - Snapshots > matches snapshot for post variant when dragging 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-brand"
+  data-state="expanded"
   data-testid="container"
 >
   <div
@@ -341,79 +961,127 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
     </p>
   </div>
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="0"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        placeholder="What's on your mind?"
-      />
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="true"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-            disabled=""
-          >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="true"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                  disabled=""
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -424,83 +1092,132 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
 exports[`PostInput - Snapshots > matches snapshot for post variant when submitting 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="0"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        disabled=""
-        placeholder="What's on your mind?"
-      />
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="true"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="true"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="true"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  disabled=""
+                  placeholder="What's on your mind?"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="true"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Posting..."
-            data-testid="post-button"
-            disabled=""
-          >
-            Posting...
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="true"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="true"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Posting..."
+                  data-testid="post-button"
+                  disabled=""
+                >
+                  Posting...
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -511,86 +1228,135 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when submitti
 exports[`PostInput - Snapshots > matches snapshot for post variant with attachments 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="0"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        placeholder="What's on your mind?"
-      />
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-      <div
-        data-testid="attachment-test-image.png"
-      >
-        test-image.png
-      </div>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="false"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+            <div
+              data-testid="attachment-test-image.png"
+            >
+              test-image.png
+            </div>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-          >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -601,83 +1367,132 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with attachme
 exports[`PostInput - Snapshots > matches snapshot for post variant with content 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="12"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        placeholder="What's on your mind?"
-      >
-        Test content
-      </textarea>
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="false"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="12"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                >
+                  Test content
+                </textarea>
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-          >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -688,82 +1503,131 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with content 
 exports[`PostInput - Snapshots > matches snapshot for post variant with custom placeholder 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="0"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        placeholder="Custom placeholder"
-      />
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="true"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="Custom placeholder"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-            disabled=""
-          >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="true"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                  disabled=""
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -774,83 +1638,131 @@ exports[`PostInput - Snapshots > matches snapshot for post variant with custom p
 exports[`PostInput - Snapshots > matches snapshot for post variant without content or attachments 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-12 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="0"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="large"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-class-name="text-xl leading-7"
-        data-testid="textarea"
-        placeholder="What's on your mind?"
-      />
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="true"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="extraLarge"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="metadata"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="extraLarge"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-5"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none text-xl leading-7"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-            disabled=""
-          >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="true"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                  disabled=""
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -861,82 +1773,131 @@ exports[`PostInput - Snapshots > matches snapshot for post variant without conte
 exports[`PostInput - Snapshots > matches snapshot for reply variant without content or attachments 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="0"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        placeholder="Write a reply..."
-      />
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="true"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="Write a reply..."
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-            disabled=""
-          >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="true"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                  disabled=""
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -947,6 +1908,7 @@ exports[`PostInput - Snapshots > matches snapshot for reply variant without cont
 exports[`PostInput - Snapshots > matches snapshot for reply with thread connector 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
@@ -954,79 +1916,127 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
     data-variant="dialog-reply"
   />
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="0"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        placeholder="Write a reply..."
-      />
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="true"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="Write a reply..."
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
-            disabled=""
-          >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="true"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                  disabled=""
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1037,90 +2047,266 @@ exports[`PostInput - Snapshots > matches snapshot for reply with thread connecto
 exports[`PostInput - Snapshots > matches snapshot for repost variant without content or attachments 1`] = `
 <div
   class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
   data-testid="container"
 >
   <div
-    class="min-w-0 gap-4 contain-inline-size"
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
     data-testid="container"
   >
     <div
-      data-count="0"
-      data-is-reply="true"
-      data-max="2000"
-      data-post-id="test-user-id:pubkey"
-      data-size="normal"
-      data-testid="post-header"
-    />
-    <div
-      class="relative"
-      data-override-defaults="true"
-      data-testid="container"
-    >
-      <textarea
-        data-testid="textarea"
-        placeholder="Optional comment"
-      />
-    </div>
-    <div
-      data-is-article="false"
-      data-submitting="false"
-      data-testid="post-input-attachments"
-    >
-      <button
-        data-testid="attachment-button"
-      >
-        Attach
-      </button>
-    </div>
-    <div
-      class="bg-card"
-      data-interactive-actions="false"
-      data-post-id="test-post-123"
-      data-testid="post-preview-card"
-    >
-      Original Post: 
-      test-post-123
-    </div>
-    <div
       class="overflow-hidden"
-      style="height: auto; opacity: 1;"
+      data-testid="post-input-state-height"
+      style="height: auto;"
     >
       <div
-        class="gap-4"
-        data-testid="container"
+        class="relative"
       >
         <div
-          data-disabled="false"
-          data-testid="post-input-tags"
-        />
-        <div
-          data-post-disabled="false"
-          data-testid="post-input-action-bar"
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
         >
-          <button
-            aria-label="Add emoji"
-            data-testid="emoji-button"
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
           >
-            Emoji
-          </button>
-          <button
-            aria-label="Add image"
-            data-testid="image-button"
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="0"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="Optional comment"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
           >
-            Image
-          </button>
-          <button
-            aria-label="Add article"
-            data-testid="article-button"
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
+            class="bg-card"
+            data-interactive-actions="false"
+            data-post-id="test-post-123"
+            data-testid="post-preview-card"
           >
-            Article
-          </button>
-          <button
-            aria-label="Post"
-            data-testid="post-button"
+            Original Post: test-post-123
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
           >
-            Post
-          </button>
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="false"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostInput - Snapshots > matches snapshot with a logged-out fallback avatar 1`] = `
+<div
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 px-6 border-input"
+  data-state="collapsed"
+  data-testid="container"
+>
+  <div
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="post-input-state-height"
+      style="height: auto;"
+    >
+      <div
+        class="relative"
+      >
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
+          >
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="shrink-0 self-start"
+              >
+                <span
+                  class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+                  data-testid="post-input-fallback-avatar"
+                >
+                  <span
+                    class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
+                  >
+                    <div
+                      class="facehash h-full w-full rounded-full text-background"
+                      data-facehash=""
+                      data-interactive="true"
+                      style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; container-type: size; perspective: 300px; transform-style: preserve-3d; background-color: rgb(252, 0, 255);"
+                    >
+                      <div
+                        data-facehash-gradient=""
+                        style="position: absolute; inset: 0px; pointer-events: none; z-index: 1; background: radial-gradient(100% 100% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);"
+                      />
+                      <div
+                        data-facehash-face=""
+                        style="position: absolute; inset: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; transform: rotateX(-15deg) rotateY(15deg) translateZ(12px); transform-style: preserve-3d; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          fill="none"
+                          style="width: 60%; height: auto; max-width: 90%; max-height: 40%;"
+                          viewBox="0 0 63 9"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g
+                            style="animation: facehash-blink 5.7s ease-in-out 3.7s infinite; transform-origin: center center;"
+                          >
+                            <path
+                              d="M0 5.1c0-.1 0-.2 0-.3.1-.5.3-1 .7-1.3.1 0 .1-.1.2-.1C2.4 2.2 6 0 10.5 0S18.6 2.2 20.2 3.3c.1 0 .1.1.1.1.4.3.7.9.7 1.3v.3c0 1 0 1.4 0 1.7-.2 1.3-1.2 1.9-2.5 1.6-.2 0-.7-.3-1.8-.8C15 6.7 12.8 6 10.5 6s-4.5.7-6.3 1.5c-1 .5-1.5.7-1.8.8-1.3.3-2.3-.3-2.5-1.6v-1.7z"
+                              fill="currentColor"
+                            />
+                          </g>
+                          <g
+                            style="animation: facehash-blink 5.7s ease-in-out 3.7s infinite; transform-origin: center center;"
+                          >
+                            <path
+                              d="M42 5.1c0-.1 0-.2 0-.3.1-.5.3-1 .7-1.3.1 0 .1-.1.2-.1C44.4 2.2 48 0 52.5 0S60.6 2.2 62.2 3.3c.1 0 .1.1.1.1.4.3.7.9.7 1.3v.3c0 1 0 1.4 0 1.7-.2 1.3-1.2 1.9-2.5 1.6-.2 0-.7-.3-1.8-.8C57 6.7 54.8 6 52.5 6s-4.5.7-6.3 1.5c-1 .5-1.5.7-1.8.8-1.3.3-2.3-.3-2.5-1.6v-1.7z"
+                              fill="currentColor"
+                            />
+                          </g>
+                        </svg>
+                        <div
+                          data-facehash-mouth=""
+                          style="margin-top: 8%; display: flex; align-items: center; justify-content: center;"
+                        >
+                          <span
+                            data-as="span"
+                            data-testid="avatar-fallback-initial"
+                          >
+                            U
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </span>
+                </span>
+              </div>
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="What's on your mind?"
+                  readonly=""
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
+          >
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
         </div>
       </div>
     </div>

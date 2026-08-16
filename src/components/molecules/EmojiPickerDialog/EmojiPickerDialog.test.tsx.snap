@@ -1,23 +1,31 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`EmojiPickerDialog - Snapshots > matches snapshot when closed 1`] = `
-<div
-  data-open="false"
-  data-testid="dialog"
-/>
-`;
-
 exports[`EmojiPickerDialog - Snapshots > matches snapshot when open 1`] = `
 <div
-  data-open="true"
-  data-testid="dialog"
+  class="fixed inset-0 z-50 flex justify-center items-end sm:items-center"
 >
   <div
-    class="max-w-sm overflow-hidden p-0 outline-none sm:p-0"
+    aria-labelledby="radix-normalized"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 border bg-background shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg rounded-t-lg border-b-0 sm:border-b max-w-sm overflow-hidden p-0 outline-none sm:p-0"
+    data-cy="dialog-content"
+    data-slot="dialog-content"
+    data-state="open"
     data-testid="dialog-content"
+    id="radix-normalized"
+    role="dialog"
+    style="pointer-events: auto;"
+    tabindex="-1"
   >
+    <h2
+      class="sr-only"
+      id="radix-normalized"
+    >
+      Emoji Picker
+    </h2>
     <p
-      data-testid="dialog-description"
+      class="text-sm leading-normal font-medium text-muted-foreground sr-only"
+      data-slot="dialog-description"
+      id="radix-normalized"
     >
       Select an emoji
     </p>
@@ -50,21 +58,68 @@ exports[`EmojiPickerDialog - Snapshots > matches snapshot when open 1`] = `
         </div>
       </div>
     </div>
+    <button
+      class="hidden"
+      data-slot="dialog-close"
+      data-testid="dialog-close"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Close
+      </span>
+    </button>
   </div>
 </div>
 `;
 
 exports[`EmojiPickerDialog - Snapshots > matches snapshot with currentInput 1`] = `
 <div
-  data-open="true"
-  data-testid="dialog"
+  class="fixed inset-0 z-50 flex justify-center items-end sm:items-center"
 >
   <div
-    class="max-w-sm overflow-hidden p-0 outline-none sm:p-0"
+    aria-labelledby="radix-normalized"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 border bg-background shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg rounded-t-lg border-b-0 sm:border-b max-w-sm overflow-hidden p-0 outline-none sm:p-0"
+    data-cy="dialog-content"
+    data-slot="dialog-content"
+    data-state="open"
     data-testid="dialog-content"
+    id="radix-normalized"
+    role="dialog"
+    style="pointer-events: auto;"
+    tabindex="-1"
   >
+    <h2
+      class="sr-only"
+      id="radix-normalized"
+    >
+      Emoji Picker
+    </h2>
     <p
-      data-testid="dialog-description"
+      class="text-sm leading-normal font-medium text-muted-foreground sr-only"
+      data-slot="dialog-description"
+      id="radix-normalized"
     >
       Select an emoji
     </p>
@@ -97,21 +152,68 @@ exports[`EmojiPickerDialog - Snapshots > matches snapshot with currentInput 1`] 
         </div>
       </div>
     </div>
+    <button
+      class="hidden"
+      data-slot="dialog-close"
+      data-testid="dialog-close"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Close
+      </span>
+    </button>
   </div>
 </div>
 `;
 
 exports[`EmojiPickerDialog - Snapshots > matches snapshot with maxLength 1`] = `
 <div
-  data-open="true"
-  data-testid="dialog"
+  class="fixed inset-0 z-50 flex justify-center items-end sm:items-center"
 >
   <div
-    class="max-w-sm overflow-hidden p-0 outline-none sm:p-0"
+    aria-labelledby="radix-normalized"
+    class="relative z-50 grid duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] gap-6 border bg-background shadow-lg sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg rounded-t-lg border-b-0 sm:border-b max-w-sm overflow-hidden p-0 outline-none sm:p-0"
+    data-cy="dialog-content"
+    data-slot="dialog-content"
+    data-state="open"
     data-testid="dialog-content"
+    id="radix-normalized"
+    role="dialog"
+    style="pointer-events: auto;"
+    tabindex="-1"
   >
+    <h2
+      class="sr-only"
+      id="radix-normalized"
+    >
+      Emoji Picker
+    </h2>
     <p
-      data-testid="dialog-description"
+      class="text-sm leading-normal font-medium text-muted-foreground sr-only"
+      data-slot="dialog-description"
+      id="radix-normalized"
     >
       Select an emoji
     </p>
@@ -144,6 +246,38 @@ exports[`EmojiPickerDialog - Snapshots > matches snapshot with maxLength 1`] = `
         </div>
       </div>
     </div>
+    <button
+      class="hidden"
+      data-slot="dialog-close"
+      data-testid="dialog-close"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-x h-4 w-4 text-secondary-foreground opacity-70"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+      <span
+        class="sr-only"
+      >
+        Close
+      </span>
+    </button>
   </div>
 </div>
 `;

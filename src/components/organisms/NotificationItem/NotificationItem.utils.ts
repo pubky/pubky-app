@@ -11,47 +11,45 @@ import { USER_CENTRIC_NOTIFICATION_TYPES } from './NotificationItem.constants';
 // ============================================================================
 
 /**
- * Translation keys for notification action text
- * Returns the i18n key to be used with useTranslations('notifications.actions')
+ * Action text for each notification type (rendered after the actor's username)
  */
-const NOTIFICATION_ACTION_KEY: Record<NotificationType, string> = {
-  [NotificationType.Follow]: 'followedYou',
-  [NotificationType.NewFriend]: 'newFriend',
-  [NotificationType.TagPost]: 'taggedPost',
-  [NotificationType.TagProfile]: 'taggedProfile',
-  [NotificationType.Reply]: 'repliedToPost',
-  [NotificationType.Repost]: 'repostedPost',
-  [NotificationType.Mention]: 'mentionedYou',
-  [NotificationType.PostDeleted]: 'deletedPost',
-  [NotificationType.PostEdited]: 'editedPost',
+const NOTIFICATION_ACTION_TEXT: Record<NotificationType, string> = {
+  [NotificationType.Follow]: 'followed you',
+  [NotificationType.NewFriend]: 'is now your friend',
+  [NotificationType.TagPost]: 'tagged your post',
+  [NotificationType.TagProfile]: 'tagged your profile',
+  [NotificationType.Reply]: 'replied to your post',
+  [NotificationType.Repost]: 'reposted your post',
+  [NotificationType.Mention]: 'mentioned you in post',
+  [NotificationType.PostDeleted]: 'deleted a post',
+  [NotificationType.PostEdited]: 'edited a post you have interacted with',
 };
 
 type SpecificPostKind = 'collection' | 'long';
 type KindSpecificNotificationAction = Partial<Record<NotificationType, Record<SpecificPostKind, string>>>;
 
-const KIND_SPECIFIC_NOTIFICATION_ACTION_KEY: KindSpecificNotificationAction = {
-  [NotificationType.TagPost]: { collection: 'taggedCollection', long: 'taggedArticle' },
-  [NotificationType.Reply]: { collection: 'repliedToCollection', long: 'repliedToArticle' },
-  [NotificationType.Repost]: { collection: 'repostedCollection', long: 'repostedArticle' },
-  [NotificationType.Mention]: { collection: 'mentionedYouInCollection', long: 'mentionedYouInArticle' },
-  [NotificationType.PostDeleted]: { collection: 'deletedCollection', long: 'deletedArticle' },
-  [NotificationType.PostEdited]: { collection: 'updatedCollection', long: 'updatedArticle' },
+const KIND_SPECIFIC_NOTIFICATION_ACTION_TEXT: KindSpecificNotificationAction = {
+  [NotificationType.TagPost]: { collection: 'tagged your collection', long: 'tagged your article' },
+  [NotificationType.Reply]: { collection: 'replied to your collection', long: 'replied to your article' },
+  [NotificationType.Repost]: { collection: 'reposted your collection', long: 'reposted your article' },
+  [NotificationType.Mention]: { collection: 'mentioned you in a collection', long: 'mentioned you in an article' },
+  [NotificationType.PostDeleted]: { collection: 'deleted a collection', long: 'deleted an article' },
+  [NotificationType.PostEdited]: { collection: 'updated collection', long: 'updated an article' },
 };
 
 /**
- * Get notification action translation key (without the username) based on type
- * Returns the i18n key to be used with useTranslations('notifications.actions')
+ * Get notification action text (without the username) based on type
  */
-export function getNotificationActionKey(notification: FlatNotification): string {
+export function getNotificationActionText(notification: FlatNotification): string {
   if ('post_kind' in notification) {
     const postKind = notification.post_kind;
     if (postKind === 'collection' || postKind === 'long') {
-      const actionKey = KIND_SPECIFIC_NOTIFICATION_ACTION_KEY[notification.type]?.[postKind];
-      if (actionKey) return actionKey;
+      const actionText = KIND_SPECIFIC_NOTIFICATION_ACTION_TEXT[notification.type]?.[postKind];
+      if (actionText) return actionText;
     }
   }
 
-  return NOTIFICATION_ACTION_KEY[notification.type] ?? 'fallback';
+  return NOTIFICATION_ACTION_TEXT[notification.type] ?? 'New notification';
 }
 
 /**

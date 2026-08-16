@@ -2,7 +2,6 @@
 
 import { ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -64,8 +63,7 @@ export function InputField({
   dataCy,
   inputClassName,
 }: InputFieldProps) {
-  const t = useTranslations('common');
-  const resolvedLoadingText = loadingText ?? t('loading');
+  const resolvedLoadingText = loadingText ?? 'Loading...';
   const containerClasses = variant === 'dashed' && 'border-dashed';
   const statusClasses = {
     default: '',

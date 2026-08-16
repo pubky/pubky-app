@@ -26,7 +26,6 @@ describe('ProfilePageFilterBar', () => {
       />,
     );
     // Check that filter items are rendered with their translated labels
-    // The component uses t(item.labelKey) to translate labels
     expect(screen.getByText('Notifications')).toBeInTheDocument();
     expect(screen.getByText('Posts')).toBeInTheDocument();
     expect(screen.getByText('Collections')).toBeInTheDocument();
@@ -132,7 +131,8 @@ describe('ProfilePageFilterBar', () => {
     const customItems = [
       {
         icon: () => <span>Icon</span>,
-        labelKey: 'notifications',
+        id: 'notifications',
+        label: 'Notifications',
         count: 10,
         pageType: PROFILE_PAGE_TYPES.NOTIFICATIONS,
       },
@@ -144,7 +144,6 @@ describe('ProfilePageFilterBar', () => {
         onPageChangeAction={() => {}}
       />,
     );
-    // labelKey 'notifications' translates to 'Notifications' in en.json profile.tabs namespace
     expect(screen.getByText('Notifications')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
   });
@@ -153,7 +152,8 @@ describe('ProfilePageFilterBar', () => {
     const customItems = [
       {
         icon: () => <span>Icon</span>,
-        labelKey: 'posts',
+        id: 'posts',
+        label: 'Posts',
         count: undefined,
         pageType: PROFILE_PAGE_TYPES.NOTIFICATIONS,
       },
@@ -165,7 +165,6 @@ describe('ProfilePageFilterBar', () => {
         onPageChangeAction={() => {}}
       />,
     );
-    // labelKey 'posts' translates to 'Posts' in en.json profile.tabs namespace
     expect(screen.getByText('Posts')).toBeInTheDocument();
     const spinners = screen.getAllByTestId('spinner');
     expect(spinners.length).toBe(1);
@@ -240,7 +239,8 @@ describe('ProfilePageFilterBar - Snapshots', () => {
     const customItems = [
       {
         icon: () => <span>Icon</span>,
-        labelKey: 'notifications',
+        id: 'notifications',
+        label: 'Notifications',
         count: 10,
         pageType: PROFILE_PAGE_TYPES.NOTIFICATIONS,
       },

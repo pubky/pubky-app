@@ -1,11 +1,11 @@
 import './globals.css';
 import type { Viewport } from 'next';
-import { getLocale, getMessages } from 'next-intl/server';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { RootContainer } from '@/molecules/ContainerRoot/ContainerRoot';
 import { Fab } from '@/molecules/Fab/Fab';
 import { Metadata } from '@/molecules/Metadata/Metadata';
+import { StructuredData } from '@/molecules/StructuredData/StructuredData';
 import { Toaster } from '@/molecules/Toaster/Toaster';
 import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
 import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
@@ -13,7 +13,6 @@ import { Header } from '@/organisms/Header/Header';
 import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
 import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
 import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
-import { IntlProvider } from '@/providers/IntlProvider/IntlProvider';
 import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
 
 export const viewport: Viewport = {
@@ -32,33 +31,35 @@ export function generateMetadata() {
   });
 }
 
-// Force dynamic rendering since we use cookies for locale detection
+// Force dynamic rendering since RootContainer serializes runtime config per-request
+// (PUBKY_RUNTIME_* env vars must be read at request time, not baked in at build time)
 export const dynamic = 'force-dynamic';
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const locale = await getLocale();
-  const messages = await getMessages();
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RootContainer locale={locale}>
-      <IntlProvider locale={locale} messages={messages}>
-        <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
-          <GlobalErrorHandlerProvider>
-            <ErrorBoundaryProvider>
-              <DatabaseProvider>
-                <RouteGuardProvider>
-                  <CoordinatorsManager />
-                  <Header />
-                  {children}
-                  <Fab />
-                  <Toaster />
-                  <DialogSignIn />
-                </RouteGuardProvider>
-              </DatabaseProvider>
-            </ErrorBoundaryProvider>
-          </GlobalErrorHandlerProvider>
-        </TooltipProvider>
-      </IntlProvider>
+    <RootContainer>
+      {/*
+        Rendered as a sibling of the DatabaseProvider/RouteGuardProvider tree below (not a
+        descendant): those are client components that gate {children} behind IndexedDB/auth
+        readiness, so anything inside them is missing from the initial server-rendered HTML.
+      */}
+      <StructuredData />
+      <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
+        <GlobalErrorHandlerProvider>
+          <ErrorBoundaryProvider>
+            <DatabaseProvider>
+              <RouteGuardProvider>
+                <CoordinatorsManager />
+                <Header />
+                {children}
+                <Fab />
+                <Toaster />
+                <DialogSignIn />
+              </RouteGuardProvider>
+            </DatabaseProvider>
+          </ErrorBoundaryProvider>
+        </GlobalErrorHandlerProvider>
+      </TooltipProvider>
     </RootContainer>
   );
 }

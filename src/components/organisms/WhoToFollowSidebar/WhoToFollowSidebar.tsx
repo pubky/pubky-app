@@ -2,7 +2,6 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { UsersRound } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
@@ -28,8 +27,6 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  * Note: This is an Organism because it interacts with data hooks (useUserStream, useFollowUser).
  */
 export function WhoToFollowSidebar() {
-  const t = useTranslations('sidebar');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
@@ -58,9 +55,9 @@ export function WhoToFollowSidebar() {
   };
   return (
     <SidebarSection
-      title={t('whoToFollow')}
+      title={'Who to follow'}
       footerIcon={UsersRound}
-      footerText={tCommon('seeAll')}
+      footerText={'See all'}
       onFooterClick={handleSeeAll}
       dataCy="who-to-follow"
       footerDataCy="who-to-follow-see-all"

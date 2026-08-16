@@ -15,23 +15,6 @@ const mockGetAuthUrl = vi.fn();
 const mockGetSignupAuthUrl = vi.fn();
 const mockInitializeAuthenticatedSession = vi.fn();
 const mockCancelActiveAuthFlow = vi.fn();
-const mockTranslations = vi.fn((key: string) => {
-  const t: Record<string, string> = {
-    authInitFailedTitle: 'Sign in failed. Try again.',
-    authInitFailedDescription: 'Sign in failed. Try again.',
-    wrongEnvironmentHomeserverDescription: 'This account belongs to a different environment.',
-    authNotCompletedTitle: 'Authorization was not completed',
-    authNotCompletedDescription: 'Authorization failed. Try again.',
-    qrGenerationFailedTitle: 'QR code generation failed',
-    qrGenerationFailedDescription: 'Could not generate QR. Refresh and try again.',
-  };
-  return t[key] ?? key;
-});
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => mockTranslations,
-}));
-
 vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
     toast: (...args: unknown[]) => mockToast(...args),
@@ -358,7 +341,7 @@ describe('useAuthUrl', () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'This account belongs to a different environment.',
+        description: 'This key is linked to a different homeserver. Use a staging account on this site.',
       });
       expect(result.current.url).toBe('');
       expect(result.current.isExpired).toBe(true);
@@ -458,7 +441,7 @@ describe('useAuthUrl', () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'This account belongs to a different environment.',
+        description: 'This key is linked to a different homeserver. Use a staging account on this site.',
       });
     });
     expect(mockLoggerError).not.toHaveBeenCalled();

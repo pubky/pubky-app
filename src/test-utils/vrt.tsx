@@ -1,11 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
-import enMessages from '../../messages/en.json';
 import { freezeNow } from './vrt.clock';
 import type { VrtViewport } from './vrt.viewports';
 
@@ -33,15 +31,13 @@ function VRTProviders({ children, viewport, queryClient }: VRTProvidersProps) {
   };
 
   return (
-    <NextIntlClientProvider locale="en" messages={enMessages}>
-      <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
-        <QueryClientProvider client={queryClient}>
-          <div data-testid={VRT_ROOT_TESTID} style={rootStyle}>
-            {children}
-          </div>
-        </QueryClientProvider>
-      </TooltipProvider>
-    </NextIntlClientProvider>
+    <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
+      <QueryClientProvider client={queryClient}>
+        <div data-testid={VRT_ROOT_TESTID} style={rootStyle}>
+          {children}
+        </div>
+      </QueryClientProvider>
+    </TooltipProvider>
   );
 }
 
@@ -141,6 +137,31 @@ async function waitForHtmlImageReady(img: HTMLImageElement, src: string): Promis
   } catch {
     throw new Error(`VRT image failed to decode: ${src}`);
   }
+}
+
+/**
+ * Preload static assets (e.g. logo SVGs) into the browser's image cache before
+ * mounting. `waitForImagesReady` already waits for every `<img>` under the VRT
+ * root, but a cold fetch racing the initial paint is what caused the
+ * intermittent blank Pubky / Synonym / "a tether. company" logos in CI (see
+ * `docs/visual-regression-testing.md`). Preloading first means the `<img>` the
+ * component renders resolves from cache immediately, removing that race
+ * instead of only reacting to it after the fact.
+ */
+export async function preloadImages(urls: readonly string[]) {
+  await Promise.all(
+    urls.map(async (url) => {
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.addEventListener('load', () => resolve(), { once: true });
+        image.addEventListener('error', () => reject(new Error(`Failed to preload VRT image: ${url}`)), {
+          once: true,
+        });
+        image.src = url;
+      });
+      await image.decode();
+    }),
+  );
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: () => string): Promise<T> {

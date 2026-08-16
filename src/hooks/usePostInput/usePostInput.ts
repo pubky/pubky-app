@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
-import { useTranslations } from 'next-intl';
 import { useDebounceCallback } from 'usehooks-ts';
 import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
@@ -26,8 +25,9 @@ import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMention
 import { usePost } from '@/hooks/usePost/usePost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { Logger } from '@/libs/logger/logger';
+import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { useToast } from '@/molecules/Toaster/use-toast';
-import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
+import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { postKindBelongsToStream } from '@/stores/home/home.utils';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -72,9 +72,7 @@ export function usePostInput({
   const dragCounterRef = useRef(0);
 
   // Hooks
-  const t = useTranslations('post.placeholder');
-  const tFile = useTranslations('toast.file');
-  const { currentUserPubky } = useCurrentUserProfile();
+  const { currentUserPubky, userDetails: currentUserDetails } = useCurrentUserProfile();
   const {
     content,
     setContent,
@@ -170,18 +168,24 @@ export function usePostInput({
     }
   }, [isExpanded]);
 
-  const resizeTextarea = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, []);
-
-  // Autosize textarea height (Safari doesn't support `field-sizing: content` yet)
+  // Autosize textarea height (Safari doesn't support `field-sizing: content` yet).
+  // Never measure an empty textarea: in a stretched layout its scrollHeight can
+  // equal the available container height and persist that height inline.
   useLayoutEffect(() => {
     if (isArticle) return;
-    resizeTextarea();
-  }, [content, isArticle, resizeTextarea]);
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    if (content.length === 0) {
+      textarea.style.height = '1lh';
+      return;
+    }
+
+    // Measure from a collapsed height so a stretched flex/grid measurement cannot
+    // become the next explicit textarea height.
+    textarea.style.height = '0px';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [content, isArticle, isExpanded]);
 
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
@@ -225,6 +229,18 @@ export function usePostInput({
             const streamId = timelineFeed?.streamId;
             if (!streamId) {
               await timelineFeed?.prependPosts(createdPostId);
+              return;
+            }
+
+            /*
+              WoT-sourced streams ('My network', 'Tagged as') never contain the
+              viewer's own posts (Nexus excludes them and the local create path
+              never writes into them), so prepending would flash the post and
+              lose it on the next stream reset (#2308). Unlike the kind gate
+              below, this check is NOT mirrored in `NewPostsSection`: unread ids
+              there come from polling the WoT stream itself, so they belong.
+            */
+            if (isViewerExcludedWotStream(streamId)) {
               return;
             }
 
@@ -350,7 +366,7 @@ export function usePostInput({
       if (availableSlots <= 0) {
         toast({
           variant: 'error',
-          description: tFile('maxFiles', { max: ATTACHMENT_MAX_FILES }),
+          description: `Maximum ${ATTACHMENT_MAX_FILES} files allowed`,
         });
         return;
       }
@@ -360,14 +376,14 @@ export function usePostInput({
 
       for (const file of files) {
         if (validFiles.length >= availableSlots) {
-          errors.push(tFile('maxFilesPartial', { max: ATTACHMENT_MAX_FILES }));
+          errors.push(`Maximum ${ATTACHMENT_MAX_FILES} files allowed. Some files were not added.`);
           break;
         }
 
         // Check against specific supported MIME types from pubky-app-specs
         const isAcceptedType = SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type);
         if (!isAcceptedType) {
-          errors.push(tFile('unsupportedType', { name: file.name, type: file.type, formats: SUPPORTED_FILE_TYPES }));
+          errors.push(`Unsupported file type for ${file.name}. Supported: ${SUPPORTED_FILE_TYPES}.`);
           continue;
         }
 
@@ -376,12 +392,12 @@ export function usePostInput({
         const maxOtherSizeLabel = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
 
         if (isImage && file.size > IMAGE_MAX_RAW_SIZE) {
-          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxImageSizeLabel }));
+          errors.push(`${file.name} exceeds the ${maxImageSizeLabel} limit.`);
           continue;
         }
 
         if (!isImage && file.size > ATTACHMENT_MAX_OTHER_SIZE) {
-          errors.push(tFile('fileTooLarge', { name: file.name, maxSize: maxOtherSizeLabel }));
+          errors.push(`${file.name} exceeds the ${maxOtherSizeLabel} limit.`);
           continue;
         }
 
@@ -399,7 +415,7 @@ export function usePostInput({
         setAttachments((prev) => [...prev, ...validFiles]);
       }
     },
-    [isArticle, isSubmitting, attachments.length, setAttachments, toast, tFile],
+    [isArticle, isSubmitting, attachments.length, setAttachments, toast],
   );
 
   // Drag and drop handlers
@@ -496,7 +512,7 @@ export function usePostInput({
 
   // Derived values
   const hasContent = content.trim().length > 0;
-  const displayPlaceholder = placeholder ?? t(variant);
+  const displayPlaceholder = placeholder ?? POST_INPUT_PLACEHOLDER[variant];
 
   return {
     // Refs
@@ -532,6 +548,7 @@ export function usePostInput({
     hasContent,
     displayPlaceholder,
     currentUserPubky,
+    currentUserDetails,
 
     // Handlers
     handleExpand,

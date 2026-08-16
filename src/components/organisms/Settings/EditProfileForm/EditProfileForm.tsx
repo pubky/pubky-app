@@ -1,7 +1,6 @@
 'use client';
 
 import { File, Trash2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
@@ -22,8 +21,6 @@ import { DialogCropImage } from '../../DialogCropImage/DialogCropImage';
 import { EditProfileFormSkeleton } from './EditProfileForm.skeleton';
 
 export const EditProfileForm = () => {
-  const t = useTranslations('forms.profile');
-  const tCommon = useTranslations('common');
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const { state, errors, handlers, cropDialog, fileInputRef, isSubmitDisabled } = useProfileForm({
     mode: 'edit',
@@ -49,16 +46,16 @@ export const EditProfileForm = () => {
           <Container className="w-full gap-6">
             <Container className="gap-3">
               <Heading level={3} size="xl" className="text-2xl">
-                {tCommon('profile')}
+                {'Profile'}
               </Heading>
             </Container>
 
             <Container className="gap-6">
               <Container className="gap-2">
-                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('name')}</Label>
+                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{'NAME*'}</Label>
                 <InputField
                   id="profile-name-input"
-                  placeholder={t('namePlaceholder')}
+                  placeholder={'Enter your name'}
                   variant="dashed"
                   value={state.name}
                   onChange={(e) => handlers.setName(e.target.value)}
@@ -69,10 +66,10 @@ export const EditProfileForm = () => {
               </Container>
 
               <Container className="gap-2">
-                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{t('bio')}</Label>
+                <Label className="text-xs font-medium tracking-wide text-muted-foreground">{'BIO'}</Label>
                 <TextareaField
                   id="profile-bio-input"
-                  placeholder={t('bioPlaceholder')}
+                  placeholder={'Tell a bit about yourself.'}
                   value={state.bio}
                   variant="dashed"
                   rows={40}
@@ -89,7 +86,7 @@ export const EditProfileForm = () => {
           <Container className="mt-6 w-full gap-6 lg:mt-0">
             <Container className="gap-3">
               <Heading level={3} size="xl" className="text-2xl">
-                {t('linksTitle')}
+                {'Links'}
               </Heading>
             </Container>
 
@@ -148,7 +145,7 @@ export const EditProfileForm = () => {
           <Container className="mt-6 w-full gap-6 lg:mt-0">
             <Container className="gap-3 md:text-center">
               <Heading level={3} size="xl" className="text-2xl">
-                {t('avatarTitle')}
+                {'Avatar'}
               </Heading>
             </Container>
 
@@ -158,18 +155,12 @@ export const EditProfileForm = () => {
                 className="h-48 w-48 cursor-pointer bg-muted"
                 onClick={handlers.handleChooseFileClick}
                 role="button"
-                aria-label={t('chooseAvatar')}
+                aria-label={'Choose avatar image'}
               >
                 {state.avatarPreview ? (
                   <AvatarImage
                     src={state.avatarPreview}
-                    alt={
-                      state.avatarFile
-                        ? t('avatarPreview', {
-                            filename: state.avatarFile.name,
-                          })
-                        : t('currentAvatar')
-                    }
+                    alt={state.avatarFile ? `Selected avatar preview: ${state.avatarFile.name}` : 'Current avatar'}
                   />
                 ) : (
                   <AvatarFallback className="overflow-hidden border-none text-4xl">
@@ -197,14 +188,14 @@ export const EditProfileForm = () => {
                   <>
                     <Trash2 className="h-4 w-4" />
                     <Typography as="span" overrideDefaults>
-                      {tCommon('delete')}
+                      {'Delete'}
                     </Typography>
                   </>
                 ) : (
                   <>
                     <File className="h-4 w-4" />
                     <Typography as="span" overrideDefaults>
-                      {t('chooseFile')}
+                      {'Choose file'}
                     </Typography>
                   </>
                 )}
@@ -228,7 +219,7 @@ export const EditProfileForm = () => {
             className="rounded-full px-8"
             data-cy="edit-profile-cancel-btn"
           >
-            {tCommon('cancel')}
+            {'Cancel'}
           </Button>
           <Button
             size="lg"
@@ -239,7 +230,7 @@ export const EditProfileForm = () => {
             className="rounded-full px-8"
           >
             {state.isSaving && <Spinner size="sm" className="mr-2" />}
-            {t(state.submitTextKey)}
+            {state.submitText}
           </Button>
         </Container>
       </Container>

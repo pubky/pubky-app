@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { COLLECTION_LAYOUT, type CollectionLayout, DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useReorderCollection } from '@/hooks/useReorderCollection/useReorderCollection';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { buildCompositeId } from '@/models/models.utils';
 import { CollectionHero } from '@/organisms/Collections/CollectionHero/CollectionHero';
 import { CollectionHiddenItemsNotice } from '@/organisms/Collections/CollectionHiddenItemsNotice/CollectionHiddenItemsNotice';
 import { CollectionItemsEmpty } from '@/organisms/Collections/CollectionItemsEmpty/CollectionItemsEmpty';
+import { CollectionReorderGrid } from '@/organisms/Collections/CollectionReorderGrid/CollectionReorderGrid';
 import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { LAYOUT } from '@/stores/home/home.types';
@@ -44,6 +47,20 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
   const [viewerLayoutOverride, setViewerLayoutOverride] = useState<CollectionLayout | null>(null);
   const viewerLayout = viewerLayoutOverride ?? creatorLayout;
 
+  const reorder = useReorderCollection({
+    compositeCollectionId: compositeId,
+    envelopeItems: collection?.items,
+  });
+
+  // If moderation blurs the collection mid-reorder, the hero swaps to the
+  // blurred placeholder — which has no Save/Cancel controls — so bail out of
+  // reorder mode rather than trapping the user (and keeping the FAB hidden).
+  const isBlurred = postDetails?.is_blurred === true;
+  const { isReorderMode, cancelReorder } = reorder;
+  useEffect(() => {
+    if (isBlurred && isReorderMode) cancelReorder();
+  }, [isBlurred, isReorderMode, cancelReorder]);
+
   const hero = (
     <CollectionHero
       authorPubky={authorPubky}
@@ -51,6 +68,17 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
       postDetails={postDetails}
       layout={viewerLayout}
       onLayoutChange={setViewerLayoutOverride}
+      reorder={
+        isOwn
+          ? {
+              isActive: reorder.isReorderMode,
+              isSaving: reorder.isSaving,
+              onEnter: reorder.enterReorder,
+              onSave: () => void reorder.saveOrder(),
+              onCancel: reorder.cancelReorder,
+            }
+          : undefined
+      }
     />
   );
 
@@ -58,6 +86,22 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
     return (
       <Container overrideDefaults className="w-full">
         {hero}
+      </Container>
+    );
+  }
+
+  // Reorder mode replaces the paginated stream grid with a full drag-and-drop
+  // grid of every envelope item (always GRID, regardless of viewer layout).
+  // Dropping `TimelineFeed` also drops pagination, pull-to-refresh, and the
+  // trailing Add Post cell — reorder mode is for reordering only. gap-6
+  // mirrors the hero → grid spacing of `TimelineFeedContent`'s container.
+  if (reorder.isReorderMode) {
+    return (
+      <Container overrideDefaults className="flex w-full flex-col gap-6">
+        {hero}
+        <PostMainLayoutProvider tagsLayout="inline">
+          <CollectionReorderGrid entries={reorder.draftEntries} onMove={reorder.moveItem} disabled={reorder.isSaving} />
+        </PostMainLayoutProvider>
       </Container>
     );
   }

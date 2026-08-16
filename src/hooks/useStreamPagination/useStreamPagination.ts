@@ -5,6 +5,7 @@ import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
+import { resolveResumeAnchor } from '@/controllers/stream/posts/posts.utils';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { isCollectionItemsStream, isSkipPaginatedStream } from '@/models/stream/post/postStream.types';
@@ -139,7 +140,11 @@ export function useStreamPagination({
           });
         }
 
-        // Advance from the response, even on a fully-filtered (empty) page.
+        // Advance BOTH resume cursors from the response, even on a fully-filtered (empty)
+        // page: `streamTail` by the raw backend cursor, `lastPostId` (the local cache-walk
+        // anchor) by the raw scan anchor. Both advance by raw scanned data, never by the
+        // post-filter visible count — otherwise a fully-filtered round would restart the
+        // cache walk at the head and spin in place on long filtered runs.
         if (result.nextCursor != null) {
           // Skip streams: `nextCursor` extends the offset this request captured
           // at start, so removals committed during the flight are not in it —
@@ -152,13 +157,18 @@ export function useStreamPagination({
           setStreamTail(Math.max(0, result.nextCursor - removalsDuringFlight));
         }
 
+        // Never overwrite a defined anchor with undefined.
+        const nextAnchor = resolveResumeAnchor(result);
+        if (nextAnchor !== undefined) {
+          setLastPostId(nextAnchor);
+        }
+
         // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
-        // keeps hasMore so the advanced cursor is re-requested. This can't spin IN PLACE (the
-        // cursor always advances by raw count, and a short raw page forces reachedEnd), but an
-        // auto-loading caller (useInfiniteScroll) will chain rounds through a filtered region
-        // until the true stream end, with no per-user-action bound or feedback. Known
-        // limitation, deliberately unchanged here — any remedy (toast + backoff, manual
-        // load-more) is a product-visible UX change tracked as follow-up.
+        // keeps hasMore so the advanced cursors are re-requested. An auto-loading caller
+        // (useInfiniteScroll) still chains bounded rounds through a filtered region until the
+        // true stream end, with no per-user-action feedback. Known limitation, deliberately
+        // unchanged here — any remedy (toast + backoff, manual load-more) is a
+        // product-visible UX change tracked as follow-up.
         if (result.nextPageIds.length === 0) {
           setHasMore(!result.reachedEnd);
           setLoadingState(isInitialLoad, false);
@@ -169,9 +179,6 @@ export function useStreamPagination({
         const existingIds = new Set(postIdsRef.current);
         const newUniquePostIds = result.nextPageIds.filter((id) => !existingIds.has(id));
 
-        // Update last-returned id even if all posts are duplicates (we need to move forward)
-        const lastId = result.nextPageIds[result.nextPageIds.length - 1];
-        setLastPostId(lastId);
         setHasMore(result.reachedEnd !== true);
 
         // If all posts were duplicates, don't update the UI but keep hasMore state

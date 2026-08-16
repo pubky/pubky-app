@@ -3,7 +3,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -30,8 +29,6 @@ export function DialogBackupPhrase({ children }: DialogBackupPhraseProps) {
   const [recoveryWords, setRecoveryWords] = useState<string[]>([]);
   const [step, setStep] = useState(1);
   const { mnemonic } = useOnboardingStore();
-  const t = useTranslations('onboarding.backupPhrase');
-  const tCommon = useTranslations('common');
   const handleClose = () => {
     setIsHidden(true);
     setStep(1);
@@ -54,10 +51,10 @@ export function DialogBackupPhrase({ children }: DialogBackupPhraseProps) {
         <DialogTrigger asChild>{children}</DialogTrigger>
       ) : (
         <DialogTrigger asChild>
-          <Button id="backup-recovery-phrase-btn">{tCommon('continue')}</Button>
+          <Button id="backup-recovery-phrase-btn">{'Continue'}</Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-sm md:max-w-2xl" hiddenTitle={t('title')}>
+      <DialogContent className="max-w-sm md:max-w-2xl" hiddenTitle={'Backup recovery phrase'}>
         {step === 1 && (
           <RecoveryStep1
             recoveryWords={recoveryWords}
@@ -83,16 +80,20 @@ function RecoveryStep1({
   setIsHidden: (isHidden: boolean) => void;
   setStep: (step: number) => void;
 }) {
-  const t = useTranslations('onboarding.backupPhrase');
-  const tCommon = useTranslations('common');
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t('title')}</DialogTitle>
+        <DialogTitle>{'Backup recovery phrase'}</DialogTitle>
         <DialogDescription>
-          <span className="hidden md:inline">{t('subtitle')} </span>
-          <span className="md:hidden">{t('writeDown')} </span>
-          <span className="font-bold text-brand">{t('neverShare')}</span>
+          <span className="hidden md:inline">
+            {
+              'Use the recovery phrase below to recover your account at a later date. Write down these 12 words in the correct order and store them in a safe place.'
+            }{' '}
+          </span>
+          <span className="md:hidden">
+            {'Write down these 12 words in the correct order and store them in a safe place.'}{' '}
+          </span>
+          <span className="font-bold text-brand">{'Never share this recovery phrase with anyone.'}</span>
         </DialogDescription>
       </DialogHeader>
 
@@ -121,7 +122,7 @@ function RecoveryStep1({
           <>
             <DialogClose asChild>
               <Button id="backup-recovery-phrase-cancel-btn" variant="outline" size="lg">
-                {tCommon('cancel')}
+                {'Cancel'}
               </Button>
             </DialogClose>
             <Button
@@ -133,7 +134,7 @@ function RecoveryStep1({
               }}
             >
               <Eye className="h-4 w-4" />
-              {t('reveal')}
+              {'Reveal recovery phrase'}
             </Button>
           </>
         ) : (
@@ -141,7 +142,7 @@ function RecoveryStep1({
             <div className="contents md:hidden">
               <Button id="backup-recovery-phrase-confirm-btn-mobile" size="lg" onClick={() => setStep(2)}>
                 <ArrowRight className="h-4 w-4" />
-                {t('confirmTitle')}
+                {'Confirm recovery phrase'}
               </Button>
               <Button
                 variant="outline"
@@ -152,7 +153,7 @@ function RecoveryStep1({
                 }}
               >
                 <EyeOff className="h-4 w-4" />
-                {t('hide')}
+                {'Hide recovery phrase'}
               </Button>
             </div>
             <div className="hidden md:contents">
@@ -165,11 +166,11 @@ function RecoveryStep1({
                 }}
               >
                 <EyeOff className="h-4 w-4" />
-                {t('hide')}
+                {'Hide recovery phrase'}
               </Button>
               <Button id="backup-recovery-phrase-confirm-btn-desktop" size="lg" onClick={() => setStep(2)}>
                 <ArrowRight className="h-4 w-4" />
-                {t('confirmTitle')}
+                {'Confirm recovery phrase'}
               </Button>
             </div>
           </>
@@ -183,8 +184,6 @@ function RecoveryStep2({ recoveryWords, setStep }: { recoveryWords: string[]; se
     useRecoveryPhraseValidation({
       recoveryWords,
     });
-  const t = useTranslations('onboarding.backupPhrase');
-  const tCommon = useTranslations('common');
   const handleValidate = () => {
     if (validateWords()) {
       setStep(3);
@@ -193,8 +192,10 @@ function RecoveryStep2({ recoveryWords, setStep }: { recoveryWords: string[]; se
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t('confirmTitle')}</DialogTitle>
-        <DialogDescription>{t('confirmSubtitle')}</DialogDescription>
+        <DialogTitle>{'Confirm recovery phrase'}</DialogTitle>
+        <DialogDescription>
+          {'Click or tap the 12 words in the correct order or enter the words manually.'}
+        </DialogDescription>
       </DialogHeader>
 
       <Container className="space-y-6">
@@ -235,40 +236,40 @@ function RecoveryStep2({ recoveryWords, setStep }: { recoveryWords: string[]; se
       <DialogFooter>
         <Button variant="outline" size="lg" onClick={() => setStep(1)}>
           <ArrowLeft className="h-4 w-4" />
-          {tCommon('back')}
+          {'Back'}
         </Button>
         <Button id="backup-recovery-phrase-validate-btn" size="lg" onClick={handleValidate} disabled={!isComplete}>
           <Check className="h-4 w-4" />
-          {t('validate')}
+          {'Validate'}
         </Button>
       </DialogFooter>
     </>
   );
 }
 function RecoveryStep3({ handleClose }: { handleClose: () => void }) {
-  const t = useTranslations('onboarding.backupPhrase');
-  const tCommon = useTranslations('common');
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t('completeTitle')}</DialogTitle>
-        <DialogDescription>{t('completeSubtitle')}</DialogDescription>
+        <DialogTitle>{'Backup complete'}</DialogTitle>
+        <DialogDescription>
+          {'You can use your backed up recovery phrase to restore your account later.'}
+        </DialogDescription>
       </DialogHeader>
 
       <Container className="flex w-full items-center justify-center rounded-md bg-card p-12">
-        <Image src="/images/check.webp" alt={t('completeTitle')} width={180} height={180} className="h-48 w-48" />
+        <Image src="/images/check.webp" alt={'Backup complete'} width={180} height={180} className="h-48 w-48" />
       </Container>
 
       <DialogFooter className="flex-col gap-3">
         <DialogClose asChild>
           <Button id="backup-recovery-phrase-finish-btn" size="lg" className="w-full" onClick={handleClose}>
             <ArrowRight className="h-4 w-4" />
-            {tCommon('finish')}
+            {'Finish'}
           </Button>
         </DialogClose>
         <DialogClose asChild>
           <Button variant="outline" size="lg" className="w-full" onClick={handleClose}>
-            {tCommon('cancel')}
+            {'Cancel'}
           </Button>
         </DialogClose>
       </DialogFooter>

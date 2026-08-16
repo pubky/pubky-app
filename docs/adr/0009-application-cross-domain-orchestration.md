@@ -12,7 +12,7 @@ Complex user workflows often require coordinating operations across multiple dom
 2. **Post creation** (PostApplication)
 3. **Tag association** (TagApplication)
 
-These operations must be orchestrated as a single cohesive workflow with proper ordering (files before post, post before tags) and transactional semantics.
+These operations must be orchestrated as a single cohesive workflow with proper ordering (files before post, post before tags) and explicit partial-failure handling.
 
 Under the current architecture (ADR-0004), the allowed dependencies are:
 
@@ -42,106 +42,44 @@ The fundamental issue: **Where does cross-domain orchestration belong?**
 
 ### Core Rules
 
-1. **Horizontal calls permitted**: Application classes MAY call other Application classes within the same layer
+1. **Horizontal calls permitted**: Applications with orchestration privilege MAY call other Application classes within the same layer
 2. **Acyclic dependency graph**: Circular dependencies between Application classes are FORBIDDEN
-3. **Maximum call depth of 1**: If Application A calls Application B, then B MUST NOT call any other Application class within that execution flow
-4. **Orchestration privilege**: `PostApplication` and `UserApplication` are permitted to call other Application classes. `NotificationApplication` is also permitted as a scoped exception defined by ADR-0010 (read-only hydration before notification persistence). `BootstrapApplication` and `MigrationApplication` are also permitted as **root-node orchestrators** — see rationale below. All other Application classes (FileApplication, TagApplication, BookmarkApplication, etc.) MUST NOT call other Application classes, including PostApplication, UserApplication, or NotificationApplication. This ensures orchestrators can coordinate cross-domain workflows while specialized domains remain independent and cannot create reverse dependencies on core entities.
+3. **Maximum call depth of 1 by default**: If Application A calls Application B, then B MUST NOT call another Application within that execution flow. The only permitted depth-2 paths start from `PostApplication`, `NotificationApplication`, or `TtlApplication`, continue through `PostStreamApplication`, and end at `FileApplication` for attachment persistence inside `fetchMissingPostsFromNexus()` or `fetchOriginalPostsByUris()`. All other depth-2 paths and every path of depth 3 or greater are FORBIDDEN.
+4. **Orchestration privilege**: Only the Applications listed below may call other Application classes. All other Application classes (`FileApplication`, `TagApplication`, `BookmarkApplication`, `UserApplication`, etc.) MUST NOT call other Application classes. This keeps specialized domains independent and prevents reverse dependencies on core orchestrators.
 
-#### BootstrapApplication and MigrationApplication as Root-Node Orchestrators
+#### Allowed orchestrators
 
-In the Application dependency DAG, `BootstrapApplication` and `MigrationApplication` are **source nodes (in-degree 0)**: no other Application class holds a reference to them or calls into them. They are invoked from the Controller layer and fan out to multiple domain Applications.
+| Application               | Why privilege exists                                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `PostApplication`         | Single user action spans files, tags, and related posts (create / edit / delete / replies).                                        |
+| `NotificationApplication` | Hydrates referenced posts/users before notification persistence; see [ADR-0010](./0010-notification-application-orchestration.md). |
+| `BootstrapApplication`    | Session startup must hydrate multiple homeserver/Nexus domains in one coordinated fan-out. **Root-node** orchestrator (see below). |
+| `MigrationApplication`    | After DB recreation, critical homeserver-backed state must be re-synced once. **Root-node** orchestrator (see below).              |
+| `HotApplication`          | Hot-tag UI needs tagger profiles cached before tags are written, to avoid liveQuery flashes with missing users.                    |
+| `PostStreamApplication`   | Stream slices include attachment metadata that must land in the file domain when posts are persisted.                              |
+| `TtlApplication`          | Force-refresh of stale posts must also persist attachments and hydrate embedded original posts for reposts.                        |
 
-`BootstrapApplication` is invoked exactly once per session for initial hydration:
+#### Root-node orchestrators
 
-```
-BootstrapApplication          ← in-degree 0 (root/source node)
-  ├─→ MuteApplication         (fetch muted users)
-  ├─→ FeedApplication          (fetch feeds)
-  ├─→ NotificationApplication  (persist & summarize)
-  ├─→ FileApplication          (persist files)
-  └─→ SettingsApplication      (initialize settings)
-```
-
-After bootstrap, the canonical mute list for filtering remains the homeserver-backed Dexie stream; **ongoing** cross-device alignment uses `MuteListSyncCoordinator` (homeserver event stream → `MuteController.fetchMutedUsers`), not Nexus. See [ADR-0014: Muting System](./0014-muting-system.md).
-
-`MigrationApplication` is invoked after a database recreation (version bump) to re-fetch critical homeserver data that is not automatically re-populated:
-
-```
-MigrationApplication          ← in-degree 0 (root/source node)
-  ├─→ MuteApplication         (fetch muted users)
-  ├─→ FeedApplication          (fetch feeds)
-  └─→ SettingsApplication      (initialize settings)
-```
-
-Because no edge points **into** these orchestrators, they structurally **cannot** participate in a cycle, and the max-depth constraint is satisfied (orchestrator → leaf, depth 1). The constraints are:
-
-- ✅ `BootstrapApplication` MAY call other Application classes for startup hydration.
-- ✅ `MigrationApplication` MAY call other Application classes for post-migration re-sync.
-- ❌ No Application class MAY call `BootstrapApplication` or `MigrationApplication` (enforced by their root-node positions; adding such an edge would violate the acyclic graph rule).
+`BootstrapApplication` and `MigrationApplication` are **source nodes (in-degree 0)** in the Application dependency DAG: Controllers invoke them, and no Application may call them, preventing cycles through these roots. Their current execution paths stop after one cross-Application hop, so they remain at depth 1.
 
 ### Example
 
-```typescript
-// ✅ ALLOWED: PostApplication (orchestrator) calls helper applications
-// Real: src/core/application/post/post.ts
-class PostApplication {
-  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }) {
-    // Depth 0 → Depth 1
-    await FileApplication.commitCreate({ fileAttachments }); // OK (PostApplication can call others)
-    await LocalPostService.create({ compositePostId, post }); // OK (own service call)
-    await TagApplication.commitCreate({ tagList: tags });      // OK (PostApplication can call others)
-  }
-}
+```
+// ✅ Depth 1 — allowed orchestrator → helper
+PostApplication → FileApplication
+PostApplication → TagApplication
 
-// ✅ ALLOWED: BootstrapApplication (orchestrator) calls helper applications
-// Real: src/core/application/bootstrap/bootstrap.ts
-class BootstrapApplication {
-  static async run({ pubky }) {
-    await FileApplication.commitCreate({ ... });          // OK (BootstrapApplication can call others)
-    await SettingsApplication.fetchFromHomeserver(pubky);  // OK (BootstrapApplication can call others)
-  }
-}
+// ✅ Depth 2 — only permitted attachment-persistence exception
+PostApplication | NotificationApplication | TtlApplication
+  → PostStreamApplication
+    → FileApplication
 
-// ❌ FORBIDDEN: Helper applications cannot call other applications
-class FileApplication {
-  static async commitCreate({ fileAttachments }) {
-    // FileApplication is NOT in the allowed list — cannot call other Applications
-    await TagApplication.commitCreate({ tagList }); // ❌ VIOLATION
-    await PostApplication.commitCreate({ ... });    // ❌ VIOLATION
-  }
-}
-
-// ❌ FORBIDDEN: Helper applications cannot call orchestrator applications
-class TagApplication {
-  static async commitCreate({ tagList }) {
-    await PostApplication.commitCreate({ ... }); // ❌ VIOLATION
-  }
-}
-
-// ❌ FORBIDDEN: Deep chains (even from orchestrators)
-class PostApplication {
-  static async commitCreate({ fileAttachments, ... }) {
-    await FileApplication.commitCreate({ fileAttachments }); // OK (Depth 0 → 1)
-  }
-}
-class FileApplication {
-  static async commitCreate({ fileAttachments }) {
-    // Depth 1 → Depth 2 (violates max depth rule)
-    await ImageProcessorApplication.process(); // ❌ NOT ALLOWED
-  }
-}
-
-// ❌ FORBIDDEN: Circular dependencies
-class PostApplication {
-  static async commitCreate({ ... }) {
-    await FileApplication.commitCreate({ ... }); // A → B
-  }
-}
-class FileApplication {
-  static async commitCreate({ ... }) {
-    await PostApplication.commitCreate({ ... }); // B → A (circular!)
-  }
-}
+// ❌ Forbidden
+FileApplication → TagApplication          // helper → other Application
+HotApplication → PostStreamApplication → FileApplication   // depth 2 outside the exception
+A → B → C → D                              // depth ≥ 3
+A → B → A                                  // cycle
 ```
 
 ### Enforcement Strategy
@@ -155,17 +93,9 @@ class FileApplication {
 
 **We rely on:**
 
-1. **Code Reviews**: Reviewers MUST check for:
-   - Circular dependencies
-   - Excessive call depth (max depth 1)
-     <<<<<<< HEAD:.cursor/adr/0009-application-cross-domain-orchestration.md
-   - **Orchestration privilege violations** (only PostApplication/UserApplication/NotificationApplication/BootstrapApplication/MigrationApplication can call other Applications)
-   - # **Root-node invariant**: no Application class may add a dependency edge pointing into `BootstrapApplication` or `MigrationApplication`
-   - **Orchestration privilege violations** (only PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, TtlApplication can call other Applications)
-     > > > > > > > dev:docs/adr/0009-application-cross-domain-orchestration.md
-2. **Documentation**: This ADR as the source of truth
-3. **Testing**: Integration tests to catch violations at runtime
-4. **Code Comments**: Developers MUST document cross-Application calls with ADR reference
+1. **Code Reviews**: Reviewers MUST check for circular dependencies, the call-depth rule and its single explicit exception, orchestration privilege (Allowed orchestrators table), and the root-node invariant (no Application may call `BootstrapApplication` or `MigrationApplication`)
+2. **Automated Review**: The `cross-domain-app-restriction` rule in `.greptile/config.json` mirrors the allowlist and call-depth constraints
+3. **Documentation**: This ADR is the source of truth
 
 **Future Tooling** (optional, not required now):
 
@@ -178,22 +108,16 @@ class FileApplication {
 **When TO use cross-Application calls:**
 
 - ✅ Single user action requires multi-domain coordination
-- ✅ Complex workflow with ordering/transactional requirements
+- ✅ Complex workflow with ordering or explicit partial-failure handling
 - ✅ Avoiding code duplication of orchestration logic
-  <<<<<<< HEAD:.cursor/adr/0009-application-cross-domain-orchestration.md
-- # ✅ **Only from PostApplication, UserApplication, NotificationApplication, BootstrapApplication, or MigrationApplication** (NotificationApplication is constrained by ADR-0010; BootstrapApplication is constrained to startup hydration and MigrationApplication to post-migration re-sync as root-node orchestrators)
-- ✅ **Only from approved orchestrators**: PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, TtlApplication
-  > > > > > > > dev:docs/adr/0009-application-cross-domain-orchestration.md
+- ✅ Only from an **allowed orchestrator** (rule 4)
 
 **When NOT to use:**
 
 - ❌ Simple read operations (use services directly)
 - ❌ Single-domain workflows (stay within one Application)
-- ❌ Deep processing chains (refactor to flatten)
-  <<<<<<< HEAD:.cursor/adr/0009-application-cross-domain-orchestration.md
-- # ❌ **From specialized Application classes** (FileApplication, TagApplication, BookmarkApplication, etc.) - these must remain independent and cannot depend on PostApplication, UserApplication, NotificationApplication, BootstrapApplication, or MigrationApplication
-- ❌ **From specialized Application classes** (FileApplication, TagApplication, BookmarkApplication, etc.) — these must remain independent and cannot call other Applications
-  > > > > > > > dev:docs/adr/0009-application-cross-domain-orchestration.md
+- ❌ Deep processing chains outside the explicit depth-2 attachment-persistence exception (refactor to flatten)
+- ❌ From Applications **without** orchestration privilege (rule 4)
 
 ## Consequences
 
@@ -223,116 +147,43 @@ class FileApplication {
 
 ### Alternative 1: Full Dependency Injection Refactor
 
-**Description**: Move from static classes to instance-based classes with constructor injection.
+Move from static Application classes to instance-based classes with constructor injection.
 
-```typescript
-class PostApplication {
-  constructor(
-    private fileApp: FileApplication,
-    private tagApp: TagApplication,
-    private postService: LocalPostService,
-  ) {}
+**Pros**: Explicit dependencies in constructors; a composition root or DI container can detect cycles; easier mocking; possible typed call-depth enforcement.
 
-  async create({ files, tags, post }) {
-    await this.fileApp.upload(files);
-    await this.tagApp.create(tags);
-  }
-}
-```
+**Cons**: Large refactor across Controllers / Applications / Services; DI container or manual wiring; more boilerplate and init complexity; little immediate product value.
 
-**Pros**:
-
-- Explicit dependencies in constructor
-- Compile-time circular dependency detection (would fail instantiation)
-- Better testability (easier mocking)
-- Could enforce call depth with types
-- Industry standard pattern
-
-**Cons**:
-
-- **Massive refactor** (affects every Controller, Application, Service)
-- Need DI container or manual wiring
-- Increased boilerplate
-- Initialization complexity
-- Team learning curve
-- No immediate business value
-
-**Why not chosen**: The refactor scope is too large for the immediate problem. This could be reconsidered later if:
-
-- Architecture violations become frequent
-- Team size grows beyond effective code review capacity
-- Complexity requires stronger compile-time guarantees
+**Why not chosen**: Scope is too large for the immediate problem. Reconsider if privilege violations become frequent or code review alone cannot enforce the rules.
 
 ### Alternative 2: UI Orchestration
 
-**Description**: Have UI components coordinate multiple controller calls sequentially.
+Have React components sequence multiple controller calls (upload files → create post → add tags).
 
-```typescript
-// In React component
-const handlePostCreate = async () => {
-  const fileUrls = await Promise.all(files.map((f) => FileController.upload({ file: f, pubky })));
-  await PostController.create({ content, fileUrls });
-  await Promise.all(tags.map((tag) => TagController.commitCreate({ taggedId: postId, label: tag })));
-};
-```
+**Pros**: No Application-layer change; domains stay separate at the controller boundary; flow is easy to read in one place.
 
-**Pros**:
+**Cons**: Business workflow leaks into presentation; ordering/error handling scatters across components; hard to reuse for non-UI flows (bootstrap, migration, TTL).
 
-- No architecture changes needed
-- Clear separation between domains
-- Easy to understand flow
+**Why not chosen**: Cross-domain orchestration belongs in the Application layer, not the UI.
 
-**Cons**:
+### Alternative 3: Controller-Level Orchestration
 
-- Business logic leaks into UI layer
-- Orchestration logic scattered across components
-- Hard to test (requires UI component testing)
-- Error handling becomes complex
-- Violates separation of concerns
+Have Controllers call several Application classes in sequence for one user/system action, with no Application→Application calls.
 
-**Why not chosen**: Business logic belongs in the domain layer, not presentation layer. This approach makes the UI responsible for orchestration, which is not its role.
+**Pros**: Keeps Application classes independent; Controllers already sit above Application; easy to follow from an entry point.
 
-### Alternative 3: Duplicate Orchestration Logic
+**Cons**: Places cross-domain business ordering alongside Controller concerns such as session and store management. Other Applications cannot reuse the workflow without duplicating it or introducing a forbidden Application → Controller dependency.
 
-**Description**: Each Application class duplicates the logic of other applications it needs.
+**Why not chosen**: Cross-domain business invariants belong in Application. Controllers select workflows and reconcile their results with UI state. They may sequence Applications for controller-owned session or store coordination, but must not own reusable cross-domain business invariants.
 
-```typescript
-class PostApplication {
-  static async commitCreate({ fileAttachments, tags, post, ... }) {
-    // Duplicate FileApplication.commitCreate logic
-    for (const file of fileAttachments) {
-      await HomeserverService.putBlob(...);
-      await HomeserverService.request(...);
-      await LocalFileService.create(...);
-    }
+### Alternative 4: Duplicate Orchestration Logic
 
-    // Duplicate TagApplication.commitCreate logic
-    for (const tag of tags) {
-      await LocalPostTagService.create(...);
-      await HomeserverService.request(...);
-    }
+Inline file/tag/stream logic inside each orchestrating Application instead of calling peer Applications.
 
-    // Post creation logic
-    await LocalPostService.create(...);
-  }
-}
-```
+**Pros**: No cross-Application dependencies; each Application is fully self-contained; easy to reason about in isolation.
 
-**Pros**:
+**Cons**: Duplicates domain rules; changes must be made in multiple places; implementations drift; larger bug surface.
 
-- No cross-Application dependencies
-- Each Application fully independent
-- Easy to reason about (all logic in one place)
-
-**Cons**:
-
-- Violates DRY principle (logic duplicated 2-3x)
-- Hard to maintain (changes needed in multiple places)
-- Inconsistency risk (different implementations drift)
-- Increased bug surface area
-- Code bloat
-
-**Why not chosen**: The maintenance burden and inconsistency risk outweigh the benefits of independence. Orchestration logic should be reusable.
+**Why not chosen**: Prefer one Application owning its domain and being called by an allowed orchestrator.
 
 ## Related Decisions
 

@@ -46,6 +46,7 @@ export default defineConfig({
           setupFiles: ['./src/config/test.ts'],
           globals: true,
           include: ['**/*.test.{ts,tsx}'],
+          // .claude excludes local tooling worktrees checked out inside the repo.
           exclude: ['**/node_modules/**', '**/.claude/**', '**/*.vrt.test.{ts,tsx}'],
           server: { deps: { inline: ['react-tweet'] } },
         },
@@ -68,7 +69,7 @@ export default defineConfig({
           globals: true,
           testTimeout: 30_000,
           include: ['**/*.vrt.test.{ts,tsx}'],
-          exclude: ['**/node_modules/**'],
+          exclude: ['**/node_modules/**', '**/.claude/**'],
           setupFiles: ['./src/test-utils/vrt.setup.ts'],
           server: { deps: { inline: ['react-tweet'] } },
           browser: {
@@ -86,9 +87,9 @@ export default defineConfig({
                 comparatorOptions: {
                   allowedMismatchedPixelRatio: 0.001,
                 },
-                // Home feed desktop (WebKit/Linux) needs extra headroom for
-                // layout to settle after fonts/images decode.
-                timeout: 10_000,
+                // Image-heavy suites (Home, Collections) on WebKit/Linux need
+                // extra headroom for layout to settle after fonts/images decode.
+                timeout: 15_000,
               },
             },
             // `viewport` below is the INITIAL browser size only. Each test

@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
@@ -29,8 +28,6 @@ export function Human() {
   const { setInviteCode, reset } = useOnboardingStore();
   const router = useRouter();
   const { toast } = useToast();
-  const t = useTranslations('onboarding.install');
-
   useEffect(() => {
     reset();
   }, [reset]);
@@ -52,28 +49,28 @@ export function Human() {
 
       if (status === 'valid') {
         toast({
-          title: t('inviteCodeApplied'),
+          title: 'Invite code applied',
         });
         return 'valid';
       }
 
       if (status === 'used') {
         toast({
-          title: t('usedInviteCode'),
+          title: 'Invite code already used',
           variant: 'error',
         });
         return 'used';
       }
 
       toast({
-        title: t('invalidInviteCode'),
+        title: 'Invalid invite code',
         variant: 'error',
       });
       return 'invalid';
     } catch {
       toast({
         variant: 'error',
-        title: t('verificationFailed'),
+        title: "Couldn't verify invite code",
       });
       return 'error';
     }

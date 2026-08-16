@@ -9,7 +9,6 @@ import { NotificationCoordinator } from '@/coordinators/notifications/notificati
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
-import * as i18nUtils from '@/i18n/utils';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -73,7 +72,6 @@ const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsSt
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
   muted: [],
-  language: 'en',
   updatedAt: 0,
   version: 1,
   ...overrides,
@@ -405,7 +403,6 @@ describe('AuthController', () => {
       };
       const remoteSettings = createMockSettingsState({
         notifications: remoteNotificationPrefs,
-        language: 'fr',
       });
       const remoteAllowedTypes = [NotificationType.Reply, NotificationType.Mention];
 
@@ -419,7 +416,6 @@ describe('AuthController', () => {
       await spyOnSleep();
 
       const loadFromHomeserverSpy = vi.fn();
-      const setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
       const settingsStoreState = mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy });
       vi.spyOn(useSettingsStore, 'getState').mockReturnValue(settingsStoreState);
 
@@ -436,9 +432,8 @@ describe('AuthController', () => {
       expect(NotificationNormalizer.toEnabledTypes).toHaveBeenCalledWith(remoteNotificationPrefs);
       // Bootstrap should use remote-derived allowedTypes
       expect(initializeSpy.mock.calls[0][0]).toEqual(expect.objectContaining({ allowedTypes: remoteAllowedTypes }));
-      // Remote settings should be applied to the store and locale cookie
+      // Remote settings should be applied to the store
       expect(loadFromHomeserverSpy).toHaveBeenCalledWith(remoteSettings);
-      expect(setLocaleCookieSpy).toHaveBeenCalledWith('fr');
     });
 
     it('should complete bootstrap when settings sync fails with AppError', async () => {
@@ -457,7 +452,6 @@ describe('AuthController', () => {
       const notification: NotificationState = { unread: 0, lastRead: 0, lastPolledTimestamp: undefined };
       const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
       await spyOnSleep();
-      const setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
 
       const loadFromHomeserverSpy = vi.fn();
       const settingsStoreState = mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy });
@@ -478,7 +472,6 @@ describe('AuthController', () => {
       expect(authStoreState.setHasProfile).toHaveBeenCalledWith(true);
       // Remote settings should NOT be applied (sync failed, fell back to local)
       expect(loadFromHomeserverSpy).not.toHaveBeenCalled();
-      expect(setLocaleCookieSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -1202,7 +1195,7 @@ describe('AuthController', () => {
 
     it('should use remote settings for allowedTypes and apply them to store when initializeSettings returns non-null', async () => {
       // Goal: prove that, during session initialization, fresher remote settings
-      // drive allowedTypes computation and are applied to settings state/cookie.
+      // drive allowedTypes computation and are applied to settings state.
       const mockSession = buildMockSession();
       const mockPubky = TEST_PUBKY as Pubky;
       const remoteNotificationPrefs: NotificationPreferences = {
@@ -1218,7 +1211,6 @@ describe('AuthController', () => {
       };
       const remoteSettings = createMockSettingsState({
         notifications: remoteNotificationPrefs,
-        language: 'fr',
       });
       const remoteAllowedTypes = [NotificationType.Reply, NotificationType.Mention];
       const notification: NotificationState = { unread: 3, lastRead: 789, lastPolledTimestamp: 0 };
@@ -1231,7 +1223,6 @@ describe('AuthController', () => {
       const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
 
       const loadFromHomeserverSpy = vi.fn();
-      const setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
       vi.spyOn(useSettingsStore, 'getState').mockReturnValue(
         mockSettingsStore({ loadFromHomeserver: loadFromHomeserverSpy }),
       );
@@ -1247,9 +1238,8 @@ describe('AuthController', () => {
       expect(NotificationNormalizer.toEnabledTypes).toHaveBeenCalledWith(remoteNotificationPrefs);
       // Bootstrap should use remote-derived allowedTypes
       expect(initializeSpy.mock.calls[0][0]).toEqual(expect.objectContaining({ allowedTypes: remoteAllowedTypes }));
-      // Remote settings applied to store and locale cookie
+      // Remote settings applied to store
       expect(loadFromHomeserverSpy).toHaveBeenCalledWith(remoteSettings);
-      expect(setLocaleCookieSpy).toHaveBeenCalledWith('fr');
     });
 
     it('should complete bootstrap when settings sync fails with AppError', async () => {
@@ -1274,7 +1264,6 @@ describe('AuthController', () => {
 
       const notification: NotificationState = { unread: 0, lastRead: 0, lastPolledTimestamp: 0 };
       const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notification);
-      const setLocaleCookieSpy = vi.spyOn(i18nUtils, 'setLocaleCookie').mockImplementation(() => {});
 
       const loadFromHomeserverSpy = vi.fn();
       vi.spyOn(useSettingsStore, 'getState').mockReturnValue(
@@ -1295,7 +1284,6 @@ describe('AuthController', () => {
       expect(NotificationNormalizer.toEnabledTypes).toHaveBeenCalledWith(localSettings.notifications);
       // Remote settings should NOT be applied
       expect(loadFromHomeserverSpy).not.toHaveBeenCalled();
-      expect(setLocaleCookieSpy).not.toHaveBeenCalled();
       // Session flow completes normally
       expect(authStore.setHasProfile).toHaveBeenCalledWith(true);
     });
@@ -1430,8 +1418,8 @@ describe('AuthController', () => {
       // Query clients
       expect(clearAllQueryClientsSpy).toHaveBeenCalledOnce();
 
-      // Cookies (with locale excluded) and database
-      expect(clearCookiesSpy).toHaveBeenCalledWith(['locale']);
+      // Cookies and database
+      expect(clearCookiesSpy).toHaveBeenCalledWith();
       expect(clearDatabaseSpy).toHaveBeenCalledOnce();
 
       // Skip post-migration resync — full cleanup resets all state
@@ -1508,7 +1496,7 @@ describe('AuthController', () => {
 
       expect(restorePersistedSessionSpy).toHaveBeenCalledOnce();
       expect(logoutSpy).toHaveBeenCalledWith({ session: restoredSession });
-      expect(clearCookiesSpy).toHaveBeenCalledWith(['locale']);
+      expect(clearCookiesSpy).toHaveBeenCalledWith();
       expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
     });
 

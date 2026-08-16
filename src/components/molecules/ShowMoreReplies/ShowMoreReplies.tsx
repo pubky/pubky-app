@@ -1,6 +1,5 @@
 'use client';
 import { CirclePlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
@@ -26,8 +25,9 @@ interface ShowMoreRepliesProps {
  * height, avoiding the fixed-height measurement that inflates the row.
  */
 export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepliesProps) {
-  const tThreadTree = useTranslations('common.threadTree');
   const connectorVariant = isLast ? 'last' : 'regular';
+  // toLocaleString matches the grouped number the ICU plural `#` placeholder produced.
+  const moreRepliesLabel = `${count.toLocaleString('en-US')} more ${count === 1 ? 'reply' : 'replies'}`;
   return (
     <Container overrideDefaults>
       <PostThreadSpacer />
@@ -66,11 +66,7 @@ export function ShowMoreReplies({ count, onClick, isLast = false }: ShowMoreRepl
             className="gap-2 rounded-full px-3.5 py-2 text-xs font-bold text-foreground"
           >
             <CirclePlus className="size-6" />
-            <span>
-              {tThreadTree('moreReplies', {
-                count,
-              })}
-            </span>
+            <span>{moreRepliesLabel}</span>
           </Button>
         </Container>
       </Container>

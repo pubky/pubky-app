@@ -1,7 +1,6 @@
 'use client';
 
 import { Check, Loader2, StickyNote, Tag, UserMinus, UserRound, UserRoundPlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { getUserProfileUrl } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
@@ -33,7 +32,6 @@ import type {
  * Renders follow/unfollow button in icon or text variant
  */
 function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, variant, onClick }: FollowButtonProps) {
-  const t = useTranslations('userList');
   // Show loading if action is in progress OR if status is still being loaded
   const showLoading = isLoading || isStatusLoading;
   if (variant === 'icon') {
@@ -45,7 +43,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
         onClick={onClick}
         disabled={showLoading}
         className="group size-8 shrink-0 rounded-full p-1"
-        aria-label={isFollowing ? `${t('unfollow')} ${displayName}` : `${t('follow')} ${displayName}`}
+        aria-label={isFollowing ? `${'Unfollow'} ${displayName}` : `${'Follow'} ${displayName}`}
       >
         {showLoading ? (
           <Loader2 className="size-5 animate-spin" />
@@ -70,7 +68,7 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
       className="group w-[110px] justify-center"
       onClick={onClick}
       disabled={showLoading}
-      aria-label={isFollowing ? t('unfollow') : t('follow')}
+      aria-label={isFollowing ? 'Unfollow' : 'Follow'}
     >
       {showLoading ? (
         <Loader2 className="size-4 animate-spin" />
@@ -78,22 +76,22 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
         <>
           <Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
             <Check className="size-4" />
-            <span>{t('following')}</span>
+            <span>{'Following'}</span>
           </Container>
           <Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
             <UserMinus className="size-4" />
-            <span>{t('unfollow')}</span>
+            <span>{'Unfollow'}</span>
           </Container>
         </>
       ) : (
         <>
           <Container overrideDefaults className="flex items-center gap-1.5 group-hover:hidden">
             <UserRoundPlus className="size-4" />
-            <span>{t('follow')}</span>
+            <span>{'Follow'}</span>
           </Container>
           <Container overrideDefaults className="hidden items-center gap-1.5 group-hover:flex">
             <Check className="size-4" />
-            <span>{t('follow')}</span>
+            <span>{'Follow'}</span>
           </Container>
         </>
       )}
@@ -106,8 +104,6 @@ function FollowButton({ isFollowing, isLoading, isStatusLoading, displayName, va
  * Disabled button shown when viewing own profile
  */
 function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 'icon'; className?: string }) {
-  const t = useTranslations('userList');
-  const tProfile = useTranslations('profile.actions');
   if (variant === 'icon') {
     return (
       <Button
@@ -118,7 +114,7 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
           'size-8 shrink-0 cursor-not-allowed border-none bg-transparent p-1 opacity-100 hover:bg-transparent',
           className,
         )}
-        aria-label={tProfile('thisIsYou')}
+        aria-label={'This is you'}
       >
         <UserRound strokeWidth={2} className="size-5" />
       </Button>
@@ -131,9 +127,9 @@ function MeButton({ variant = 'icon', className }: { variant?: 'iconWithText' | 
       size="sm"
       className={cn('w-[110px] cursor-not-allowed justify-center text-muted-foreground opacity-50', className)}
       disabled
-      aria-label={tProfile('thisIsYou')}
+      aria-label={'This is you'}
     >
-      <span>{t('me')}</span>
+      <span>{'Me'}</span>
     </Button>
   );
 }
@@ -169,12 +165,11 @@ function StatsSubtitle({ tags, posts }: StatsSubtitleProps) {
  * Full stats display with labels (for profile pages)
  */
 function UserStats({ tags, posts }: UserStatsProps) {
-  const t = useTranslations('userList');
   return (
     <Container overrideDefaults className="flex shrink-0 items-center gap-3">
       <Container className="items-start">
         <Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
-          {t('tags')}
+          {'TAGS'}
         </Typography>
         <Typography data-cy="profile-follower-item-tags-count" size="sm" className="font-bold">
           {tags}
@@ -182,7 +177,7 @@ function UserStats({ tags, posts }: UserStatsProps) {
       </Container>
       <Container className="items-start">
         <Typography className="text-xs font-medium tracking-[1.2px] text-muted-foreground uppercase">
-          {t('posts')}
+          {'POSTS'}
         </Typography>
         <Typography data-cy="profile-follower-item-posts-count" size="sm" className="font-bold">
           {posts}

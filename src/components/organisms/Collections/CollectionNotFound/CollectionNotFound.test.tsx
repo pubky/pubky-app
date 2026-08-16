@@ -8,11 +8,6 @@ import { CollectionNotFound } from './CollectionNotFound';
 // ---------------------------------------------------------------------------
 
 const mockPush = vi.fn();
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
@@ -59,17 +54,17 @@ describe('CollectionNotFound', () => {
   it('renders the namespaced title and subtitle copy', () => {
     render(<CollectionNotFound postId={COMPOSITE} />);
 
-    expect(screen.getByText('collections.single.notFound.title')).toBeInTheDocument();
+    expect(screen.getByText('Collection Not Found')).toBeInTheDocument();
     // subtitle1 and subtitle2 share one node split by a <br />.
     const subtitle = screen.getByTestId('subtitle');
-    expect(subtitle).toHaveTextContent('collections.single.notFound.subtitle1');
-    expect(subtitle).toHaveTextContent('collections.single.notFound.subtitle2');
+    expect(subtitle).toHaveTextContent("This collection isn't available.");
+    expect(subtitle).toHaveTextContent('It may have been removed or the link is no longer valid.');
   });
 
   it('navigates back to the collections landing route when "Back to Collections" is clicked', () => {
     render(<CollectionNotFound postId={COMPOSITE} />);
 
-    const button = screen.getByText('collections.single.notFound.backToCollections').closest('button');
+    const button = screen.getByText('Back to Collections').closest('button');
     expect(button).not.toBeNull();
     fireEvent.click(button as HTMLButtonElement);
 
@@ -80,7 +75,7 @@ describe('CollectionNotFound', () => {
   it('shows a "View profile" control when the composite resolves to a valid author pubky', () => {
     render(<CollectionNotFound postId={COMPOSITE} />);
 
-    const viewProfile = screen.getByText('collections.single.notFound.viewProfile');
+    const viewProfile = screen.getByText('View profile');
     expect(viewProfile).toBeInTheDocument();
 
     fireEvent.click(viewProfile.closest('button') as HTMLButtonElement);
@@ -90,8 +85,8 @@ describe('CollectionNotFound', () => {
   it('hides the "View profile" control when the composite does not parse to a valid author', () => {
     render(<CollectionNotFound postId="not-a-composite" />);
 
-    expect(screen.queryByText('collections.single.notFound.viewProfile')).not.toBeInTheDocument();
+    expect(screen.queryByText('View profile')).not.toBeInTheDocument();
     // The back action is always available.
-    expect(screen.getByText('collections.single.notFound.backToCollections')).toBeInTheDocument();
+    expect(screen.getByText('Back to Collections')).toBeInTheDocument();
   });
 });

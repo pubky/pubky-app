@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
@@ -61,7 +60,6 @@ export function PostMain({
   isNavigable = true,
   showFullContentInListLayout = false,
 }: PostMainProps) {
-  const t = useTranslations('post');
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const isListLayout = effectiveTagsLayout === 'list';
@@ -108,9 +106,17 @@ export function PostMain({
         )}
         <Card ref={cardRef} className={cn('min-w-0 flex-1 gap-0 rounded-md py-0', className)}>
           {isMissing ? (
-            <RemovablePostUnavailable postId={postId} message={t('missing')} removeDataCy="post-missing-remove-btn" />
+            <RemovablePostUnavailable
+              postId={postId}
+              message={'Post not found.'}
+              removeDataCy="post-missing-remove-btn"
+            />
           ) : isDeleted ? (
-            <RemovablePostUnavailable postId={postId} message={t('deleted')} removeDataCy="post-deleted-remove-btn" />
+            <RemovablePostUnavailable
+              postId={postId}
+              message={'This post has been deleted by its author.'}
+              removeDataCy="post-deleted-remove-btn"
+            />
           ) : (
             <>
               {showRepostHeader && <RepostHeader />}
@@ -132,7 +138,7 @@ export function PostMain({
                   <Container className="flex min-w-0 flex-col lg:flex-row">
                     <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
                       {shouldShowPostHeader && (
-                        <PostHeader postId={postId} size="large" timeAgoPlacement="bottom-left" />
+                        <PostHeader postId={postId} size="extraLarge" timeAgoPlacement="bottom-left" />
                       )}
                       <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
                       {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}

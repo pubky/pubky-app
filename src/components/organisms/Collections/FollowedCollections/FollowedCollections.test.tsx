@@ -20,11 +20,6 @@ let mockAuthState: { hasHydrated: boolean; currentUserPubky: string | null } = {
   hasHydrated: false,
   currentUserPubky: null,
 };
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string) => `${namespace ?? ''}.${key}`,
-}));
-
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(),
 }));
@@ -108,12 +103,14 @@ function makeSlice({
   nextPageIds = [],
   reachedEnd = true,
   nextCursor = 0,
+  lastRawPostId,
 }: {
   nextPageIds?: string[];
   reachedEnd?: boolean;
   nextCursor?: number;
+  lastRawPostId?: string;
 } = {}) {
-  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor });
+  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor, lastRawPostId });
 }
 
 beforeEach(() => {
@@ -141,7 +138,7 @@ describe('FollowedCollections', () => {
 
     render(<FollowedCollections />);
 
-    expect(screen.getByText('collections.followed.title')).toBeInTheDocument();
+    expect(screen.getByText('Followed Collections')).toBeInTheDocument();
     expect(screen.getByTestId('avatar-stack-skeleton')).toHaveAttribute('data-count', '3');
     expect(screen.getAllByTestId('collection-card-skeleton').length).toBeGreaterThan(0);
     expect(mockPrepareStreamForInitialLoad).not.toHaveBeenCalled();
@@ -277,8 +274,8 @@ describe('FollowedCollections', () => {
     await waitFor(() => {
       expect(mockGetOrFetchStreamSlice).toHaveBeenCalled();
     });
-    expect(screen.queryByText('collections.followed.empty')).not.toBeInTheDocument();
-    expect(screen.queryByText('collections.followed.title')).not.toBeInTheDocument();
+    expect(screen.queryByText("You haven't followed any collections yet.")).not.toBeInTheDocument();
+    expect(screen.queryByText('Followed Collections')).not.toBeInTheDocument();
     expect(screen.queryByTestId('collection-card')).not.toBeInTheDocument();
   });
 
@@ -292,7 +289,7 @@ describe('FollowedCollections', () => {
     });
 
     await waitFor(() => {
-      expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+      expect(screen.queryByText('Show more')).not.toBeInTheDocument();
     });
   });
 
@@ -307,7 +304,7 @@ describe('FollowedCollections', () => {
       render(<FollowedCollections />);
     });
 
-    const button = await screen.findByRole('button', { name: 'collections.showMore' });
+    const button = await screen.findByRole('button', { name: 'Show more' });
     expect(button).toBeInTheDocument();
 
     const callsBefore = mockGetOrFetchStreamSlice.mock.calls.length;
@@ -320,6 +317,33 @@ describe('FollowedCollections', () => {
     // The follow-up fetch must resume from the cursor threaded back by the first page (42),
     // proving the timestamp->nextCursor rename actually feeds pagination.
     expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({ streamTail: 42 });
+  });
+
+  it('Show More resumes the cache walk from lastRawPostId, not the last visible id', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    mockUseLiveQuery.mockReturnValue(['a:p1']);
+    // The slice's raw scan ended past the visible page — e.g. a filtered tail of
+    // deleted bookmarked collections. The next request must anchor on the raw id.
+    mockGetOrFetchStreamSlice.mockResolvedValue(
+      makeSlice({ nextPageIds: ['a:p1'], reachedEnd: false, nextCursor: 42, lastRawPostId: 'a:deleted-9' }),
+    );
+
+    await act(async () => {
+      render(<FollowedCollections />);
+    });
+
+    const button = await screen.findByRole('button', { name: 'Show more' });
+    const callsBefore = mockGetOrFetchStreamSlice.mock.calls.length;
+    await act(async () => {
+      button.click();
+    });
+    await waitFor(() => {
+      expect(mockGetOrFetchStreamSlice.mock.calls.length).toBeGreaterThan(callsBefore);
+    });
+    expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({
+      lastPostId: 'a:deleted-9',
+      streamTail: 42,
+    });
   });
 
   it('on seed-fetch failure: logs an error, fires the load-failed toast, and hides Show More (reachedEnd flips true)', async () => {
@@ -338,9 +362,9 @@ describe('FollowedCollections', () => {
     // consistent across the three Collections sections.
     expect(mockToast).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'collections.loadFailed',
+      description: 'Failed to load collections. Please try again.',
     });
-    expect(screen.queryByText('collections.showMore')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show more')).not.toBeInTheDocument();
   });
 
   describe('FollowedCollections - Snapshots', () => {
@@ -360,7 +384,7 @@ describe('FollowedCollections', () => {
 
       const { container } = await act(async () => render(<FollowedCollections />));
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'collections.showMore' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Show more' })).toBeInTheDocument();
       });
 
       expect(container.firstChild).toMatchSnapshot();

@@ -123,7 +123,6 @@ z-0   ─────────────  Normal document flow
 - `Popover` / `PopoverContent`
 - `SearchInput` dropdown
 - `TagInput` dropdown
-- `Language` dropdown
 
 ### Modal Controls (`z-60`)
 

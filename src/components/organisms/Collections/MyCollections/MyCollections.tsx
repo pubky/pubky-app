@@ -2,7 +2,6 @@
 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Loader2, Plus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -39,8 +38,6 @@ import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
  * No empty state — the pinned card is always present.
  */
 export function MyCollections() {
-  const t = useTranslations('collections');
-
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
   const localAvatarUrl = useLocalFilesStore((state) => state.profile);
 
@@ -58,7 +55,7 @@ export function MyCollections() {
       <Container overrideDefaults className="flex flex-wrap items-center justify-between gap-3">
         <Container overrideDefaults className="flex flex-wrap items-center gap-3">
           <Heading level={2} size="lg" className="font-light text-muted-foreground">
-            {t('my.title')}
+            {'My Collections'}
           </Heading>
           {currentUserPubky ? (
             <AvatarWithFallback
@@ -75,10 +72,10 @@ export function MyCollections() {
             <Button variant="secondary" size="sm">
               <Plus />
               <Typography as="span" overrideDefaults className="text-sm font-bold lg:hidden">
-                {t('new.ctaShort')}
+                {'New'}
               </Typography>
               <Typography as="span" overrideDefaults className="hidden text-sm font-bold lg:inline">
-                {t('new.ctaShort')}
+                {'New'}
               </Typography>
             </Button>
           </DialogNewCollection>
@@ -108,7 +105,6 @@ interface MyCollectionsStreamProps {
  * so `useStreamPagination` always receives a real stream id.
  */
 function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
-  const t = useTranslations('collections');
   const { toast } = useToast();
   const streamId = buildAuthorCollectionsStreamId(currentUserPubky);
 
@@ -122,7 +118,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
     onError: () => {
       toast({
         variant: 'error',
-        description: t('loadFailed'),
+        description: 'Failed to load collections. Please try again.',
       });
     },
   });
@@ -171,7 +167,7 @@ function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
         <Container overrideDefaults className="flex w-full justify-center">
           <Button variant="default" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>
             {loadingMore && <Loader2 className="size-4 animate-spin" />}
-            {t('showMore')}
+            {'Show more'}
           </Button>
         </Container>
       )}

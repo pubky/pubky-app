@@ -18,7 +18,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
         class="text-2xl font-light text-muted-foreground"
         data-testid="heading-2"
       >
-        collections.my.title
+        My Collections
       </h2>
       <div
         data-alt="Alice"
@@ -60,13 +60,13 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
           class="text-sm font-bold lg:hidden"
           data-testid="typography"
         >
-          collections.new.ctaShort
+          New
         </span>
         <span
           class="hidden text-sm font-bold lg:inline"
           data-testid="typography"
         >
-          collections.new.ctaShort
+          New
         </span>
       </button>
     </div>
@@ -91,7 +91,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
       data-testid="collection-card"
     />
     <button
-      aria-label="collections.new.cta"
+      aria-label="New Collection"
       class="flex h-full w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input p-6 text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
       data-cy="new-collection-card-cta"
       data-slot="button"
@@ -121,7 +121,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
         class="text-sm font-bold"
         data-testid="typography"
       >
-        collections.new.cta
+        New Collection
       </span>
     </button>
   </div>
@@ -135,7 +135,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
       data-slot="button"
       data-variant="default"
     >
-      collections.showMore
+      Show more
     </button>
   </div>
 </div>
@@ -159,7 +159,7 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
         class="text-2xl font-light text-muted-foreground"
         data-testid="heading-2"
       >
-        collections.my.title
+        My Collections
       </h2>
       <div
         data-count="1"
@@ -196,13 +196,13 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
           class="text-sm font-bold lg:hidden"
           data-testid="typography"
         >
-          collections.new.ctaShort
+          New
         </span>
         <span
           class="hidden text-sm font-bold lg:inline"
           data-testid="typography"
         >
-          collections.new.ctaShort
+          New
         </span>
       </button>
     </div>

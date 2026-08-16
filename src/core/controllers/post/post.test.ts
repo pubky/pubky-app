@@ -939,6 +939,176 @@ describe('PostController', () => {
     });
   });
 
+  describe('commitReorderCollectionItems', () => {
+    const collectionPostId = buildCompositeId({ pubky: testData.authorPubky, id: 'reorderCol1' });
+    const uriA = 'pubky://author_a/pub/pubky.app/posts/aaa';
+    const uriB = 'pubky://author_b/pub/pubky.app/posts/bbb';
+    const uriC = 'pubky://author_c/pub/pubky.app/posts/ccc';
+
+    const createCollectionDetails = (items: string[] = [], overrides: Partial<PostDetailsModelSchema> = {}) =>
+      ({
+        id: collectionPostId,
+        content: JSON.stringify({ name: 'Saved posts', description: '', items }),
+        indexed_at: Date.now(),
+        kind: 'collection',
+        uri: `pubky://${testData.authorPubky}/pub/pubky.app/posts/reorderCol1`,
+        attachments: null,
+        is_moderated: false,
+        is_blurred: false,
+        ...overrides,
+      }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
+
+    it('commits the reordered items', async () => {
+      setupAuthUser(testData.authorPubky);
+      const getDetailsSpy = vi
+        .spyOn(PostApplication, 'getDetails')
+        .mockResolvedValue(createCollectionDetails([uriA, uriB, uriC]));
+      const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { url: 'pubky://author/pub/pubky.app/posts/reorderCol1' },
+      } as never);
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitReorderCollectionItems({
+          collectionId: collectionPostId,
+          items: [uriC, uriA, uriB],
+        });
+
+        expect(getDetailsSpy).toHaveBeenCalledWith({ compositeId: collectionPostId });
+        expect(toEditSpy).toHaveBeenCalledWith({
+          compositePostId: collectionPostId,
+          content: JSON.stringify({
+            name: 'Saved posts',
+            description: '',
+            items: [uriC, uriA, uriB],
+            layout: COLLECTION_LAYOUT.GRID,
+          }),
+          currentUserPubky: testData.authorPubky,
+        });
+        expect(commitEditSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            compositePostId: collectionPostId,
+            postUrl: 'pubky://author/pub/pubky.app/posts/reorderCol1',
+          }),
+        );
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('merges stale drafts against the live envelope: since-added items lead, since-removed items are dropped', async () => {
+      setupAuthUser(testData.authorPubky);
+      // Draft was taken from [uriB, uriA]; since then uriC was added (prepended)
+      // and the draft also still references a URI that was removed (uriD).
+      const removedUri = 'pubky://author_d/pub/pubky.app/posts/ddd';
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([uriC, uriA, uriB]));
+      const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { url: 'pubky://author/pub/pubky.app/posts/reorderCol1' },
+      } as never);
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitReorderCollectionItems({
+          collectionId: collectionPostId,
+          items: [uriB, removedUri, uriA],
+        });
+
+        expect(toEditSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            content: JSON.stringify({
+              name: 'Saved posts',
+              description: '',
+              items: [uriC, uriB, uriA],
+              layout: COLLECTION_LAYOUT.GRID,
+            }),
+          }),
+        );
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('does not edit when the drafted order matches the current order', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([uriA, uriB]));
+      const toEditSpy = vi.spyOn(PostNormalizer, 'toEdit');
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit');
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitReorderCollectionItems({
+          collectionId: collectionPostId,
+          items: [uriA, uriB],
+        });
+
+        expect(toEditSpy).not.toHaveBeenCalled();
+        expect(commitEditSpy).not.toHaveBeenCalled();
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects missing collections', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(null);
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitReorderCollectionItems({ collectionId: collectionPostId, items: [uriA] }),
+        ).rejects.toThrow('Collection not found');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects tombstoned collections (content === [DELETED]) as not-found', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([], { content: '[DELETED]' }));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitReorderCollectionItems({ collectionId: collectionPostId, items: [uriA] }),
+        ).rejects.toThrow('Collection not found');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects collections with invalid content', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([], { content: 'not-json' }));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitReorderCollectionItems({ collectionId: collectionPostId, items: [uriA] }),
+        ).rejects.toThrow('Collection content is invalid');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects edits when the current user is not the collection author', async () => {
+      setupAuthUser('different_user_pubky' as Pubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails([uriA, uriB]));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitReorderCollectionItems({ collectionId: collectionPostId, items: [uriB, uriA] }),
+        ).rejects.toThrow('Current user is not the author of this post');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+  });
+
   describe('commitEditCollection', () => {
     const collectionPostId = buildCompositeId({ pubky: testData.authorPubky, id: 'editCol1' });
     const existingItemUri = 'pubky://target_author_pubky/pub/pubky.app/posts/keep-me';

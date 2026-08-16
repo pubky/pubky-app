@@ -7,32 +7,35 @@ export function useElementHeight() {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!ref.current) return;
+    const element = ref.current;
+    if (!element) return;
 
-    const updateHeight = () => {
-      if (ref.current) {
-        const height = ref.current.getBoundingClientRect().height;
-        setHeight(height);
-      }
-    };
+    let animationFrameId: number | null = null;
 
-    // Initial height measurement - use requestAnimationFrame to ensure DOM is ready
-    const measureInitialHeight = () => {
-      requestAnimationFrame(() => {
-        updateHeight();
+    const updateHeight = (nextHeight: number) => {
+      if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+
+      animationFrameId = requestAnimationFrame(() => {
+        animationFrameId = null;
+        setHeight((currentHeight) => (currentHeight === nextHeight ? currentHeight : nextHeight));
       });
     };
 
-    measureInitialHeight();
+    // offsetHeight and ResizeObserver box sizes are layout measurements, so ancestor
+    // transforms (for example a dialog's zoom-in animation) cannot shrink the result.
+    updateHeight(element.offsetHeight);
 
     // Use ResizeObserver to watch for content changes
-    const resizeObserver = new ResizeObserver(() => {
-      requestAnimationFrame(updateHeight);
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+
+      updateHeight(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
     });
-    resizeObserver.observe(ref.current);
+    resizeObserver.observe(element, { box: 'border-box' });
 
     return () => {
       resizeObserver.disconnect();
+      if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
     };
   }, []);
 

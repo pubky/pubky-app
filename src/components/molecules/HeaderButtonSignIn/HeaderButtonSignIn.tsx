@@ -3,12 +3,10 @@
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogIn, UserRoundPlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 
 export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButtonElement>) {
-  const t = useTranslations('header');
   const router = useRouter();
   const pathname = usePathname();
   const isSignInPage = pathname === AUTH_ROUTES.SIGN_IN;
@@ -30,12 +28,12 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
       {isSignInPage ? (
         <>
           <UserRoundPlus className="size-4" />
-          {t('newHere')}
+          {'New here?'}
         </>
       ) : (
         <>
           <LogIn className="size-4" />
-          {t('signIn')}
+          {'Sign in'}
         </>
       )}
     </Button>

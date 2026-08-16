@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useTranslations } from 'next-intl';
 import { TagKind } from '@/application/tag/tag.types';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -289,7 +288,6 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
  * stops propagation itself.
  */
 function VisualTimelinePlaceholderTile({ tile, size, onNavigate }: VisualTimelinePlaceholderTileProps) {
-  const t = useTranslations('post');
   const removal = useRemoveDeletedPost(tile.postId);
 
   const handleNavigate = () => {
@@ -316,7 +314,7 @@ function VisualTimelinePlaceholderTile({ tile, size, onNavigate }: VisualTimelin
       style={{ aspectRatio: VISUAL_TILE_ASPECT_RATIOS[size] }}
     >
       <PostUnavailable
-        message={tile.placeholderKind === 'deleted' ? t('deleted') : t('missing')}
+        message={tile.placeholderKind === 'deleted' ? 'This post has been deleted by its author.' : 'Post not found.'}
         removeDataCy={tile.placeholderKind === 'deleted' ? 'post-deleted-remove-btn' : 'post-missing-remove-btn'}
         onRemove={removal.canRemove ? () => void removal.remove() : undefined}
         isRemoving={removal.isRemoving}
@@ -401,9 +399,13 @@ export function VisualTimelinePosts({
       });
   }, [loadMore, shouldBackfillInitialRows]);
 
+  // `hasRows` keeps the observer quiet while the tile pipeline resolves rows for
+  // existing postIds (the backfill effect owns that case). A fully-filtered stream
+  // region leaves postIds itself empty — there the sentinel must stay armed so
+  // load rounds keep chaining toward the first visible posts.
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: loadMore,
-    hasMore: hasMore && hasRows,
+    hasMore: hasMore && (hasRows || postIds.length === 0),
     isLoading: loadingMore || isInitialLoading,
     threshold: 3000,
     debounceMs: 20,
@@ -433,6 +435,7 @@ export function VisualTimelinePosts({
       loading={isInitialLoading}
       error={error}
       hasItems={(hasRows && !showFilteredEmptyState) || hasExtras}
+      hasMore={hasMore}
       loadingComponent={<VisualTimelinePostsSkeleton />}
       emptyComponent={emptyState}
     >

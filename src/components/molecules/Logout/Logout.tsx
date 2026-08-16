@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { AUTH_ROUTES, ROOT_ROUTES } from '@/app/routes';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -23,24 +22,19 @@ export const LogoutContent = () => {
 };
 
 export const LogoutHeader = () => {
-  const t = useTranslations('logout');
-
   return (
     <PageHeader>
       <PageTitle size="large">
-        {t.rich('title', {
-          highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-        })}
+        {'See you '}
+        <span className="text-brand">{'soon!'}</span>
       </PageTitle>
-      <PageSubtitle>{t('subtitle')}</PageSubtitle>
+      <PageSubtitle>{'You have securely signed out.'}</PageSubtitle>
     </PageHeader>
   );
 };
 
 export const LogoutNavigation = () => {
   const router = useRouter();
-  const t = useTranslations('logout');
-
   const onHandleBackButton = () => {
     router.push(ROOT_ROUTES);
   };
@@ -52,8 +46,8 @@ export const LogoutNavigation = () => {
   return (
     <ButtonsNavigation
       id="logout-navigation"
-      backText={t('homepage')}
-      continueText={t('signBackIn')}
+      backText={'Homepage'}
+      continueText={'Sign back in'}
       onHandleContinueButton={onHandleContinueButton}
       onHandleBackButton={onHandleBackButton}
     />

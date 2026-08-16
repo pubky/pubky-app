@@ -1,6 +1,5 @@
 'use client';
 import { Check, Smartphone, TriangleAlert } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -13,7 +12,6 @@ import { HumanSmsCardSkeleton } from './HumanSmsCard.skeleton';
 import type { HumanSmsCardProps } from './HumanSmsCard.types';
 
 export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
-  const t = useTranslations('onboarding.phoneNumber');
   const smsInfo = useSmsVerificationInfo();
 
   // Waiting for availability check
@@ -48,33 +46,33 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
               as="h3"
               className="m-0 text-[20px] leading-none font-bold text-foreground lg:text-2xl lg:leading-8"
             >
-              {t('title')}
+              {'Phone Number'}
             </Typography>
             <Badge
               variant="secondary"
               className="rounded-md border-0 bg-primary px-2 py-[2px] text-sm font-semibold tracking-wide text-primary-foreground uppercase lg:hidden"
             >
-              {t('free')}
+              {'Free'}
             </Badge>
           </Container>
 
           <Typography as="p" className="hidden text-5xl leading-none font-bold text-brand lg:block lg:text-6xl">
-            {t('free')}
+            {'Free'}
           </Typography>
 
           <Typography
             as="p"
             className="mt-1 text-sm font-bold tracking-widest text-muted-foreground uppercase lg:mt-0 lg:text-xs lg:font-medium lg:tracking-[1.2px]"
           >
-            {t('lessPrivate')}
+            {'LESS PRIVATE, BUT EASY'}
           </Typography>
 
           <Container className="hidden flex-col lg:flex">
             <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {t('storage')}
+              {'1GB storage'}
             </Typography>
             <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {t('speedLimit')}
+              {'1MB/s speed limit'}
             </Typography>
           </Container>
         </Container>
@@ -83,13 +81,13 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
           <Container className="flex-row items-center gap-2">
             <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
             <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {t('storage')}
+              {'1GB storage'}
             </Typography>
           </Container>
           <Container className="flex-row items-center gap-2">
             <Check className="size-6 shrink-0 text-foreground" aria-hidden="true" />
             <Typography as="p" className="text-base leading-6 font-medium text-secondary-foreground/80">
-              {t('speedLimit')}
+              {'1MB/s speed limit'}
             </Typography>
           </Container>
         </Container>
@@ -102,7 +100,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
           disabled={isUnavailable}
         >
           <Smartphone className="mr-2 size-4" />
-          {t('receiveCode')}
+          {'Receive Code'}
         </Button>
       </IllustratedCard>
 
@@ -117,7 +115,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
             <TriangleAlert className="size-4 text-destructive-foreground" />
           </Container>
           <Typography overrideDefaults className="text-sm font-semibold whitespace-nowrap text-destructive-foreground">
-            {t('notAvailable')}
+            {'Currently not available in your country'}
           </Typography>
         </Container>
       )}
@@ -133,7 +131,7 @@ export const HumanSmsCard = ({ onClick }: HumanSmsCardProps) => {
             <TriangleAlert className="size-4 text-destructive-foreground" />
           </Container>
           <Typography overrideDefaults className="text-sm font-semibold whitespace-nowrap text-destructive-foreground">
-            {t('unavailable')}
+            {'Service temporarily unavailable'}
           </Typography>
         </Container>
       )}

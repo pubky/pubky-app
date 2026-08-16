@@ -14,9 +14,13 @@ import { PostMainLayoutProvider } from './PostMainLayoutContext';
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
 const { mockPostHeader } = vi.hoisted(() => ({
   mockPostHeader: vi.fn(
-    ({ postId }: { postId: string; size?: 'normal' | 'large'; timeAgoPlacement?: 'top-right' | 'bottom-left' }) => (
-      <div data-testid="post-header">PostHeader {postId}</div>
-    ),
+    ({
+      postId,
+    }: {
+      postId: string;
+      size?: 'normal' | 'large' | 'extraLarge';
+      timeAgoPlacement?: 'top-right' | 'bottom-left';
+    }) => <div data-testid="post-header">PostHeader {postId}</div>,
   ),
 }));
 
@@ -196,7 +200,7 @@ vi.mock('@/organisms/PostHeader/PostHeader', () => {
       timeAgoPlacement,
     }: {
       postId: string;
-      size?: 'normal' | 'large';
+      size?: 'normal' | 'large' | 'extraLarge';
       timeAgoPlacement?: 'top-right' | 'bottom-left';
     }) => mockPostHeader({ postId, size, timeAgoPlacement }),
   };
@@ -690,7 +694,7 @@ describe('PostMain', () => {
     expect(screen.getByTestId('post-content')).toBeInTheDocument();
   });
 
-  it('passes large size and bottom-left timestamp placement for side tags layout', () => {
+  it('passes extraLarge size and bottom-left timestamp placement for side tags layout', () => {
     render(
       <PostMainLayoutProvider tagsLayout="side">
         <PostMain postId="post-side-1" />
@@ -699,7 +703,7 @@ describe('PostMain', () => {
 
     expect(mockPostHeader).toHaveBeenCalledWith({
       postId: 'post-side-1',
-      size: 'large',
+      size: 'extraLarge',
       timeAgoPlacement: 'bottom-left',
     });
   });
@@ -823,7 +827,7 @@ describe('PostMain', () => {
 
     expect(mockPostHeader).toHaveBeenCalledWith({
       postId: 'post-context-side-1',
-      size: 'large',
+      size: 'extraLarge',
       timeAgoPlacement: 'bottom-left',
     });
     expect(screen.getByTestId('post-content')).toHaveAttribute('data-text-class-name', 'text-xl leading-7');

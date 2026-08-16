@@ -12,13 +12,6 @@ const mocks = vi.hoisted(() => ({
   toggleBookmark: vi.fn(),
   toast: vi.fn(),
 }));
-
-const translations: Record<string, string> = {
-  success: 'Success',
-  addedToCollection: 'Post added to collection.',
-  removedFromCollection: 'Post removed from collection.',
-};
-
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitUpdateCollectionItem: (...args: unknown[]) => mocks.commitUpdateCollectionItem(...args),
@@ -67,15 +60,6 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
     selector({ currentUserPubky: 'current-user' }),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string, values?: Record<string, string>) =>
-    Object.entries(values ?? {}).reduce(
-      (message, [name, value]) => message.replace(`{${name}}`, value),
-      translations[key] ?? key,
-    ),
-}));
-
 describe('usePostSaveTargets', () => {
   beforeEach(() => {
     vi.clearAllMocks();

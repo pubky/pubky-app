@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@synonymdev/pubky';
-import { useTranslations } from 'next-intl';
 import { AuthController } from '@/controllers/auth/auth';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { isAppError, isAuthError, isTimeoutError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
@@ -28,7 +27,6 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   const autoFetch = options.autoFetch ?? true;
   const type = options.type ?? 'signin';
   const inviteCode = options.type === 'signup' ? options.inviteCode : '';
-  const t = useTranslations('onboarding.signIn');
 
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(autoFetch);
@@ -56,7 +54,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             if (isWrongEnvironmentHomeserverError(error)) {
               toast({
                 variant: 'error',
-                description: t('wrongEnvironmentHomeserverDescription'),
+                description: 'This key is linked to a different homeserver. Use a staging account on this site.',
               });
               if (isMountedRef.current) {
                 setUrl('');
@@ -70,7 +68,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
             }
             toast({
               variant: 'error',
-              description: t('authInitFailedDescription'),
+              description: 'Sign in failed. Try again.',
             });
             if (isMountedRef.current) {
               setUrl('');
@@ -99,7 +97,7 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
 
           toast({
             variant: 'error',
-            description: t('authNotCompletedDescription'),
+            description: 'Authorization failed. Try again.',
           });
         });
 
@@ -110,14 +108,14 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
       if (!isMountedRef.current) return;
       toast({
         variant: 'error',
-        description: t('qrGenerationFailedDescription'),
+        description: 'Could not generate QR. Refresh and try again.',
       });
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
       }
     }
-  }, [type, inviteCode, t]);
+  }, [type, inviteCode]);
 
   const copyAuthUrl = useCallback(async (): Promise<void> => {
     if (!url) return;

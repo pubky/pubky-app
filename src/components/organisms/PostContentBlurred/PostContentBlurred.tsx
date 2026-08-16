@@ -1,4 +1,3 @@
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ModerationController } from '@/controllers/moderation/moderation';
@@ -11,7 +10,6 @@ interface PostContentBlurredProps {
   variant?: 'default' | 'compact';
 }
 export const PostContentBlurred = ({ postId, className, variant = 'default' }: PostContentBlurredProps) => {
-  const t = useTranslations('moderation');
   const isCompact = variant === 'compact';
   return (
     <Button
@@ -39,7 +37,7 @@ export const PostContentBlurred = ({ postId, className, variant = 'default' }: P
 
       {/* Overlay with icon and message */}
       <ModerationBlurOverlay
-        label={t('postContentModerated')}
+        label={'Post content moderated.'}
         className={isCompact ? 'flex-row justify-start gap-2 [&_svg]:size-4' : undefined}
       />
     </Button>

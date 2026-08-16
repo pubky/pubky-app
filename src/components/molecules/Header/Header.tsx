@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Flame, Home, Library, Settings, UserRoundPlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES, isCoreExploreRoute, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
@@ -86,7 +85,7 @@ type NavigationItemConfig = {
   icon: React.ComponentType<{
     className?: string;
   }>;
-  labelKey: string;
+  label: string;
   dataCy?: string;
   activePrefix?: string;
   isFeedRoute?: boolean;
@@ -102,27 +101,27 @@ const NAVIGATION_ITEMS: NavigationItemConfig[] = [
   {
     href: APP_ROUTES.HOME,
     icon: Home,
-    labelKey: 'home',
+    label: 'Home',
     dataCy: 'header-home-btn',
     isFeedRoute: true,
   },
   {
     href: APP_ROUTES.HOT,
     icon: Flame,
-    labelKey: 'hot',
+    label: 'Hot',
     dataCy: 'header-hot-btn',
   },
   {
     href: APP_ROUTES.COLLECTIONS,
     icon: Library,
-    labelKey: 'collections',
+    label: 'Collections',
     dataCy: 'header-collections-btn',
     activePrefix: APP_ROUTES.COLLECTIONS,
   },
   {
     href: SETTINGS_ROUTES.ACCOUNT,
     icon: Settings,
-    labelKey: 'settings',
+    label: 'Settings',
     dataCy: 'header-settings-btn',
     activePrefix: APP_ROUTES.SETTINGS,
   },
@@ -207,8 +206,6 @@ export function HeaderNavigationButtons({
   className,
 }: HeaderNavigationButtonsProps) {
   const pathname = usePathname();
-  const t = useTranslations('header');
-  const tCommon = useTranslations('common');
   const { showCollectionsNew, markCollectionsNavSeen } = useCollectionsNavDiscovery();
   const counterString = counter > 21 ? '21+' : counter.toString();
   return (
@@ -221,12 +218,12 @@ export function HeaderNavigationButtons({
             href={item.href}
             onClick={isCollectionsItem ? markCollectionsNavSeen : undefined}
             icon={item.icon}
-            label={t(item.labelKey)}
+            label={item.label}
             isActive={isNavItemActive(pathname, item)}
             dataCy={item.dataCy}
             isFeedRoute={item.isFeedRoute}
             showNew={isCollectionsItem && showCollectionsNew}
-            newLabel={t('new')}
+            newLabel={'New'}
           />
         );
       })}
@@ -238,7 +235,7 @@ export function HeaderNavigationButtons({
           fallbackSeed={avatarSeed || avatarName}
           size="lg"
           className="cursor-pointer"
-          alt={tCommon('profile')}
+          alt={'Profile'}
         />
         {counter > 0 && (
           <Badge
@@ -267,7 +264,6 @@ export function HeaderExploreNavigationButtons({
 }: HeaderExploreNavigationButtonsProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
-  const tHeader = useTranslations('header');
   const { requireAuth } = useRequireAuth();
   const setShowSignInDialog = useAuthStore((state) => state.setShowSignInDialog);
 
@@ -283,7 +279,7 @@ export function HeaderExploreNavigationButtons({
             href={requiresAuth ? undefined : item.href}
             onClick={requiresAuth ? () => requireAuth(() => router.push(item.href)) : undefined}
             icon={item.icon}
-            label={tHeader(item.labelKey)}
+            label={item.label}
             isActive={isNavItemActive(pathname, item)}
             dataCy={item.dataCy}
           />

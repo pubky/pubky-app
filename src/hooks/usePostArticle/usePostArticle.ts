@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { FileController } from '@/controllers/file/file';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
@@ -48,8 +47,6 @@ export function usePostArticle({
   coverImageVariant,
 }: UsePostArticleParams): UsePostArticleResult {
   const { toast } = useToast();
-  const tPost = useTranslations('toast.post');
-
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [coverImage, setCoverImage] = useState<CoverImage | null>(null);
@@ -65,7 +62,7 @@ export function usePostArticle({
       setBody('');
       toast({
         variant: 'error',
-        description: tPost('parseError'),
+        description: 'Could not parse article content',
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
@@ -92,7 +89,7 @@ export function usePostArticle({
 
         toast({
           variant: 'error',
-          description: tPost('coverImageError'),
+          description: 'Could not load cover image',
         });
       }
     };

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { AppWindow, ArrowRight, Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -21,7 +20,6 @@ import { PageTitle } from '../Page/Page';
 import { PopoverTradeoffs } from '../PopoverTradeoffs/PopoverTradeoffs';
 
 export const InstallCard = () => {
-  const t = useTranslations('onboarding.install');
   return (
     <ContentCard
       image={{
@@ -42,7 +40,7 @@ export const InstallCard = () => {
           />
         </Container>
         <Typography className="text-base font-medium text-secondary-foreground opacity-80">
-          {t('instructions')}
+          {'Download and install the mobile app. Then continue to the next step.'}
         </Typography>
       </Container>
       <StoreButtons />
@@ -50,43 +48,32 @@ export const InstallCard = () => {
   );
 };
 export const InstallFooter = () => {
-  const t = useTranslations('onboarding.install');
   return (
     <FooterLinks className="py-6">
-      {t.rich('alternative', {
-        pubkyRing: (chunks) => (
-          <Link href={getPubkyRingLink()} target="_blank">
-            {chunks}
-          </Link>
-        ),
-        pubkyCore: (chunks) => (
-          <Link href={getPubkyCoreLink()} target="_blank">
-            {chunks}
-          </Link>
-        ),
-      })}
+      {'Use '}
+      <Link href={getPubkyRingLink()} target="_blank">
+        {'Pubky Ring'}
+      </Link>
+      {' or any other '}
+      <Link href={getPubkyCoreLink()} target="_blank">
+        {'Pubky Core'}
+      </Link>
+      {'–powered keychain, or create your keys in the browser (less secure).'}
     </FooterLinks>
   );
 };
 export const InstallHeader = () => {
-  const t = useTranslations('onboarding.install');
   return (
     <PageHeader>
       <PageTitle size="large">
-        {t.rich('title', {
-          highlight: (chunks) => (
-            <>
-              <br className="block sm:hidden" /> <span className="text-brand">{chunks}</span>
-            </>
-          ),
-        })}
+        {'Install '}
+        <br className="block sm:hidden" /> <span className="text-brand">{'Pubky Ring.'}</span>
       </PageTitle>
-      <PageSubtitle>{t('subtitle')}</PageSubtitle>
+      <PageSubtitle>{'Pubky Ring is a keychain for your identity keys in the Pubky ecosystem.'}</PageSubtitle>
     </PageHeader>
   );
 };
 export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
-  const t = useTranslations('onboarding.install');
   const router = useRouter();
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [loadingContinue, setLoadingContinue] = useState(false);
@@ -110,7 +97,7 @@ export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElem
           disabled={loadingCreate || loadingContinue}
         >
           {loadingCreate ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AppWindow className="mr-2 h-4 w-4" />}
-          {t('createInBrowser')}
+          {'Create keys in browser'}
         </Button>
         <PopoverTradeoffs />
       </Container>
@@ -122,7 +109,7 @@ export const InstallNavigation = ({ ...props }: React.HTMLAttributes<HTMLDivElem
         disabled={loadingCreate || loadingContinue}
       >
         {loadingContinue ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-        {t('continueWithRing')}
+        {'Continue with Pubky Ring'}
       </Button>
     </Container>
   );

@@ -5,9 +5,12 @@ import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
+import { parseCollectionContent } from '@/libs/post/collectionContent';
+import { sortPostIdsByCollectionOrder } from '@/libs/post/collectionItemOrder';
 import { buildCompositeId } from '@/models/models.utils';
 import {
   type AuthorStreamCompositeId,
@@ -217,6 +220,13 @@ function CollectionTimelineFeed({
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION, requestedLayout ?? LAYOUT.COLUMNS);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
+  // The envelope's `items` (a live Dexie query) is the local-first source of
+  // truth for ordering; the Nexus `collection` stream re-indexes asynchronously
+  // and can serve a stale order right after an add/remove/reorder commit.
+  // Sorting the stream's ids by the envelope makes commits render instantly.
+  const { postDetails } = usePostDetails(collectionId);
+  const envelopeItems = postDetails ? parseCollectionContent(postDetails.content)?.items : undefined;
+
   return (
     <TimelineFeedWithStream
       streamId={streamId}
@@ -228,6 +238,7 @@ function CollectionTimelineFeed({
       pullToRefreshContainerRef={pullToRefreshContainerRef}
       trailingSlot={trailingSlot}
       visualHiddenItemsNotice={visualHiddenItemsNotice}
+      transformPostIds={(postIds) => sortPostIdsByCollectionOrder(postIds, envelopeItems)}
     >
       {children}
     </TimelineFeedWithStream>

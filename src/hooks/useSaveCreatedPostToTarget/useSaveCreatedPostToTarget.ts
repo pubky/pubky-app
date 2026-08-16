@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { Logger } from '@/libs/logger/logger';
@@ -17,11 +15,6 @@ type SaveCreatedPostToTargetParams = {
 export function useSaveCreatedPostToTarget() {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { toast } = useToast();
-  const tFab = useTranslations('fab');
-  const tToast = useTranslations('toast');
-  const tSave = useTranslations('postSave');
-  const tBookmark = useTranslations('toast.bookmark');
-
   return async ({ target, createdPostId, onSaved }: SaveCreatedPostToTargetParams): Promise<void> => {
     try {
       if (target.type === 'collection') {
@@ -31,25 +24,25 @@ export function useSaveCreatedPostToTarget() {
           shouldAdd: true,
         });
         await onSaved?.(createdPostId, target);
-        toast({ title: tToast('success'), description: tFab('addedToCollection') });
+        toast({ title: 'Success', description: 'Post added to collection.' });
         return;
       }
 
       // The post is already created by the time this runs, so a missing pubky
       // (e.g. sign-out racing the create) must surface feedback.
       if (!currentUserPubky) {
-        toast({ variant: 'error', description: tBookmark('loginRequired') });
+        toast({ variant: 'error', description: 'Sign in to bookmark posts' });
         return;
       }
 
       await BookmarkController.commitCreate({ postId: createdPostId, userId: currentUserPubky });
       await onSaved?.(createdPostId, target);
-      toast({ title: tBookmark('added') });
+      toast({ title: 'Post saved to bookmarks' });
     } catch (error) {
       Logger.error('[useSaveCreatedPostToTarget] Failed to save created post', { error, target, createdPostId });
       toast({
         variant: 'error',
-        description: target.type === 'collection' ? tSave('updateCollectionFailed') : tBookmark('addFailed'),
+        description: target.type === 'collection' ? 'Failed to update collection.' : 'Could not add bookmark',
       });
     }
   };

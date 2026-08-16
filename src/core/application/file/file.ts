@@ -33,7 +33,7 @@ export class FileApplication {
     try {
       sanitizedFile = await stripImageMetadata(file);
     } catch (error) {
-      // Tag size-limit failures so UI can show a localized toast (GIF/animated
+      // Tag size-limit failures so UI can show the kind-specific toast (GIF/animated
       // WebP/SVG cannot be compressed under the homeserver cap).
       const sizeLimitKind = getImageUploadSizeLimitKind(error);
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
