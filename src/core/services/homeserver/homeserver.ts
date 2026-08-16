@@ -19,10 +19,11 @@ import {
   getTestnet,
   isStagingHomeserverDeploy,
 } from '@/config/network';
+import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError } from '@/libs/error/error.http';
-import { ErrorService } from '@/libs/error/error.types';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
@@ -120,37 +121,43 @@ export class HomeserverService {
     }
   }
 
-  /** Resolve PKARR homeserver; on staging, require it matches this deploy's homeserver. */
+  /**
+   * Resolve PKARR homeserver; on staging, require it matches this deploy's homeserver.
+   *
+   * An absent record is rejected the same way as a mismatched one: absence cannot
+   * prove the key belongs here, both outcomes are deterministic (retrying the
+   * lookup cannot change them), and fail-open would re-enable the prod-key
+   * force-republish this guard exists to prevent (#2126). This also means a key
+   * whose just-published record has not yet propagated to our relays is rejected
+   * until it propagates. Only a lookup that itself failed (relay/network error)
+   * throws a retryable server error instead.
+   */
   static async assertUserHomeserverAllowed({ publicKey }: THomeserverPublicKeyParams): Promise<void> {
     if (!isStagingHomeserverDeploy()) {
       return;
     }
 
     const homeserver = await this.resolveHomeserverRecord({ publicKey });
-    if (!homeserver) {
-      // Absent record fails closed too: absence proves nothing about which
-      // homeserver the key belongs to.
-      return handleError({
-        error: Error('Homeserver not found'),
-        additionalContext: { publicKey: publicKey?.z32?.() },
-      });
-    }
     const configuredHomeserver = getHomeserver();
-    const resolvedHomeserver = homeserver.z32();
+    const resolvedHomeserver = homeserver ? homeserver.z32() : null;
     if (resolvedHomeserver !== configuredHomeserver) {
-      throw Err.auth(
-        AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
-        'This key is linked to a different homeserver than this staging site.',
-        {
-          service: ErrorService.Homeserver,
-          operation: 'assertUserHomeserverAllowed',
-          context: {
-            configuredHomeserver,
-            resolvedHomeserver,
-            publicKey: publicKey.z32(),
-          },
-        },
-      );
+      const context = {
+        configuredHomeserver,
+        resolvedHomeserver,
+        publicKey: publicKey.z32(),
+      };
+      // An expected user mistake (prod key on a staging deploy), not a system
+      // fault — constructed directly rather than via the Err factory so every
+      // occurrence does not emit an error log plus a Sentry error event.
+      Logger.info('Rejected sign-in: key is not linked to this staging homeserver', context);
+      throw new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+        message: 'This key is not linked to this staging deploy homeserver.',
+        service: ErrorService.Homeserver,
+        operation: 'assertUserHomeserverAllowed',
+        context,
+      });
     }
   }
 

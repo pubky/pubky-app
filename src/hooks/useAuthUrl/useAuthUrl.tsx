@@ -51,24 +51,15 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           try {
             await AuthController.initializeAuthenticatedSession({ session });
           } catch (error) {
-            if (isWrongEnvironmentHomeserverError(error)) {
-              toast({
-                variant: 'error',
-                description: 'This key is linked to a different homeserver. Use a staging account on this site.',
-              });
-              if (isMountedRef.current) {
-                setUrl('');
-                setIsExpired(true);
-              }
-              return;
-            }
-
-            if (!isAppError(error)) {
+            const isWrongEnvironment = isWrongEnvironmentHomeserverError(error);
+            if (!isWrongEnvironment && !isAppError(error)) {
               Logger.error('Failed to persist session and check profile:', error);
             }
             toast({
               variant: 'error',
-              description: 'Sign in failed. Try again.',
+              description: isWrongEnvironment
+                ? 'This key is linked to a different homeserver. Use a staging account on this site.'
+                : 'Sign in failed. Try again.',
             });
             if (isMountedRef.current) {
               setUrl('');

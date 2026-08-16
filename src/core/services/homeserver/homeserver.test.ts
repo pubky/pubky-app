@@ -471,13 +471,17 @@ describe('HomeserverService', () => {
         });
       });
 
-      it('should not republish when homeserver resolution is inconclusive on staging', async () => {
+      it('should reject an absent homeserver record on staging without republishing', async () => {
+        // Absence cannot prove the key belongs to this deploy — it is rejected
+        // like a mismatch (deterministic, non-retryable) rather than surfaced
+        // as a transient server error.
         await withStagingHomeserverEnv(async () => {
           const keypair = createMockKeypair();
           mockState.getHomeserverOf.mockResolvedValue(null);
 
           await expect(HomeserverService.signIn({ keypair })).rejects.toMatchObject({
-            category: ErrorCategory.Server,
+            category: ErrorCategory.Auth,
+            code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
           });
           expect(mockState.signin).not.toHaveBeenCalled();
           expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();

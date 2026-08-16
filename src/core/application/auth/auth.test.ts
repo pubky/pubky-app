@@ -375,7 +375,7 @@ describe('AuthApplication', () => {
       const authStore = createMockAuthStore();
       const publicKey = asOpaque({ z32: () => 'user-pubky' });
       const session = asOpaque<Session>({ token: 'test-token', info: { publicKey } });
-      vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(session);
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(session);
       const logoutSpy = vi.spyOn(HomeserverService, 'logout').mockResolvedValue(undefined);
       vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed')
         .mockRejectedValueOnce(createNetworkError())
@@ -385,6 +385,8 @@ describe('AuthApplication', () => {
 
       expect(result).toEqual({ session });
       expect(sleepSpy).toHaveBeenCalledOnce();
+      // The already-restored session is reused — only the failed check retries.
+      expect(restoreSpy).toHaveBeenCalledOnce();
       // Only a definitive wrong-environment rejection signs the session out.
       expect(logoutSpy).not.toHaveBeenCalled();
       expect(authStore.setIsRestoringSession).toHaveBeenLastCalledWith(false);

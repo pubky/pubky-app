@@ -154,7 +154,6 @@ const storeMocks = vi.hoisted(() => {
   const initAuthStore = vi.fn();
   const setAuthUrlResolved = vi.fn();
   const setProfileChecked = vi.fn();
-  const setSignInError = vi.fn();
   const resetMigrationStore = vi.fn();
 
   // Factories are kept as separate constants so they can be reapplied in
@@ -180,13 +179,11 @@ const storeMocks = vi.hoisted(() => {
     reset: resetSignInStore,
     setAuthUrlResolved,
     setProfileChecked,
-    setError: setSignInError,
     authUrlResolved: false,
     profileChecked: false,
     bootstrapFetched: false,
     dataPersisted: false,
     homeserverSynced: false,
-    error: null,
   });
   const localFilesStateFactory = () => ({ reset: resetLocalFilesStore });
   const homeStateFactory = () => ({ reset: resetHomeStore });
@@ -208,7 +205,6 @@ const storeMocks = vi.hoisted(() => {
     initAuthStore,
     setAuthUrlResolved,
     setProfileChecked,
-    setSignInError,
     resetMigrationStore,
     authStateFactory,
     onboardingStateFactory,
@@ -1288,7 +1284,7 @@ describe('AuthController', () => {
       expect(authStore.setHasProfile).toHaveBeenCalledWith(true);
     });
 
-    it('should reset auth state and rethrow when homeserver environment check fails', async () => {
+    it('should sign the session out and rethrow when homeserver environment check fails', async () => {
       const mockSession = buildMockSession();
       const wrongEnvError = Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong env', {
         service: ErrorService.Homeserver,
@@ -1313,9 +1309,30 @@ describe('AuthController', () => {
       // The Ring-approved session lives on the user's actual homeserver — it
       // must be signed out, not left dangling after the rejection.
       expect(logoutSpy).toHaveBeenCalledWith({ session: mockSession });
+      // The guard runs before any store mutation, so there is nothing to reset.
       expect(authStore.init).not.toHaveBeenCalled();
-      expect(authStore.reset).toHaveBeenCalled();
-      expect(signInStore.reset).toHaveBeenCalled();
+      expect(authStore.reset).not.toHaveBeenCalled();
+      expect(signInStore.reset).not.toHaveBeenCalled();
+    });
+
+    it('should sign the session out when the environment check fails transiently', async () => {
+      // A failed PKARR lookup (not a wrong-env rejection) must not leave the
+      // just-approved session dangling on its homeserver either.
+      const mockSession = buildMockSession();
+      const lookupError = Err.server(ServerErrorCode.INTERNAL_ERROR, 'PKARR relay unavailable', {
+        service: ErrorService.Homeserver,
+        operation: 'assertUserHomeserverAllowed',
+      });
+
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(TEST_PUBKY as Pubky);
+      vi.spyOn(AuthApplication, 'assertUserHomeserverAllowed').mockRejectedValue(lookupError);
+      const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+
+      await expect(AuthController.initializeAuthenticatedSession({ session: mockSession })).rejects.toMatchObject({
+        code: ServerErrorCode.INTERNAL_ERROR,
+      });
+
+      expect(logoutSpy).toHaveBeenCalledWith({ session: mockSession });
     });
   });
 

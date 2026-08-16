@@ -1,3 +1,4 @@
+import type { Session } from '@synonymdev/pubky';
 import { userUriBuilder } from 'pubky-app-specs';
 import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -62,32 +63,31 @@ export class AuthApplication {
       authStore.setIsRestoringSession(true);
 
       try {
+        // The restored session is kept across attempts so a transient
+        // environment-check failure retries only the PKARR lookup instead of
+        // re-running the whole restore round-trip.
+        let session: Session | null = null;
         for (let attempt = 1; attempt <= this.RESTORE_MAX_ATTEMPTS; attempt++) {
           try {
-            const session = await HomeserverService.restoreSession({
+            session ??= await HomeserverService.restoreSession({
               sessionExport: authStore.sessionExport!,
             });
-            try {
-              await HomeserverService.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
-            } catch (environmentError) {
-              if (isWrongEnvironmentHomeserverError(environmentError)) {
-                // The session is about to be discarded and its persisted export
-                // erased — sign it out on its own homeserver so it is not left
-                // dangling there. Best-effort: the rejection surfaces anyway.
-                await HomeserverService.logout({ session }).catch((logoutError) => {
-                  Logger.warn('Failed to sign out wrong-environment session', { logoutError });
-                });
-              }
-              // Anything else (transient PKARR lookup failure, absent record)
-              // falls through to the shared retry-or-cleanup policy below —
-              // keeping the store in a half-restored state would strand
-              // useAuthStatus in its loading branch with no retry trigger.
-              throw environmentError;
-            }
+            // Transient lookup failures fall through to the shared retry-or-cleanup
+            // policy below — keeping the store in a half-restored state would
+            // strand useAuthStatus in its loading branch with no retry trigger.
+            await HomeserverService.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
             Logger.info('Session restored successfully');
             return { session };
           } catch (error) {
             if (isWrongEnvironmentHomeserverError(error)) {
+              // The session is about to be discarded and its persisted export
+              // erased — sign it out on its own homeserver so it is not left
+              // dangling there. Best-effort: the rejection surfaces anyway.
+              if (session) {
+                await HomeserverService.logout({ session }).catch((logoutError) => {
+                  Logger.warn('Failed to sign out wrong-environment session', { logoutError });
+                });
+              }
               throw error;
             }
 
