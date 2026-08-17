@@ -62,6 +62,7 @@ interface CollectionCardProps {
   interactiveActions?: boolean;
   /** Show the owner Delete action. Opt in only from the My Collections overview. */
   showDeleteAction?: boolean;
+  unfollowCollectionHandler?: (id: string) => void;
 }
 
 /**
@@ -91,6 +92,7 @@ export function CollectionCard({
   presentation = 'landing',
   interactiveActions = true,
   showDeleteAction = false,
+  unfollowCollectionHandler,
 }: CollectionCardProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
   const isMobile = useIsMobile();
@@ -133,6 +135,7 @@ export function CollectionCard({
       isWideLayout={isWideLayout}
       interactiveActions={interactiveActions}
       showDeleteAction={showDeleteAction}
+      unfollowCollectionHandler={unfollowCollectionHandler}
     />
   );
 }
@@ -149,6 +152,7 @@ interface CollectionCardContentProps {
   isWideLayout: boolean;
   interactiveActions: boolean;
   showDeleteAction: boolean;
+  unfollowCollectionHandler?: (id: string) => void;
 }
 
 function CollectionCardContent({
@@ -163,6 +167,7 @@ function CollectionCardContent({
   isWideLayout,
   interactiveActions,
   showDeleteAction,
+  unfollowCollectionHandler,
 }: CollectionCardContentProps) {
   const isEmbed = presentation === 'embed';
   const showTagAddButton = interactiveActions && !isEmbed;
@@ -222,6 +227,9 @@ function CollectionCardContent({
     requireAuth(() => {
       void toggle();
     });
+    if (isBookmarked) {
+      unfollowCollectionHandler?.(compositeId);
+    }
   };
 
   // Collection-specific toast copy so success / failure reads as "Collection

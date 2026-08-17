@@ -79,7 +79,7 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  * raw posts and filtering removed them all), we surface a toast so the
  * click gets feedback instead of silently rendering nothing.
  */
-export function DiscoverCollections() {
+export function DiscoverCollections({ unfollowedId }: { unfollowedId?: string | null }) {
   const { toast } = useToast();
   // The stream layer filters own collections against the viewer read from the
   // auth store, so a viewer switch must reset and refetch (effect dep below).
@@ -101,6 +101,12 @@ export function DiscoverCollections() {
   // dedup without re-creating the function on every successful append.
   const visibleIdsRef = useRef<string[]>([]);
   visibleIdsRef.current = visibleIds;
+
+  useEffect(() => {
+    if (unfollowedId && !visibleIdsRef.current.includes(unfollowedId)) {
+      setVisibleIds([unfollowedId, ...visibleIdsRef.current]);
+    }
+  }, [unfollowedId]);
 
   // Cancellation token for the in-flight initial fetch. When the effect
   // re-fires (StrictMode double-invoke, or genuine viewer switch), the old
@@ -146,7 +152,6 @@ export function DiscoverCollections() {
         limit: COLLECTIONS_SECTION_PAGE_SIZE,
       });
       if (token?.cancelled) return;
-
       // `nextPageIds` is already post-filter; `nextCursor` is the raw skip
       // offset the stream layer consumed to produce it. Dedup is defensive
       // only — the stream layer's cursor accounting should prevent overlap.

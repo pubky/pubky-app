@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { cn } from '@/libs/utils/utils';
 import { DiscoverCollections } from '@/organisms/Collections/DiscoverCollections/DiscoverCollections';
@@ -28,16 +29,21 @@ export function CollectionsSections({ className }: CollectionsSectionsProps) {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const showPersonalSections = hasHydrated && Boolean(currentUserPubky);
+  const [unfollowedId, setUnfollowedId] = useState<string | null>(null);
+
+  function unfollowedCollectionIdHandler(id: string) {
+    setUnfollowedId(id);
+  }
 
   return (
     <Container overrideDefaults className={cn('flex w-full flex-col gap-12', className)}>
       {showPersonalSections ? (
         <>
           <MyCollections />
-          <FollowedCollections />
+          <FollowedCollections unfollowHandler={unfollowedCollectionIdHandler} />
         </>
       ) : null}
-      <DiscoverCollections />
+      <DiscoverCollections unfollowedId={unfollowedId} />
     </Container>
   );
 }
