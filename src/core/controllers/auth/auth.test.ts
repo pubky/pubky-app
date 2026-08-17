@@ -311,6 +311,10 @@ vi.mock('@/libs/env/env', async (importOriginal) => {
   };
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('AuthController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -334,10 +338,6 @@ describe('AuthController', () => {
         wasDbReset: false,
       }),
     );
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   describe('bootstrapWithDelay', () => {
@@ -490,6 +490,7 @@ describe('AuthController', () => {
       const z32FromSessionSpy = vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
       const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
+      const cancelModerationFollowSpy = vi.spyOn(BootstrapApplication, 'cancelModerationFollow');
 
       const authStore = storeMocks.getAuthState();
       vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
@@ -498,6 +499,9 @@ describe('AuthController', () => {
 
       expect(clearAllQueryClientsSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalled();
+      expect(cancelModerationFollowSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        clearDatabaseSpy.mock.invocationCallOrder[0]!,
+      );
       // Skip post-migration resync — new user has no homeserver data to resync
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
       expect(keypairFromSecretKeySpy).toHaveBeenCalledWith(TEST_SECRET_KEY);
@@ -522,10 +526,14 @@ describe('AuthController', () => {
       const keypairFromSecretKeySpy = vi.spyOn(Identity, 'keypairFromSecretKey').mockReturnValue(keypair);
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
       const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
+      const cancelModerationFollowSpy = vi.spyOn(BootstrapApplication, 'cancelModerationFollow');
 
       await expect(AuthController.signUp({ secretKey: TEST_SECRET_KEY, signupToken })).rejects.toThrow('Signup failed');
       expect(clearAllQueryClientsSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalled();
+      expect(cancelModerationFollowSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        clearDatabaseSpy.mock.invocationCallOrder[0]!,
+      );
       expect(keypairFromSecretKeySpy).toHaveBeenCalledWith(TEST_SECRET_KEY);
       expect(signUpSpy).toHaveBeenCalledWith({
         keypair,
@@ -559,6 +567,7 @@ describe('AuthController', () => {
       const initializeSpy = vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(mockNotification);
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
       const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
+      const cancelModerationFollowSpy = vi.spyOn(BootstrapApplication, 'cancelModerationFollow');
 
       const _authStore = setupAuthAndNotificationStores();
 
@@ -566,6 +575,9 @@ describe('AuthController', () => {
 
       expect(clearAllQueryClientsSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalled();
+      expect(cancelModerationFollowSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        clearDatabaseSpy.mock.invocationCallOrder[0]!,
+      );
       // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
       expect(keypairSpy).toHaveBeenCalledWith(mnemonic);
@@ -807,10 +819,14 @@ describe('AuthController', () => {
       };
       const generateAuthUrlSpy = vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue(mockAuthUrl);
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+      const cancelModerationFollowSpy = vi.spyOn(BootstrapApplication, 'cancelModerationFollow');
 
       const result = await AuthController.getAuthUrl();
 
       expect(clearDatabaseSpy).toHaveBeenCalled();
+      expect(cancelModerationFollowSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        clearDatabaseSpy.mock.invocationCallOrder[0]!,
+      );
       // Skip post-migration resync — full bootstrap below covers all data
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
       expect(result.authorizationUrl).toEqual(mockAuthUrl.authorizationUrl);
@@ -994,6 +1010,7 @@ describe('AuthController', () => {
       const clearCookiesSpy = await spyOnClearCookies();
       await spyOnClearAllQueryClients();
       const resetSpy = vi.spyOn(PubkySpecsSingleton, 'reset');
+      const cancelModerationFollowSpy = vi.spyOn(BootstrapApplication, 'cancelModerationFollow');
       const homeStore = storeMocks.getHomeState();
       const searchStore = storeMocks.getSearchState();
       const notificationStore = storeMocks.getNotificationState();
@@ -1017,6 +1034,9 @@ describe('AuthController', () => {
       expect(settingsStore.reset).toHaveBeenCalled();
       expect(clearCookiesSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalled();
+      expect(cancelModerationFollowSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        clearDatabaseSpy.mock.invocationCallOrder[0]!,
+      );
     });
   });
 
@@ -1252,6 +1272,7 @@ describe('AuthController', () => {
     it('should successfully logout user, clear stores, cookies and redirect', async () => {
       const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+      const cancelModerationFollowSpy = vi.spyOn(BootstrapApplication, 'cancelModerationFollow');
       const clearCookiesSpy = await spyOnClearCookies();
       const clearAllQueryClientsSpy = await spyOnClearAllQueryClients();
       const resetSpy = vi.spyOn(PubkySpecsSingleton, 'reset');
@@ -1289,6 +1310,13 @@ describe('AuthController', () => {
 
       // Homeserver logout
       expect(logoutSpy).toHaveBeenCalledWith({ session: expect.anything() });
+      expect(cancelModerationFollowSpy).toHaveBeenCalledTimes(2);
+      expect(cancelModerationFollowSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        logoutSpy.mock.invocationCallOrder[0]!,
+      );
+      expect(cancelModerationFollowSpy.mock.invocationCallOrder[1]).toBeLessThan(
+        clearDatabaseSpy.mock.invocationCallOrder[0]!,
+      );
 
       // Singletons
       expect(resetSpy).toHaveBeenCalledOnce();

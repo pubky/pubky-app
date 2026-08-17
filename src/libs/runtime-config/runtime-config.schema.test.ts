@@ -8,6 +8,8 @@ import {
   SENTRY_RUNTIME_DEFAULTS,
 } from './runtime-config.schema';
 
+const VALID_MODERATION_ID = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro';
+
 const VALID_ENV_INPUT = {
   nexusUrl: 'https://nexus.example.com',
   cdnUrl: 'https://nexus.example.com/static',
@@ -33,7 +35,7 @@ const APP_ENV_INPUT = {
   streamFetchLimit: '25',
   maxStreamTags: '7',
   ttlPostMs: '45000',
-  moderationId: 'moderation-key',
+  moderationId: VALID_MODERATION_ID,
   moderatedTags: '["spam","nudity"]',
   exchangeRateApi: 'https://rates.example.com/btc',
   plausibleDomain: 'example.com',
@@ -74,6 +76,7 @@ describe('runtimeEnvInputSchema', () => {
     expect(parsed.sentryTracesSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryTracesSampleRate);
     expect(parsed.sentryReplaysSessionSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryReplaysSessionSampleRate);
     expect(parsed.sentryReplaysOnErrorSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryReplaysOnErrorSampleRate);
+    expect(parsed.moderationId).toBeUndefined();
   });
 
   it('parses the Sentry tier when provided (string rates become numbers)', () => {
@@ -123,6 +126,7 @@ describe('runtimeEnvInputSchema', () => {
     expect(parsed.notificationPollOnStart).toBe(false);
     expect(parsed.streamFetchLimit).toBe(25);
     expect(parsed.maxStreamTags).toBe(7);
+    expect(parsed.moderationId).toBe(VALID_MODERATION_ID);
     expect(parsed.moderatedTags).toEqual(['spam', 'nudity']);
     expect(parsed.exchangeRateApi).toBe('https://rates.example.com/btc');
     expect(parsed.siteName).toBe('Example App');
@@ -154,6 +158,21 @@ describe('runtimeEnvInputSchema', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, ttlPostMs: '123abc' })).toThrow();
     expect(() => runtimeEnvInputSchemaWithDefaults.parse({ maxStreamTags: '0' })).toThrow();
   });
+
+  it('rejects an invalid configured moderation Pubky', () => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, moderationId: 'moderation-key' })).toThrow(
+      'Expected a 52-character z-base-32 Pubky',
+    );
+  });
+
+  it('trims a padded valid moderation Pubky before validation', () => {
+    const parsed = runtimeEnvInputSchema.parse({
+      ...VALID_ENV_INPUT,
+      moderationId: `  ${VALID_MODERATION_ID}\n`,
+    });
+
+    expect(parsed.moderationId).toBe(VALID_MODERATION_ID);
+  });
 });
 
 describe('runtimeConfigValueSchema', () => {
@@ -163,6 +182,7 @@ describe('runtimeConfigValueSchema', () => {
     expect(parsed.sentryTracesSampleRate).toBe(SENTRY_RUNTIME_DEFAULTS.sentryTracesSampleRate);
     expect(parsed.notificationPollIntervalMs).toBe(APP_RUNTIME_DEFAULTS.notificationPollIntervalMs);
     expect(parsed.moderatedTags).toEqual(APP_RUNTIME_DEFAULTS.moderatedTags);
+    expect(parsed.moderationId).toBeUndefined();
   });
 
   it('accepts an empty moderatedTags array (no moderated tags)', () => {
@@ -172,6 +192,34 @@ describe('runtimeConfigValueSchema', () => {
     });
 
     expect(parsed.moderatedTags).toEqual([]);
+  });
+
+  it('accepts a valid non-default moderation Pubky', () => {
+    const moderationId = 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy';
+    const parsed = runtimeConfigValueSchema.parse({
+      ...NETWORK_RUNTIME_DEFAULTS,
+      moderationId,
+    });
+
+    expect(parsed.moderationId).toBe(moderationId);
+  });
+
+  it('trims a padded valid moderation Pubky in parsed runtime values', () => {
+    const parsed = runtimeConfigValueSchema.parse({
+      ...NETWORK_RUNTIME_DEFAULTS,
+      moderationId: `\t${VALID_MODERATION_ID} `,
+    });
+
+    expect(parsed.moderationId).toBe(VALID_MODERATION_ID);
+  });
+
+  it('rejects invalid moderation Pubkys', () => {
+    expect(() =>
+      runtimeConfigValueSchema.parse({ ...NETWORK_RUNTIME_DEFAULTS, moderationId: 'moderation-key' }),
+    ).toThrow('Expected a 52-character z-base-32 Pubky');
+    expect(() =>
+      runtimeConfigValueSchema.parse({ ...NETWORK_RUNTIME_DEFAULTS, moderationId: `${VALID_MODERATION_ID}a` }),
+    ).toThrow('Expected a 52-character z-base-32 Pubky');
   });
 
   it('accepts an already-parsed config object with the Sentry tier present', () => {
@@ -200,6 +248,7 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     expect(parsed).toEqual({ ...NETWORK_RUNTIME_DEFAULTS, ...SENTRY_RUNTIME_DEFAULTS, ...APP_RUNTIME_DEFAULTS });
     expect(Array.isArray(parsed.pkarrRelays)).toBe(true);
     expect(typeof parsed.testnet).toBe('boolean');
+    expect(parsed.moderationId).toBe(APP_RUNTIME_DEFAULTS.moderationId);
   });
 
   it('honors provided values over defaults', () => {
@@ -214,5 +263,17 @@ describe('runtimeEnvInputSchemaWithDefaults', () => {
     expect(parsed.testnet).toBe(true);
     // Unset fields fall back to defaults.
     expect(parsed.cdnUrl).toBe(NETWORK_RUNTIME_DEFAULTS.cdnUrl);
+  });
+
+  it('uses the validated staging moderation identity when the lenient input is blank', () => {
+    const parsed = runtimeEnvInputSchemaWithDefaults.parse({ moderationId: '   ' });
+
+    expect(parsed.moderationId).toBe(APP_RUNTIME_DEFAULTS.moderationId);
+  });
+
+  it('rejects an invalid moderation identity provided to the lenient parser', () => {
+    expect(() => runtimeEnvInputSchemaWithDefaults.parse({ moderationId: 'moderation-key' })).toThrow(
+      'Expected a 52-character z-base-32 Pubky',
+    );
   });
 });

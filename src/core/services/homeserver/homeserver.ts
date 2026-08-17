@@ -513,6 +513,33 @@ export class HomeserverService {
   }
 
   /**
+   * Checks whether a homeserver resource exists without treating an expected 404 as an error.
+   * Storage SDK probes return a boolean; plain HTTP URLs retain explicit response handling.
+   */
+  static async exists(url: string): Promise<boolean> {
+    const pubkySdk = this.getPubkySdk();
+
+    try {
+      if (isHttpUrl(url)) {
+        const response = await pubkySdk.client.fetch(url);
+        if (response.status === HttpStatusCode.NOT_FOUND) return false;
+        await assertOk({ response, url, operation: 'exists' });
+        return true;
+      }
+
+      const owned = this.resolveOwnedSessionPath(url);
+      return owned
+        ? await owned.session.storage.exists(owned.path)
+        : await pubkySdk.publicStorage.exists(url as Address);
+    } catch (error) {
+      return handleError({
+        error,
+        additionalContext: { url, method: HttpMethod.GET, operation: 'exists' },
+      });
+    }
+  }
+
+  /**
    * Restore an authenticated Session from a previous `session.export()` snapshot.
    */
   static async restoreSession({ sessionExport }: THomeserverRestoreSessionParams): Promise<Session> {

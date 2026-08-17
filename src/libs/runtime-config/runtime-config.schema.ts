@@ -10,8 +10,8 @@ import { z } from 'zod';
  *    them; partial config fails loudly instead of silently resolving to staging defaults.
  *  - OPTIONAL observability values (sentry*): absent means the feature is disabled (DSN) or
  *    a documented default applies (sample rates).
- *  - DEFAULTED app/deployer values: public operational, moderation, metadata, analytics,
- *    Prelude, and external-link values that deployers may override without rebuilding.
+ *  - OPTIONAL/DEFAULTED app/deployer values: public operational, moderation, metadata,
+ *    analytics, Prelude, and external-link values that deployers may override without rebuilding.
  *
  * This module is a leaf (zod only, no `Env`, no logger) so the runtime-config resolver never
  * pulls in the heavy `env -> libs/error -> logger -> env` import cycle.
@@ -34,6 +34,10 @@ const testnetValue = z.boolean();
 const sampleRateValue = z.number().min(0).max(1);
 const positiveIntValue = z.number().int().positive();
 const nonEmptyStringValue = z.string().min(1);
+const pubkyValue = z
+  .string()
+  .trim()
+  .regex(/^[ybndrfg8ejkmcpqxot1uwisza345h769]{52}$/, 'Expected a 52-character z-base-32 Pubky');
 
 /** Parse a JSON-array-of-strings env value into a string[]. Throws on malformed input. */
 function parseJsonStringArray(val: string, label = 'value'): string[] {
@@ -159,7 +163,7 @@ export const APP_RUNTIME_DEFAULTS = {
   ttlPostMaxBatchSize: 20,
   ttlUserMaxBatchSize: 20,
   ttlRetryDelayMs: 60_000,
-  moderationId: 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro',
+  moderationId: 'nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy',
   moderatedTags: ['nudity'],
   exchangeRateApi: 'https://api1.blocktank.to/api/fx/rates/btc',
   preludeSdkTimeoutMs: 5_000,
@@ -232,7 +236,7 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   ttlPostMaxBatchSize: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlPostMaxBatchSize),
   ttlUserMaxBatchSize: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlUserMaxBatchSize),
   ttlRetryDelayMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlRetryDelayMs),
-  moderationId: nonEmptyStringValue.default(APP_RUNTIME_DEFAULTS.moderationId),
+  moderationId: pubkyValue.optional(),
   moderatedTags: z.array(nonEmptyStringValue).default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
   exchangeRateApi: urlValue.default(APP_RUNTIME_DEFAULTS.exchangeRateApi),
   preludeSdkKey: nonEmptyStringValue.optional(),
@@ -259,14 +263,19 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   playStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.playStoreUrl),
 });
 
+const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
+  // Zod v4 `.default()` bypasses validation; `.prefault()` sends the staging fallback through pubkyValue.
+  moderationId: pubkyValue.prefault(APP_RUNTIME_DEFAULTS.moderationId),
+});
+
 export type RuntimeConfig = z.infer<typeof runtimeConfigValueSchema>;
 
 /**
  * Strict env-input schema (string inputs -> parsed `RuntimeConfig`). NO defaults for the
  * required network tier: a missing value THROWS. Used for the production parse of
  * `PUBKY_RUNTIME_*` so partial deploy config fails loudly instead of silently resolving to a
- * staging URL. The optional Sentry tier stays optional here (absent = disabled / documented
- * sample-rate default).
+ * staging URL. Optional public values stay optional here (for example, absent moderationId
+ * disables moderation behavior; absent Sentry DSN disables Sentry).
  */
 export const runtimeEnvInputSchema = z
   .object({
@@ -400,7 +409,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     appStoreUrl: optionalUrlFromString,
     playStoreUrl: optionalUrlFromString,
   })
-  .pipe(runtimeConfigValueSchema);
+  .pipe(lenientRuntimeConfigValueSchema);
 
 // ---------------------------------------------------------------------------
 // Env-name <-> config-key mapping
