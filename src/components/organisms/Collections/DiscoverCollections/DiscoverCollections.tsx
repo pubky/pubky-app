@@ -103,10 +103,11 @@ export function DiscoverCollections({ unfollowedId }: { unfollowedId?: string | 
   visibleIdsRef.current = visibleIds;
 
   useEffect(() => {
+    if (loading || loadingMore) return;
     if (unfollowedId && !visibleIdsRef.current.includes(unfollowedId)) {
       setVisibleIds([unfollowedId, ...visibleIdsRef.current]);
     }
-  }, [unfollowedId]);
+  }, [unfollowedId, loading, loadingMore]);
 
   // Cancellation token for the in-flight initial fetch. When the effect
   // re-fires (StrictMode double-invoke, or genuine viewer switch), the old
