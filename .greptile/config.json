@@ -38,7 +38,7 @@
     },
     {
       "id": "cross-domain-app-restriction",
-      "rule": "Only PostApplication, NotificationApplication, BootstrapApplication, HotApplication, PostStreamApplication, and TtlApplication may call other Applications. Max call depth is 1. No circular dependencies.",
+      "rule": "Only PostApplication, NotificationApplication, BootstrapApplication, MigrationApplication, HotApplication, PostStreamApplication, and TtlApplication may call other Applications. Max call depth is 1 by default. The only permitted depth-2 paths are PostApplication, NotificationApplication, or TtlApplication calling PostStreamApplication, which may call FileApplication for attachment persistence. All other depth-2 paths, paths of depth 3 or greater, and cycles are forbidden.",
       "scope": ["src/core/application/**"],
       "severity": "high"
     },

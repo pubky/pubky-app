@@ -95,8 +95,11 @@ describe('posts', () => {
 
     cy.findFirstPostInFeed().within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', prefix.trim());
-      cy.contains('Show more').should('be.visible');
+      cy.contains('Show more').should('be.visible').click();
+      cy.contains('Show more').should('not.exist');
+      cy.get('[data-cy="post-text"]').should('contain.text', postContent);
     });
+    cy.location('pathname').should('eq', '/home');
   });
 
   it('can post with emojis', () => {

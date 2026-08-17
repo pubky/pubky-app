@@ -947,27 +947,42 @@ describe('PostText', () => {
       render(<PostText content={longContent} />);
 
       const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
-      expect(showMoreButton).toHaveAttribute('data-allow-post-navigation');
+      expect(showMoreButton).not.toHaveAttribute('data-allow-post-navigation');
+      expect(showMoreButton).toHaveAttribute('type', 'button');
       expect(showMoreButton).toHaveClass('cursor-pointer');
       expect(showMoreButton).toHaveClass('text-brand');
       expect(showMoreButton).toHaveClass('mt-4');
     });
 
-    it('does not stop event propagation on "Show more" button click', () => {
+    it('expands truncated content in place and stops event propagation on "Show more" click', () => {
       const handleParentClick = vi.fn();
-      const longContent = generateContent(600);
-
-      render(
+      const uniqueTail = ' UNIQUE_EXPAND_TAIL_MARKER';
+      const longContent = `${generateContent(600)}${uniqueTail}`;
+      const { container } = render(
         <div onClick={handleParentClick}>
           <PostText content={longContent} />
         </div>,
       );
 
-      const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
-      fireEvent.click(showMoreButton);
+      expect(container.textContent).not.toContain(uniqueTail);
 
-      // Click should propagate to parent (unlike regular links)
-      expect(handleParentClick).toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Show full post content' }));
+
+      expect(handleParentClick).not.toHaveBeenCalled();
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(container.textContent).toContain(uniqueTail);
+    });
+
+    it('expands line-truncated content in place on "Show more" click', () => {
+      const content = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7'].join('\n');
+      const { container } = render(<PostText content={content} />);
+
+      expect(container.textContent).not.toContain('Line 7');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Show full post content' }));
+
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(container.textContent).toContain('Line 7');
     });
 
     it('truncates content exactly at TRUNCATION_LIMIT characters plus ellipsis', () => {
