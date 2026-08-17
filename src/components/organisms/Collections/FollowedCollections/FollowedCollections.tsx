@@ -52,7 +52,7 @@ const EMPTY_IDS: string[] = [];
  * Live-reactive: a Follow / Unfollow performed anywhere in the app
  * pushes a card into / out of this section without a reload.
  */
-export function FollowedCollections() {
+export function FollowedCollections({ unfollowHandler }: { unfollowHandler?: (id: string) => void }) {
   const { toast } = useToast();
   // Gate the seed fetch on auth hydration. `StreamPostsController.getOrFetchStreamSlice`
   // reads `viewerId` from the auth store synchronously, and the bookmarks-collection
@@ -196,7 +196,15 @@ export function FollowedCollections() {
             // collection. Seed the bookmark hook so the CTA renders as
             // "Unfollow" on the first paint instead of briefly flashing
             // "Follow" while the async existence check resolves.
-            return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} initialIsBookmarked />;
+            return (
+              <CollectionCard
+                key={compositeId}
+                authorPubky={pubky}
+                postId={id}
+                initialIsBookmarked
+                unfollowCollectionHandler={unfollowHandler}
+              />
+            );
           })}
         </Container>
       )}
