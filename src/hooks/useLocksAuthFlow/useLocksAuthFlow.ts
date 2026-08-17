@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { LocksController } from '@/controllers/locks/locks';
 import type { AppError } from '@/libs/error/error';
@@ -31,7 +31,11 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
   // Identifies the current server check, so `prepare()` can drop the answer of an outdated one.
   const serverCheckRef = useRef(0);
 
-  const reset = () => {
+  // Keep useCallback: the React Compiler skips any hook with a `throw` inside a `try` block — the
+  // message handler in this file's useEffect has two — so nothing here is memoized for us.
+  // Consumers put these in useEffect deps, where a new identity each render means an endless loop.
+  // https://github.com/react/react/issues/35605
+  const reset = useCallback(() => {
     serverCheckRef.current += 1;
     stateRef.current = null;
     lockServerOriginRef.current = null;
@@ -39,11 +43,11 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
     setSession(null);
     setError(null);
     setStatus(LocksAuthFlowStatus.IDLE);
-  };
+  }, []);
 
   // Run when the modal opens: probe readiness before the user can start, so a dead / not-ready server
   // disables "Continue" (with a message) instead of loading a broken iframe on click.
-  const prepare = async () => {
+  const prepare = useCallback(async () => {
     const serverCheck = (serverCheckRef.current += 1);
     const isOutdated = () => serverCheck !== serverCheckRef.current;
     setError(null);
@@ -57,9 +61,9 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
       setError(toAppError(caught, ErrorService.Locks, 'useLocksAuthFlow.prepare'));
       setStatus(LocksAuthFlowStatus.SERVER_UNAVAILABLE);
     }
-  };
+  }, []);
 
-  const start = async () => {
+  const start = useCallback(async () => {
     setError(null);
     setStatus(LocksAuthFlowStatus.CONNECTING);
 
@@ -75,7 +79,7 @@ export function useLocksAuthFlow(): UseLocksAuthFlowReturn {
       setError(toAppError(caught, ErrorService.Locks, 'useLocksAuthFlow.start'));
       setStatus(LocksAuthFlowStatus.ERROR);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (status !== LocksAuthFlowStatus.AWAITING_APPROVAL) return;
