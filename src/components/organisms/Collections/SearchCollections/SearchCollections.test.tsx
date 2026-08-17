@@ -107,12 +107,25 @@ describe('SearchCollections', () => {
     expect(screen.queryByTestId('search-collections-see-all')).not.toBeInTheDocument();
   });
 
-  it('renders nothing when the stream settles empty', () => {
-    setup({ pagination: { loading: false, postIds: [] } });
+  it('renders nothing when the stream settles empty and is exhausted', () => {
+    setup({ pagination: { loading: false, postIds: [], hasMore: false } });
 
     const { container } = render(<SearchCollections />);
 
     expect(container.firstChild).toBeNull();
+  });
+
+  it('keeps a Show more path when a fully-filtered page settles empty with more on the server', () => {
+    const loadMore = vi.fn();
+    setup({ pagination: { loading: false, postIds: [], hasMore: true, loadMore } });
+
+    render(<SearchCollections />);
+
+    expect(screen.getByRole('heading', { name: 'Collections' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'See all' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }));
+
+    expect(loadMore).toHaveBeenCalledTimes(1);
   });
 
   it('caps the collapsed preview at the preview count and shows the See all pill', () => {

@@ -55,14 +55,21 @@ function SearchCollectionsStream({ streamId }: { streamId: PostStreamId }) {
 
   const showSkeletons = loading && postIds.length === 0;
 
-  // Settled empty (including error) — the section vanishes entirely.
-  if (!loading && postIds.length === 0) {
+  // Settled empty with the stream exhausted (including error) — the section
+  // vanishes entirely.
+  if (!loading && postIds.length === 0 && !hasMore) {
     return null;
   }
 
   const visibleIds = isExpanded ? postIds : postIds.slice(0, SEARCH_COLLECTIONS_PREVIEW_COUNT);
-  const showSeeAll = !isExpanded && !showSkeletons && (postIds.length > SEARCH_COLLECTIONS_PREVIEW_COUNT || hasMore);
-  const showShowMore = isExpanded && hasMore && !loading;
+  const showSeeAll =
+    !isExpanded &&
+    !showSkeletons &&
+    postIds.length > 0 &&
+    (postIds.length > SEARCH_COLLECTIONS_PREVIEW_COUNT || hasMore);
+  // A fully-filtered page keeps hasMore (see useStreamPagination) — with nothing
+  // to preview, surface "Show more" directly so the cursor can still advance.
+  const showShowMore = !loading && hasMore && (isExpanded || postIds.length === 0);
 
   return (
     <Container overrideDefaults data-cy="search-collections-section" className="flex w-full flex-col gap-4">
