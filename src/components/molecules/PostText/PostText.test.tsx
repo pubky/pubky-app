@@ -400,6 +400,13 @@ describe('PostText', () => {
   });
 
   describe('Article mode (isArticle prop)', () => {
+    it('renders feed preview copy with the secondary foreground color', () => {
+      render(<PostText content="Article preview copy" isArticle />);
+
+      expect(screen.getByTestId('container')).toHaveClass('text-secondary-foreground');
+      expect(screen.getByTestId('container')).not.toHaveClass('text-muted-foreground');
+    });
+
     it('renders h1 heading when isArticle is true', () => {
       render(<PostText content="# Heading 1" isArticle />);
 
