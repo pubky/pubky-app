@@ -8,6 +8,7 @@ export const detectModerationFromTags = (tags: { label: string; taggers: string[
   if (!tags) return false;
   const moderatedTags = getModeratedTags();
   const moderationId = getModerationId();
+  if (!moderationId) return false;
   return tags.some((tag) => moderatedTags.includes(tag.label) && tag.taggers.includes(moderationId));
 };
 

@@ -86,6 +86,7 @@ export class AuthController {
    * @returns Configured homeserver service instance
    */
   private static async signIn({ keypair }: TKeypairParams): Promise<boolean> {
+    BootstrapApplication.cancelModerationFollow();
     // Clear query clients to ensure no stale cache from previous session
     clearAllQueryClients();
     // Clear database before sign in to ensure clean state
@@ -215,6 +216,7 @@ export class AuthController {
    * @param params.signupToken - Invitation code for user registration
    */
   static async signUp({ secretKey, signupToken }: TSignUpParams) {
+    BootstrapApplication.cancelModerationFollow();
     // Clear query clients to ensure no stale cache from previous session
     clearAllQueryClients();
     // Clear database before sign up to ensure clean state
@@ -260,6 +262,7 @@ export class AuthController {
   private static async wrapAuthFlow(
     generateFn: () => Promise<TGenerateAuthUrlResult>,
   ): Promise<TGenerateAuthUrlResult> {
+    BootstrapApplication.cancelModerationFollow();
     await clearDatabase();
     // Skip post-migration resync — full bootstrap below covers all data
     useMigrationStore.getState().reset();
@@ -292,6 +295,7 @@ export class AuthController {
    * Used by both logout() and restorePersistedSession() on failure.
    */
   private static async cleanupLocalState() {
+    BootstrapApplication.cancelModerationFollow();
     // Capture pubky before resetting auth store; used to scope marker cleanup.
     const pubky = useAuthStore.getState().currentUserPubky;
     if (pubky) {
@@ -357,6 +361,7 @@ export class AuthController {
    * Logs out the current user from both the homeserver and local application state.
    */
   static async logout() {
+    BootstrapApplication.cancelModerationFollow();
     let authStore = useAuthStore.getState();
 
     // Set logging out flag immediately to prevent flash of weird states in UI
