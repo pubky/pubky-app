@@ -75,11 +75,10 @@ describe('contacts', () => {
 
     // check number of listed following is 1
     cy.get('[data-cy="profile-filter-item-following"]').should('have.text', 'Following');
-    // first is profile 1, second is moderation (not persisted on sign out because not indexed)
-    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', 2).click();
+    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', 1).click();
     cy.get('[data-cy="profile-connections-list"]')
       .children()
-      .should('have.length', 2)
+      .should('have.length', 1)
       .first()
       .within(() => {
         // check that profile 1 is listed as a following
@@ -140,8 +139,7 @@ describe('contacts', () => {
           });
       });
 
-    // check number of listed following is 2
-    // first is profile 1, no moderation profile because not indexed in testnet
+    // check number of listed following is 1
     cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', 1).click();
     cy.get('[data-cy="profile-connections-list"]')
       .children()
