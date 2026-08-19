@@ -119,7 +119,12 @@ function CollectionHeroContent({
 
   // Override the generic bookmark toast copy so Follow / Unfollow reads as a
   // collection-specific action.
-  const { isBookmarked, isToggling, toggle } = useBookmark(compositeId, {
+  const {
+    isBookmarked,
+    isLoading: isBookmarkLoading,
+    isToggling,
+    toggle,
+  } = useBookmark(compositeId, {
     toastMessages: {
       added: 'You are now following this collection',
       removed: "You've unfollowed this collection",
@@ -127,7 +132,7 @@ function CollectionHeroContent({
   });
 
   const handleFollowToggle = () => {
-    if (isToggling) return;
+    if (isBookmarkLoading || isToggling) return;
     requireAuth(() => {
       void toggle();
     });
@@ -363,7 +368,8 @@ function CollectionHeroContent({
                 variant="secondary"
                 size="sm"
                 onClick={handleFollowToggle}
-                disabled={isToggling}
+                disabled={isBookmarkLoading || isToggling}
+                aria-busy={isBookmarkLoading || undefined}
                 aria-label={isBookmarked ? 'Unfollow' : 'Follow'}
                 data-cy="collection-hero-follow-btn"
                 className="gap-2 text-xs"

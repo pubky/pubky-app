@@ -290,11 +290,11 @@ function setOwnerProfile(name: string | null, avatarUrl?: string) {
   });
 }
 
-function setBookmark({ isBookmarked = false, isToggling = false } = {}) {
+function setBookmark({ isBookmarked = false, isLoading = false, isToggling = false } = {}) {
   const toggle = vi.fn().mockResolvedValue(undefined);
   mockUseBookmark.mockReturnValue({
     isBookmarked,
-    isLoading: false,
+    isLoading,
     isToggling,
     toggle,
   });
@@ -745,6 +745,19 @@ describe('CollectionHero', () => {
 
       const button = screen.getByLabelText('Follow') as HTMLButtonElement;
       expect(button).toBeDisabled();
+      fireEvent.click(button);
+      expect(toggle).not.toHaveBeenCalled();
+    });
+
+    it('disables Follow and ignores clicks while bookmark state is loading', () => {
+      setAuthStore('some-other-user');
+      const toggle = setBookmark({ isBookmarked: false, isLoading: true });
+
+      renderHero();
+
+      const button = screen.getByLabelText('Follow');
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-busy', 'true');
       fireEvent.click(button);
       expect(toggle).not.toHaveBeenCalled();
     });
