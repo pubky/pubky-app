@@ -55,8 +55,8 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
   useEffect(() => {
     if (!lock || !currentUserPubky || !session) return;
     // My own post can't have a replicated copy (unlocking only happens on other people's posts).
-    // Leans on the a == b policy: post author == lock creator. TODO:[Locks] #1998 — phase 2 (a != b)
-    // breaks that inference; decide by lock ownership (e.g. a local unlock index), not authorship.
+    // Leans on the a == b policy: post author == lock creator. TODO:[Locks] #2283 — a != b breaks
+    // that inference; decide by lock ownership (e.g. a local unlock index), not authorship.
     if (authorId === currentUserPubky) return;
 
     let cancelled = false;
@@ -79,7 +79,8 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
     if (!isOwnLock) {
       // a != b: I posted this but locked it with a different account, so the guarded original lives on
       // that account's homeserver and can't be read with this session. Leave it locked.
-      // TODO:[Locks] #1998 — phase 2: resolve by forcing the lock-auth account == the pubky.app account.
+      // TODO:[Locks] #2283 — the resolution is still open; forcing the two accounts to match is not
+      // it, since #2001 deliberately allowed them to differ.
       if (authorId === currentUserPubky) {
         Logger.warn('[Locks] own lock posted under a different account — guarded original unreadable (phase 2)', {
           lock,
