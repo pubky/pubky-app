@@ -2,15 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogUnlockContent } from './DialogUnlockContent';
 
-vi.mock('@/atoms/Dialog/Dialog', () => ({
-  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
-    open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
 const setup = (override?: Partial<React.ComponentProps<typeof DialogUnlockContent>>) => {
   const onOpenChange = vi.fn();
   const onSubmit = vi.fn();
@@ -39,7 +30,7 @@ describe('DialogUnlockContent', () => {
 
   it('does not render when closed', () => {
     setup({ open: false });
-    expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('keeps View Content disabled until a password is entered', () => {
@@ -69,11 +60,20 @@ describe('DialogUnlockContent', () => {
     const { onSubmit } = setup({ loading: true });
     fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'anything' } });
 
-    const cancel = screen.getByRole('button', { name: 'Cancel' });
-    const action = screen.getAllByRole('button').find((button) => button !== cancel);
+    const action = screen.getByRole('button', { name: 'Loading' });
     expect(action).toBeDisabled();
-    fireEvent.click(action as HTMLElement);
+    fireEvent.click(action);
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('clears the typed password when the dialog is dismissed', () => {
+    setup();
+    const password = screen.getByLabelText('Password', { selector: 'input' });
+    fireEvent.change(password, { target: { value: 'hunter2' } });
+
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+    expect(password).toHaveValue('');
   });
 
   it('shows an error message when the unlock failed', () => {
