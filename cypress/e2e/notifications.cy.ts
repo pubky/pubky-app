@@ -326,38 +326,56 @@ describe('notifications', () => {
     checkLatestNotification([profile1.username, 'deleted a post'], LatestNotificationReadState.Read);
   });
 
-  it('can be notified for a post being deleted that you reposted', () => {
-    // * profile 1 creates a post (1) that will be reposted and then deleted
-    const postContent = `The one who reposts this post will be notified when it is deleted! ${Date.now()}`;
-    createQuickPost(postContent);
+  it('groups notifications for posts being deleted that you reposted', () => {
+    // * profile 1 creates two posts that will be reposted and then deleted. Two posts
+    // make the test self-contained: it forms a grouped row on its own, so it also passes
+    // in isolation. The copy assertions stay count-agnostic because earlier deletions by
+    // profile 1 (from the preceding test, or Cypress retries) join the same run.
+    const timestamp = Date.now();
+    const firstPostContent = `The one who reposts this post will be notified when it is deleted! ${timestamp}`;
+    const secondPostContent = `Repost this one too and hear about its deletion as well! ${timestamp}`;
+    createQuickPost(firstPostContent);
+    createQuickPost(secondPostContent);
 
-    // * profile 2 reposts profile 1's post
+    // * profile 2 reposts both of profile 1's posts
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    cy.findFirstPostInFeed().innerTextContains(postContent);
-    repostPost({ repostContent: 'I reposted your post!', filterText: postContent });
+    // The newest post visible in the feed proves both have been indexed.
+    cy.findFirstPostInFeed().innerTextContains(secondPostContent);
+    repostPost({ repostContent: 'I reposted your post!', filterText: firstPostContent });
+    repostPost({ repostContent: 'I reposted this one as well!', filterText: secondPostContent });
 
-    // * profile 1 deletes own post (1)
+    // * profile 1 deletes both own posts
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     // Go to profile page and click Posts tab to see own posts (home feed shows followed users' posts)
     goToProfilePageFromHeader();
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
-    deletePost({ postIdx: 0, filterText: postContent });
+    deletePost({ postIdx: 0, filterText: firstPostContent });
+    deletePost({ postIdx: 0, filterText: secondPostContent });
 
-    // * profile 2 checks for notification for post being deleted
+    // * profile 2 checks for the grouped deletion notification
+    // (see https://github.com/pubky/pubky-app/issues/1570)
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    verifyNotificationCounter(1);
+    verifyNotificationCounter(2);
     goToProfilePageFromHeader();
     verifyNotificationCounter(0);
-    checkLatestNotification([profile1.username, 'deleted a post'], LatestNotificationReadState.Unread);
+    // 'posts you interacted with' is the grouped copy; a lone row says 'deleted a post'.
+    checkLatestNotification(
+      [profile1.username, 'deleted', 'posts you interacted with'],
+      LatestNotificationReadState.Unread,
+    );
+    cy.get('[data-cy="notifications-list"]').children().first().should('have.attr', 'data-cy', 'notification-group');
 
     // * toggle tabs to check unread dot disappears
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
-    checkLatestNotification([profile1.username, 'deleted a post'], LatestNotificationReadState.Read);
+    checkLatestNotification(
+      [profile1.username, 'deleted', 'posts you interacted with'],
+      LatestNotificationReadState.Read,
+    );
   });
 
   it('can be notified for a post being edited that you replied to', () => {
@@ -393,38 +411,73 @@ describe('notifications', () => {
     checkLatestNotification([profile1.username, 'edited a post'], LatestNotificationReadState.Read);
   });
 
-  it('can be notified for a post being edited that you reposted', () => {
-    // * profile 1 creates a post (1) that will be reposted and then edited
-    const postContent = `The one who reposts this post will be notified when it is edited! ${Date.now()}`;
-    const editedContent = `This post has been edited! ${Date.now()}`;
-    createQuickPost(postContent);
+  it('groups notifications for posts being edited that you reposted', () => {
+    // * profile 1 creates two posts that will be reposted and then edited. Two distinct
+    // posts make the test self-contained: they form a grouped row on their own (repeated
+    // edits of one post deduplicate instead), so the test also passes in isolation. The
+    // copy assertions stay count-agnostic because earlier edits by profile 1 (from the
+    // preceding test, or Cypress retries) join the same run.
+    const timestamp = Date.now();
+    const firstPostContent = `The one who reposts this post will be notified when it is edited! ${timestamp}`;
+    const secondPostContent = `Repost this one too and hear about its edit as well! ${timestamp}`;
+    createQuickPost(firstPostContent);
+    createQuickPost(secondPostContent);
 
-    // * profile 2 reposts profile 1's post
+    // * profile 2 reposts both of profile 1's posts
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    cy.findFirstPostInFeed().innerTextContains(postContent);
-    repostPost({ repostContent: 'I reposted your post!', filterText: postContent });
+    // The newest post visible in the feed proves both have been indexed.
+    cy.findFirstPostInFeed().innerTextContains(secondPostContent);
+    repostPost({ repostContent: 'I reposted your post!', filterText: firstPostContent });
+    repostPost({ repostContent: 'I reposted this one as well!', filterText: secondPostContent });
 
-    // * profile 1 edits own post (1)
+    // * profile 1 edits both own posts
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     goToProfilePageFromHeader();
     cy.get('[data-cy="profile-filter-item-posts"]').click();
     cy.get('[data-cy="profile-filter-item-posts"]').closest('[data-selected="true"]').should('exist');
-    editPost({ newPostContent: editedContent, postIdx: 0, filterText: postContent });
+    editPost({ newPostContent: `This post has been edited! ${timestamp}`, postIdx: 0, filterText: firstPostContent });
+    editPost({
+      newPostContent: `This post has also been edited! ${timestamp}`,
+      postIdx: 0,
+      filterText: secondPostContent,
+    });
 
-    // * profile 2 checks for notification for post being edited
+    // * profile 2 checks for the grouped edit notification, which keeps a link to every
+    // edited post (see issue #1570)
     cy.signOut(HasBackedUp.Yes);
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    verifyNotificationCounter(1);
+    verifyNotificationCounter(2);
     goToProfilePageFromHeader();
     verifyNotificationCounter(0);
-    checkLatestNotification([profile1.username, 'edited a post'], LatestNotificationReadState.Unread);
+    // 'posts you interacted with' is the grouped copy; a lone row says 'edited a post'.
+    checkLatestNotification(
+      [profile1.username, 'edited', 'posts you interacted with'],
+      LatestNotificationReadState.Unread,
+    );
+
+    // * every edited post sits behind the Show/Hide disclosure on desktop, while mobile
+    // renders the title list permanently without a toggle
+    cy.get('[data-cy="notifications-list"]').children().first().as('editedGroup');
+    if (Cypress.expose('isMobile')) {
+      cy.get('@editedGroup').find('[data-cy="notification-group-toggle"]').should('not.exist');
+      cy.get('@editedGroup').find('[data-cy="notification-group-item"]').should('have.length.at.least', 2);
+    } else {
+      cy.get('@editedGroup').find('[data-cy="notification-group-toggle"]').should('contain.text', 'Show');
+      cy.get('@editedGroup').find('[data-cy="notification-group-item"]').should('have.length', 0);
+      cy.get('@editedGroup').find('[data-cy="notification-group-toggle"]').click();
+      cy.get('@editedGroup').find('[data-cy="notification-group-item"]').should('have.length.at.least', 2);
+      cy.get('@editedGroup').find('[data-cy="notification-group-toggle"]').should('contain.text', 'Hide');
+    }
 
     // * toggle tabs to check unread dot disappears
     causeNotificationsToBeRead();
     verifyNotificationCounter(0);
-    checkLatestNotification([profile1.username, 'edited a post'], LatestNotificationReadState.Read);
+    checkLatestNotification(
+      [profile1.username, 'edited', 'posts you interacted with'],
+      LatestNotificationReadState.Read,
+    );
   });
 
   it('can be notified when a followed collection is updated with a new post', () => {
