@@ -425,6 +425,14 @@ describe('CollectionHero', () => {
     expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.LIST);
   });
 
+  it('keeps the tag action last in the viewer action row', () => {
+    renderHero();
+
+    const layoutButton = screen.getByRole('button', { name: /Layout: Grid/ });
+    const tagButton = screen.getByLabelText('Tag post (3)');
+    expect(layoutButton.compareDocumentPosition(tagButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('hides the temporary layout override from the collection owner', () => {
     setAuthStore(AUTHOR_PUBKY);
 

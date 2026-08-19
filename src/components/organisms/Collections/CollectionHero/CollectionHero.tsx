@@ -360,7 +360,6 @@ function CollectionHeroContent({
                   {'Delete'}
                 </Typography>
               </Button>
-              {tagToggle}
             </>
           ) : (
             <>
@@ -389,10 +388,10 @@ function CollectionHeroContent({
                   {'Share'}
                 </Typography>
               </Button>
-              {tagToggle}
             </>
           )}
           {!isOwn && <CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />}
+          {tagToggle}
         </Container>
       </CardContent>
       {dialogs}
