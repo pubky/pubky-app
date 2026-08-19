@@ -4,9 +4,10 @@ import { LocksApplication } from '@/application/locks/locks';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { type LockFile, VerifierType } from '@/services/locks/locks.types';
+import { VerifierType } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
+import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LocksController } from './locks';
 
@@ -251,24 +252,7 @@ describe('LocksController (content)', () => {
   });
 });
 
-// TODO:[Locks] #1998 — inline test fixtures (sample lock file + author pubky) are
-// duplicated across the lock tests; consider extracting a shared test util/fixture.
-const MOCK_LOCK_AUTHOR_PUBKY = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
-const MOCK_LOCK_FILE: LockFile = {
-  version: 1,
-  creator: 'pubkycreator123',
-  primary_resource: {
-    path: '/priv/locks.app/content/example.txt',
-    hash: '<hash>',
-    content_type: 'text/plain',
-    size: 13,
-  },
-  secondary_resources: {},
-  criteria: [{ criterion_id: 'criterion-1', verifier_type: 'password', params: { satisfied: true } }],
-  lock_logic: { type: 'all', criteria: ['criterion-1'] },
-  access_policy: { requested_credential_ttl_seconds: 900 },
-  lock_server: { override: 'pubkyserver123' },
-};
+const MOCK_LOCK_FILE = mockLockFile();
 
 const VALID_LOCK_URL = `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks/lock.json`;
 
