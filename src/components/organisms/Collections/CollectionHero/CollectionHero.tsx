@@ -118,10 +118,10 @@ function CollectionHeroContent({
   const ownerProfileHref = getUserProfileUrl(authorPubky, currentUserPubky);
 
   // Override the generic bookmark toast copy so Follow / Unfollow reads as a
-  // collection action (matches `CollectionCard`).
+  // collection-specific action.
   const { isBookmarked, isToggling, toggle } = useBookmark(compositeId, {
     toastMessages: {
-      added: "You've followed this collection",
+      added: 'You are now following this collection',
       removed: "You've unfollowed this collection",
     },
   });
@@ -232,7 +232,7 @@ function CollectionHeroContent({
             className="min-w-0 flex-1 gap-3 lg:flex-none"
             profileHref={ownerProfileHref}
           />
-          <CollectionCountBadge count={itemCount} />
+          <CollectionCountBadge count={itemCount} showLabelOnMobile />
         </Container>
 
         {/* Description */}

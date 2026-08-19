@@ -90,7 +90,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
         >
           2
           <span
-            class="hidden sm:inline"
+            class="inline"
             data-testid="typography"
           >
              posts
@@ -422,7 +422,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
         >
           2
           <span
-            class="hidden sm:inline"
+            class="inline"
             data-testid="typography"
           >
              posts
@@ -787,7 +787,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
         >
           2
           <span
-            class="hidden sm:inline"
+            class="inline"
             data-testid="typography"
           >
              posts
@@ -1074,7 +1074,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
         >
           0
           <span
-            class="hidden sm:inline"
+            class="inline"
             data-testid="typography"
           >
              posts

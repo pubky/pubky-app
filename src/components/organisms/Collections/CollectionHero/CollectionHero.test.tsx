@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
@@ -348,7 +348,9 @@ describe('CollectionHero', () => {
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-    expect(screen.getByLabelText('2 posts')).toBeInTheDocument(); // compact-formatted item count
+    const countBadge = screen.getByLabelText('2 posts');
+    expect(countBadge).toBeInTheDocument(); // compact-formatted item count
+    expect(within(countBadge).getByText('posts', { exact: false })).toHaveClass('inline');
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
@@ -795,7 +797,7 @@ describe('CollectionHero', () => {
     expect(mockUseBookmark).toHaveBeenCalledWith(
       COMPOSITE_ID,
       expect.objectContaining({
-        toastMessages: expect.objectContaining({ added: "You've followed this collection" }),
+        toastMessages: expect.objectContaining({ added: 'You are now following this collection' }),
       }),
     );
   });

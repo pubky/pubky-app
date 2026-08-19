@@ -442,15 +442,16 @@ describe('notifications', () => {
     cy.wait(1000);
     cy.signOut(HasBackedUp.Yes);
 
-    // * profile 2 discovers and follows the collection
+    // * profile 2 discovers the collection and follows it from the dedicated page header
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     goToCollectionsPage();
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
     cy.intercept('PUT', '**/pub/pubky.app/bookmarks/**').as('followCollection');
-    findCollectionCardInSection(DISCOVER_SECTION, collectionName)
-      .find('[data-cy="collection-card-follow-btn"]')
-      .click();
+    findCollectionCardInSection(DISCOVER_SECTION, collectionName).click();
+    cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
+    cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Follow').click();
     cy.wait('@followCollection').its('response.statusCode').should('eq', 201);
+    goToCollectionsPage();
     findCollectionCardInSection(FOLLOWED_SECTION, collectionName).should('be.visible');
 
     // * profile 1 adds a new post to the followed collection
