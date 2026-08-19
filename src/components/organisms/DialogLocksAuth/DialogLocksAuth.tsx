@@ -131,7 +131,6 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
                 // The parent accepts the auth code only from the configured Lock Server origin.
                 // Without allow-same-origin, sandboxed postMessage uses origin "null" and gets rejected.
                 // The other flags let /connect run JS, submit its approval form, and open Pubky Ring.
-                // TODO:[Locks] #2001 — verify this sandbox set against the live /connect flow.
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                 className="h-[420px] w-full"
               />
