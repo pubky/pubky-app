@@ -17,18 +17,18 @@ A lock post looks like a normal post (a short / image / link / … teaser) with 
 const isLock = !!postDetails.lock; // PostContentBase.tsx
 ```
 
-`lock` is **provisional** on `NexusPostDetails` / `PostDetailsModel` — Nexus and
-pubky-app-specs do not send it yet (only the local demo seeds it). Tagged
-`TODO:[Locks] #1998`; remove the note once the spec / Nexus deliver it.
+`lock` is written by the publish flow (`useCreateLockContent` → `services/local/post`) and
+persisted on `NexusPostDetails` / `PostDetailsModel`. Whether Nexus serves it back on read is
+not confirmed here.
 
 ## Data shape
 
-| Field                    | Owner                                      | Meaning                                                                           |
-| ------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------- |
-| top-level `kind`         | Nexus / specs                              | teaser display type (`image` / `link` / `short` / …; never `long` / `collection`) |
-| top-level `lock`         | Lock server (provisional; FE-mock for now) | URL of the public `lock.json` — the detection seam                                |
-| `content` (string)       | **FE-owned**                               | stringified teaser JSON, Zod-validated: `lock_title`, `teaser_description`        |
-| `lock.json` → `LockFile` | **Lock server**                            | the public content-lock contract (see below)                                      |
+| Field                    | Owner           | Meaning                                                                           |
+| ------------------------ | --------------- | --------------------------------------------------------------------------------- |
+| top-level `kind`         | Nexus / specs   | teaser display type (`image` / `link` / `short` / …; never `long` / `collection`) |
+| top-level `lock`         | Lock server     | URL of the public `lock.json` — the detection seam                                |
+| `content` (string)       | **FE-owned**    | stringified teaser JSON, Zod-validated: `lock_title`, `teaser_description`        |
+| `lock.json` → `LockFile` | **Lock server** | the public content-lock contract (see below)                                      |
 
 - `content` is FE-owned (pubky-app-specs does not manage it) and validated at runtime
   with Zod (`lockPostContentSchema`, `core/services/locks/locks.types.ts`). Bad / missing
@@ -36,7 +36,7 @@ pubky-app-specs do not send it yet (only the local demo seeds it). Tagged
 - `LockFile` mirrors the Lock server's public `lock.json` (`version`, `creator`,
   `primary_resource`, `secondary_resources`, `criteria`, `lock_logic`, `access_policy`,
   `lock_server`). It is the **Lock server's contract**, not FE-owned — it should come from
-  the Lock SDK once that ships a typed reader API (`TODO:[Locks] #1998`). Until then it is
+  the Lock SDK once that exports one (`TODO:[Locks] locks#22`). Until then it is
   hand-mirrored in `locks.types.ts`.
 
 ## Render flow (shared by feed and detail)
@@ -112,23 +112,16 @@ Notes:
   factory logs + reports to Sentry once). Hooks catch and degrade to the lock card.
 - **Read path.** This is a read flow; there is no local-first `commit*` write.
 
-## Release-gate markers
+## Marker tracking
 
-Every dev / temporary shortcut is tagged so it can be audited out before ship. The gate
-(#2040): `grep -rn "TODO:\[Locks\]" src/` must return **zero** before release.
-
-| Marker               | Removed when                                   | Examples                                                                      |
-| -------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------- |
-| `TODO:[Locks] #1998` | Phase-1 (password-only) / provisional resolved | provisional `.lock` field; `LockFile` type → Lock SDK; inline test fixtures   |
-| `TODO:[Locks] #2001` | auth sandbox verified against the live flow    | the `/connect` iframe sandbox set                                             |
-| `TODO:[Locks] #2039` | upload robustness landed                       | orphaned resources after a partial publish; no size checks before upload      |
-| `TODO:[Locks] #2040` | Lock Server ships the password verifier        | `dev-static` proofs (every criterion passes); unvalidated `any` from lock-sdk |
-| `TODO:[Locks] #2181` | announcement failure rolls the lock back       | a lock left unreferenced when its announcement post fails                     |
+Every dev / temporary shortcut carries the ticket number that owns it —
+`grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
+Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 
 ## Testing & local demo
 
-- Tests are co-located with each file. Sample test data (a `LockFile` + an author pubky)
-  is **inlined per test** — there is no mock-data module.
+- Tests are co-located with each file. Shared sample data (a `LockFile` + an author pubky)
+  lives in `src/test-utils/locks.ts` (`mockLockFile()`, `MOCK_LOCK_AUTHOR_PUBKY`).
 - No integration test spans UI → application → SDK for the unlock flow; the local stack
   (testnet + Lock Server + nexus) is driven manually.
 
