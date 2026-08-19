@@ -26,10 +26,6 @@ describe('contacts', () => {
     // Sign out of profile 1
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/franky/issues/496
-    cy.clearAllSessionStorage();
-    cy.reload();
-
     // Create profile 2
     cy.onboardAsNewUser(profileName2, "Man's second best friend", [BackupType.RecoveryPhraseWithoutConfirmation]);
 
@@ -51,7 +47,7 @@ describe('contacts', () => {
       .should('have.length', 1)
       .first()
       .within(() => {
-        // check that account 2 is listed as a follower
+        // check that profile 2 is listed as a follower
         cy.get('[data-cy="profile-follower-item-name"]').should('have.text', profileName2);
         // check 0 tags
         cy.get('[data-cy="profile-follower-item-tags-count"]').should('have.text', 0);
@@ -79,10 +75,11 @@ describe('contacts', () => {
 
     // check number of listed following is 1
     cy.get('[data-cy="profile-filter-item-following"]').should('have.text', 'Following');
-    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', 1).click();
+    // first is profile 1, second is moderation (not persisted on sign out because not indexed)
+    cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', 2).click();
     cy.get('[data-cy="profile-connections-list"]')
       .children()
-      .should('have.length', 1)
+      .should('have.length', 2)
       .first()
       .within(() => {
         // check that profile 1 is listed as a following
@@ -143,7 +140,8 @@ describe('contacts', () => {
           });
       });
 
-    // check number of listed following is 1
+    // check number of listed following is 2
+    // first is profile 1, no moderation profile because not indexed in testnet
     cy.get('[data-cy="profile-filter-item-following-count"]').should('have.text', 1).click();
     cy.get('[data-cy="profile-connections-list"]')
       .children()
