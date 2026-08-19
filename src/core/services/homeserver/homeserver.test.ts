@@ -156,6 +156,37 @@ const createMockKeypair = (): Keypair =>
     secret: vi.fn(() => new Uint8Array(32).fill(1)),
   });
 
+/**
+ * Temporarily declare a staging deploy (PUBKY_RUNTIME_ENV=staging) and point
+ * runtime config at canonical staging homeserver values.
+ */
+async function withStagingHomeserverEnv(
+  run: () => Promise<void>,
+  { keepTestHomeserver = false }: { keepTestHomeserver?: boolean } = {},
+): Promise<void> {
+  const { resetRuntimeConfigForTests } = await import('@/libs/runtime-config/runtime-config');
+  const { NETWORK_RUNTIME_DEFAULTS } = await import('@/libs/runtime-config/runtime-config.schema');
+
+  const previousDeployEnv = process.env.PUBKY_RUNTIME_ENV;
+  const previousHomeserver = process.env.PUBKY_RUNTIME_HOMESERVER;
+  const previousHomeserverUrl = process.env.PUBKY_RUNTIME_HOMESERVER_URL;
+  process.env.PUBKY_RUNTIME_ENV = 'staging';
+  if (!keepTestHomeserver) {
+    process.env.PUBKY_RUNTIME_HOMESERVER = NETWORK_RUNTIME_DEFAULTS.homeserver;
+    process.env.PUBKY_RUNTIME_HOMESERVER_URL = NETWORK_RUNTIME_DEFAULTS.homeserverUrl;
+  }
+  resetRuntimeConfigForTests();
+
+  try {
+    await run();
+  } finally {
+    process.env.PUBKY_RUNTIME_ENV = previousDeployEnv;
+    process.env.PUBKY_RUNTIME_HOMESERVER = previousHomeserver;
+    process.env.PUBKY_RUNTIME_HOMESERVER_URL = previousHomeserverUrl;
+    resetRuntimeConfigForTests();
+  }
+}
+
 // =============================================================================
 // TEST SUITE
 // =============================================================================
@@ -359,6 +390,14 @@ describe('HomeserverService', () => {
     });
 
     describe('signIn', () => {
+      it('should skip homeserver resolution when the deploy is not staging', async () => {
+        const keypair = createMockKeypair();
+
+        await HomeserverService.assertUserHomeserverAllowed({ publicKey: keypair.publicKey });
+
+        expect(mockState.getHomeserverOf).not.toHaveBeenCalled();
+      });
+
       it('should return session on successful signin', async () => {
         const keypair = createMockKeypair();
         const expectedSession = createMockSession();
@@ -382,19 +421,33 @@ describe('HomeserverService', () => {
         expect(mockState.getHomeserverOf).toHaveBeenCalledWith(keypair.publicKey);
       });
 
-      it('should attempt to republish homeserver and return undefined when checkHomeserver fails', async () => {
+      it('should attempt to republish homeserver and return undefined when the record is provably absent', async () => {
         // NOTE: This is intentional behavior - after republishing the homeserver,
         // the method returns undefined to signal the caller should retry signin.
-        // The republish is a recovery mechanism when PKARR records are stale.
+        // The republish is a recovery mechanism when PKARR records are stale,
+        // and only fires when the lookup RESOLVED to "no record".
         const keypair = createMockKeypair();
 
-        // checkHomeserver throws because no homeserver found
         mockState.getHomeserverOf.mockResolvedValue(null);
 
         const result = await HomeserverService.signIn({ keypair });
 
         expect(mockState.publishHomeserverForce).toHaveBeenCalled();
         expect(result).toBeUndefined();
+      });
+
+      it('should not republish when the homeserver lookup fails outside staging', async () => {
+        // A thrown lookup does not prove the record is absent — republishing on
+        // it could overwrite an existing record that points elsewhere.
+        const keypair = createMockKeypair();
+
+        mockState.getHomeserverOf.mockRejectedValue(new Error('PKARR relay unavailable'));
+
+        await expect(HomeserverService.signIn({ keypair })).rejects.toMatchObject({
+          category: ErrorCategory.Server,
+        });
+        expect(mockState.signin).not.toHaveBeenCalled();
+        expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
       });
 
       it('should throw SESSION_EXPIRED error when both signin and republish fail', async () => {
@@ -408,6 +461,91 @@ describe('HomeserverService', () => {
           category: ErrorCategory.Auth,
           code: AuthErrorCode.SESSION_EXPIRED,
         });
+      });
+
+      it('should reject mismatched homeserver on staging without republishing', async () => {
+        await withStagingHomeserverEnv(async () => {
+          const keypair = createMockKeypair();
+          mockState.getHomeserverOf.mockResolvedValue({
+            z32: () => 'prod-homeserver-public-key-z32',
+          });
+
+          await expect(HomeserverService.signIn({ keypair })).rejects.toMatchObject({
+            category: ErrorCategory.Auth,
+            code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+          });
+          expect(mockState.signin).not.toHaveBeenCalled();
+          expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+        });
+      });
+
+      it('should reject an absent homeserver record on staging without republishing', async () => {
+        // Absence cannot prove the key belongs to this deploy — it is rejected
+        // like a mismatch (deterministic, non-retryable) rather than surfaced
+        // as a transient server error.
+        await withStagingHomeserverEnv(async () => {
+          const keypair = createMockKeypair();
+          mockState.getHomeserverOf.mockResolvedValue(null);
+
+          await expect(HomeserverService.signIn({ keypair })).rejects.toMatchObject({
+            category: ErrorCategory.Auth,
+            code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+          });
+          expect(mockState.signin).not.toHaveBeenCalled();
+          expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+        });
+      });
+
+      it('should not republish when homeserver resolution fails on staging', async () => {
+        await withStagingHomeserverEnv(async () => {
+          const keypair = createMockKeypair();
+          mockState.getHomeserverOf.mockRejectedValue(new Error('PKARR relay unavailable'));
+
+          await expect(HomeserverService.signIn({ keypair })).rejects.toMatchObject({
+            category: ErrorCategory.Server,
+          });
+          expect(mockState.signin).not.toHaveBeenCalled();
+          expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+        });
+      });
+
+      it('should allow signin on staging when PKARR homeserver matches configured homeserver', async () => {
+        await withStagingHomeserverEnv(async () => {
+          const { NETWORK_RUNTIME_DEFAULTS } = await import('@/libs/runtime-config/runtime-config.schema');
+          const keypair = createMockKeypair();
+          const expectedSession = createMockSession();
+          mockState.getHomeserverOf.mockResolvedValue({
+            z32: () => NETWORK_RUNTIME_DEFAULTS.homeserver,
+          });
+          mockState.signin.mockResolvedValue(expectedSession);
+
+          const result = await HomeserverService.signIn({ keypair });
+
+          expect(result).toEqual({ session: expectedSession });
+          expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+        });
+      });
+
+      it('should keep the staging guard active when homeserver config drifts from the canonical defaults', async () => {
+        // Regression: the guard is driven by the declared PUBKY_RUNTIME_ENV, not
+        // by config equality with the compiled-in staging defaults — drift used
+        // to silently disable it and re-enable the force-republish path.
+        await withStagingHomeserverEnv(
+          async () => {
+            const keypair = createMockKeypair();
+            mockState.getHomeserverOf.mockResolvedValue({
+              z32: () => 'prod-homeserver-public-key-z32',
+            });
+
+            await expect(HomeserverService.signIn({ keypair })).rejects.toMatchObject({
+              category: ErrorCategory.Auth,
+              code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+            });
+            expect(mockState.signin).not.toHaveBeenCalled();
+            expect(mockState.publishHomeserverForce).not.toHaveBeenCalled();
+          },
+          { keepTestHomeserver: true },
+        );
       });
     });
 

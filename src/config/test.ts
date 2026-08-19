@@ -24,6 +24,9 @@ process.env.PUBKY_RUNTIME_TESTNET = 'true';
 process.env.PUBKY_RUNTIME_PKARR_RELAYS = '["http://localhost:8080"]';
 process.env.PUBKY_RUNTIME_HOMESERVER = 'test-homeserver-key';
 process.env.PUBKY_RUNTIME_HOMESERVER_URL = 'http://localhost:6286';
+// Deploy identity: tests run as "production" so the staging sign-in guard is
+// opt-in per test (see withStagingHomeserverEnv in homeserver.test.ts).
+process.env.PUBKY_RUNTIME_ENV = 'production';
 process.env.PUBKY_RUNTIME_MODERATION_ID = 'nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy';
 process.env.PUBKY_RUNTIME_MODERATED_TAGS = '["nudity"]';
 process.env.PUBKY_RUNTIME_EXCHANGE_RATE_API = 'https://api1.blocktank.to/api/fx/rates/btc';

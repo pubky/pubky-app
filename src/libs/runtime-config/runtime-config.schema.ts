@@ -29,6 +29,14 @@ import { z } from 'zod';
 
 const urlValue = z.url();
 const homeserverValue = z.string().min(1);
+/**
+ * Declared deploy identity. Drives environment-gated behavior (e.g. the staging
+ * homeserver sign-in guard) — declared explicitly instead of inferred from
+ * network values, so config drift can never silently flip it (see
+ * `isStagingHomeserverDeploy` in `@/config/network`).
+ */
+const deployEnvValue = z.enum(['production', 'staging']);
+export type DeployEnv = z.infer<typeof deployEnvValue>;
 const pkarrRelaysValue = z.array(z.url()).min(1);
 const testnetValue = z.boolean();
 const sampleRateValue = z.number().min(0).max(1);
@@ -205,6 +213,7 @@ export const networkConfigValueSchema = z.object({
   defaultHttpRelay: urlValue,
   pkarrRelays: pkarrRelaysValue,
   testnet: testnetValue,
+  deployEnv: deployEnvValue,
 });
 
 export type NetworkRuntimeConfig = z.infer<typeof networkConfigValueSchema>;
@@ -287,6 +296,7 @@ export const runtimeEnvInputSchema = z
     defaultHttpRelay: urlValue,
     pkarrRelays: pkarrRelaysFromString,
     testnet: testnetFromString,
+    deployEnv: deployEnvValue,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -347,6 +357,7 @@ export const NETWORK_RUNTIME_DEFAULTS: NetworkRuntimeConfig = {
   defaultHttpRelay: 'https://httprelay.staging.pubky.app/inbox',
   pkarrRelays: ['https://pkarr.pubky.app', 'https://pkarr.pubky.org'],
   testnet: false,
+  deployEnv: 'staging',
 };
 
 /**
@@ -363,6 +374,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     defaultHttpRelay: urlValue.default(NETWORK_RUNTIME_DEFAULTS.defaultHttpRelay),
     pkarrRelays: z.string().default(JSON.stringify(NETWORK_RUNTIME_DEFAULTS.pkarrRelays)).pipe(pkarrRelaysFromString),
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
+    deployEnv: deployEnvValue.default(NETWORK_RUNTIME_DEFAULTS.deployEnv),
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -428,6 +440,7 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
   defaultHttpRelay: 'PUBKY_RUNTIME_DEFAULT_HTTP_RELAY',
   pkarrRelays: 'PUBKY_RUNTIME_PKARR_RELAYS',
   testnet: 'PUBKY_RUNTIME_TESTNET',
+  deployEnv: 'PUBKY_RUNTIME_ENV',
 };
 
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {

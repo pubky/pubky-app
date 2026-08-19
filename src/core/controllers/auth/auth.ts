@@ -7,14 +7,14 @@ import { TagApplication } from '@/application/tag/tag';
 import type {
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
-  TPubkyParams,
   TSignUpParams,
 } from '@/controllers/auth/auth.types';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
-import type { AppError } from '@/libs/error/error';
+import { ErrorService } from '@/libs/error/error.types';
+import { isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
@@ -50,23 +50,33 @@ export class AuthController {
 
   /**
    * Restores a persisted session from the auth store.
-   * @returns Promise resolving to true if the session was restored successfully, false otherwise
+   * @returns true on success, false on failure
+   * @throws Wrong-environment homeserver errors after local cleanup so UI can show feedback
    */
   static async restorePersistedSession(): Promise<boolean> {
     const authStore = useAuthStore.getState();
-    const result = await AuthApplication.restorePersistedSession({ authStore });
-    if (!result) {
+    try {
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+      if (!result) {
+        await this.cleanupLocalState();
+        return false;
+      }
+      const { session } = result;
+      const initialState = {
+        session,
+        currentUserPubky: Identity.z32FromSession({ session }),
+        hasProfile: authStore.hasProfile,
+      };
+      authStore.init(initialState);
+      return true;
+    } catch (error) {
+      const appError = toAppError(error, ErrorService.Local, 'restorePersistedSession');
       await this.cleanupLocalState();
+      if (isWrongEnvironmentHomeserverError(appError)) {
+        throw appError;
+      }
       return false;
     }
-    const { session } = result;
-    const initialState = {
-      session,
-      currentUserPubky: Identity.z32FromSession({ session }),
-      hasProfile: authStore.hasProfile,
-    };
-    authStore.init(initialState);
-    return true;
   }
 
   /**
@@ -88,7 +98,9 @@ export class AuthController {
       Logger.error('Failed to sign in. Please try again.', { keypair });
       return false;
     }
-    await this.initializeAuthenticatedSession(session);
+    // Environment guard already ran inside HomeserverService.signIn (before the
+    // session was created), so go straight to shared initialization.
+    await this.completeAuthenticatedSession(session);
     return true;
   }
 
@@ -98,7 +110,7 @@ export class AuthController {
    * @param params.session - The user session data
    * @param params.pubky - The user's public key identifier
    */
-  private static async hydrateMeImAlive({ pubky }: TPubkyParams) {
+  private static async hydrateMeImAlive({ pubky }: { pubky: Pubky }) {
     const signInStore = useSignInStore.getState();
     const {
       meta: { url },
@@ -140,10 +152,35 @@ export class AuthController {
 
   /**
    * Initializes the authenticated session and checks if the user is signed up (profile.json in homeserver).
+   *
+   * Runs the staging environment guard first: the session was approved externally
+   * (e.g. Pubky Ring), so this is its only checkpoint. Keypair flows skip the
+   * guard here — HomeserverService.signIn already ran it before creating the
+   * session, and re-asserting would duplicate the PKARR lookup and let a
+   * transient second lookup abort an already-verified sign-in.
    * @param params - Object containing session data from authentication
    * @param params.session - The user session data
    */
   static async initializeAuthenticatedSession({ session }: THomeserverSessionResult) {
+    try {
+      await AuthApplication.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
+    } catch (error) {
+      // The just-approved session lives on the user's actual homeserver — sign it
+      // out instead of leaving it dangling, whether the key was rejected or the
+      // lookup failed. Best-effort: the failure must surface regardless.
+      await AuthApplication.logout({ session }).catch((logoutError) => {
+        Logger.warn('Failed to sign out session after environment check failure', { logoutError });
+      });
+      throw error;
+    }
+    await this.completeAuthenticatedSession({ session });
+  }
+
+  /**
+   * Session initialization shared by all sign-in flows; assumes the environment
+   * guard already passed for this session.
+   */
+  private static async completeAuthenticatedSession({ session }: THomeserverSessionResult) {
     const signInStore = useSignInStore.getState();
     signInStore.reset(); // Reset for fresh sign-in
     signInStore.setAuthUrlResolved(true); // Step 1 complete (20%)
@@ -166,9 +203,8 @@ export class AuthController {
       // Update hasProfile after bootstrap completes - triggers redirect via useAuthStatus
       authStore.setHasProfile(isSignedUp);
     } catch (error) {
-      // Clean up early-stored session to prevent dangling state
       authStore.reset();
-      signInStore.setError(error as AppError);
+      signInStore.reset();
       throw error;
     }
   }
@@ -336,8 +372,15 @@ export class AuthController {
     // Fresh loads can still have a persisted session export before the live session is restored.
     // Reuse the restore flow so /logout performs a real homeserver sign-out before local cleanup.
     if (!session && authStore.sessionExport) {
-      const didRestoreSession = await this.restorePersistedSession();
-      if (!didRestoreSession) {
+      try {
+        const didRestoreSession = await this.restorePersistedSession();
+        if (!didRestoreSession) {
+          return;
+        }
+      } catch (error) {
+        // restorePersistedSession already cleaned up local state; a wrong-environment
+        // rejection needs no toast here — the user asked to log out anyway.
+        Logger.warn('Persisted session restore during logout failed; local state already cleaned up', { error });
         return;
       }
       authStore = useAuthStore.getState();
