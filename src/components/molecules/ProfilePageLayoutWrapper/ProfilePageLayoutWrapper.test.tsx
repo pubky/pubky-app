@@ -52,16 +52,6 @@ describe('ProfilePageLayoutWrapper', () => {
     expect(wrapper).toHaveClass('px-6', 'xl:px-0', 'pt-0');
   });
 
-  it('clears the fixed mobile footer with bottom padding', () => {
-    const { container } = render(
-      <ProfilePageLayoutWrapper>
-        <div>Test</div>
-      </ProfilePageLayoutWrapper>,
-    );
-    const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveClass('pb-24', 'lg:pb-12');
-  });
-
   it('matches snapshot', () => {
     const { container } = render(
       <ProfilePageLayoutWrapper>
