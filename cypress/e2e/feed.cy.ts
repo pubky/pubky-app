@@ -176,6 +176,7 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of following', () => {
+    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
     // slow down execution locally to avoid seeing wrong profile in filtered feed
     const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
     slowCypressDown(slowCy);
@@ -183,7 +184,7 @@ describe('feed and filters', () => {
     // * sign in as profile 2 and view Reach Following, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     // click the Following filter
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Following"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
 
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
@@ -198,7 +199,7 @@ describe('feed and filters', () => {
 
     // * sign in as profile 3 and view Reach Following, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Following"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
@@ -214,7 +215,7 @@ describe('feed and filters', () => {
 
     // * sign in as profile 4 and view Reach Following, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile4.username));
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Following"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
 
     cannotFindPostInFeed(profile1.postText1);
@@ -228,13 +229,14 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view only posts and reposts of friends', () => {
+    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
     // slow down execution more locally to avoid seeing wrong profile in filtered feed
     const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
     slowCypressDown(slowCy);
 
     // * sign in as profile 1 and view Reach Friends, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="friends-reach-toggle"]').click();
     waitForFeedToLoad();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
@@ -252,7 +254,7 @@ describe('feed and filters', () => {
 
     // * sign in as profile 2 and view Reach Friends, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="friends-reach-toggle"]').click();
     waitForFeedToLoad();
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
@@ -266,7 +268,7 @@ describe('feed and filters', () => {
 
     // * sign in as profile 3 and view Reach Friends, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Friends"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="friends-reach-toggle"]').click();
     waitForFeedToLoad();
 
     cannotFindPostInFeed(profile1.postText1);
@@ -281,7 +283,7 @@ describe('feed and filters', () => {
   it('can filter to view only own posts', () => {
     // * sign in as profile 2 and view Reach Me, only own post and repost can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Me"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="me-reach-toggle"]').click();
     waitForFeedToLoad();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
@@ -297,13 +299,14 @@ describe('feed and filters', () => {
   });
 
   it('can filter to view posts from your web of trust', () => {
+    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
     // slow down execution locally to avoid seeing wrong profile in filtered feed
     const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
     slowCypressDown(slowCy);
 
     // * sign in as profile 3 and view Reach My network
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="My network"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="network-reach-toggle"]').click();
     waitForFeedToLoad();
 
     // profile 1 is 2 hops away (profile 3 -> profile 2 -> profile 1) so their posts are included
@@ -315,20 +318,21 @@ describe('feed and filters', () => {
     // profile 2 is followed directly (1 hop)
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
-    // unlike Following/Friends, My network does not include the viewer's own posts
+    // my network does not include the viewer's own posts
     cannotFindPostInFeed(profile3.postText);
     // profile 4 is 3 hops away (profile 3 -> profile 2 -> profile 1 -> profile 4), outside the network
     cannotFindPostInFeed(profile4.postText);
   });
 
   it('can filter to view posts by users tagged as chosen profile tags', () => {
+    // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
     // slow down execution locally to avoid seeing wrong profile in filtered feed
     const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
     slowCypressDown(slowCy);
 
     // * sign in as profile 3 and view Reach Tagged as
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Tagged as"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="tagged-as-reach-toggle"]').click();
 
     // * select the tag applied by profile 4, who is outside profile 3's 2-hop network - not honored
     cy.get('[data-cy="add-tag-input"]').type(`${taggedAsLabelOutsideNetwork}{enter}`);
@@ -337,7 +341,9 @@ describe('feed and filters', () => {
 
     // * swap to the tag applied by profile 1, who is within profile 3's 2-hop network - honored,
     // even though the tagged profile (profile 4) is otherwise outside profile 3's reach
-    cy.get(`[aria-label="Remove ${taggedAsLabelOutsideNetwork} tag"]`).click();
+    cy.get(`[data-cy="post-tag"][data-tag-label="${taggedAsLabelOutsideNetwork}"]`)
+      .find('[data-cy="post-tag-remove-btn"]')
+      .click();
     cy.get('[data-cy="add-tag-input"]').type(`${taggedAsLabelInNetwork}{enter}`);
     waitForFeedToLoad();
 
@@ -384,9 +390,9 @@ describe('feed and filters', () => {
   it('can sort by popularity', () => {
     // * sign in as profile 1 and sort by Popularity with Reach Following posts
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
-    cy.get('[data-cy="filter-reach-radiogroup"]').find('[aria-label="Following"]').click();
+    cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
-    cy.get('[data-cy="filter-sort-radiogroup"]').find('[aria-label="Popularity"]').click();
+    cy.get('[data-cy="filter-sort-radiogroup"]').find('[data-cy="popularity-sort-toggle"]').click();
     waitForFeedToLoad();
 
     // * check the posts are in the correct order
@@ -433,7 +439,7 @@ describe('visual layout', () => {
     createQuickPostWithImage(imagePostContent3);
 
     // switch to visual layout
-    cy.get('[data-testid="filter-layout-radiogroup"]').find('[aria-label="Visual"]').click();
+    cy.get('[data-cy="filter-layout-radiogroup"]').find('[data-cy="visual-layout-toggle"]').click();
 
     // check the post with text is not visible
     cannotFindPostInFeed(textOnlyPostContent);
