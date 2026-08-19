@@ -87,6 +87,8 @@ export function useCreateLockContent({
       // The lock lives on the Lock-Server-authenticated pubky's homeserver, which may differ from the
       // pubky.app account. Build the URL from `lock.creator`, stripping its `pubky` prefix to the raw
       // z32 host the `pubky://` scheme expects.
+      // TODO:[Locks] run this through `LockContentParser.isValidLockUrl` before publishing. The read
+      // path already does; the publish path does not, and the announcement below cannot be undone.
       const lockUrl = `pubky://${stripPubkyPrefix(lock.creator)}${lock.content_lock_path}`;
 
       // TODO:[Locks] #2181 — the lock and its public lock file already exist. If the announcement below

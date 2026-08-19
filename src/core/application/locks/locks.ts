@@ -398,7 +398,6 @@ export class LocksApplication {
       });
     }
 
-    // TODO:[Locks] #2040 — lock-sdk returns `any`; validate with Zod instead of casting.
     return (await LocksService.readContentLock(lockUrl)) as LockFile;
   }
 }
