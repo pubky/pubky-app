@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationsList } from './NotificationsList';
 import type { GroupableNotification, NotificationListEntry } from './NotificationsList.types';
 
@@ -37,10 +39,14 @@ vi.mock('@/organisms/NotificationGroupItem/NotificationGroupItem', () => ({
     notifications,
     isUnread,
     isMobile,
+    isExpanded,
+    onExpandedChange,
   }: {
     notifications: GroupableNotification[];
     isUnread: boolean;
     isMobile: boolean;
+    isExpanded?: boolean;
+    onExpandedChange?: (expanded: boolean) => void;
   }) => (
     <div
       data-testid="notification-group-item"
@@ -48,7 +54,11 @@ vi.mock('@/organisms/NotificationGroupItem/NotificationGroupItem', () => ({
       data-count={notifications.length}
       data-unread={isUnread ? 'true' : 'false'}
       data-mobile={isMobile ? 'true' : undefined}
+      data-expanded={isExpanded ? 'true' : 'false'}
     >
+      <button type="button" onClick={() => onExpandedChange?.(!isExpanded)}>
+        toggle
+      </button>
       {notifications[0].type}
     </div>
   ),
@@ -181,6 +191,34 @@ describe('NotificationsList', () => {
     expect(screen.getByTestId('notification-group-item')).toHaveAttribute('data-unread', 'true');
   });
 
+  it('keeps a group expanded when its members change and the row remounts', async () => {
+    const newest = deletedBy('deleter', 4000);
+    const middle = deletedBy('deleter', 3000);
+    const oldest = deletedBy('deleter', 2000);
+
+    const { rerender } = render(<NotificationsList entries={[toGroup([middle, oldest])]} unreadNotifications={[]} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'toggle' }));
+    expect(screen.getByTestId('notification-group-item')).toHaveAttribute('data-expanded', 'true');
+
+    // A refresh prepends a newer member, which changes the row's key and remounts it;
+    // the disclosure state lives here, so the group the user is reading stays open.
+    rerender(<NotificationsList entries={[toGroup([newest, middle, oldest])]} unreadNotifications={[]} />);
+
+    expect(screen.getByTestId('notification-group-item')).toHaveAttribute('data-expanded', 'true');
+  });
+
+  it('collapses a group again once the row reports it closed', async () => {
+    const grouped = [deletedBy('deleter', 3000), deletedBy('deleter', 2000)];
+
+    render(<NotificationsList entries={[toGroup(grouped)]} unreadNotifications={[]} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'toggle' }));
+    await userEvent.click(screen.getByRole('button', { name: 'toggle' }));
+
+    expect(screen.getByTestId('notification-group-item')).toHaveAttribute('data-expanded', 'false');
+  });
+
   it('marks a group read when none of its members are unread', () => {
     const grouped = [deletedBy('deleter', 3000), deletedBy('deleter', 2000)];
 
@@ -190,25 +228,31 @@ describe('NotificationsList', () => {
   });
 });
 
+/** Shared by the desktop and mobile snapshots, which must render the same input. */
+const renderSnapshotList = () => {
+  const notifications: FlatNotification[] = [
+    {
+      id: 'follow:123:user1',
+      type: NotificationType.Follow,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      followed_by: 'user1',
+    } as FlatNotification,
+    {
+      id: 'reply:123:user2',
+      type: NotificationType.Reply,
+      timestamp: Date.now() - 1000 * 60 * 60,
+      replied_by: 'user2',
+      parent_post_uri: 'user1:post123',
+      reply_uri: 'user2:reply456',
+    } as FlatNotification,
+  ];
+
+  return render(<NotificationsList entries={notifications.map(toSingle)} unreadNotifications={[]} />);
+};
+
 describe('NotificationsList - Snapshots', () => {
   it('matches snapshot with notifications', () => {
-    const notifications: FlatNotification[] = [
-      {
-        id: 'follow:123:user1',
-        type: NotificationType.Follow,
-        timestamp: Date.now() - 1000 * 60 * 30,
-        followed_by: 'user1',
-      } as FlatNotification,
-      {
-        id: 'reply:123:user2',
-        type: NotificationType.Reply,
-        timestamp: Date.now() - 1000 * 60 * 60,
-        replied_by: 'user2',
-        parent_post_uri: 'user1:post123',
-        reply_uri: 'user2:reply456',
-      } as FlatNotification,
-    ];
-    const { container } = render(<NotificationsList entries={notifications.map(toSingle)} unreadNotifications={[]} />);
+    const { container } = renderSnapshotList();
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -220,22 +264,16 @@ describe('NotificationsList - Snapshots', () => {
 
 describe('NotificationsList - Mobile Snapshots', () => {
   beforeEach(() => {
+    setMobileViewport();
     mockUseIsMobile.mockReturnValue(true);
   });
 
-  it('matches snapshot with a group and a single on mobile viewport', () => {
-    const single: FlatNotification = {
-      id: 'follow:123:user1',
-      type: NotificationType.Follow,
-      timestamp: Date.now() - 1000 * 60 * 30,
-      followed_by: 'user1',
-    } as FlatNotification;
-    const grouped = [deletedBy('deleter', 3000), deletedBy('deleter', 2000)];
+  afterEach(() => {
+    resetViewport();
+  });
 
-    const { container } = render(
-      <NotificationsList entries={[toGroup(grouped), toSingle(single)]} unreadNotifications={[]} />,
-    );
-
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = renderSnapshotList();
     expect(container.firstChild).toMatchSnapshot();
   });
 });

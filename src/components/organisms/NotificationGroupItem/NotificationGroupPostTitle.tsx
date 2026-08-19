@@ -9,7 +9,7 @@ import {
   getNotificationLink,
   getPostUriFromNotification,
   pubkyUriToCompositeId,
-} from '@/organisms/NotificationItem/NotificationItem.utils';
+} from '../NotificationItem/NotificationItem.utils';
 import { formatGroupedPostTitle } from './NotificationGroupItem.utils';
 
 interface NotificationGroupPostTitleProps {

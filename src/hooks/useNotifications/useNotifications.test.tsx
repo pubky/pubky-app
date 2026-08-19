@@ -414,6 +414,68 @@ describe('useNotifications', () => {
     expect(NotificationController.getOrFetchNotifications).toHaveBeenNthCalledWith(3, { olderThan: 3999 });
   });
 
+  it('restores pagination when refresh stands in for a failed initial load', async () => {
+    // The retry button calls refresh(); without establishing the cursor the first
+    // loadMore would see an undefined olderThan and switch pagination off for good.
+    const firstPage = [
+      { id: 'test-1', type: NotificationType.Follow, timestamp: 2000, followed_by: 'user1' },
+    ] as FlatNotification[];
+    const secondPage = [
+      { id: 'test-2', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user2' },
+    ] as FlatNotification[];
+
+    vi.mocked(NotificationController.getOrFetchNotifications)
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({ flatNotifications: firstPage, olderThan: 1999 })
+      .mockResolvedValueOnce({ flatNotifications: secondPage, olderThan: 999 });
+
+    const { result } = renderHook(() => useNotifications());
+
+    await waitFor(() => {
+      expect(result.current.error).toBe('Failed to load notifications');
+    });
+    expect(result.current.notifications).toEqual([]);
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(result.current.notifications).toEqual(firstPage);
+    expect(result.current.hasMore).toBe(true);
+
+    // Pagination still works: the cursor from the retry is used for the next page.
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(NotificationController.getOrFetchNotifications).toHaveBeenNthCalledWith(3, { olderThan: 1999 });
+    expect(result.current.notifications).toEqual([...firstPage, ...secondPage]);
+  });
+
+  it('keeps the loaded list when a refreshed page is filtered down to nothing', async () => {
+    // Everyone on the newest page is muted, so the filtered page is empty — that says
+    // nothing about overlap and must not be mistaken for a gap that replaces the list.
+    const initialNotifications = [
+      { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
+    ] as FlatNotification[];
+
+    vi.mocked(NotificationController.getOrFetchNotifications)
+      .mockResolvedValueOnce({ flatNotifications: initialNotifications, olderThan: 999 })
+      .mockResolvedValueOnce({ flatNotifications: [], olderThan: undefined });
+
+    const { result } = renderHook(() => useNotifications());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(result.current.notifications).toEqual(initialNotifications);
+  });
+
   it('should reset pagination and refetch first page when notification filter changes', async () => {
     // Regression intent:
     // - User may already be paginated into older items (cursor has advanced).

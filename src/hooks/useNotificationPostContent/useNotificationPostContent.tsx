@@ -6,7 +6,7 @@ import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { deriveTextPreview } from '@/libs/post/postPreview';
 import { isPostDeleted } from '@/libs/utils/utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/use-toast';
 import { resolvePubkyToNames } from '@/organisms/NotificationItem/NotificationItem.helpers';
 
 interface UseNotificationPostContentOptions {
@@ -37,7 +37,6 @@ export function useNotificationPostContent({
   isMissing: boolean;
   isResolving: boolean;
 } {
-  const { toast } = useToast();
   const { postDetails, isLoading } = usePostDetails(compositeId);
 
   const rawContent = postDetails?.content ?? null;
@@ -86,7 +85,6 @@ export function useNotificationPostContent({
         description: 'Could not parse collection content',
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
   }, [collectionParseFailed, notifyOnCollectionParseError, rawContent]);
 
   // Derive the label for the current post. Because this reads the live query's value

@@ -172,10 +172,10 @@ export function useNotifications(): UseNotificationsResult {
    * Runs silently (no `isLoading` flip): the poll fires it whenever anything new
    * arrives, and swapping the mounted list for a skeleton would collapse expanded
    * group rows and throw away scroll position every few seconds on active accounts.
-   * New notifications are prepended onto what is already loaded; only when the fresh
-   * page does not overlap the loaded list at all (more than a page arrived at once,
-   * so prepending would leave a gap) does it fall back to replacing the list and
-   * resetting pagination, like the initial load.
+   * New notifications are prepended onto what is already loaded; the list is replaced
+   * (and pagination restarted) only when there is nothing to prepend onto, or when the
+   * fresh page shares nothing with the loaded list — more than a page arrived at once,
+   * so prepending would leave an invisible gap.
    */
   const refresh = useCallback(async () => {
     if (!currentUserPubky || loadingRef.current) return;
@@ -190,8 +190,14 @@ export function useNotifications(): UseNotificationsResult {
       const existingIds = new Set(notificationsRef.current.map((n) => n.id));
       const newNotifications = fresh.filter((n) => !existingIds.has(n.id));
 
-      const hasGap = notificationsRef.current.length > 0 && newNotifications.length === fresh.length;
-      if (hasGap) {
+      // Nothing loaded yet — the first load failed and the user retried, so this call
+      // stands in for it and has to establish the pagination cursor too.
+      const isEmptyList = notificationsRef.current.length === 0;
+      // An empty page proves nothing about overlap (every actor on it may be muted), so
+      // it must never be mistaken for a gap and wipe the loaded list.
+      const hasGap = !isEmptyList && fresh.length > 0 && newNotifications.length === fresh.length;
+
+      if (isEmptyList || hasGap) {
         setNotifications(fresh);
         olderThanRef.current = olderThan;
         setHasMore(olderThan !== undefined);

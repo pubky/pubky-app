@@ -17,8 +17,8 @@ import {
   getNotificationKindBucket,
   getUserIdFromNotification,
   getUserProfileLink,
-} from '@/organisms/NotificationItem/NotificationItem.utils';
-import type { GroupableNotification } from '@/organisms/NotificationsList/NotificationsList.types';
+} from '../NotificationItem/NotificationItem.utils';
+import type { GroupableNotification } from '../NotificationsList/NotificationsList.types';
 import { getGroupedActionText, getGroupToggleHideLabel, getGroupToggleShowLabel } from './NotificationGroupItem.utils';
 import { NotificationGroupPostTitle } from './NotificationGroupPostTitle';
 
@@ -32,6 +32,14 @@ interface NotificationGroupItemProps {
    * Supplied by the list so rows do not each subscribe to viewport changes.
    */
   isMobile?: boolean;
+  /**
+   * Disclosure state owned by the list. A run's members change as pages load and
+   * refreshes arrive, which can change the row's key and remount it — holding the state
+   * here would silently collapse the group the user is reading. Omitted when the row is
+   * rendered on its own, where it keeps its own state.
+   */
+  isExpanded?: boolean;
+  onExpandedChange?: (isExpanded: boolean) => void;
 }
 
 /**
@@ -42,8 +50,20 @@ interface NotificationGroupItemProps {
  * title list: collapsed behind a disclosure toggle on desktop, always expanded on
  * mobile where the list stacks vertically anyway.
  */
-export function NotificationGroupItem({ notifications, isUnread, isMobile = false }: NotificationGroupItemProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function NotificationGroupItem({
+  notifications,
+  isUnread,
+  isMobile = false,
+  isExpanded: expandedProp,
+  onExpandedChange,
+}: NotificationGroupItemProps) {
+  const [ownExpanded, setOwnExpanded] = useState(false);
+  const isExpanded = expandedProp ?? ownExpanded;
+
+  const handleExpandedChange = (next: boolean) => {
+    setOwnExpanded(next);
+    onExpandedChange?.(next);
+  };
 
   const toggleRef = useRef<HTMLButtonElement>(null);
   // On desktop the toggle relocates between the header and the disclosure block, which
@@ -191,7 +211,7 @@ export function NotificationGroupItem({ notifications, isUnread, isMobile = fals
   if (!isDisclosable) return row;
 
   return (
-    <Collapsible asChild={true} open={isExpanded} onOpenChange={setIsExpanded}>
+    <Collapsible asChild={true} open={isExpanded} onOpenChange={handleExpandedChange}>
       {row}
     </Collapsible>
   );

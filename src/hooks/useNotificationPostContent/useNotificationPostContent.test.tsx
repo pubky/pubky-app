@@ -23,7 +23,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
 }));
 
 vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
+  toast: mockToast,
 }));
 
 vi.mock('@/libs/logger/logger', () => ({

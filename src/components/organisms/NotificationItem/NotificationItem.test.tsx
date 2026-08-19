@@ -92,7 +92,8 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
 });
 
 // Mock molecules
-const mockToast = vi.fn();
+// Hoisted so the module-level `toast` export can be mocked with it directly.
+const mockToast = vi.hoisted(() => vi.fn());
 /** The post the mocked live query currently reports; null models "not found". */
 const mockPostDetails = { value: null as { kind: string; content: string } | null };
 const mockUsePostDetails = vi.fn((compositeId: string | null) => ({
@@ -142,6 +143,7 @@ vi.mock('@/molecules/PostTag/PostTag', () => {
 
 vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
+    toast: mockToast,
     useToast: () => ({ toast: mockToast }),
   };
 });

@@ -1,7 +1,7 @@
 import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { NotificationType } from '@/models/notification/notification.types';
-import type { NotificationKindBucket } from '@/organisms/NotificationItem/NotificationItem.utils';
-import type { GroupableNotificationType } from '@/organisms/NotificationsList/NotificationsList.types';
+import type { NotificationKindBucket } from '../NotificationItem/NotificationItem.utils';
+import type { GroupableNotificationType } from '../NotificationsList/NotificationsList.types';
 
 /**
  * Grouped post titles get more room than the single-row preview (20 chars) because they

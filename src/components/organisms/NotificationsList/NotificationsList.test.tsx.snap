@@ -1,5 +1,29 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`NotificationsList - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="gap-3 rounded-md bg-card p-6"
+  data-testid="container"
+>
+  <div
+    data-mobile="true"
+    data-testid="notification-item"
+    data-type="follow"
+    data-unread="false"
+  >
+    follow
+  </div>
+  <div
+    data-mobile="true"
+    data-testid="notification-item"
+    data-type="reply"
+    data-unread="false"
+  >
+    reply
+  </div>
+</div>
+`;
+
 exports[`NotificationsList - Mobile Snapshots > matches snapshot with a group and a single on mobile viewport 1`] = `
 <div
   class="gap-3 rounded-md bg-card p-6"
