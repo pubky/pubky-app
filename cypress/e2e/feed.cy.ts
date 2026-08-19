@@ -15,7 +15,12 @@ import {
 import { followFromPostMenu, searchAndFollowProfile, searchForProfileByPubky } from '../support/contacts';
 import { addProfileTags } from '../support/profile';
 import { BackupType, HasBackedUp, PostType, WaitForNewPosts } from '../support/types/enums';
-import { fastMs, slowMs } from '../support/slow-down';
+import { defaultMs, fastMs, slowMs } from '../support/slow-down';
+
+// Temporary extra delay around filtered-feed sign-in/clicks (https://github.com/pubky/pubky-app/issues/2142).
+// Must be applied with cy.slowDown / cy.slowDownEnd: slowCypressDown() is synchronous and
+// cannot change delay mid-test, and a bare slowCypressDown() reuses the last delay instead of defaultMs.
+const filteredFeedWorkaroundMs = () => (Cypress.expose('ci') ? fastMs * 2 : slowMs);
 
 // Profile 1 follows Profile 2 and is friends with Profile 2. Profile 1 also follows Profile 3 and Profile 4.
 // Needs 5 posts to be suggested in "who to follow"
@@ -122,6 +127,11 @@ describe('feed and filters', () => {
     cy.signOut(HasBackedUp.Yes);
   });
 
+  beforeEach(() => {
+    // in case it gets changed by a test and not reset
+    cy.slowDown(defaultMs);
+  });
+
   it('can filter to view all posts in the recent sorting order (default view)', () => {
     // * sign in as profile 2 and view Reach All posts, all can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
@@ -178,14 +188,16 @@ describe('feed and filters', () => {
   it('can filter to view only posts and reposts of following', () => {
     // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
     // slow down execution locally to avoid seeing wrong profile in filtered feed
-    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
-    slowCypressDown(slowCy);
+    cy.slowDown(filteredFeedWorkaroundMs());
 
     // * sign in as profile 2 and view Reach Following, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     // click the Following filter
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
+
+    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
@@ -197,10 +209,16 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
+    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDown(filteredFeedWorkaroundMs());
+
     // * sign in as profile 3 and view Reach Following, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
+
+    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
@@ -213,10 +231,16 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
+    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDown(filteredFeedWorkaroundMs());
+
     // * sign in as profile 4 and view Reach Following, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile4.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="following-reach-toggle"]').click();
     waitForFeedToLoad();
+
+    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDownEnd();
 
     cannotFindPostInFeed(profile1.postText1);
     cannotFindPostInFeed(profile1.postText2);
@@ -231,13 +255,15 @@ describe('feed and filters', () => {
   it('can filter to view only posts and reposts of friends', () => {
     // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
     // slow down execution more locally to avoid seeing wrong profile in filtered feed
-    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
-    slowCypressDown(slowCy);
+    cy.slowDown(filteredFeedWorkaroundMs());
 
     // * sign in as profile 1 and view Reach Friends, only profile 2's post can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile1.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="friends-reach-toggle"]').click();
     waitForFeedToLoad();
+
+    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
@@ -252,10 +278,17 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
+    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDown(filteredFeedWorkaroundMs());
+
     // * sign in as profile 2 and view Reach Friends, only profile 1's posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile2.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="friends-reach-toggle"]').click();
     waitForFeedToLoad();
+
+    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDownEnd();
+
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
     // can see own posts
@@ -266,10 +299,16 @@ describe('feed and filters', () => {
 
     cy.signOut(HasBackedUp.Yes);
 
+    // todo: remove slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDown(filteredFeedWorkaroundMs());
+
     // * sign in as profile 3 and view Reach Friends, no posts can be seen
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="friends-reach-toggle"]').click();
     waitForFeedToLoad();
+
+    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDownEnd();
 
     cannotFindPostInFeed(profile1.postText1);
     cannotFindPostInFeed(profile1.postText2);
@@ -301,13 +340,15 @@ describe('feed and filters', () => {
   it('can filter to view posts from your web of trust', () => {
     // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
     // slow down execution locally to avoid seeing wrong profile in filtered feed
-    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
-    slowCypressDown(slowCy);
+    cy.slowDown(filteredFeedWorkaroundMs());
 
     // * sign in as profile 3 and view Reach My network
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     cy.get('[data-cy="filter-reach-radiogroup"]').find('[data-cy="network-reach-toggle"]').click();
     waitForFeedToLoad();
+
+    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDownEnd();
 
     // profile 1 is 2 hops away (profile 3 -> profile 2 -> profile 1) so their posts are included
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
@@ -327,8 +368,7 @@ describe('feed and filters', () => {
   it('can filter to view posts by users tagged as chosen profile tags', () => {
     // todo: remove workaround once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
     // slow down execution locally to avoid seeing wrong profile in filtered feed
-    const slowCy = Cypress.expose('ci') ? fastMs * 2 : slowMs;
-    slowCypressDown(slowCy);
+    cy.slowDown(filteredFeedWorkaroundMs());
 
     // * sign in as profile 3 and view Reach Tagged as
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
@@ -346,6 +386,9 @@ describe('feed and filters', () => {
       .click();
     cy.get('[data-cy="add-tag-input"]').type(`${taggedAsLabelInNetwork}{enter}`);
     waitForFeedToLoad();
+
+    // todo: remove reset slow down once bug is fixed, https://github.com/pubky/pubky-app/issues/2142
+    cy.slowDownEnd();
 
     cy.findFirstPostInFeedFiltered(profile4.postText).should('be.visible');
     cannotFindPostInFeed(profile1.postText1);
