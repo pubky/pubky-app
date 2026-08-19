@@ -51,8 +51,6 @@ export function LockedPostContent({
   const tToast = useTranslations('toast.post');
   const tLock = useTranslations('post.lock');
 
-  // TODO:[Locks] #1998 — `lockContent` is null when the teaser content can't be parsed. Rendering
-  // nothing matches the previous behaviour; the unparseable-lock UX is still undecided.
   if (!lockContent) return null;
 
   const handleViewContent = async (password: string) => {
