@@ -102,7 +102,7 @@ export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
 export type PostStreamKindSegment = 'all' | StreamKind;
 export type WotDomainDepth = 0 | 1 | 2;
-export type FollowDependentStreamScope = 'follow_graph' | 'friends';
+export type StreamDependencyScope = 'follow_graph' | 'friends' | 'profile_tag';
 export type WotStreamId =
   | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}`
   | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}:${string}`;
@@ -264,44 +264,57 @@ export function getPostStreamKind(streamId: string): PostStreamKindSegment | und
   return undefined;
 }
 
+const NO_DEPENDENCY_SCOPES: ReadonlySet<StreamDependencyScope> = new Set();
+
 /**
- * Classifies streams whose membership can change after a follow mutation.
+ * Classifies streams whose cached membership depends on local mutations:
  *
- * Depth-1 domain streams are deliberately graph-scoped: Following and Friends
- * both serialize to depth 1, so their original reach cannot be reconstructed
- * from the stream id. Depth 0 depends on profile tagging, not follow changes.
+ * - `follow_graph`: follow/unfollow changes membership — Following, My network
+ *   (`wot`) and `wot_domain` depths 1–2, whose reach is graph-derived.
+ * - `friends`: only friendship transitions change membership. Depth-1 domain
+ *   streams are deliberately graph-scoped instead: Following and Friends both
+ *   serialize to depth 1, so their original reach cannot be reconstructed
+ *   from the stream id.
+ * - `profile_tag`: profile-tag create/delete changes membership — `wot_domain`
+ *   at every depth, since the domain tag set defines the trust set (#2302).
  */
-export function getFollowDependentStreamScope(streamId: string): FollowDependentStreamScope | undefined {
+export function getStreamDependencyScopes(streamId: string): ReadonlySet<StreamDependencyScope> {
   const parts = streamId.split(':');
   const [sorting, source, thirdSegment] = parts;
   const isKnownSorting = Object.values<string>(StreamSorting).includes(sorting);
 
   if (!isKnownSorting || !getPostStreamKind(streamId)) {
-    return undefined;
+    return NO_DEPENDENCY_SCOPES;
   }
 
   if (source === StreamSource.WOT_DOMAIN) {
     if (parts.length < 5 || parts.length > 6 || !parts[4] || (parts.length === 6 && !parts[5])) {
-      return undefined;
+      return NO_DEPENDENCY_SCOPES;
     }
-    return thirdSegment === '1' || thirdSegment === '2' ? 'follow_graph' : undefined;
+    if (thirdSegment === '0') {
+      return new Set(['profile_tag']);
+    }
+    if (thirdSegment === '1' || thirdSegment === '2') {
+      return new Set(['follow_graph', 'profile_tag']);
+    }
+    return NO_DEPENDENCY_SCOPES;
   }
 
   // The existing custom-feed builder emits a trailing colon for an empty post-tag
   // list. The request parser treats that segment as absent, so classification does too.
   if (parts.length > 4) {
-    return undefined;
+    return NO_DEPENDENCY_SCOPES;
   }
 
   if (source === StreamSource.FRIENDS) {
-    return 'friends';
+    return new Set(['friends']);
   }
 
   if (source === StreamSource.FOLLOWING || source === StreamSource.WOT) {
-    return 'follow_graph';
+    return new Set(['follow_graph']);
   }
 
-  return undefined;
+  return NO_DEPENDENCY_SCOPES;
 }
 
 /**

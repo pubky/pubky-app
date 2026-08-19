@@ -9,8 +9,8 @@ import {
   buildPostReplyStreamId,
   buildSortedAuthorStreamId,
   buildWotDomainStreamId,
-  getFollowDependentStreamScope,
   getPostStreamKind,
+  getStreamDependencyScopes,
   isAuthorStreamSkippingMuteFilter,
   isCollectionItemsStream,
   isSkipPaginatedStream,
@@ -252,9 +252,9 @@ describe('getPostStreamKind', () => {
   });
 });
 
-describe('getFollowDependentStreamScope', () => {
-  it.each(POST_STREAM_GRAMMAR_FIXTURES)('classifies $streamId', ({ streamId, scope }) => {
-    expect(getFollowDependentStreamScope(streamId)).toBe(scope);
+describe('getStreamDependencyScopes', () => {
+  it.each(POST_STREAM_GRAMMAR_FIXTURES)('classifies $streamId', ({ streamId, scopes }) => {
+    expect(getStreamDependencyScopes(streamId)).toEqual(new Set(scopes));
   });
 
   it.each([
@@ -266,8 +266,9 @@ describe('getFollowDependentStreamScope', () => {
     'timeline:wot_domain:2:not-a-kind:developer',
     'timeline:wot_domain:2:all:',
     'timeline:wot_domain:2:all:developer:',
-  ])('rejects malformed dependency stream %s', (streamId) => {
-    expect(getFollowDependentStreamScope(streamId)).toBeUndefined();
+    'timeline:wot_domain:0:all:',
+  ])('classifies malformed dependency stream %s as scopeless', (streamId) => {
+    expect(getStreamDependencyScopes(streamId).size).toBe(0);
   });
 });
 

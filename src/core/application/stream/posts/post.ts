@@ -38,6 +38,7 @@ import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalPostService } from '@/services/local/post/post';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -196,6 +197,22 @@ export class PostStreamApplication {
     // Initial loads and pull-to-refresh should start from the real stream head,
     // not reuse buffered overflow from a previous pagination session.
     postStreamQueue.remove(streamId);
+
+    // 0. Rebuild streams invalidated by follow/friendship/profile-tag mutations.
+    // Mutations only mark scopes dirty (mounted feeds are never disturbed);
+    // the stale membership is dropped here, on the next initial load (#2294).
+    if (postStreamDirtyRegistry.isDirty(streamId)) {
+      Logger.debug('[PostStreamApplication] Stream marked dirty by a dependency mutation, clearing both streams', {
+        streamId,
+      });
+      await Promise.all([
+        LocalStreamPostsService.deleteById({ streamId }),
+        LocalStreamPostsService.clearUnreadStream({ streamId }),
+      ]);
+      postStreamDirtyRegistry.markReconciled(streamId);
+      return;
+    }
+
     const now = Date.now();
 
     // 1. Check if main stream cache is stale
