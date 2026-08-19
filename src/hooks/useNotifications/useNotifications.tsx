@@ -23,6 +23,13 @@ export function useNotifications(): UseNotificationsResult {
 
   const olderThanRef = useRef<number | undefined>(undefined);
   const loadingRef = useRef(false);
+  // Mirrors `notifications` so `refresh` can diff against the loaded list without
+  // subscribing to it (its identity changes on every merge).
+  const notificationsRef = useRef<FlatNotification[]>([]);
+
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
 
   const { currentUserPubky } = useAuthStore();
   const notificationPreferences = useSettingsStore((s) => s.notifications);
@@ -160,28 +167,41 @@ export function useNotifications(): UseNotificationsResult {
   }, [hasMore, currentUserPubky, filterMutedNotifications]);
 
   /**
-   * Refresh notifications - resets pagination and fetches from start
+   * Refresh notifications - fetches the newest page and merges it in place.
+   *
+   * Runs silently (no `isLoading` flip): the poll fires it whenever anything new
+   * arrives, and swapping the mounted list for a skeleton would collapse expanded
+   * group rows and throw away scroll position every few seconds on active accounts.
+   * New notifications are prepended onto what is already loaded; only when the fresh
+   * page does not overlap the loaded list at all (more than a page arrived at once,
+   * so prepending would leave a gap) does it fall back to replacing the list and
+   * resetting pagination, like the initial load.
    */
   const refresh = useCallback(async () => {
     if (!currentUserPubky || loadingRef.current) return;
 
     loadingRef.current = true;
-    setIsLoading(true);
     setError(null);
-    olderThanRef.current = undefined;
-    setHasMore(true);
 
     try {
-      const { flatNotifications: notifications, olderThan } = await NotificationController.getOrFetchNotifications({});
+      const { flatNotifications: fetched, olderThan } = await NotificationController.getOrFetchNotifications({});
 
-      setNotifications(filterMutedNotifications(notifications));
-      olderThanRef.current = olderThan;
-      setHasMore(olderThan !== undefined);
+      const fresh = filterMutedNotifications(fetched);
+      const existingIds = new Set(notificationsRef.current.map((n) => n.id));
+      const newNotifications = fresh.filter((n) => !existingIds.has(n.id));
+
+      const hasGap = notificationsRef.current.length > 0 && newNotifications.length === fresh.length;
+      if (hasGap) {
+        setNotifications(fresh);
+        olderThanRef.current = olderThan;
+        setHasMore(olderThan !== undefined);
+      } else if (newNotifications.length > 0) {
+        setNotifications((prev) => [...newNotifications, ...prev]);
+      }
     } catch {
       setError('Failed to refresh notifications');
     } finally {
       loadingRef.current = false;
-      setIsLoading(false);
     }
   }, [currentUserPubky, filterMutedNotifications]);
 
@@ -218,6 +238,8 @@ export function useNotifications(): UseNotificationsResult {
    * Reset pagination when notification filter preferences change.
    * Preference changes create a new query context, so we must restart from
    * the first page instead of continuing with the previous olderThan cursor.
+   * This is a full reload (not the silent merge `refresh`), because the already
+   * loaded list was built under the old filter and cannot be patched in place.
    */
   useEffect(() => {
     if (!currentUserPubky) return;
@@ -227,8 +249,8 @@ export function useNotifications(): UseNotificationsResult {
 
     if (!hasPreferencesChanged) return;
 
-    refresh();
-  }, [currentUserPubky, notificationPreferences, refresh]);
+    performInitialLoad();
+  }, [currentUserPubky, notificationPreferences, performInitialLoad]);
 
   /**
    * Reactively filter notifications when mute state changes.

@@ -13,7 +13,8 @@ import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import type { Pubky } from '@/models/models.types';
+import { CompositeIdDomain, type Pubky } from '@/models/models.types';
+import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -300,6 +301,10 @@ export class NotificationApplication {
   /**
    * Fetches posts and users referenced in notifications that are not yet persisted in cache.
    *
+   * Edited posts are refetched even on a cache hit: the notification itself proves the
+   * cached copy predates the edit, and the local-first read path never revalidates a
+   * cached post, so without this the notification row would render the pre-edit content.
+   *
    * @param notifications - Array of flat notifications to extract post and user references from
    */
   static async fetchMissingEntities({
@@ -313,9 +318,17 @@ export class NotificationApplication {
     const notPersistedPostIds = await LocalStreamPostsService.getNotPersistedPostsInCache(relatedPostIds);
     const notPersistedUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(relatedUserIds);
 
-    if (notPersistedPostIds.length > 0) {
+    const editedPostIds = flatNotifications.flatMap((n) =>
+      n.type === NotificationType.PostEdited
+        ? (buildCompositeIdFromPubkyUri({ uri: n.edited_uri, domain: CompositeIdDomain.POSTS }) ?? [])
+        : [],
+    );
+
+    const postIdsToFetch = [...new Set([...notPersistedPostIds, ...editedPostIds])];
+
+    if (postIdsToFetch.length > 0) {
       await PostStreamApplication.fetchMissingPostsFromNexus({
-        cacheMissPostIds: notPersistedPostIds,
+        cacheMissPostIds: postIdsToFetch,
         viewerId,
       });
     }

@@ -119,6 +119,8 @@ describe('TimelineGridPosts', () => {
 
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
 
     // Mock useLiveQuery to return no replies by default
@@ -458,6 +460,8 @@ describe('TimelineGridPosts', () => {
     it('should render sentinel element for infinite scroll', async () => {
       mockUseInfiniteScroll.mockReturnValue({
         sentinelRef: vi.fn(),
+        isStalled: false,
+        resumeAutoLoad: vi.fn(),
       });
 
       const { container } = render(
@@ -522,6 +526,8 @@ describe('TimelineGridPosts - Snapshots', () => {
 
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
 
     // Mock useLiveQuery

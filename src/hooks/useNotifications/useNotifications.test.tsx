@@ -339,6 +339,81 @@ describe('useNotifications', () => {
     expect(NotificationController.getOrFetchNotifications).toHaveBeenCalledTimes(2);
   });
 
+  it('refreshes silently, without swapping the mounted list for a loading state', async () => {
+    const initialNotifications = [
+      { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
+    ] as FlatNotification[];
+    const refreshedNotifications = [
+      { id: 'test-2', type: NotificationType.Follow, timestamp: 2000, followed_by: 'user2' },
+      { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
+    ] as FlatNotification[];
+
+    let resolveRefresh!: (value: { flatNotifications: FlatNotification[]; olderThan: number }) => void;
+    vi.mocked(NotificationController.getOrFetchNotifications)
+      .mockResolvedValueOnce({ flatNotifications: initialNotifications, olderThan: 999 })
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveRefresh = resolve)));
+
+    const { result, rerender } = renderHook(() => useNotifications());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      setMockUnreadCount(2);
+      rerender();
+    });
+
+    // The refresh is in flight — the already loaded list must stay mounted, so the
+    // container's skeleton gate (isLoading) must not flip and collapse expanded rows.
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.notifications).toEqual(initialNotifications);
+
+    await act(async () => {
+      resolveRefresh({ flatNotifications: refreshedNotifications, olderThan: 999 });
+    });
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.notifications).toEqual(refreshedNotifications);
+  });
+
+  it('falls back to replacing the list when the refreshed page does not overlap it', async () => {
+    // More than a page arrived at once: prepending would leave an invisible gap between
+    // the fresh page and the previously loaded items, so the refresh starts over.
+    const initialNotifications = [
+      { id: 'test-1', type: NotificationType.Follow, timestamp: 1000, followed_by: 'user1' },
+    ] as FlatNotification[];
+    const freshPage = [
+      { id: 'test-3', type: NotificationType.Follow, timestamp: 5000, followed_by: 'user3' },
+      { id: 'test-2', type: NotificationType.Follow, timestamp: 4000, followed_by: 'user2' },
+    ] as FlatNotification[];
+
+    vi.mocked(NotificationController.getOrFetchNotifications)
+      .mockResolvedValueOnce({ flatNotifications: initialNotifications, olderThan: 999 })
+      .mockResolvedValueOnce({ flatNotifications: freshPage, olderThan: 3999 });
+
+    const { result, rerender } = renderHook(() => useNotifications());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      setMockUnreadCount(2);
+      rerender();
+    });
+
+    await waitFor(() => {
+      expect(result.current.notifications).toEqual(freshPage);
+    });
+
+    // Pagination restarts from the fresh page's cursor, not the stale pre-refresh one.
+    await act(async () => {
+      await result.current.loadMore();
+    });
+    expect(NotificationController.getOrFetchNotifications).toHaveBeenNthCalledWith(3, { olderThan: 3999 });
+  });
+
   it('should reset pagination and refetch first page when notification filter changes', async () => {
     // Regression intent:
     // - User may already be paginated into older items (cursor has advanced).
