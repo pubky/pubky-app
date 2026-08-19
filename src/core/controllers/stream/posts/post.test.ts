@@ -25,11 +25,13 @@ describe('StreamPostsController', () => {
     it('should return posts when no cache misses', async () => {
       const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
       const nextCursor = 1000000;
+      const lastRawPostId = 'user-1:post-2';
 
       const getOrFetchStreamSliceSpy = vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds,
         cacheMissPostIds: [],
         nextCursor,
+        lastRawPostId,
       });
 
       const fetchMissingPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus');
@@ -51,6 +53,7 @@ describe('StreamPostsController', () => {
       expect(result).toEqual({
         nextPageIds,
         nextCursor,
+        lastRawPostId,
       });
     });
 
@@ -58,11 +61,13 @@ describe('StreamPostsController', () => {
       const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
       const cacheMissPostIds = ['user-1:post-3', 'user-1:post-4'];
       const nextCursor = 1000000;
+      const lastRawPostId = 'user-1:post-4';
 
       const getOrFetchStreamSliceSpy = vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds,
         cacheMissPostIds,
         nextCursor,
+        lastRawPostId,
       });
 
       const fetchMissingPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
@@ -90,7 +95,35 @@ describe('StreamPostsController', () => {
       expect(result).toEqual({
         nextPageIds,
         nextCursor,
+        lastRawPostId,
       });
+    });
+
+    it('preserves lastRawPostId when the second-pass filter empties the page', async () => {
+      // A page whose ids were fail-open on missing details, then all dropped after
+      // hydration (e.g. a freshly-fetched run of collection posts in the home feed).
+      const nextPageIds = ['user-1:coll-1', 'user-1:coll-2'];
+      const cacheMissPostIds = ['user-1:coll-1', 'user-1:coll-2'];
+
+      vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+        nextPageIds,
+        cacheMissPostIds,
+        nextCursor: 2000000,
+        lastRawPostId: 'user-1:coll-2',
+      });
+      vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
+      vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue([]);
+
+      const result = await StreamPostsController.getOrFetchStreamSlice({
+        streamId,
+        streamTail: 0,
+      });
+
+      // The visible page shrinks to nothing, but the raw anchor survives so the
+      // caller can resume the cache walk past the filtered run.
+      expect(result.nextPageIds).toEqual([]);
+      expect(result.lastRawPostId).toBe('user-1:coll-2');
+      expect(result.nextCursor).toBe(2000000);
     });
 
     it('should remove posts hidden by stream filters after cache-miss fetch', async () => {

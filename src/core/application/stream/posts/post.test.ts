@@ -2525,6 +2525,94 @@ describe('PostStreamApplication', () => {
       expect(nexusFetchSpy).toHaveBeenCalledTimes(20);
       // All posts were muted, so we get nothing
       expect(result.nextPageIds).toHaveLength(0);
+      // The raw cache-walk anchor still advanced through the scanned (muted) run,
+      // so the caller can resume past it instead of restarting at the cache head.
+      expect(result.lastRawPostId).toBe('author-muted:post-10');
+    });
+
+    it('returns lastRawPostId equal to the caller lastPostId when a round is served purely from the overflow buffer', async () => {
+      await setupMutedUsers(['author-2'] as Pubky[]);
+
+      // First request overflows the queue: 15 non-muted posts, limit 10 → 5 buffered.
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: Array.from({ length: 15 }, (_, i) => `author-1:post-${i + 1}`),
+        last_post_score: BASE_TIMESTAMP + 14,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      const result1 = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+      expect(result1.nextPageIds).toHaveLength(10);
+      expect(result1.lastRawPostId).toBe('author-1:post-15');
+
+      // Second request is fully served from the buffer: nothing new is scanned, so the
+      // raw anchor must hold at the caller's own lastPostId, not move backward.
+      vi.spyOn(NexusPostStreamService, 'fetch').mockClear();
+      const result2 = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 5,
+        streamHead: 0,
+        streamTail: BASE_TIMESTAMP + 14,
+        lastPostId: 'author-1:post-15',
+        viewerId,
+      });
+
+      expect(result2.nextPageIds).toHaveLength(5);
+      expect(NexusPostStreamService.fetch).not.toHaveBeenCalled();
+      expect(result2.lastRawPostId).toBe('author-1:post-15');
+    });
+
+    it('head-poll calls (streamHead > 0) bypass the pagination queue and leave the overflow buffer untouched', async () => {
+      // Seed the buffer: 15 posts, limit 10 → 5 overflow buffered for the UI's next round.
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: Array.from({ length: 15 }, (_, i) => `author-1:post-${i + 1}`),
+        last_post_score: BASE_TIMESTAMP + 14,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+      const bufferedBefore = postStreamQueue.get(streamId);
+      expect(bufferedBefore?.posts).toHaveLength(5);
+
+      // A coordinator head-poll on the same stream must not consume or rewrite the buffer.
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: [`author-1:post-new-1`, `author-1:post-new-2`],
+        last_post_score: BASE_TIMESTAMP + 100,
+      });
+      await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: BASE_TIMESTAMP + 14,
+        streamTail: 0,
+        viewerId,
+      });
+
+      const bufferedAfter = postStreamQueue.get(streamId);
+      expect(bufferedAfter).toEqual(bufferedBefore);
+
+      // The UI's next round is still served from the intact buffer, without Nexus.
+      vi.spyOn(NexusPostStreamService, 'fetch').mockClear();
+      const nextRound = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 5,
+        streamHead: 0,
+        streamTail: BASE_TIMESTAMP + 14,
+        lastPostId: 'author-1:post-15',
+        viewerId,
+      });
+      expect(nextRound.nextPageIds).toHaveLength(5);
+      expect(NexusPostStreamService.fetch).not.toHaveBeenCalled();
     });
 
     it('should return partial results when max fetch iterations reached with some valid posts', async () => {

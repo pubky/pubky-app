@@ -88,7 +88,7 @@ export function PostHeaderUserInfo({
   );
 
   const userNameContent = (
-    <Link href={profileUrl} onClick={handleLinkClick} className="block w-full max-w-full min-w-0 overflow-hidden">
+    <Link href={profileUrl} onClick={handleLinkClick} className="block w-fit max-w-full min-w-0 overflow-hidden">
       <Typography
         className={cn(
           'block w-full max-w-full cursor-pointer truncate font-bold text-foreground',
@@ -101,14 +101,17 @@ export function PostHeaderUserInfo({
     </Link>
   );
 
-  // This container is also the UserInfoPopover hover target, so it must hug the avatar and
-  // name instead of stretching across the header row — otherwise the empty space next to the
-  // timestamp opens the popover. `max-w-full` keeps long names truncating inside tight layouts.
+  // This container is also the UserInfoPopover hover target when showPopover is true, so it
+  // must hug the avatar and name (`w-fit`) instead of stretching across the header row —
+  // otherwise the empty space next to the timestamp opens the popover. Keep `w-full` when the
+  // popover is off (composer) so the character count can sit on the trailing edge. `max-w-full`
+  // keeps long names truncating inside tight layouts.
   const content = (
     <Container
       overrideDefaults
       className={cn(
-        'grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center',
+        'grid max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center',
+        showPopover ? 'w-fit' : 'w-full',
         GAP_CLASS_BY_HEADER_SIZE[size],
       )}
     >

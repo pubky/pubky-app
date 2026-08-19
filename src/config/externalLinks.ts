@@ -2,6 +2,7 @@ import {
   getAppStoreUrl,
   getEmail,
   getGithubUrl,
+  getNexusScoutUrl,
   getPlayStoreUrl,
   getPubkyCoreUrl,
   getPubkyRingUrl,
@@ -24,6 +25,10 @@ export const APP_RELEASE_URL = `https://github.com/pubky/pubky-app/releases/tag/
 // Pubky ecosystem links
 export const getPubkyRingLink = getPubkyRingUrl;
 export const getPubkyCoreLink = getPubkyCoreUrl;
+
+// Public, read-only Cypher gateway to the Pubky social graph — surfaced to AI agents via
+// StructuredData in the root layout so they know where to query it.
+export const getNexusScoutLink = getNexusScoutUrl;
 
 // Social media links
 export const getTwitterLink = getTwitterUrl;

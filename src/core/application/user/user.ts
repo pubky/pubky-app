@@ -1,11 +1,21 @@
-import type { TUserApplicationFollowParams, TUserCountsOrFetchResult } from '@/application/user/user.types';
+import { baseUriBuilder, followUriBuilder } from 'pubky-app-specs';
+import type {
+  TEnsureModerationFollowParams,
+  TUserApplicationFollowParams,
+  TUserCountsOrFetchResult,
+} from '@/application/user/user.types';
+import { getModerationId } from '@/config/moderation';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
+import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFollowService } from '@/services/local/follow/follow';
 import { LocalProfileService } from '@/services/local/profile/profile';
@@ -24,6 +34,18 @@ import { NexusUserService } from '@/services/nexus/user/user';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
 
 export class UserApplication {
+  private static moderationFollowMarkerUrl(follower: Pubky, moderationId: Pubky): string {
+    return `${baseUriBuilder(follower)}migrations/moderation-follow/v1/${moderationId}.json`;
+  }
+
+  private static async writeModerationFollowMarker(follower: Pubky, moderationId: Pubky): Promise<void> {
+    await HomeserverService.request({
+      method: HttpMethod.PUT,
+      url: this.moderationFollowMarkerUrl(follower, moderationId),
+      bodyJson: { moderationId, completedAt: Date.now() },
+    });
+  }
+
   /**
    * Get user details from local database
    * This is a read-only operation that queries the local cache
@@ -247,13 +269,73 @@ export class UserApplication {
     follower,
     followee,
     activeStreamId,
+    signal,
   }: TUserApplicationFollowParams) {
+    if (signal?.aborted) return;
+
+    const moderationId = eventType === HttpMethod.DELETE ? getModerationId() : undefined;
+    if (moderationId && followee === moderationId) {
+      // A durable opt-out must exist before removing the follow. If this network write fails,
+      // leave both local and remote follow state unchanged instead of risking a later re-follow.
+      await this.writeModerationFollowMarker(follower, moderationId);
+    }
+
+    if (signal?.aborted) return;
+
     if (eventType === HttpMethod.PUT) {
       await LocalFollowService.create({ follower, followee, activeStreamId });
     } else if (eventType === HttpMethod.DELETE) {
       await LocalFollowService.delete({ follower, followee, activeStreamId });
     }
+
+    if (signal?.aborted) return;
+
     await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
+  }
+
+  /**
+   * Applies the moderation-bot default follow once per account. The homeserver marker preserves
+   * explicit unfollows, while the canonical follow resource makes retries idempotent.
+   */
+  static async ensureModerationFollow({
+    follower,
+    moderationId,
+    signal,
+  }: TEnsureModerationFollowParams): Promise<void> {
+    if (!moderationId || follower === moderationId || signal?.aborted) return;
+
+    const markerUrl = this.moderationFollowMarkerUrl(follower, moderationId);
+
+    const markerExists = await HomeserverService.exists(markerUrl);
+    if (signal?.aborted || markerExists) return;
+
+    const { meta, follow } = FollowNormalizer.to({ follower, followee: moderationId });
+    const expectedFollowUrl = followUriBuilder(follower, moderationId);
+    if (meta.url !== expectedFollowUrl) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Follow resource belongs to an unexpected account', {
+        service: ErrorService.PubkyAppSpecs,
+        operation: 'ensureModerationFollow',
+        context: { follower, moderationId, followUrl: meta.url },
+      });
+    }
+
+    const followExists = await HomeserverService.exists(meta.url);
+    if (signal?.aborted) return;
+
+    if (!followExists) {
+      await this.commitFollow({
+        eventType: HttpMethod.PUT,
+        followUrl: meta.url,
+        followJson: follow.toJson(),
+        follower,
+        followee: moderationId,
+        activeStreamId: undefined,
+        signal,
+      });
+    }
+
+    if (signal?.aborted) return;
+    await this.writeModerationFollowMarker(follower, moderationId);
   }
 
   /**

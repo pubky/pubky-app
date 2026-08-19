@@ -18,6 +18,7 @@ import { DialogCheckLink } from '../DialogCheckLink/DialogCheckLink';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContentBlurred } from '../PostContentBlurred/PostContentBlurred';
 import { PostHeader } from '../PostHeader/PostHeader';
+import { PostInlineTagsActions } from '../PostInlineTagsActions/PostInlineTagsActions';
 import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 import type { PostTagsPanelHandle } from '../PostTagsPanel/PostTagsPanel.types';
 
@@ -29,8 +30,8 @@ interface PostArticleDetailProps {
 }
 
 /**
- * Displays an article post detail page with tags always visible on mobile and desktop.
- * Columns places desktop tags under the header (max-w-2/4); other layouts use a side tags column.
+ * Displays an article post detail page.
+ * Columns reuses the regular post inline tags/actions; other layouts use a side tags column.
  */
 export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: PostArticleDetailProps) => {
   const layout = useHomeStore((state) => state.layout);
@@ -68,13 +69,22 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
 
       <PostHeader postId={postId} size="extraLarge" timeAgoPlacement="bottom-left" />
 
-      <PostActionsBar
-        postId={postId}
-        onTagClick={handleTagClick}
-        onReplyClick={openReplyDialog}
-        onRepostClick={openRepostDialog}
-        className="mt-3 mb-6"
-      />
+      {isColumnsLayout ? (
+        <PostInlineTagsActions
+          postId={postId}
+          onReplyClick={openReplyDialog}
+          onRepostClick={openRepostDialog}
+          className="mt-3 mb-6"
+        />
+      ) : (
+        <PostActionsBar
+          postId={postId}
+          onTagClick={handleTagClick}
+          onReplyClick={openReplyDialog}
+          onRepostClick={openRepostDialog}
+          className="mt-3 mb-6"
+        />
+      )}
     </>
   );
 
@@ -99,18 +109,10 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
       <Container className={cn('mb-6 gap-6', !isColumnsLayout && 'grid grid-cols-1 lg:grid-cols-3')}>
         <Container className={cn(!isColumnsLayout && 'lg:col-span-2')}>
           {articleHeader}
-          {isColumnsLayout && (
-            <Container overrideDefaults className="mx-0 mb-6 max-w-2/4">
-              <PostTagsPanel
-                ref={desktopTagsPanelRef}
-                postId={postId}
-                widthMode="full"
-                className="mx-0 hidden lg:flex"
-              />
-            </Container>
-          )}
           {articleBody}
-          <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
+          {!isColumnsLayout && (
+            <PostTagsPanel ref={mobileTagsPanelRef} postId={postId} widthMode="full" className="mt-6 flex lg:hidden" />
+          )}
         </Container>
 
         {!isColumnsLayout && (

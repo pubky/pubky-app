@@ -88,6 +88,127 @@ describe('useStreamPagination', () => {
         expect.objectContaining({ streamId, streamTail: 40 }),
       );
     });
+
+    it('advances lastPostId from lastRawPostId on an empty page so the next loadMore resumes past the filtered run', async () => {
+      const streamId = 'timeline:all:all' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p1', 'p2'],
+        nextCursor: 20,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      // loadMore #1: a fully-filtered page. The raw scan went through 'raw-200' even
+      // though nothing visible came back — the anchor must adopt it.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: [],
+        reachedEnd: false,
+        nextCursor: 40,
+        lastRawPostId: 'raw-200',
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(result.current.hasMore).toBe(true);
+
+      // loadMore #2 must resume the cache walk from 'raw-200', not restart from scratch.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p3'],
+        nextCursor: 41,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId, lastPostId: 'raw-200', streamTail: 40 }),
+      );
+    });
+
+    it('prefers lastRawPostId over the last visible id on non-empty pages', async () => {
+      const streamId = 'timeline:all:all' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      // Initial load returned 2 visible posts, but the raw scan ended further on at 'raw-x'
+      // (the filtered tail of the page). Resuming from 'p2' would rescan that tail.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p1', 'p2'],
+        nextCursor: 20,
+        lastRawPostId: 'raw-x',
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p3'],
+        nextCursor: 30,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId, lastPostId: 'raw-x' }),
+      );
+    });
+
+    it('falls back to the last visible id when lastRawPostId is absent', async () => {
+      const streamId = 'timeline:all:all' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p1', 'p2'],
+        nextCursor: 20,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p3'],
+        nextCursor: 30,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId, lastPostId: 'p2' }),
+      );
+    });
+
+    it('keeps the previous anchor when an empty page carries no lastRawPostId', async () => {
+      const streamId = 'timeline:all:all' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p1', 'p2'],
+        nextCursor: 20,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      // Empty page without an anchor: must not clobber 'p2' with undefined.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: [],
+        reachedEnd: false,
+        nextCursor: 40,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p3'],
+        nextCursor: 41,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId, lastPostId: 'p2', streamTail: 40 }),
+      );
+    });
   });
 
   describe('Initialization', () => {

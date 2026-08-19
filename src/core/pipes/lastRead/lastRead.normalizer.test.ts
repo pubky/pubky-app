@@ -146,24 +146,16 @@ describe('LastReadNormalizer', () => {
       });
     });
 
-    describe('validation behavior (singleton caching)', () => {
-      /**
-       * Note: createLastRead() takes no parameters, so validation only happens
-       * at singleton initialization. Once initialized, invalid pubkys don't throw
-       * because the singleton reuses the existing builder.
-       */
+    describe('validation behavior after an identity switch', () => {
       it.each([
         ['empty', INVALID_INPUTS.EMPTY],
         ['null', INVALID_INPUTS.NULL],
         ['undefined', INVALID_INPUTS.UNDEFINED],
         ['invalid format', INVALID_INPUTS.INVALID_FORMAT],
-      ])('should not throw for %s pubky (singleton already initialized)', (_, invalidPubky) => {
-        // Ensure singleton is initialized first
+      ])('should reject a %s pubky after initialization', (_, invalidPubky) => {
         LastReadNormalizer.to(TEST_PUBKY.USER_1);
 
-        // Invalid pubky doesn't throw due to singleton caching
-        const result = LastReadNormalizer.to(invalidPubky);
-        expect(result).toBeDefined();
+        expect(() => LastReadNormalizer.to(invalidPubky)).toThrow(AppError);
       });
     });
 

@@ -11,8 +11,8 @@ exports[`NotificationsEmpty - Snapshots > matches snapshot with default props 1`
   />
   <svg
     aria-hidden="true"
-    class="lucide lucide-frown"
-    data-testid="frown-icon"
+    class="lucide lucide-bell"
+    data-testid="bell-icon"
     fill="none"
     height="24"
     stroke="currentColor"
@@ -23,29 +23,15 @@ exports[`NotificationsEmpty - Snapshots > matches snapshot with default props 1`
     width="24"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <circle
-      cx="12"
-      cy="12"
-      r="10"
+    <path
+      d="M10.268 21a2 2 0 0 0 3.464 0"
     />
     <path
-      d="M16 16s-1.5-2-4-2-4 2-4 2"
-    />
-    <line
-      x1="9"
-      x2="9.01"
-      y1="9"
-      y2="9"
-    />
-    <line
-      x1="15"
-      x2="15.01"
-      y1="9"
-      y2="9"
+      d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
     />
   </svg>
   <h3>
-    Nothing to see here yet
+    No notifications yet
   </h3>
   <p>
     Tags, follows, reposts and account information will be displayed here.

@@ -1,7 +1,4 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AppError } from '@/libs/error/error';
-import { NetworkErrorCode } from '@/libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { useSignInStore } from './signIn.store';
 
 describe('SignInStore', () => {
@@ -19,7 +16,6 @@ describe('SignInStore', () => {
       expect(state.bootstrapFetched).toBe(false);
       expect(state.dataPersisted).toBe(false);
       expect(state.homeserverSynced).toBe(false);
-      expect(state.error).toBeNull();
     });
   });
 
@@ -69,47 +65,9 @@ describe('SignInStore', () => {
     });
   });
 
-  describe('Error Handling', () => {
-    it('should set error state', () => {
-      const mockError = new AppError({
-        category: ErrorCategory.Network,
-        code: NetworkErrorCode.CONNECTION_FAILED,
-        message: 'Network failed',
-        service: ErrorService.Local,
-        operation: 'test',
-      });
-
-      useSignInStore.getState().setError(mockError);
-
-      expect(useSignInStore.getState().error).toBe(mockError);
-    });
-
-    it('should clear error state', () => {
-      const mockError = new AppError({
-        category: ErrorCategory.Network,
-        code: NetworkErrorCode.CONNECTION_FAILED,
-        message: 'Network failed',
-        service: ErrorService.Local,
-        operation: 'test',
-      });
-
-      useSignInStore.getState().setError(mockError);
-      useSignInStore.getState().setError(null);
-
-      expect(useSignInStore.getState().error).toBeNull();
-    });
-  });
-
   describe('Reset', () => {
     it('should reset all state to initial values', () => {
       const store = useSignInStore.getState();
-      const mockError = new AppError({
-        category: ErrorCategory.Network,
-        code: NetworkErrorCode.CONNECTION_FAILED,
-        message: 'Network failed',
-        service: ErrorService.Local,
-        operation: 'test',
-      });
 
       // Set all state
       store.setAuthUrlResolved(true);
@@ -117,7 +75,6 @@ describe('SignInStore', () => {
       store.setBootstrapFetched(true);
       store.setDataPersisted(true);
       store.setHomeserverSynced(true);
-      store.setError(mockError);
 
       // Reset
       store.reset();
@@ -129,7 +86,6 @@ describe('SignInStore', () => {
       expect(resetState.bootstrapFetched).toBe(false);
       expect(resetState.dataPersisted).toBe(false);
       expect(resetState.homeserverSynced).toBe(false);
-      expect(resetState.error).toBeNull();
     });
   });
 });

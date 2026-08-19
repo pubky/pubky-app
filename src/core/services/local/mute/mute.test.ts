@@ -186,30 +186,15 @@ describe('LocalMuteService', () => {
       await expect(LocalMuteService.delete({ muter, mutee })).resolves.not.toThrow();
     });
 
-    it('should clear post stream queue when mute status changes', async () => {
+    it('preserves the post stream queue across mute status changes', async () => {
+      // The queue's buffered posts must survive a mute/unmute: collect() re-filters the
+      // buffer against the current mute list on every read, and clearing it mid-scroll
+      // would make the raw resume anchor (lastRawPostId) skip the buffered posts.
       const clearSpy = vi.spyOn(postStreamQueue, 'clear');
 
-      // Mute should clear queue
       await LocalMuteService.create({ muter, mutee });
-      expect(clearSpy).toHaveBeenCalledTimes(1);
-
-      // Unmute should also clear queue
       await LocalMuteService.delete({ muter, mutee });
-      expect(clearSpy).toHaveBeenCalledTimes(2);
 
-      clearSpy.mockRestore();
-    });
-
-    it('should not clear post stream queue when mute status does not change', async () => {
-      // Already muted via stream
-      await LocalStreamUsersService.prependToStream(UserStreamTypes.MUTED, [mutee]);
-
-      const clearSpy = vi.spyOn(postStreamQueue, 'clear');
-
-      // Mute again (no-op since already muted)
-      await LocalMuteService.create({ muter, mutee });
-
-      // Queue should not be cleared since status didn't change
       expect(clearSpy).not.toHaveBeenCalled();
       clearSpy.mockRestore();
     });

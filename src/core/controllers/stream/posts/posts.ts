@@ -62,8 +62,8 @@ export class StreamPostsController {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile posts)
     const viewerId = useAuthStore.getState().currentUserPubky;
-    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd } = await PostStreamApplication.getOrFetchStreamSlice(
-      {
+    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd, lastRawPostId } =
+      await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit,
         streamHead,
@@ -71,8 +71,8 @@ export class StreamPostsController {
         lastPostId,
         viewerId,
         order,
-      },
-    );
+      });
+    let visibleIds = nextPageIds;
     // Query nexus to get the cacheMissPostIds
     if (cacheMissPostIds.length > 0) {
       // TODO: When TTL is implemented, we can return to void
@@ -82,10 +82,10 @@ export class StreamPostsController {
       });
       // Second-pass: cache-miss details are now resolved,
       // re-filter to catch posts that were fail-open in the first pass.
-      const validIds = await PostStreamApplication.filterStreamPosts({ streamId, postIds: nextPageIds });
-      return { nextPageIds: validIds, nextCursor, reachedEnd };
+      // Only the visible page shrinks here — the raw anchor passes through untouched.
+      visibleIds = await PostStreamApplication.filterStreamPosts({ streamId, postIds: nextPageIds });
     }
-    return { nextPageIds, nextCursor, reachedEnd };
+    return { nextPageIds: visibleIds, nextCursor, reachedEnd, lastRawPostId };
   }
 
   /**

@@ -148,6 +148,69 @@ describe('TimelineStateWrapper', () => {
     });
   });
 
+  describe('Empty-but-hasMore State', () => {
+    it('keeps the loading component AND mounts children when empty but more may load', () => {
+      // The infinite-scroll sentinel lives in the children: unmounting them here
+      // would stall the feed one load-round away from real posts (heavily-filtered
+      // stream regions return empty pages while more content exists).
+      render(
+        <TimelineStateWrapper loading={false} error={null} hasItems={false} hasMore={true}>
+          {mockChildren}
+        </TimelineStateWrapper>,
+      );
+
+      expect(screen.getByTestId('default-loading')).toBeInTheDocument();
+      expect(screen.getByTestId('mock-children')).toBeInTheDocument();
+      expect(screen.queryByText('No posts found')).not.toBeInTheDocument();
+    });
+
+    it('does not show the empty component while hasMore is true', () => {
+      const customEmpty = <div data-testid="custom-empty">Custom Empty</div>;
+
+      render(
+        <TimelineStateWrapper loading={false} error={null} hasItems={false} hasMore={true} emptyComponent={customEmpty}>
+          {mockChildren}
+        </TimelineStateWrapper>,
+      );
+
+      expect(screen.queryByTestId('custom-empty')).not.toBeInTheDocument();
+      expect(screen.getByTestId('mock-children')).toBeInTheDocument();
+    });
+
+    it('shows the empty component once hasMore flips false', () => {
+      render(
+        <TimelineStateWrapper loading={false} error={null} hasItems={false} hasMore={false}>
+          {mockChildren}
+        </TimelineStateWrapper>,
+      );
+
+      expect(screen.getByText('No posts found')).toBeInTheDocument();
+      expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
+    });
+
+    it('error still takes precedence over the empty-but-hasMore state', () => {
+      render(
+        <TimelineStateWrapper loading={false} error="Some error" hasItems={false} hasMore={true}>
+          {mockChildren}
+        </TimelineStateWrapper>,
+      );
+
+      expect(screen.getByText(/some error/i)).toBeInTheDocument();
+      expect(screen.queryByTestId('mock-children')).not.toBeInTheDocument();
+    });
+
+    it('renders children alone (no loading component) once items exist', () => {
+      render(
+        <TimelineStateWrapper loading={false} error={null} hasItems={true} hasMore={true}>
+          {mockChildren}
+        </TimelineStateWrapper>,
+      );
+
+      expect(screen.getByTestId('mock-children')).toBeInTheDocument();
+      expect(screen.queryByTestId('default-loading')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Success State', () => {
     it('should render children when has items', () => {
       render(

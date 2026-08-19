@@ -57,7 +57,13 @@ export function TimelinePosts({
   const showEmptyMessageWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
 
   return (
-    <TimelineStateWrapper loading={loading} error={error} hasItems={hasListContent} emptyComponent={emptyState}>
+    <TimelineStateWrapper
+      loading={loading}
+      error={error}
+      hasItems={hasListContent}
+      hasMore={hasMore}
+      emptyComponent={emptyState}
+    >
       <Container
         data-cy="timeline-container"
         overrideDefaults={showEmptyMessageWithTrailingSlot}
@@ -84,7 +90,9 @@ export function TimelinePosts({
 
           {trailingSlot}
 
-          {loadingMore && <TimelineLoadingMore />}
+          {/* Suppressed while the list is empty: the wrapper's full skeleton is already
+              the loading representation there (empty-but-hasMore chaining rounds). */}
+          {postIds.length > 0 && loadingMore && <TimelineLoadingMore />}
 
           {error && postIds.length > 0 && <TimelineError message={error} />}
 

@@ -83,12 +83,14 @@ function makeSlice({
   nextPageIds = [],
   reachedEnd = true,
   nextCursor = 0,
+  lastRawPostId,
 }: {
   nextPageIds?: string[];
   reachedEnd?: boolean;
   nextCursor?: number;
+  lastRawPostId?: string;
 } = {}) {
-  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor });
+  return asOpaque<TReadPostStreamChunkResponse>({ nextPageIds, reachedEnd, nextCursor, lastRawPostId });
 }
 
 beforeEach(() => {
@@ -197,6 +199,35 @@ describe('DiscoverCollections', () => {
     // The new page is appended after the first one.
     await waitFor(() => {
       expect(screen.getAllByTestId('collection-card')).toHaveLength(COLLECTIONS_SECTION_PAGE_SIZE + 1);
+    });
+  });
+
+  it('Show More anchors the next request on lastRawPostId when the slice threads one back', async () => {
+    mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
+    // The raw scan ended past the visible page (filtered tail) — the follow-up
+    // request must anchor on the raw id, not the last visible one.
+    mockGetOrFetchStreamSlice.mockResolvedValueOnce(
+      makeSlice({ nextPageIds: ['other:p1'], reachedEnd: false, nextCursor: 26, lastRawPostId: 'other:raw-26' }),
+    );
+    mockGetOrFetchStreamSlice.mockResolvedValueOnce(
+      makeSlice({ nextPageIds: ['other:more'], reachedEnd: true, nextCursor: 30 }),
+    );
+
+    await act(async () => {
+      render(<DiscoverCollections />);
+    });
+
+    const button = await screen.findByRole('button', { name: 'Show more' });
+    await act(async () => {
+      button.click();
+    });
+
+    await waitFor(() => {
+      expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+    });
+    expect(mockGetOrFetchStreamSlice.mock.calls.at(-1)?.[0]).toMatchObject({
+      lastPostId: 'other:raw-26',
+      streamTail: 26,
     });
   });
 
