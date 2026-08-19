@@ -126,7 +126,7 @@ function CollectionHeroContent({
     toggle,
   } = useBookmark(compositeId, {
     toastMessages: {
-      added: 'You are now following this collection',
+      added: 'You are now following this collection.',
       removed: "You've unfollowed this collection",
     },
   });

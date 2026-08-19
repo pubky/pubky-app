@@ -818,7 +818,7 @@ describe('CollectionHero', () => {
     expect(mockUseBookmark).toHaveBeenCalledWith(
       COMPOSITE_ID,
       expect.objectContaining({
-        toastMessages: expect.objectContaining({ added: 'You are now following this collection' }),
+        toastMessages: expect.objectContaining({ added: 'You are now following this collection.' }),
       }),
     );
   });

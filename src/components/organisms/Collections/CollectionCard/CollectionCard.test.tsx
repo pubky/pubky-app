@@ -249,7 +249,8 @@ describe('CollectionCard', () => {
     const metadata = document.querySelector<HTMLElement>('[data-cy="collection-card-metadata"]');
     const countLabel = screen.getByText('posts', { exact: false });
 
-    expect(header).toHaveClass('flex-col', 'sm:flex-row');
+    expect(header).toHaveClass('flex-col', 'lg:flex-row');
+    expect(header).not.toHaveClass('sm:flex-row');
     expect(header).toContainElement(metadata);
     expect(countLabel).toHaveClass('inline');
     expect(countLabel).not.toHaveClass('hidden');

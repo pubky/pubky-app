@@ -45,4 +45,10 @@ describe('CollectionCountBadge - Snapshots', () => {
 
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  it('matches the snapshot with the label visible on mobile', () => {
+    const { container } = render(<CollectionCountBadge count={123} showLabelOnMobile />);
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
 });

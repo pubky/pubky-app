@@ -26,12 +26,12 @@ exports[`CollectionCard - Mobile Snapshots > matches the mobile snapshot with up
       data-slot="card-content"
     >
       <div
-        class="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center"
+        class="flex w-full flex-col items-start gap-3 lg:flex-row lg:items-center"
         data-cy="collection-card-header"
         data-testid="container"
       >
         <div
-          class="flex w-full min-w-0 items-center gap-2 sm:flex-1"
+          class="flex w-full min-w-0 items-center gap-2 lg:flex-1"
           data-testid="container"
         >
           <svg
@@ -346,12 +346,12 @@ exports[`CollectionCard - Snapshots > matches the default card snapshot 1`] = `
       data-slot="card-content"
     >
       <div
-        class="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center"
+        class="flex w-full flex-col items-start gap-3 lg:flex-row lg:items-center"
         data-cy="collection-card-header"
         data-testid="container"
       >
         <div
-          class="flex w-full min-w-0 items-center gap-2 sm:flex-1"
+          class="flex w-full min-w-0 items-center gap-2 lg:flex-1"
           data-testid="container"
         >
           <svg
@@ -684,12 +684,12 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
       data-slot="card-content"
     >
       <div
-        class="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center"
+        class="flex w-full flex-col items-start gap-3 lg:flex-row lg:items-center"
         data-cy="collection-card-header"
         data-testid="container"
       >
         <div
-          class="flex w-full min-w-0 items-center gap-2 sm:flex-1"
+          class="flex w-full min-w-0 items-center gap-2 lg:flex-1"
           data-testid="container"
         >
           <svg
@@ -1016,12 +1016,12 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
       data-slot="card-content"
     >
       <div
-        class="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center"
+        class="flex w-full flex-col items-start gap-3 lg:flex-row lg:items-center"
         data-cy="collection-card-header"
         data-testid="container"
       >
         <div
-          class="flex w-full min-w-0 items-center gap-2 sm:flex-1"
+          class="flex w-full min-w-0 items-center gap-2 lg:flex-1"
           data-testid="container"
         >
           <svg

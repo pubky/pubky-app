@@ -202,9 +202,9 @@ function CollectionCardContent({
           <Container
             overrideDefaults
             data-cy="collection-card-header"
-            className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center"
+            className="flex w-full flex-col items-start gap-3 lg:flex-row lg:items-center"
           >
-            <Container overrideDefaults className="flex w-full min-w-0 items-center gap-2 sm:flex-1">
+            <Container overrideDefaults className="flex w-full min-w-0 items-center gap-2 lg:flex-1">
               <Library className="size-6 shrink-0 text-foreground" />
               <Typography
                 as="span"
