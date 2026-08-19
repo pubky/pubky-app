@@ -44,6 +44,10 @@ spec:
         - name: pubky-app
           image: SHOULD_BE_UPDATED
           env:
+            # PR previews run against the staging homeserver, so the staging
+            # sign-in guard must be active (see isStagingHomeserverDeploy).
+            - name: PUBKY_RUNTIME_ENV
+              value: "staging"
             - name: PUBKY_RUNTIME_TESTNET
               value: "false"
             - name: PUBKY_RUNTIME_HOMESERVER

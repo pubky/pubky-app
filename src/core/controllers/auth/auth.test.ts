@@ -10,7 +10,8 @@ import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { AppError } from '@/libs/error/error';
-import { ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
@@ -153,7 +154,6 @@ const storeMocks = vi.hoisted(() => {
   const initAuthStore = vi.fn();
   const setAuthUrlResolved = vi.fn();
   const setProfileChecked = vi.fn();
-  const setSignInError = vi.fn();
   const resetMigrationStore = vi.fn();
 
   // Factories are kept as separate constants so they can be reapplied in
@@ -179,13 +179,11 @@ const storeMocks = vi.hoisted(() => {
     reset: resetSignInStore,
     setAuthUrlResolved,
     setProfileChecked,
-    setError: setSignInError,
     authUrlResolved: false,
     profileChecked: false,
     bootstrapFetched: false,
     dataPersisted: false,
     homeserverSynced: false,
-    error: null,
   });
   const localFilesStateFactory = () => ({ reset: resetLocalFilesStore });
   const homeStateFactory = () => ({ reset: resetHomeStore });
@@ -207,7 +205,6 @@ const storeMocks = vi.hoisted(() => {
     initAuthStore,
     setAuthUrlResolved,
     setProfileChecked,
-    setSignInError,
     resetMigrationStore,
     authStateFactory,
     onboardingStateFactory,
@@ -319,6 +316,8 @@ describe('AuthController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockClearDatabase.mockReset();
+    // Default: homeserver environment check passes (non-staging test config / allowed key)
+    vi.spyOn(AuthApplication, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
     // Re-apply factory implementations: vi.restoreAllMocks() in afterEach can
     // clear vi.fn implementations whenever a property has been spied on, which
     // would leave subsequent tests with empty mocks returning undefined.
@@ -1038,6 +1037,80 @@ describe('AuthController', () => {
         clearDatabaseSpy.mock.invocationCallOrder[0]!,
       );
     });
+
+    it('should cleanup then rethrow when restore throws wrong-environment homeserver error', async () => {
+      const authStore = mockAuthStore({
+        ...storeMocks.getAuthState(),
+        hasHydrated: true,
+        session: null,
+        sessionExport: 'session-export',
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+      });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockRejectedValue(
+        Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong env', {
+          service: ErrorService.Homeserver,
+          operation: 'assertUserHomeserverAllowed',
+        }),
+      );
+      mockClearDatabase.mockResolvedValue(undefined);
+      await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+      const homeStore = storeMocks.getHomeState();
+      const searchStore = storeMocks.getSearchState();
+      const notificationStore = storeMocks.getNotificationState();
+      const settingsStore = storeMocks.getSettingsState();
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(mockHomeStore(homeStore));
+      vi.spyOn(useSearchStore, 'getState').mockReturnValue(mockSearchStore(searchStore));
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(mockNotificationStore(notificationStore));
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
+
+      await expect(AuthController.restorePersistedSession()).rejects.toMatchObject({
+        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+      });
+
+      expect(authStore.init).not.toHaveBeenCalled();
+      expect(authStore.reset).toHaveBeenCalled();
+    });
+
+    it('should normalize an unknown restore error before cleanup', async () => {
+      const authStore = mockAuthStore({
+        ...storeMocks.getAuthState(),
+        hasHydrated: true,
+        session: null,
+        sessionExport: 'session-export',
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+      });
+      const loggerErrorSpy = vi.spyOn(Logger, 'error');
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockRejectedValue(new Error('unexpected restore failure'));
+      mockClearDatabase.mockResolvedValue(undefined);
+      await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+      const homeStore = storeMocks.getHomeState();
+      const searchStore = storeMocks.getSearchState();
+      const notificationStore = storeMocks.getNotificationState();
+      const settingsStore = storeMocks.getSettingsState();
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(mockHomeStore(homeStore));
+      vi.spyOn(useSearchStore, 'getState').mockReturnValue(mockSearchStore(searchStore));
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(mockNotificationStore(notificationStore));
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
+
+      await expect(AuthController.restorePersistedSession()).resolves.toBe(false);
+
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        `[${ErrorService.Local}:restorePersistedSession]`,
+        'unexpected restore failure',
+        undefined,
+      );
+      expect(authStore.reset).toHaveBeenCalled();
+    });
   });
 
   describe('initializeAuthenticatedSession', () => {
@@ -1229,6 +1302,57 @@ describe('AuthController', () => {
       expect(loadFromHomeserverSpy).not.toHaveBeenCalled();
       // Session flow completes normally
       expect(authStore.setHasProfile).toHaveBeenCalledWith(true);
+    });
+
+    it('should sign the session out and rethrow when homeserver environment check fails', async () => {
+      const mockSession = buildMockSession();
+      const wrongEnvError = Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong env', {
+        service: ErrorService.Homeserver,
+        operation: 'assertUserHomeserverAllowed',
+      });
+
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(TEST_PUBKY as Pubky);
+      vi.spyOn(AuthApplication, 'assertUserHomeserverAllowed').mockRejectedValue(wrongEnvError);
+      const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+      const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp');
+
+      const authStore = storeMocks.getAuthState();
+      const signInStore = storeMocks.getSignInState();
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore(authStore));
+      vi.spyOn(useSignInStore, 'getState').mockReturnValue(mockSignInStore(signInStore));
+
+      await expect(AuthController.initializeAuthenticatedSession({ session: mockSession })).rejects.toMatchObject({
+        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+      });
+
+      expect(userIsSignedUpSpy).not.toHaveBeenCalled();
+      // The Ring-approved session lives on the user's actual homeserver — it
+      // must be signed out, not left dangling after the rejection.
+      expect(logoutSpy).toHaveBeenCalledWith({ session: mockSession });
+      // The guard runs before any store mutation, so there is nothing to reset.
+      expect(authStore.init).not.toHaveBeenCalled();
+      expect(authStore.reset).not.toHaveBeenCalled();
+      expect(signInStore.reset).not.toHaveBeenCalled();
+    });
+
+    it('should sign the session out when the environment check fails transiently', async () => {
+      // A failed PKARR lookup (not a wrong-env rejection) must not leave the
+      // just-approved session dangling on its homeserver either.
+      const mockSession = buildMockSession();
+      const lookupError = Err.server(ServerErrorCode.INTERNAL_ERROR, 'PKARR relay unavailable', {
+        service: ErrorService.Homeserver,
+        operation: 'assertUserHomeserverAllowed',
+      });
+
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(TEST_PUBKY as Pubky);
+      vi.spyOn(AuthApplication, 'assertUserHomeserverAllowed').mockRejectedValue(lookupError);
+      const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+
+      await expect(AuthController.initializeAuthenticatedSession({ session: mockSession })).rejects.toMatchObject({
+        code: ServerErrorCode.INTERNAL_ERROR,
+      });
+
+      expect(logoutSpy).toHaveBeenCalledWith({ session: mockSession });
     });
   });
 

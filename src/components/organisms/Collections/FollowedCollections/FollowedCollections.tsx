@@ -196,7 +196,7 @@ export function FollowedCollections() {
             // collection. Seed the bookmark hook so the CTA renders as
             // "Unfollow" on the first paint instead of briefly flashing
             // "Follow" while the async existence check resolves.
-            return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} initialIsBookmarked />;
+            return <CollectionCard key={compositeId} authorPubky={pubky} postId={id} />;
           })}
         </Container>
       )}

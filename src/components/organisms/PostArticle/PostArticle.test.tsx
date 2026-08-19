@@ -193,6 +193,12 @@ describe('PostArticle', () => {
       expect(postText).toHaveAttribute('data-is-article', 'true');
     });
 
+    it('limits article preview copy to three lines', () => {
+      render(<PostArticle {...defaultProps} />);
+
+      expect(screen.getByTestId('post-text')).toHaveClass('line-clamp-3');
+    });
+
     it('passes onLinkClick handler to PostText', () => {
       render(<PostArticle {...defaultProps} />);
 
@@ -208,11 +214,16 @@ describe('PostArticle', () => {
       expect(dialog).toHaveAttribute('data-open', 'false');
     });
 
-    it('renders typography with large size', () => {
+    it('renders an xl title with a size-5 newspaper icon and gap-2', () => {
       render(<PostArticle {...defaultProps} />);
 
       const typography = screen.getByTestId('typography');
-      expect(typography).toHaveAttribute('data-size', 'lg');
+      const titleRow = typography.parentElement;
+      const newspaperIcon = titleRow?.querySelector('.lucide-newspaper');
+
+      expect(typography).toHaveClass('text-xl');
+      expect(titleRow).toHaveClass('gap-2');
+      expect(newspaperIcon).toHaveClass('size-5');
     });
   });
 
@@ -324,11 +335,18 @@ describe('PostArticle', () => {
       render(<PostArticle {...defaultProps} />);
 
       const image = screen.getByTestId('cover-image');
-      expect(image).toHaveClass('h-25');
-      expect(image).toHaveClass('w-45');
+      expect(image).toHaveClass('aspect-video');
+      expect(image).toHaveClass('h-auto');
+      expect(image).toHaveClass('w-full');
       expect(image).toHaveClass('rounded-md');
       expect(image).toHaveClass('object-cover');
       expect(image).toHaveClass('object-center');
+      expect(image).toHaveClass('lg:aspect-auto');
+      expect(image).toHaveClass('lg:h-25');
+      expect(image).toHaveClass('lg:w-45');
+      expect(image).toHaveClass('@max-xl/grid:aspect-video!');
+      expect(image).toHaveClass('@max-xl/grid:h-auto!');
+      expect(image).toHaveClass('@max-xl/grid:w-full!');
     });
   });
 

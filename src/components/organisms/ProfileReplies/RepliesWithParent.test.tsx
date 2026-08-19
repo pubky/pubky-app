@@ -65,6 +65,12 @@ vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
   };
 });
 
+vi.mock('@/molecules/RepliesEmpty/RepliesEmpty', () => {
+  return {
+    RepliesEmpty: () => <div data-testid="replies-empty">No replies yet</div>,
+  };
+});
+
 vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper')>();
@@ -76,12 +82,14 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
       hasItems,
       hasMore,
       children,
+      emptyComponent,
     }: {
       loading: boolean;
       error: string | null;
       hasItems: boolean;
       hasMore?: boolean;
       children: React.ReactNode;
+      emptyComponent?: React.ReactNode;
     }) => {
       if (loading) return <div data-testid="timeline-loading">Loading...</div>;
       if (error && !hasItems) return <div data-testid="timeline-initial-error">Error: {error}</div>;
@@ -92,7 +100,7 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
             {children}
           </>
         );
-      if (!hasItems) return <div data-testid="timeline-empty">No replies</div>;
+      if (!hasItems) return emptyComponent ?? <div data-testid="timeline-empty">No replies</div>;
       return <>{children}</>;
     },
   };
@@ -207,6 +215,7 @@ describe('RepliesWithParent', () => {
       render(<RepliesWithParent streamId={mockStreamId} />);
 
       expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('replies-empty')).not.toBeInTheDocument();
       expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
     });
 
@@ -227,7 +236,7 @@ describe('RepliesWithParent', () => {
 
       render(<RepliesWithParent streamId={mockStreamId} />);
 
-      expect(screen.getByTestId('timeline-empty')).toBeInTheDocument();
+      expect(screen.getByTestId('replies-empty')).toBeInTheDocument();
     });
 
     it('should render end message when no more replies to load', () => {

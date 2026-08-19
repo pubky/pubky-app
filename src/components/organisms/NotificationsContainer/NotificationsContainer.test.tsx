@@ -84,7 +84,7 @@ vi.mock('@/atoms/Spinner/Spinner', () => {
 // Mock molecules
 vi.mock('@/molecules/NotificationsEmpty/NotificationsEmpty', () => {
   return {
-    NotificationsEmpty: () => <div data-testid="notifications-empty">Nothing to see here yet</div>,
+    NotificationsEmpty: () => <div data-testid="notifications-empty">No notifications yet</div>,
   };
 });
 
@@ -152,7 +152,7 @@ describe('NotificationsContainer', () => {
       isNotificationUnread: vi.fn(() => false),
     });
     render(<NotificationsContainer />);
-    expect(screen.getByText(/Nothing to see here yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No notifications yet/i)).toBeInTheDocument();
   });
 
   it('shows error state', () => {
