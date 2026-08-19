@@ -164,8 +164,7 @@ export function usePostInputLock({
     revertToNormalPost();
   };
 
-  // TODO:[Locks] #2040 — `password` is dropped: the Lock Server has no password verifier yet, so the
-  // lock is created with the `dev-static` placeholder (see `LocksController`).
+  // TODO:[Locks] #2369 — password and `dev-static` all go away here.
   const handleLockApplied = (_password: string) => {
     setIsLockDialogOpen(false);
     setIsLockConfigured(true);

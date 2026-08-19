@@ -132,7 +132,7 @@ export class LocksService {
   }
 
   // Reader calls are public (no session) → `toAppError`, not `toLocksError` (a 401 isn't an expired session).
-  // TODO:[Locks] #2040 — `password` reaches here but isn't forwarded to lock-sdk (no password verifier yet).
+  // TODO:[Locks] #2369 — password and `dev-static` all go away here.
   static async submitProofBundle(bundle: TSubmittedProofBundle, _password: string): Promise<TVerificationTask> {
     try {
       const viewer = await this.getViewer();

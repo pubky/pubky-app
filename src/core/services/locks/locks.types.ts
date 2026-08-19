@@ -46,13 +46,7 @@ export type TGuardedResource = {
   size: number;
 };
 
-/**
- * One unlock criterion.
- *
- * TODO:[Locks] #2040 — Phase 1 ships a `password` verifier, but the Lock Server only registers
- * `dev-static` today, so that placeholder is sent instead — see the content methods on
- * `LocksController`. Drop this note once the password verifier lands and the placeholder is gone.
- */
+/** One unlock criterion. */
 type TLockCriterion = {
   criterion_id: string;
   verifier_type: string;

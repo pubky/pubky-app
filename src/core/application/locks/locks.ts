@@ -37,14 +37,7 @@ const MAX_POLL_ATTEMPTS = 40;
 
 const isVerifying = (status: TVerificationStatus) => status === 'pending' || status === 'in_progress';
 
-// TODO:[Locks] #2040 — Phase 1 ships the `password` verifier, but the Lock Server does not implement
-// one yet: `VerifierType` (locks-core/src/lock_policy.rs) only has `DevStatic`, and unknown verifier
-// strings are rejected while parsing, so `password` cannot be sent today. `dev-static` is a
-// placeholder that always satisfies — it MUST be replaced (and this constant deleted) before ship.
-// Blocked on the Lock Server adding a password verifier.
-//
-// When it lands: the public lock file (`/pub/locks.app/<lock_id>.json`) carries `criteria[].params`
-// verbatim, so the creator's password must never be put there in plaintext.
+// TODO:[Locks] #2369 — password and `dev-static` all go away here.
 const CRITERION_ID = 'criterion-1';
 const VERIFIER_TYPE = 'dev-static';
 const VERIFIER_PARAMS = { satisfied: true };
