@@ -153,10 +153,8 @@ export class LocksApplication {
    * A validation error (permanent data fault) drops only that attachment; any other failure rejects
    * the whole read so no caller persists a partial result — see the catch below.
    *
-   * TODO:[Locks] #2040 — both failure kinds surface only after the unlock is already paid for (credential
-   * issued), so the reader needs a user-facing retry UI that does not charge again — re-download for
-   * transient failures, re-fetch of the dropped attachment for permanent ones. Decide with the real
-   * payment verifier.
+   * TODO:[Locks] #2374 — a permanently dropped attachment still lets the marker land, so the lock
+   * reads as fully unlocked and the attachment is unrecoverable.
    */
   private static async readAttachments(
     lockFile: LockFile,
