@@ -62,8 +62,6 @@ export interface UseStreamPaginationResult {
    * Function to manually trigger a refresh
    */
   refresh: () => Promise<void>;
-  /** Rebuild the first page directly from Nexus, replacing cached membership. */
-  refreshFromNetwork: () => Promise<void>;
   /**
    * Function to add post(s) to the timeline, sorted by timestamp
    * @param postIds - A single post ID or array of post IDs to add

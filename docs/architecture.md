@@ -205,14 +205,8 @@ class PostApplication {
 // Real: src/core/controllers/user/user.ts
 class UserController {
   static async commitFollow(eventType, { follower, followee }) {
-    let friendshipChanged;
-    try {
-      ({ friendshipChanged } = await UserApplication.commitFollow({ eventType, follower, followee }));
-    } finally {
-      useStreamInvalidationStore.getState().invalidateFollowDependentStreams({
-        includeFriends: friendshipChanged ?? true,
-      });
-    }
+    const activeStreamId = this.getActiveStreamId(); // Controller reads store
+    await UserApplication.commitFollow({ eventType, follower, followee, activeStreamId });
   }
 }
 ```

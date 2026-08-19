@@ -57,46 +57,6 @@ describe('StreamPostsController', () => {
       });
     });
 
-    it('refreshes from Nexus through the dedicated application path', async () => {
-      const refreshStreamSliceSpy = vi.spyOn(PostStreamApplication, 'refreshStreamSlice').mockResolvedValue({
-        nextPageIds: [],
-        cacheMissPostIds: [],
-        nextCursor: undefined,
-        reachedEnd: true,
-      });
-
-      await StreamPostsController.refreshStreamSlice({
-        streamId,
-      });
-
-      expect(refreshStreamSliceSpy).toHaveBeenCalledWith({
-        streamId,
-        limit: NEXUS_POSTS_PER_PAGE,
-        viewerId,
-        order: undefined,
-      });
-    });
-
-    it('hydrates and re-filters cache misses returned by refreshStreamSlice', async () => {
-      vi.spyOn(PostStreamApplication, 'refreshStreamSlice').mockResolvedValue({
-        nextPageIds: ['visible-post', 'filtered-post'],
-        cacheMissPostIds: ['filtered-post'],
-        nextCursor: 42,
-        reachedEnd: false,
-      });
-      const hydrateSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
-      const filterSpy = vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue(['visible-post']);
-
-      const result = await StreamPostsController.refreshStreamSlice({ streamId, limit: 2 });
-
-      expect(hydrateSpy).toHaveBeenCalledWith({ cacheMissPostIds: ['filtered-post'], viewerId });
-      expect(filterSpy).toHaveBeenCalledWith({
-        streamId,
-        postIds: ['visible-post', 'filtered-post'],
-      });
-      expect(result).toEqual({ nextPageIds: ['visible-post'], nextCursor: 42, reachedEnd: false });
-    });
-
     it('should fetch missing posts and re-filter stream posts when cacheMissPostIds exist', async () => {
       const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
       const cacheMissPostIds = ['user-1:post-3', 'user-1:post-4'];

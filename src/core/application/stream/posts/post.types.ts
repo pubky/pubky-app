@@ -15,13 +15,6 @@ export interface TFetchStreamParams {
   order?: StreamOrder;
 }
 
-export type TRefreshStreamParams = Pick<TFetchStreamParams, 'streamId' | 'limit' | 'viewerId' | 'order'>;
-
-export interface TFetchStreamFromNexusParams extends TFetchStreamParams {
-  /** Replace the cache with this response instead of merging it. Used by the first forced page. */
-  replaceCache?: boolean;
-}
-
 export interface TInitialStreamParams {
   streamId: PostStreamId;
   limit: number;

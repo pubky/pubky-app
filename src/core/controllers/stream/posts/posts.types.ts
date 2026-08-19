@@ -12,8 +12,6 @@ export type TReadPostStreamChunkParams = {
   order?: StreamOrder;
 };
 
-export type TRefreshPostStreamChunkParams = Pick<TReadPostStreamChunkParams, 'streamId' | 'limit' | 'order'>;
-
 export type TStreamIdParams = {
   streamId: PostStreamId;
 };

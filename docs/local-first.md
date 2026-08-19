@@ -184,55 +184,33 @@ await LocalUserService.upsertDetails(author); // Author not yet in DB!
 For immediate UI feedback, controllers manage store state while application handles persistence:
 
 ```typescript
-// Controller signals mounted views after the application completes cache cleanup
+// Controller reads store state before delegating to application
 // Real pattern: src/core/controllers/user/user.ts
 class UserController {
   static async commitFollow(eventType, { follower, followee }) {
     const normalizedFollowee = stripPubkyPrefix(followee);
     const { meta, follow } = FollowNormalizer.to({ follower, followee: normalizedFollowee });
-    let friendshipChanged;
-    try {
-      ({ friendshipChanged } = await UserApplication.commitFollow({
-        eventType,
-        followUrl: meta.url,
-        followJson: follow.toJson(),
-        follower,
-        followee: normalizedFollowee,
-      }));
-    } finally {
-      useStreamInvalidationStore.getState().invalidateFollowDependentStreams({
-        includeFriends: friendshipChanged ?? true,
-      });
-    }
+    const activeStreamId = this.getActiveStreamId(); // Controller reads from store
+
+    await UserApplication.commitFollow({
+      eventType,
+      followUrl: meta.url,
+      followJson: follow.toJson(),
+      follower,
+      followee: normalizedFollowee,
+      activeStreamId,
+    });
   }
 }
 
 // Application handles local-first persistence
 // Real pattern: src/core/application/user/user.ts
 class UserApplication {
-  static async commitFollow({ eventType, followUrl, followJson, follower, followee }) {
-    let result;
-    let mutationError;
-    try {
-      // 1. Write relationship state to IndexedDB first
-      result = await LocalFollowService.create({ follower, followee });
-      // 2. Sync to homeserver
-      await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
-      return result;
-    } catch (error) {
-      mutationError = error;
-      throw error;
-    } finally {
-      // 3. Invalidate inactive follow-dependent caches after the sync attempt.
-      try {
-        await LocalFollowService.invalidateTimelineStreams({
-          includeFriends: result?.friendshipChanged ?? true,
-        });
-      } catch (cleanupError) {
-        // Cleanup failures propagate only when there is no mutation error to preserve.
-        if (!mutationError) throw cleanupError;
-      }
-    }
+  static async commitFollow({ eventType, followUrl, followJson, follower, followee, activeStreamId }) {
+    // 1. Write to IndexedDB first
+    await LocalFollowService.create({ follower, followee, activeStreamId });
+    // 2. Sync to homeserver
+    await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
   }
 }
 ```

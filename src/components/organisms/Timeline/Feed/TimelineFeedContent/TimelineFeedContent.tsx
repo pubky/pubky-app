@@ -8,7 +8,6 @@ import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { COLLECTION_ITEMS_MAX_COUNT } from '@/config/posts';
 import { useApplyPendingFeedInsert } from '@/hooks/useApplyPendingFeedInsert/useApplyPendingFeedInsert';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
-import { useFollowDependentStreamRefresh } from '@/hooks/useFollowDependentStreamRefresh/useFollowDependentStreamRefresh';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
@@ -163,7 +162,6 @@ function TimelineFeedContent({
     hasMore,
     loadMore,
     refresh,
-    refreshFromNetwork,
     prependPosts,
     prependOptimisticPosts,
     removePosts,
@@ -174,7 +172,6 @@ function TimelineFeedContent({
     // Nexus max page size so the eager full load below takes ≤2 requests.
     ...(isCollectionFeed ? { limit: NEXUS_STREAM_MAX_LIMIT } : {}),
   });
-  useFollowDependentStreamRefresh({ streamId, refreshFromNetwork });
 
   // Collections eagerly load the ENTIRE stream instead of waiting for scroll.
   // `transformPostIds` sorts the feed by the envelope's item order, but it can

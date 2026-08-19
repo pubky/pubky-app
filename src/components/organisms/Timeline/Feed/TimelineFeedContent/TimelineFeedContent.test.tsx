@@ -207,7 +207,6 @@ const listLayoutResolution: FeedLayoutResolution = {
 
 const mockLoadMore = vi.fn();
 const mockRefresh = vi.fn();
-const mockRefreshFromNetwork = vi.fn();
 const mockPrependPosts = vi.fn();
 const mockPrependOptimisticPosts = vi.fn();
 const mockRemovePosts = vi.fn();
@@ -227,7 +226,6 @@ const defaultPaginationResult = {
   hasMore: true,
   loadMore: mockLoadMore,
   refresh: mockRefresh,
-  refreshFromNetwork: mockRefreshFromNetwork,
   prependPosts: mockPrependPosts,
   prependOptimisticPosts: mockPrependOptimisticPosts,
   removePosts: mockRemovePosts,

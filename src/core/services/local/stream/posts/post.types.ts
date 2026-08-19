@@ -16,11 +16,6 @@ export interface TPostStreamBulkParams {
   postStreams: TPostStreamUpsertParams[];
 }
 
-export interface TDeletedPostStreams {
-  cachedStreamIds: PostStreamId[];
-  unreadStreamIds: PostStreamId[];
-}
-
 export interface TPostDetailsTimestampParams {
   postCompositeId: string;
 }
