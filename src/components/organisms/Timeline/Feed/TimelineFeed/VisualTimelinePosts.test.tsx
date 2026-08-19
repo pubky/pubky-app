@@ -917,6 +917,58 @@ describe('VisualTimelinePosts', () => {
         });
       });
     });
+
+    it('arms the observer when postIds is empty but hasMore (filtered stream region)', () => {
+      // A fully-filtered stream region leaves postIds itself empty — the sentinel
+      // must stay armed so load rounds chain toward the first visible posts.
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: [],
+        tail: [],
+        tiles: [],
+        hasPendingSnapshot: false,
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hasPendingPostDetails: false,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ hasMore: true }));
+    });
+
+    it('keeps the observer quiet while rows resolve for existing postIds (backfill effect owns that case)', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: [],
+        tail: [],
+        tiles: [],
+        hasPendingSnapshot: false,
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hasPendingPostDetails: false,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ hasMore: false }));
+    });
   });
 
   describe('Trailing slot, empty state, and hidden items', () => {

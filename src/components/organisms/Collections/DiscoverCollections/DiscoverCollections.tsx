@@ -11,6 +11,7 @@ import { COLLECTIONS_SECTION_PAGE_SIZE, COLLECTIONS_SECTION_SKELETON_COUNT } fro
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { resolveResumeAnchor } from '@/controllers/stream/posts/posts.utils';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { isPostDeleted } from '@/libs/utils/utils';
@@ -153,9 +154,10 @@ export function DiscoverCollections() {
       const seen = new Set(base);
       const fresh = result.nextPageIds.filter((id) => !seen.has(id));
 
-      const lastRawId = result.nextPageIds[result.nextPageIds.length - 1];
+      // Anchor is inert for this skip stream's offset pagination, but resolves the
+      // same way as every other feed so the semantics stay uniform.
       cursorRef.current = {
-        lastPostId: lastRawId ?? cursor.lastPostId,
+        lastPostId: resolveResumeAnchor(result) ?? cursor.lastPostId,
         streamTail: result.nextCursor ?? cursor.streamTail,
       };
       setReachedEnd(result.reachedEnd === true);

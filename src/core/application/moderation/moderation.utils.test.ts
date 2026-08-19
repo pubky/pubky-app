@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { getModeratedTags, getModerationId } from '@/config/moderation';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as moderationConfig from '@/config/moderation';
+import { APP_RUNTIME_DEFAULTS } from '@/libs/runtime-config/runtime-config.schema';
 import { detectModerationFromTags, shouldBlur } from './moderation.utils';
 
 describe('moderation.utils', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('detectModerationFromTags', () => {
     it('should return false for null tags', () => {
       const result = detectModerationFromTags(null);
@@ -22,8 +27,8 @@ describe('moderation.utils', () => {
     it('should return true when tag has moderation label and moderation tagger', () => {
       const tags = [
         {
-          label: getModeratedTags()[0],
-          taggers: [getModerationId()],
+          label: moderationConfig.getModeratedTags()[0],
+          taggers: [APP_RUNTIME_DEFAULTS.moderationId],
         },
       ];
 
@@ -34,7 +39,7 @@ describe('moderation.utils', () => {
     it('should return false when tag has moderation label but wrong tagger', () => {
       const tags = [
         {
-          label: getModeratedTags()[0],
+          label: moderationConfig.getModeratedTags()[0],
           taggers: ['other-tagger'],
         },
       ];
@@ -47,7 +52,7 @@ describe('moderation.utils', () => {
       const tags = [
         {
           label: 'other-label',
-          taggers: [getModerationId()],
+          taggers: [APP_RUNTIME_DEFAULTS.moderationId],
         },
       ];
 
@@ -62,8 +67,8 @@ describe('moderation.utils', () => {
           taggers: ['other-tagger'],
         },
         {
-          label: getModeratedTags()[0],
-          taggers: [getModerationId()],
+          label: moderationConfig.getModeratedTags()[0],
+          taggers: [APP_RUNTIME_DEFAULTS.moderationId],
         },
         {
           label: 'another-label',
@@ -73,6 +78,18 @@ describe('moderation.utils', () => {
 
       const result = detectModerationFromTags(tags);
       expect(result).toBe(true);
+    });
+
+    it('should return false when the moderation identity is unset', () => {
+      vi.spyOn(moderationConfig, 'getModerationId').mockReturnValue(undefined);
+      const tags = [
+        {
+          label: moderationConfig.getModeratedTags()[0],
+          taggers: [APP_RUNTIME_DEFAULTS.moderationId],
+        },
+      ];
+
+      expect(detectModerationFromTags(tags)).toBe(false);
     });
   });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Frown } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
 
 export function NotificationsEmpty() {
@@ -8,8 +8,8 @@ export function NotificationsEmpty() {
     <IllustratedEmptyState
       imageSrc="/images/notifications-empty-state.webp"
       imageAlt={'Notifications - Empty state'}
-      icon={Frown}
-      title={'Nothing to see here yet'}
+      icon={Bell}
+      title={'No notifications yet'}
       subtitle={'Tags, follows, reposts and account information will be displayed here.'}
     />
   );

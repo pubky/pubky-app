@@ -13,13 +13,13 @@ Notifications are cross-domain entity aggregations. Each notification references
 
 When fetching notifications from Nexus, referenced posts and users must be hydrated into the local cache **before** persisting notifications.
 
-ADR-0009 restricts orchestration privilege to `PostApplication` and `UserApplication`. However, `NotificationApplication` legitimately requires cross-Application calls for entity pre-fetching.
+[ADR-0009](./0009-application-cross-domain-orchestration.md) defines which Applications may call other Applications. `NotificationApplication` needs that privilege for entity pre-fetching, but with tighter constraints than general orchestrators (network reads with local cache persistence, before notification persistence only).
 
 ## Decision
 
-**Extend the orchestration privilege (ADR-0009) to include `NotificationApplication`.**
+**Include `NotificationApplication` as an allowed orchestrator under ADR-0009 rule #4, scoped to network-read cache hydration before notification persistence.**
 
-This ADR amends ADR-0009 rule #4 with a scoped exception: `NotificationApplication` is an allowed orchestrator only for pre-persistence read hydration.
+The canonical allowlist lives in ADR-0009. This ADR defines the **extra constraints** that apply when `NotificationApplication` uses that privilege.
 
 `NotificationApplication` MAY call:
 
@@ -28,16 +28,16 @@ This ADR amends ADR-0009 rule #4 with a scoped exception: `NotificationApplicati
 
 Constraints:
 
-1. **Read-only hydration**: Only fetch/read operations permitted—no writes to post or user domains
+1. **Network-read cache hydration only**: Nexus reads and local post, file, and user cache persistence are permitted; homeserver writes and user-authored domain mutations are not
 2. **Pre-persistence only**: Cross-Application calls must occur before persisting notifications
 3. **No reverse dependencies**: `PostStreamApplication` and `UserStreamApplication` MUST NOT call `NotificationApplication`
-4. **Max depth 1**: Standard ADR-0009 depth rule applies
+4. **Call depth**: The ADR-0009 attachment-persistence exception permits `NotificationApplication` → `PostStreamApplication` → `FileApplication`; no other depth-2 path is permitted
 
 ## Consequences
 
 ✅ Ensures UI renders complete notification data (no missing entities)  
-✅ Formalizes existing implementation pattern  
-⚠️ Adds third orchestrator to review checklist (Post, User, Notification)
+✅ Formalizes the hydration-before-persist pattern  
+⚠️ Reviewers must check Notification’s scoped constraints in addition to the ADR-0009 allowlist
 
 ## Related Decisions
 

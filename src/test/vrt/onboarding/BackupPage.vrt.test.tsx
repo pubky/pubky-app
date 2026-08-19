@@ -57,10 +57,7 @@ describe('BackupPage (onboarding) — visual regression', () => {
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-backup-desktop');
   });
 
-  // Skipped: backup-method buttons (Recovery phrase / Encrypted file) stack and
-  // misalign instead of sitting side-by-side (known bug #1976). No baseline is
-  // committed while broken; re-enable and generate it once fixed.
-  it.skip('renders the backup page at mobile viewport', async () => {
+  it('renders the backup page at mobile viewport', async () => {
     const screen = await renderForVRT(<BackupWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-backup-mobile');
   });

@@ -126,10 +126,42 @@ describe('stripImageMetadata', () => {
     return [(value >> 8) & 0xff, value & 0xff];
   }
 
-  function buildJpegBytes(width: number, height: number): ArrayBuffer {
+  function buildExifApp1Bytes(orientation: number, bigEndian: boolean): number[] {
+    const byteOrderByte = bigEndian ? 0x4d : 0x49;
+    const uint16 = (value: number) =>
+      bigEndian ? [(value >> 8) & 0xff, value & 0xff] : [value & 0xff, (value >> 8) & 0xff];
+    const uint32 = (value: number) =>
+      bigEndian
+        ? [(value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff]
+        : [value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff];
+
+    const tiffBytes = [
+      byteOrderByte,
+      byteOrderByte,
+      ...uint16(42), // TIFF magic
+      ...uint32(8), // IFD0 offset
+      ...uint16(1), // entry count
+      ...uint16(0x0112), // Orientation tag
+      ...uint16(3), // type SHORT
+      ...uint32(1), // count
+      ...uint16(orientation),
+      0x00,
+      0x00, // SHORT left-justified in 4-byte value field
+      ...uint32(0), // no next IFD
+    ];
+    const payload = [...asciiBytes('Exif\0\0'), ...tiffBytes];
+    return [0xff, 0xe1, ...uint16BigEndianBytes(payload.length + 2), ...payload];
+  }
+
+  function buildJpegBytes(
+    width: number,
+    height: number,
+    exif?: { orientation: number; bigEndian?: boolean },
+  ): ArrayBuffer {
     const bytes = new Uint8Array([
       0xff,
       0xd8,
+      ...(exif ? buildExifApp1Bytes(exif.orientation, exif.bigEndian ?? false) : []),
       0xff,
       0xe0,
       0x00,
@@ -260,6 +292,126 @@ describe('stripImageMetadata', () => {
     expect(mockContext.drawImage).toHaveBeenCalledWith(bitmap, 0, 0, IMAGE_MAX_DIMENSION, 1536);
     expect(bitmapClose).toHaveBeenCalled();
     expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  function mockCreateImageBitmapHonoringResize(): ReturnType<typeof vi.fn> {
+    const createImageBitmapMock = vi.fn().mockImplementation((_file, options) =>
+      Promise.resolve(
+        asOpaque<ImageBitmap>({
+          close: vi.fn(),
+          width: options.resizeWidth,
+          height: options.resizeHeight,
+        }),
+      ),
+    );
+    Object.defineProperty(globalThis, 'createImageBitmap', {
+      configurable: true,
+      value: createImageBitmapMock,
+      writable: true,
+    });
+    return createImageBitmapMock;
+  }
+
+  it('swaps the resize target for EXIF-rotated portrait JPEGs to preserve aspect ratio', async () => {
+    const createImageBitmapMock = mockCreateImageBitmapHonoringResize();
+    // Portrait phone shot: stored 4032×3024 + orientation 6 → displays as 3024×4032
+    const inputFile = new File([buildJpegBytes(4032, 3024, { orientation: 6 })], 'portrait.jpg', {
+      type: 'image/jpeg',
+    });
+
+    await stripImageMetadata(inputFile);
+
+    expect(createImageBitmapMock).toHaveBeenCalledWith(inputFile, {
+      imageOrientation: 'from-image',
+      resizeWidth: 1536,
+      resizeHeight: IMAGE_MAX_DIMENSION,
+      resizeQuality: 'high',
+    });
+    expect(mockCanvas.width).toBe(1536);
+    expect(mockCanvas.height).toBe(IMAGE_MAX_DIMENSION);
+    expect(mockContext.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 1536, IMAGE_MAX_DIMENSION);
+  });
+
+  it('swaps the resize target for big-endian EXIF orientation 8', async () => {
+    const createImageBitmapMock = mockCreateImageBitmapHonoringResize();
+    const inputFile = new File([buildJpegBytes(4032, 3024, { orientation: 8, bigEndian: true })], 'portrait.jpg', {
+      type: 'image/jpeg',
+    });
+
+    await stripImageMetadata(inputFile);
+
+    expect(createImageBitmapMock).toHaveBeenCalledWith(inputFile, {
+      imageOrientation: 'from-image',
+      resizeWidth: 1536,
+      resizeHeight: IMAGE_MAX_DIMENSION,
+      resizeQuality: 'high',
+    });
+    expect(mockCanvas.width).toBe(1536);
+    expect(mockCanvas.height).toBe(IMAGE_MAX_DIMENSION);
+  });
+
+  it('keeps the raw resize target for EXIF orientation 1', async () => {
+    const createImageBitmapMock = mockCreateImageBitmapHonoringResize();
+    const inputFile = new File([buildJpegBytes(4032, 3024, { orientation: 1 })], 'landscape.jpg', {
+      type: 'image/jpeg',
+    });
+
+    await stripImageMetadata(inputFile);
+
+    expect(createImageBitmapMock).toHaveBeenCalledWith(inputFile, {
+      imageOrientation: 'from-image',
+      resizeWidth: IMAGE_MAX_DIMENSION,
+      resizeHeight: 1536,
+      resizeQuality: 'high',
+    });
+    expect(mockCanvas.width).toBe(IMAGE_MAX_DIMENSION);
+    expect(mockCanvas.height).toBe(1536);
+  });
+
+  it('falls back to an unresized decode when the browser ignores the resize request', async () => {
+    const firstBitmapClose = vi.fn();
+    const fallbackBitmapClose = vi.fn();
+    const fallbackBitmap = asOpaque<ImageBitmap>({ close: fallbackBitmapClose, width: 3024, height: 4032 });
+    const createImageBitmapMock = vi
+      .fn()
+      .mockResolvedValueOnce(asOpaque<ImageBitmap>({ close: firstBitmapClose, width: 3024, height: 4032 }))
+      .mockResolvedValueOnce(fallbackBitmap);
+    Object.defineProperty(globalThis, 'createImageBitmap', {
+      configurable: true,
+      value: createImageBitmapMock,
+      writable: true,
+    });
+    const inputFile = new File([buildJpegBytes(4032, 3024, { orientation: 6 })], 'portrait.jpg', {
+      type: 'image/jpeg',
+    });
+
+    await stripImageMetadata(inputFile);
+
+    expect(createImageBitmapMock).toHaveBeenNthCalledWith(2, inputFile, { imageOrientation: 'from-image' });
+    expect(firstBitmapClose).toHaveBeenCalled();
+    expect(mockCanvas.width).toBe(1536);
+    expect(mockCanvas.height).toBe(IMAGE_MAX_DIMENSION);
+    expect(mockContext.drawImage).toHaveBeenCalledWith(fallbackBitmap, 0, 0, 1536, IMAGE_MAX_DIMENSION);
+    expect(fallbackBitmapClose).toHaveBeenCalled();
+  });
+
+  it('skips decode-time resizing for WebP with the EXIF flag set', async () => {
+    const createImageBitmapMock = mockCreateImageBitmapHonoringResize();
+    const webpWithExif = buildWebpBytes([
+      {
+        type: 'VP8X',
+        payload: new Uint8Array([WEBP_EXIF_FLAG, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+      },
+      { type: 'VP8 ', payload: new Uint8Array(20) },
+    ]);
+    const inputFile = new File([webpWithExif], 'rotated.webp', { type: 'image/webp' });
+
+    const result = await stripImageMetadata(inputFile);
+
+    expect(result.type).toBe('image/webp');
+    expect(createImageBitmapMock).not.toHaveBeenCalled();
+    expect(URL.createObjectURL).toHaveBeenCalledWith(inputFile);
+    expect(mockCanvas.toBlob).toHaveBeenCalled();
   });
 
   it('rejects image files exceeding the raw image cap before decoding', async () => {

@@ -3,11 +3,14 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { OnboardingScanPage } from '@/templates/Onboarding/OnboardingScanPage/OnboardingScanPage';
+
+// Preload images into cache to guarantee they render before snapshot.
+const SCAN_PAGE_IMAGE_URLS = ['/images/scan.webp', '/images/ring-logo.svg', '/images/logo-pubky-ring.svg'];
 
 // The real app mounts <Header /> from the root layout above every page; on
 // /onboarding/* it renders the "Create account" step bar (1–5). Render it here
@@ -80,11 +83,13 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 
 describe('OnboardingScanPage (onboarding) — visual regression', () => {
   it('renders the scan/QR page at desktop viewport', async () => {
+    await preloadImages(SCAN_PAGE_IMAGE_URLS);
     const screen = await renderForVRT(<ScanWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-scan-desktop');
   });
 
   it('renders the scan/QR page at mobile viewport', async () => {
+    await preloadImages(SCAN_PAGE_IMAGE_URLS);
     const screen = await renderForVRT(<ScanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-scan-mobile');
   });

@@ -25,6 +25,7 @@ import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMention
 import { usePost } from '@/hooks/usePost/usePost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { Logger } from '@/libs/logger/logger';
+import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
@@ -228,6 +229,18 @@ export function usePostInput({
             const streamId = timelineFeed?.streamId;
             if (!streamId) {
               await timelineFeed?.prependPosts(createdPostId);
+              return;
+            }
+
+            /*
+              WoT-sourced streams ('My network', 'Tagged as') never contain the
+              viewer's own posts (Nexus excludes them and the local create path
+              never writes into them), so prepending would flash the post and
+              lose it on the next stream reset (#2308). Unlike the kind gate
+              below, this check is NOT mirrored in `NewPostsSection`: unread ids
+              there come from polling the WoT stream itself, so they belong.
+            */
+            if (isViewerExcludedWotStream(streamId)) {
               return;
             }
 

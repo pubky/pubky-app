@@ -3,11 +3,16 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { Landing } from '@/templates/Public/Landing/Landing';
+
+// Preload images into cache to guarantee they render before snapshot.
+// This ensures the logo and Synonym/"a tether. company" brand mark <img>s are loaded up front,
+// preventing intermittent blank rendering in CI due to cold fetch racing initial paint.
+const LANDING_LOGO_URLS = ['/pubky-logo.svg', '/images/synonym-grey-logo.svg', '/images/a-tether-company.svg'];
 
 // Root layout mounts `<Header />` above every page. On `/` it renders
 // HeaderHome (social links + sign in) for guests — include it so the
@@ -77,6 +82,7 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 
 describe('Landing — visual regression', () => {
   it('renders the landing hero at desktop viewport', async () => {
+    await preloadImages(LANDING_LOGO_URLS);
     const screen = await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
     // Viewport-clamped root: first fold only (hero is min-h-svh; lower
     // sections are intentionally cropped — see docs/visual-regression-testing.md).
@@ -84,6 +90,7 @@ describe('Landing — visual regression', () => {
   });
 
   it('renders the landing hero at mobile viewport', async () => {
+    await preloadImages(LANDING_LOGO_URLS);
     const screen = await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('landing-mobile');
   });

@@ -116,7 +116,7 @@ UI → Controllers (user-initiated actions)
 Coordinators → Controllers (system-initiated actions)
 Controllers → Pipes, Application, Stores
 Application → Pipes, Services (local, homeserver, nexus)
-Application → Application (cross-domain, acyclic only, max depth 1)
+Application → Application (cross-domain, acyclic, max depth 1 by default; see ADR-0009 for the depth-2 attachment-persistence exception)
 Services:
   local → Models
   homeserver → network only
@@ -134,6 +134,7 @@ Only these Applications can call other Applications:
 - `PostApplication`
 - `NotificationApplication`
 - `BootstrapApplication`
+- `MigrationApplication`
 - `HotApplication`
 - `PostStreamApplication`
 - `TtlApplication`
@@ -157,8 +158,13 @@ static async commitCreate({ fileAttachments }) {
 // FORBIDDEN: No circular dependencies
 PostApplication → FileApplication → PostApplication  // VIOLATION
 
-// FORBIDDEN: Max call depth is 1
-PostApplication → FileApplication → ImageProcessor  // VIOLATION
+// ONLY ALLOWED DEPTH-2 PATHS: attachment persistence via PostStreamApplication
+PostApplication | NotificationApplication | TtlApplication
+  → PostStreamApplication
+    → FileApplication
+
+// FORBIDDEN: Every other depth-2 path and all paths of depth 3 or greater
+PostApplication → FileApplication → ImageProcessorApplication  // VIOLATION
 ```
 
 Since the architecture uses static classes without dependency injection, these constraints **cannot be enforced at compile time**. They are enforced through code reviews and documentation. See ADR-0009.

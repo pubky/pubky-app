@@ -1,0 +1,123 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RepliesEmpty - Snapshots > matches snapshot on another user profile 1`] = `
+<div
+  data-testid="empty-state"
+>
+  <div
+    data-alt="Replies - Empty state"
+    data-src="/images/posts-replies-empty-state.webp"
+    data-testid="image"
+  />
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-users-round"
+    data-testid="users-round-icon"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M18 21a8 8 0 0 0-16 0"
+    />
+    <circle
+      cx="10"
+      cy="8"
+      r="5"
+    />
+    <path
+      d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"
+    />
+  </svg>
+  <h3>
+    No replies yet
+  </h3>
+  <p>
+    This user hasn't replied yet.
+  </p>
+</div>
+`;
+
+exports[`RepliesEmpty - Snapshots > matches snapshot on own profile 1`] = `
+<div
+  data-testid="empty-state"
+>
+  <div
+    data-alt="Replies - Empty state"
+    data-src="/images/posts-replies-empty-state.webp"
+    data-testid="image"
+  />
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-users-round"
+    data-testid="users-round-icon"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M18 21a8 8 0 0 0-16 0"
+    />
+    <circle
+      cx="10"
+      cy="8"
+      r="5"
+    />
+    <path
+      d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"
+    />
+  </svg>
+  <h3>
+    No replies yet
+  </h3>
+  <p>
+    Find a post in your feed to reply to.
+  </p>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 px-4 py-2 has-[>svg]:px-4 gap-2"
+    data-cy="profile-replies-empty-create-post"
+    data-size="default"
+    data-slot="button"
+    data-variant="secondary"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-plus size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M5 12h14"
+      />
+      <path
+        d="M12 5v14"
+      />
+    </svg>
+    <span
+      data-testid="typography"
+    >
+      Create a Post
+    </span>
+  </button>
+</div>
+`;

@@ -89,10 +89,7 @@ describe('PublicKey (onboarding) — visual regression', () => {
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-pubky-desktop');
   });
 
-  // Skipped: the card still shows a leftover Share button (v20 design) that
-  // should be removed in v25 (known bug #1977). No baseline is committed while
-  // broken; re-enable and generate it once fixed.
-  it.skip('renders the public-key page at mobile viewport', async () => {
+  it('renders the public-key page at mobile viewport', async () => {
     const screen = await renderForVRT(<PublicKeyWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-pubky-mobile');
   });
