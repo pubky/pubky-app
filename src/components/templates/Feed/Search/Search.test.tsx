@@ -141,6 +141,13 @@ describe('Search - Snapshots', () => {
     const { container } = render(<Search />);
     expect(container).toMatchSnapshot();
   });
+
+  it('matches snapshot with full-text results', () => {
+    mockUseContentSearchQuery.mockReturnValue('bitcoin wallet');
+    mockUseSearchTags.mockReturnValue(['ignored-tag']);
+    const { container } = render(<Search />);
+    expect(container).toMatchSnapshot();
+  });
 });
 
 describe('Search - Mobile Snapshots', () => {

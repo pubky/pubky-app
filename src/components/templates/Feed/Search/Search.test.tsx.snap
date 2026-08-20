@@ -32,6 +32,39 @@ exports[`Search - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 </div>
 `;
 
+exports[`Search - Snapshots > matches snapshot with full-text results 1`] = `
+<div>
+  <div
+    class="lg:hidden"
+    data-testid="container"
+  >
+    <div
+      data-auto-focus="false"
+      data-testid="search-input"
+    >
+      SearchInput
+    </div>
+  </div>
+  <div
+    data-query="bitcoin wallet"
+    data-testid="search-header"
+  >
+    SearchHeader
+  </div>
+  <div
+    data-cy="post-search-results"
+    data-testid="container"
+  >
+    <div
+      data-testid="timeline-feed"
+      data-variant="search"
+    >
+      TimelineFeed
+    </div>
+  </div>
+</div>
+`;
+
 exports[`Search - Snapshots > matches snapshot with no tags 1`] = `
 <div>
   <div

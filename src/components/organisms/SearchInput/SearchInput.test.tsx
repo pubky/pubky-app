@@ -95,6 +95,7 @@ describe('SearchInput', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // Reset URL search params
+    mockSearchParams.delete('q');
     mockSearchParams.delete('tags');
     // Reset hooks to default state before each test
     vi.mocked(useSearchInput).mockReturnValue({
@@ -380,6 +381,24 @@ describe('SearchInput', () => {
   });
 
   describe('Content Search', () => {
+    it('ignores active tags when a valid q parameter is present', () => {
+      mockSearchParams.set('q', 'bitcoin');
+      mockSearchParams.set('tags', 'nostr,pubky');
+      vi.mocked(useTagSearch).mockReturnValue({
+        addTagToSearch: mockAddTagToSearch,
+        removeTagFromSearch: mockRemoveTagFromSearch,
+        activeTags: ['nostr', 'pubky'],
+        isReadOnly: true,
+      });
+
+      render(<SearchInput />);
+
+      expect(screen.queryByRole('button', { name: 'nostr tag' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'pubky tag' })).not.toBeInTheDocument();
+      expect(screen.getByRole('textbox')).not.toHaveAttribute('readOnly');
+      expect(mockSetActiveTags).toHaveBeenCalledWith([]);
+    });
+
     it('uses the same q-only navigation for Enter and Show all results', () => {
       const clearInputValue = vi.fn();
       const setFocus = vi.fn();

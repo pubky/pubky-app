@@ -9,6 +9,7 @@ import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
+import { useContentSearchQuery } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { validateContentSearchQuery } from '@/libs/search/contentSearch';
 import type { Pubky } from '@/models/models.types';
@@ -28,6 +29,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = useSearchStore();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isMobile = useIsMobile();
+  const contentSearchQuery = useContentSearchQuery();
 
   const submitContentSearch = (value: string): boolean => {
     const validation = validateContentSearchQuery(value);
@@ -56,9 +58,9 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
 
   const tagsParam = searchParams.get('tags');
   useEffect(() => {
-    const urlTags = parseTagsFromUrl(tagsParam);
+    const urlTags = contentSearchQuery ? [] : parseTagsFromUrl(tagsParam);
     setActiveTags(urlTags);
-  }, [tagsParam, setActiveTags]);
+  }, [contentSearchQuery, tagsParam, setActiveTags]);
 
   const { tags: hotTags } = useHotTags({ limit: CLICKABLE_TAGS_DEFAULT_MAX_LENGTH });
 
@@ -104,10 +106,10 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     <Container ref={containerRef} data-testid="search-input" className="relative min-w-0">
       {/* Input bar with active tags */}
       <SearchInputBar
-        activeTags={activeTags}
+        activeTags={contentSearchQuery ? [] : activeTags}
         inputValue={inputValue}
         isFocused={isFocused}
-        isReadOnly={isReadOnly}
+        isReadOnly={contentSearchQuery ? false : isReadOnly}
         isExpanded={hasSuggestions}
         suggestionsId={hasSuggestions ? suggestionsId : undefined}
         inputRef={inputRef}
