@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PubkyAppFeedReach } from 'pubky-app-specs';
@@ -48,6 +48,10 @@ type UseCustomFeedFormResult = {
 export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFeedFormResult {
   const { mode, feed, open } = params;
   const [loading, setLoading] = useState(false);
+  // Synchronous re-entrancy truth: a queued second click can run a stale
+  // render's closure before React commits `loading`, so the guard cannot rely
+  // on state alone.
+  const inFlightRef = useRef(false);
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
@@ -69,70 +73,73 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
   }, [open, feed, form]);
 
   const submit = async (): Promise<boolean> => {
-    if (loading) return false;
+    if (inFlightRef.current) return false;
+    inFlightRef.current = true;
+    setLoading(true);
 
     let saved = false;
 
-    await form.handleSubmit(async (data) => {
-      setLoading(true);
+    try {
+      await form.handleSubmit(async (data) => {
+        // `null` is the feed record's "no content filter"; the form carries a
+        // sentinel instead because a Select cannot hold null as an option value.
+        // Tagged as is a UI-only reach: persist as WoT + the form's domain_tags.
+        const { reach: formReach, content: formContent, ...rest } = data;
+        const changes = {
+          ...rest,
+          reach: formReach === TAGGED_AS_FILTER_KEY ? PubkyAppFeedReach.Wot : formReach,
+          content: formContent === CUSTOM_FEED_CONTENT_ALL ? null : formContent,
+        };
 
-      // `null` is the feed record's "no content filter"; the form carries a
-      // sentinel instead because a Select cannot hold null as an option value.
-      // Tagged as is a UI-only reach: persist as WoT + the form's domain_tags.
-      const { reach: formReach, content: formContent, ...rest } = data;
-      const changes = {
-        ...rest,
-        reach: formReach === TAGGED_AS_FILTER_KEY ? PubkyAppFeedReach.Wot : formReach,
-        content: formContent === CUSTOM_FEED_CONTENT_ALL ? null : formContent,
-      };
+        try {
+          if (mode === 'create') {
+            const createdFeed = await FeedController.commitCreate(changes);
 
-      try {
-        if (mode === 'create') {
-          const createdFeed = await FeedController.commitCreate(changes);
+            toast({
+              title: `Feed created: ${createdFeed.name}`,
+            });
+            router.push(`${APP_ROUTES.FEED}/${createdFeed.id}`);
+            saved = true;
+
+            return;
+          }
+
+          const currentFeedHref = `${APP_ROUTES.FEED}/${feed.id}`;
+          const updatedFeed = await FeedController.commitUpdate({
+            feedId: feed.id,
+            changes,
+          });
 
           toast({
-            title: `Feed created: ${createdFeed.name}`,
+            title: `Feed updated: ${updatedFeed.name}`,
           });
-          router.push(`${APP_ROUTES.FEED}/${createdFeed.id}`);
+
+          // Config edits rehash the id, which moves the feed's route. Only a
+          // reader standing on the old route needs redirecting, and via `replace`
+          // (not `push`) because the old id no longer resolves.
+          if (pathname === currentFeedHref && updatedFeed.id !== feed.id) {
+            router.replace(`${APP_ROUTES.FEED}/${updatedFeed.id}`);
+          }
+
           saved = true;
-
-          return;
+        } catch {
+          toast({
+            variant: 'error',
+            description: mode === 'create' ? 'Could not create feed. Try again.' : 'Could not update feed. Try again.',
+          });
         }
-
-        const currentFeedHref = `${APP_ROUTES.FEED}/${feed.id}`;
-        const updatedFeed = await FeedController.commitUpdate({
-          feedId: feed.id,
-          changes,
-        });
-
-        toast({
-          title: `Feed updated: ${updatedFeed.name}`,
-        });
-
-        // Config edits rehash the id, which moves the feed's route. Only a
-        // reader standing on the old route needs redirecting, and via `replace`
-        // (not `push`) because the old id no longer resolves.
-        if (pathname === currentFeedHref && updatedFeed.id !== feed.id) {
-          router.replace(`${APP_ROUTES.FEED}/${updatedFeed.id}`);
-        }
-
-        saved = true;
-      } catch {
-        toast({
-          variant: 'error',
-          description: mode === 'create' ? 'Could not create feed. Try again.' : 'Could not update feed. Try again.',
-        });
-      } finally {
-        setLoading(false);
-      }
-    })();
+      })();
+    } finally {
+      inFlightRef.current = false;
+      setLoading(false);
+    }
 
     return saved;
   };
 
   const deleteFeed = async (): Promise<boolean> => {
-    if (loading || mode !== 'edit') return false;
-
+    if (inFlightRef.current || mode !== 'edit') return false;
+    inFlightRef.current = true;
     setLoading(true);
 
     try {
@@ -158,6 +165,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
 
       return false;
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
     }
   };

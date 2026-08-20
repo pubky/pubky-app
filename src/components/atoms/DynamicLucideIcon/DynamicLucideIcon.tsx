@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Activity, Icon, type IconNode, type LucideIcon, type LucideProps } from 'lucide-react';
 import type { IconName } from 'lucide-react/dynamic.js';
-import { getLoadedLucideIconNode, isLucideIconName, loadLucideIconNode } from '@/libs/utils/lucideIcons';
+import { getLoadedLucideIconNode, isPlausibleLucideIconName, loadLucideIconNode } from '@/libs/utils/lucideIcons';
 
 const EMPTY_ICON_NODE: IconNode = [];
 
@@ -33,7 +33,9 @@ function resolveFromCache(name: IconName | null): ResolvedIcon {
  */
 export function DynamicLucideIcon({ name, fallback, ...iconProps }: DynamicLucideIconProps) {
   const FallbackIcon = fallback === undefined ? Activity : fallback;
-  const validName = isLucideIconName(name) ? name : null;
+  // Shape check only — the catalog is lazy-loaded, so a plausible-but-unknown
+  // name resolves to a null node and lands on the fallback via `failed`.
+  const validName = isPlausibleLucideIconName(name) ? name : null;
   const [resolved, setResolved] = useState<ResolvedIcon>(() => resolveFromCache(validName));
 
   // Adjust state during render when the requested icon changes, so a cached

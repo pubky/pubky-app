@@ -4,6 +4,7 @@ import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useSelectedReachFilter } from '@/hooks/useSelectedReachFilter/useSelectedReachFilter';
 import { FilterContent } from '@/molecules/Filters/FilterContent/FilterContent';
 import { FilterLayout } from '@/molecules/Filters/FilterLayout/FilterLayout';
 import { FilterReach, type ReachFilterValue, TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
@@ -36,7 +37,6 @@ function HomeFeedFilters({
   const {
     layout,
     setLayout,
-    reach,
     setReach,
     taggedAsActive,
     setTaggedAsActive,
@@ -51,9 +51,7 @@ function HomeFeedFilters({
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { requireAuth } = useRequireAuth();
   const isAuthenticated = Boolean(currentUserPubky);
-  const effectiveReach = isAuthenticated ? reach : REACH.ALL;
-  const selectedReach: ReachFilterValue =
-    isAuthenticated && taggedAsActive && profileTags.length > 0 ? TAGGED_AS_FILTER_KEY : effectiveReach;
+  const selectedReach = useSelectedReachFilter();
   const effectiveProfileTags = isAuthenticated ? profileTags : [];
   const { isPhoneViewport, isVisualActive } = useFeedLayoutResolution(feedVariant);
 

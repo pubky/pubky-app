@@ -1,35 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import {
   getLoadedLucideIconNode,
-  isLucideIconName,
+  isPlausibleLucideIconName,
   loadLucideIconNode,
-  LUCIDE_CANONICAL_ICON_NAMES,
-  LUCIDE_ICON_NAMES,
+  loadLucidePickerIcons,
   preloadLucideIcons,
 } from './lucideIcons';
 
 describe('lucideIcons', () => {
-  it('exposes the installed Lucide icon names', () => {
-    expect(LUCIDE_ICON_NAMES).toContain('activity');
-    expect(LUCIDE_ICON_NAMES).toContain('library');
+  it('accepts kebab-case icon name shapes, including foreign ones', () => {
+    expect(isPlausibleLucideIconName('activity')).toBe(true);
+    expect(isPlausibleLucideIconName('alarm-clock-check')).toBe(true);
+    // Another client's icon set — must pass the shape check so it round-trips.
+    expect(isPlausibleLucideIconName('not-a-real-lucide-icon')).toBe(true);
   });
 
-  it('recognizes valid Lucide icon names', () => {
-    expect(isLucideIconName('activity')).toBe(true);
+  it('rejects missing and malformed icon names', () => {
+    expect(isPlausibleLucideIconName(undefined)).toBe(false);
+    expect(isPlausibleLucideIconName(null)).toBe(false);
+    expect(isPlausibleLucideIconName('')).toBe(false);
+    expect(isPlausibleLucideIconName('Not An Icon')).toBe(false);
+    expect(isPlausibleLucideIconName('-leading-dash')).toBe(false);
   });
 
-  it('rejects missing and unknown icon names', () => {
-    expect(isLucideIconName(undefined)).toBe(false);
-    expect(isLucideIconName(null)).toBe(false);
-    expect(isLucideIconName('not-a-real-lucide-icon')).toBe(false);
-  });
+  it('lists canonical picker entries with their deprecated aliases attached', async () => {
+    const pickerIcons = await loadLucidePickerIcons();
+    const names = pickerIcons.map((icon) => icon.name);
 
-  it('hides deprecated aliases from the canonical list but keeps them valid', () => {
-    // 'alarm-check' is a deprecated alias of 'alarm-clock-check' — same glyph.
-    expect(LUCIDE_CANONICAL_ICON_NAMES).not.toContain('alarm-check');
-    expect(LUCIDE_CANONICAL_ICON_NAMES).toContain('alarm-clock-check');
-    expect(isLucideIconName('alarm-check')).toBe(true);
-    expect(LUCIDE_CANONICAL_ICON_NAMES.length).toBeLessThan(LUCIDE_ICON_NAMES.length);
+    expect(names).toContain('activity');
+    expect(names).toContain('library');
+    // 'alarm-check' is a deprecated alias of 'alarm-clock-check' — same glyph,
+    // hidden from the grid but searchable through the canonical entry.
+    expect(names).not.toContain('alarm-check');
+    const alarmClockCheck = pickerIcons.find((icon) => icon.name === 'alarm-clock-check');
+    expect(alarmClockCheck?.aliases).toContain('alarm-check');
+    // 'home' aliases 'house' — the picker search relies on this mapping.
+    const house = pickerIcons.find((icon) => icon.name === 'house');
+    expect(house?.aliases).toContain('home');
   });
 
   it('loads an icon node and serves it synchronously from the cache afterwards', async () => {
@@ -41,6 +48,12 @@ describe('lucideIcons', () => {
     expect(getLoadedLucideIconNode('mountain')).toBe(node);
   });
 
+  it('resolves null for a name the catalog does not contain', async () => {
+    const node = await loadLucideIconNode('not-a-real-lucide-icon' as Parameters<typeof loadLucideIconNode>[0]);
+
+    expect(node).toBeNull();
+  });
+
   it('dedupes concurrent loads of the same icon', async () => {
     const [first, second] = await Promise.all([loadLucideIconNode('anchor'), loadLucideIconNode('anchor')]);
 
@@ -48,8 +61,8 @@ describe('lucideIcons', () => {
     expect(first).toBe(second);
   });
 
-  it('preloads valid names and silently skips the rest', async () => {
-    expect(() => preloadLucideIcons(['not-a-real-lucide-icon', null, undefined, 'wrench'])).not.toThrow();
+  it('preloads plausible names and silently skips the rest', async () => {
+    expect(() => preloadLucideIcons(['Not An Icon', null, undefined, 'wrench'])).not.toThrow();
 
     expect(await loadLucideIconNode('wrench')).toBe(getLoadedLucideIconNode('wrench'));
     expect(getLoadedLucideIconNode('wrench')).toBeDefined();

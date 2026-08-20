@@ -15,7 +15,12 @@ import { DynamicLucideIcon } from '@/atoms/DynamicLucideIcon/DynamicLucideIcon';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { isLucideIconName, LUCIDE_CANONICAL_ICON_NAMES, preloadLucideIcons } from '@/libs/utils/lucideIcons';
+import {
+  isPlausibleLucideIconName,
+  loadLucidePickerIcons,
+  type LucidePickerIcon,
+  preloadLucideIcons,
+} from '@/libs/utils/lucideIcons';
 import { cn } from '@/libs/utils/utils';
 
 // The virtualization math below is coupled to the grid's Tailwind classes:
@@ -40,6 +45,7 @@ export interface IconPickerDialogProps {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Explicit icon list; omit to lazily load the full Lucide catalog on open. */
   icons?: readonly string[];
   title?: string;
   description?: string;
@@ -54,7 +60,7 @@ export function IconPickerDialog({
   open,
   defaultOpen = false,
   onOpenChange,
-  icons = LUCIDE_CANONICAL_ICON_NAMES,
+  icons,
   title,
   description,
   searchPlaceholder,
@@ -65,6 +71,7 @@ export function IconPickerDialog({
   const [isGridReady, setIsGridReady] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(FALLBACK_VIEWPORT_HEIGHT_PX);
+  const [loadedPickerIcons, setLoadedPickerIcons] = useState<readonly LucidePickerIcon[] | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const isMobileGrid = useIsMobile({ breakpoint: 'sm' });
@@ -74,7 +81,15 @@ export function IconPickerDialog({
   const resolvedSearchPlaceholder = searchPlaceholder ?? 'Search for icon';
   const resolvedEmptyMessage = emptyMessage ?? 'No icons found';
   const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, '-');
-  const filteredIcons = icons.filter((iconName) => isLucideIconName(iconName) && iconName.includes(normalizedQuery));
+  const pickerIcons: readonly LucidePickerIcon[] = icons
+    ? icons.filter(isPlausibleLucideIconName).map((name) => ({ name, aliases: [] }))
+    : (loadedPickerIcons ?? []);
+  const isCatalogLoading = !icons && loadedPickerIcons === null;
+  // Search matches the canonical name or any of its deprecated aliases, so a
+  // query like 'home' still finds 'house'.
+  const filteredIcons = pickerIcons.filter(
+    ({ name, aliases }) => name.includes(normalizedQuery) || aliases.some((alias) => alias.includes(normalizedQuery)),
+  );
   const columnCount = isMobileGrid ? MOBILE_COLUMN_COUNT : DESKTOP_COLUMN_COUNT;
   const rowCount = Math.ceil(filteredIcons.length / columnCount);
   const firstVisibleRow = Math.max(0, Math.floor(scrollTop / ICON_ROW_HEIGHT_PX) - OVERSCAN_ROW_COUNT);
@@ -89,10 +104,25 @@ export function IconPickerDialog({
   const virtualGridHeight = rowCount > 0 ? rowCount * ICON_ROW_HEIGHT_PX - 16 : 0;
   const virtualGridOffset = firstVisibleRow * ICON_ROW_HEIGHT_PX;
 
+  // Load the lazily-chunked catalog the first time the dialog opens without
+  // an explicit icon list.
+  useEffect(() => {
+    if (!resolvedOpen || icons || loadedPickerIcons) return;
+
+    let cancelled = false;
+    void loadLucidePickerIcons().then((entries) => {
+      if (!cancelled) setLoadedPickerIcons(entries);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedOpen, icons, loadedPickerIcons]);
+
   useEffect(() => {
     if (!resolvedOpen) return;
-    preloadLucideIcons(icons.slice(0, INITIAL_ICON_PRELOAD_COUNT));
-  }, [resolvedOpen, icons]);
+    const names = icons ? icons.filter(isPlausibleLucideIconName) : (loadedPickerIcons ?? []).map((icon) => icon.name);
+    preloadLucideIcons(names.slice(0, INITIAL_ICON_PRELOAD_COUNT));
+  }, [resolvedOpen, icons, loadedPickerIcons]);
 
   useEffect(() => {
     if (!resolvedOpen) {
@@ -214,7 +244,9 @@ export function IconPickerDialog({
           data-testid="icon-picker-scroll-area"
           aria-busy={filteredIcons.length > 0 && !isGridReady ? true : undefined}
         >
-          {filteredIcons.length === 0 ? (
+          {isCatalogLoading ? (
+            <div className="h-full" data-testid="icon-picker-loading" />
+          ) : filteredIcons.length === 0 ? (
             <p
               className="flex h-full items-center justify-center text-sm text-muted-foreground"
               data-testid="icon-picker-empty"
@@ -228,7 +260,7 @@ export function IconPickerDialog({
                 style={{ transform: `translateY(${virtualGridOffset}px)` }}
                 data-testid="icon-picker-grid"
               >
-                {virtualIcons.map((iconName) => {
+                {virtualIcons.map(({ name: iconName }) => {
                   const isSelected = iconName === value;
                   const accessibleName = iconName.replaceAll('-', ' ');
 

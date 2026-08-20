@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { iconNames } from 'lucide-react/dynamic.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LUCIDE_ICON_NAMES } from '@/libs/utils/lucideIcons';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { IconPickerDialog } from './IconPickerDialog';
 
 const TEST_ICONS = ['activity', 'airplay', 'mountain'] as const;
-const VIRTUAL_GRID_SNAPSHOT_ICONS = LUCIDE_ICON_NAMES.slice(0, 8);
+const VIRTUAL_GRID_SNAPSHOT_ICONS = iconNames.slice(0, 8);
 
 async function finishOpeningAnimation() {
   fireEvent.animationEnd(screen.getByTestId('icon-picker-dialog-content'));
@@ -116,14 +116,26 @@ describe('IconPickerDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('filters invalid names supplied by a consumer', () => {
-    render(<IconPickerDialog open onSelect={() => {}} icons={['not-a-real-icon']} />);
+  it('filters malformed names supplied by a consumer', () => {
+    render(<IconPickerDialog open onSelect={() => {}} icons={['Not A Real Icon']} />);
 
     expect(screen.getByText('No icons found')).toBeInTheDocument();
   });
 
+  it('lazily loads the catalog and maps alias queries to their canonical icon', async () => {
+    render(<IconPickerDialog open onSelect={() => {}} />);
+    await finishOpeningAnimation();
+
+    // Catalog chunk resolves asynchronously on first open.
+    await waitFor(() => expect(screen.queryByTestId('icon-picker-loading')).not.toBeInTheDocument());
+
+    // 'home' is a deprecated alias of 'house' — no canonical name contains it.
+    fireEvent.change(screen.getByTestId('icon-picker-search'), { target: { value: 'home' } });
+    await waitFor(() => expect(screen.getByTestId('icon-picker-option-house')).toBeInTheDocument());
+  });
+
   it('only mounts the virtualized rows around the scroll viewport', async () => {
-    const icons = LUCIDE_ICON_NAMES.slice(0, 110);
+    const icons = iconNames.slice(0, 110);
     const initiallyHiddenIcon = icons[100];
     const initiallyVisibleIcon = icons[0];
     render(<IconPickerDialog open onSelect={() => {}} icons={icons} />);

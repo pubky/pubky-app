@@ -6,8 +6,7 @@ import {
   type TFeedPersistDeleteParams,
   type TFeedPersistParams,
 } from '@/application/feed/feed.types';
-import { DEFAULT_CUSTOM_FEED_ICON } from '@/config/feed';
-import { isProfileTagReachSupported } from '@/config/feed';
+import { DEFAULT_CUSTOM_FEED_ICON, isProfileTagReachSupported } from '@/config/feed';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -49,14 +48,6 @@ export class FeedValidators {
     return trimmed;
   }
 
-  /**
-   * Validates and normalizes tags for a feed.
-   * Throws an error if validation fails.
-   *
-   * @param tags - Array of tag strings to validate
-   * @returns Normalized array of unique, lowercase tags
-   * @throws Error if tags are invalid
-   */
   /** Validates that a feed has a supported reach and valid independent tag scopes. */
   static validateTagScope(
     tags: string[] | undefined | null,

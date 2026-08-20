@@ -7,6 +7,7 @@ import { layoutToString, postKindToString, reachToString, sortToString } from '@
 import type { Pubky } from '@/models/models.types';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { normalizeTagList } from './feed.utils';
+import { FeedValidators } from './feed.validators';
 
 export type TFeedNormalizerInput = {
   params: TFeedCreateParams;
@@ -33,7 +34,10 @@ export class FeedNormalizer {
         content: content ?? undefined,
         name: params.name.trim(),
         domainTags: normalizedDomainTags.length > 0 ? normalizedDomainTags : undefined,
-        icon: params.icon,
+        // Single chokepoint for create + update: coerce the icon into a value
+        // specs accepts, so a bad icon degrades to the default instead of
+        // failing the whole feed write.
+        icon: FeedValidators.sanitizeIcon(params.icon),
       });
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {

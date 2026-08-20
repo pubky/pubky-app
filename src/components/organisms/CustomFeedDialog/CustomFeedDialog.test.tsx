@@ -386,6 +386,21 @@ describe('CustomFeedDialog', () => {
     expect(within(screen.getByTestId('custom-feed-dialog-trigger')).getByText('Create Feed')).toBeInTheDocument();
   });
 
+  it('supports controlled open without a trigger', () => {
+    const onOpenChange = vi.fn();
+    render(<CustomFeedDialog mode="edit" feed={createMockFeed()} open onOpenChange={onOpenChange} />);
+
+    expect(screen.queryByTestId('custom-feed-dialog-trigger')).not.toBeInTheDocument();
+    expect(screen.getByTestId('dialog')).toHaveAttribute('data-open', 'true');
+
+    fireEvent.click(screen.getByTestId('dialog'));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    // Controlled: the parent owns the open state, so it stays open until the
+    // parent flips the prop.
+    expect(screen.getByTestId('dialog')).toHaveAttribute('data-open', 'true');
+  });
+
   it('renders dialog title with translated title for create', () => {
     render(
       <CustomFeedDialog mode="create">

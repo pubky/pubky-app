@@ -40,7 +40,8 @@ const mockHomeState = {
   profileTags: [] as string[],
 };
 vi.mock('@/stores/home/home.store', () => ({
-  useHomeStore: () => mockHomeState,
+  useHomeStore: (selector?: (state: typeof mockHomeState) => unknown) =>
+    selector ? selector(mockHomeState) : mockHomeState,
 }));
 
 // Keep the icon utilities real (DynamicLucideIcon depends on them) but noop the
@@ -147,8 +148,20 @@ vi.mock('@/atoms/Typography/Typography', () => {
 // Mock @/organisms — CustomFeedDialog is a complex component; mock it as a transparent wrapper
 vi.mock('@/organisms/CustomFeedDialog/CustomFeedDialog', () => {
   return {
-    CustomFeedDialog: ({ children, mode }: { children: React.ReactNode; mode: string }) => (
-      <div data-testid={`custom-feed-dialog-${mode}`}>{children}</div>
+    CustomFeedDialog: ({
+      children,
+      mode,
+      feed,
+      open,
+    }: {
+      children?: React.ReactNode;
+      mode: string;
+      feed?: FeedModelSchema;
+      open?: boolean;
+    }) => (
+      <div data-testid={`custom-feed-dialog-${mode}`} data-feed-id={feed?.id} data-open={open}>
+        {children}
+      </div>
     ),
   };
 });
@@ -210,7 +223,7 @@ describe('FeedNavigation', () => {
   it('renders with default state (no custom feeds)', () => {
     render(<FeedNavigation />);
 
-    const container = screen.getByTestId('container');
+    const [container] = screen.getAllByTestId('container');
     expect(container).toBeInTheDocument();
 
     // The reach tab (default reach = All) should always be present
@@ -395,7 +408,7 @@ describe('FeedNavigation', () => {
 
   // ── Edit dialog for custom feeds ────────────────────────────────────────
 
-  it('wraps the right-side pencil in an edit dialog for every custom feed', () => {
+  it('renders a right-side edit pencil for every custom feed', () => {
     mockCustomFeeds = [
       createMockFeed({ id: 'feed-edit', name: 'Editable Feed' }),
       createMockFeed({ id: 'feed-other', name: 'Other Feed' }),
@@ -404,22 +417,39 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    const editDialogs = screen.getAllByTestId('custom-feed-dialog-edit');
-    expect(editDialogs).toHaveLength(2);
+    const pencils = [screen.getByLabelText('Edit Editable Feed'), screen.getByLabelText('Edit Other Feed')];
 
-    editDialogs.forEach((editDialog) => {
-      const editButton = editDialog.querySelector('[data-testid="button"]');
-      expect(editButton).toBeInTheDocument();
+    pencils.forEach((editButton) => {
+      expect(editButton).toHaveClass('absolute', 'right-1', 'p-2', 'text-muted-foreground');
+      // Hover-capable devices hide the pencil until hover/focus; hover-less
+      // lg+ devices (no :hover) keep it visible and interactive.
       expect(editButton).toHaveClass(
-        'absolute',
-        'right-1',
-        'p-2',
-        'text-muted-foreground',
-        'lg:opacity-0',
+        '[@media(hover:hover)]:lg:opacity-0',
+        '[@media(hover:hover)]:lg:pointer-events-none',
         'lg:group-hover:opacity-100',
+        'lg:group-hover:pointer-events-auto',
+        'lg:group-focus-within:opacity-100',
       );
-      expect(editButton?.querySelector('svg')).toHaveClass('size-4');
+      expect(editButton.querySelector('svg')).toHaveClass('size-4');
     });
+  });
+
+  it('opens a single edit dialog for the clicked feed only', () => {
+    mockCustomFeeds = [
+      createMockFeed({ id: 'feed-edit', name: 'Editable Feed' }),
+      createMockFeed({ id: 'feed-other', name: 'Other Feed' }),
+    ];
+    mockUsePathname.mockReturnValue('/feed/feed-edit');
+
+    render(<FeedNavigation />);
+
+    expect(screen.queryByTestId('custom-feed-dialog-edit')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Edit Other Feed'));
+
+    const editDialog = screen.getByTestId('custom-feed-dialog-edit');
+    expect(editDialog).toHaveAttribute('data-feed-id', 'feed-other');
+    expect(editDialog).toHaveAttribute('data-open', 'true');
   });
 
   it('shows the pencil on mobile only for the active custom feed', () => {
@@ -431,12 +461,8 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    const [activePencil, inactivePencil] = screen
-      .getAllByTestId('custom-feed-dialog-edit')
-      .map((dialog) => dialog.querySelector('[data-testid="button"]'));
-
-    expect(activePencil).not.toHaveClass('hidden');
-    expect(inactivePencil).toHaveClass('hidden', 'lg:block');
+    expect(screen.getByLabelText('Edit Active Feed')).not.toHaveClass('hidden');
+    expect(screen.getByLabelText('Edit Other Feed')).toHaveClass('hidden', 'lg:block');
   });
 
   it('keeps the pencil outside the feed link so it does not navigate', () => {
@@ -447,7 +473,7 @@ describe('FeedNavigation', () => {
 
     const feedLink = getLink('/feed/feed-edit');
     expect(feedLink?.querySelector('.lucide-pencil')).not.toBeInTheDocument();
-    expect(screen.getByTestId('custom-feed-dialog-edit').querySelector('.lucide-pencil')).toBeInTheDocument();
+    expect(screen.getByLabelText('Edit Editable Feed').querySelector('.lucide-pencil')).toBeInTheDocument();
   });
 
   it('whitens only the custom feed name on hover, not the pencil', () => {
@@ -458,12 +484,10 @@ describe('FeedNavigation', () => {
 
     const feedLink = getLink('/feed/feed-1');
     expect(feedLink).toHaveClass('group-hover:text-white');
-    expect(screen.getByTestId('custom-feed-dialog-edit').querySelector('[data-testid="button"]')).toHaveClass(
-      'text-muted-foreground',
-    );
+    expect(screen.getByLabelText('Edit Test Feed')).toHaveClass('text-muted-foreground');
   });
 
-  it('does not show edit dialog for the reach tab even when active', () => {
+  it('does not render an edit dialog until a pencil is clicked', () => {
     mockUsePathname.mockReturnValue('/home');
 
     render(<FeedNavigation />);
@@ -529,11 +553,15 @@ describe('FeedNavigation', () => {
   it('renders a horizontally scrollable row that sticks under the mobile header', () => {
     render(<FeedNavigation />);
 
-    const container = screen.getByTestId('container');
-    expect(container).toHaveClass('flex-row');
-    expect(container).toHaveClass('overflow-x-auto');
-    expect(container).toHaveClass('sticky', 'top-(--header-height-settings)', 'bg-background');
-    expect(container).toHaveClass('lg:static', 'lg:bg-transparent');
+    // Sticky chrome and the gradient fade live on the outer, non-scrolling
+    // wrapper; the scroll container is the inner row, so the ::after fade is
+    // not clipped into the scrollport.
+    const [wrapper, row] = screen.getAllByTestId('container');
+    expect(wrapper).toHaveClass('mobile-menu-gradient-fade', 'sticky', 'top-(--header-height-settings)');
+    expect(wrapper).toHaveClass('bg-background', 'lg:static', 'lg:bg-transparent', 'lg:after:hidden');
+    expect(wrapper).not.toHaveClass('overflow-x-auto');
+    expect(row).toHaveClass('flex-row');
+    expect(row).toHaveClass('overflow-x-auto');
   });
 
   it('renders tabs with Figma chrome classes', () => {
@@ -542,10 +570,14 @@ describe('FeedNavigation', () => {
 
     const homeLink = getLink('/home');
     expect(homeLink).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-1');
+    // Active tabs share one symmetric padding so the selected pill looks the
+    // same whether it is the reach tab or a custom feed tab.
+    expect(homeLink).toHaveClass('px-8');
 
     const customLink = getLink('/feed/feed-1');
     expect(customLink).toHaveClass('h-full', 'w-full');
-    expect(customLink?.parentElement).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-1');
+    expect(customLink).toHaveClass('px-2', 'lg:px-8');
+    expect(customLink?.parentElement).toHaveClass('min-h-12', 'lg:min-w-40', 'flex-1');
 
     screen.getAllByTestId('typography').forEach((label) => {
       expect(label).toHaveClass('text-sm', 'leading-5');

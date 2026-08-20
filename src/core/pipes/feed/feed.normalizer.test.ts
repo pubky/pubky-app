@@ -141,6 +141,19 @@ describe('FeedNormalizer', () => {
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(expect.objectContaining({ name: 'Bitcoin News' }));
     });
 
+    it('coerces a malformed icon to the default and keeps foreign valid names', () => {
+      FeedNormalizer.to({ params: { ...createValidParams(), icon: 'Not A Valid Icon!' }, userId: testData.userPubky });
+      expect(mockBuilder.createFeed).toHaveBeenLastCalledWith(expect.objectContaining({ icon: 'activity' }));
+
+      FeedNormalizer.to({
+        params: { ...createValidParams(), icon: 'another-clients-icon' },
+        userId: testData.userPubky,
+      });
+      expect(mockBuilder.createFeed).toHaveBeenLastCalledWith(
+        expect.objectContaining({ icon: 'another-clients-icon' }),
+      );
+    });
+
     it('should convert reach enum to string', () => {
       const params = createValidParams();
       params.reach = PubkyAppFeedReach.Following;

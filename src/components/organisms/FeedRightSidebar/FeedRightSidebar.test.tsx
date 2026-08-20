@@ -1,12 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import {
-  HomeFeedRightDrawer,
-  HomeFeedRightDrawerMobile,
-  HomeFeedRightSidebar,
-  HotFeedRightDrawer,
-  HotFeedRightSidebar,
-} from './FeedRightSidebar';
+import { HomeFeedRightDrawer, HomeFeedRightSidebar, HotFeedRightDrawer, HotFeedRightSidebar } from './FeedRightSidebar';
 
 // Mock Molecules
 vi.mock('@/molecules/FeedSection/FeedSection', () => {
@@ -68,19 +62,6 @@ describe('HomeFeedRightDrawer', () => {
 
   it('matches snapshot', () => {
     const { container } = render(<HomeFeedRightDrawer />);
-    expect(container).toMatchSnapshot();
-  });
-});
-
-describe('HomeFeedRightDrawerMobile', () => {
-  it('renders FeedSection', () => {
-    render(<HomeFeedRightDrawerMobile />);
-
-    expect(screen.getByTestId('feed-section')).toBeInTheDocument();
-  });
-
-  it('matches snapshot', () => {
-    const { container } = render(<HomeFeedRightDrawerMobile />);
     expect(container).toMatchSnapshot();
   });
 });

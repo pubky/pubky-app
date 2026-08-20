@@ -1,27 +1,22 @@
 'use client';
 
-import { type ComponentType, type ReactNode, useEffect, useState } from 'react';
+import { type ComponentType, type ReactNode, useEffect } from 'react';
 import {
   CirclePlay,
   Columns3,
   Delete,
   Download,
   Flame,
-  HeartHandshake,
   Image,
   Layers,
   LayoutGrid,
   Library,
   Link,
   Newspaper,
-  Radio,
   Rows2,
   Rows4,
   SquareAsterisk,
   StickyNote,
-  Tags,
-  UserRound,
-  Waypoints,
 } from 'lucide-react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { Controller, useWatch } from 'react-hook-form';
@@ -33,6 +28,7 @@ import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useControlledState } from '@/hooks/useControlledState/useControlledState';
 import { useCustomFeedForm } from '@/hooks/useCustomFeedForm/useCustomFeedForm';
 import {
   CUSTOM_FEED_CONTENT_ALL,
@@ -40,26 +36,35 @@ import {
   type CustomFeedFormContent,
   type CustomFeedFormReach,
 } from '@/hooks/useCustomFeedForm/useCustomFeedForm.types';
-import { UsersRound2 } from '@/icons';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import { TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
+import {
+  REACH_FILTER_META,
+  type ReachFilterValue,
+  TAGGED_AS_FILTER_KEY,
+} from '@/molecules/Filters/FilterReach/FilterReach';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { IconPickerDialog } from '@/organisms/IconPickerDialog/IconPickerDialog';
-import { HOME_PROFILE_TAGS_MAX_SELECTED } from '@/stores/home/home.types';
+import { HOME_PROFILE_TAGS_MAX_SELECTED, REACH } from '@/stores/home/home.types';
+import { pubkyReachToHomeReach } from '@/utils/pubky-app-spec-feed-mappers';
+
+interface CustomFeedDialogSharedProps {
+  /** Trigger element; omit when the dialog is driven via `open`/`onOpenChange`. */
+  children?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
 
 type CustomFeedDialogProps =
-  | {
+  | (CustomFeedDialogSharedProps & {
       mode: 'create';
-      children: ReactNode;
       feed?: never;
-    }
-  | {
+    })
+  | (CustomFeedDialogSharedProps & {
       mode: 'edit';
-      children: ReactNode;
       feed: FeedModelSchema;
-    };
+    });
 
 function isVisualCustomFeedContentSupported(content?: CustomFeedFormContent): boolean {
   return (
@@ -71,9 +76,22 @@ function parseReachValue(value: string): CustomFeedFormReach {
   return value === TAGGED_AS_FILTER_KEY ? TAGGED_AS_FILTER_KEY : (Number(value) as PubkyAppFeedReach);
 }
 
+const REACH_OPTION_VALUES: CustomFeedFormReach[] = [
+  PubkyAppFeedReach.Wot,
+  TAGGED_AS_FILTER_KEY,
+  PubkyAppFeedReach.Following,
+  PubkyAppFeedReach.Friends,
+  PubkyAppFeedReach.Me,
+  PubkyAppFeedReach.All,
+];
+
 export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   const { mode, children } = props;
-  const [open, setOpen] = useState(false);
+  const { value: open, setValue: setOpen } = useControlledState<boolean>({
+    value: props.open,
+    defaultValue: false,
+    onChange: props.onOpenChange,
+  });
   // Read `feed` off `props` rather than destructuring it: the props union ties
   // `feed` to `mode`, and destructuring erases that link for TS.
   const { form, loading, submit, deleteFeed } = useCustomFeedForm(
@@ -90,38 +108,13 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   const isTaggedAsReach = reach === TAGGED_AS_FILTER_KEY;
   const isAtProfileTagLimit = domainTags.length >= HOME_PROFILE_TAGS_MAX_SELECTED;
 
-  const reachFilters = [
-    {
-      value: PubkyAppFeedReach.Wot,
-      label: 'My network',
-      icon: Waypoints,
-    },
-    {
-      value: TAGGED_AS_FILTER_KEY,
-      label: 'Tagged as',
-      icon: Tags,
-    },
-    {
-      value: PubkyAppFeedReach.Following,
-      label: 'Following',
-      icon: UsersRound2,
-    },
-    {
-      value: PubkyAppFeedReach.Friends,
-      label: 'Friends',
-      icon: HeartHandshake,
-    },
-    {
-      value: PubkyAppFeedReach.Me,
-      label: 'Me',
-      icon: UserRound,
-    },
-    {
-      value: PubkyAppFeedReach.All,
-      label: 'All',
-      icon: Radio,
-    },
-  ];
+  // Reach options derive from the shared REACH_FILTER_META so every surface
+  // that renders a reach (sidebar filter, feed tab, this dialog) stays in sync.
+  const reachFilters = REACH_OPTION_VALUES.map((value) => {
+    const metaKey: ReachFilterValue =
+      value === TAGGED_AS_FILTER_KEY ? TAGGED_AS_FILTER_KEY : (pubkyReachToHomeReach(value) ?? REACH.ALL);
+    return { value, ...REACH_FILTER_META[metaKey] };
+  });
   const sortFilters = [
     {
       value: PubkyAppFeedSort.Recent,
@@ -269,9 +262,11 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild data-testid="custom-feed-dialog-trigger">
-        {children}
-      </DialogTrigger>
+      {children && (
+        <DialogTrigger asChild data-testid="custom-feed-dialog-trigger">
+          {children}
+        </DialogTrigger>
+      )}
 
       <DialogContent
         onOpenAutoFocus={(e) => {

@@ -163,6 +163,33 @@ describe('useCustomFeedForm', () => {
       expect(mocks.push).toHaveBeenCalledWith(`${APP_ROUTES.FEED}/new-feed`);
     });
 
+    it('ignores a second submit while one is in flight', async () => {
+      let resolveCreate: ((value: { id: string; name: string }) => void) | undefined;
+      mocks.commitCreate.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveCreate = resolve;
+          }),
+      );
+      const { result } = renderHook(() => useCustomFeedForm({ mode: 'create', open: true }));
+      await fillValidForm(result.current.form);
+
+      let second: boolean | undefined;
+      await act(async () => {
+        const first = result.current.submit();
+        // Fired from the same render's closure — the ref, not state, must gate it.
+        second = await result.current.submit();
+        await vi.waitFor(() => {
+          if (!resolveCreate) throw new Error('first submit has not reached the controller yet');
+        });
+        resolveCreate?.({ id: 'new-feed', name: 'My Feed' });
+        await first;
+      });
+
+      expect(second).toBe(false);
+      expect(mocks.commitCreate).toHaveBeenCalledTimes(1);
+    });
+
     it('maps a concrete content kind through instead of null', async () => {
       mocks.commitCreate.mockResolvedValue({ id: 'new-feed', name: 'My Feed' });
       const { result } = renderHook(() => useCustomFeedForm({ mode: 'create', open: true }));

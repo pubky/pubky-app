@@ -39,7 +39,16 @@ describe('DynamicLucideIcon', () => {
     expect(screen.getByTestId('fallback-icon')).toHaveClass('lucide-activity');
   });
 
-  it('renders a consumer-provided fallback for an invalid icon', () => {
+  it('renders a consumer-provided fallback for a malformed icon name', () => {
+    render(
+      <DynamicLucideIcon name="Not A Real Icon" fallback={Library} data-testid="fallback-icon" className="size-6" />,
+    );
+
+    expect(screen.getByTestId('fallback-icon')).toHaveClass('lucide-library');
+    expect(screen.getByTestId('fallback-icon')).toHaveClass('size-6');
+  });
+
+  it('falls back once a plausible-but-unknown name resolves to no catalog entry', async () => {
     render(
       <DynamicLucideIcon
         name="not-a-real-lucide-icon"
@@ -49,12 +58,13 @@ describe('DynamicLucideIcon', () => {
       />,
     );
 
-    expect(screen.getByTestId('fallback-icon')).toHaveClass('lucide-library');
-    expect(screen.getByTestId('fallback-icon')).toHaveClass('size-6');
+    // Shape-valid names load through the lazy catalog, so the fallback lands
+    // only after the lookup resolves null.
+    await waitFor(() => expect(screen.getByTestId('fallback-icon')).toHaveClass('lucide-library'));
   });
 
   it('can omit the fallback while a consumer handles its own loading state', () => {
-    const { container } = render(<DynamicLucideIcon name="not-a-real-lucide-icon" fallback={null} />);
+    const { container } = render(<DynamicLucideIcon name="Not A Real Icon" fallback={null} />);
 
     expect(container.firstChild).toBeNull();
   });
