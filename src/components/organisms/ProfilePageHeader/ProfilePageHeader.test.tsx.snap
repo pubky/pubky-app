@@ -276,6 +276,11 @@ exports[`ProfilePageHeader - Mobile Snapshots > matches snapshot on mobile viewp
           type="button"
         >
           <span
+            class="text-base leading-6"
+          >
+            🌴
+          </span>
+          <span
             class="text-base leading-6 font-bold text-white"
           >
             Vacationing
@@ -581,6 +586,11 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
           data-variant="ghost"
           type="button"
         >
+          <span
+            class="text-base leading-6"
+          >
+            🌴
+          </span>
           <span
             class="text-base leading-6 font-bold text-white"
           >

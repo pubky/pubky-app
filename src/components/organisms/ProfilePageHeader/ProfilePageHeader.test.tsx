@@ -91,7 +91,7 @@ const mockProps: ProfilePageHeaderProps = {
     name: 'Satoshi Nakamoto',
     bio: 'Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.',
     publicKey: '1QX7GKW3abcdef1234567890',
-    status: 'Vacationing',
+    status: 'vacationing',
     emoji: '🌴',
     link: 'https://example.com',
   },
@@ -124,7 +124,7 @@ const mockOtherUserProps: ProfilePageHeaderProps = {
     name: 'Other User',
     bio: 'Some bio',
     publicKey: 'other123456789012345',
-    status: 'Active',
+    status: '🎉 Active',
     emoji: '🎉',
     link: 'https://example.com/other',
   },
@@ -258,6 +258,16 @@ describe('ProfilePageHeader', () => {
 
     expect(name.nextElementSibling).toBe(statusEmoji);
     expect(screen.getByTestId('avatar').parentElement).not.toHaveTextContent('🌴');
+  });
+
+  it('does not add a fallback emoji to a text-only custom status', () => {
+    const props = { ...mockProps, profile: { ...mockProps.profile, status: 'Focused' } };
+
+    render(<ProfilePageHeader {...props} />);
+
+    expect(screen.getByText('Satoshi Nakamoto').nextElementSibling).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Focused status' })).not.toBeInTheDocument();
+    expect(screen.queryByText('🌴')).not.toBeInTheDocument();
   });
 
   it('shows the status label in a tooltip when the profile emoji is hovered', async () => {

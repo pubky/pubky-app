@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/
 import { Typography } from '@/atoms/Typography/Typography';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
-import { extractEmojiFromStatus, parseStatus } from '@/libs/status/status';
+import { parseStatus } from '@/libs/status/status';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
 import { PostText } from '@/molecules/PostText/PostText';
 import { StatusPickerWrapper } from '@/molecules/StatusPicker/StatusPickerWrapper/StatusPickerWrapper';
@@ -71,8 +71,8 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
     key: publicKey,
   });
   const [isStatusTooltipOpen, setIsStatusTooltipOpen] = useState(false);
-  const displayEmoji = extractEmojiFromStatus(status || '', emoji);
-  const parsedStatus = parseStatus(status || '', displayEmoji);
+  const parsedStatus = parseStatus(status || '', emoji);
+  const displayEmoji = parsedStatus.emoji;
   const followersLabel = stats ? `${compactNumber.format(stats.followers)} FOLLOWERS` : null;
   const getLoadingFollowText = () => {
     if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
