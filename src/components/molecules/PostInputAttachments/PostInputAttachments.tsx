@@ -44,6 +44,15 @@ const getAttachmentType = (mimeType: string): AttachmentType | undefined => {
   if (mimeType.startsWith('audio/')) return 'audio';
   if (mimeType === 'application/pdf') return 'pdf';
 };
+// Mirrors the feed's variant rule (PostAttachmentsImagesAndVideos): FEED for
+// images so the preview paints from the browser cache the feed already warmed
+// (MAIN is the full-res lightbox/detail variant), except GIFs, where the feed
+// itself uses MAIN to keep the animation.
+const getExistingPreviewUrl = (attachment: ExistingAttachment): string | null => {
+  if (!attachment.urls) return null;
+  if (attachment.type === 'image/gif') return attachment.urls.main;
+  return attachment.urls.feed ?? attachment.urls.main;
+};
 export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttachmentsProps>(
   (
     {
@@ -91,7 +100,7 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
         key: attachment.uri,
         type: getAttachmentType(attachment.type),
         name: attachment.name,
-        previewUrl: attachment.urls?.main ?? null,
+        previewUrl: getExistingPreviewUrl(attachment),
         isLoading: attachment.urls === null && !attachment.resolutionFailed,
         onRemove: () => onRemoveExisting?.(attachment.uri),
       })),

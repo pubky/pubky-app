@@ -702,6 +702,26 @@ describe('PostInputAttachments', () => {
       expect(images[1]).toHaveAttribute('src', 'blob:mock-url-new-image.jpg');
     });
 
+    it('prefers the FEED variant for existing image previews (already cached by the feed render)', () => {
+      const existing = createExistingAttachment({
+        urls: { main: 'https://cdn.example.com/main/file-1', feed: 'https://cdn.example.com/feed/file-1' },
+      });
+      render(<PostInputAttachments {...defaultProps} existingAttachments={[existing]} />);
+
+      expect(screen.getByTestId('image')).toHaveAttribute('src', 'https://cdn.example.com/feed/file-1');
+    });
+
+    it('uses the MAIN variant for existing GIFs (mirrors the feed rule so the animation is kept)', () => {
+      const existing = createExistingAttachment({
+        type: 'image/gif',
+        name: 'existing-animation.gif',
+        urls: { main: 'https://cdn.example.com/main/gif-1', feed: 'https://cdn.example.com/feed/gif-1' },
+      });
+      render(<PostInputAttachments {...defaultProps} existingAttachments={[existing]} />);
+
+      expect(screen.getByTestId('image')).toHaveAttribute('src', 'https://cdn.example.com/main/gif-1');
+    });
+
     it('renders media previews for resolved existing video and audio attachments', () => {
       const existingVideo = createExistingAttachment({
         uri: 'pubky://author/pub/pubky.app/files/video-1',
