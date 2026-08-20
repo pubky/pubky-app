@@ -26,6 +26,8 @@ export interface SearchInputBarProps {
   onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
   /** Callback when input receives focus */
   onFocus: () => void;
+  /** Clears the typed value and collapses the active search UI. */
+  onCloseSearch: () => void;
   /** Whether to auto-focus the input on mount */
   autoFocus?: boolean;
 }

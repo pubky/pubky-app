@@ -1,6 +1,11 @@
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { searchApi } from '@/services/nexus/search/search.api';
-import type { TPrefixSearchParams, TSearchResult } from '@/services/nexus/search/search.types';
+import type {
+  TContentSearchParams,
+  TContentSearchResult,
+  TPrefixSearchParams,
+  TSearchResult,
+} from '@/services/nexus/search/search.types';
 
 /**
  * Nexus Search Service
@@ -9,6 +14,12 @@ import type { TPrefixSearchParams, TSearchResult } from '@/services/nexus/search
  */
 export class NexusSearchService {
   private constructor() {}
+
+  /** Search post content, ordered by Nexus full-text relevance. */
+  static async postsByContent(params: TContentSearchParams): Promise<TContentSearchResult> {
+    const url = searchApi.byContent(params);
+    return await queryNexus<TContentSearchResult>({ url });
+  }
 
   /**
    * Search users by ID prefix

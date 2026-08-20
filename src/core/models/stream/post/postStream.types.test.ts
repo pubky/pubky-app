@@ -4,6 +4,7 @@ import {
   advanceCursor,
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
+  buildContentSearchStreamId,
   buildDiscoverCollectionsStreamId,
   buildFollowedCollectionsStreamId,
   buildPostReplyStreamId,
@@ -13,10 +14,12 @@ import {
   getStreamDependencyScopes,
   isAuthorStreamSkippingMuteFilter,
   isCollectionItemsStream,
+  isContentSearchStream,
   isSkipPaginatedStream,
   isViewerExcludedWotStream,
   isWotDomainStream,
   isWotStream,
+  parseContentSearchStreamId,
 } from '@/models/stream/post/postStream.types';
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -27,6 +30,19 @@ const TEST_PUBKY = 'erztyis9oiaho93ckucetcf5xnxacecqwhbst5hnd7mmkf69dhby' as Pub
 const TEST_POST_ID = 'post-pubky-id';
 
 describe('post-stream id builders', () => {
+  describe('buildContentSearchStreamId', () => {
+    it('round-trips queries with spaces and punctuation without changing their kind', () => {
+      const streamId = buildContentSearchStreamId('bitcoin: wallets & privacy', StreamKind.COLLECTION);
+
+      expect(streamId).toBe('content_search:bitcoin%3A%20wallets%20%26%20privacy:collection');
+      expect(isContentSearchStream(streamId)).toBe(true);
+      expect(parseContentSearchStreamId(streamId)).toEqual({
+        query: 'bitcoin: wallets & privacy',
+        kind: StreamKind.COLLECTION,
+      });
+    });
+  });
+
   describe('buildPostReplyStreamId', () => {
     it('produces post_replies:<compositeId>', () => {
       expect(buildPostReplyStreamId(`${TEST_PUBKY}:${TEST_POST_ID}`)).toBe(
@@ -152,6 +168,10 @@ describe('post-stream id builders', () => {
 });
 
 describe('isSkipPaginatedStream', () => {
+  it('returns true for relevance-ordered content-search streams', () => {
+    expect(isSkipPaginatedStream(buildContentSearchStreamId('bitcoin wallets'))).toBe(true);
+  });
+
   it('returns true for engagement streams (no stable score cursor)', () => {
     expect(isSkipPaginatedStream(buildDiscoverCollectionsStreamId())).toBe(true);
     expect(isSkipPaginatedStream('total_engagement:all:all')).toBe(true);
@@ -205,6 +225,11 @@ describe('isViewerExcludedWotStream', () => {
 });
 
 describe('getPostStreamKind', () => {
+  it('extracts the kind from content-search streams', () => {
+    expect(getPostStreamKind(buildContentSearchStreamId('bitcoin', StreamKind.COLLECTION))).toBe(StreamKind.COLLECTION);
+    expect(getPostStreamKind(buildContentSearchStreamId('bitcoin'))).toBe('all');
+  });
+
   it('extracts the kind from sorting-first stream ids', () => {
     expect(getPostStreamKind('timeline:all:all')).toBe('all');
     expect(getPostStreamKind('timeline:following:short')).toBe(StreamKind.SHORT);

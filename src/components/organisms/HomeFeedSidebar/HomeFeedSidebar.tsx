@@ -28,6 +28,7 @@ import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
  */
 function HomeFeedFilters({
   hideReachFilter = false,
+  hideSortFilter = false,
   hideLayoutFilter = false,
   allowVisualLayout = false,
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
@@ -100,7 +101,7 @@ function HomeFeedFilters({
           profileTagsDisabled={!isAuthenticated || !taggedAsActive}
         />
       )}
-      <FilterSort selectedTab={sort} onTabChange={setSort} />
+      {!hideSortFilter && <FilterSort selectedTab={sort} onTabChange={setSort} />}
       {variant === 'sidebar' ? (
         <Container overrideDefaults className="sticky top-[100px] flex w-full flex-col gap-6 self-start">
           {!hideLayoutFilter && (
@@ -128,12 +129,14 @@ function HomeFeedFilters({
  */
 export function HomeFeedSidebar({
   hideReachFilter = false,
+  hideSortFilter = false,
   allowVisualLayout = false,
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
 }: HomeFeedSidebarProps) {
   return (
     <HomeFeedFilters
       hideReachFilter={hideReachFilter}
+      hideSortFilter={hideSortFilter}
       allowVisualLayout={allowVisualLayout}
       feedVariant={feedVariant}
       variant="sidebar"
@@ -148,12 +151,14 @@ export function HomeFeedSidebar({
  */
 export function HomeFeedDrawer({
   hideReachFilter = false,
+  hideSortFilter = false,
   allowVisualLayout = false,
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
 }: HomeFeedSidebarProps) {
   return (
     <HomeFeedFilters
       hideReachFilter={hideReachFilter}
+      hideSortFilter={hideSortFilter}
       allowVisualLayout={allowVisualLayout}
       feedVariant={feedVariant}
       variant="drawer"
@@ -169,12 +174,14 @@ export function HomeFeedDrawer({
  */
 export function HomeFeedDrawerMobile({
   hideReachFilter = false,
+  hideSortFilter = false,
   allowVisualLayout = false,
   feedVariant = TIMELINE_FEED_VARIANT.HOME,
 }: HomeFeedSidebarProps) {
   return (
     <HomeFeedFilters
       hideReachFilter={hideReachFilter}
+      hideSortFilter={hideSortFilter}
       hideLayoutFilter
       allowVisualLayout={allowVisualLayout}
       feedVariant={feedVariant}

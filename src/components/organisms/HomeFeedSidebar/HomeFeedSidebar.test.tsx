@@ -187,6 +187,14 @@ describe('HomeFeedSidebar', () => {
     expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
   });
 
+  it('can hide sort without hiding layout or content', () => {
+    render(<HomeFeedSidebar hideSortFilter />);
+
+    expect(screen.queryByTestId('filter-sort')).not.toBeInTheDocument();
+    expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-content')).toBeInTheDocument();
+  });
+
   it('shows visual layout when enabled on desktop/tablet', () => {
     render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
 

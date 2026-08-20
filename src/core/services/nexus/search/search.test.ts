@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryNexus } from '@/services/nexus/nexus.utils';
+import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusSearchService } from './search';
 
 vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
@@ -15,6 +16,30 @@ const mockQueryNexus = vi.mocked(queryNexus);
 describe('NexusSearchService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('postsByContent', () => {
+    it('searches content with kind and pagination while preserving Nexus relevance order', async () => {
+      const results = [
+        { post_key: 'alice:post-2', score: 4.2 },
+        { post_key: 'alice:post-1', score: 3.1 },
+      ];
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(results);
+
+      const result = await NexusSearchService.postsByContent({
+        q: 'bitcoin wallet',
+        kind: StreamKind.COLLECTION,
+        skip: 10,
+        limit: 20,
+      });
+
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: expect.stringMatching(
+          /\/v0\/search\/posts\/by_content\?(?=.*q=bitcoin\+wallet)(?=.*kind=collection)(?=.*skip=10)(?=.*limit=20)/,
+        ),
+      });
+      expect(result).toEqual(results);
+    });
   });
 
   describe('usersById', () => {

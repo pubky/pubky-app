@@ -43,9 +43,12 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with
       type="text"
       value=""
     />
-    <svg
-      data-testid="search-icon"
-    />
+    <button
+      aria-label="Clear and close search"
+      type="button"
+    >
+      x
+    </button>
   </div>
   <div
     aria-label="Search suggestions"

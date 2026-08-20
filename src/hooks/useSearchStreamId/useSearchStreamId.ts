@@ -1,9 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { validateContentSearchQuery } from '@/libs/search/contentSearch';
+import {
+  buildContentSearchStreamId,
+  getPostStreamKind,
+  type PostStreamId,
+} from '@/models/stream/post/postStream.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { useHomeStore } from '@/stores/home/home.store';
 import { type ContentType, REACH } from '@/stores/home/home.types';
@@ -61,25 +65,36 @@ function parseTags(tagsParam: string | null): string[] {
  */
 export function useSearchStreamId(contentOverride?: ContentType): PostStreamId | undefined {
   const searchParams = useSearchParams();
+  const contentSearchQuery = useContentSearchQuery();
   const sort = useHomeStore((state) => state.sort);
   const storeContent = useHomeStore((state) => state.content);
   const content = contentOverride ?? storeContent;
 
-  const streamId = useMemo(() => {
-    const tags = parseTags(searchParams.get('tags'));
+  // Get base stream ID from filters (always use 'all' reach for search).
+  // Its kind segment is shared by tag and full-text searches; full-text ignores sort.
+  const baseStreamId = getStreamIdFromFilters(sort, REACH.ALL, content);
+  if (contentSearchQuery) {
+    return buildContentSearchStreamId(contentSearchQuery, getPostStreamKind(baseStreamId) ?? 'all');
+  }
 
-    if (tags.length === 0) {
-      return undefined;
-    }
+  const tags = parseTags(searchParams.get('tags'));
+  if (tags.length === 0) {
+    return undefined;
+  }
 
-    // Get base stream ID from filters (always use 'all' reach for search)
-    const baseStreamId = getStreamIdFromFilters(sort, REACH.ALL, content);
+  return `${baseStreamId}:${tags.join(POST_STREAM_TAG_DELIMITER)}` as PostStreamId;
+}
 
-    // Append tags to the stream ID
-    return `${baseStreamId}:${tags.join(POST_STREAM_TAG_DELIMITER)}` as PostStreamId;
-  }, [searchParams, sort, content]);
+/** Returns a normalized Nexus-compatible `q` parameter, or null when absent/invalid. */
+export function useContentSearchQuery(): string | null {
+  const searchParams = useSearchParams();
+  const query = searchParams.get('q');
+  if (query === null) {
+    return null;
+  }
 
-  return streamId;
+  const validation = validateContentSearchQuery(query);
+  return validation.isValid ? validation.query : null;
 }
 
 /**
@@ -105,5 +120,5 @@ export function useSearchStreamId(contentOverride?: ContentType): PostStreamId |
 export function useSearchTags(): string[] {
   const searchParams = useSearchParams();
 
-  return useMemo(() => parseTags(searchParams.get('tags')), [searchParams]);
+  return parseTags(searchParams.get('tags'));
 }

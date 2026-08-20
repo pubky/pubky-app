@@ -1,6 +1,7 @@
 'use client';
 
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { SEARCH_CLOSED_STYLE, SEARCH_INPUT_EXPANDED_STYLE } from '@/config/search';
@@ -20,6 +21,7 @@ export function SearchInputBar({
   onInputChange,
   onKeyDown,
   onFocus,
+  onCloseSearch,
   autoFocus,
 }: SearchInputBarProps) {
   const hasActiveTags = activeTags.length > 0;
@@ -69,8 +71,20 @@ export function SearchInputBar({
         )}
       />
 
-      {/* Search icon */}
-      <Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      {isFocused ? (
+        <Button
+          type="button"
+          variant={ButtonVariant.GHOST}
+          size="icon"
+          aria-label="Clear and close search"
+          className="size-8 border-none p-0 text-muted-foreground shadow-none"
+          onClick={onCloseSearch}
+        >
+          <X className="size-4" aria-hidden="true" />
+        </Button>
+      ) : (
+        <Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      )}
     </Container>
   );
 }

@@ -1,4 +1,6 @@
 'use client';
+import { Search } from 'lucide-react';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { SEARCH_EXPANDED_STYLE } from '@/config/search';
 import { MAX_RECENT_SEARCHES } from '@/stores/search/search.constants';
@@ -18,6 +20,7 @@ export function SearchSuggestions({
   recentTags = [],
   onTagClick,
   onUserClick,
+  onShowAllResults,
   onClearRecentSearches,
 }: SearchSuggestionsProps) {
   // Limit recent items to display
@@ -77,6 +80,12 @@ export function SearchSuggestions({
       <Container className="flex flex-col space-y-6 px-6 pt-3 pb-6" overrideDefaults>
         {renderAutocompleteContent()}
         {renderRecentContent()}
+        {hasInput && (
+          <Button type="button" variant={ButtonVariant.SECONDARY} size="sm" onClick={onShowAllResults}>
+            <Search aria-hidden="true" />
+            Show all results
+          </Button>
+        )}
       </Container>
     </Container>
   );

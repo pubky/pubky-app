@@ -68,6 +68,7 @@ describe('SearchSuggestions', () => {
     inputValue: '',
     onTagClick: vi.fn(),
     onUserClick: vi.fn(),
+    onShowAllResults: vi.fn(),
     onRecentUserClick: vi.fn(),
     onRecentTagClick: vi.fn(),
   };
@@ -91,6 +92,17 @@ describe('SearchSuggestions', () => {
     fireEvent.click(screen.getByTestId('tag-pubky'));
 
     expect(onTagClick).toHaveBeenCalledWith('pubky');
+  });
+
+  it('shows the full-text search action only for non-empty input and invokes it', () => {
+    const onShowAllResults = vi.fn();
+    const { rerender } = render(<SearchSuggestions {...defaultProps} hasInput onShowAllResults={onShowAllResults} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show all results' }));
+    expect(onShowAllResults).toHaveBeenCalledOnce();
+
+    rerender(<SearchSuggestions {...defaultProps} hasInput={false} onShowAllResults={onShowAllResults} />);
+    expect(screen.queryByRole('button', { name: 'Show all results' })).not.toBeInTheDocument();
   });
 
   it('applies dropdown styles', () => {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
+import { SearchApplication } from '@/application/search/search';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
@@ -12,6 +13,7 @@ import { DELETED } from '@/models/post/details/postDetails.constants';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import {
   buildAuthorCollectionsStreamId,
+  buildContentSearchStreamId,
   buildDiscoverCollectionsStreamId,
   type PostStreamId,
   PostStreamTypes,
@@ -37,6 +39,7 @@ import {
   StreamSorting,
 } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
+import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { MuteFilter } from './muting/mute-filter';
@@ -260,6 +263,20 @@ describe('PostStreamApplication', () => {
       expect(result).toEqual([collectionPostId]);
     });
 
+    it('keeps collections alongside other post kinds in all-kinds content search', async () => {
+      const shortPostId = `${DEFAULT_AUTHOR}:short-post`;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(shortPostId, 'short');
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: buildContentSearchStreamId('bitcoin'),
+        postIds: [shortPostId, collectionPostId],
+      });
+
+      expect(result).toEqual([shortPostId, collectionPostId]);
+    });
+
     it('keeps collection-kind posts in wot_domain collection content streams', async () => {
       const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
       await createPostDetailWithKind(collectionPostId, 'collection');
@@ -383,6 +400,38 @@ describe('PostStreamApplication', () => {
   });
 
   describe('getOrFetchStreamSlice', () => {
+    it('fetches content-search pages in Nexus relevance order and advances their offset', async () => {
+      const contentStreamId = buildContentSearchStreamId('bitcoin wallet', StreamKind.COLLECTION);
+      const results = [
+        { post_key: `${DEFAULT_AUTHOR}:post-2`, score: 4.2 },
+        { post_key: `${DEFAULT_AUTHOR}:post-1`, score: 3.1 },
+      ];
+      const searchSpy = vi.spyOn(SearchApplication, 'fetchPostsByContent').mockResolvedValue(results);
+      const persistStreamSpy = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk');
+
+      const result = await PostStreamApplication.fetchStreamSlice({
+        streamId: contentStreamId,
+        limit: 2,
+        streamHead: 0,
+        streamTail: 10,
+        viewerId: null,
+      });
+
+      expect(searchSpy).toHaveBeenCalledWith({
+        q: 'bitcoin wallet',
+        kind: StreamKind.COLLECTION,
+        skip: 10,
+        limit: 2,
+      });
+      expect(result).toEqual({
+        nextPageIds: [`${DEFAULT_AUTHOR}:post-2`, `${DEFAULT_AUTHOR}:post-1`],
+        cacheMissPostIds: [`${DEFAULT_AUTHOR}:post-2`, `${DEFAULT_AUTHOR}:post-1`],
+        nextCursor: 12,
+        reachedEnd: false,
+      });
+      expect(persistStreamSpy).not.toHaveBeenCalled();
+    });
+
     it('should return posts from cache when available (no cursor)', async () => {
       const postIds = Array.from({ length: 20 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);

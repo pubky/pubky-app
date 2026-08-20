@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
+import { APP_ROUTES, getContentSearchUrl, getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
@@ -10,7 +10,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
-import { isValidTagLabel } from '@/libs/utils/utils';
+import { validateContentSearchQuery } from '@/libs/search/contentSearch';
 import type { Pubky } from '@/models/models.types';
 import { SearchInputBar } from '@/molecules/SearchInputBar/SearchInputBar';
 import { SearchSuggestions } from '@/molecules/SearchSuggestions/SearchSuggestions';
@@ -29,16 +29,17 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isMobile = useIsMobile();
 
-  const handleEnter = (value: string) => {
-    if (!isValidTagLabel(value.trim().toLowerCase())) {
-      toast({ variant: 'error', description: 'Tags can be max 20 chars and cannot contain special characters' });
+  const submitContentSearch = (value: string): boolean => {
+    const validation = validateContentSearchQuery(value);
+    if (!validation.isValid) {
+      toast({ variant: 'error', description: validation.message });
       return false;
     }
 
-    addTagToSearch(value, { addToRecent: true });
-    if (pathname !== APP_ROUTES.SEARCH) {
-      setFocus(false);
-    }
+    setActiveTags([]);
+    router.push(getContentSearchUrl(validation.query));
+    setFocus(false);
+    return true;
   };
 
   const {
@@ -51,7 +52,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     handleFocus,
     clearInputValue,
     setFocus,
-  } = useSearchInput({ onEnter: handleEnter });
+  } = useSearchInput({ onEnter: submitContentSearch });
 
   const tagsParam = searchParams.get('tags');
   useEffect(() => {
@@ -83,6 +84,17 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     }
   };
 
+  const handleShowAllResults = () => {
+    if (submitContentSearch(inputValue)) {
+      clearInputValue();
+    }
+  };
+
+  const handleCloseSearch = () => {
+    clearInputValue();
+    setFocus(false);
+  };
+
   // Show dropdown immediately when focused
   // The dropdown will display hot tags, recent searches, or empty state
   const hasSuggestions = isFocused;
@@ -103,6 +115,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
         onInputChange={handleInputChange}
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
+        onCloseSearch={handleCloseSearch}
         autoFocus={autoFocus}
       />
 
@@ -119,6 +132,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
           recentTags={recentTags}
           onTagClick={handleTagClick}
           onUserClick={handleUserClick}
+          onShowAllResults={handleShowAllResults}
           onClearRecentSearches={clearRecentSearches}
         />
       )}

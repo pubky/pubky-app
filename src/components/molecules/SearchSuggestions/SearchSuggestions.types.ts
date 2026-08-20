@@ -25,6 +25,8 @@ export interface SearchSuggestionsProps {
   onTagClick: (tag: string) => void;
   /** Callback when a user is clicked */
   onUserClick: (userId: Pubky) => void;
+  /** Runs a full-text content search for the current input. */
+  onShowAllResults: () => void;
   /** Callback to clear all recent searches */
   onClearRecentSearches?: () => void;
   /** Whether inside a wrapper that handles gradient (no absolute positioning) */

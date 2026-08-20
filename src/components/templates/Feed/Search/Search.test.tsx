@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Search } from './Search';
 
-const { mockUseIsMobile, mockUseSearchTags } = vi.hoisted(() => ({
+const { mockUseContentSearchQuery, mockUseIsMobile, mockUseSearchTags } = vi.hoisted(() => ({
+  mockUseContentSearchQuery: vi.fn(() => null as string | null),
   mockUseIsMobile: vi.fn(() => false),
   mockUseSearchTags: vi.fn(() => ['pubky']),
 }));
@@ -13,6 +14,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
+  useContentSearchQuery: () => mockUseContentSearchQuery(),
   useSearchTags: () => mockUseSearchTags(),
 }));
 
@@ -37,7 +39,11 @@ vi.mock('@/molecules/SearchEmptyState/SearchEmptyState', () => ({
 }));
 
 vi.mock('@/molecules/SearchHeader/SearchHeader', () => ({
-  SearchHeader: () => <div data-testid="search-header">SearchHeader</div>,
+  SearchHeader: ({ query }: { query?: string | null; tags: string[] }) => (
+    <div data-query={query ?? undefined} data-testid="search-header">
+      SearchHeader
+    </div>
+  ),
 }));
 
 vi.mock('@/atoms/Container/Container', () => ({
@@ -60,6 +66,7 @@ describe('Search', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseIsMobile.mockReturnValue(false);
+    mockUseContentSearchQuery.mockReturnValue(null);
     mockUseSearchTags.mockReturnValue(['pubky']);
   });
 
@@ -76,6 +83,17 @@ describe('Search', () => {
 
     expect(screen.getByTestId('search-header')).toBeInTheDocument();
     expect(screen.queryByTestId('search-empty-state')).not.toBeInTheDocument();
+  });
+
+  it('renders full-text results and keeps the mobile input collapsed when q is present', () => {
+    mockUseContentSearchQuery.mockReturnValue('bitcoin wallet');
+    mockUseSearchTags.mockReturnValue(['ignored-tag']);
+
+    render(<Search />);
+
+    expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
+    expect(screen.getByTestId('search-header')).toHaveAttribute('data-query', 'bitcoin wallet');
+    expect(screen.getByTestId('search-input')).toHaveAttribute('data-auto-focus', 'false');
   });
 
   it('renders the empty state when no tags are present', () => {

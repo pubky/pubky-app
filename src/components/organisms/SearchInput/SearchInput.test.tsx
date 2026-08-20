@@ -13,6 +13,7 @@ const mockPush = vi.fn();
 const mockSearchParams = new URLSearchParams();
 const mockPathname = vi.fn(() => '/home');
 const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
+const mockToast = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
@@ -65,6 +66,10 @@ vi.mock('@/hooks/useTagSearch/useTagSearch', () => ({
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: mockUseIsMobile,
+}));
+
+vi.mock('@/molecules/Toaster/use-toast', () => ({
+  toast: mockToast,
 }));
 
 // Mock dependencies
@@ -144,6 +149,7 @@ vi.mock('@/molecules/SearchInputBar/SearchInputBar', () => {
       onInputChange,
       onKeyDown,
       onFocus,
+      onCloseSearch,
     }: {
       activeTags: string[];
       inputValue: string;
@@ -155,6 +161,7 @@ vi.mock('@/molecules/SearchInputBar/SearchInputBar', () => {
       onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
       onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
       onFocus: () => void;
+      onCloseSearch: () => void;
     }) => (
       <div
         data-testid="search-input-bar"
@@ -186,7 +193,13 @@ vi.mock('@/molecules/SearchInputBar/SearchInputBar', () => {
           aria-controls={suggestionsId || undefined}
           aria-expanded={isExpanded}
         />
-        <svg data-testid="search-icon" />
+        {isFocused ? (
+          <button type="button" aria-label="Clear and close search" onClick={onCloseSearch}>
+            x
+          </button>
+        ) : (
+          <svg data-testid="search-icon" />
+        )}
       </div>
     ),
   };
@@ -206,8 +219,10 @@ vi.mock('@/molecules/SearchSuggestions/SearchSuggestions', () => {
       'aria-label': ariaLabel,
       hotTags,
       autocompleteUsers = [],
+      hasInput,
       onTagClick,
       onUserClick,
+      onShowAllResults,
     }: {
       id?: string;
       'aria-label'?: string;
@@ -220,7 +235,7 @@ vi.mock('@/molecules/SearchSuggestions/SearchSuggestions', () => {
       recentTags?: Array<{ tag: string; searchedAt: number }>;
       onTagClick: (tag: string | { tag: string; searchedAt: number }) => void;
       onUserClick: (userId: string | { id: string; searchedAt: number }) => void;
-      onSearchAsTagClick?: (query: string) => void;
+      onShowAllResults: () => void;
       onClearRecentSearches?: () => void;
     }) => (
       <div id={id} aria-label={ariaLabel} data-testid="search-suggestions">
@@ -234,6 +249,11 @@ vi.mock('@/molecules/SearchSuggestions/SearchSuggestions', () => {
             {user.name}
           </button>
         ))}
+        {hasInput && (
+          <button type="button" onClick={onShowAllResults}>
+            Show all results
+          </button>
+        )}
       </div>
     ),
   };
@@ -524,6 +544,85 @@ describe('SearchInput', () => {
       expect(clearInputValue).toHaveBeenCalled();
       expect(setFocus).toHaveBeenCalledWith(false);
       expect(mockPush).toHaveBeenCalledWith('/profile/user123');
+    });
+  });
+
+  describe('Content Search', () => {
+    it('uses the same q-only navigation for Enter and Show all results', () => {
+      const clearInputValue = vi.fn();
+      const setFocus = vi.fn();
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'bitcoin wallet',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue,
+        setFocus,
+      });
+
+      render(<SearchInput />);
+
+      const onEnter = vi.mocked(useSearchInput).mock.calls[0]?.[0]?.onEnter;
+      expect(onEnter?.('bitcoin wallet')).toBe(true);
+      expect(mockPush).toHaveBeenLastCalledWith('/search?q=bitcoin+wallet');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Show all results' }));
+      expect(mockPush).toHaveBeenLastCalledWith('/search?q=bitcoin+wallet');
+      expect(mockSetActiveTags).toHaveBeenCalledWith([]);
+      expect(clearInputValue).toHaveBeenCalledOnce();
+      expect(setFocus).toHaveBeenCalledWith(false);
+    });
+
+    it('keeps invalid full-text input open and reports the Nexus constraint', () => {
+      const clearInputValue = vi.fn();
+      const setFocus = vi.fn();
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'b',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue,
+        setFocus,
+      });
+
+      render(<SearchInput />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show all results' }));
+
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Search must be at least 2 characters',
+      });
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(clearInputValue).not.toHaveBeenCalled();
+      expect(setFocus).not.toHaveBeenCalled();
+    });
+
+    it('clears and collapses the active search from the X action', () => {
+      const clearInputValue = vi.fn();
+      const setFocus = vi.fn();
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'bitcoin',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue,
+        setFocus,
+      });
+
+      render(<SearchInput />);
+      fireEvent.click(screen.getByRole('button', { name: 'Clear and close search' }));
+
+      expect(clearInputValue).toHaveBeenCalledOnce();
+      expect(setFocus).toHaveBeenCalledWith(false);
     });
   });
 

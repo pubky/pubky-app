@@ -6,6 +6,10 @@
  */
 const SEARCH_SUGGESTIONS_MAX_HEIGHT = 300;
 
+export const CONTENT_SEARCH_QUERY_MIN_LENGTH = 2;
+export const CONTENT_SEARCH_QUERY_MAX_LENGTH = 30;
+export const CONTENT_SEARCH_QUERY_MAX_TERMS = 4;
+
 /**
  * Search bar closed state style (pill shape)
  * - Gradient background matching Figma design

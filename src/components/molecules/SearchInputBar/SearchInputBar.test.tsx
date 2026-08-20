@@ -91,6 +91,7 @@ describe('SearchInputBar', () => {
     onInputChange: vi.fn(),
     onKeyDown: vi.fn(),
     onFocus: vi.fn(),
+    onCloseSearch: vi.fn(),
   };
 
   beforeEach(() => {
@@ -110,6 +111,15 @@ describe('SearchInputBar', () => {
       // Real icon implementation renders as SVG with lucide-search class
       const svg = container.querySelector('svg.lucide-search');
       expect(svg).toBeInTheDocument();
+    });
+
+    it('replaces the search icon with an accessible close action while focused', () => {
+      const onCloseSearch = vi.fn();
+      const { container } = render(<SearchInputBar {...defaultProps} isFocused onCloseSearch={onCloseSearch} />);
+
+      expect(container.querySelector('svg.lucide-search')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Clear and close search' }));
+      expect(onCloseSearch).toHaveBeenCalledOnce();
     });
 
     it('renders input with Search placeholder when no active tags', () => {

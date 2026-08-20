@@ -2,13 +2,14 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, SORT } from '@/stores/home/home.types';
-import { useSearchStreamId, useSearchTags } from './useSearchStreamId';
+import { useContentSearchQuery, useSearchStreamId, useSearchTags } from './useSearchStreamId';
 
 // Mock next/navigation
 const mockGet = vi.fn();
+const mockQueryParam = vi.hoisted(() => ({ value: null as string | null }));
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
-    get: mockGet,
+    get: (key: string) => (key === 'q' ? mockQueryParam.value : mockGet(key)),
   }),
 }));
 
@@ -16,6 +17,7 @@ describe('useSearchStreamId', () => {
   beforeEach(() => {
     // Reset mocks and store to default state before each test
     mockGet.mockReset();
+    mockQueryParam.value = null;
     act(() => {
       useHomeStore.setState({
         sort: SORT.TIMELINE,
@@ -41,6 +43,24 @@ describe('useSearchStreamId', () => {
       mockGet.mockReturnValue('   ');
       const { result } = renderHook(() => useSearchStreamId());
       expect(result.current).toBeUndefined();
+    });
+  });
+
+  describe('when a content query is provided', () => {
+    it('takes precedence over tags and maps the content filter into the search stream', () => {
+      mockQueryParam.value = 'bitcoin wallets';
+      mockGet.mockReturnValue('tag-that-must-not-win');
+      act(() => {
+        useHomeStore.setState({ content: CONTENT.COLLECTIONS });
+      });
+
+      const { result, rerender } = renderHook(() => useSearchStreamId());
+
+      expect(result.current).toBe('content_search:bitcoin%20wallets:collection');
+
+      mockQueryParam.value = 'privacy tools';
+      rerender();
+      expect(result.current).toBe('content_search:privacy%20tools:collection');
     });
   });
 
@@ -222,5 +242,21 @@ describe('useSearchTags', () => {
     mockGet.mockReturnValue('tag1,tag2,tag3,tag4,tag5,tag6,tag7');
     const { result } = renderHook(() => useSearchTags());
     expect(result.current).toEqual(['tag1', 'tag2', 'tag3', 'tag4', 'tag5']);
+  });
+});
+
+describe('useContentSearchQuery', () => {
+  beforeEach(() => {
+    mockQueryParam.value = null;
+  });
+
+  it('returns only valid normalized q parameters', () => {
+    mockQueryParam.value = '  bitcoin wallet  ';
+    const { result, rerender } = renderHook(() => useContentSearchQuery());
+    expect(result.current).toBe('bitcoin wallet');
+
+    mockQueryParam.value = 'b';
+    rerender();
+    expect(result.current).toBeNull();
   });
 });

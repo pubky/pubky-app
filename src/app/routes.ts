@@ -28,6 +28,11 @@ export enum APP_ROUTES {
   SHARE = '/share',
 }
 
+export function getContentSearchUrl(query: string): string {
+  const params = new URLSearchParams({ q: query });
+  return `${APP_ROUTES.SEARCH}?${params.toString()}`;
+}
+
 export enum COLLECTION_ROUTES {
   BOOKMARKS = '/collections/bookmarks',
 }

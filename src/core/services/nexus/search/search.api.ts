@@ -1,6 +1,7 @@
 import { buildUrlWithQuery, encodePathSegment } from '@/services/nexus/nexus.utils';
 import {
   SEARCH_PATH_PARAMS,
+  type TContentSearchParams,
   type TPrefixSearchParams,
   type TTagSearchParams,
 } from '@/services/nexus/search/search.types';
@@ -14,6 +15,11 @@ import {
 const PREFIX = 'v0/search';
 
 export const searchApi = {
+  byContent: (params: TContentSearchParams) =>
+    buildUrlWithQuery({
+      baseRoute: `${PREFIX}/posts/by_content`,
+      params,
+    }),
   byTag: (params: TTagSearchParams) => {
     const tag = encodePathSegment(params.tag);
     return buildUrlWithQuery({

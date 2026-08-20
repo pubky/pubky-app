@@ -474,6 +474,10 @@ function setSearchTags(tags: string[]) {
   navigation.searchParams = tags.length ? new URLSearchParams({ tags: tags.join(',') }) : new URLSearchParams();
 }
 
+function setContentSearchQuery(query: string) {
+  navigation.searchParams = new URLSearchParams({ q: query });
+}
+
 function resetSearchInputUi() {
   searchInputUi.inputValue = '';
   searchInputUi.isFocused = false;
@@ -511,6 +515,22 @@ describe('Search (tagged results) — visual regression', () => {
   it('renders tagged search results at mobile viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-mobile');
+  });
+});
+
+describe('Search (full-text results) — visual regression', () => {
+  beforeEach(() => {
+    setContentSearchQuery('bitcoin design');
+  });
+
+  it('renders relevance-ranked content results at desktop viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-desktop');
+  });
+
+  it('renders relevance-ranked content results at mobile viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-mobile');
   });
 });
 

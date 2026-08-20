@@ -132,6 +132,8 @@ export type FollowedCollectionsStreamId =
   `${StreamSorting.TIMELINE}:${StreamSource.BOOKMARKS}:${StreamKind.COLLECTION}`;
 export type DiscoverCollectionsStreamId = `${StreamSorting.ENGAGEMENT}:${StreamSource.ALL}:${StreamKind.COLLECTION}`;
 export type CollectionItemsStreamCompositeId = `${StreamSource.COLLECTION}:${string}:${string}`;
+export const CONTENT_SEARCH_STREAM_PREFIX = 'content_search' as const;
+export type ContentSearchStreamId = `${typeof CONTENT_SEARCH_STREAM_PREFIX}:${string}:${PostStreamKindSegment}`;
 
 export function buildPostReplyStreamId(compositePostId: string): ReplyStreamCompositeId {
   return `${StreamSource.REPLIES}:${compositePostId}`;
@@ -195,6 +197,29 @@ export function buildCollectionItemsStreamId(authorPubky: Pubky, postId: string)
   return `${StreamSource.COLLECTION}:${authorPubky}:${postId}`;
 }
 
+export function buildContentSearchStreamId(query: string, kind: PostStreamKindSegment = 'all'): ContentSearchStreamId {
+  return `${CONTENT_SEARCH_STREAM_PREFIX}:${encodeURIComponent(query)}:${kind}`;
+}
+
+export function parseContentSearchStreamId(streamId: string): { query: string; kind: PostStreamKindSegment } | null {
+  const [prefix, encodedQuery, kind, ...extra] = streamId.split(':');
+  const parsedKind = toPostStreamKindSegment(kind);
+  if (prefix !== CONTENT_SEARCH_STREAM_PREFIX || !encodedQuery || !parsedKind || extra.length > 0) {
+    return null;
+  }
+
+  try {
+    const query = decodeURIComponent(encodedQuery);
+    return query ? { query, kind: parsedKind } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isContentSearchStream(streamId: string): streamId is ContentSearchStreamId {
+  return parseContentSearchStreamId(streamId) !== null;
+}
+
 export function isCollectionItemsStream(streamId: string): streamId is CollectionItemsStreamCompositeId {
   return streamId.startsWith(`${StreamSource.COLLECTION}:`);
 }
@@ -235,6 +260,11 @@ function toPostStreamKindSegment(segment: string | undefined): PostStreamKindSeg
  * `postKindBelongsToStream`) must use it instead of splitting the id themselves.
  */
 export function getPostStreamKind(streamId: string): PostStreamKindSegment | undefined {
+  const contentSearch = parseContentSearchStreamId(streamId);
+  if (contentSearch) {
+    return contentSearch.kind;
+  }
+
   const parts = streamId.split(':');
   const [first, second] = parts;
 
@@ -346,7 +376,8 @@ export type PostStreamId =
   | AuthorCollectionsStreamId
   | FollowedCollectionsStreamId
   | DiscoverCollectionsStreamId
-  | CollectionItemsStreamCompositeId;
+  | CollectionItemsStreamCompositeId
+  | ContentSearchStreamId;
 
 /**
  * Streams that paginate by offset (`skip`) rather than a timestamp/score cursor.
@@ -356,10 +387,11 @@ export type PostStreamId =
  * - Engagement streams (`total_engagement:…`) — popularity-ranked, no stable score cursor.
  * - Single-collection item streams (`collection:…`) — returned in the collection's own
  *   item order, paginated by index.
+ * - Full-text content search (`content_search:…`) — relevance-ranked and paginated by offset.
  */
 export function isSkipPaginatedStream(streamId: string): boolean {
   const head = streamId.split(':')[0];
-  return head === StreamSorting.ENGAGEMENT || isCollectionItemsStream(streamId);
+  return head === StreamSorting.ENGAGEMENT || isCollectionItemsStream(streamId) || isContentSearchStream(streamId);
 }
 
 /**

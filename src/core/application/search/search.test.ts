@@ -1,10 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NexusSearchService } from '@/services/nexus/search/search';
+import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 import { SearchApplication } from './search';
 
 describe('SearchApplication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('fetchPostsByContent', () => {
+    it('delegates relevance-ranked content search to NexusSearchService', async () => {
+      const params = { q: 'bitcoin wallet', kind: StreamKind.COLLECTION, skip: 0, limit: 10 };
+      const results = [{ post_key: 'alice:post-1', score: 4.2 }];
+      const searchSpy = vi.spyOn(NexusSearchService, 'postsByContent').mockResolvedValue(results);
+
+      await expect(SearchApplication.fetchPostsByContent(params)).resolves.toEqual(results);
+      expect(searchSpy).toHaveBeenCalledWith(params);
+    });
   });
 
   describe('fetchUsersById', () => {

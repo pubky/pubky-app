@@ -3,7 +3,7 @@
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
+import { useContentSearchQuery, useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { SearchEmptyState } from '@/molecules/SearchEmptyState/SearchEmptyState';
 import { SearchHeader } from '@/molecules/SearchHeader/SearchHeader';
 import { SearchInput } from '@/organisms/SearchInput/SearchInput';
@@ -12,12 +12,13 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
 /**
  * Search Template
  *
- * Template for the Search page that displays posts filtered by tags.
- * Tags are parsed from URL query parameters (?tags=pubky,bitcoin).
+ * Template for the Search page that displays full-text or tag-filtered posts.
+ * Criteria are parsed from `?q=bitcoin` or `?tags=pubky,bitcoin`.
  *
  * Features:
- * - Displays search results when tags are provided
- * - Shows empty state when no tags in URL
+ * - Displays full-text results when a valid query is provided (takes precedence)
+ * - Displays tag results when tags are provided
+ * - Shows empty state when neither criterion is present
  * - Uses TimelineFeed with SEARCH variant for infinite scroll
  * - Shows SearchInput on mobile (hidden on desktop where it's in the header)
  *
@@ -27,21 +28,22 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
  * config for `/search` lives in `app/(feeds)/_shell/configs.tsx`.
  */
 export function Search() {
-  // Get tags from URL query params
   const tags = useSearchTags();
+  const query = useContentSearchQuery();
   const isMobile = useIsMobile();
   const hasTags = tags.length > 0;
+  const hasSearchCriteria = Boolean(query) || hasTags;
 
   return (
     <>
       {/* Mobile search input - hidden on desktop (shown in header there) */}
       <Container className="lg:hidden">
-        <SearchInput autoFocus={!hasTags || isMobile} />
+        <SearchInput autoFocus={!query && (!hasTags || isMobile)} />
       </Container>
 
-      {hasTags ? (
+      {hasSearchCriteria ? (
         <>
-          <SearchHeader tags={tags} />
+          <SearchHeader tags={tags} query={query} />
           <Container data-cy="post-search-results" overrideDefaults>
             <TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />
           </Container>
