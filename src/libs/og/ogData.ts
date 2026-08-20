@@ -1,5 +1,4 @@
 import sharp from 'sharp';
-import { resolvePostAttachmentUrl } from '@/libs/file/resolvePostAttachmentUrl';
 import { Logger } from '@/libs/logger/logger';
 import { fetchWithValidation } from '@/libs/post/postMetadata';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
@@ -8,8 +7,6 @@ import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nex
 import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
 import { OG_REVALIDATE } from './ogConstants';
-
-export { resolvePostAttachmentUrl };
 
 /**
  * Server-only data helpers for dynamic OG image generation.

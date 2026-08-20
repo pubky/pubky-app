@@ -1,3 +1,4 @@
+import { resolvePostAttachmentUrl } from '@/libs/file/resolvePostAttachmentUrl';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
@@ -6,7 +7,7 @@ import { generateRandomColor, getDisplayTags, isPostDeleted, resolveDisplayName 
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { OgAvatar, OgFrame, OgHeader } from './OgComponents';
 import { OG_SIZE, OG_TOKENS, OG_TRUNCATE } from './ogConstants';
-import { buildAvatarUrl, fetchImageAsDataUri, fetchPostTags, resolvePostAttachmentUrl } from './ogData';
+import { buildAvatarUrl, fetchImageAsDataUri, fetchPostTags } from './ogData';
 import { LibraryIcon, StickyNoteIcon } from './OgIcons';
 import { ogImageResponse } from './ogImageResponse';
 import { renderFallbackOg } from './renderFallbackOg';

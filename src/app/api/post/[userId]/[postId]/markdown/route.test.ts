@@ -219,6 +219,26 @@ describe('API Route: /api/post/[userId]/[postId]/markdown', () => {
     expect(mocks.fetchPostDetailsForServer).toHaveBeenCalledWith(USER_ID, originalId);
   });
 
+  it('omits the quote and still returns 200 when the original fetch fails', async () => {
+    const originalId = '0035ORIGINAL1';
+    mocks.fetchPostViewForServer.mockResolvedValueOnce(
+      view(
+        { content: 'my take' },
+        {
+          replied: null,
+          reposted: `pubky://${USER_ID}/pub/pubky.app/posts/${originalId}`,
+          mentioned: [],
+        },
+      ),
+    );
+    mocks.fetchPostDetailsForServer.mockRejectedValueOnce(new Error('Nexus down'));
+
+    const response = await GET(new Request('http://localhost/api/post/x/y/markdown'), context());
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('my take');
+  });
+
   it('prefixes a reply with a link to the parent and does not fetch it', async () => {
     const parentId = '0035PARENT000';
     mocks.fetchPostViewForServer.mockResolvedValueOnce(

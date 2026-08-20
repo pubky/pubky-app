@@ -1,3 +1,4 @@
+import { resolvePostAttachmentUrl } from '@/libs/file/resolvePostAttachmentUrl';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { markdownToText } from '@/libs/post/markdownToText';
@@ -8,7 +9,7 @@ import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { OgFrame, OgHeader } from './OgComponents';
 import { OG_TOKENS, OG_TRUNCATE } from './ogConstants';
-import { buildAvatarUrl, fetchImageAsDataUri, resolvePostAttachmentUrl } from './ogData';
+import { buildAvatarUrl, fetchImageAsDataUri } from './ogData';
 import { NewspaperIcon } from './OgIcons';
 import { ogImageResponse } from './ogImageResponse';
 import { renderCollectionOg } from './renderCollectionOg';

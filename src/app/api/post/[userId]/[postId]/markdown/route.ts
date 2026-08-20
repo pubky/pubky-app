@@ -96,12 +96,17 @@ function markdownHrefForPostUri(uri: string | null | undefined): string | null {
 async function loadQuotedPost(repostedUri: string | null): Promise<MarkdownQuotedPost | undefined> {
   const parsed = parsePostUri(repostedUri);
   if (!parsed) return undefined;
-  const post = await fetchPostDetailsForServer(parsed.userId, parsed.postId);
-  if (!post) return undefined;
-  return {
-    kind: post.kind,
-    content: post.content,
-    attachments: post.attachments,
-    href: `${POST_ROUTES.POST}/${parsed.userId}/${parsed.postId}.md`,
-  };
+  try {
+    const post = await fetchPostDetailsForServer(parsed.userId, parsed.postId);
+    if (!post) return undefined;
+    return {
+      kind: post.kind,
+      content: post.content,
+      attachments: post.attachments,
+      href: `${POST_ROUTES.POST}/${parsed.userId}/${parsed.postId}.md`,
+    };
+  } catch {
+    // Quote lookup is optional. A Nexus blip on the original must not 502 the current post.
+    return undefined;
+  }
 }
