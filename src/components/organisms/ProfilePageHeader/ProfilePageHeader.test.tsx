@@ -145,13 +145,13 @@ describe('ProfilePageHeader', () => {
   it('renders name and bio correctly', () => {
     render(<ProfilePageHeader {...mockProps} />);
 
-    expect(screen.getByText('Satoshi Nakamoto')).toBeInTheDocument();
+    expect(screen.getByText('Satoshi Nakamoto')).toHaveClass('leading-8', 'lg:leading-none');
     expect(
       screen.getByText('Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.'),
     ).toBeInTheDocument();
   });
 
-  it('places spacing before the actions instead of between the name and bio', () => {
+  it('uses the original responsive spacing between profile sections', () => {
     render(<ProfilePageHeader {...mockProps} />);
 
     const header = screen.getByTestId('profile-page-header');
@@ -159,9 +159,9 @@ describe('ProfilePageHeader', () => {
     const actions = screen.getByText('Edit profile').closest('button')?.parentElement;
 
     expect(header).toHaveClass('gap-y-3');
-    expect(bio?.parentElement).toHaveClass('lg:gap-0');
+    expect(bio?.parentElement).toHaveClass('lg:gap-3');
     expect(bio?.nextElementSibling).toBe(actions);
-    expect(actions).toHaveClass('lg:mt-3');
+    expect(actions).not.toHaveClass('lg:mt-3');
   });
 
   it('renders formatted public key', () => {

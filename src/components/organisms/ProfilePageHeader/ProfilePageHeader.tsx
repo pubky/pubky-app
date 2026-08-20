@@ -121,7 +121,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
       </Container>
 
       {/* Mobile uses display: contents so children participate in the parent grid; desktop restores a normal flex column. */}
-      <Container overrideDefaults={true} className="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-0">
+      <Container overrideDefaults={true} className="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3">
         <Container
           overrideDefaults={true}
           className={cn(
@@ -136,7 +136,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               data-cy="profile-username-header"
               as="h1"
               size="lg"
-              className="min-w-0 truncate text-2xl leading-normal text-white lg:text-6xl"
+              className="min-w-0 truncate text-2xl leading-8 text-white lg:text-6xl lg:leading-none"
             >
               {name}
             </Typography>
@@ -200,7 +200,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
 
         <Container
           overrideDefaults={true}
-          className="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:mt-3 lg:flex lg:flex-wrap lg:gap-3"
+          className="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:flex lg:flex-wrap lg:gap-3"
         >
           {/* Own profile actions */}
           {isOwnProfile && (
