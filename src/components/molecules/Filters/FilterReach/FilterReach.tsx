@@ -25,6 +25,16 @@ export const REACH_FILTER_META: Record<ReachFilterValue, { label: string; icon: 
   [REACH.ALL]: { label: 'All', icon: Radio },
 };
 
+/** Cypress hooks for the reach radiogroup — the WoT feed E2E selects by these. */
+const REACH_FILTER_DATA_CY: Record<ReachFilterValue, string> = {
+  [REACH.NETWORK]: 'network-reach-toggle',
+  [TAGGED_AS_FILTER_KEY]: 'tagged-as-reach-toggle',
+  [REACH.FOLLOWING]: 'following-reach-toggle',
+  [REACH.FRIENDS]: 'friends-reach-toggle',
+  [REACH.ME]: 'me-reach-toggle',
+  [REACH.ALL]: 'all-reach-toggle',
+};
+
 interface FilterReachSharedProps {
   profileTags?: string[];
   onProfileTagAdd?: (tag: string) => void;
@@ -61,6 +71,7 @@ export function FilterReach({
     key,
     ...REACH_FILTER_META[key],
     disabled,
+    dataCy: REACH_FILTER_DATA_CY[key],
   }));
 
   const handleReachChange = (value: ReachFilterValue) => {

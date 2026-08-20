@@ -60,6 +60,7 @@ export function FilterLayout({
       selectedValue={displaySelectedTab}
       defaultValue={defaultSelectedTab}
       onChange={onTabChange}
+      dataCy="filter-layout-radiogroup"
     />
   );
 }

@@ -238,8 +238,7 @@ describe('notifications', () => {
     cy.signInWithEncryptedFile(backupDownloadFilePath(profile3.username));
     verifyNotificationCounter(0);
     goToProfilePageFromHeader();
-    // todo: change text when placeholder UI is updated, see https://github.com/pubky/pubky-app/issues/1789
-    cy.get('[data-cy="profile-tab-content"]').should('contain.text', 'Nothing to see here yet');
+    cy.get('[data-cy="profile-tab-content"]').should('contain.text', 'No notifications yet');
   });
 
   it('can be notified for your post being replied to', () => {

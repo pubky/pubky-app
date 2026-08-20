@@ -78,6 +78,13 @@ describe('FilterLayout', () => {
     expect(screen.getByText('Visual')).toBeInTheDocument();
   });
 
+  it('preserves data-cy selectors for e2e tests', () => {
+    render(<FilterLayout showVisual />);
+
+    expect(screen.getByRole('radiogroup')).toHaveAttribute('data-cy', 'filter-layout-radiogroup');
+    expect(screen.getByLabelText('Visual')).toHaveAttribute('data-cy', 'visual-layout-toggle');
+  });
+
   it('falls back to columns for display when visual is selected but hidden', () => {
     render(<FilterLayout selectedTab={LAYOUT.VISUAL} showVisual={false} />);
 

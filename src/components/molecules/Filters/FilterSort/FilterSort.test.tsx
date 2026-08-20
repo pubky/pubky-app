@@ -74,6 +74,13 @@ describe('FilterSort', () => {
     });
   });
 
+  it('preserves data-cy selectors for e2e tests', () => {
+    render(<FilterSort />);
+
+    expect(screen.getByLabelText('Recent')).toHaveAttribute('data-cy', 'recent-sort-toggle');
+    expect(screen.getByLabelText('Popularity')).toHaveAttribute('data-cy', 'popularity-sort-toggle');
+  });
+
   it('renders with different selected tabs', () => {
     const { rerender } = render(<FilterSort selectedTab={SORT.TIMELINE} />);
 
