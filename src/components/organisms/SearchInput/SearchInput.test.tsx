@@ -1,11 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
-import type { Pubky } from '@/models/models.types';
 import { useSearchStore } from '@/stores/search/search.store';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { SearchInput } from './SearchInput';
 
 // Mock next/navigation
@@ -91,174 +91,6 @@ vi.mock('@/stores/search/search.store', () => ({
   })),
 }));
 
-// Mock atoms
-vi.mock('@/atoms/Container/Container', () => {
-  return {
-    Container: ({
-      children,
-      className,
-      style,
-      ...props
-    }: React.PropsWithChildren<{ className?: string; style?: React.CSSProperties }>) => (
-      <div className={className} style={style} {...props}>
-        {children}
-      </div>
-    ),
-  };
-});
-
-vi.mock('@/atoms/Input/Input', () => {
-  return {
-    Input: ({
-      type,
-      placeholder,
-      value,
-      onChange,
-      onKeyDown,
-      onFocus,
-      readOnly,
-      className,
-      ...props
-    }: React.InputHTMLAttributes<HTMLInputElement>) => (
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        onFocus={onFocus}
-        readOnly={readOnly}
-        className={className}
-        {...props}
-      />
-    ),
-  };
-});
-
-// Mock molecules
-vi.mock('@/molecules/SearchInputBar/SearchInputBar', () => {
-  return {
-    SearchInputBar: ({
-      activeTags,
-      inputValue,
-      isFocused,
-      isReadOnly,
-      isExpanded,
-      suggestionsId,
-      onTagRemove,
-      onInputChange,
-      onKeyDown,
-      onFocus,
-      onCloseSearch,
-    }: {
-      activeTags: string[];
-      inputValue: string;
-      isFocused: boolean;
-      isReadOnly: boolean;
-      isExpanded?: boolean;
-      suggestionsId?: string;
-      onTagRemove: (tag: string) => void;
-      onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-      onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-      onFocus: () => void;
-      onCloseSearch: () => void;
-    }) => (
-      <div
-        data-testid="search-input-bar"
-        className={isFocused ? 'rounded-t-2xl' : 'rounded-full'}
-        style={isFocused ? { background: 'linear-gradient(180deg, #05050A 0%, rgba(5, 5, 10, 0.50) 100%)' } : undefined}
-      >
-        {activeTags.length > 0 && (
-          <div role="list" aria-label="Active search tags">
-            {activeTags.map((tag) => (
-              <span key={tag} data-testid={`active-tag-${tag}`}>
-                {tag}
-                <button data-testid={`remove-tag-${tag}`} onClick={() => onTagRemove(tag)}>
-                  x
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        <input
-          type="text"
-          placeholder={activeTags.length > 0 ? '' : 'Search'}
-          value={inputValue}
-          onChange={onInputChange}
-          onKeyDown={onKeyDown}
-          onFocus={onFocus}
-          readOnly={isReadOnly}
-          aria-label="Search input"
-          aria-autocomplete="list"
-          aria-controls={suggestionsId || undefined}
-          aria-expanded={isExpanded}
-        />
-        {isFocused ? (
-          <button type="button" aria-label="Clear and close search" onClick={onCloseSearch}>
-            x
-          </button>
-        ) : (
-          <svg data-testid="search-icon" />
-        )}
-      </div>
-    ),
-  };
-});
-
-vi.mock('@/molecules/SearchRecentUserItem/SearchRecentUserItem.types', () => {
-  return {
-    RecentUserSearchItem: {} as { id: Pubky; searchedAt: number },
-    RecentTagSearchItem: {} as { tag: string; searchedAt: number },
-  };
-});
-
-vi.mock('@/molecules/SearchSuggestions/SearchSuggestions', () => {
-  return {
-    SearchSuggestions: ({
-      id,
-      'aria-label': ariaLabel,
-      hotTags,
-      autocompleteUsers = [],
-      hasInput,
-      onTagClick,
-      onUserClick,
-      onShowAllResults,
-    }: {
-      id?: string;
-      'aria-label'?: string;
-      hotTags: Array<{ name: string }>;
-      inputValue: string;
-      hasInput: boolean;
-      autocompleteTags?: Array<{ name: string }>;
-      autocompleteUsers?: Array<{ id: string; name: string; avatarUrl?: string }>;
-      recentUsers?: Array<{ id: string; searchedAt: number }>;
-      recentTags?: Array<{ tag: string; searchedAt: number }>;
-      onTagClick: (tag: string | { tag: string; searchedAt: number }) => void;
-      onUserClick: (userId: string | { id: string; searchedAt: number }) => void;
-      onShowAllResults: () => void;
-      onClearRecentSearches?: () => void;
-    }) => (
-      <div id={id} aria-label={ariaLabel} data-testid="search-suggestions">
-        {hotTags.map((tag) => (
-          <button key={tag.name} data-testid={`hot-tag-${tag.name}`} onClick={() => onTagClick(tag.name)}>
-            {tag.name}
-          </button>
-        ))}
-        {autocompleteUsers.map((user) => (
-          <button key={user.id} data-testid={`autocomplete-user-${user.id}`} onClick={() => onUserClick(user.id)}>
-            {user.name}
-          </button>
-        ))}
-        {hasInput && (
-          <button type="button" onClick={onShowAllResults}>
-            Show all results
-          </button>
-        )}
-      </div>
-    ),
-  };
-});
-
 describe('SearchInput', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -315,9 +147,9 @@ describe('SearchInput', () => {
     });
 
     it('renders the search icon', () => {
-      render(<SearchInput />);
+      const { container } = render(<SearchInput />);
 
-      expect(screen.getByTestId('search-icon')).toBeInTheDocument();
+      expect(container.querySelector('svg.lucide-search')).toBeInTheDocument();
     });
 
     it('does not render combobox role on container (suggestions are button-based, not listbox)', () => {
@@ -354,8 +186,8 @@ describe('SearchInput', () => {
 
       render(<SearchInput />);
 
-      expect(screen.getByTestId('active-tag-bitcoin')).toBeInTheDocument();
-      expect(screen.getByTestId('active-tag-pubky')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'bitcoin tag' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'pubky tag' })).toBeInTheDocument();
     });
 
     it('renders empty placeholder when active tags present', async () => {
@@ -509,7 +341,7 @@ describe('SearchInput', () => {
 
       render(<SearchInput />);
 
-      fireEvent.click(screen.getByTestId('hot-tag-pubky'));
+      fireEvent.click(screen.getByRole('button', { name: 'pubky tag' }));
 
       expect(mockAddTagToSearch).toHaveBeenCalledWith('pubky', { addToRecent: true });
     });
@@ -538,7 +370,7 @@ describe('SearchInput', () => {
 
       render(<SearchInput />);
 
-      fireEvent.click(screen.getByTestId('autocomplete-user-user123'));
+      fireEvent.click(screen.getByTestId('search-user-suggestion-user123'));
 
       expect(mockAddUser).toHaveBeenCalledWith('user123');
       expect(clearInputValue).toHaveBeenCalled();
@@ -637,7 +469,7 @@ describe('SearchInput', () => {
 
       render(<SearchInput />);
 
-      fireEvent.click(screen.getByTestId('remove-tag-bitcoin'));
+      fireEvent.click(screen.getByRole('button', { name: 'Remove bitcoin tag' }));
 
       expect(mockRemoveTagFromSearch).toHaveBeenCalledWith('bitcoin');
     });
@@ -707,5 +539,79 @@ describe('SearchInput', () => {
       const { container } = render(<SearchInput />);
       expect(container.firstChild).toMatchSnapshot();
     });
+
+    it('matches snapshot - focused with the full-text action', () => {
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'bitcoin',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setFocus: vi.fn(),
+      });
+
+      const { container } = render(<SearchInput />);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+  });
+});
+
+describe('SearchInput - Mobile Snapshots', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSearchParams.delete('tags');
+    vi.mocked(useSearchInput).mockReturnValue({
+      inputValue: '',
+      isFocused: false,
+      containerRef: { current: null },
+      inputRef: { current: null },
+      handleInputChange: vi.fn(),
+      handleKeyDown: vi.fn(),
+      handleFocus: vi.fn(),
+      clearInputValue: vi.fn(),
+      setFocus: vi.fn(),
+    });
+    vi.mocked(useHotTags).mockReturnValue({
+      tags: [{ name: 'pubky', count: 10 }],
+      rawTags: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    vi.mocked(useSearchAutocomplete).mockReturnValue({
+      tags: [],
+      users: [],
+      isLoading: false,
+    });
+    vi.mocked(useTagSearch).mockReturnValue({
+      addTagToSearch: mockAddTagToSearch,
+      removeTagFromSearch: mockRemoveTagFromSearch,
+      activeTags: [],
+      isReadOnly: false,
+    });
+    vi.mocked(useSearchStore).mockReturnValue({
+      activeTags: [],
+      setActiveTags: mockSetActiveTags,
+      addActiveTag: mockAddActiveTag,
+      removeActiveTag: mockRemoveActiveTag,
+      recentUsers: [],
+      recentTags: [],
+      addUser: mockAddUser,
+      addTag: mockAddTag,
+    });
+    mockUseIsMobile.mockReturnValue(true);
+    setMobileViewport();
+  });
+
+  afterEach(() => {
+    resetViewport();
+  });
+
+  it('matches snapshot on mobile viewport', () => {
+    const { container } = render(<SearchInput />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

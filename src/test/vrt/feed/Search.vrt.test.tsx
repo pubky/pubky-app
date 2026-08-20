@@ -544,11 +544,15 @@ describe('Search (profile results) — visual regression', () => {
 
   it('renders profile search suggestions at desktop viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByRole('button', { name: 'Clear and close search' })).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Show all results' })).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-profiles-desktop');
   });
 
   it('renders profile search suggestions at mobile viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByRole('button', { name: 'Clear and close search' })).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Show all results' })).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-profiles-mobile');
   });
 });

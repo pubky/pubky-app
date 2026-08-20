@@ -17,3 +17,15 @@ describe('SearchHeader', () => {
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 });
+
+describe('SearchHeader - Snapshots', () => {
+  it('matches full-text query snapshot', () => {
+    const { container } = render(<SearchHeader tags={['ignored-tag']} query="bitcoin wallet" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches tag-search snapshot', () => {
+    const { container } = render(<SearchHeader tags={['bitcoin', 'design']} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

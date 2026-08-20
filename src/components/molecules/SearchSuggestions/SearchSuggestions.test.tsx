@@ -132,5 +132,10 @@ describe('SearchSuggestions', () => {
       const { container } = render(<SearchSuggestions {...defaultProps} hotTags={[]} />);
       expect(container.firstChild).toMatchSnapshot();
     });
+
+    it('matches snapshot with the full-text action', () => {
+      const { container } = render(<SearchSuggestions {...defaultProps} hasInput />);
+      expect(container.firstChild).toMatchSnapshot();
+    });
   });
 });

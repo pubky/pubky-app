@@ -2,7 +2,7 @@
 
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useContentSearchQuery } from '@/hooks/useSearchStreamId/useSearchStreamId';
-import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organisms/HomeFeedSidebar/HomeFeedSidebar';
+import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '../HomeFeedSidebar/HomeFeedSidebar';
 
 type SearchFeedFiltersProps = {
   variant: 'sidebar' | 'drawer' | 'mobile';

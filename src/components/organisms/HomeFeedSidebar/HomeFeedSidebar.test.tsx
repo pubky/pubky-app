@@ -408,6 +408,18 @@ describe('HomeFeedSidebar - Snapshots', () => {
     const { container } = render(<HomeFeedSidebar allowVisualLayout={true} feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
     expect(container).toMatchSnapshot();
   });
+
+  it('matches snapshot with Sort hidden', () => {
+    const { container } = render(
+      <HomeFeedSidebar
+        allowVisualLayout={true}
+        feedVariant={TIMELINE_FEED_VARIANT.SEARCH}
+        hideReachFilter
+        hideSortFilter
+      />,
+    );
+    expect(container).toMatchSnapshot();
+  });
 });
 
 describe('HomeFeedDrawer - Snapshots', () => {

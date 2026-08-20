@@ -126,6 +126,8 @@ describe('Search', () => {
 describe('Search - Snapshots', () => {
   beforeEach(() => {
     mockUseIsMobile.mockReturnValue(false);
+    mockUseContentSearchQuery.mockReturnValue(null);
+    mockUseSearchTags.mockReturnValue(['pubky']);
   });
 
   it('matches snapshot with tags present', () => {
@@ -144,13 +146,14 @@ describe('Search - Snapshots', () => {
 describe('Search - Mobile Snapshots', () => {
   beforeEach(() => {
     mockUseIsMobile.mockReturnValue(true);
+    mockUseContentSearchQuery.mockReturnValue(null);
+    mockUseSearchTags.mockReturnValue(['pubky']);
     setMobileViewport();
   });
   afterEach(() => {
     resetViewport();
   });
   it('matches snapshot on mobile viewport', () => {
-    mockUseSearchTags.mockReturnValue(['pubky']);
     const { container } = render(<Search />);
     expect(container).toMatchSnapshot();
   });

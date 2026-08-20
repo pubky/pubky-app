@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SearchHeader - Snapshots > matches full-text query snapshot 1`] = `
+<h2
+  class="text-2xl font-light text-muted-foreground"
+  data-testid="heading-2"
+>
+  Results for: bitcoin wallet
+</h2>
+`;
+
+exports[`SearchHeader - Snapshots > matches tag-search snapshot 1`] = `
+<h2
+  class="text-2xl font-light text-muted-foreground"
+  data-testid="heading-2"
+>
+  Results for: bitcoin, design
+</h2>
+`;
