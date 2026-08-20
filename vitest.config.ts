@@ -62,6 +62,11 @@ export default defineConfig({
             'react/jsx-runtime',
             'react/jsx-dev-runtime',
             'next/font/google',
+            // Reached only through a runtime dynamic import (the lazy icon
+            // catalog) — pre-bundle it so Vite does not discover it mid-run
+            // and reload the page under an in-flight request, which crashes
+            // the browser-playwright route handler.
+            'lucide-react/dynamic.js',
           ],
         },
         test: {

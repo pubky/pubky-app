@@ -27,6 +27,13 @@ data dependency (store/hook/fetch/router) so the pixels are deterministic.
 
 ## Determinism
 
+Both VRT scripts pass `--no-file-parallelism`: parallel browser-page startup
+intermittently crashes the whole run before any test executes (an unhandled
+`route.fulfill: Target page, context or browser has been closed` rejection
+inside `@vitest/browser-playwright` when a page closes under an in-flight
+module request). Serialized runs are reliably stable; remove the flag only
+after verifying repeated parallel runs survive on a clean cache.
+
 Renders should be as close to identical as possible every run, on every OS.
 `vitest.config.ts` sets a small `toMatchScreenshot` tolerance
 (`comparatorOptions.allowedMismatchedPixelRatio: 0.001`, i.e. 0.1%) so residual
