@@ -3,6 +3,7 @@
 import { type ReactNode, useDeferredValue, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import {
 import { DynamicLucideIcon } from '@/atoms/DynamicLucideIcon/DynamicLucideIcon';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
+import { Typography } from '@/atoms/Typography/Typography';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import {
   isPlausibleLucideIconName,
@@ -30,7 +32,7 @@ const APPEND_BATCH_SIZE = 150;
 // Warmed on open so the grid's first paint renders icons from cache.
 const INITIAL_ICON_PRELOAD_COUNT = 88;
 
-export interface IconPickerDialogProps {
+interface IconPickerDialogProps {
   children?: ReactNode;
   value?: string | null;
   onSelect: (iconName: string) => void;
@@ -171,7 +173,7 @@ export function IconPickerDialog({
         <Label htmlFor="icon-picker-search" className="sr-only">
           {resolvedSearchPlaceholder}
         </Label>
-        <div className="relative shrink-0">
+        <Container overrideDefaults className="relative shrink-0">
           <Input
             ref={searchInputRef}
             id="icon-picker-search"
@@ -196,30 +198,36 @@ export function IconPickerDialog({
               <X className="size-4" />
             </Button>
           )}
-        </div>
+        </Container>
 
-        <span role="status" className="sr-only">
+        <Typography overrideDefaults as="span" role="status" className="sr-only">
           {isCatalogLoading ? 'Loading icons' : `${filteredIcons.length} icons`}
-        </span>
+        </Typography>
 
-        <div
+        <Container
+          overrideDefaults
           ref={scrollAreaRef}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2"
           data-testid="icon-picker-scroll-area"
           aria-busy={isCatalogLoading || isFilterPending ? true : undefined}
         >
           {isCatalogLoading ? (
-            <div className="h-full" data-testid="icon-picker-loading" />
+            <Container overrideDefaults className="h-full" data-testid="icon-picker-loading" />
           ) : filteredIcons.length === 0 ? (
-            <p
+            <Typography
+              overrideDefaults
               className="flex h-full items-center justify-center text-sm text-muted-foreground"
               data-testid="icon-picker-empty"
             >
               {resolvedEmptyMessage}
-            </p>
+            </Typography>
           ) : (
             <>
-              <div className="grid grid-cols-6 gap-x-2 gap-y-4 sm:grid-cols-11" data-testid="icon-picker-grid">
+              <Container
+                overrideDefaults
+                className="grid grid-cols-6 gap-x-2 gap-y-4 sm:grid-cols-11"
+                data-testid="icon-picker-grid"
+              >
                 {visibleIcons.map(({ name: iconName }) => {
                   const isSelected = iconName === value;
                   const accessibleName = iconName.replaceAll('-', ' ');
@@ -244,11 +252,13 @@ export function IconPickerDialog({
                     </Button>
                   );
                 })}
-              </div>
-              {hasMoreIcons && <div ref={sentinelRef} className="h-6" data-testid="icon-picker-sentinel" />}
+              </Container>
+              {hasMoreIcons && (
+                <Container overrideDefaults ref={sentinelRef} className="h-6" data-testid="icon-picker-sentinel" />
+              )}
             </>
           )}
-        </div>
+        </Container>
       </DialogContent>
     </Dialog>
   );

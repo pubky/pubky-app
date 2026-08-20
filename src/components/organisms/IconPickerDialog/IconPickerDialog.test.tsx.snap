@@ -62,6 +62,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the empty state 1`]
       </label>
       <div
         class="relative shrink-0"
+        data-testid="container"
       >
         <input
           aria-label="Search for icon"
@@ -75,6 +76,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the empty state 1`]
       </div>
       <span
         class="sr-only"
+        data-testid="typography"
         role="status"
       >
         0 icons
@@ -196,6 +198,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the icon grid 1`] =
       </label>
       <div
         class="relative shrink-0"
+        data-testid="container"
       >
         <input
           aria-label="Search for icon"
@@ -209,6 +212,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the icon grid 1`] =
       </div>
       <span
         class="sr-only"
+        data-testid="typography"
         role="status"
       >
         8 icons

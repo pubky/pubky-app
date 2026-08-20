@@ -40,7 +40,7 @@ function loadLucideCatalog(): Promise<LucideCatalog> {
   return catalogLoad;
 }
 
-export type LucideIconState =
+type LucideIconState =
   | { status: 'loading' }
   | { status: 'loaded'; node: IconNode }
   | { status: 'unknown' }

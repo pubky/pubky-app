@@ -57,6 +57,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
     </a>
     <div
       class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 flex-none lg:flex-1 border-white"
+      data-testid="container"
     >
       <a
         aria-current="page"
@@ -224,6 +225,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     </a>
     <div
       class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 border-border"
+      data-testid="container"
     >
       <a
         aria-label="Bitcoin News"
@@ -287,6 +289,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     </div>
     <div
       class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 border-border"
+      data-testid="container"
     >
       <a
         aria-label="Lightning Network"
@@ -452,6 +455,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     </a>
     <div
       class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 border-border"
+      data-testid="container"
     >
       <a
         aria-label="Bitcoin"
@@ -515,6 +519,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     </div>
     <div
       class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 flex-none lg:flex-1 border-white"
+      data-testid="container"
     >
       <a
         aria-current="page"
@@ -579,6 +584,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     </div>
     <div
       class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 border-border"
+      data-testid="container"
     >
       <a
         aria-label="Nostr"

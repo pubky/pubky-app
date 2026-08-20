@@ -12,7 +12,7 @@ import { cn } from '@/libs/utils/utils';
 
 const EMPTY_ICON_NODE: IconNode = [];
 
-export interface DynamicLucideIconProps extends Omit<LucideProps, 'name'> {
+interface DynamicLucideIconProps extends Omit<LucideProps, 'name'> {
   name?: string | null;
   /** Rendered for a missing/unknown/failed name — never while a valid icon is loading. */
   fallback?: LucideIcon | null;

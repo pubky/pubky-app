@@ -126,7 +126,8 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           const isActive = pathname === href;
 
           return (
-            <div
+            <Container
+              overrideDefaults
               key={href}
               className={cn(
                 'group',
@@ -169,7 +170,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
               >
                 <Pencil className="size-4" />
               </Button>
-            </div>
+            </Container>
           );
         })}
 
