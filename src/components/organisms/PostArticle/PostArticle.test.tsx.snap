@@ -10,14 +10,50 @@ exports[`PostArticle > Snapshots > matches snapshot with cover image 1`] = `
       class="gap-y-1"
       data-testid="container"
     >
-      <span
-        class="wrap-anywhere"
-        data-size="lg"
-        data-testid="typography"
-      >
-        Test Article Title
-      </span>
       <div
+        class="flex-row items-start gap-2"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-newspaper mt-1 size-5 shrink-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 18h-5"
+          />
+          <path
+            d="M18 14h-8"
+          />
+          <path
+            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+          />
+          <rect
+            height="4"
+            rx="1"
+            width="8"
+            x="10"
+            y="6"
+          />
+        </svg>
+        <span
+          class="min-w-0 text-xl wrap-anywhere"
+          data-size="lg"
+          data-testid="typography"
+        >
+          Test Article Title
+        </span>
+      </div>
+      <div
+        class="line-clamp-3"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -27,7 +63,7 @@ exports[`PostArticle > Snapshots > matches snapshot with cover image 1`] = `
     </div>
     <img
       alt="Cover Image"
-      class="h-25 w-45 rounded-md object-cover object-center"
+      class="aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!"
       data-testid="cover-image"
       height="100"
       src="https://example.com/cover-image.jpg"
@@ -58,14 +94,50 @@ exports[`PostArticle > Snapshots > matches snapshot with custom className 1`] = 
       class="gap-y-1"
       data-testid="container"
     >
-      <span
-        class="wrap-anywhere"
-        data-size="lg"
-        data-testid="typography"
-      >
-        Test Article Title
-      </span>
       <div
+        class="flex-row items-start gap-2"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-newspaper mt-1 size-5 shrink-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 18h-5"
+          />
+          <path
+            d="M18 14h-8"
+          />
+          <path
+            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+          />
+          <rect
+            height="4"
+            rx="1"
+            width="8"
+            x="10"
+            y="6"
+          />
+        </svg>
+        <span
+          class="min-w-0 text-xl wrap-anywhere"
+          data-size="lg"
+          data-testid="typography"
+        >
+          Test Article Title
+        </span>
+      </div>
+      <div
+        class="line-clamp-3"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -75,7 +147,7 @@ exports[`PostArticle > Snapshots > matches snapshot with custom className 1`] = 
     </div>
     <img
       alt="Cover Image"
-      class="h-25 w-45 rounded-md object-cover object-center"
+      class="aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!"
       data-testid="cover-image"
       height="100"
       src="https://example.com/cover-image.jpg"
@@ -106,14 +178,50 @@ exports[`PostArticle > Snapshots > matches snapshot with local cover image 1`] =
       class="gap-y-1"
       data-testid="container"
     >
-      <span
-        class="wrap-anywhere"
-        data-size="lg"
-        data-testid="typography"
-      >
-        Test Article Title
-      </span>
       <div
+        class="flex-row items-start gap-2"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-newspaper mt-1 size-5 shrink-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 18h-5"
+          />
+          <path
+            d="M18 14h-8"
+          />
+          <path
+            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+          />
+          <rect
+            height="4"
+            rx="1"
+            width="8"
+            x="10"
+            y="6"
+          />
+        </svg>
+        <span
+          class="min-w-0 text-xl wrap-anywhere"
+          data-size="lg"
+          data-testid="typography"
+        >
+          Test Article Title
+        </span>
+      </div>
+      <div
+        class="line-clamp-3"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -123,7 +231,7 @@ exports[`PostArticle > Snapshots > matches snapshot with local cover image 1`] =
     </div>
     <img
       alt="Local Cover Image"
-      class="h-25 w-45 rounded-md object-cover object-center"
+      class="aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!"
       data-testid="cover-image"
       height="100"
       src="blob:http://localhost/local-cover-image"
@@ -154,14 +262,50 @@ exports[`PostArticle > Snapshots > matches snapshot with local video attachment 
       class="gap-y-1"
       data-testid="container"
     >
-      <span
-        class="wrap-anywhere"
-        data-size="lg"
-        data-testid="typography"
-      >
-        Test Article Title
-      </span>
       <div
+        class="flex-row items-start gap-2"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-newspaper mt-1 size-5 shrink-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 18h-5"
+          />
+          <path
+            d="M18 14h-8"
+          />
+          <path
+            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+          />
+          <rect
+            height="4"
+            rx="1"
+            width="8"
+            x="10"
+            y="6"
+          />
+        </svg>
+        <span
+          class="min-w-0 text-xl wrap-anywhere"
+          data-size="lg"
+          data-testid="typography"
+        >
+          Test Article Title
+        </span>
+      </div>
+      <div
+        class="line-clamp-3"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -171,7 +315,7 @@ exports[`PostArticle > Snapshots > matches snapshot with local video attachment 
     </div>
     <img
       alt="Cover Image"
-      class="h-25 w-45 rounded-md object-cover object-center"
+      class="aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!"
       data-testid="cover-image"
       height="100"
       src="https://example.com/cover-image.jpg"
@@ -202,14 +346,50 @@ exports[`PostArticle > Snapshots > matches snapshot with long title and body 1`]
       class="gap-y-1"
       data-testid="container"
     >
-      <span
-        class="wrap-anywhere"
-        data-size="lg"
-        data-testid="typography"
-      >
-        This is a very long article title that might wrap to multiple lines in the UI
-      </span>
       <div
+        class="flex-row items-start gap-2"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-newspaper mt-1 size-5 shrink-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 18h-5"
+          />
+          <path
+            d="M18 14h-8"
+          />
+          <path
+            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+          />
+          <rect
+            height="4"
+            rx="1"
+            width="8"
+            x="10"
+            y="6"
+          />
+        </svg>
+        <span
+          class="min-w-0 text-xl wrap-anywhere"
+          data-size="lg"
+          data-testid="typography"
+        >
+          This is a very long article title that might wrap to multiple lines in the UI
+        </span>
+      </div>
+      <div
+        class="line-clamp-3"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"
@@ -219,7 +399,7 @@ exports[`PostArticle > Snapshots > matches snapshot with long title and body 1`]
     </div>
     <img
       alt="Cover Image"
-      class="h-25 w-45 rounded-md object-cover object-center"
+      class="aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!"
       data-testid="cover-image"
       height="100"
       src="https://example.com/cover-image.jpg"
@@ -250,14 +430,50 @@ exports[`PostArticle > Snapshots > matches snapshot without cover image 1`] = `
       class="gap-y-1"
       data-testid="container"
     >
-      <span
-        class="wrap-anywhere"
-        data-size="lg"
-        data-testid="typography"
-      >
-        Test Article Title
-      </span>
       <div
+        class="flex-row items-start gap-2"
+        data-testid="container"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-newspaper mt-1 size-5 shrink-0"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 18h-5"
+          />
+          <path
+            d="M18 14h-8"
+          />
+          <path
+            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+          />
+          <rect
+            height="4"
+            rx="1"
+            width="8"
+            x="10"
+            y="6"
+          />
+        </svg>
+        <span
+          class="min-w-0 text-xl wrap-anywhere"
+          data-size="lg"
+          data-testid="typography"
+        >
+          Test Article Title
+        </span>
+      </div>
+      <div
+        class="line-clamp-3"
         data-has-link-click="true"
         data-is-article="true"
         data-testid="post-text"

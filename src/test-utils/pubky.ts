@@ -9,7 +9,15 @@ import { asOpaque } from './type-assertions';
  * shape and cast. Consolidating the cast here means test bodies stay typed
  * against the real `Session` type rather than `any`.
  */
-export const mockSession = (partial: Partial<Session> = {}): Session => asOpaque<Session>({ ...partial });
+export const mockSession = (partial: Partial<Session> = {}): Session =>
+  asOpaque<Session>({
+    info: {
+      publicKey: {
+        z32: () => 'mock-session-pubky',
+      },
+    },
+    ...partial,
+  });
 
 /**
  * Minimal `@synonymdev/pubky` `Keypair` double.

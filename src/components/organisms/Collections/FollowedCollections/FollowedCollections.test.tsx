@@ -66,21 +66,8 @@ vi.mock('@/molecules/AvatarStack/AvatarStack.skeleton', () => ({
 }));
 
 vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
-  CollectionCard: ({
-    authorPubky,
-    postId,
-    initialIsBookmarked,
-  }: {
-    authorPubky: string;
-    postId: string;
-    initialIsBookmarked?: boolean;
-  }) => (
-    <div
-      data-testid="collection-card"
-      data-author-pubky={authorPubky}
-      data-post-id={postId}
-      data-initial-bookmarked={String(!!initialIsBookmarked)}
-    />
+  CollectionCard: ({ authorPubky, postId }: { authorPubky: string; postId: string }) => (
+    <div data-testid="collection-card" data-author-pubky={authorPubky} data-post-id={postId} />
   ),
 }));
 
@@ -169,7 +156,7 @@ describe('FollowedCollections', () => {
     });
   });
 
-  it('renders one CollectionCard per live-query id with initialIsBookmarked=true', async () => {
+  it('renders one CollectionCard per live-query id', async () => {
     mockAuthState = { hasHydrated: true, currentUserPubky: 'me' };
     mockUseLiveQuery.mockReturnValue(['authorA:p1', 'authorA:p2', 'authorB:p3']);
 
@@ -183,9 +170,6 @@ describe('FollowedCollections', () => {
     expect(cards[0]).toHaveAttribute('data-post-id', 'p1');
     expect(cards[2]).toHaveAttribute('data-author-pubky', 'authorB');
     expect(cards[2]).toHaveAttribute('data-post-id', 'p3');
-    for (const card of cards) {
-      expect(card).toHaveAttribute('data-initial-bookmarked', 'true');
-    }
   });
 
   it('passes unique authors from displayed cards to AvatarStack', async () => {

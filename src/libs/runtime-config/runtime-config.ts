@@ -1,5 +1,6 @@
 import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 import {
+  type DeployEnv,
   PUBKY_RUNTIME_ENV_NAMES,
   type RuntimeConfig,
   runtimeConfigValueSchema,
@@ -34,7 +35,8 @@ const REQUIRED_NETWORK_ENV_MESSAGE =
   'Set all required PUBKY_RUNTIME_* network variables: ' +
   'PUBKY_RUNTIME_NEXUS_URL, PUBKY_RUNTIME_CDN_URL, PUBKY_RUNTIME_HOMESERVER, ' +
   'PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, ' +
-  'PUBKY_RUNTIME_PKARR_RELAYS, and PUBKY_RUNTIME_TESTNET. ' +
+  'PUBKY_RUNTIME_PKARR_RELAYS, PUBKY_RUNTIME_TESTNET, and PUBKY_RUNTIME_ENV ' +
+  '("production" or "staging"). ' +
   'Optional/defaulted PUBKY_RUNTIME_* values may be set independently.';
 
 /**
@@ -164,6 +166,7 @@ export const getHomegateUrl = (): string => getRuntimeConfig().homegateUrl;
 export const getDefaultHttpRelay = (): string => getRuntimeConfig().defaultHttpRelay;
 export const getPkarrRelays = (): string[] => getRuntimeConfig().pkarrRelays;
 export const getTestnet = (): boolean => getRuntimeConfig().testnet;
+export const getDeployEnv = (): DeployEnv => getRuntimeConfig().deployEnv;
 
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getSentryDsn = (): string | undefined => getRuntimeConfig().sentryDsn;

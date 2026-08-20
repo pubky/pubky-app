@@ -38,6 +38,7 @@ jobs:
           SERVER_LOG="$(mktemp)"
 
           #PUBKY runtime variables
+          export PUBKY_RUNTIME_ENV="staging"
           export PUBKY_RUNTIME_TESTNET="false"
           export PUBKY_RUNTIME_HOMESERVER="ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy"
           export PUBKY_RUNTIME_HOMESERVER_URL="https://homeserver.staging.pubky.app"

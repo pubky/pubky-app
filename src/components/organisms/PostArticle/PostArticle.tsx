@@ -1,5 +1,6 @@
 'use client';
 
+import { Newspaper } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -38,18 +39,21 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
     <>
       <Container className={cn('justify-between gap-6 lg:flex-row @max-xl/grid:flex-col!', className)}>
         <Container className="gap-y-1">
-          <Typography size="lg" className="wrap-anywhere">
-            {title}
-          </Typography>
+          <Container className="flex-row items-start gap-2">
+            <Newspaper aria-hidden="true" className="mt-1 size-5 shrink-0" />
+            <Typography size="lg" className="min-w-0 text-xl wrap-anywhere">
+              {title}
+            </Typography>
+          </Container>
 
-          <PostText content={body} isArticle onLinkClick={handleLinkClick} />
+          <PostText content={body} isArticle onLinkClick={handleLinkClick} className="line-clamp-3" />
         </Container>
 
         {finalCoverImage && (
           <Image
             src={finalCoverImage.src}
             alt={finalCoverImage.alt}
-            className="h-25 w-45 rounded-md object-cover object-center"
+            className="aspect-video h-auto w-full rounded-md object-cover object-center lg:aspect-auto lg:h-25 lg:w-45 @max-xl/grid:aspect-video! @max-xl/grid:h-auto! @max-xl/grid:w-full!"
             width={180}
             height={100}
           />

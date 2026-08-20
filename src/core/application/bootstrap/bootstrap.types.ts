@@ -1,5 +1,6 @@
-import type { TPubkyParams } from '@/controllers/auth/auth.types';
+import type { Pubky } from '@/models/models.types';
 
-export type TBootstrapParams = TPubkyParams & {
+export type TBootstrapParams = {
+  pubky: Pubky;
   lastReadUrl: string;
 };

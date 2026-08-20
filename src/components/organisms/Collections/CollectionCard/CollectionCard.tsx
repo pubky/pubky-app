@@ -1,20 +1,15 @@
 'use client';
 
-import { type MouseEvent, useState } from 'react';
-import { Library, Minus, Plus, Trash2 } from 'lucide-react';
+import { Library } from 'lucide-react';
 import { getCollectionRoute } from '@/app/routes';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { useBookmark } from '@/hooks/useBookmark/useBookmark';
-import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
-import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { resolveCollectionCoverImage } from '@/libs/post/collectionCoverImage';
@@ -24,12 +19,10 @@ import { buildCompositeId } from '@/models/models.utils';
 import { CollectionCountBadge } from '@/molecules/CollectionCountBadge/CollectionCountBadge';
 import { CollectionDeleted } from '@/molecules/CollectionDeleted/CollectionDeleted';
 import { CollectionMissing } from '@/molecules/CollectionMissing/CollectionMissing';
-import { DialogConfirmDelete } from '@/molecules/DialogConfirmDelete/DialogConfirmDelete';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { CollectionCardBlurred } from '@/organisms/Collections/CollectionCard/CollectionCardBlurred';
 import { PostTagsExpandableRow } from '@/organisms/PostTagsExpandableRow/PostTagsExpandableRow';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 
 type CollectionCardPresentation = 'landing' | 'embed';
@@ -41,27 +34,17 @@ interface CollectionCardProps {
   postId: string;
   className?: string;
   /**
-   * Seed for the bookmark hook's initial state. Set to `true` from contexts
-   * where the card is known to represent a followed collection (e.g. the
-   * Followed section) so the action button doesn't flash "Follow" before the
-   * async existence check resolves to "Unfollow".
-   */
-  initialIsBookmarked?: boolean;
-  /**
-   * Controls layout, visible actions, and embed chrome.
+   * Controls layout and embed chrome.
    *
    * - `landing` — full card in catalog sections and collection feeds (default)
    * - `embed` — nested preview (repost, share dialog, inline in post body)
    */
   presentation?: CollectionCardPresentation;
   /**
-   * When `false`, tags render read-only and the Follow / Delete CTA is hidden.
-   * Use for collection embeds inside share/repost dialogs; feed embeds keep the
-   * default (`true`).
+   * When `false`, tags render read-only. Use for collection embeds inside
+   * share/repost dialogs; feed embeds keep the default (`true`).
    */
   interactiveActions?: boolean;
-  /** Show the owner Delete action. Opt in only from the My Collections overview. */
-  showDeleteAction?: boolean;
 }
 
 /**
@@ -71,26 +54,22 @@ interface CollectionCardProps {
  * landing sections (`presentation="landing"`) and nested embed surfaces
  * (`presentation="embed"` — repost, share dialog, inline post body).
  * Use `interactiveActions={false}` on dialog embeds so tags stay visible but
- * non-interactive and the Follow / Delete CTA is hidden.
- * Self-contained: derives title / description / cover / item count / owner profile / tags / ownership
+ * non-interactive. Card-level collection actions live on the dedicated page header.
+ * Self-contained: derives title / description / cover / item count / owner profile / tags
  * locally from `(authorPubky, postId)`, so callers stay thin.
  *
  * Two-stage render: while `usePostDetails` is resolving (`undefined`) we
  * render `CollectionCardSkeleton` so the card never flashes a half-empty
  * state (title='', itemCount=0, etc.). Once details land we delegate to
  * `CollectionCardContent` with `postDetails` as a non-null prop. The
- * separation also keeps hook ordering clean — the content component owns
- * all the hooks that depend on the loaded envelope (`useBookmark` toast
- * copy reads from the parsed title, etc.).
+ * separation also keeps hook ordering clean for hooks that depend on the loaded envelope.
  */
 export function CollectionCard({
   authorPubky,
   postId,
   className,
-  initialIsBookmarked,
   presentation = 'landing',
   interactiveActions = true,
-  showDeleteAction = false,
 }: CollectionCardProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
   const isMobile = useIsMobile();
@@ -127,12 +106,10 @@ export function CollectionCard({
       compositeId={compositeId}
       postDetails={postDetails}
       className={className}
-      initialIsBookmarked={initialIsBookmarked}
       presentation={presentation}
       isMobile={isMobile}
       isWideLayout={isWideLayout}
       interactiveActions={interactiveActions}
-      showDeleteAction={showDeleteAction}
     />
   );
 }
@@ -143,12 +120,10 @@ interface CollectionCardContentProps {
   compositeId: string;
   postDetails: EnrichedPostDetails;
   className?: string;
-  initialIsBookmarked?: boolean;
   presentation: CollectionCardPresentation;
   isMobile: boolean;
   isWideLayout: boolean;
   interactiveActions: boolean;
-  showDeleteAction: boolean;
 }
 
 function CollectionCardContent({
@@ -157,37 +132,18 @@ function CollectionCardContent({
   compositeId,
   postDetails,
   className,
-  initialIsBookmarked,
   presentation,
   isMobile,
   isWideLayout,
   interactiveActions,
-  showDeleteAction,
 }: CollectionCardContentProps) {
   const isEmbed = presentation === 'embed';
   const showTagAddButton = interactiveActions && !isEmbed;
   const { profile: ownerProfile } = useUserProfile(authorPubky);
 
-  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const isOwn = currentUserPubky === authorPubky;
-  const canDelete = interactiveActions && isOwn && showDeleteAction;
-  const canFollow = interactiveActions && !isOwn;
-  const showCardActions = canDelete || canFollow;
-  const { requireAuth } = useRequireAuth();
-
   const collection = parseCollectionContent(postDetails.content);
 
   const title = collection?.name ?? '';
-
-  // Override the generic "Bookmark added / removed" toast copy so collection
-  // Follow / Unfollow reads as a collection action.
-  const { isBookmarked, isToggling, toggle } = useBookmark(compositeId, {
-    toastMessages: {
-      added: "You've followed this collection",
-      removed: "You've unfollowed this collection",
-    },
-    initialIsBookmarked,
-  });
 
   const description = collection?.description?.trim() ?? '';
   const itemCount = collection?.items?.length ?? 0;
@@ -196,201 +152,112 @@ function CollectionCardContent({
   // cover renders instantly after create/edit while the CDN catches up.
   const localCoverUrl = useLocalFilesStore((s) => s.collections[compositeId]);
   const coverImage = localCoverUrl ?? resolveCollectionCoverImage(collection?.cover_image);
-  // Elevated embed chrome (bg-muted card, bg-card CTAs/count pill) without a cover.
+  // Elevated count pill contrast for embed chrome without a cover.
   const embeddedOnMuted = isEmbed && !coverImage;
-  const embeddedMutedActionClass = embeddedOnMuted
-    ? 'gap-2 text-xs bg-card text-foreground hover:bg-card/90 border-card'
-    : 'gap-2 text-xs';
 
   const ownerName = ownerProfile?.name || authorPubky;
   const ownerAvatarUrl = ownerProfile?.avatarUrl;
 
   const href = getCollectionRoute(authorPubky, postId);
 
-  // Suppresses card navigation for clicks inside the wrapping `<Link>` subtree.
-  // Both calls are required: `preventDefault` blocks the native `<a>` default
-  // action; `stopPropagation` keeps the event from reaching any parent React
-  // handlers (and is harmless when called on a leaf handler).
-  const suppressCardNavigation = (event: MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
-
-  const handleFollowToggle = (event: MouseEvent) => {
-    suppressCardNavigation(event);
-    if (isToggling) return;
-    requireAuth(() => {
-      void toggle();
-    });
-  };
-
-  // Collection-specific toast copy so success / failure reads as "Collection
-  // deleted" rather than "Post deleted". `useDeletePost` falls back to the
-  // generic `toast.post.*` strings for any field we omit.
-  const deleteCollectionDescription = `Are you sure you want to delete '${title || authorPubky}'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.`;
-  const { deletePost, isDeleting } = useDeletePost({
-    toastMessages: {
-      deleted: 'Your collection has been deleted',
-      deleteFailed: 'Failed to delete collection. Please try again.',
-    },
-  });
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-
-  const handleDelete = (event: MouseEvent) => {
-    suppressCardNavigation(event);
-    setDeleteConfirmOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    void deletePost(compositeId);
-  };
-
   return (
-    <>
-      <Link
-        overrideDefaults
-        href={href}
-        aria-label={title}
-        data-cy="collection-card"
-        data-presentation={presentation}
-        data-interactive-actions={interactiveActions ? 'true' : 'false'}
-        data-layout={isWideLayout ? 'wide' : 'default'}
-        className={cn('group relative block h-full w-full', isEmbed && 'overflow-hidden rounded-md', className)}
+    <Link
+      overrideDefaults
+      href={href}
+      aria-label={title}
+      data-cy="collection-card"
+      data-presentation={presentation}
+      data-interactive-actions={interactiveActions ? 'true' : 'false'}
+      data-layout={isWideLayout ? 'wide' : 'default'}
+      className={cn('group relative block h-full w-full', isEmbed && 'overflow-hidden rounded-md', className)}
+    >
+      <Card
+        className={cn(
+          // `isolate` creates a new stacking context so the cover image at `-z-10`
+          // stays behind this card's content but does not slip behind an enclosing
+          // post card's opaque background when nested in `PostContentBase`.
+          // In preview embeds the Link wrapper owns clip + radius so a square
+          // ancestor (quoted post shell) does not fight the cover at the corners.
+          'relative isolate h-full gap-0 overflow-hidden py-0',
+          isEmbed ? 'rounded-none shadow-none' : 'rounded-md',
+          coverImage && 'border-transparent bg-card/40',
+          // Embed without a cover uses `bg-muted` (Figma embed chrome).
+          // With a cover, `bg-card/40` + the gradient overlay handle contrast.
+          isEmbed && !coverImage && 'bg-muted',
+        )}
       >
-        <Card
-          className={cn(
-            // `isolate` creates a new stacking context so the cover image at `-z-10`
-            // stays behind this card's content but does not slip behind an enclosing
-            // post card's opaque background when nested in `PostContentBase`.
-            // In preview embeds the Link wrapper owns clip + radius so a square
-            // ancestor (quoted post shell) does not fight the cover at the corners.
-            'relative isolate h-full gap-0 overflow-hidden py-0',
-            isEmbed ? 'rounded-none shadow-none' : 'rounded-md',
-            coverImage && 'border-transparent bg-card/40',
-            // Embed without a cover uses `bg-muted` (Figma embed chrome).
-            // With a cover, `bg-card/40` + the gradient overlay handle contrast.
-            isEmbed && !coverImage && 'bg-muted',
-          )}
-        >
-          {coverImage && (
-            <Container
-              overrideDefaults
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-              style={{
-                backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.35)), url(${coverImage})`,
-              }}
-            />
-          )}
+        {coverImage && (
+          <Container
+            overrideDefaults
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.35)), url(${coverImage})`,
+            }}
+          />
+        )}
 
-          <CardContent className={cn('flex h-full flex-col gap-3', isWideLayout ? 'p-12' : 'p-6')}>
-            {/* Header row: icon + title (left, grows) | item-count + avatar (right) */}
-            <Container overrideDefaults className="flex w-full flex-wrap items-center gap-3 sm:flex-nowrap">
-              <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
-                <Library className="size-6 shrink-0 text-foreground" />
-                <Typography
-                  as="span"
-                  overrideDefaults
-                  className={cn(
-                    'min-w-0 truncate font-bold text-foreground',
-                    isWideLayout ? 'text-2xl leading-8' : 'text-xl leading-7',
-                  )}
-                >
-                  {title}
-                </Typography>
-              </Container>
-
-              <Container overrideDefaults className="flex shrink-0 items-center justify-end gap-2">
-                <CollectionCountBadge count={itemCount} tone={embeddedOnMuted ? 'on-muted' : 'on-card'} />
-                <AvatarWithFallback
-                  avatarUrl={ownerAvatarUrl}
-                  name={ownerName}
-                  fallbackSeed={authorPubky}
-                  size={isWideLayout ? 'lg' : 'sm'}
-                  alt={ownerName}
-                />
-              </Container>
-            </Container>
-
-            {/* Description */}
-            {description && (
+        <CardContent className={cn('flex h-full flex-col gap-3', isWideLayout ? 'p-12' : 'p-6')}>
+          {/* Mobile: title row, then metadata. Desktop: title (left) | metadata (right). */}
+          <Container
+            overrideDefaults
+            data-cy="collection-card-header"
+            className="flex w-full flex-col items-start gap-3 lg:flex-row lg:items-center"
+          >
+            <Container overrideDefaults className="flex w-full min-w-0 items-center gap-2 lg:flex-1">
+              <Library className="size-6 shrink-0 text-foreground" />
               <Typography
+                as="span"
                 overrideDefaults
-                className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
+                className={cn(
+                  'min-w-0 truncate font-bold text-foreground',
+                  isWideLayout ? 'text-2xl leading-8' : 'text-xl leading-7',
+                )}
               >
-                {description}
+                {title}
               </Typography>
-            )}
-
-            {/*
-              Bottom row: tags (left) | Follow/Delete (right).
-
-              `interactiveActions={false}` (share/repost dialog previews): tags
-              stay visible but read-only; Follow/Delete hidden — matches
-              non-collection repost previews.
-            */}
-            <Container
-              overrideDefaults
-              data-cy="collection-card-bottom-row"
-              className="mt-auto flex w-full flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-4"
-            >
-              <PostTagsExpandableRow
-                postId={compositeId}
-                preventDefaultOnClick
-                showTagToggle={false}
-                showAddButton={showTagAddButton}
-                tagsReadOnly={!interactiveActions}
-                maxVisibleTags={isMobile ? 3 : undefined}
-                className="min-w-0 flex-1"
-              />
-              {showCardActions && (
-                <Container
-                  overrideDefaults
-                  data-cy="collection-card-actions"
-                  className="flex w-full shrink-0 items-center justify-start gap-2 self-start md:w-auto md:justify-end md:self-end"
-                  onClick={suppressCardNavigation}
-                  onAuxClick={suppressCardNavigation}
-                >
-                  {canDelete ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      aria-label={'Delete'}
-                      data-cy="collection-card-delete-btn"
-                      className={embeddedMutedActionClass}
-                    >
-                      <Trash2 className="size-4" />
-                      <span className="md:hidden">{'Delete'}</span>
-                    </Button>
-                  ) : canFollow ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleFollowToggle}
-                      disabled={isToggling}
-                      aria-label={isBookmarked ? 'Unfollow' : 'Follow'}
-                      data-cy="collection-card-follow-btn"
-                      className={embeddedMutedActionClass}
-                    >
-                      {isBookmarked ? <Minus className="size-4" /> : <Plus className="size-4" />}
-                      {isBookmarked ? 'Unfollow' : 'Follow'}
-                    </Button>
-                  ) : null}
-                </Container>
-              )}
             </Container>
-          </CardContent>
-        </Card>
-      </Link>
-      <DialogConfirmDelete
-        open={deleteConfirmOpen}
-        onOpenChange={setDeleteConfirmOpen}
-        onConfirm={handleDeleteConfirm}
-        title="Delete collection?"
-        description={deleteCollectionDescription}
-      />
-    </>
+
+            <Container overrideDefaults data-cy="collection-card-metadata" className="flex shrink-0 items-center gap-2">
+              <CollectionCountBadge
+                count={itemCount}
+                showLabelOnMobile
+                tone={embeddedOnMuted ? 'on-muted' : 'on-card'}
+              />
+              <AvatarWithFallback
+                avatarUrl={ownerAvatarUrl}
+                name={ownerName}
+                fallbackSeed={authorPubky}
+                size={isWideLayout ? 'lg' : 'sm'}
+                alt={ownerName}
+              />
+            </Container>
+          </Container>
+
+          {/* Description */}
+          {description && (
+            <Typography
+              overrideDefaults
+              className="line-clamp-2 w-full min-w-0 text-base leading-6 font-medium wrap-anywhere text-secondary-foreground"
+            >
+              {description}
+            </Typography>
+          )}
+
+          {/* Tags stay visible but read-only in non-interactive share/repost previews. */}
+          <Container overrideDefaults data-cy="collection-card-bottom-row" className="mt-auto w-full">
+            <PostTagsExpandableRow
+              postId={compositeId}
+              preventDefaultOnClick
+              showTagToggle={false}
+              showAddButton={showTagAddButton}
+              tagsReadOnly={!interactiveActions}
+              maxVisibleTags={isMobile ? 3 : undefined}
+              className="w-full min-w-0"
+            />
+          </Container>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

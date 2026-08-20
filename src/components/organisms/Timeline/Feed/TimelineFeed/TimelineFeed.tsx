@@ -18,6 +18,7 @@ import {
   buildCollectionItemsStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
+import { PostsEmpty } from '@/molecules/PostsEmpty/PostsEmpty';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
@@ -165,6 +166,7 @@ function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['child
       variant={TIMELINE_FEED_VARIANT.PROFILE}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      emptyState={<PostsEmpty />}
     >
       {children}
     </TimelineFeedWithStream>
