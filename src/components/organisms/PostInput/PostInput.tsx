@@ -55,6 +55,7 @@ export function PostInput({
   onArticleModeChange,
   editContent,
   editIsArticle,
+  editAttachments,
   autoFocusTextarea = false,
   initialContent,
   initialAttachments,
@@ -71,6 +72,8 @@ export function PostInput({
     setTags,
     attachments,
     setAttachments,
+    existingAttachments,
+    removeExistingAttachment,
     isArticle,
     setIsArticle,
     handleArticleClick,
@@ -109,6 +112,7 @@ export function PostInput({
     postId,
     originalPostId,
     editPostId,
+    editAttachmentUris: editAttachments,
     onSuccess,
     placeholder,
     successToastTitle,
@@ -133,6 +137,7 @@ export function PostInput({
     handleArticleTitleChangeWithAuth,
     handleArticleBodyChangeWithAuth,
     handleArticleClickWithAuth,
+    removeExistingAttachmentWithAuth,
   } = usePostInputAuthHandlers({
     handleExpand,
     handleSubmit,
@@ -146,10 +151,18 @@ export function PostInput({
     handleArticleTitleChange,
     handleArticleBodyChange,
     handleArticleClick,
+    removeExistingAttachment,
   });
 
   const isValid = () => {
-    return canSubmitPost(variant, content, attachments, isSubmitting, isArticle, articleTitle);
+    return canSubmitPost(
+      variant,
+      content,
+      [...existingAttachments, ...attachments],
+      isSubmitting,
+      isArticle,
+      articleTitle,
+    );
   };
 
   const enterSubmitHandler = useEnterSubmit(isValid, handleSubmitWithAuth, {
@@ -236,10 +249,10 @@ export function PostInput({
         isDragging ? 'border-brand' : 'border-input',
       )}
       onClick={handleExpandWithAuth}
-      onDragEnter={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragEnter)}
-      onDragLeave={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragLeave)}
-      onDragOver={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDragOver)}
-      onDrop={isEdit ? undefined : (event) => handleDragEventWithAuth(event, handleDrop)}
+      onDragEnter={(event) => handleDragEventWithAuth(event, handleDragEnter)}
+      onDragLeave={(event) => handleDragEventWithAuth(event, handleDragLeave)}
+      onDragOver={(event) => handleDragEventWithAuth(event, handleDragOver)}
+      onDrop={(event) => handleDragEventWithAuth(event, handleDrop)}
     >
       {/* Drag overlay */}
       {isDragging && (
@@ -367,7 +380,7 @@ export function PostInput({
                         onChange={handleChangeWithAuth}
                         onFocus={handleExpandWithAuth}
                         onKeyDown={handleKeyDown}
-                        onPaste={isEdit ? undefined : handlePasteWithAuth}
+                        onPaste={handlePasteWithAuth}
                         maxLength={POST_MAX_CHARACTER_LENGTH}
                         rows={1}
                         disabled={isSubmitting}
@@ -393,17 +406,17 @@ export function PostInput({
                 </Container>
               )}
 
-              {!isEdit && (
-                <PostInputAttachments
-                  ref={fileInputRef}
-                  attachments={attachments}
-                  setAttachments={setAttachmentsWithAuth}
-                  handleFilesAdded={handleFilesAddedWithAuth}
-                  isSubmitting={isSubmitting}
-                  isArticle={isArticle}
-                  handleFileClick={handleFileClickWithAuth}
-                />
-              )}
+              <PostInputAttachments
+                ref={fileInputRef}
+                attachments={attachments}
+                setAttachments={setAttachmentsWithAuth}
+                handleFilesAdded={handleFilesAddedWithAuth}
+                isSubmitting={isSubmitting}
+                isArticle={isArticle}
+                handleFileClick={handleFileClickWithAuth}
+                existingAttachments={isEdit ? existingAttachments : undefined}
+                onRemoveExisting={isEdit ? removeExistingAttachmentWithAuth : undefined}
+              />
 
               {isArticle && (
                 <MarkdownEditor

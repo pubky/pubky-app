@@ -7,6 +7,14 @@ type TInferPostKindParams = {
   isArticle?: boolean;
 };
 
+type TInferPostKindForEditParams = {
+  content: string;
+  /** MIME content types of the resulting attachment set (kept + added). */
+  attachmentContentTypes: string[];
+  /** Stored lowercase kind of the post being edited. */
+  currentKind: string;
+};
+
 type TResolveTagTargetCompositeIdParams = {
   authorId: string;
   newPostId: string;
@@ -32,16 +40,16 @@ const hasSupportedUrl = (content: string): boolean => {
   return Boolean(match?.[0]?.url);
 };
 
-const getAttachmentKind = (attachments: File[]): PubkyAppPostKind | null => {
-  if (attachments.some((file) => file.type.startsWith('video/'))) {
+const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
+  if (contentTypes.some((type) => type.startsWith('video/'))) {
     return PubkyAppPostKind.Video;
   }
 
-  if (attachments.some((file) => file.type.startsWith('image/'))) {
+  if (contentTypes.some((type) => type.startsWith('image/'))) {
     return PubkyAppPostKind.Image;
   }
 
-  if (attachments.length > 0) {
+  if (contentTypes.length > 0) {
     return PubkyAppPostKind.File;
   }
 
@@ -58,13 +66,38 @@ export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInf
   }
 
   const files = attachments ?? [];
-  const attachmentKind = getAttachmentKind(files);
+  const attachmentKind = getAttachmentKind(files.map((file) => file.type));
 
   if (attachmentKind !== null) {
     return attachmentKind;
   }
 
   return PubkyAppPostKind.Short;
+};
+
+/**
+ * Kind for an edited post whose attachment set changed. Articles and
+ * collections keep their kind; everything else re-runs the create-time
+ * inference against the resulting attachment content types.
+ */
+export const inferPostKindForEdit = ({
+  content,
+  attachmentContentTypes,
+  currentKind,
+}: TInferPostKindForEditParams): PubkyAppPostKind => {
+  if (currentKind === 'long') {
+    return PubkyAppPostKind.Long;
+  }
+
+  if (currentKind === 'collection') {
+    return PubkyAppPostKind.Collection;
+  }
+
+  if (hasSupportedUrl(content)) {
+    return PubkyAppPostKind.Link;
+  }
+
+  return getAttachmentKind(attachmentContentTypes) ?? PubkyAppPostKind.Short;
 };
 
 /**

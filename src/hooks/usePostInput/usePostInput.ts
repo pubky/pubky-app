@@ -19,6 +19,7 @@ import {
 import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
+import { useEditAttachments } from '@/hooks/useEditAttachments/useEditAttachments';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
 import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
@@ -52,6 +53,7 @@ export function usePostInput({
   postId,
   originalPostId,
   editPostId,
+  editAttachmentUris,
   onSuccess,
   placeholder,
   successToastTitle,
@@ -80,6 +82,8 @@ export function usePostInput({
     setTags,
     attachments,
     setAttachments,
+    existingAttachments,
+    setExistingAttachments,
     isArticle,
     setIsArticle,
     articleTitle,
@@ -93,6 +97,15 @@ export function usePostInput({
   const timelineFeed = useTimelineFeedContext();
   const { toast } = useToast();
   const { deletePost } = useDeletePost();
+
+  // Seed and resolve the post's current attachments for the edit composer
+  const { seededUris: seededAttachmentUris } = useEditAttachments({
+    enabled: variant === POST_INPUT_VARIANT.EDIT,
+    postId: editPostId,
+    uris: editAttachmentUris,
+    existingAttachments,
+    setExistingAttachments,
+  });
 
   // Get original post author's name for repost toast message
   const originalPostAuthorId = originalPostId ? originalPostId.split(':')[0] : null;
@@ -122,8 +135,8 @@ export function usePostInput({
 
   // Notify parent of content changes
   useEffect(() => {
-    onContentChange?.(content, tags, attachments, articleTitle);
-  }, [content, tags, attachments, articleTitle, onContentChange]);
+    onContentChange?.(content, tags, attachments, articleTitle, existingAttachments);
+  }, [content, tags, attachments, articleTitle, existingAttachments, onContentChange]);
 
   // Notify parent of article mode changes
   useEffect(() => {
@@ -191,27 +204,51 @@ export function usePostInput({
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
 
-    // For replies and posts, require content or attachments. For reposts, content is optional. Content and title is required for articles. Content is required for edits.
+    // For replies, posts, and edits, require content or attachments. For reposts, content is optional. Content and title is required for articles.
+    const totalAttachments = attachments.length + existingAttachments.length;
     if (
-      (variant !== POST_INPUT_VARIANT.REPOST && !content.trim() && attachments.length === 0) ||
-      (isArticle && (!content.trim() || !articleTitle.trim())) ||
-      (variant === POST_INPUT_VARIANT.EDIT && !content.trim())
+      (variant !== POST_INPUT_VARIANT.REPOST && !content.trim() && totalAttachments === 0) ||
+      (isArticle && (!content.trim() || !articleTitle.trim()))
     )
       return;
 
+    // Maps a newly added File to a local-store attachment backed by a fresh object URL
+    const newFileToLocalAttachment = (file: File) => {
+      const url = URL.createObjectURL(file);
+      const isImage = file.type.startsWith('image');
+      return { type: file.type, name: file.name, urls: { main: url, feed: isImage ? url : undefined } };
+    };
+
     // Wrapper that prepends to timeline and calls original onSuccess
     const handleSuccess = (createdPostId: string) => {
-      if (attachments.length) {
-        const localAttachments = attachments.map((a) => {
-          const url = URL.createObjectURL(a);
-          const isImage = a.type.startsWith('image');
-          return { type: a.type, name: a.name, urls: { main: url, feed: isImage ? url : undefined } };
-        });
+      if (variant === POST_INPUT_VARIANT.EDIT) {
+        // Replace the optimistic store entry with the resulting attachment set:
+        // kept attachments reuse their already-resolved URLs (the store's
+        // set-difference revoke keeps reused blob: URLs alive), new files get
+        // fresh object URLs. If a kept attachment never resolved, clear the
+        // entry instead and let the Dexie/CDN render path take over.
+        const allKeptResolved = existingAttachments.every((attachment) => attachment.urls !== null);
+        const merged = allKeptResolved
+          ? [
+              ...existingAttachments.map((attachment) => ({
+                type: attachment.type,
+                name: attachment.name,
+                urls: attachment.urls as { main: string; feed?: string },
+              })),
+              ...attachments.map(newFileToLocalAttachment),
+            ]
+          : [];
 
-        useLocalFilesStore.getState().setPostAttachments(createdPostId, localAttachments);
+        useLocalFilesStore.getState().setPostAttachments(createdPostId, merged);
+        onSuccess?.(createdPostId);
+        return;
       }
 
-      if (variant === POST_INPUT_VARIANT.REPLY || variant === POST_INPUT_VARIANT.EDIT) {
+      if (attachments.length) {
+        useLocalFilesStore.getState().setPostAttachments(createdPostId, attachments.map(newFileToLocalAttachment));
+      }
+
+      if (variant === POST_INPUT_VARIANT.REPLY) {
         onSuccess?.(createdPostId);
         return;
       }
@@ -279,7 +316,7 @@ export function usePostInput({
         });
         break;
       case POST_INPUT_VARIANT.EDIT:
-        await edit({ editPostId: editPostId!, onSuccess: handleSuccess });
+        await edit({ editPostId: editPostId!, originalAttachmentUris: seededAttachmentUris, onSuccess: handleSuccess });
         break;
       case POST_INPUT_VARIANT.POST:
       default:
@@ -289,6 +326,7 @@ export function usePostInput({
   }, [
     content,
     attachments,
+    existingAttachments,
     isArticle,
     articleTitle,
     variant,
@@ -301,6 +339,7 @@ export function usePostInput({
     repost,
     edit,
     editPostId,
+    seededAttachmentUris,
     isSubmitting,
     onSuccess,
     timelineFeed,
@@ -360,7 +399,7 @@ export function usePostInput({
         : POST_SUPPORTED_ATTACHMENT_MIME_TYPES;
       const SUPPORTED_FILE_TYPES = isArticle ? ARTICLE_SUPPORTED_FILE_TYPES : POST_SUPPORTED_FILE_TYPES;
 
-      const currentCount = attachments.length;
+      const currentCount = attachments.length + existingAttachments.length;
       const availableSlots = ATTACHMENT_MAX_FILES - currentCount;
 
       if (availableSlots <= 0) {
@@ -415,8 +454,13 @@ export function usePostInput({
         setAttachments((prev) => [...prev, ...validFiles]);
       }
     },
-    [isArticle, isSubmitting, attachments.length, setAttachments, toast],
+    [isArticle, isSubmitting, attachments.length, existingAttachments.length, setAttachments, toast],
   );
+
+  // Remove an existing attachment from the edit composer (removed from the post on submit)
+  const removeExistingAttachment = (uri: string) => {
+    setExistingAttachments((prev) => prev.filter((attachment) => attachment.uri !== uri));
+  };
 
   // Drag and drop handlers
   const handleDragEnter = useCallback(
@@ -528,6 +572,8 @@ export function usePostInput({
     setTags,
     attachments,
     setAttachments,
+    existingAttachments,
+    setExistingAttachments,
     isArticle,
     setIsArticle,
     articleTitle,
@@ -560,6 +606,7 @@ export function usePostInput({
     handleEmojiSelect,
     handleFilesAdded,
     handleFileClick,
+    removeExistingAttachment,
     handleDragEnter,
     handleDragLeave,
     handleDragOver,

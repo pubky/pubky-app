@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
 import { FileVariant } from '@/services/nexus/file/file.types';
@@ -411,6 +411,59 @@ describe('PostAttachments', () => {
       // Should not render anything after error
       expect(container.firstChild).toBeNull();
     });
+
+    it('clears previously rendered attachments when a re-fetch fails', async () => {
+      const initialAttachments = ['pubky://user1/pub/pubky.app/files/image1'];
+      const newAttachments = ['pubky://user2/pub/pubky.app/files/image2'];
+      mockGetMetadata.mockResolvedValueOnce([createMockImageMetadata('user1:image1')]);
+
+      const { container, rerender } = render(
+        <PostAttachments attachments={initialAttachments} localAttachments={undefined} />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
+      });
+
+      // An edit changed the attachment set, but the metadata fetch fails
+      mockGetMetadata.mockRejectedValueOnce(new Error('Network error'));
+      rerender(<PostAttachments attachments={newAttachments} localAttachments={undefined} />);
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith({
+          variant: 'error',
+          description: 'Could not load attachments',
+        });
+      });
+
+      // The previously constructed attachments must not linger as stale media
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('does not toast or clear when the failing fetch was already cancelled', async () => {
+      const attachments = ['pubky://user1/pub/pubky.app/files/image1'];
+      let rejectMetadata: (error: Error) => void = () => undefined;
+      mockGetMetadata.mockReturnValue(
+        new Promise<NexusFileDetails[]>((_, reject) => {
+          rejectMetadata = reject;
+        }),
+      );
+
+      const { container, rerender } = render(
+        <PostAttachments attachments={attachments} localAttachments={undefined} />,
+      );
+
+      // Removing the attachments cancels the in-flight fetch
+      rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
+
+      await act(async () => {
+        rejectMetadata(new Error('Network error'));
+        await Promise.resolve();
+      });
+
+      expect(mockToast).not.toHaveBeenCalled();
+      expect(container.firstChild).toBeNull();
+    });
   });
 
   describe('Conditional rendering of sub-components', () => {
@@ -451,6 +504,68 @@ describe('PostAttachments', () => {
       });
 
       expect(screen.queryByTestId('post-attachments-generic-files')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Clearing on attachment removal', () => {
+    it('clears rendered remote attachments when the list becomes empty', async () => {
+      const attachments = ['pubky://user1/pub/pubky.app/files/image1'];
+      mockGetMetadata.mockResolvedValue([createMockImageMetadata('user1:image1')]);
+
+      const { container, rerender } = render(
+        <PostAttachments attachments={attachments} localAttachments={undefined} />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
+      });
+
+      rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
+
+      await waitFor(() => {
+        expect(container.firstChild).toBeNull();
+      });
+    });
+
+    it('clears rendered local attachments when the store entry is removed and no remote attachments remain', async () => {
+      const localAttachments = [createLocalImageAttachment()];
+
+      const { container, rerender } = render(
+        <PostAttachments attachments={null} localAttachments={localAttachments} />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('post-attachments-images-and-videos')).toBeInTheDocument();
+      });
+
+      rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
+
+      await waitFor(() => {
+        expect(container.firstChild).toBeNull();
+      });
+    });
+
+    it('ignores a late metadata resolution after the attachments were removed', async () => {
+      const attachments = ['pubky://user1/pub/pubky.app/files/image1'];
+      let resolveMetadata: (value: NexusFileDetails[]) => void = () => undefined;
+      mockGetMetadata.mockReturnValue(
+        new Promise<NexusFileDetails[]>((resolve) => {
+          resolveMetadata = resolve;
+        }),
+      );
+
+      const { container, rerender } = render(
+        <PostAttachments attachments={attachments} localAttachments={undefined} />,
+      );
+
+      rerender(<PostAttachments attachments={null} localAttachments={undefined} />);
+
+      resolveMetadata([createMockImageMetadata('user1:image1')]);
+
+      await waitFor(() => {
+        expect(mockGetMetadata).toHaveBeenCalled();
+      });
+      expect(container.firstChild).toBeNull();
     });
   });
 

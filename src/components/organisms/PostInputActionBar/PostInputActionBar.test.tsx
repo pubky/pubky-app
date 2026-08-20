@@ -190,11 +190,11 @@ describe('PostInputActionBar', () => {
     expect(screen.getByRole('button', { name: 'Post' })).toBeInTheDocument();
   });
 
-  it('hides image and file buttons but shows emoji when isEdit is true', () => {
-    render(<PostInputActionBar hideArticleButton={false} isEdit={true} />);
+  it('shows the image button whenever isArticle is false', () => {
+    render(<PostInputActionBar hideArticleButton={false} isArticle={false} />);
 
     expect(screen.getByRole('button', { name: 'Add emoji' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Add image' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add image' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add article' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Post' })).toBeInTheDocument();
   });
@@ -277,11 +277,6 @@ describe('PostInputActionBar - Snapshots', () => {
 
   it('matches snapshot with isArticle prop', () => {
     const { container } = render(<PostInputActionBar hideArticleButton={false} isArticle={true} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot with isEdit prop', () => {
-    const { container } = render(<PostInputActionBar hideArticleButton={false} isEdit={true} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

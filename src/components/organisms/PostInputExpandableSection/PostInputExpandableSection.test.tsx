@@ -92,7 +92,6 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isSubmitting,
     hideArticleButton,
     isArticle,
-    isEdit,
     postButtonIcon,
     postButtonLabel,
   }: {
@@ -103,7 +102,6 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
     isSubmitting?: boolean;
     hideArticleButton?: boolean;
     isArticle?: boolean;
-    isEdit?: boolean;
     postButtonIcon?: React.ComponentType;
     postButtonLabel?: string;
   }) => (
@@ -113,7 +111,6 @@ vi.mock('../PostInputActionBar/PostInputActionBar', () => ({
       data-submitting={isSubmitting}
       data-hide-article-button={hideArticleButton}
       data-is-article={isArticle}
-      data-is-edit={isEdit}
       data-has-post-button-icon={!!postButtonIcon}
       data-post-button-label={postButtonLabel}
     >
@@ -338,20 +335,6 @@ describe('PostInputExpandableSection', () => {
 
     const tagsComponent = screen.getByTestId('post-input-tags');
     expect(tagsComponent).toHaveAttribute('data-disabled', 'true');
-  });
-
-  it('passes isEdit=true to PostInputActionBar when submitMode is EDIT', () => {
-    render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} />);
-
-    const actionBar = screen.getByTestId('post-input-action-bar');
-    expect(actionBar).toHaveAttribute('data-is-edit', 'true');
-  });
-
-  it('passes isEdit=false to PostInputActionBar when submitMode is not EDIT', () => {
-    render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.POST} />);
-
-    const actionBar = screen.getByTestId('post-input-action-bar');
-    expect(actionBar).toHaveAttribute('data-is-edit', 'false');
   });
 
   it('passes postButtonIcon when submitMode is EDIT', () => {

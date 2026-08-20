@@ -74,6 +74,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
       id: postId,
       content: 'Test post content',
       kind: 'short',
+      attachments: null,
     },
     isLoading: false,
   })),
@@ -113,6 +114,7 @@ vi.mock('../PostInput/PostInput', () => ({
       editPostId,
       editContent,
       editIsArticle,
+      editAttachments,
       expanded,
       layoutOverride,
     }) => (
@@ -123,6 +125,7 @@ vi.mock('../PostInput/PostInput', () => ({
         data-edit-post-id={editPostId}
         data-edit-content={editContent}
         data-edit-is-article={String(editIsArticle)}
+        data-edit-attachments={editAttachments?.join(',')}
         data-expanded={String(expanded)}
         data-layout-override={layoutOverride}
       >
@@ -141,6 +144,7 @@ vi.mock('../PostInput/PostInput', () => ({
 
 describe('DialogEditPost', () => {
   const articleContent = JSON.stringify({ title: 'Test article title', body: 'Test article content' });
+  const postAttachments = ['pubky://author/pub/pubky.app/files/file-1', 'pubky://author/pub/pubky.app/files/file-2'];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -150,6 +154,7 @@ describe('DialogEditPost', () => {
         id: 'test-post-123',
         content: 'Test post content',
         kind: 'short',
+        attachments: postAttachments,
       } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });
@@ -218,10 +223,28 @@ describe('DialogEditPost', () => {
         editPostId: 'test-post-123',
         editContent: 'Test post content',
         editIsArticle: false,
+        editAttachments: postAttachments,
         layoutOverride: 'inline',
       }),
       undefined,
     );
+  });
+
+  it('passes empty editAttachments to PostInput when the post has no attachments', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: {
+        id: 'test-post-123',
+        content: 'Test post content',
+        kind: 'short',
+        attachments: null,
+      } as ReturnType<typeof usePostDetails>['postDetails'],
+      isLoading: false,
+    });
+
+    const onOpenChangeAction = vi.fn();
+    render(<DialogEditPost postId="test-post-123" open={true} onOpenChangeAction={onOpenChangeAction} />);
+
+    expect(PostInput).toHaveBeenCalledWith(expect.objectContaining({ editAttachments: [] }), undefined);
   });
 
   it('enables keyboard avoidance on DialogContent', () => {
@@ -336,6 +359,7 @@ describe('DialogEditPost - Snapshots', () => {
         id: 'snapshot-post-id',
         content: 'Snapshot post content',
         kind: 'short',
+        attachments: ['pubky://author/pub/pubky.app/files/snapshot-file-1'],
       } as ReturnType<typeof usePostDetails>['postDetails'],
       isLoading: false,
     });

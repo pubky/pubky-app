@@ -48,6 +48,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           editPostId={postDetails.id}
           editContent={postDetails.content}
           editIsArticle={isArticle}
+          editAttachments={postDetails.attachments ?? []}
           layoutOverride="inline"
         />
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}

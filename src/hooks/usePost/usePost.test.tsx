@@ -4,6 +4,14 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { usePost } from './usePost';
+import type { ExistingAttachment } from './usePost.types';
+
+const mockExistingAttachment = (uri: string): ExistingAttachment => ({
+  uri,
+  type: 'image/png',
+  name: uri.split('/').pop() ?? 'file',
+  urls: { main: `https://cdn.example/${uri}/main` },
+});
 
 // Hoist mock data and functions
 const {
@@ -84,10 +92,12 @@ describe('usePost', () => {
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
       expect(result.current.attachments).toEqual([]);
+      expect(result.current.existingAttachments).toEqual([]);
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
       expect(result.current.isSubmitting).toBe(false);
       expect(typeof result.current.setContent).toBe('function');
+      expect(typeof result.current.setExistingAttachments).toBe('function');
       expect(typeof result.current.setTags).toBe('function');
       expect(typeof result.current.setAttachments).toBe('function');
       expect(typeof result.current.setIsArticle).toBe('function');
@@ -151,6 +161,52 @@ describe('usePost', () => {
 
       expect(result.current.isArticle).toBe(true);
       expect(result.current.attachments).toEqual([]);
+    });
+
+    // Locks the deliberate exclusion of `existingAttachments` from the
+    // article-mode clearing effect: edit-mode prefill flips isArticle true in
+    // the same commit window that seeds the article cover, so clearing here
+    // would wipe the seeded cover on mount.
+    it('should not clear existingAttachments or toast when switching to article mode', () => {
+      const { result } = renderHook(() => usePost());
+      const existing = mockExistingAttachment('pubky://user/pub/pubky.app/files/COVER');
+
+      act(() => {
+        result.current.setExistingAttachments([existing]);
+      });
+
+      expect(result.current.existingAttachments).toEqual([existing]);
+      mockToast.mockClear();
+
+      act(() => {
+        result.current.setIsArticle(true);
+      });
+
+      expect(result.current.isArticle).toBe(true);
+      expect(result.current.existingAttachments).toEqual([existing]);
+      expect(mockToast).not.toHaveBeenCalled();
+    });
+
+    it('should clear only new attachments when switching to article mode with both kinds present', () => {
+      const { result } = renderHook(() => usePost());
+      const existing = mockExistingAttachment('pubky://user/pub/pubky.app/files/COVER');
+      const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+      act(() => {
+        result.current.setExistingAttachments([existing]);
+        result.current.setAttachments([mockFile]);
+      });
+
+      act(() => {
+        result.current.setIsArticle(true);
+      });
+
+      expect(result.current.attachments).toEqual([]);
+      expect(result.current.existingAttachments).toEqual([existing]);
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'warning',
+        title: 'Articles support one cover image',
+      });
     });
 
     // Note: This scenario doesn't occur in the actual UI (the form resets entirely),
@@ -1330,6 +1386,231 @@ describe('usePost', () => {
         expect(mockOnSuccess).toHaveBeenCalled();
         expect(mockToast).toHaveBeenCalledWith({
           title: 'Post updated',
+        });
+      });
+
+      it('should commit content-only (no attachments payload) when the attachment set is unchanged', async () => {
+        const { result } = renderHook(() => usePost());
+        const existing = mockExistingAttachment('pubky://user/pub/pubky.app/files/F1');
+
+        act(() => {
+          result.current.setContent('Edited content');
+          result.current.setExistingAttachments([existing]);
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            originalAttachmentUris: [existing.uri],
+            onSuccess: vi.fn(),
+          });
+        });
+
+        expect(mockPostControllerEdit).toHaveBeenCalledWith({
+          compositePostId: 'test-post-123',
+          content: 'Edited content',
+        });
+        expect(mockPostControllerEdit.mock.calls[0][0].attachments).toBeUndefined();
+      });
+
+      it('should submit edit with empty content when existing attachments remain', async () => {
+        const { result } = renderHook(() => usePost());
+        const mockOnSuccess = vi.fn();
+        const existing = mockExistingAttachment('pubky://user/pub/pubky.app/files/F1');
+
+        act(() => {
+          result.current.setExistingAttachments([existing]);
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            originalAttachmentUris: [existing.uri],
+            onSuccess: mockOnSuccess,
+          });
+        });
+
+        expect(mockPostControllerEdit).toHaveBeenCalledWith({
+          compositePostId: 'test-post-123',
+          content: '',
+        });
+        expect(mockOnSuccess).toHaveBeenCalled();
+      });
+
+      it('should submit edit with empty content when new attachments are added', async () => {
+        const { result } = renderHook(() => usePost());
+        const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+        act(() => {
+          result.current.setAttachments([mockFile]);
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            originalAttachmentUris: [],
+            onSuccess: vi.fn(),
+          });
+        });
+
+        expect(mockPostControllerEdit).toHaveBeenCalledWith({
+          compositePostId: 'test-post-123',
+          content: '',
+          attachments: { original: [], kept: [], added: [mockFile] },
+        });
+      });
+
+      it('should send kept and added attachments when new files are attached', async () => {
+        const { result } = renderHook(() => usePost());
+        const existing = mockExistingAttachment('pubky://user/pub/pubky.app/files/F1');
+        const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+        act(() => {
+          result.current.setContent('Edited content');
+          result.current.setExistingAttachments([existing]);
+          result.current.setAttachments([mockFile]);
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            originalAttachmentUris: [existing.uri],
+            onSuccess: vi.fn(),
+          });
+        });
+
+        expect(mockPostControllerEdit).toHaveBeenCalledWith({
+          compositePostId: 'test-post-123',
+          content: 'Edited content',
+          attachments: { original: [existing.uri], kept: [existing.uri], added: [mockFile] },
+        });
+      });
+
+      it('should fall back to the kept uris as original when no snapshot is provided', async () => {
+        const { result } = renderHook(() => usePost());
+        const existing = mockExistingAttachment('pubky://user/pub/pubky.app/files/F1');
+        const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+        act(() => {
+          result.current.setContent('Edited content');
+          result.current.setExistingAttachments([existing]);
+          result.current.setAttachments([mockFile]);
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            onSuccess: vi.fn(),
+          });
+        });
+
+        expect(mockPostControllerEdit).toHaveBeenCalledWith({
+          compositePostId: 'test-post-123',
+          content: 'Edited content',
+          attachments: { original: [existing.uri], kept: [existing.uri], added: [mockFile] },
+        });
+      });
+
+      it('should send the attachments payload when an existing attachment was removed', async () => {
+        const { result } = renderHook(() => usePost());
+        const kept = mockExistingAttachment('pubky://user/pub/pubky.app/files/F1');
+        const removedUri = 'pubky://user/pub/pubky.app/files/F2';
+
+        act(() => {
+          result.current.setContent('Edited content');
+          // The user removed the second of the two original attachments
+          result.current.setExistingAttachments([kept]);
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            originalAttachmentUris: [kept.uri, removedUri],
+            onSuccess: vi.fn(),
+          });
+        });
+
+        // `original` carries the seeded snapshot verbatim; `kept` reflects the removal
+        expect(mockPostControllerEdit).toHaveBeenCalledWith({
+          compositePostId: 'test-post-123',
+          content: 'Edited content',
+          attachments: { original: [kept.uri, removedUri], kept: [kept.uri], added: [] },
+        });
+      });
+
+      it('should reset attachments and existingAttachments after successful edit', async () => {
+        const { result } = renderHook(() => usePost());
+        const existing = mockExistingAttachment('pubky://user/pub/pubky.app/files/F1');
+        const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
+
+        act(() => {
+          result.current.setContent('Edited content');
+          result.current.setExistingAttachments([existing]);
+          result.current.setAttachments([mockFile]);
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            originalAttachmentUris: [existing.uri],
+            onSuccess: vi.fn(),
+          });
+        });
+
+        expect(result.current.content).toBe('');
+        expect(result.current.attachments).toEqual([]);
+        expect(result.current.existingAttachments).toEqual([]);
+      });
+
+      it('should not submit article edit with attachments but empty content', async () => {
+        const { result } = renderHook(() => usePost());
+        const mockOnSuccess = vi.fn();
+        const existing = mockExistingAttachment('pubky://user/pub/pubky.app/files/COVER');
+
+        act(() => {
+          result.current.setIsArticle(true);
+          result.current.setArticleTitle('Article Title');
+          result.current.setExistingAttachments([existing]);
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            originalAttachmentUris: [existing.uri],
+            onSuccess: mockOnSuccess,
+          });
+        });
+
+        expect(mockPostControllerEdit).not.toHaveBeenCalled();
+        expect(mockOnSuccess).not.toHaveBeenCalled();
+      });
+
+      it('should toast a localized size-limit message when an added attachment exceeds the upload limit', async () => {
+        const { result } = renderHook(() => usePost());
+        mockPostControllerEdit.mockRejectedValueOnce(
+          Err.validation(ValidationErrorCode.INVALID_INPUT, 'Image sanitization failed', {
+            service: ErrorService.Local,
+            operation: 'toFileAttachment',
+            context: { imageUploadSizeLimitKind: 'gif' },
+            cause: new Error('IMAGE_UPLOAD_SIZE_LIMIT:gif'),
+          }),
+        );
+
+        act(() => {
+          result.current.setContent('Edited content');
+          result.current.setAttachments([new File(['x'], 'animated.gif', { type: 'image/gif' })]);
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            onSuccess: vi.fn(),
+          });
+        });
+
+        expect(mockToast).toHaveBeenCalledWith({
+          variant: 'error',
+          description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
         });
       });
 

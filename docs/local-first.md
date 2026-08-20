@@ -65,7 +65,7 @@ PostController.retrieveDetails(id); // Unclear source
 ```typescript
 // Real method names from the codebase
 PostController.commitCreate({ authorId, content, isArticle, tags, attachments });
-PostController.commitEdit({ compositePostId, content });
+PostController.commitEdit({ compositePostId, content, attachments }); // attachments optional: { original, kept, added }
 PostController.commitDelete({ compositePostId });
 BookmarkController.commitCreate({ postId, userId });
 

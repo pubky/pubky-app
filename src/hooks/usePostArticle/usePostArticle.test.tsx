@@ -210,6 +210,58 @@ describe('usePostArticle', () => {
       });
     });
 
+    it('clears a loaded cover image when the attachment is removed', async () => {
+      const content = JSON.stringify({ title: 'Test', body: 'Content' });
+      const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
+      mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456')]);
+
+      const { result, rerender } = renderHook(
+        ({ attachments }: { attachments: string[] | null }) =>
+          usePostArticle({
+            content,
+            attachments,
+            coverImageVariant: FileVariant.FEED,
+          }),
+        { initialProps: { attachments: attachments as string[] | null } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.coverImage).not.toBeNull();
+      });
+
+      rerender({ attachments: null });
+
+      await waitFor(() => {
+        expect(result.current.coverImage).toBeNull();
+      });
+    });
+
+    it('clears a loaded cover image when the attachment is replaced by a non-image', async () => {
+      const content = JSON.stringify({ title: 'Test', body: 'Content' });
+      mockGetMetadata.mockResolvedValue([createMockImageMetadata('user123:file456')]);
+
+      const { result, rerender } = renderHook(
+        ({ attachments }: { attachments: string[] | null }) =>
+          usePostArticle({
+            content,
+            attachments,
+            coverImageVariant: FileVariant.FEED,
+          }),
+        { initialProps: { attachments: ['pubky://user123/pub/pubky.app/files/file456'] as string[] | null } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.coverImage).not.toBeNull();
+      });
+
+      mockGetMetadata.mockResolvedValue([createMockPdfMetadata('user123:file789')]);
+      rerender({ attachments: ['pubky://user123/pub/pubky.app/files/file789'] });
+
+      await waitFor(() => {
+        expect(result.current.coverImage).toBeNull();
+      });
+    });
+
     it('does not set cover image when attachment is not an image', async () => {
       const content = JSON.stringify({ title: 'Test', body: 'Content' });
       const attachments = ['pubky://user123/pub/pubky.app/files/file456'];
@@ -321,6 +373,38 @@ describe('usePostArticle', () => {
         description: 'Could not load cover image',
       });
       expect(result.current.coverImage).toBeNull();
+    });
+
+    it('clears a previously loaded cover image when a re-fetch fails', async () => {
+      const content = JSON.stringify({ title: 'Test', body: 'Content' });
+      mockGetMetadata.mockResolvedValueOnce([createMockImageMetadata('user123:file456', 'old-cover.jpg')]);
+
+      const { result, rerender } = renderHook(
+        ({ attachments }: { attachments: string[] | null }) =>
+          usePostArticle({
+            content,
+            attachments,
+            coverImageVariant: FileVariant.FEED,
+          }),
+        { initialProps: { attachments: ['pubky://user123/pub/pubky.app/files/file456'] as string[] | null } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.coverImage?.alt).toBe('old-cover.jpg');
+      });
+
+      // An edit replaced the attachments, but the metadata fetch fails —
+      // the stale cover must not linger
+      mockGetMetadata.mockRejectedValueOnce(new Error('Network error'));
+      rerender({ attachments: ['pubky://user123/pub/pubky.app/files/file789'] });
+
+      await waitFor(() => {
+        expect(result.current.coverImage).toBeNull();
+      });
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not load cover image',
+      });
     });
   });
 

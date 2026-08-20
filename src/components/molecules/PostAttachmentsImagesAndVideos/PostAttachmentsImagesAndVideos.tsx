@@ -79,8 +79,13 @@ export const PostAttachmentsImagesAndVideos = ({
     };
     onSelect();
     api.on('select', onSelect);
+    // 'reInit' fires when the slide list changes (e.g. an edit removed
+    // attachments while the lightbox is open) — embla clamps its index but
+    // emits no 'select', so resync here too
+    api.on('reInit', onSelect);
     return () => {
       api.off('select', onSelect);
+      api.off('reInit', onSelect);
     };
   }, [api]);
 

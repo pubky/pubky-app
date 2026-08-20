@@ -7,6 +7,7 @@ import { isPostDeleted } from '@/libs/utils/utils';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UseDeletePostOptions, UseDeletePostResult } from './useDeletePost.types';
 
 /**
@@ -62,6 +63,9 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
 
     try {
       await PostController.commitDelete({ compositePostId: postId });
+      // Clear the optimistic attachment cache so its blob URLs are revoked and
+      // don't shadow the tombstone for the rest of the session
+      useLocalFilesStore.getState().setPostAttachments(postId, []);
       Logger.info('[useDeletePost] Post deleted successfully', { postId });
       toast({
         title: deletedTitle,
@@ -109,7 +113,10 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
 
       if (localWriteCommitted) {
         // Local-first write succeeded (row gone or tombstoned). Leave the
-        // optimistic removal in place — homeserver retry can resync.
+        // optimistic removal in place — homeserver retry can resync. The
+        // optimistic attachment cache is cleared here too (as on success): the
+        // post renders as deleted either way, so its blob URLs are dead weight.
+        useLocalFilesStore.getState().setPostAttachments(postId, []);
         Logger.warn('[useDeletePost] Local write committed; not restoring to timeline', {
           postId,
           state: postStillExists === null ? 'row_removed' : 'tombstoned',
