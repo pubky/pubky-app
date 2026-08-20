@@ -1,72 +1,57 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Activity, Icon, type IconNode, type LucideIcon, type LucideProps } from 'lucide-react';
-import type { IconName } from 'lucide-react/dynamic.js';
-import { getLoadedLucideIconNode, isPlausibleLucideIconName, loadLucideIconNode } from '@/libs/utils/lucideIcons';
+import { useEffect, useSyncExternalStore } from 'react';
+import { Activity as ActivityFallback, Icon, type IconNode, type LucideIcon, type LucideProps } from 'lucide-react';
+import {
+  getLucideIconState,
+  isPlausibleLucideIconName,
+  requestLucideIcon,
+  subscribeToLucideIcons,
+} from '@/libs/utils/lucideIcons';
+import { cn } from '@/libs/utils/utils';
 
 const EMPTY_ICON_NODE: IconNode = [];
 
 export interface DynamicLucideIconProps extends Omit<LucideProps, 'name'> {
   name?: string | null;
-  /** Rendered only for a missing/invalid name — never while a valid icon is loading. */
+  /** Rendered for a missing/unknown/failed name — never while a valid icon is loading. */
   fallback?: LucideIcon | null;
-}
-
-interface ResolvedIcon {
-  name: IconName | null;
-  node: IconNode | null;
-  /** The chunk load failed; render the fallback and retry only on remount. */
-  failed?: boolean;
-}
-
-function resolveFromCache(name: IconName | null): ResolvedIcon {
-  return { name, node: name ? (getLoadedLucideIconNode(name) ?? null) : null };
 }
 
 /**
  * Renders a Lucide icon by its dynamic (kebab-case) name without bundling the
- * full icon set. Icon chunks resolve through a module-level cache, so an icon
- * renders synchronously on first paint once it has loaded anywhere in the
- * session. While a valid icon is genuinely loading it renders an empty,
- * size-preserving svg — never a wrong icon.
+ * full icon set. Icon state lives in a module-level store read through
+ * useSyncExternalStore, so: a resolved icon renders synchronously everywhere
+ * for the rest of the session, hydration is correct by construction (the
+ * server snapshot is always "nothing known"), and a failed chunk heals every
+ * mounted instance the moment any retry succeeds. While a valid icon is
+ * genuinely loading it renders an empty, size-preserving svg — never a wrong
+ * icon.
  */
-export function DynamicLucideIcon({ name, fallback, ...iconProps }: DynamicLucideIconProps) {
-  const FallbackIcon = fallback === undefined ? Activity : fallback;
-  // Shape check only — the catalog is lazy-loaded, so a plausible-but-unknown
-  // name resolves to a null node and lands on the fallback via `failed`.
+export function DynamicLucideIcon({ name, fallback, className, ...iconProps }: DynamicLucideIconProps) {
+  const FallbackIcon = fallback === undefined ? ActivityFallback : fallback;
+  // Shape check only — the catalog is lazy-loaded; a plausible-but-unknown
+  // name resolves to the `unknown` state and lands on the fallback.
   const validName = isPlausibleLucideIconName(name) ? name : null;
-  const [resolved, setResolved] = useState<ResolvedIcon>(() => resolveFromCache(validName));
-
-  // Adjust state during render when the requested icon changes, so a cached
-  // icon swaps in synchronously instead of after an effect roundtrip.
-  if (resolved.name !== validName) {
-    setResolved(resolveFromCache(validName));
-  }
+  const state = useSyncExternalStore(
+    subscribeToLucideIcons,
+    () => (validName ? getLucideIconState(validName) : undefined),
+    () => undefined,
+  );
 
   useEffect(() => {
-    if (!validName || (resolved.name === validName && (resolved.node || resolved.failed))) return;
-    let cancelled = false;
-    void loadLucideIconNode(validName).then((node) => {
-      if (cancelled) return;
-      setResolved((current) => {
-        if (current.name !== validName) return current;
-        if (node) return current.node === node ? current : { name: validName, node };
-        return current.failed ? current : { name: validName, node: null, failed: true };
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [validName, resolved]);
+    if (validName) requestLucideIcon(validName);
+  }, [validName]);
 
-  if (!validName) {
-    return FallbackIcon ? <FallbackIcon {...iconProps} /> : null;
+  if (!validName || state?.status === 'unknown' || state?.status === 'error') {
+    return FallbackIcon ? <FallbackIcon className={className} {...iconProps} /> : null;
   }
 
-  if (resolved.failed && !resolved.node) {
-    return FallbackIcon ? <FallbackIcon {...iconProps} /> : null;
+  if (state?.status === 'loaded') {
+    // Carry the `lucide-<name>` class statically-imported icons get, so CSS
+    // rules and test selectors match dynamic icons too.
+    return <Icon iconNode={state.node} className={cn(`lucide-${validName}`, className)} {...iconProps} />;
   }
 
-  return <Icon iconNode={resolved.node ?? EMPTY_ICON_NODE} {...iconProps} />;
+  return <Icon iconNode={EMPTY_ICON_NODE} className={className} {...iconProps} />;
 }

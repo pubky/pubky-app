@@ -69,7 +69,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         >
           <svg
             aria-hidden="true"
-            class="lucide size-4 shrink-0"
+            class="lucide lucide-activity size-4 shrink-0"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -954,7 +954,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
       >
         <svg
           aria-hidden="true"
-          class="lucide size-4"
+          class="lucide lucide-activity size-4"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -1047,7 +1047,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         >
           <svg
             aria-hidden="true"
-            class="lucide size-4 shrink-0"
+            class="lucide lucide-activity size-4 shrink-0"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -1932,7 +1932,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
       >
         <svg
           aria-hidden="true"
-          class="lucide size-4"
+          class="lucide lucide-activity size-4"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -2023,7 +2023,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         >
           <svg
             aria-hidden="true"
-            class="lucide size-4 shrink-0"
+            class="lucide lucide-activity size-4 shrink-0"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -2945,7 +2945,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
       >
         <svg
           aria-hidden="true"
-          class="lucide size-4"
+          class="lucide lucide-activity size-4"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -3067,7 +3067,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         >
           <svg
             aria-hidden="true"
-            class="lucide size-4 shrink-0"
+            class="lucide lucide-activity size-4 shrink-0"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -3973,7 +3973,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
       >
         <svg
           aria-hidden="true"
-          class="lucide size-4"
+          class="lucide lucide-activity size-4"
           fill="none"
           height="24"
           stroke="currentColor"

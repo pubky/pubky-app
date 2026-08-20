@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { Library } from 'lucide-react';
-import { describe, expect, it } from 'vitest';
-import { loadLucideIconNode } from '@/libs/utils/lucideIcons';
+import { describe, expect, it, vi } from 'vitest';
+import { getLucideIconState, requestLucideIcon } from '@/libs/utils/lucideIcons';
 import { DynamicLucideIcon } from './DynamicLucideIcon';
 
 // The icon cache is module-level and persists across tests in this file, so
@@ -26,7 +26,10 @@ describe('DynamicLucideIcon', () => {
   });
 
   it('renders a cached icon synchronously on first paint', async () => {
-    await loadLucideIconNode('library');
+    requestLucideIcon('library');
+    await vi.waitFor(() => {
+      if (getLucideIconState('library')?.status !== 'loaded') throw new Error('icon not cached yet');
+    });
 
     render(<DynamicLucideIcon name="library" data-testid="cached-icon" />);
 
