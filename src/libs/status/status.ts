@@ -61,7 +61,7 @@ export function parseStatus(status: string, defaultEmoji: string = STATUS_EMOJIS
 
   if (isPredefined) {
     return {
-      emoji: STATUS_EMOJIS[statusKey] || defaultEmoji,
+      emoji: STATUS_EMOJIS[statusKey] ?? defaultEmoji,
       text: STATUS_LABELS[statusKey],
       isCustom: false,
       key: statusKey,
@@ -112,7 +112,7 @@ export function extractEmojiFromStatus(status: string, defaultEmoji: string = ST
   const isPredefined = statusKey in STATUS_LABELS;
 
   if (isPredefined) {
-    return STATUS_EMOJIS[statusKey] || defaultEmoji;
+    return STATUS_EMOJIS[statusKey] ?? defaultEmoji;
   }
 
   // Text-only custom status - use fallback emoji for display purposes
