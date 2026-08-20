@@ -188,14 +188,15 @@ describe('collections', () => {
     goToCollectionsPage();
     findCollectionCardInSection(DISCOVER_SECTION, collectionName).should('be.visible');
 
-    // * follow the collection from its discover card
+    // * open the collection and follow it from the dedicated page header
     cy.intercept('PUT', '**/pub/pubky.app/bookmarks/**').as('followCollection');
-    findCollectionCardInSection(DISCOVER_SECTION, collectionName)
-      .find('[data-cy="collection-card-follow-btn"]')
-      .click();
+    findCollectionCardInSection(DISCOVER_SECTION, collectionName).click();
+    cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
+    cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Follow').click();
     cy.wait('@followCollection').its('response.statusCode').should('eq', 201);
 
     // * the collection moves to Followed Collections and leaves Discover Collections
+    goToCollectionsPage();
     findCollectionCardInSection(FOLLOWED_SECTION, collectionName).should('be.visible');
     sectionDoesNotContainCollection(DISCOVER_SECTION, collectionName);
 
@@ -220,13 +221,14 @@ describe('collections', () => {
       });
     cy.contains('[data-cy="collection-card"]', collectionName).should('be.visible');
 
-    // * unfollowing returns the collection to Discover Collections
+    // * unfollowing from the dedicated page header returns the collection to Discover Collections
     goToCollectionsPage();
     cy.intercept('DELETE', '**/pub/pubky.app/bookmarks/**').as('unfollowCollection');
-    findCollectionCardInSection(FOLLOWED_SECTION, collectionName)
-      .find('[data-cy="collection-card-follow-btn"]')
-      .click();
+    findCollectionCardInSection(FOLLOWED_SECTION, collectionName).click();
+    cy.location('pathname').should('match', /^\/collections\/[^/]+\/[^/]+$/);
+    cy.get('[data-cy="collection-hero-follow-btn"]').should('contain.text', 'Unfollow').click();
     cy.wait('@unfollowCollection').its('response.statusCode').should('eq', 204);
+    goToCollectionsPage();
     sectionDoesNotContainCollection(FOLLOWED_SECTION, collectionName);
     // todo: remove reload workaround for bug https://github.com/pubky/pubky-app/issues/2237
     cy.reload();

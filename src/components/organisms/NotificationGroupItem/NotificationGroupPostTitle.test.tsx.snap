@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`NotificationGroupPostTitle - Snapshots > matches snapshot while resolving 1`] = `
+<div
+  data-cy="notification-group-item"
+>
+  <div
+    class="animate-pulse rounded-md bg-muted h-4 w-48 max-w-full"
+    data-slot="skeleton"
+  />
+</div>
+`;
+
+exports[`NotificationGroupPostTitle - Snapshots > matches snapshot with a resolved title 1`] = `
+<div
+  class="min-w-0"
+  data-cy="notification-group-item"
+>
+  <a
+    class="block truncate text-sm font-medium text-muted-foreground hover:underline lg:text-base"
+    href="/post/oliver/post123"
+  >
+    "Apple releases the new iPhone"
+  </a>
+</div>
+`;
+
+exports[`NotificationGroupPostTitle - Snapshots > matches snapshot with an unresolvable post 1`] = `
+<div
+  class="min-w-0"
+  data-cy="notification-group-item"
+>
+  <p
+    class="block truncate text-sm font-medium text-muted-foreground lg:text-base"
+    data-testid="typography"
+  >
+    Untitled post
+  </p>
+</div>
+`;

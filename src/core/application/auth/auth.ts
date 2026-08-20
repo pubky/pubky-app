@@ -1,16 +1,24 @@
+import type { Session } from '@synonymdev/pubky';
 import { userUriBuilder } from 'pubky-app-specs';
 import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
-import type { TPubkyParams } from '@/controllers/auth/auth.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { isAppError, isNotFound, isRetryable, toAppError } from '@/libs/error/error.utils';
+import {
+  isAppError,
+  isNotFound,
+  isRetryable,
+  isWrongEnvironmentHomeserverError,
+  toAppError,
+} from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
+import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type {
   TGenerateAuthUrlResult,
+  THomeserverPublicKeyParams,
   THomeserverSessionResult,
   THomeserverSignUpParams,
 } from '@/services/homeserver/homeserver.types';
@@ -55,14 +63,34 @@ export class AuthApplication {
       authStore.setIsRestoringSession(true);
 
       try {
+        // The restored session is kept across attempts so a transient
+        // environment-check failure retries only the PKARR lookup instead of
+        // re-running the whole restore round-trip.
+        let session: Session | null = null;
         for (let attempt = 1; attempt <= this.RESTORE_MAX_ATTEMPTS; attempt++) {
           try {
-            const session = await HomeserverService.restoreSession({
+            session ??= await HomeserverService.restoreSession({
               sessionExport: authStore.sessionExport!,
             });
+            // Transient lookup failures fall through to the shared retry-or-cleanup
+            // policy below — keeping the store in a half-restored state would
+            // strand useAuthStatus in its loading branch with no retry trigger.
+            await HomeserverService.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
             Logger.info('Session restored successfully');
             return { session };
           } catch (error) {
+            if (isWrongEnvironmentHomeserverError(error)) {
+              // The session is about to be discarded and its persisted export
+              // erased — sign it out on its own homeserver so it is not left
+              // dangling there. Best-effort: the rejection surfaces anyway.
+              if (session) {
+                await HomeserverService.logout({ session }).catch((logoutError) => {
+                  Logger.warn('Failed to sign out wrong-environment session', { logoutError });
+                });
+              }
+              throw error;
+            }
+
             const canRetry = isAppError(error) && isRetryable(error) && attempt < this.RESTORE_MAX_ATTEMPTS;
             if (!canRetry) {
               Logger.error('Failed to restore session from persisted export', error);
@@ -170,6 +198,11 @@ export class AuthApplication {
     return await HomeserverService.generateSignupToken();
   }
 
+  /** Staging guard: reject keys whose PKARR homeserver does not match this deploy. */
+  static async assertUserHomeserverAllowed({ publicKey }: THomeserverPublicKeyParams): Promise<void> {
+    await HomeserverService.assertUserHomeserverAllowed({ publicKey });
+  }
+
   /**
    * In the application, there are two signups to do.
    * 1. First the user has to register the user key in the homeserver, throw the inviation code
@@ -180,7 +213,7 @@ export class AuthApplication {
    * @param params.pubky - The user's public key identifier
    * @returns Promise resolving to the user profile or undefined if not found
    */
-  static async userIsSignedUp({ pubky }: TPubkyParams): Promise<boolean> {
+  static async userIsSignedUp({ pubky }: { pubky: Pubky }): Promise<boolean> {
     try {
       await HomeserverService.request({ method: HttpMethod.GET, url: userUriBuilder(pubky) });
       return true;

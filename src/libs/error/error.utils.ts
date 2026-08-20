@@ -72,6 +72,11 @@ export const requiresLogin = (error: AppError): boolean => {
   );
 };
 
+/** True when sign-in/restore was rejected for a homeserver/environment mismatch on staging. */
+export const isWrongEnvironmentHomeserverError = (error: unknown): error is AppError => {
+  return isAppError(error) && error.code === AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER;
+};
+
 /**
  * Is this a "not found" error?
  * Checks both client NOT_FOUND and database RECORD_NOT_FOUND.

@@ -1,6 +1,9 @@
 import React from 'react';
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import { RouteGuardProvider } from './RouteGuardProvider';
 
@@ -10,12 +13,16 @@ const mocks = vi.hoisted(() => {
   const mockRouterRefresh = vi.fn();
   const mockResync = vi.fn();
   const resetMigrationStore = vi.fn();
+  const mockToast = vi.fn();
+  const restorePersistedSession = vi.fn().mockResolvedValue(true);
 
   return {
     mockRouterPush,
     mockRouterRefresh,
     mockResync,
     resetMigrationStore,
+    mockToast,
+    restorePersistedSession,
     // Auth store state defaults
     hasHydrated: true,
     session: {} as unknown,
@@ -82,6 +89,10 @@ vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
+vi.mock('@/molecules/Toaster/use-toast', () => ({
+  toast: mocks.mockToast,
+}));
+
 // Mock auth store
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: Record<string, unknown>) => unknown) =>
@@ -102,7 +113,7 @@ vi.mock('@/stores/migration/migration.store', () => ({
 }));
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
-    restorePersistedSession: vi.fn().mockResolvedValue(true),
+    restorePersistedSession: mocks.restorePersistedSession,
   },
 }));
 vi.mock('@/controllers/migration/migration', () => ({
@@ -128,6 +139,9 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.mockResync.mockReset();
     mocks.mockRouterRefresh.mockReset();
     mocks.resetMigrationStore.mockReset();
+    mocks.mockToast.mockReset();
+    mocks.restorePersistedSession.mockReset();
+    mocks.restorePersistedSession.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -461,5 +475,47 @@ describe('RouteGuardProvider — migration resync', () => {
     expect(screen.getByText('Redirecting...')).toBeInTheDocument();
     expect(screen.queryByText('Explore Content')).not.toBeInTheDocument();
     expect(mocks.mockRouterPush).toHaveBeenCalledWith('/create-profile');
+  });
+});
+
+describe('RouteGuardProvider — session restore', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.hasHydrated = true;
+    mocks.session = null;
+    mocks.sessionExport = 'session-export';
+    mocks.currentUserPubky = null;
+    mocks.wasDbReset = false;
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.pathname = '/home';
+    mocks.mockToast.mockReset();
+    mocks.restorePersistedSession.mockReset();
+    mocks.restorePersistedSession.mockResolvedValue(true);
+  });
+
+  it('toasts when persisted session restore fails for wrong-environment homeserver', async () => {
+    mocks.restorePersistedSession.mockRejectedValue(
+      Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong env', {
+        service: ErrorService.Homeserver,
+        operation: 'assertUserHomeserverAllowed',
+      }),
+    );
+
+    render(
+      <RouteGuardProvider>
+        <div>Protected Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.mockToast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'This key is linked to a different homeserver. Use a staging account on this site.',
+    });
+    expect(Logger.error).not.toHaveBeenCalled();
   });
 });

@@ -17,6 +17,13 @@ describe('CollectionCountBadge', () => {
     expect(screen.getByText('post', { exact: true })).toHaveClass('hidden', 'sm:inline');
   });
 
+  it('can keep the label visible on mobile', () => {
+    render(<CollectionCountBadge count={42} showLabelOnMobile />);
+
+    expect(screen.getByText('posts', { exact: false })).toHaveClass('inline');
+    expect(screen.getByText('posts', { exact: false })).not.toHaveClass('hidden');
+  });
+
   it('renders a zero count rather than hiding it', () => {
     render(<CollectionCountBadge count={0} />);
 
@@ -35,6 +42,12 @@ describe('CollectionCountBadge', () => {
 describe('CollectionCountBadge - Snapshots', () => {
   it('matches the snapshot', () => {
     const { container } = render(<CollectionCountBadge count={123} />);
+
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches the snapshot with the label visible on mobile', () => {
+    const { container } = render(<CollectionCountBadge count={123} showLabelOnMobile />);
 
     expect(container.firstChild).toMatchSnapshot();
   });

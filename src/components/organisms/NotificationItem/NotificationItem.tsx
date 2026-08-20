@@ -1,26 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { PostController } from '@/controllers/post/post';
-import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
+import { useNotificationPostContent } from '@/hooks/useNotificationPostContent/useNotificationPostContent';
 import { buildSearchUrl } from '@/hooks/useTagSearch/useTagSearch.utils';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
-import { Logger } from '@/libs/logger/logger';
-import { parseArticleContent } from '@/libs/post/articleContent';
-import { parseCollectionContent } from '@/libs/post/collectionContent';
-import { isPostDeleted } from '@/libs/utils/utils';
 import { NotificationType } from '@/models/notification/notification.types';
-import { NotificationIcon } from '@/molecules/NotificationIcon/NotificationIcon';
+import {
+  NotificationActorAvatar,
+  NotificationActorHeading,
+  NotificationTimestampAndIcon,
+} from '@/molecules/NotificationRowChrome/NotificationRowChrome';
 import { PostTag } from '@/molecules/PostTag/PostTag';
-import { RelativeTimestamp } from '@/molecules/RelativeTimestamp/RelativeTimestamp';
-import { useToast } from '@/molecules/Toaster/use-toast';
-import { useAuthStore } from '@/stores/auth/auth.store';
-import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
-import { resolvePubkyToNames } from './NotificationItem.helpers';
 import type { NotificationItemProps } from './NotificationItem.types';
 import {
   formatPreviewText,
@@ -34,73 +27,20 @@ import {
 
 export function NotificationItem({ notification, isUnread, isMobile = false }: NotificationItemProps) {
   const router = useRouter();
-  const { toast } = useToast();
-  const { formatRelativeTime } = useRelativeTime();
 
   // Extract the user ID from the notification (the actor who triggered it)
   const actorUserId = getUserIdFromNotification(notification);
   const postKind = 'post_kind' in notification ? notification.post_kind : undefined;
+  const showsPostPreview = hasPostPreview(notification.type, postKind);
 
-  // Extract post composite ID for notifications with post content (memoized to avoid recalculation)
-  const postCompositeId = useMemo(() => {
-    const postUri = getPostUriFromNotification(notification);
-    return postUri ? pubkyUriToCompositeId(postUri) : null;
-  }, [notification]);
-
-  // State for post content (fetched via controller)
-  const [postContent, setPostContent] = useState<string | null>(null);
+  // Types that never render a preview stay null so they do not trigger a pointless fetch.
+  const postUri = showsPostPreview ? getPostUriFromNotification(notification) : null;
+  const postCompositeId = postUri ? pubkyUriToCompositeId(postUri) : null;
 
   // Use existing hook for user profile data
   const { profile } = useUserProfile(actorUserId || '');
 
-  // Fetch post content via controller (handles caching internally)
-  useEffect(() => {
-    if (!postCompositeId) return;
-
-    const viewerId = useAuthStore.getState().currentUserPubky;
-    if (!viewerId) return;
-
-    let isCancelled = false;
-
-    // PostController.getOrFetch handles the caching strategy:
-    // 1. Check local DB first
-    // 2. If missing, fetch from Nexus
-    // 3. Write to local DB
-    PostController.getOrFetch({ compositeId: postCompositeId, viewerId })
-      .then(async (post) => {
-        if (!isCancelled && post?.content) {
-          if (isPostDeleted(post.content)) {
-            setPostContent('This post has been deleted by its author.');
-          } else if (post.kind === 'long') {
-            setPostContent(parseArticleContent(post.content)?.title || post.content);
-          } else if (post.kind === 'collection') {
-            const parsed = parseCollectionContent(post.content);
-            if (parsed) {
-              setPostContent(parsed.name);
-            } else {
-              setPostContent(post.content);
-              toast({
-                variant: 'error',
-                description: 'Could not parse collection content',
-              });
-            }
-          } else {
-            const content = await resolvePubkyToNames(post.content);
-            if (!isCancelled) setPostContent(content);
-          }
-        }
-      })
-      .catch((error) => {
-        if (!isCancelled) {
-          Logger.warn('Failed to fetch notification post:', { postCompositeId, error });
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
-  }, [postCompositeId]);
+  const { content: postContent } = useNotificationPostContent({ compositeId: postCompositeId });
 
   // Get user name and avatar from profile hook
   const userName = profile?.name || 'User';
@@ -110,17 +50,9 @@ export function NotificationItem({ notification, isUnread, isMobile = false }: N
   const actionText = getNotificationActionText(notification);
 
   // Get post preview text
-  const previewText = hasPostPreview(notification.type, postKind) ? formatPreviewText(postContent) : null;
+  const previewText = showsPostPreview ? formatPreviewText(postContent) : null;
 
   const timestampDate = new Date(notification.timestamp);
-  const timestampElement = (
-    <RelativeTimestamp
-      timeAgo={formatRelativeTime(timestampDate)}
-      date={timestampDate}
-      isMobile={isMobile}
-      className="text-xs font-medium tracking-widest text-muted-foreground"
-    />
-  );
 
   // Calculate notification links (business logic separated in pure function)
   const { notificationLink, userProfileLink } = getNotificationLink(notification);
@@ -148,52 +80,20 @@ export function NotificationItem({ notification, isUnread, isMobile = false }: N
       onClick={handleRowClick}
     >
       <Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
-        {/* Avatar - links to user profile */}
-        {userProfileLink ? (
-          <Link href={userProfileLink} className="shrink-0 transition-opacity hover:opacity-80">
-            <AvatarWithFallback
-              avatarUrl={avatarUrl}
-              name={userName}
-              fallbackSeed={actorUserId || userName}
-              size="sm"
-              className="lg:size-8"
-            />
-          </Link>
-        ) : (
-          <AvatarWithFallback
-            avatarUrl={avatarUrl}
-            name={userName}
-            fallbackSeed={actorUserId || userName}
-            size="sm"
-            className="shrink-0 lg:size-8"
-          />
-        )}
+        <NotificationActorAvatar
+          avatarUrl={avatarUrl}
+          userName={userName}
+          fallbackSeed={actorUserId || userName}
+          userProfileLink={userProfileLink}
+        />
 
         <Container overrideDefaults={true} className="flex min-w-0 flex-1 items-center gap-2">
-          <Typography
-            as="p"
-            className="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
-          >
-            {/* Username - truncated independently so long names do not overlap timestamp/icon */}
-            {userProfileLink ? (
-              <Link
-                href={userProfileLink}
-                className="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
-              >
-                {userName}
-              </Link>
-            ) : (
-              <span className="inline-block max-w-full min-w-0 truncate align-bottom">{userName}</span>
-            )}{' '}
-            {/* Action text - links to notification target (post or profile) */}
-            {notificationLink ? (
-              <Link href={notificationLink} className="text-foreground hover:underline lg:shrink-0">
-                {actionText}
-              </Link>
-            ) : (
-              <span className="text-foreground lg:shrink-0">{actionText}</span>
-            )}
-          </Typography>
+          <NotificationActorHeading
+            userName={userName}
+            userProfileLink={userProfileLink}
+            actionText={actionText}
+            actionLink={notificationLink}
+          />
 
           {/* Post preview text - dynamically fetched from database */}
           {previewText &&
@@ -234,19 +134,14 @@ export function NotificationItem({ notification, isUnread, isMobile = false }: N
       </Container>
 
       {/* Timestamp and icon - links to notification target */}
-      {notificationLink ? (
-        <Link href={notificationLink} className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80">
-          {timestampElement}
-
-          <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
-        </Link>
-      ) : (
-        <Container overrideDefaults={true} className="flex items-center gap-2">
-          {timestampElement}
-
-          <NotificationIcon type={notification.type} postKind={postKind} showBadge={isUnread} />
-        </Container>
-      )}
+      <NotificationTimestampAndIcon
+        timestampDate={timestampDate}
+        isMobile={isMobile}
+        type={notification.type}
+        postKind={postKind}
+        showBadge={isUnread}
+        link={notificationLink}
+      />
     </Container>
   );
 }

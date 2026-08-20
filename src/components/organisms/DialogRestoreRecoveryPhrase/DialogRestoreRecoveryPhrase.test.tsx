@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthController } from '@/controllers/auth/auth';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { DialogRestoreRecoveryPhrase } from './DialogRestoreRecoveryPhrase';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -528,6 +531,35 @@ describe('DialogRestoreRecoveryPhrase', () => {
         });
       });
 
+      expect(mockOnRestore).not.toHaveBeenCalled();
+    });
+
+    it('shows the environment toast and exits loading when the recovery phrase belongs elsewhere', async () => {
+      mockLoginWithMnemonic.mockRejectedValue(
+        new AppError({
+          category: ErrorCategory.Auth,
+          code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+          message: 'Wrong homeserver environment',
+          service: ErrorService.Homeserver,
+          operation: 'loginWithMnemonic',
+        }),
+      );
+      render(<DialogRestoreRecoveryPhrase onRestore={mockOnRestore} />);
+
+      const inputs = screen.getAllByTestId('word-input');
+      const restoreButton = screen.getByText('Restore').closest('button')!;
+      inputs.forEach((input) => fireEvent.change(input, { target: { value: 'abandon' } }));
+      fireEvent.click(restoreButton);
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith({
+          variant: 'error',
+          description: 'This key is linked to a different homeserver. Use a staging account on this site.',
+        });
+        expect(screen.queryByText('Restoring...')).not.toBeInTheDocument();
+        expect(restoreButton).not.toBeDisabled();
+        inputs.forEach((input) => expect(input).not.toBeDisabled());
+      });
       expect(mockOnRestore).not.toHaveBeenCalled();
     });
 

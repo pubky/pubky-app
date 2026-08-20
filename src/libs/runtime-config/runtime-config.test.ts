@@ -30,6 +30,7 @@ const RUNTIME_ENV_VALUES: Partial<Record<keyof RuntimeConfig, string>> = {
   defaultHttpRelay: 'https://relay.runtime.example.com/inbox',
   pkarrRelays: '["https://pkarr.runtime.example.com"]',
   testnet: 'false',
+  deployEnv: 'production',
   sentryDsn: 'https://abc123@o123.ingest.runtime.example.com/456',
   sentryEnvironment: 'staging',
   sentryTracesSampleRate: '0.5',

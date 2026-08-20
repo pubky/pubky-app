@@ -281,6 +281,8 @@ describe('VisualTimelinePosts', () => {
     });
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),
@@ -1204,6 +1206,8 @@ describe('VisualTimelinePosts - Snapshots', () => {
     mockUseIsTouchDevice.mockReturnValue(false);
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),

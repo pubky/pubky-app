@@ -1,0 +1,89 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`NotificationRowChrome - Snapshots > matches snapshot for a fully linked heading 1`] = `
+<p
+  class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
+  data-testid="typography"
+>
+  <a
+    class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
+    href="/profile/oliver"
+  >
+    Oliver
+  </a>
+   
+  <a
+    class="text-foreground hover:underline lg:shrink-0"
+    href="/post/oliver/123"
+  >
+    followed you
+  </a>
+</p>
+`;
+
+exports[`NotificationRowChrome - Snapshots > matches snapshot for a linked avatar 1`] = `
+<a
+  class="shrink-0 transition-opacity hover:opacity-80"
+  href="/profile/oliver"
+>
+  <div
+    class="lg:size-8"
+    data-name="Oliver"
+    data-testid="avatar-with-fallback"
+  />
+</a>
+`;
+
+exports[`NotificationRowChrome - Snapshots > matches snapshot for a linked timestamp cluster 1`] = `
+<a
+  class="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
+  href="/post/oliver/123"
+>
+  <span
+    data-testid="relative-timestamp"
+  >
+    37m
+  </span>
+  <div
+    data-testid="notification-icon"
+    data-type="follow"
+  />
+</a>
+`;
+
+exports[`NotificationRowChrome - Snapshots > matches snapshot for a plain timestamp cluster 1`] = `
+<div
+  class="flex items-center gap-2 shrink-0"
+  data-testid="container"
+>
+  <span
+    data-testid="relative-timestamp"
+  >
+    37m
+  </span>
+  <div
+    data-post-kind="collection"
+    data-testid="notification-icon"
+    data-type="post_edited"
+  />
+</div>
+`;
+
+exports[`NotificationRowChrome - Snapshots > matches snapshot for a plain-text heading 1`] = `
+<p
+  class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
+  data-testid="typography"
+>
+  <span
+    class="inline-block max-w-full min-w-0 truncate align-bottom"
+  >
+    Oliver
+  </span>
+   
+  <span
+    class="text-foreground lg:shrink-0"
+  >
+    followed you
+  </span>
+</p>
+`;

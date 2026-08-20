@@ -27,13 +27,11 @@ exports[`FollowedCollections > FollowedCollections - Snapshots > matches the sna
   >
     <div
       data-author-pubky="authorA"
-      data-initial-bookmarked="true"
       data-post-id="p1"
       data-testid="collection-card"
     />
     <div
       data-author-pubky="authorB"
-      data-initial-bookmarked="true"
       data-post-id="p2"
       data-testid="collection-card"
     />

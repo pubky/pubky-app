@@ -9,6 +9,8 @@ const compactNumber = new Intl.NumberFormat('en-US', { notation: 'compact' });
 
 interface CollectionCountBadgeProps {
   count: number;
+  /** Keep the text label visible below the `sm` breakpoint. */
+  showLabelOnMobile?: boolean;
   /**
    * Pill contrast against the parent surface. Always rendered as a pill.
    *
@@ -24,9 +26,9 @@ interface CollectionCountBadgeProps {
  * CollectionCountBadge
  *
  * Compact item-count badge (sticky-note icon + count; "N POSTS" label from `sm`
- * upward) shared across the collections surfaces — the bookmarks hero, the pinned
- * collection grid card, and the single-collection hero — so they all stay
- * visually in sync.
+ * upward by default) shared across the collections surfaces — the bookmarks hero,
+ * the pinned collection grid card, and the single-collection hero — so they all
+ * stay visually in sync. Collection cards opt into showing the label on mobile.
  *
  * Renders as a pill so the count stays legible against the parent surface.
  * Default tone is `on-card` (`bg-background`). `CollectionCard` passes `on-muted`
@@ -36,7 +38,11 @@ interface CollectionCountBadgeProps {
  * Compact notation (e.g. 1.2K, 3M) keeps long counts from blowing out the
  * header row.
  */
-export function CollectionCountBadge({ count, tone = 'on-card' }: CollectionCountBadgeProps) {
+export function CollectionCountBadge({
+  count,
+  showLabelOnMobile = false,
+  tone = 'on-card',
+}: CollectionCountBadgeProps) {
   const isOnMuted = tone === 'on-muted';
   const compactCount = compactNumber.format(count);
   const countLabel = count === 1 ? 'post' : 'posts';
@@ -54,7 +60,7 @@ export function CollectionCountBadge({ count, tone = 'on-card' }: CollectionCoun
       <StickyNote className="size-3 shrink-0" aria-hidden />
       <Typography as="span" overrideDefaults className="text-xs leading-4 font-medium tracking-widest uppercase">
         {compactCount}
-        <Typography as="span" overrideDefaults className="hidden sm:inline">
+        <Typography as="span" overrideDefaults className={cn(showLabelOnMobile ? 'inline' : 'hidden sm:inline')}>
           {` ${countLabel}`}
         </Typography>
       </Typography>

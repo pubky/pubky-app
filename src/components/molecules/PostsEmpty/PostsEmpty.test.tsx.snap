@@ -1,0 +1,113 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PostsEmpty - Snapshots > matches snapshot on another user profile 1`] = `
+<div
+  data-testid="empty-state"
+>
+  <div
+    data-alt="Posts - Empty state"
+    data-src="/images/posts-replies-empty-state.webp"
+    data-testid="image"
+  />
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-file"
+    data-testid="file-icon"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+    />
+    <path
+      d="M14 2v5a1 1 0 0 0 1 1h5"
+    />
+  </svg>
+  <h3>
+    No posts yet
+  </h3>
+  <p>
+    This user hasn't posted yet.
+  </p>
+</div>
+`;
+
+exports[`PostsEmpty - Snapshots > matches snapshot on own profile 1`] = `
+<div
+  data-testid="empty-state"
+>
+  <div
+    data-alt="Posts - Empty state"
+    data-src="/images/posts-replies-empty-state.webp"
+    data-testid="image"
+  />
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-file"
+    data-testid="file-icon"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+    />
+    <path
+      d="M14 2v5a1 1 0 0 0 1 1h5"
+    />
+  </svg>
+  <h3>
+    No posts yet
+  </h3>
+  <p>
+    What's on your mind?
+  </p>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-10 px-4 py-2 has-[>svg]:px-4 gap-2"
+    data-cy="profile-posts-empty-create-post"
+    data-size="default"
+    data-slot="button"
+    data-variant="default"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-plus size-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M5 12h14"
+      />
+      <path
+        d="M12 5v14"
+      />
+    </svg>
+    <span
+      data-testid="typography"
+    >
+      Create a Post
+    </span>
+  </button>
+</div>
+`;

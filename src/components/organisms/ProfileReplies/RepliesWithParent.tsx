@@ -13,6 +13,7 @@ import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { RepliesEmpty } from '@/molecules/RepliesEmpty/RepliesEmpty';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
@@ -44,7 +45,13 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
 
   return (
-    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0} hasMore={hasMore}>
+    <TimelineStateWrapper
+      loading={loading}
+      error={error}
+      hasItems={postIds.length > 0}
+      hasMore={hasMore}
+      emptyComponent={<RepliesEmpty />}
+    >
       <Container>
         <Container overrideDefaults role="feed" className="space-y-4" onKeyDown={onListKeyDown}>
           {postIds.map((postId: string, index: number) => (

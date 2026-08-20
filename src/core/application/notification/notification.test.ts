@@ -652,6 +652,38 @@ describe('NotificationApplication.fetchMissingEntities', () => {
     expect(fetchPostsSpy).not.toHaveBeenCalled();
     expect(fetchUsersSpy).not.toHaveBeenCalled();
   });
+
+  it('refetches edited posts even on a cache hit, so rows never show pre-edit content', async () => {
+    // The cached copy predates the edit by definition — the notification is the proof —
+    // and the local-first read path never revalidates a cache hit on its own.
+    const notifications = [createNexus(1000)];
+    const editedFlat = {
+      id: 'post_edited:1000:author',
+      type: NotificationType.PostEdited,
+      timestamp: 1000,
+      edited_by: 'author',
+      edited_uri: 'pubky://author/pub/pubky.app/posts/edited-post',
+      linked_uri: 'pubky://viewer/pub/pubky.app/posts/linked-post',
+    } as FlatNotification;
+
+    vi.spyOn(NotificationNormalizer, 'toFlatNotification').mockReturnValue(editedFlat);
+    vi.spyOn(LocalNotificationService, 'parseNotifications').mockReturnValue({
+      relatedPostIds: ['author:edited-post'],
+      relatedUserIds: [],
+    });
+    // The edited post is already cached — nothing is "missing".
+    vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
+    vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
+    const fetchPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(undefined);
+    vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
+
+    await NotificationApplication.fetchMissingEntities({ notifications, viewerId });
+
+    expect(fetchPostsSpy).toHaveBeenCalledWith({
+      cacheMissPostIds: ['author:edited-post'],
+      viewerId,
+    });
+  });
 });
 
 describe('NotificationApplication.getAllFromCache', () => {
