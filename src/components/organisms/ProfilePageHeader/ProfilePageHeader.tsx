@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Check,
   Ellipsis,
@@ -12,9 +13,9 @@ import {
   UserRoundPlus,
   UsersRound,
 } from 'lucide-react';
-import { AvatarEmojiBadge } from '@/atoms/AvatarEmojiBadge/AvatarEmojiBadge';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
@@ -69,7 +70,9 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
   const formattedPublicKey = formatPublicKey({
     key: publicKey,
   });
+  const [isStatusTooltipOpen, setIsStatusTooltipOpen] = useState(false);
   const displayEmoji = extractEmojiFromStatus(status || '', emoji);
+  const parsedStatus = parseStatus(status || '', displayEmoji);
   const followersLabel = stats ? `${compactNumber.format(stats.followers)} FOLLOWERS` : null;
   const getLoadingFollowText = () => {
     if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
@@ -94,27 +97,6 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
       {formattedPublicKey}
     </Button>
   );
-  const renderStatusDisplay = () => {
-    if (!status || isOwnProfile) {
-      return null;
-    }
-
-    // For predefined statuses parseStatus already resolves `text` from STATUS_LABELS,
-    // which carries the same copy the status.* translation keys held.
-    const parsedStatus = parseStatus(status, displayEmoji);
-    const statusText = parsedStatus.text;
-
-    return (
-      <Container overrideDefaults={true} className="flex h-8 items-center gap-1">
-        <Typography as="span" overrideDefaults className="text-base leading-6">
-          {displayEmoji}
-        </Typography>
-        <Typography as="span" overrideDefaults className="text-base leading-6 font-bold text-white">
-          {statusText}
-        </Typography>
-      </Container>
-    );
-  };
 
   return (
     <Container
@@ -136,25 +118,54 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
           fallbackClassName="text-2xl lg:text-4xl"
           alt={name}
         />
-        <AvatarEmojiBadge emoji={displayEmoji} />
       </Container>
 
       {/* Mobile uses display: contents so children participate in the parent grid; desktop restores a normal flex column. */}
-      <Container overrideDefaults={true} className="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3">
+      <Container overrideDefaults={true} className="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-0">
         <Container
           overrideDefaults={true}
           className={cn(
             'col-start-2 row-start-1 flex min-w-0 flex-col items-start gap-1 self-center lg:col-auto lg:row-auto lg:self-auto lg:text-left',
           )}
         >
-          <Typography
-            data-cy="profile-username-header"
-            as="h1"
-            size="lg"
-            className="max-width-profile-page-header w-full truncate text-2xl leading-normal text-white sm:max-w-xl lg:max-w-full lg:text-6xl"
+          <Container
+            overrideDefaults
+            className="max-width-profile-page-header flex w-fit min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
           >
-            {name}
-          </Typography>
+            <Typography
+              data-cy="profile-username-header"
+              as="h1"
+              size="lg"
+              className="min-w-0 truncate text-2xl leading-normal text-white lg:text-6xl"
+            >
+              {name}
+            </Typography>
+            {displayEmoji && (
+              <Tooltip open={isStatusTooltipOpen} onOpenChange={setIsStatusTooltipOpen}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`${parsedStatus.text} status`}
+                    className="shrink-0 rounded-sm border-0 bg-transparent p-0 text-2xl leading-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:text-5xl"
+                    onPointerDown={(event) => {
+                      if (event.pointerType !== 'touch') return;
+
+                      event.preventDefault();
+                      setIsStatusTooltipOpen((open) => !open);
+                    }}
+                    onClick={(event) => event.preventDefault()}
+                  >
+                    {displayEmoji}
+                  </button>
+                </TooltipTrigger>
+                <TooltipPortal>
+                  <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
+                    {parsedStatus.text}
+                  </TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
+            )}
+          </Container>
           <Container overrideDefaults className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 lg:hidden">
             <Container overrideDefaults className="flex min-w-0 items-center gap-1">
               <KeyRound className="size-4 shrink-0 text-muted-foreground" />
@@ -189,7 +200,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
 
         <Container
           overrideDefaults={true}
-          className="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:flex lg:flex-wrap lg:gap-3"
+          className="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:mt-3 lg:flex lg:flex-wrap lg:gap-3"
         >
           {/* Own profile actions */}
           {isOwnProfile && (
@@ -236,7 +247,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
               </Button>
               <Container
                 overrideDefaults
-                className="order-first col-span-2 flex h-8 items-center lg:order-0 lg:col-auto"
+                className="order-last col-span-2 flex h-8 items-center lg:order-0 lg:col-auto"
               >
                 <StatusPickerWrapper emoji={displayEmoji} status={status || ''} onStatusChange={onStatusChange} />
               </Container>
@@ -294,8 +305,6 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                   </Button>
                 }
               />
-              {/* Status display inline with buttons */}
-              {renderStatusDisplay()}
             </>
           )}
         </Container>

@@ -20,28 +20,35 @@ exports[`ProfilePageHeader - Mobile Snapshots > matches snapshot on mobile viewp
         SN
       </div>
     </div>
-    <div
-      class="absolute -right-1 -bottom-1 flex size-10 items-center justify-center text-3xl leading-none lg:size-16 lg:text-5xl"
-      data-testid="container"
-    >
-      🌴
-    </div>
   </div>
   <div
-    class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3"
+    class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-0"
     data-testid="container"
   >
     <div
       class="col-start-2 row-start-1 flex min-w-0 flex-col items-start gap-1 self-center lg:col-auto lg:row-auto lg:self-auto lg:text-left"
       data-testid="container"
     >
-      <h1
-        class="font-bold max-width-profile-page-header w-full truncate text-2xl leading-normal text-white sm:max-w-xl lg:max-w-full lg:text-6xl"
-        data-cy="profile-username-header"
-        data-testid="typography"
+      <div
+        class="max-width-profile-page-header flex w-fit min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
+        data-testid="container"
       >
-        Satoshi Nakamoto
-      </h1>
+        <h1
+          class="font-bold min-w-0 truncate text-2xl leading-normal text-white lg:text-6xl"
+          data-cy="profile-username-header"
+          data-testid="typography"
+        >
+          Satoshi Nakamoto
+        </h1>
+        <button
+          aria-label="Vacationing status"
+          class="shrink-0 rounded-sm border-0 bg-transparent p-0 text-2xl leading-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:text-5xl"
+          data-state="closed"
+          type="button"
+        >
+          🌴
+        </button>
+      </div>
       <div
         class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 lg:hidden"
         data-testid="container"
@@ -130,7 +137,7 @@ exports[`ProfilePageHeader - Mobile Snapshots > matches snapshot on mobile viewp
       </div>
     </div>
     <div
-      class="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:flex lg:flex-wrap lg:gap-3"
+      class="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:mt-3 lg:flex lg:flex-wrap lg:gap-3"
       data-testid="container"
     >
       <button
@@ -255,7 +262,7 @@ exports[`ProfilePageHeader - Mobile Snapshots > matches snapshot on mobile viewp
         Sign out
       </button>
       <div
-        class="order-first col-span-2 flex h-8 items-center lg:order-0 lg:col-auto"
+        class="order-last col-span-2 flex h-8 items-center lg:order-0 lg:col-auto"
         data-testid="container"
       >
         <button
@@ -317,28 +324,35 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         SN
       </div>
     </div>
-    <div
-      class="absolute -right-1 -bottom-1 flex size-10 items-center justify-center text-3xl leading-none lg:size-16 lg:text-5xl"
-      data-testid="container"
-    >
-      🌴
-    </div>
   </div>
   <div
-    class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-3"
+    class="contents lg:flex lg:min-w-0 lg:flex-1 lg:flex-col lg:gap-0"
     data-testid="container"
   >
     <div
       class="col-start-2 row-start-1 flex min-w-0 flex-col items-start gap-1 self-center lg:col-auto lg:row-auto lg:self-auto lg:text-left"
       data-testid="container"
     >
-      <h1
-        class="font-bold max-width-profile-page-header w-full truncate text-2xl leading-normal text-white sm:max-w-xl lg:max-w-full lg:text-6xl"
-        data-cy="profile-username-header"
-        data-testid="typography"
+      <div
+        class="max-width-profile-page-header flex w-fit min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
+        data-testid="container"
       >
-        Satoshi Nakamoto
-      </h1>
+        <h1
+          class="font-bold min-w-0 truncate text-2xl leading-normal text-white lg:text-6xl"
+          data-cy="profile-username-header"
+          data-testid="typography"
+        >
+          Satoshi Nakamoto
+        </h1>
+        <button
+          aria-label="Vacationing status"
+          class="shrink-0 rounded-sm border-0 bg-transparent p-0 text-2xl leading-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:text-5xl"
+          data-state="closed"
+          type="button"
+        >
+          🌴
+        </button>
+      </div>
       <div
         class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 lg:hidden"
         data-testid="container"
@@ -427,7 +441,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
       </div>
     </div>
     <div
-      class="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:flex lg:flex-wrap lg:gap-3"
+      class="col-span-full grid w-full grid-cols-2 items-center gap-2 lg:col-auto lg:mt-3 lg:flex lg:flex-wrap lg:gap-3"
       data-testid="container"
     >
       <button
@@ -552,7 +566,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         Sign out
       </button>
       <div
-        class="order-first col-span-2 flex h-8 items-center lg:order-0 lg:col-auto"
+        class="order-last col-span-2 flex h-8 items-center lg:order-0 lg:col-auto"
         data-testid="container"
       >
         <button

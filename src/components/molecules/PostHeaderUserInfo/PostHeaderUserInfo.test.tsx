@@ -1,6 +1,8 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { formatPublicKey } from '@/libs/utils/utils';
 import { PostHeaderUserInfo } from './PostHeaderUserInfo';
 
@@ -272,6 +274,67 @@ describe('PostHeaderUserInfo', () => {
     expect(avatars.length).toBeGreaterThan(0);
     expect(screen.getAllByText('Test User').length).toBeGreaterThan(0);
     expect(screen.getAllByText(`@${formattedPublicKey}`).length).toBeGreaterThan(0);
+  });
+
+  it('renders a status emoji immediately after the user name', () => {
+    render(
+      <TooltipProvider delayDuration={0}>
+        <PostHeaderUserInfo userId="userpubkykey" userName="Test User" status="vacationing" />
+      </TooltipProvider>,
+    );
+
+    const userName = screen.getAllByText('Test User')[0];
+    const statusEmoji = screen.getByRole('button', { name: 'Vacationing status' });
+
+    expect(userName.parentElement?.nextElementSibling).toBe(statusEmoji);
+    expect(statusEmoji).toHaveTextContent('🌴');
+  });
+
+  it('shows the status label in a tooltip when the emoji is hovered', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TooltipProvider delayDuration={0}>
+        <PostHeaderUserInfo userId="userpubkykey" userName="Test User" status="vacationing" />
+      </TooltipProvider>,
+    );
+
+    await user.hover(screen.getByRole('button', { name: 'Vacationing status' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Vacationing');
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveClass(
+        'bg-accent',
+        'font-medium',
+        'text-foreground',
+        '[&_svg]:fill-accent',
+      );
+    });
+  });
+
+  it('shows the status label when the emoji is tapped without bubbling to the post', async () => {
+    const onPostClick = vi.fn();
+
+    render(
+      <TooltipProvider delayDuration={0}>
+        <div onClick={onPostClick}>
+          <PostHeaderUserInfo userId="userpubkykey" userName="Test User" status="vacationing" />
+        </div>
+      </TooltipProvider>,
+    );
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Vacationing status' }), { pointerType: 'touch' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Vacationing');
+    });
+    expect(onPostClick).not.toHaveBeenCalled();
+  });
+
+  it('does not render a status emoji for no status', () => {
+    render(<PostHeaderUserInfo userId="userpubkykey" userName="Test User" status="noStatus" />);
+
+    expect(screen.queryByRole('button', { name: /status/i })).not.toBeInTheDocument();
   });
 
   it('renders avatar with image when avatarUrl is provided', () => {

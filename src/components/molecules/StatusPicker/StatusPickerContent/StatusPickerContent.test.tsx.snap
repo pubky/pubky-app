@@ -146,9 +146,10 @@ exports[`StatusPickerContent > Snapshots > matches snapshot with custom status 1
       class="flex items-center gap-2"
       data-testid="container"
     >
-      <span>
-        💭
-      </span>
+      <span
+        aria-hidden="true"
+        class="size-4 shrink-0 rounded-full border border-border"
+      />
       <span
         class="text-base leading-6 font-medium transition-colors text-muted-foreground group-hover:text-popover-foreground"
         data-testid="typography"
@@ -346,9 +347,10 @@ exports[`StatusPickerContent > Snapshots > matches snapshot with no current stat
       class="flex items-center gap-2"
       data-testid="container"
     >
-      <span>
-        💭
-      </span>
+      <span
+        aria-hidden="true"
+        class="size-4 shrink-0 rounded-full border border-border"
+      />
       <span
         class="text-base leading-6 font-medium transition-colors text-muted-foreground group-hover:text-popover-foreground"
         data-testid="typography"
@@ -592,9 +594,10 @@ exports[`StatusPickerContent > Snapshots > matches snapshot with predefined stat
       class="flex items-center gap-2"
       data-testid="container"
     >
-      <span>
-        💭
-      </span>
+      <span
+        aria-hidden="true"
+        class="size-4 shrink-0 rounded-full border border-border"
+      />
       <span
         class="text-base leading-6 font-medium transition-colors text-muted-foreground group-hover:text-popover-foreground"
         data-testid="typography"
