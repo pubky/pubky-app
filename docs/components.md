@@ -144,7 +144,7 @@ export { Home as default } from '@/templates/Feed/Home/Home';
 
 ## Icons (Lucide and custom)
 
-Icons are split on purpose: **stock Lucide** ships from the `lucide-react` package; **app-owned SVGs** (brands, bespoke marks, non-Lucide shapes) live in a single module behind the **`@/icons`** path alias (`src/libs/icons/icons.tsx`).
+Icons are split on purpose: **stock Lucide** ships from the `lucide-react` package; **app-owned SVGs** (brands, bespoke marks, non-Lucide shapes) live in a single module behind the **`@/icons`** path alias (`src/libs/icons/icons.tsx`); **data-driven Lucide icons** (an icon _name_ stored on a record, e.g. a custom feed's icon) render through the `DynamicLucideIcon` atom.
 
 ### Stock Lucide icons
 
@@ -153,6 +153,16 @@ import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 ```
 
 Use named imports from `lucide-react` only.
+
+### Data-driven Lucide icons (`DynamicLucideIcon`)
+
+When the icon is chosen at runtime from data (a kebab-case Lucide name like `"folder-heart"` stored on a feed), a static named import is impossible. Render it with the **`DynamicLucideIcon`** atom (`@/atoms/DynamicLucideIcon/DynamicLucideIcon`):
+
+```tsx
+<DynamicLucideIcon name={feed.icon} className="size-5" />
+```
+
+Icon chunks load lazily via `lucide-react/dynamic.js` through a module-level cache in **`@/libs/utils/lucideIcons`** (`isLucideIconName`, `loadLucideIconNode`, `preloadLucideIcons`). Once an icon has resolved anywhere in the session it renders synchronously on first paint. While a valid name is still loading, the atom renders an empty size-preserving svg — never a wrong icon; the `fallback` prop (default `Activity`) applies only to names that are not Lucide icons at all. Call `preloadLucideIcons(names)` when the icon names become known (e.g. when feed data lands) so mounts hit the cache. Never use this path for static UI icons — those stay named imports.
 
 ### Custom / brand icons
 

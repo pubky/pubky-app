@@ -8,6 +8,7 @@ describe('FeedModel', () => {
   const createFeedSchema = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({
     id: 'feed-abc123',
     name: 'Bitcoin News',
+    icon: 'activity',
     tags: ['bitcoin', 'lightning'],
     domain_tags: [],
     reach: PubkyAppFeedReach.All,
@@ -148,6 +149,7 @@ describe('FeedModel', () => {
       const saved = await FeedModel.table.get(feed.id);
 
       expect(saved!.name).toBe('Complete Feed');
+      expect(saved!.icon).toBe('activity');
       expect(saved!.tags).toEqual(['tag1', 'tag2', 'tag3']);
       expect(saved!.domain_tags).toEqual(['bitcoiner', '🔥']);
       expect(saved!.reach).toBe(PubkyAppFeedReach.Following);
@@ -163,6 +165,15 @@ describe('FeedModel', () => {
       const saved = await FeedModel.table.get(feed.id);
 
       expect(saved!.content).toBeNull();
+    });
+
+    it('should support legacy feeds without an icon', async () => {
+      const feed = createFeedSchema({ icon: undefined });
+
+      await FeedModel.upsert(feed);
+      const saved = await FeedModel.table.get(feed.id);
+
+      expect(saved!.icon).toBeUndefined();
     });
 
     it('should store timestamps correctly', async () => {

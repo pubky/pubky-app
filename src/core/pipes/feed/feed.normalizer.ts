@@ -25,15 +25,16 @@ export class FeedNormalizer {
 
       const builder = PubkySpecsSingleton.get(userId);
 
-      return builder.createFeed(
-        normalizedTags,
-        reachToString(params.reach),
-        layoutToString(params.layout),
-        sortToString(params.sort),
-        content,
-        params.name.trim(),
-        normalizedDomainTags.length > 0 ? normalizedDomainTags : undefined,
-      );
+      return builder.createFeed({
+        tags: normalizedTags,
+        reach: reachToString(params.reach),
+        layout: layoutToString(params.layout),
+        sort: sortToString(params.sort),
+        content: content ?? undefined,
+        name: params.name.trim(),
+        domainTags: normalizedDomainTags.length > 0 ? normalizedDomainTags : undefined,
+        icon: params.icon,
+      });
     } catch (error) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, error as string, {
         service: ErrorService.PubkyAppSpecs,

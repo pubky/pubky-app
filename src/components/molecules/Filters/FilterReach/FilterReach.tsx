@@ -11,6 +11,20 @@ import type { BaseFilterProps, FilterListItem } from '../Filters.types';
 export const TAGGED_AS_FILTER_KEY = 'tagged_as' as const;
 export type ReachFilterValue = ReachType | typeof TAGGED_AS_FILTER_KEY;
 
+/**
+ * Canonical label + icon for each reach filter value. Single source for every
+ * surface that renders a reach (this filter, the feed navigation tab, ...) so
+ * they cannot drift apart.
+ */
+export const REACH_FILTER_META: Record<ReachFilterValue, { label: string; icon: FilterListItem['icon'] }> = {
+  [REACH.NETWORK]: { label: 'My network', icon: Waypoints },
+  [TAGGED_AS_FILTER_KEY]: { label: 'Tagged as', icon: Tags },
+  [REACH.FOLLOWING]: { label: 'Following', icon: UsersRound2 },
+  [REACH.FRIENDS]: { label: 'Friends', icon: HeartHandshake },
+  [REACH.ME]: { label: 'Me', icon: UserRound },
+  [REACH.ALL]: { label: 'All', icon: Radio },
+};
+
 interface FilterReachSharedProps {
   profileTags?: string[];
   onProfileTagAdd?: (tag: string) => void;
@@ -39,70 +53,15 @@ export function FilterReach({
   onProfileTagRemove,
   profileTagsDisabled = false,
 }: FilterReachProps) {
-  const reachItems: FilterListItem<ReachFilterValue>[] = showTaggedAs
-    ? [
-        {
-          key: REACH.NETWORK,
-          label: 'My network',
-          icon: Waypoints,
-          disabled,
-        },
-        {
-          key: TAGGED_AS_FILTER_KEY,
-          label: 'Tagged as',
-          icon: Tags,
-          disabled,
-        },
-        {
-          key: REACH.FOLLOWING,
-          label: 'Following',
-          icon: UsersRound2,
-          disabled,
-        },
-        {
-          key: REACH.FRIENDS,
-          label: 'Friends',
-          icon: HeartHandshake,
-          disabled,
-        },
-        {
-          key: REACH.ME,
-          label: 'Me',
-          icon: UserRound,
-          disabled,
-        },
-        {
-          key: REACH.ALL,
-          label: 'All',
-          icon: Radio,
-          disabled,
-        },
-      ]
-    : [
-        {
-          key: REACH.ALL,
-          label: 'All',
-          icon: Radio,
-          disabled,
-        },
-      ];
+  const orderedReachKeys: ReachFilterValue[] = showTaggedAs
+    ? [REACH.NETWORK, TAGGED_AS_FILTER_KEY, REACH.FOLLOWING, REACH.FRIENDS, REACH.ME, REACH.ALL]
+    : [REACH.ALL, REACH.FOLLOWING, REACH.FRIENDS];
 
-  if (!showTaggedAs) {
-    reachItems.push(
-      {
-        key: REACH.FOLLOWING,
-        label: 'Following',
-        icon: UsersRound2,
-        disabled,
-      },
-      {
-        key: REACH.FRIENDS,
-        label: 'Friends',
-        icon: HeartHandshake,
-        disabled,
-      },
-    );
-  }
+  const reachItems: FilterListItem<ReachFilterValue>[] = orderedReachKeys.map((key) => ({
+    key,
+    ...REACH_FILTER_META[key],
+    disabled,
+  }));
 
   const handleReachChange = (value: ReachFilterValue) => {
     if (showTaggedAs) {

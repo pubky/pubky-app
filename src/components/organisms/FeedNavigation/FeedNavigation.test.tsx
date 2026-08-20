@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { REACH } from '@/stores/home/home.types';
 import { FeedNavigation } from './FeedNavigation';
 
 // Mock next/navigation
@@ -32,6 +33,23 @@ vi.mock('@/controllers/feed/feed', () => ({
   },
 }));
 
+// Home store drives the reach tab; expose a mutable state object per test
+const mockHomeState = {
+  reach: REACH.ALL as (typeof REACH)[keyof typeof REACH],
+  taggedAsActive: false,
+  profileTags: [] as string[],
+};
+vi.mock('@/stores/home/home.store', () => ({
+  useHomeStore: () => mockHomeState,
+}));
+
+// Keep the icon utilities real (DynamicLucideIcon depends on them) but noop the
+// preloader so tests do not kick off background icon chunk loads.
+vi.mock('@/libs/utils/lucideIcons', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/libs/utils/lucideIcons')>()),
+  preloadLucideIcons: vi.fn(),
+}));
+
 // Mock @/atoms — lightweight forwarding mocks
 vi.mock('@/atoms/Button/Button', () => {
   return {
@@ -42,6 +60,7 @@ vi.mock('@/atoms/Button/Button', () => {
       className,
       overrideDefaults,
       onClick,
+      'aria-label': ariaLabel,
     }: {
       children: React.ReactNode;
       variant?: string;
@@ -49,6 +68,7 @@ vi.mock('@/atoms/Button/Button', () => {
       className?: string;
       overrideDefaults?: boolean;
       onClick?: () => void;
+      'aria-label'?: string;
     }) => (
       <button
         data-testid="button"
@@ -57,6 +77,7 @@ vi.mock('@/atoms/Button/Button', () => {
         className={className}
         data-override-defaults={overrideDefaults}
         onClick={onClick}
+        aria-label={ariaLabel}
       >
         {children}
       </button>
@@ -74,26 +95,6 @@ vi.mock('@/atoms/Container/Container', () => {
   };
 });
 
-vi.mock('@/atoms/Heading/Heading', () => {
-  return {
-    Heading: ({
-      children,
-      level,
-      size,
-      className,
-    }: {
-      children: React.ReactNode;
-      level?: number;
-      size?: string;
-      className?: string;
-    }) => (
-      <div data-testid="heading" data-level={level} data-size={size} className={className}>
-        {children}
-      </div>
-    ),
-  };
-});
-
 vi.mock('@/atoms/Link/Link', () => {
   return {
     Link: ({
@@ -101,13 +102,24 @@ vi.mock('@/atoms/Link/Link', () => {
       href,
       className,
       overrideDefaults,
+      'aria-label': ariaLabel,
+      'aria-current': ariaCurrent,
     }: {
       children: React.ReactNode;
       href?: string;
       className?: string;
       overrideDefaults?: boolean;
+      'aria-label'?: string;
+      'aria-current'?: React.AriaAttributes['aria-current'];
     }) => (
-      <a data-testid="link" href={href} className={className} data-override-defaults={overrideDefaults}>
+      <a
+        data-testid="link"
+        href={href}
+        className={className}
+        data-override-defaults={overrideDefaults}
+        aria-label={ariaLabel}
+        aria-current={ariaCurrent}
+      >
         {children}
       </a>
     ),
@@ -174,6 +186,8 @@ const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSche
   ...overrides,
 });
 
+const getLink = (href: string) => screen.getAllByTestId('link').find((link) => link.getAttribute('href') === href);
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -183,6 +197,9 @@ describe('FeedNavigation', () => {
     vi.clearAllMocks();
     mockCustomFeeds = [];
     mockIsAuthenticated = true;
+    mockHomeState.reach = REACH.ALL;
+    mockHomeState.taggedAsActive = false;
+    mockHomeState.profileTags = [];
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);
@@ -196,40 +213,91 @@ describe('FeedNavigation', () => {
     const container = screen.getByTestId('container');
     expect(container).toBeInTheDocument();
 
-    // Home link should always be present
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    // The reach tab (default reach = All) should always be present
+    expect(screen.getByText('All')).toBeInTheDocument();
     expect(screen.getByTestId('custom-feed-dialog-create')).toHaveTextContent('Feed');
   });
 
-  // ── Home feed link ──────────────────────────────────────────────────────
+  // ── Reach tab (first tab, links to /home) ────────────────────────────────
 
-  it('renders the Home feed link with correct href', () => {
+  it('renders the reach tab as a link to /home', () => {
     render(<FeedNavigation />);
 
-    const links = screen.getAllByTestId('link');
-    const homeLink = links.find((link) => link.getAttribute('href') === '/home');
+    const homeLink = getLink('/home');
     expect(homeLink).toBeInTheDocument();
-    expect(homeLink).toHaveTextContent('Home');
+    expect(homeLink).toHaveTextContent('All');
+    expect(homeLink?.querySelector('svg')).toHaveClass('lucide-radio');
   });
 
-  it('applies active styling to Home link when pathname is /home', () => {
+  it('reflects the selected reach in the tab label and icon', () => {
+    mockHomeState.reach = REACH.NETWORK;
+
+    render(<FeedNavigation />);
+
+    const homeLink = getLink('/home');
+    expect(homeLink).toHaveTextContent('My network');
+    expect(homeLink?.querySelector('svg')).toHaveClass('lucide-waypoints');
+  });
+
+  it('shows Tagged as when the tagged-as filter is active with profile tags', () => {
+    mockHomeState.reach = REACH.NETWORK;
+    mockHomeState.taggedAsActive = true;
+    mockHomeState.profileTags = ['bitcoiner'];
+
+    render(<FeedNavigation />);
+
+    const homeLink = getLink('/home');
+    expect(homeLink).toHaveTextContent('Tagged as');
+    expect(homeLink?.querySelector('svg')).toHaveClass('lucide-tags');
+  });
+
+  it('forces the All reach when unauthenticated', () => {
+    mockIsAuthenticated = false;
+    mockHomeState.reach = REACH.NETWORK;
+    mockHomeState.taggedAsActive = true;
+    mockHomeState.profileTags = ['bitcoiner'];
+
+    render(<FeedNavigation />);
+
+    const homeLink = getLink('/home');
+    expect(homeLink).toHaveTextContent('All');
+    expect(homeLink?.querySelector('svg')).toHaveClass('lucide-radio');
+  });
+
+  it('applies active styling to the reach tab when pathname is /home', () => {
     mockUsePathname.mockReturnValue('/home');
     render(<FeedNavigation />);
 
-    const links = screen.getAllByTestId('link');
-    const homeLink = links.find((link) => link.getAttribute('href') === '/home');
+    const homeLink = getLink('/home');
     expect(homeLink).toHaveClass('border-white');
     expect(homeLink).toHaveClass('text-white');
+    expect(homeLink).toHaveAttribute('aria-current', 'page');
   });
 
-  it('applies muted styling to Home link when pathname is not /home', () => {
+  it('applies muted styling to the reach tab when pathname is not /home', () => {
     mockUsePathname.mockReturnValue('/feed/feed-abc123');
     render(<FeedNavigation />);
 
-    const links = screen.getAllByTestId('link');
-    const homeLink = links.find((link) => link.getAttribute('href') === '/home');
+    const homeLink = getLink('/home');
     expect(homeLink).toHaveClass('border-border');
     expect(homeLink).toHaveClass('text-muted-foreground');
+    expect(homeLink).not.toHaveAttribute('aria-current');
+  });
+
+  it('collapses the reach tab label to icon-only on mobile when inactive', () => {
+    mockUsePathname.mockReturnValue('/feed/feed-abc123');
+    render(<FeedNavigation />);
+
+    const label = getLink('/home')?.querySelector('[data-testid="typography"]');
+    expect(label).toHaveClass('hidden', 'lg:inline');
+  });
+
+  it('keeps the reach tab label visible on mobile when active', () => {
+    mockUsePathname.mockReturnValue('/home');
+    render(<FeedNavigation />);
+
+    const label = getLink('/home')?.querySelector('[data-testid="typography"]');
+    expect(label).not.toHaveClass('hidden');
   });
 
   // ── Custom feeds rendering ──────────────────────────────────────────────
@@ -251,8 +319,7 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    const links = screen.getAllByTestId('link');
-    const customFeedLink = links.find((link) => link.getAttribute('href') === '/feed/feed-xyz');
+    const customFeedLink = getLink('/feed/feed-xyz');
     expect(customFeedLink).toBeInTheDocument();
     expect(customFeedLink).toHaveTextContent('My Feed');
   });
@@ -269,7 +336,15 @@ describe('FeedNavigation', () => {
     const typographies = screen.getAllByTestId('typography');
     const feedNames = typographies.map((t) => t.textContent);
 
-    expect(feedNames).toEqual(['Home', 'Alpha Feed', 'Beta Feed', 'Gamma Feed', 'Feed']);
+    expect(feedNames).toEqual(['All', 'Alpha Feed', 'Beta Feed', 'Gamma Feed', 'Feed']);
+  });
+
+  it('renders the feed icon inside the custom feed link (Activity fallback when unset)', () => {
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed', icon: undefined })];
+
+    render(<FeedNavigation />);
+
+    expect(getLink('/feed/feed-1')?.querySelector('svg')).toHaveClass('lucide-activity');
   });
 
   // ── Active / Inactive custom feed styling ───────────────────────────────
@@ -280,8 +355,9 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    const activeLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-active');
+    const activeLink = getLink('/feed/feed-active');
     expect(activeLink).toHaveClass('text-white');
+    expect(activeLink).toHaveAttribute('aria-current', 'page');
     expect(activeLink?.parentElement).toHaveClass('border-white');
   });
 
@@ -291,12 +367,30 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    const inactiveLink = screen
-      .getAllByTestId('link')
-      .find((link) => link.getAttribute('href') === '/feed/feed-inactive');
+    const inactiveLink = getLink('/feed/feed-inactive');
     expect(inactiveLink).toHaveClass('text-muted-foreground', 'group-hover:text-white');
     expect(inactiveLink?.parentElement).toHaveClass('border-border');
     expect(inactiveLink?.parentElement).not.toHaveClass('hover:text-white');
+  });
+
+  it('collapses inactive custom feed tabs to icon-only on mobile, keeps the active label', () => {
+    mockCustomFeeds = [
+      createMockFeed({ id: 'feed-active', name: 'Active Feed' }),
+      createMockFeed({ id: 'feed-other', name: 'Other Feed' }),
+    ];
+    mockUsePathname.mockReturnValue('/feed/feed-active');
+
+    render(<FeedNavigation />);
+
+    const activeLabel = getLink('/feed/feed-active')?.querySelector('[data-testid="typography"]');
+    expect(activeLabel).not.toHaveClass('hidden');
+
+    const inactiveLabel = getLink('/feed/feed-other')?.querySelector('[data-testid="typography"]');
+    expect(inactiveLabel).toHaveClass('hidden', 'lg:inline');
+
+    // The active tab hugs its content on mobile; inactive tabs share the row.
+    expect(getLink('/feed/feed-active')?.parentElement).toHaveClass('flex-none', 'lg:flex-1');
+    expect(getLink('/feed/feed-other')?.parentElement).toHaveClass('min-w-12', 'flex-1');
   });
 
   // ── Edit dialog for custom feeds ────────────────────────────────────────
@@ -318,13 +412,31 @@ describe('FeedNavigation', () => {
       expect(editButton).toBeInTheDocument();
       expect(editButton).toHaveClass(
         'absolute',
-        'right-3',
+        'right-1',
+        'p-2',
         'text-muted-foreground',
         'lg:opacity-0',
         'lg:group-hover:opacity-100',
       );
-      expect(editButton?.querySelector('svg')).toHaveClass('size-3');
+      expect(editButton?.querySelector('svg')).toHaveClass('size-4');
     });
+  });
+
+  it('shows the pencil on mobile only for the active custom feed', () => {
+    mockCustomFeeds = [
+      createMockFeed({ id: 'feed-active', name: 'Active Feed' }),
+      createMockFeed({ id: 'feed-other', name: 'Other Feed' }),
+    ];
+    mockUsePathname.mockReturnValue('/feed/feed-active');
+
+    render(<FeedNavigation />);
+
+    const [activePencil, inactivePencil] = screen
+      .getAllByTestId('custom-feed-dialog-edit')
+      .map((dialog) => dialog.querySelector('[data-testid="button"]'));
+
+    expect(activePencil).not.toHaveClass('hidden');
+    expect(inactivePencil).toHaveClass('hidden', 'lg:block');
   });
 
   it('keeps the pencil outside the feed link so it does not navigate', () => {
@@ -333,7 +445,7 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    const feedLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-edit');
+    const feedLink = getLink('/feed/feed-edit');
     expect(feedLink?.querySelector('.lucide-pencil')).not.toBeInTheDocument();
     expect(screen.getByTestId('custom-feed-dialog-edit').querySelector('.lucide-pencil')).toBeInTheDocument();
   });
@@ -344,14 +456,14 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    const feedLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-1');
+    const feedLink = getLink('/feed/feed-1');
     expect(feedLink).toHaveClass('group-hover:text-white');
     expect(screen.getByTestId('custom-feed-dialog-edit').querySelector('[data-testid="button"]')).toHaveClass(
       'text-muted-foreground',
     );
   });
 
-  it('does not show edit dialog for Home feed even when active', () => {
+  it('does not show edit dialog for the reach tab even when active', () => {
     mockUsePathname.mockReturnValue('/home');
 
     render(<FeedNavigation />);
@@ -369,12 +481,12 @@ describe('FeedNavigation', () => {
     expect(createDialog).toHaveTextContent('Feed');
   });
 
-  it('renders Feed button with PlusCircle icon', () => {
+  it('renders Feed button with PlusCircle icon and mobile-hidden label', () => {
     render(<FeedNavigation />);
 
     const createDialog = screen.getByTestId('custom-feed-dialog-create');
-    const svg = createDialog.querySelector('svg');
-    expect(svg).toBeInTheDocument();
+    expect(createDialog.querySelector('svg')).toBeInTheDocument();
+    expect(createDialog.querySelector('[data-testid="typography"]')).toHaveClass('hidden', 'lg:inline');
   });
 
   it('does not expose custom feeds when unauthenticated', () => {
@@ -383,7 +495,7 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('All')).toBeInTheDocument();
     expect(screen.queryByText('Private Feed')).not.toBeInTheDocument();
     expect(screen.queryByTestId('custom-feed-dialog-create')).not.toBeInTheDocument();
     expect(mockGetList).not.toHaveBeenCalled();
@@ -408,49 +520,51 @@ describe('FeedNavigation', () => {
 
     render(<FeedNavigation />);
 
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('All')).toBeInTheDocument();
     expect(screen.getByTestId('custom-feed-dialog-create')).toHaveTextContent('Feed');
   });
 
   // ── Container and layout ────────────────────────────────────────────────
 
-  it('renders container with flex-row and overflow-x-auto classes', () => {
+  it('renders a horizontally scrollable row that sticks under the mobile header', () => {
     render(<FeedNavigation />);
 
     const container = screen.getByTestId('container');
-    expect(container).toHaveClass('lg:flex-row');
+    expect(container).toHaveClass('flex-row');
     expect(container).toHaveClass('overflow-x-auto');
+    expect(container).toHaveClass('sticky', 'top-(--header-height-settings)', 'bg-background');
+    expect(container).toHaveClass('lg:static', 'lg:bg-transparent');
   });
 
   it('renders tabs with Figma chrome classes', () => {
     mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
     render(<FeedNavigation />);
 
-    const homeLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/home');
-    expect(homeLink).toHaveClass('min-h-12', 'w-full', 'min-w-40', 'lg:flex-1');
+    const homeLink = getLink('/home');
+    expect(homeLink).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-1');
 
-    const customLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-1');
-    expect(customLink).toHaveClass('absolute', 'inset-0');
-    expect(customLink?.parentElement).toHaveClass('min-h-12', 'w-full', 'min-w-40', 'lg:flex-1');
+    const customLink = getLink('/feed/feed-1');
+    expect(customLink).toHaveClass('h-full', 'w-full');
+    expect(customLink?.parentElement).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-1');
 
     screen.getAllByTestId('typography').forEach((label) => {
       expect(label).toHaveClass('text-sm', 'leading-5');
     });
   });
 
-  it('does not use a left-side pencil as the custom feed icon', () => {
+  it('does not use a pencil as the custom feed icon', () => {
     mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
     render(<FeedNavigation />);
 
-    const customLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/feed/feed-1');
-    expect(customLink?.querySelector('svg')).not.toBeInTheDocument();
+    const customLink = getLink('/feed/feed-1');
+    expect(customLink?.querySelector('.lucide-pencil')).not.toBeInTheDocument();
   });
 
-  it('does not show a pencil on Home or Create Feed', () => {
+  it('does not show a pencil on the reach tab or Create Feed', () => {
     render(<FeedNavigation />);
 
-    const homeLink = screen.getAllByTestId('link').find((link) => link.getAttribute('href') === '/home');
-    expect(homeLink?.querySelector('svg')).toHaveClass('lucide-house');
+    const homeLink = getLink('/home');
+    expect(homeLink?.querySelector('svg')).toHaveClass('lucide-radio');
     expect(homeLink?.querySelector('.lucide-pencil')).not.toBeInTheDocument();
     expect(screen.getByTestId('custom-feed-dialog-create').querySelector('.lucide-pencil')).not.toBeInTheDocument();
   });
@@ -465,6 +579,9 @@ describe('FeedNavigation - Snapshots', () => {
     vi.clearAllMocks();
     mockCustomFeeds = [];
     mockIsAuthenticated = true;
+    mockHomeState.reach = REACH.ALL;
+    mockHomeState.taggedAsActive = false;
+    mockHomeState.profileTags = [];
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);

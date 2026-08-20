@@ -1,6 +1,8 @@
 /**
  * Feed-related UI constants shared across hooks, components, and templates.
  */
+export const DEFAULT_CUSTOM_FEED_ICON = 'activity';
+
 export const TIMELINE_FEED_VARIANT = {
   HOME: 'home',
   CUSTOM: 'custom',
