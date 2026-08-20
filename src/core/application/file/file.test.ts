@@ -267,6 +267,57 @@ describe('FileApplication', () => {
       expect(createSpy).not.toHaveBeenCalled();
     });
 
+    it('waits for sibling uploads to settle before rejecting on a partial failure', async () => {
+      // On failure the callers sweep the whole batch — rejecting while a
+      // sibling upload is still in flight would race the rollback against it
+      const failing = {
+        blobResult: createMockBlobResult('pubky://user/blob/fail'),
+        fileResult: createMockFileResult(),
+      };
+      const slow = {
+        blobResult: createMockBlobResult('pubky://user/blob/slow'),
+        fileResult: createMockFileResult('pubky://user/pub/pubky.app/files/slow', { id: 'file-slow', kind: 'image' }),
+      };
+
+      let resolveSlowBlob: () => void = () => undefined;
+      const putBlobSpy = vi.spyOn(HomeserverService, 'putBlob').mockImplementation(({ url }) => {
+        if (url === failing.blobResult.meta.url) {
+          return Promise.reject(new Error('blob upload failed'));
+        }
+        return new Promise((resolve) => {
+          resolveSlowBlob = () => resolve(undefined);
+        });
+      });
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+      const createSpy = vi.spyOn(LocalFileService, 'create').mockResolvedValue(undefined);
+
+      let settled = false;
+      const pending = FileApplication.commitCreate({ fileAttachments: [failing, slow] }).catch((error: Error) => {
+        settled = true;
+        return error;
+      });
+
+      // The failing upload has rejected, but the slow sibling is still in
+      // flight — commitCreate must NOT have settled yet
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(putBlobSpy).toHaveBeenCalledTimes(2);
+      expect(settled).toBe(false);
+
+      resolveSlowBlob();
+      const error = await pending;
+
+      expect(settled).toBe(true);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe('blob upload failed');
+      // The slow sibling completed its full chain before the rejection surfaced
+      expect(requestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.PUT,
+        url: slow.fileResult.meta.url,
+        bodyJson: { id: 'file-slow', kind: 'image' },
+      });
+      expect(createSpy).toHaveBeenCalledWith({ blobResult: slow.blobResult, fileResult: slow.fileResult });
+    });
+
     it('propagates errors if the file record upload fails', async () => {
       const fileJson = { id: 'file-1', kind: 'image' };
       const blobResult = createMockBlobResult();

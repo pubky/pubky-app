@@ -67,7 +67,12 @@ export class FileApplication {
    * @param params.fileResult - Normalized file result
    */
   static async commitCreate({ fileAttachments }: FilesListParams) {
-    await Promise.all(
+    // allSettled, not all: on a partial failure the callers roll back the whole
+    // batch (`commitDeleteUploaded`) — rejecting early would start that sweep
+    // while sibling uploads are still in flight, letting a late PUT recreate a
+    // record/blob the sweep already deleted, or finish after it and orphan.
+    // Waiting for every upload to settle before throwing keeps rollback safe.
+    const results = await Promise.allSettled(
       fileAttachments.map(async (fileAttachment) => {
         const { blobResult, fileResult } = fileAttachment;
         // Upload Blob
@@ -82,6 +87,11 @@ export class FileApplication {
         await LocalFileService.create({ blobResult, fileResult });
       }),
     );
+
+    const firstFailure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+    if (firstFailure) {
+      throw firstFailure.reason;
+    }
   }
 
   /**
