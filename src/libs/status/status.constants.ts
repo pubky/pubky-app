@@ -24,7 +24,7 @@ export const STATUS_EMOJIS = {
   traveling: '✈️',
   celebrating: '🥂',
   sick: '🤒',
-  noStatus: '💭',
+  noStatus: '',
   loading: '⏳',
 } as const;
 

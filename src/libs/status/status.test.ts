@@ -40,19 +40,19 @@ describe('status', () => {
         expect(STATUS_EMOJIS.traveling).toBe('✈️');
         expect(STATUS_EMOJIS.celebrating).toBe('🥂');
         expect(STATUS_EMOJIS.sick).toBe('🤒');
-        expect(STATUS_EMOJIS.noStatus).toBe('💭');
+        expect(STATUS_EMOJIS.noStatus).toBe('');
         expect(STATUS_EMOJIS.loading).toBe('⏳');
       });
 
-      it('should have all emojis as non-empty strings', () => {
+      it('should have all status emoji values as strings', () => {
         Object.values(STATUS_EMOJIS).forEach((emoji) => {
           expect(typeof emoji).toBe('string');
-          expect(emoji.length).toBeGreaterThan(0);
         });
       });
 
       it('should have emojis that match Unicode emoji pattern', () => {
-        Object.values(STATUS_EMOJIS).forEach((emoji) => {
+        Object.entries(STATUS_EMOJIS).forEach(([status, emoji]) => {
+          if (status === 'noStatus') return;
           expect(emoji).toMatch(/\p{Extended_Pictographic}/u);
         });
       });
@@ -368,12 +368,12 @@ describe('status', () => {
 
   describe('extractEmojiFromStatus', () => {
     describe('empty status', () => {
-      it('should return noStatus emoji for empty string', () => {
+      it('should return no emoji for empty string', () => {
         const result = extractEmojiFromStatus('');
         expect(result).toBe(STATUS_EMOJIS.noStatus);
       });
 
-      it('should return noStatus emoji for empty string with custom default', () => {
+      it('should return no emoji for empty string with custom default', () => {
         const result = extractEmojiFromStatus('', '🎯');
         expect(result).toBe(STATUS_EMOJIS.noStatus);
       });

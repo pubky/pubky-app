@@ -1,9 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
+
+const render = (ui: ReactElement) => rtlRender(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
 
 // Mock Molecules components
 vi.mock('@/molecules/PostText/PostText', () => {
@@ -86,7 +91,7 @@ const mockProps: ProfilePageHeaderProps = {
     name: 'Satoshi Nakamoto',
     bio: 'Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.',
     publicKey: '1QX7GKW3abcdef1234567890',
-    status: 'Vacationing',
+    status: 'vacationing',
     emoji: '🌴',
     link: 'https://example.com',
   },
@@ -119,7 +124,7 @@ const mockOtherUserProps: ProfilePageHeaderProps = {
     name: 'Other User',
     bio: 'Some bio',
     publicKey: 'other123456789012345',
-    status: 'Active',
+    status: '🎉 Active',
     emoji: '🎉',
     link: 'https://example.com/other',
   },
@@ -140,10 +145,23 @@ describe('ProfilePageHeader', () => {
   it('renders name and bio correctly', () => {
     render(<ProfilePageHeader {...mockProps} />);
 
-    expect(screen.getByText('Satoshi Nakamoto')).toBeInTheDocument();
+    expect(screen.getByText('Satoshi Nakamoto')).toHaveClass('leading-8', 'lg:leading-none');
     expect(
       screen.getByText('Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.'),
     ).toBeInTheDocument();
+  });
+
+  it('uses the original responsive spacing between profile sections', () => {
+    render(<ProfilePageHeader {...mockProps} />);
+
+    const header = screen.getByTestId('profile-page-header');
+    const bio = document.querySelector('[data-cy="profile-bio-header"]');
+    const actions = screen.getByText('Edit profile').closest('button')?.parentElement;
+
+    expect(header).toHaveClass('gap-y-3');
+    expect(bio?.parentElement).toHaveClass('lg:gap-3');
+    expect(bio?.nextElementSibling).toBe(actions);
+    expect(actions).not.toHaveClass('lg:mt-3');
   });
 
   it('renders formatted public key', () => {
@@ -164,12 +182,21 @@ describe('ProfilePageHeader', () => {
     expect(screen.getByText('83 FOLLOWERS')).toBeInTheDocument();
   });
 
-  it('renders the status picker when own profile has no status', () => {
-    const props = { ...mockProps, profile: { ...mockProps.profile, status: '' } };
+  it('places the status picker below the action buttons on mobile', () => {
+    render(<ProfilePageHeader {...mockProps} />);
+
+    const statusPicker = screen.getByText('Vacationing').closest('button')?.parentElement;
+
+    expect(statusPicker).toHaveClass('order-last', 'col-span-2', 'lg:order-0', 'lg:col-auto');
+  });
+
+  it('renders the status picker without an emoji when own profile chooses no status', () => {
+    const props = { ...mockProps, profile: { ...mockProps.profile, status: 'noStatus' } };
 
     render(<ProfilePageHeader {...props} />);
 
     expect(screen.getByText('No Status')).toBeInTheDocument();
+    expect(screen.queryByText('💭')).not.toBeInTheDocument();
   });
 
   it('calls onEdit when Edit button is clicked', () => {
@@ -223,12 +250,52 @@ describe('ProfilePageHeader', () => {
     expect(screen.getByText('SN')).toBeInTheDocument();
   });
 
-  it('renders emoji badge', () => {
+  it('renders the status emoji after the name instead of on the avatar', () => {
     render(<ProfilePageHeader {...mockProps} />);
 
-    // Emoji appears in both badge and status picker, so check for multiple instances
-    const emojis = screen.getAllByText('🌴');
-    expect(emojis.length).toBeGreaterThan(0);
+    const name = screen.getByText('Satoshi Nakamoto');
+    const statusEmoji = screen.getByRole('button', { name: 'Vacationing status' });
+
+    expect(name.nextElementSibling).toBe(statusEmoji);
+    expect(screen.getByTestId('avatar').parentElement).not.toHaveTextContent('🌴');
+  });
+
+  it('does not add a fallback emoji to a text-only custom status', () => {
+    const props = { ...mockProps, profile: { ...mockProps.profile, status: 'Focused' } };
+
+    render(<ProfilePageHeader {...props} />);
+
+    expect(screen.getByText('Satoshi Nakamoto').nextElementSibling).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Focused status' })).not.toBeInTheDocument();
+    expect(screen.queryByText('🌴')).not.toBeInTheDocument();
+  });
+
+  it('shows the status label in a tooltip when the profile emoji is hovered', async () => {
+    const user = userEvent.setup();
+
+    render(<ProfilePageHeader {...mockProps} />);
+
+    await user.hover(screen.getByRole('button', { name: 'Vacationing status' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Vacationing');
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveClass(
+        'bg-accent',
+        'font-medium',
+        'text-foreground',
+        '[&_svg]:fill-accent',
+      );
+    });
+  });
+
+  it('shows the status label when the profile emoji is tapped', async () => {
+    render(<ProfilePageHeader {...mockProps} />);
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Vacationing status' }), { pointerType: 'touch' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Vacationing');
+    });
   });
 
   it('renders without bio', () => {
@@ -380,14 +447,15 @@ describe('ProfilePageHeader - Other User Profile', () => {
     expect(onFollowToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('shows status inline with buttons when viewing other user', () => {
+  it('shows another user status only beside their name', () => {
     render(<ProfilePageHeader {...mockOtherUserProps} />);
 
-    // The status should be shown inline with buttons (emoji and text in separate elements)
-    // Emoji appears both in avatar badge and status display
-    const emojis = screen.getAllByText('🎉');
-    expect(emojis.length).toBeGreaterThanOrEqual(2); // Badge + status
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    const name = screen.getByText('Other User');
+    const statusEmoji = screen.getByRole('button', { name: 'Active status' });
+
+    expect(name.nextElementSibling).toBe(statusEmoji);
+    expect(screen.getAllByText('🎉')).toHaveLength(1);
+    expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
   it('always shows Follow button when onFollowToggle is provided (auth handled by parent)', () => {

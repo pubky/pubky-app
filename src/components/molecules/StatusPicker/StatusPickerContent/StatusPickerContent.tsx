@@ -74,7 +74,11 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
             className={cn('w-full justify-between gap-2 p-0', 'inline-flex cursor-pointer items-center', 'group')}
           >
             <Container overrideDefaults className="flex items-center gap-2">
-              <span>{option.emoji}</span>
+              {option.emoji ? (
+                <span>{option.emoji}</span>
+              ) : (
+                <span aria-hidden="true" className="size-4 shrink-0 rounded-full border border-border" />
+              )}
               <Typography
                 as="span"
                 className={cn(
