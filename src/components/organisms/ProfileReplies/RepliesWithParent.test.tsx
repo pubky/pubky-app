@@ -148,6 +148,8 @@ describe('RepliesWithParent', () => {
     // Mock useInfiniteScroll
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
 
     // Mock useLiveQuery

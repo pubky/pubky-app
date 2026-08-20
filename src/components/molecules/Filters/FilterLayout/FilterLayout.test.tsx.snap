@@ -22,6 +22,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with Columns selected tab 1
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-layout-radiogroup"
     data-testid="filter-layout-radiogroup"
     role="radiogroup"
   >
@@ -195,6 +196,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with Wide selected tab 1`] 
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-layout-radiogroup"
     data-testid="filter-layout-radiogroup"
     role="radiogroup"
   >
@@ -368,6 +370,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with default props 1`] = `
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-layout-radiogroup"
     data-testid="filter-layout-radiogroup"
     role="radiogroup"
   >
@@ -541,6 +544,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with disabled state 1`] = `
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-layout-radiogroup"
     data-testid="filter-layout-radiogroup"
     role="radiogroup"
   >
@@ -717,6 +721,7 @@ exports[`FilterLayout - Snapshots > matches snapshot with hidden visual selectio
   <div
     aria-labelledby="radix-normalized"
     class=""
+    data-cy="filter-layout-radiogroup"
     data-testid="filter-layout-radiogroup"
     role="radiogroup"
   >

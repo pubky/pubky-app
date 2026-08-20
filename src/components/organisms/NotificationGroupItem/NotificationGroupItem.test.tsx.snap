@@ -1,0 +1,599 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`NotificationGroupItem - Mobile Snapshots > matches snapshot for an always-expanded edited group on mobile viewport 1`] = `
+<div
+  class="flex w-full min-w-0 flex-col gap-1"
+  data-cy="notification-group"
+  data-testid="container"
+>
+  <div
+    class="flex w-full min-w-0 items-center justify-between gap-2"
+    data-cy="notification-group-header"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 items-center gap-2"
+      data-testid="container"
+    >
+      <a
+        class="shrink-0 transition-opacity hover:opacity-80"
+        href="/profile/oliver"
+      >
+        <div
+          data-name="Oliver"
+          data-testid="avatar-with-fallback"
+        />
+      </a>
+      <p
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
+        data-testid="typography"
+      >
+        <a
+          class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
+          href="/profile/oliver"
+        >
+          Oliver
+        </a>
+         
+        <span
+          class="text-foreground lg:shrink-0"
+        >
+          edited 3 posts you interacted with
+        </span>
+      </p>
+    </div>
+    <div
+      class="flex items-center gap-2 shrink-0"
+      data-testid="container"
+    >
+      <span
+        class="text-xs font-medium tracking-widest text-muted-foreground"
+        data-testid="typography"
+      >
+        37m
+      </span>
+      <div
+        class="relative shrink-0"
+        data-testid="container"
+        style="width: 24px; height: 24px;"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sticky-note text-foreground"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+          />
+          <path
+            d="M15 3v5a1 1 0 0 0 1 1h5"
+          />
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div
+    class="flex min-w-0 flex-col items-start gap-2 pl-8 lg:pl-10"
+    data-testid="container"
+  >
+    <div
+      class="flex w-full min-w-0 flex-col gap-2"
+      data-testid="container"
+    >
+      <div
+        class="min-w-0"
+        data-cy="notification-group-item"
+      >
+        <a
+          class="block truncate text-sm font-medium text-muted-foreground hover:underline lg:text-base"
+          href="/post/oliver/post-1767266580000"
+        >
+          "Apple releases the new iPhone"
+        </a>
+      </div>
+      <div
+        class="min-w-0"
+        data-cy="notification-group-item"
+      >
+        <a
+          class="block truncate text-sm font-medium text-muted-foreground hover:underline lg:text-base"
+          href="/post/oliver/post-1767266520000"
+        >
+          "Apple releases the new iPhone"
+        </a>
+      </div>
+      <div
+        class="min-w-0"
+        data-cy="notification-group-item"
+      >
+        <a
+          class="block truncate text-sm font-medium text-muted-foreground hover:underline lg:text-base"
+          href="/post/oliver/post-1767266460000"
+        >
+          "Apple releases the new iPhone"
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`NotificationGroupItem - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="flex w-full min-w-0 flex-col gap-1"
+  data-cy="notification-group"
+  data-testid="container"
+>
+  <div
+    class="flex w-full min-w-0 items-center justify-between gap-2"
+    data-cy="notification-group-header"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 items-center gap-2"
+      data-testid="container"
+    >
+      <a
+        class="shrink-0 transition-opacity hover:opacity-80"
+        href="/profile/oliver"
+      >
+        <div
+          data-name="Oliver"
+          data-testid="avatar-with-fallback"
+        />
+      </a>
+      <p
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
+        data-testid="typography"
+      >
+        <a
+          class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
+          href="/profile/oliver"
+        >
+          Oliver
+        </a>
+         
+        <span
+          class="text-foreground lg:shrink-0"
+        >
+          deleted 8 posts you interacted with
+        </span>
+      </p>
+    </div>
+    <div
+      class="flex items-center gap-2 shrink-0"
+      data-testid="container"
+    >
+      <span
+        class="text-xs font-medium tracking-widest text-muted-foreground"
+        data-testid="typography"
+      >
+        37m
+      </span>
+      <div
+        class="relative shrink-0"
+        data-testid="container"
+        style="width: 24px; height: 24px;"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 text-foreground"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
+        <div
+          class="absolute right-0 bottom-0 rounded-full bg-brand"
+          data-cy="notification-unread-dot"
+          data-testid="container"
+          style="width: 11px; height: 11px;"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`NotificationGroupItem - Snapshots > matches snapshot for a collapsed edited group 1`] = `
+<div
+  class="flex w-full min-w-0 flex-col gap-1"
+  data-cy="notification-group"
+  data-slot="collapsible"
+  data-state="closed"
+  data-testid="collapsible"
+>
+  <div
+    class="flex w-full min-w-0 items-center justify-between gap-2"
+    data-cy="notification-group-header"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 items-center gap-2"
+      data-testid="container"
+    >
+      <a
+        class="shrink-0 transition-opacity hover:opacity-80"
+        href="/profile/oliver"
+      >
+        <div
+          data-name="Oliver"
+          data-testid="avatar-with-fallback"
+        />
+      </a>
+      <p
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
+        data-testid="typography"
+      >
+        <a
+          class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
+          href="/profile/oliver"
+        >
+          Oliver
+        </a>
+         
+        <span
+          class="text-foreground lg:shrink-0"
+        >
+          edited 3 posts you interacted with
+        </span>
+      </p>
+      <button
+        aria-controls="radix-normalized"
+        aria-expanded="false"
+        aria-label="Show the 3 posts edited by Oliver"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-last shrink-0"
+        data-cy="notification-group-toggle"
+        data-size="sm"
+        data-slot="collapsible-trigger"
+        data-state="closed"
+        data-testid="collapsible-trigger"
+        data-variant="secondary"
+        type="button"
+      >
+        Show
+      </button>
+    </div>
+    <div
+      class="flex items-center gap-2 shrink-0"
+      data-testid="container"
+    >
+      <span
+        class=""
+        data-state="closed"
+      >
+        <span
+          class="text-xs font-medium tracking-widest text-muted-foreground"
+          data-testid="typography"
+        >
+          37m
+        </span>
+      </span>
+      <div
+        class="relative shrink-0"
+        data-testid="container"
+        style="width: 24px; height: 24px;"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sticky-note text-foreground"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+          />
+          <path
+            d="M15 3v5a1 1 0 0 0 1 1h5"
+          />
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div
+    class="min-w-0 flex-col items-start gap-2 pl-8 lg:pl-10 hidden"
+    data-testid="container"
+  >
+    <div
+      class="flex w-full min-w-0 flex-col gap-2"
+      data-slot="collapsible-content"
+      data-state="closed"
+      data-testid="collapsible-content"
+      hidden=""
+      id="radix-normalized"
+      style=""
+    />
+  </div>
+</div>
+`;
+
+exports[`NotificationGroupItem - Snapshots > matches snapshot for a deleted group 1`] = `
+<div
+  class="flex w-full min-w-0 flex-col gap-1"
+  data-cy="notification-group"
+  data-testid="container"
+>
+  <div
+    class="flex w-full min-w-0 items-center justify-between gap-2"
+    data-cy="notification-group-header"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 items-center gap-2"
+      data-testid="container"
+    >
+      <a
+        class="shrink-0 transition-opacity hover:opacity-80"
+        href="/profile/oliver"
+      >
+        <div
+          data-name="Oliver"
+          data-testid="avatar-with-fallback"
+        />
+      </a>
+      <p
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
+        data-testid="typography"
+      >
+        <a
+          class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
+          href="/profile/oliver"
+        >
+          Oliver
+        </a>
+         
+        <span
+          class="text-foreground lg:shrink-0"
+        >
+          deleted 8 posts you interacted with
+        </span>
+      </p>
+    </div>
+    <div
+      class="flex items-center gap-2 shrink-0"
+      data-testid="container"
+    >
+      <span
+        class=""
+        data-state="closed"
+      >
+        <span
+          class="text-xs font-medium tracking-widest text-muted-foreground"
+          data-testid="typography"
+        >
+          37m
+        </span>
+      </span>
+      <div
+        class="relative shrink-0"
+        data-testid="container"
+        style="width: 24px; height: 24px;"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-trash2 lucide-trash-2 text-foreground"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10 11v6"
+          />
+          <path
+            d="M14 11v6"
+          />
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+          />
+          <path
+            d="M3 6h18"
+          />
+          <path
+            d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          />
+        </svg>
+        <div
+          class="absolute right-0 bottom-0 rounded-full bg-brand"
+          data-cy="notification-unread-dot"
+          data-testid="container"
+          style="width: 11px; height: 11px;"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`NotificationGroupItem - Snapshots > matches snapshot for an expanded edited group 1`] = `
+<div
+  class="flex w-full min-w-0 flex-col gap-1"
+  data-cy="notification-group"
+  data-slot="collapsible"
+  data-state="open"
+  data-testid="collapsible"
+>
+  <div
+    class="flex w-full min-w-0 items-center justify-between gap-2"
+    data-cy="notification-group-header"
+    data-testid="container"
+  >
+    <div
+      class="flex min-w-0 flex-1 items-center gap-2"
+      data-testid="container"
+    >
+      <a
+        class="shrink-0 transition-opacity hover:opacity-80"
+        href="/profile/oliver"
+      >
+        <div
+          data-name="Oliver"
+          data-testid="avatar-with-fallback"
+        />
+      </a>
+      <p
+        class="min-w-0 shrink text-sm leading-normal font-medium whitespace-normal text-foreground lg:flex lg:items-baseline lg:gap-1 lg:text-base lg:whitespace-nowrap"
+        data-testid="typography"
+      >
+        <a
+          class="inline-block max-w-full min-w-0 truncate align-bottom no-underline hover:no-underline"
+          href="/profile/oliver"
+        >
+          Oliver
+        </a>
+         
+        <span
+          class="text-foreground lg:shrink-0"
+        >
+          edited 3 posts you interacted with
+        </span>
+      </p>
+    </div>
+    <div
+      class="flex items-center gap-2 shrink-0"
+      data-testid="container"
+    >
+      <span
+        class=""
+        data-state="closed"
+      >
+        <span
+          class="text-xs font-medium tracking-widest text-muted-foreground"
+          data-testid="typography"
+        >
+          37m
+        </span>
+      </span>
+      <div
+        class="relative shrink-0"
+        data-testid="container"
+        style="width: 24px; height: 24px;"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-sticky-note text-foreground"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"
+          />
+          <path
+            d="M15 3v5a1 1 0 0 0 1 1h5"
+          />
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div
+    class="flex min-w-0 flex-col items-start gap-2 pl-8 lg:pl-10"
+    data-testid="container"
+  >
+    <button
+      aria-controls="radix-normalized"
+      aria-expanded="true"
+      aria-label="Hide the posts edited by Oliver"
+      class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 order-last shrink-0"
+      data-cy="notification-group-toggle"
+      data-size="sm"
+      data-slot="collapsible-trigger"
+      data-state="open"
+      data-testid="collapsible-trigger"
+      data-variant="secondary"
+      type="button"
+    >
+      Hide
+    </button>
+    <div
+      class="flex w-full min-w-0 flex-col gap-2"
+      data-slot="collapsible-content"
+      data-state="open"
+      data-testid="collapsible-content"
+      id="radix-normalized"
+      style=""
+    >
+      <div
+        class="min-w-0"
+        data-cy="notification-group-item"
+      >
+        <a
+          class="block truncate text-sm font-medium text-muted-foreground hover:underline lg:text-base"
+          href="/post/oliver/post-1767266580000"
+        >
+          "Apple releases the new iPhone"
+        </a>
+      </div>
+      <div
+        class="min-w-0"
+        data-cy="notification-group-item"
+      >
+        <a
+          class="block truncate text-sm font-medium text-muted-foreground hover:underline lg:text-base"
+          href="/post/oliver/post-1767266520000"
+        >
+          "Apple releases the new iPhone"
+        </a>
+      </div>
+      <div
+        class="min-w-0"
+        data-cy="notification-group-item"
+      >
+        <a
+          class="block truncate text-sm font-medium text-muted-foreground hover:underline lg:text-base"
+          href="/post/oliver/post-1767266460000"
+        >
+          "Apple releases the new iPhone"
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+`;

@@ -151,7 +151,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
             data-cy="profile-username-header"
             as="h1"
             size="lg"
-            className="max-width-profile-page-header w-full truncate text-2xl leading-8 text-white sm:max-w-xl lg:max-w-full lg:text-6xl lg:leading-none"
+            className="max-width-profile-page-header w-full truncate text-2xl leading-normal text-white sm:max-w-xl lg:max-w-full lg:text-6xl"
           >
             {name}
           </Typography>

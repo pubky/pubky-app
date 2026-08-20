@@ -81,13 +81,11 @@ exports[`MyCollections > MyCollections - Snapshots > matches the snapshot for th
     <div
       data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
       data-post-id="p1"
-      data-show-delete-action="true"
       data-testid="collection-card"
     />
     <div
       data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
       data-post-id="p2"
-      data-show-delete-action="true"
       data-testid="collection-card"
     />
     <button

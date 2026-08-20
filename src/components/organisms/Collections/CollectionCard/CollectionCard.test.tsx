@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
@@ -33,15 +32,6 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: vi.fn(),
-}));
-
-vi.mock('@/hooks/useBookmark/useBookmark', () => ({
-  useBookmark: vi.fn(),
-}));
-
-const mockRequireAuth = vi.fn(<T,>(action: () => T) => action());
-vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
-  useRequireAuth: () => ({ isAuthenticated: true, requireAuth: mockRequireAuth }),
 }));
 
 vi.mock('@/hooks/useEntityTags/useEntityTags', () => ({
@@ -89,33 +79,6 @@ vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => ({
   UserInfoPopover: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="user-info-popover">{children}</div>
   ),
-}));
-
-const mockDeletePost = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
-  useDeletePost: () => ({ deletePost: mockDeletePost, isDeleting: false }),
-}));
-
-vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
-  DialogConfirmDelete: ({
-    open,
-    onConfirm,
-    title,
-    description,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onConfirm: () => void;
-    title?: string;
-    description?: string;
-  }) =>
-    open ? (
-      <div data-testid="dialog-confirm-delete" data-title={title} data-description={description}>
-        <button data-testid="dialog-confirm-delete-btn" onClick={onConfirm}>
-          confirm delete
-        </button>
-      </div>
-    ) : null,
 }));
 
 vi.mock('@/molecules/CollectionDeleted/CollectionDeleted', () => ({
@@ -198,7 +161,6 @@ const COLLECTION_CONTENT_NO_COVER = JSON.stringify({
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseUserProfile = vi.mocked(useUserProfile);
-const mockUseBookmark = vi.mocked(useBookmark);
 
 function getTagsList(container: HTMLElement = document.body) {
   return container.querySelector('[data-cy="clickable-tags-list"]');
@@ -251,17 +213,6 @@ function setOwnerProfile(name: string | null, avatarUrl?: string) {
   });
 }
 
-function setBookmark({ isBookmarked = false, isToggling = false } = {}) {
-  const toggle = vi.fn().mockResolvedValue(undefined);
-  mockUseBookmark.mockReturnValue({
-    isBookmarked,
-    isLoading: false,
-    isToggling,
-    toggle,
-  });
-  return toggle;
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useIsMobile).mockReturnValue(false);
@@ -270,7 +221,6 @@ beforeEach(() => {
   setAuthStore(null);
   setPostDetails(COLLECTION_CONTENT);
   setOwnerProfile('Bitcoin Wizard', 'https://example.com/avatar.png');
-  setBookmark();
 });
 
 // ---------------------------------------------------------------------------
@@ -288,6 +238,22 @@ describe('CollectionCard', () => {
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
     expect(avatar).toHaveAttribute('data-fallback-seed', AUTHOR_PUBKY);
+  });
+
+  it('stacks the metadata below the title and keeps the posts label visible on mobile', () => {
+    vi.mocked(useIsMobile).mockReturnValue(true);
+
+    render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+    const header = document.querySelector<HTMLElement>('[data-cy="collection-card-header"]');
+    const metadata = document.querySelector<HTMLElement>('[data-cy="collection-card-metadata"]');
+    const countLabel = screen.getByText('posts', { exact: false });
+
+    expect(header).toHaveClass('flex-col', 'lg:flex-row');
+    expect(header).not.toHaveClass('sm:flex-row');
+    expect(header).toContainElement(metadata);
+    expect(countLabel).toHaveClass('inline');
+    expect(countLabel).not.toHaveClass('hidden');
   });
 
   it('renders the link with the canonical /collections/<author>/<id> href', () => {
@@ -308,30 +274,22 @@ describe('CollectionCard', () => {
     expect(screen.queryByLabelText(/^Tag post/)).not.toBeInTheDocument();
   });
 
-  it('pins the tags and action row to the bottom of the card with mt-auto', () => {
+  it('pins the tags row to the bottom of the card without card-level actions', () => {
     const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
-    const actionRow = container.querySelector('[data-cy="collection-card-bottom-row"]');
+    const tagsRow = container.querySelector('[data-cy="collection-card-bottom-row"]');
 
-    expect(actionRow).toHaveClass(
-      'mt-auto',
-      'flex-col',
-      'items-start',
-      'gap-3',
-      'md:flex-row',
-      'md:items-end',
-      'md:justify-between',
-      'md:gap-4',
-    );
+    expect(tagsRow).toHaveClass('mt-auto', 'w-full');
     expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).not.toBeInTheDocument();
-    expect(container.querySelector('[data-cy="collection-card-actions"]')).toHaveClass(
-      'w-full',
-      'justify-start',
-      'self-start',
-      'md:w-auto',
-      'md:justify-end',
-      'md:self-end',
-    );
+    expect(container.querySelector('[data-cy="collection-card-actions"]')).not.toBeInTheDocument();
+  });
+
+  it('does not render Follow, Unfollow, or Delete actions on standalone cards', () => {
+    render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+    expect(screen.queryByLabelText('Follow')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Unfollow')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Delete')).not.toBeInTheDocument();
   });
 
   describe('wide timeline layout', () => {
@@ -448,145 +406,6 @@ describe('CollectionCard', () => {
     expect(container.querySelector('a[data-cy="collection-card"]')).toBeNull();
   });
 
-  describe('CTA — non-owner', () => {
-    it('renders a Follow button when the post is not bookmarked', () => {
-      setAuthStore('some-other-user');
-      setBookmark({ isBookmarked: false });
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
-
-      expect(screen.getByLabelText('Follow')).toBeInTheDocument();
-      expect(screen.queryByLabelText('Delete')).not.toBeInTheDocument();
-    });
-
-    it('renders an Unfollow button when the post is already bookmarked', () => {
-      setAuthStore('some-other-user');
-      setBookmark({ isBookmarked: true });
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
-
-      expect(screen.getByLabelText('Unfollow')).toBeInTheDocument();
-    });
-
-    it('invokes the bookmark toggle and stops the click from triggering navigation', () => {
-      setAuthStore('some-other-user');
-      const toggle = setBookmark({ isBookmarked: false });
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
-
-      const button = screen.getByLabelText('Follow');
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const preventDefault = vi.spyOn(clickEvent, 'preventDefault');
-      const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation');
-      button.dispatchEvent(clickEvent);
-
-      expect(toggle).toHaveBeenCalledTimes(1);
-      expect(preventDefault).toHaveBeenCalled();
-      expect(stopPropagation).toHaveBeenCalled();
-    });
-
-    it('does not call toggle while a previous toggle is still in flight', () => {
-      setAuthStore('some-other-user');
-      const toggle = setBookmark({ isBookmarked: false, isToggling: true });
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
-
-      const button = screen.getByLabelText('Follow') as HTMLButtonElement;
-      expect(button).toBeDisabled();
-      fireEvent.click(button);
-      expect(toggle).not.toHaveBeenCalled();
-    });
-
-    it('prompts sign-in instead of toggling bookmark when a guest clicks Follow', () => {
-      setAuthStore(null);
-      const toggle = setBookmark({ isBookmarked: false });
-      mockRequireAuth.mockImplementation(<T,>(_action: () => T) => undefined as T);
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
-
-      fireEvent.click(screen.getByLabelText('Follow'));
-
-      expect(mockRequireAuth).toHaveBeenCalledTimes(1);
-      expect(toggle).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('CTA — owner', () => {
-    it('hides Delete outside an opted-in My Collections card', () => {
-      setAuthStore(AUTHOR_PUBKY);
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
-
-      expect(screen.queryByLabelText('Delete')).not.toBeInTheDocument();
-      expect(document.querySelector('[data-cy="collection-card-actions"]')).not.toBeInTheDocument();
-    });
-
-    it('renders Delete when the owner card opts in from My Collections', () => {
-      setAuthStore(AUTHOR_PUBKY);
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} showDeleteAction />);
-
-      expect(screen.getByLabelText('Delete')).toBeInTheDocument();
-      expect(screen.queryByLabelText('Follow')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Unfollow')).not.toBeInTheDocument();
-    });
-
-    it('shows the Delete label below md while keeping the desktop action icon-only', () => {
-      setAuthStore(AUTHOR_PUBKY);
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} showDeleteAction />);
-
-      const deleteButton = screen.getByLabelText('Delete');
-      const deleteLabel = screen.getByText('Delete', { selector: 'span' });
-      expect(deleteButton).toContainElement(deleteLabel);
-      expect(deleteLabel).toHaveClass('md:hidden');
-    });
-
-    it('does not toggle the bookmark when the owner clicks Delete (placeholder only)', () => {
-      setAuthStore(AUTHOR_PUBKY);
-      const toggle = setBookmark({ isBookmarked: false });
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} showDeleteAction />);
-
-      fireEvent.click(screen.getByLabelText('Delete'));
-
-      expect(toggle).not.toHaveBeenCalled();
-    });
-
-    describe('delete flow', () => {
-      it('opens the confirmation dialog with collection-specific copy on Delete click', () => {
-        setAuthStore(AUTHOR_PUBKY);
-        setBookmark({ isBookmarked: false });
-        render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} showDeleteAction />);
-
-        fireEvent.click(screen.getByLabelText('Delete'));
-
-        const dialog = screen.getByTestId('dialog-confirm-delete');
-        expect(dialog).toBeInTheDocument();
-        // The dialog must use the collection-specific copy, not the generic
-        // delete-post copy.
-        expect(dialog).toHaveAttribute('data-title', 'Delete collection?');
-        expect(dialog).toHaveAttribute(
-          'data-description',
-          "Are you sure you want to delete 'Based Bitcoin'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
-        );
-      });
-
-      it('calls useDeletePost.deletePost with the composite id when confirming', () => {
-        setAuthStore(AUTHOR_PUBKY);
-        setBookmark({ isBookmarked: false });
-        mockDeletePost.mockClear();
-        render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} showDeleteAction />);
-
-        fireEvent.click(screen.getByLabelText('Delete'));
-        fireEvent.click(screen.getByTestId('dialog-confirm-delete-btn'));
-
-        expect(mockDeletePost).toHaveBeenCalledTimes(1);
-        expect(mockDeletePost).toHaveBeenCalledWith(COMPOSITE_ID);
-      });
-    });
-  });
-
   describe('deleted-state fallback', () => {
     // When `usePostDetails` resolves with `content === '[DELETED]'`, the card
     // must render the `CollectionDeleted` molecule instead of an empty card,
@@ -596,10 +415,6 @@ describe('CollectionCard', () => {
       render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
 
       expect(screen.getByTestId('collection-deleted')).toBeInTheDocument();
-      // No follow / delete action row is rendered for deleted collections.
-      expect(screen.queryByLabelText('Delete')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Follow')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Unfollow')).not.toBeInTheDocument();
     });
   });
 
@@ -652,10 +467,8 @@ describe('CollectionCard', () => {
       expect(screen.getByTestId('avatar-with-fallback')).toHaveAttribute('data-name', 'Bitcoin Wizard');
     });
 
-    it('shows tags and Follow without tag-management controls for non-owners', () => {
+    it('shows tags without card-level actions or tag-management controls', () => {
       vi.mocked(useIsMobile).mockReturnValue(true);
-      setAuthStore('some-other-user');
-      setBookmark({ isBookmarked: false });
 
       render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
 
@@ -665,21 +478,8 @@ describe('CollectionCard', () => {
       expect(screen.getByRole('button', { name: 'web3 tag (10 posts)' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'nostr tag (1 posts)' })).not.toBeInTheDocument();
       expect(getAddTagButton()).not.toBeInTheDocument();
-      expect(screen.getByLabelText('Follow')).toBeInTheDocument();
-      expect(screen.queryByLabelText(/^Tag post/)).not.toBeInTheDocument();
-    });
-
-    it('shows tags without Delete or tag-management controls for the owner', () => {
-      setAuthStore(AUTHOR_PUBKY);
-
-      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
-
-      expect(getTagsList()).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'bitcoin tag (5 posts)' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'ethereum tag (3 posts)' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'web3 tag (10 posts)' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'nostr tag (1 posts)' })).not.toBeInTheDocument();
-      expect(getAddTagButton()).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Follow')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Unfollow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Delete')).not.toBeInTheDocument();
       expect(screen.queryByLabelText(/^Tag post/)).not.toBeInTheDocument();
       expect(document.querySelector('[data-cy="collection-card-actions"]')).not.toBeInTheDocument();
@@ -706,9 +506,7 @@ describe('CollectionCard', () => {
       expect(card).not.toHaveClass('rounded-none');
     });
 
-    it('elevates the Follow CTA on embeds without a cover', () => {
-      setAuthStore('some-other-user');
-      setBookmark({ isBookmarked: false });
+    it('elevates the count pill on embeds without a cover', () => {
       setPostDetails(
         JSON.stringify({
           name: 'Based Bitcoin',
@@ -721,14 +519,9 @@ describe('CollectionCard', () => {
 
       const countBadge = screen.getByLabelText('2 posts');
       expect(countBadge).toHaveClass('bg-card');
-
-      expect(screen.getByLabelText('Follow')).toHaveClass('bg-card', 'text-foreground');
     });
 
-    it('hides CTAs and renders read-only tags when interactiveActions is false', () => {
-      setAuthStore('some-other-user');
-      setBookmark({ isBookmarked: false });
-
+    it('renders read-only tags when interactiveActions is false', () => {
       render(
         <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" interactiveActions={false} />,
       );
@@ -736,41 +529,25 @@ describe('CollectionCard', () => {
       expect(getTagsList()).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'bitcoin tag (5 posts)' })).toBeInTheDocument();
       expect(getAddTagButton()).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Follow')).not.toBeInTheDocument();
       expect(screen.queryByLabelText(/^Tag post/)).not.toBeInTheDocument();
-      expect(document.querySelector('[data-cy="collection-card-actions"]')).not.toBeInTheDocument();
     });
   });
 });
 
 describe('CollectionCard - Snapshots', () => {
-  it('matches the snapshot for the non-owner Follow state', () => {
-    setAuthStore('viewer-pubky');
-    setBookmark({ isBookmarked: false });
-
+  it('matches the default card snapshot', () => {
     const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches the snapshot for the owner Delete state', () => {
-    setAuthStore(AUTHOR_PUBKY);
-
-    const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} showDeleteAction />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches the snapshot when no cover image and no description are set', () => {
     setPostDetails(COLLECTION_CONTENT_NO_COVER);
-    setAuthStore('viewer-pubky');
 
     const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches the snapshot for the wide timeline layout', () => {
-    setAuthStore('viewer-pubky');
-    setBookmark({ isBookmarked: false });
-
     const { container } = render(
       <PostMainLayoutProvider tagsLayout="side">
         <CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />
@@ -790,10 +567,7 @@ describe('CollectionCard - Mobile Snapshots', () => {
     resetViewport();
   });
 
-  it('matches the mobile snapshot with up to three visible tags and stacked actions', () => {
-    setAuthStore('viewer-pubky');
-    setBookmark({ isBookmarked: false });
-
+  it('matches the mobile snapshot with up to three visible tags', () => {
     const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -46,36 +46,42 @@ export function FilterReach({
           label: 'My network',
           icon: Waypoints,
           disabled,
+          dataCy: 'network-reach-toggle',
         },
         {
           key: TAGGED_AS_FILTER_KEY,
           label: 'Tagged as',
           icon: Tags,
           disabled,
+          dataCy: 'tagged-as-reach-toggle',
         },
         {
           key: REACH.FOLLOWING,
           label: 'Following',
           icon: UsersRound2,
           disabled,
+          dataCy: 'following-reach-toggle',
         },
         {
           key: REACH.FRIENDS,
           label: 'Friends',
           icon: HeartHandshake,
           disabled,
+          dataCy: 'friends-reach-toggle',
         },
         {
           key: REACH.ME,
           label: 'Me',
           icon: UserRound,
           disabled,
+          dataCy: 'me-reach-toggle',
         },
         {
           key: REACH.ALL,
           label: 'All',
           icon: Radio,
           disabled,
+          dataCy: 'all-reach-toggle',
         },
       ]
     : [
@@ -84,6 +90,7 @@ export function FilterReach({
           label: 'All',
           icon: Radio,
           disabled,
+          dataCy: 'all-reach-toggle',
         },
       ];
 
@@ -94,12 +101,14 @@ export function FilterReach({
         label: 'Following',
         icon: UsersRound2,
         disabled,
+        dataCy: 'following-reach-toggle',
       },
       {
         key: REACH.FRIENDS,
         label: 'Friends',
         icon: HeartHandshake,
         disabled,
+        dataCy: 'friends-reach-toggle',
       },
     );
   }

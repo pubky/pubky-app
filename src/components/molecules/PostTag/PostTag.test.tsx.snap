@@ -75,6 +75,7 @@ exports[`PostTag - Snapshots > matches snapshot with all features 1`] = `
   <span
     aria-label="Remove bitcoin tag"
     class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
+    data-cy="post-tag-remove-btn"
     role="button"
   >
     <svg
@@ -140,6 +141,7 @@ exports[`PostTag - Snapshots > matches snapshot with close button 1`] = `
   <span
     aria-label="Remove bitcoin tag"
     class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
+    data-cy="post-tag-remove-btn"
     role="button"
   >
     <svg
