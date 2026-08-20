@@ -67,6 +67,11 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
     },
     ref,
   ) => {
+    // Deliberate useMemo despite the React Compiler: createObjectURL allocates
+    // a browser resource whose IDENTITY drives the revoke cleanup below, and
+    // compiler memoization is an optimization, not a semantic guarantee —
+    // re-running this map on an unrelated render would leak object URLs and
+    // revoke ones still bound to rendered previews.
     const newFilePreviews = useMemo(
       () =>
         attachments.map((file, index) => ({
