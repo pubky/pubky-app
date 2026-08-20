@@ -7,6 +7,7 @@ import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/use-toast';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { parsePostReference } from '@/pipes/post/post.reference';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -27,6 +28,7 @@ interface UseAddContentFormResult {
   form: UseFormReturn<AddContentFormData>;
   submit: (value?: string) => Promise<boolean>;
   handlePaste: (event: React.ClipboardEvent<HTMLInputElement>) => void;
+  pasteFromClipboard: () => Promise<void>;
   reset: () => void;
   isPending: boolean;
 }
@@ -134,10 +136,27 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
     void submit(event.clipboardData.getData('text'));
   };
 
+  const pasteFromClipboard = async () => {
+    if (isPending) return;
+
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.readText) {
+      toast({ variant: 'error', description: 'Could not read clipboard.' });
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+      await submit(text);
+    } catch {
+      toast({ variant: 'error', description: 'Could not read clipboard.' });
+    }
+  };
+
   return {
     form,
     submit,
     handlePaste,
+    pasteFromClipboard,
     reset,
     isPending,
   };

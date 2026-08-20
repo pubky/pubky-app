@@ -76,6 +76,29 @@ describe('ControlledInputField', () => {
     expect(handlePaste).toHaveBeenCalled();
   });
 
+  it('forwards icon clicks', () => {
+    const handleClickIcon = vi.fn();
+
+    render(
+      <TestWrapper>
+        {(form) => (
+          <ControlledInputField<TestFormData>
+            name="testField"
+            control={form.control}
+            placeholder="Enter value"
+            icon={<span>icon</span>}
+            iconPosition="right"
+            onClickIcon={handleClickIcon}
+          />
+        )}
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByText('icon'));
+
+    expect(handleClickIcon).toHaveBeenCalledTimes(1);
+  });
+
   it('renders without a label wrapper', () => {
     render(
       <TestWrapper>

@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   getCollectionDetails: vi.fn(),
   commitUpdateCollectionItem: vi.fn(),
   onSuccess: vi.fn(),
+  toast: vi.fn(),
 }));
 vi.mock('@/controllers/bookmark/bookmark', () => ({
   BookmarkController: {
@@ -40,6 +41,10 @@ vi.mock('@/controllers/post/post', () => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
     selector({ currentUserPubky: mocks.currentUserPubky }),
+}));
+
+vi.mock('@/molecules/Toaster/use-toast', () => ({
+  toast: mocks.toast,
 }));
 
 function livePost() {
@@ -296,5 +301,44 @@ describe('useAddContentForm', () => {
 
     await waitFor(() => expect(mocks.commitCreateBookmark).toHaveBeenCalled());
     expect(preventDefault).toHaveBeenCalled();
+  });
+
+  it('submits clipboard text from pasteFromClipboard', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { readText: vi.fn().mockResolvedValue(POST_URL) },
+    });
+
+    const { result } = renderHook(() =>
+      useAddContentForm({ target: { type: 'bookmarks' }, onSuccess: mocks.onSuccess }),
+    );
+
+    await act(async () => {
+      await result.current.pasteFromClipboard();
+    });
+
+    await waitFor(() => expect(mocks.commitCreateBookmark).toHaveBeenCalled());
+    expect(mocks.toast).not.toHaveBeenCalled();
+  });
+
+  it('toasts when pasteFromClipboard cannot read the clipboard', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { readText: vi.fn().mockRejectedValue(new Error('denied')) },
+    });
+
+    const { result } = renderHook(() =>
+      useAddContentForm({ target: { type: 'bookmarks' }, onSuccess: mocks.onSuccess }),
+    );
+
+    await act(async () => {
+      await result.current.pasteFromClipboard();
+    });
+
+    expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
+    expect(mocks.toast).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Could not read clipboard.',
+    });
   });
 });

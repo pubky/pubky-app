@@ -22,6 +22,10 @@ export interface ControlledInputFieldProps<T extends FieldValues> {
   icon?: ReactNode;
   /** Icon position */
   iconPosition?: 'left' | 'right';
+  /** Optional class applied to the icon wrapper */
+  iconClassName?: string;
+  /** Optional click handler for the icon */
+  onClickIcon?: () => void;
   /** Disabled state */
   disabled?: boolean;
   /** Loading state */

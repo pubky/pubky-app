@@ -71,6 +71,7 @@ vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
 }));
 
 vi.mock('@/molecules/Toaster/use-toast', () => ({
+  toast: mocks.toast,
   useToast: () => ({ toast: mocks.toast }),
 }));
 
@@ -214,6 +215,8 @@ describe('DialogAddContent', () => {
     expect(screen.getByText('Create new post')).toBeInTheDocument();
     expect(screen.getByText("What's on your mind?")).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Paste' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Paste' })).toHaveAttribute('data-cy', 'add-content-paste-button');
   });
 
   it.each(['add-content-feed-reply-pill', 'add-content-feed-repost-pill', 'add-content-feed-save-pill'])(
@@ -314,6 +317,45 @@ describe('DialogAddContent', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('adds clipboard content when the paste button is clicked', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { readText: vi.fn().mockResolvedValue(POST_URL) },
+    });
+
+    render(<DialogAddContent />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Paste' }));
+
+    await waitFor(() =>
+      expect(mocks.commitCreateBookmark).toHaveBeenCalledWith({ postId: COMPOSITE_ID, userId: VIEWER }),
+    );
+    expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith(COMPOSITE_ID);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('shows an error toast when the paste button cannot read the clipboard', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { readText: vi.fn().mockRejectedValue(new Error('denied')) },
+    });
+
+    render(<DialogAddContent />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Paste' }));
+
+    await waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not read clipboard.',
+      }),
+    );
+    expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
   it('disables the input and shows loading text while paste processing is pending', async () => {
     let resolvePost!: (value: ReturnType<typeof livePost>) => void;
     mocks.getOrFetchPost.mockReturnValue(new Promise((resolve) => (resolvePost = resolve)));
@@ -330,7 +372,8 @@ describe('DialogAddContent', () => {
     await waitFor(() => {
       const input = screen.getByDisplayValue('Adding...');
       expect(input).toBeDisabled();
-      expect(input.closest('[data-testid="container"]')).toHaveClass('gap-2');
+      expect(input.closest('[data-testid="container"]')).toHaveClass('gap-3');
+      expect(screen.queryByRole('button', { name: 'Paste' })).not.toBeInTheDocument();
     });
 
     resolvePost(livePost());

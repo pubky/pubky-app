@@ -28,6 +28,23 @@ describe('InputField', () => {
     expect(handleClick).toHaveBeenCalled();
   });
 
+  it('invokes onClickIcon for a right-aligned icon', () => {
+    const handleClickIcon = vi.fn();
+    render(
+      <InputField
+        value="test"
+        icon={<span>icon</span>}
+        iconPosition="right"
+        onClickIcon={handleClickIcon}
+        iconClassName="mr-0"
+      />,
+    );
+
+    fireEvent.click(screen.getByText('icon'));
+
+    expect(handleClickIcon).toHaveBeenCalledTimes(1);
+  });
+
   it('handles paste events', () => {
     const handlePaste = vi.fn();
     render(<InputField value="test" onPaste={handlePaste} />);

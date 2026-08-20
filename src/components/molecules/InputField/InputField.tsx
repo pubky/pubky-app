@@ -29,6 +29,7 @@ interface InputFieldProps {
   onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   maxLength?: number;
   iconPosition?: 'left' | 'right';
+  iconClassName?: React.HTMLAttributes<HTMLDivElement>['className'];
   message?: ReactNode;
   messageType?: 'default' | 'info' | 'alert' | 'error' | 'success';
   size?: 'sm' | 'md' | 'lg';
@@ -43,7 +44,7 @@ export function InputField({
   disabled = false,
   readOnly = false,
   onClick,
-  onClickIcon = () => {},
+  onClickIcon,
   className,
   icon,
   variant = 'default',
@@ -57,6 +58,7 @@ export function InputField({
   onPaste,
   maxLength,
   iconPosition = 'left',
+  iconClassName,
   message,
   messageType = 'default',
   size = 'md',
@@ -103,7 +105,10 @@ export function InputField({
           </Container>
         )}
         {!loading && icon && iconPosition === 'left' && (
-          <Container onClick={onClickIcon} className={cn('w-auto cursor-pointer items-center justify-center')}>
+          <Container
+            onClick={onClickIcon}
+            className={cn('w-auto cursor-pointer items-center justify-center', iconClassName)}
+          >
             {icon}
           </Container>
         )}
@@ -126,7 +131,10 @@ export function InputField({
           data-cy={dataCy}
         />
         {!loading && icon && iconPosition === 'right' && (
-          <Container onClick={onClickIcon} className={cn('mr-5 w-auto cursor-pointer items-center justify-center')}>
+          <Container
+            onClick={onClickIcon}
+            className={cn('mr-5 w-auto cursor-pointer items-center justify-center', iconClassName)}
+          >
             {icon}
           </Container>
         )}
