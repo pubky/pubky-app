@@ -31,6 +31,19 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return {
+      // beforeFiles: `.md` must not be treated as a static-file miss before the
+      // App Router `[postId]` page can run. `\\.` is a literal dot — without it
+      // `:postId.md` is a param named `postId.md`.
+      beforeFiles: [
+        {
+          source: '/post/:userId/:postId\\.md',
+          destination: '/api/post/:userId/:postId/markdown',
+        },
+      ],
+    };
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push('@synonymdev/pubky');

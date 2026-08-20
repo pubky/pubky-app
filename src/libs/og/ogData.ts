@@ -1,15 +1,15 @@
 import sharp from 'sharp';
+import { resolvePostAttachmentUrl } from '@/libs/file/resolvePostAttachmentUrl';
 import { Logger } from '@/libs/logger/logger';
 import { fetchWithValidation } from '@/libs/post/postMetadata';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { filesApi } from '@/services/nexus/file/file.api';
-import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusTag, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
 import { OG_REVALIDATE } from './ogConstants';
+
+export { resolvePostAttachmentUrl };
 
 /**
  * Server-only data helpers for dynamic OG image generation.
@@ -68,44 +68,6 @@ export async function fetchPostTags(userId: string, postId: string, limit: numbe
   } catch (error) {
     Logger.warn('[ogData] Failed to fetch post tags for OG', { userId, postId, error });
     return [];
-  }
-}
-
-/**
- * Resolves a post attachment reference into an absolute CDN URL the OG image
- * renderer can load. Only `pubky://<user>/pub/pubky.app/files/<fileId>` URIs are
- * accepted — they resolve to our own CDN. Anything else (including absolute
- * `http(s)` URLs) is rejected, so the server-side image fetch can never be
- * pointed at an arbitrary/internal host (SSRF). In practice every post attachment
- * is a homeserver file URI, so this reflects reality rather than restricting it.
- *
- * Uses only pure primitives (avoids the Dexie-tainted `FileController.getFileUrl`).
- * Returns `null` on any empty / non-pubky / malformed input so the caller can
- * fall back gracefully.
- */
-export function resolvePostAttachmentUrl(
-  attachmentUri: string | null | undefined,
-  variant: FileVariant = FileVariant.FEED,
-): string | null {
-  const trimmed = attachmentUri?.trim();
-  if (!trimmed) return null;
-
-  if (!trimmed.startsWith('pubky://')) {
-    Logger.warn('[ogData] Rejected non-pubky attachment (only CDN file URIs are fetched)', { uri: trimmed });
-    return null;
-  }
-
-  try {
-    const compositeId = buildCompositeIdFromPubkyUri({
-      uri: trimmed as Pubky,
-      domain: CompositeIdDomain.FILES,
-    });
-    if (!compositeId) return null;
-    const { pubky, id } = parseCompositeId(compositeId);
-    return filesApi.getFileUrl({ pubky, file_id: id, variant });
-  } catch (error) {
-    Logger.warn('[ogData] Failed to resolve attachment pubky URI', { uri: trimmed, error });
-    return null;
   }
 }
 

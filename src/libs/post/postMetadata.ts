@@ -1,7 +1,7 @@
 import { httpResponseToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
-import type { NexusPostDetails, NexusUserDetails } from '@/services/nexus/nexus.types';
+import type { NexusPost, NexusPostDetails, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
 
@@ -24,6 +24,22 @@ export async function fetchWithValidation<T>(url: string, operation: string): Pr
 }
 
 /**
+ * Server-only post details fetch (Nexus + Next Data Cache). Does not touch Dexie.
+ * Used by the `/{postId}.md` route, which must not go through PostController.
+ */
+export async function fetchPostDetailsForServer(userId: string, postId: string): Promise<NexusPostDetails | null> {
+  return fetchWithValidation<NexusPostDetails>(
+    postApi.details({ author_id: userId, post_id: postId }),
+    'fetchPostDetails',
+  );
+}
+
+/** Full post view (details + relationships). Used by `/{postId}.md` for quotes/replies. */
+export async function fetchPostViewForServer(userId: string, postId: string): Promise<NexusPost | null> {
+  return fetchWithValidation<NexusPost>(postApi.view({ author_id: userId, post_id: postId }), 'fetchPostView');
+}
+
+/**
  * Concurrently fetches user and post details for use in `generateMetadata`.
  * Returns `null` when either resource is missing so callers can fall back to
  * empty metadata in a single guard.
@@ -34,7 +50,7 @@ export async function fetchUserAndPostForMetadata(
 ): Promise<{ user: NexusUserDetails; post: NexusPostDetails } | null> {
   const [user, post] = await Promise.all([
     fetchWithValidation<NexusUserDetails>(userApi.details({ user_id: userId }), 'fetchUserDetails'),
-    fetchWithValidation<NexusPostDetails>(postApi.details({ author_id: userId, post_id: postId }), 'fetchPostDetails'),
+    fetchPostDetailsForServer(userId, postId),
   ]);
 
   if (!user || !post) return null;
