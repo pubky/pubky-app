@@ -43,7 +43,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
     selector({ currentUserPubky: mocks.currentUserPubky }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
+vi.mock('@/molecules/Toaster/toast', () => ({
   toast: mocks.toast,
 }));
 

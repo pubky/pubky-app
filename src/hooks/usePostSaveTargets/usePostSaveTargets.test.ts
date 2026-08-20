@@ -52,8 +52,8 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
   }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: mocks.toast,
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({

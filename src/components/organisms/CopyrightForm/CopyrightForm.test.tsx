@@ -7,7 +7,7 @@ import { CopyrightForm } from './CopyrightForm';
 const { mockToast } = vi.hoisted(() => ({
   mockToast: vi.fn(),
 }));
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: mockToast,
   };

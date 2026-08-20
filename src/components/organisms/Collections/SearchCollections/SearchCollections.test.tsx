@@ -19,9 +19,9 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
+const mockToast = vi.hoisted(() => vi.fn());
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: mockToast,
 }));
 
 vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({

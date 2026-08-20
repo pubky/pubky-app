@@ -27,8 +27,8 @@ vi.mock('embla-carousel-react', () => ({
   default: vi.fn(() => [vi.fn(), mockEmblaApi]),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: vi.fn(),
 }));
 
 const createMockImage = (overrides: Partial<AttachmentConstructed> = {}): AttachmentConstructed => ({

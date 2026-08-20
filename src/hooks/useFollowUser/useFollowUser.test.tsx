@@ -29,7 +29,7 @@ vi.mock('@/libs/logger/logger', () => ({
   Logger: mockLogger,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
+vi.mock('@/molecules/Toaster/toast', () => ({
   toast: (props: unknown) => mockToast(props),
 }));
 describe('useFollowUser', () => {

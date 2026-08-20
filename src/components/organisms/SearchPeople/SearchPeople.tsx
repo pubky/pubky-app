@@ -10,7 +10,7 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
 import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import type { Pubky } from '@/models/models.types';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { UserListItem } from '@/organisms/UserListItem/UserListItem';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { SearchPersonCardSkeleton } from './SearchPeople.skeleton';
@@ -36,7 +36,6 @@ export function SearchPeople() {
 
 /** Inner data-driven body — only mounted with a non-empty tag list. */
 function SearchPeopleContent({ tags }: { tags: string[] }) {
-  const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { toggleFollow, isUserLoading } = useFollowUser();

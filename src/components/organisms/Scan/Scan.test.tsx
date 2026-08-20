@@ -113,7 +113,7 @@ vi.mock('@/molecules/Page/Page', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: vi.fn(),
   };

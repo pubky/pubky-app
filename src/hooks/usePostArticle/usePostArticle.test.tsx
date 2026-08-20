@@ -5,11 +5,11 @@ import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { usePostArticle } from './usePostArticle';
 
-// Mock useToast
+// Mock toast
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
-    useToast: () => ({ toast: mockToast }),
+    toast: (...args: unknown[]) => mockToast(...args),
   };
 });
 

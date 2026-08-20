@@ -20,9 +20,9 @@ vi.mock('@/hooks/useSearchPeople/useSearchPeople', () => ({
   useSearchPeople: vi.fn(),
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
+const mockToast = vi.hoisted(() => vi.fn());
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: mockToast,
 }));
 
 const mockToggleFollow = vi.fn();

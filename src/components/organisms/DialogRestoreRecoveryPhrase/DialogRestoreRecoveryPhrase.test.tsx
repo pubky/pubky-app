@@ -124,11 +124,9 @@ vi.mock('@/stores/auth/auth.store', () => ({
 
 // Mock Molecules module
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
-    useToast: vi.fn(() => ({
-      toast: mockToast,
-    })),
+    toast: (...args: unknown[]) => mockToast(...args),
   };
 });
 

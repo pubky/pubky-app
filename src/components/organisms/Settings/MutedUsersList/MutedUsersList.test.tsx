@@ -38,7 +38,7 @@ vi.mock('@/molecules/FacehashAvatar/FacehashAvatar', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: vi.fn(),
   };

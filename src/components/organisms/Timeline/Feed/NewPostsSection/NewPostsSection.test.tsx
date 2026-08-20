@@ -40,7 +40,7 @@ vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: vi.fn(),
   };

@@ -70,7 +70,7 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: (props: unknown) => mockToast(props),
   };

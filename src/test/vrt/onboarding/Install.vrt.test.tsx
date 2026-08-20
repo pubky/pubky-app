@@ -43,10 +43,8 @@ vi.mock('next/navigation', () => {
 });
 
 // Toast is only fired from the invite-code verification effect (never hit in the
-// default snapshot), but the hook is called unconditionally at render.
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn(), dismiss: vi.fn(), toasts: [] }),
-  // `showErrorToast` imports the standalone `toast` binding.
+// default snapshot); stub it so no real toast timers run.
+vi.mock('@/molecules/Toaster/toast', () => ({
   toast: vi.fn(),
 }));
 

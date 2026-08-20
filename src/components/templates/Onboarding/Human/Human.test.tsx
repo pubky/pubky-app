@@ -35,10 +35,8 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: (...args: unknown[]) => mockToast(...args),
 }));
 
 vi.mock('@/stores/onboarding/onboarding.store', () => ({

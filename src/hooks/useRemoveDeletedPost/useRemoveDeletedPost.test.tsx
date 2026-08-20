@@ -34,7 +34,7 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
 }));
 
 const { mockToast } = vi.hoisted(() => ({ mockToast: vi.fn() }));
-vi.mock('@/molecules/Toaster/use-toast', () => ({
+vi.mock('@/molecules/Toaster/toast', () => ({
   toast: mockToast,
 }));
 

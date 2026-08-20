@@ -31,10 +31,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: (...args: unknown[]) => mockToast(...args),
 }));
 
 describe('useDeleteAccount', () => {

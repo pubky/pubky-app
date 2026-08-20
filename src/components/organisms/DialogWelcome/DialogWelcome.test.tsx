@@ -203,7 +203,7 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: vi.fn(() => ({
       dismiss: vi.fn(),

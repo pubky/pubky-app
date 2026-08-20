@@ -16,9 +16,9 @@ vi.mock('@/controllers/auth/auth', () => ({
   AuthController: { logout: (...args: unknown[]) => mockLogout(...args) },
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
-    useToast: () => ({ toast: mockToast }),
+    toast: (...args: unknown[]) => mockToast(...args),
   };
 });
 

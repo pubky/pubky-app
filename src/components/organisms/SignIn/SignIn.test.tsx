@@ -124,7 +124,7 @@ vi.mock('@/molecules/Page/Page', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: vi.fn(),
   };
@@ -408,7 +408,7 @@ describe('SignInContent', () => {
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
-    const { toast } = await import('@/molecules/Toaster/use-toast');
+    const { toast } = await import('@/molecules/Toaster/toast');
 
     await act(async () => {
       render(<SignInContent />);
@@ -439,7 +439,7 @@ describe('SignInContent', () => {
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
-    const { toast } = await import('@/molecules/Toaster/use-toast');
+    const { toast } = await import('@/molecules/Toaster/toast');
 
     await act(async () => {
       render(<SignInContent />);

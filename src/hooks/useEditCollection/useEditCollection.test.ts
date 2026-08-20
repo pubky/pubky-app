@@ -43,8 +43,8 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: () => ({ postDetails: mocks.postDetails, isLoading: false }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: mocks.toast,
 }));
 
 vi.mock('@/stores/localFiles/localFiles.store', () => ({

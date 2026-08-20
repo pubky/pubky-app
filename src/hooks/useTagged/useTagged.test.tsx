@@ -61,7 +61,7 @@ vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
   useProfileStats: (...args: Parameters<typeof useProfileStats>) => mockUseProfileStats(...args),
 }));
 // Mock toast
-vi.mock('@/molecules/Toaster/use-toast', () => ({
+vi.mock('@/molecules/Toaster/toast', () => ({
   toast: mockMocks.mockToast,
 }));
 

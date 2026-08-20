@@ -5,7 +5,7 @@ import { useCopyrightForm } from './useCopyrightForm';
 import { COPYRIGHT_ROLES } from './useCopyrightForm.constants';
 
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: (...args: unknown[]) => mockToast(...args),
   };

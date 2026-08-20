@@ -28,7 +28,7 @@ import {
 } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo.utils';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_HEADER_SIZE_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainLayoutRules';
 import { BODY_TEXT_CLASS_BY_TAGS_LAYOUT } from '@/organisms/PostMain/PostMainTypography';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
@@ -174,7 +174,6 @@ export function PostInput({
 
   const isEdit = variant === POST_INPUT_VARIANT.EDIT;
 
-  const { toast } = useToast();
   const shouldReduceMotion = useReducedMotion();
   const { ref: stateContentMeasureRef, height: stateContentHeight } = useElementHeight();
   // Forced-expanded dialog composers must not use Framer height at all — even

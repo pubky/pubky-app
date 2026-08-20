@@ -34,8 +34,8 @@ vi.mock('@/hooks/useCoverImagePicker/useCoverImagePicker', () => ({
   useCoverImagePicker: () => mocks.cover,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: mocks.toast,
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({

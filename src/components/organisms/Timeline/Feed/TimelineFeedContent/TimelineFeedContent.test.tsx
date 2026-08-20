@@ -72,7 +72,7 @@ vi.mock('@/molecules/Timeline/TimelineLoading', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: vi.fn(),
   };

@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
 
 vi.mock('@/libs/logger/logger', async (importOriginal) => {
@@ -24,7 +24,7 @@ vi.mock('@/libs/error/error.utils', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: vi.fn(),
   };

@@ -37,9 +37,9 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
-    useToast: () => ({ toast: mockToast }),
+    toast: (...args: unknown[]) => mockToast(...args),
   };
 });
 vi.mock('@/libs/error/error.utils', async (importOriginal) => {

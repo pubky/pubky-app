@@ -51,7 +51,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(() => undefined),
 }));
 // Mock toast
-vi.mock('@/molecules/Toaster/use-toast', () => ({
+vi.mock('@/molecules/Toaster/toast', () => ({
   toast: mockToast,
 }));
 

@@ -15,7 +15,7 @@ const mockGetAuthUrl = vi.fn();
 const mockGetSignupAuthUrl = vi.fn();
 const mockInitializeAuthenticatedSession = vi.fn();
 const mockCancelActiveAuthFlow = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: (...args: unknown[]) => mockToast(...args),
   };

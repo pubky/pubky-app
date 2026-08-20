@@ -37,7 +37,7 @@ vi.mock('@/models/models.utils', () => ({
 
 // Mock toast helpers
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
     toast: (params: { title?: string; description: string; variant?: string }) => mockToast(params),
   };

@@ -26,9 +26,9 @@ vi.mock('@/libs/utils/utils', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
-    useToast: () => ({ toast: mockToast }),
+    toast: mockToast,
   };
 });
 

@@ -422,9 +422,9 @@ vi.mock('@/molecules/TagInput/TagInput', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
-    useToast: vi.fn(() => ({ toast: mockToast })),
+    toast: (...args: unknown[]) => mockToast(...args),
   };
 });
 

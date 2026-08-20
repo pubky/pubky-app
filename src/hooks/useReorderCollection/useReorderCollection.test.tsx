@@ -18,8 +18,8 @@ vi.mock('@/controllers/stream/posts/posts', () => ({
 }));
 
 const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: (...args: unknown[]) => mockToast(...args),
 }));
 
 const collectionId = 'collection_author:collection123';

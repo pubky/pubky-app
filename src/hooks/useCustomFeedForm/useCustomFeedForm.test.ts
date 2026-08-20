@@ -26,8 +26,8 @@ vi.mock('@/controllers/feed/feed', () => ({
   },
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: mocks.toast,
 }));
 
 vi.mock('next/navigation', () => ({

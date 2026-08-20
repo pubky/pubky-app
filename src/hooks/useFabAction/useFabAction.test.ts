@@ -34,8 +34,8 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
   },
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: mocks.toast,
 }));
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');

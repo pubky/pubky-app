@@ -57,11 +57,9 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules/Toaster/use-toast', () => {
+vi.mock('@/molecules/Toaster/toast', () => {
   return {
-    useToast: vi.fn(() => ({
-      toast: mockToast,
-    })),
+    toast: mockToast,
   };
 });
 
@@ -1339,7 +1337,7 @@ describe('usePost', () => {
       );
     });
 
-    it('should include ToastAction with onUndo', async () => {
+    it('should include an Undo action descriptor that undoes the created repost', async () => {
       const { result } = renderHook(() => usePost());
       const mockOnUndo = vi.fn();
 
@@ -1353,9 +1351,13 @@ describe('usePost', () => {
 
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: expect.anything(),
+          action: { label: 'Undo', altText: 'Undo', onClick: expect.any(Function) },
         }),
       );
+
+      const { action } = mockToast.mock.calls[0][0];
+      action.onClick();
+      expect(mockOnUndo).toHaveBeenCalledWith('created-post-id');
     });
 
     describe('edit method', () => {

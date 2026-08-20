@@ -74,7 +74,7 @@ vi.mock('@/controllers/auth/auth', () => ({
     loginWithEncryptedFile: vi.fn(),
   },
 }));
-vi.mock('@/molecules/Toaster/use-toast', () => ({
+vi.mock('@/molecules/Toaster/toast', () => ({
   toast: (...args: unknown[]) => mockToast(...args),
 }));
 vi.mock('@/stores/auth/auth.store', () => ({

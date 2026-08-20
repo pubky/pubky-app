@@ -11,8 +11,8 @@ vi.mock('@/controllers/post/post', () => ({
   },
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+vi.mock('@/molecules/Toaster/toast', () => ({
+  toast: vi.fn(),
 }));
 
 vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
