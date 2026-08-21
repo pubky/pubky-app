@@ -57,14 +57,21 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
 
     setIsDeleting(true);
 
-    // Optimistically remove post from timeline feed
-    timelineFeed?.removePosts(postId);
+    // Optimistically remove the post as a transaction: the commit path also decrements
+    // skip-stream offsets (content search, engagement, collections), so the next page
+    // doesn't skip one live row once Nexus drops the deleted post. The plain removePosts
+    // fallback covers providers that don't expose the transactional API.
+    const removal = timelineFeed?.removePostsOptimistically?.(postId);
+    if (!removal) {
+      timelineFeed?.removePosts(postId);
+    }
 
     try {
       await PostController.commitDelete({ compositePostId: postId });
       // Clear the optimistic attachment cache so its blob URLs are revoked and
       // don't shadow the tombstone for the rest of the session
       useLocalFilesStore.getState().setPostAttachments(postId, []);
+      removal?.commit();
       Logger.info('[useDeletePost] Post deleted successfully', { postId });
       toast({
         title: deletedTitle,
@@ -111,11 +118,12 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
         postStillExists === null || (postStillExists !== 'unknown' && isPostDeleted(postStillExists.content));
 
       if (localWriteCommitted) {
-        // Local-first write succeeded (row gone or tombstoned). Leave the
-        // optimistic removal in place — homeserver retry can resync. The
-        // optimistic attachment cache is cleared here too (as on success): the
-        // post renders as deleted either way, so its blob URLs are dead weight.
+        // Local-first write succeeded (row gone or tombstoned). Keep the removal —
+        // committing also applies the cursor decrement, matching local state; the
+        // homeserver retry can resync later. Clear the optimistic attachment cache
+        // too, because the post renders as deleted and its blob URLs are dead weight.
         useLocalFilesStore.getState().setPostAttachments(postId, []);
+        removal?.commit();
         Logger.warn('[useDeletePost] Local write committed; not restoring to timeline', {
           postId,
           state: postStillExists === null ? 'row_removed' : 'tombstoned',
@@ -123,8 +131,13 @@ export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResu
         });
       } else {
         // Either we couldn't verify, or the row exists with original content
-        // (local-first never committed). Put the card back.
-        timelineFeed?.prependPosts(postId);
+        // (local-first never committed). Put the card back: rollback reveals it in
+        // place; the prepend fallback re-inserts it for non-transactional providers.
+        if (removal) {
+          removal.rollback();
+        } else {
+          timelineFeed?.prependPosts(postId);
+        }
         Logger.info('[useDeletePost] Post restored to timeline after failed deletion', {
           postId,
           reason: postStillExists === 'unknown' ? 'could_not_verify' : 'local_write_did_not_commit',
