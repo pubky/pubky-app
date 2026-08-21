@@ -93,4 +93,35 @@ describe('SearchApplication', () => {
       );
     });
   });
+  describe('fetchUsersByTags', () => {
+    it('should call NexusSearchService.usersByTags with correct params', async () => {
+      const params = { tags: 'synonym,rust', skip: 0, limit: 20 };
+      const mockResults = [
+        { user_id: 'user1', score: 12 },
+        { user_id: 'user2', score: 3 },
+      ];
+      const usersByTagsSpy = vi.spyOn(NexusSearchService, 'usersByTags').mockResolvedValue(mockResults);
+
+      const result = await SearchApplication.fetchUsersByTags(params);
+
+      expect(usersByTagsSpy).toHaveBeenCalledWith(params);
+      expect(result).toEqual(mockResults);
+    });
+
+    it('should return empty array when no users found', async () => {
+      vi.spyOn(NexusSearchService, 'usersByTags').mockResolvedValue([]);
+
+      const result = await SearchApplication.fetchUsersByTags({ tags: 'xyz', skip: 0, limit: 20 });
+
+      expect(result).toEqual([]);
+    });
+
+    it('should propagate errors from service', async () => {
+      vi.spyOn(NexusSearchService, 'usersByTags').mockRejectedValue(new Error('API error'));
+
+      await expect(SearchApplication.fetchUsersByTags({ tags: 'test', skip: 0, limit: 20 })).rejects.toThrow(
+        'API error',
+      );
+    });
+  });
 });

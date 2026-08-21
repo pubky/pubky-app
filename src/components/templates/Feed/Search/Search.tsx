@@ -9,6 +9,7 @@ import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { SearchEmptyState } from '@/molecules/SearchEmptyState/SearchEmptyState';
 import { SearchCollections } from '@/organisms/Collections/SearchCollections/SearchCollections';
 import { SearchInput } from '@/organisms/SearchInput/SearchInput';
+import { SearchPeople } from '@/organisms/SearchPeople/SearchPeople';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT } from '@/stores/home/home.types';
@@ -16,10 +17,10 @@ import { CONTENT } from '@/stores/home/home.types';
 /**
  * Search Template
  *
- * Search results for the tags in the URL (?tags=pubky,bitcoin): a Collections
- * section (expandable preview), then the posts feed under a "Posts" heading.
- * Sections render only in the default view (Content filter = All, visual
- * layout inactive) — narrower filters show the bare feed, avoiding
+ * Search results for the tags in the URL (?tags=pubky,bitcoin): People and
+ * Collections sections (expandable previews), then the posts feed under a
+ * "Posts" heading. Sections render only in the default view (Content filter =
+ * All, visual layout inactive) — narrower filters show the bare feed, avoiding
  * duplication with the Collections content filter. Empty state without tags.
  *
  * Rendered as `{children}` inside the shared `(feeds)/layout.tsx`, which hoists
@@ -54,7 +55,7 @@ export function Search() {
       {hasTags ? (
         showSections ? (
           <Container overrideDefaults className="flex w-full flex-col gap-6">
-            {/* People section (blocked on backend endpoint) slots in here, above Collections. */}
+            <SearchPeople />
             <SearchCollections />
             <Container overrideDefaults className="flex w-full flex-col gap-4">
               <Heading level={2} size="lg" className="font-light text-muted-foreground">

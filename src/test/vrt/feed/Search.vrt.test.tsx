@@ -40,6 +40,33 @@ const fixtures = vi.hoisted(async () => {
   const taggedSearchCompositeIds = postsModule.VRT_FEED_POSTS.filter((post) =>
     post.tags.some((tag) => tag.label === 'pubky' || tag.label === 'design'),
   ).map((post) => post.compositeId);
+  // People section fixtures: 5 users give a deterministic preview-of-4 plus a
+  // visible "See all" pill. Stats/tags are static so baselines stay stable.
+  const searchPeopleKeys = ['bran', 'cleo', 'dion', 'eira', 'fynn'] as const;
+  const searchPeople = searchPeopleKeys.map((key, index) => {
+    const id = profilesModule.VRT_AUTHOR_PUBKYS[key];
+    return {
+      id,
+      name: profilesModule.VRT_AUTHOR_PROFILES[id]?.name ?? key,
+      avatarUrl: null,
+      stats: { tags: 34 - index * 3, posts: 120 - index * 7 },
+      isFollowing: index === 1,
+    };
+  });
+  // Profile tag chips served through the useEntityTags mock, keyed by pubky.
+  const userTagsByPubky = Object.fromEntries(
+    searchPeople.map((person, index) => [
+      person.id,
+      [
+        {
+          label: index % 2 === 0 ? 'pubky' : 'design',
+          taggers: [],
+          taggers_count: 3 + index,
+          relationship: false,
+        },
+      ],
+    ]),
+  );
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   // Profile autocomplete results (same shape as useSearchAutocomplete → SearchUsersSection).
   // Pubky ids follow the existing VRT author convention (`…alice01`, `…bran02`, …).
@@ -61,6 +88,8 @@ const fixtures = vi.hoisted(async () => {
     postsByCompositeId,
     taggedSearchCompositeIds,
     searchCollectionIds,
+    searchPeople,
+    userTagsByPubky,
     collectionCoverUrls: collectionsModule.VRT_COLLECTION_COVER_URLS,
     profiles: profilesModule.VRT_AUTHOR_PROFILES,
     viewerPubky,
@@ -404,11 +433,15 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
   const isViewerTagger = () => false;
   const cache = new Map<string, unknown>();
   return {
-    useEntityTags: (taggedId: string) => {
-      const cached = cache.get(taggedId);
+    useEntityTags: (taggedId: string, taggedKind?: string) => {
+      const cacheKey = `${taggedKind ?? 'post'}:${taggedId}`;
+      const cached = cache.get(cacheKey);
       if (cached) return cached;
-      const fixture = f.postsByCompositeId.get(taggedId);
-      const tags = (fixture?.tags ?? []).map((tag) => ({ ...tag, taggers_avatars: [] }));
+      // Dispatch on the kind production passes: user profile chips (People
+      // section) resolve by pubky, everything else by post composite id.
+      const rawTags =
+        taggedKind === 'user' ? (f.userTagsByPubky[taggedId] ?? []) : (f.postsByCompositeId.get(taggedId)?.tags ?? []);
+      const tags = rawTags.map((tag) => ({ ...tag, taggers_avatars: [] }));
       const result = {
         tags,
         count: tags.length,
@@ -417,11 +450,30 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
         handleTagToggle: noopToggle,
         handleTagAdd: noopAdd,
       };
-      cache.set(taggedId, result);
+      cache.set(cacheKey, result);
       return result;
     },
   };
 });
+
+// People section data — served fully hydrated so the section renders without
+// touching the search/user controllers.
+vi.mock('@/hooks/useSearchPeople/useSearchPeople', async () => {
+  const f = await fixtures;
+  const result = {
+    users: f.searchPeople,
+    loading: false,
+    loadingMore: false,
+    hasMore: false,
+    error: null,
+    loadMore: async () => {},
+  };
+  return { useSearchPeople: () => result };
+});
+
+vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
+  useEnrichedTags: <T,>(tags: T[]) => ({ enrichedTags: tags, isLoading: false }),
+}));
 
 vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => {
   const result = {
@@ -580,6 +632,9 @@ async function renderTaggedSearch(viewport: { width: number; height: number }) {
   await preloadImages(Object.values(f.collectionCoverUrls));
 
   const screen = await renderForVRT(<SearchWithLayout />, { viewport });
+  await expect.element(screen.getByRole('heading', { name: 'People' })).toBeVisible();
+  // The same author can also appear in the posts feed — assert the card copy.
+  await expect.element(screen.getByText('Bran Ó Conaill').first()).toBeVisible();
   await expect.element(screen.getByRole('heading', { name: 'Collections' })).toBeVisible();
   await expect.element(screen.getByText('Local-first notes')).toBeVisible();
   await expect.element(screen.getByRole('heading', { name: 'Posts' })).toBeVisible();

@@ -18,6 +18,11 @@ exports[`Search - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
     data-testid="container"
   >
     <div
+      data-testid="search-people"
+    >
+      SearchPeople
+    </div>
+    <div
       data-testid="search-collections"
     >
       SearchCollections
@@ -86,6 +91,11 @@ exports[`Search - Snapshots > matches snapshot with tags present 1`] = `
     class="flex w-full flex-col gap-6"
     data-testid="container"
   >
+    <div
+      data-testid="search-people"
+    >
+      SearchPeople
+    </div>
     <div
       data-testid="search-collections"
     >

@@ -178,6 +178,38 @@ describe('UserListItem - followButtonVariant', () => {
   });
 });
 
+describe('UserListItem - card variant', () => {
+  it('renders name, formatted pubky, stats and tags in a self-contained card', () => {
+    render(<UserListItem user={mockUser} variant="card" onFollowClick={vi.fn()} />);
+
+    expect(screen.getByText('Test User')).toBeInTheDocument();
+    // TAGS/POSTS stats with values
+    expect(screen.getByText('TAGS')).toBeInTheDocument();
+    expect(screen.getByText('POSTS')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByTestId('tags-list')).toBeInTheDocument();
+    // Self-contained card keeps its background at every breakpoint
+    const root = screen.getByTestId(`user-list-item-${mockUser.id}`);
+    expect(root).toHaveClass('bg-card');
+    expect(root.className).not.toContain('lg:bg-transparent');
+  });
+
+  it('renders a single icon follow button for other users', () => {
+    render(<UserListItem user={mockUser} variant="card" onFollowClick={vi.fn()} />);
+
+    const followButton = screen.getByRole('button', { name: /Follow Test User/i });
+    expect(followButton).toHaveAttribute('data-size', 'icon');
+  });
+
+  it('renders the Me button for the current user', () => {
+    render(<UserListItem user={mockUser} variant="card" isCurrentUser />);
+
+    expect(screen.getByRole('button', { name: /This is you/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Follow Test User/i })).not.toBeInTheDocument();
+  });
+});
+
 describe('UserListItem - Snapshots', () => {
   it('matches snapshot for compact variant', () => {
     const { container } = render(<UserListItem user={mockUser} variant="compact" onFollowClick={vi.fn()} />);
@@ -203,6 +235,11 @@ describe('UserListItem - Snapshots', () => {
 
   it('matches snapshot for full variant', () => {
     const { container } = render(<UserListItem user={mockUser} variant="full" onFollowClick={vi.fn()} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for card variant', () => {
+    const { container } = render(<UserListItem user={mockUser} variant="card" onFollowClick={vi.fn()} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

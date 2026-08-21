@@ -31,6 +31,10 @@ vi.mock('@/organisms/Collections/SearchCollections/SearchCollections', () => ({
   SearchCollections: () => <div data-testid="search-collections">SearchCollections</div>,
 }));
 
+vi.mock('@/organisms/SearchPeople/SearchPeople', () => ({
+  SearchPeople: () => <div data-testid="search-people">SearchPeople</div>,
+}));
+
 vi.mock('@/organisms/SearchInput/SearchInput', () => ({
   SearchInput: ({ autoFocus }: { autoFocus?: boolean }) => (
     <div data-auto-focus={String(Boolean(autoFocus))} data-testid="search-input">
@@ -84,12 +88,21 @@ describe('Search', () => {
     expect(timelineFeed).toHaveAttribute('data-variant', 'search');
   });
 
-  it('renders the Collections section and Posts heading in the default view', () => {
+  it('renders the People and Collections sections and Posts heading in the default view', () => {
     render(<Search />);
 
+    expect(screen.getByTestId('search-people')).toBeInTheDocument();
     expect(screen.getByTestId('search-collections')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Posts' })).toBeInTheDocument();
     expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
+  });
+
+  it('renders the People section above the Collections section', () => {
+    render(<Search />);
+
+    const people = screen.getByTestId('search-people');
+    const collections = screen.getByTestId('search-collections');
+    expect(people.compareDocumentPosition(collections) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('renders the bare feed when the content filter is not All', () => {
@@ -97,6 +110,7 @@ describe('Search', () => {
 
     render(<Search />);
 
+    expect(screen.queryByTestId('search-people')).not.toBeInTheDocument();
     expect(screen.queryByTestId('search-collections')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Posts' })).not.toBeInTheDocument();
     expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
@@ -107,6 +121,7 @@ describe('Search', () => {
 
     render(<Search />);
 
+    expect(screen.queryByTestId('search-people')).not.toBeInTheDocument();
     expect(screen.queryByTestId('search-collections')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Posts' })).not.toBeInTheDocument();
     expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
@@ -119,6 +134,7 @@ describe('Search', () => {
 
     expect(screen.getByTestId('search-empty-state')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('search-people')).not.toBeInTheDocument();
     expect(screen.queryByTestId('search-collections')).not.toBeInTheDocument();
   });
 

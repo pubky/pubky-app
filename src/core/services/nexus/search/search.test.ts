@@ -105,4 +105,45 @@ describe('NexusSearchService', () => {
       });
     });
   });
+
+  describe('usersByTags', () => {
+    it('should call queryNexus with correct URL and return scored user ids', async () => {
+      const mockResults = [
+        { user_id: 'user1', score: 12 },
+        { user_id: 'user2', score: 3 },
+      ];
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockResults);
+
+      const result = await NexusSearchService.usersByTags({ tags: 'synonym,rust', skip: 0, limit: 20 });
+
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: expect.stringContaining('/v0/search/users/by_tags'),
+      });
+      expect(result).toEqual(mockResults);
+    });
+
+    it('should pass tags and pagination as query params', async () => {
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
+
+      await NexusSearchService.usersByTags({ tags: 'synonym,rust', skip: 10, limit: 20 });
+
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: expect.stringContaining('tags=synonym%2Crust'),
+      });
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: expect.stringContaining('skip=10'),
+      });
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: expect.stringContaining('limit=20'),
+      });
+    });
+
+    it('should return empty array when queryNexus returns empty array', async () => {
+      mockQueryNexus.mockResolvedValue([]);
+
+      const result = await NexusSearchService.usersByTags({ tags: 'nonexistent', skip: 0, limit: 20 });
+
+      expect(result).toEqual([]);
+    });
+  });
 });
