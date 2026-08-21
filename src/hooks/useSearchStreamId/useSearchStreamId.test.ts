@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, SORT } from '@/stores/home/home.types';
-import { useContentSearchQuery, useSearchStreamId, useSearchTags } from './useSearchStreamId';
+import { useSearchCriteria, useSearchStreamId } from './useSearchStreamId';
 
 // Mock next/navigation
 const mockGet = vi.fn();
@@ -56,11 +56,11 @@ describe('useSearchStreamId', () => {
 
       const { result, rerender } = renderHook(() => useSearchStreamId());
 
-      expect(result.current).toBe('content_search:bitcoin%20wallets:collection');
+      expect(result.current).toBe('content_search:q~bitcoin%20wallets:collection');
 
       mockQueryParam.value = 'privacy tools';
       rerender();
-      expect(result.current).toBe('content_search:privacy%20tools:collection');
+      expect(result.current).toBe('content_search:q~privacy%20tools:collection');
     });
   });
 
@@ -197,66 +197,95 @@ describe('useSearchStreamId', () => {
   });
 });
 
-describe('useSearchTags', () => {
+describe('useSearchCriteria', () => {
   beforeEach(() => {
     mockGet.mockReset();
-  });
-
-  it('should return empty array when tags param is null', () => {
     mockGet.mockReturnValue(null);
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual([]);
-  });
-
-  it('should return empty array when tags param is empty string', () => {
-    mockGet.mockReturnValue('');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual([]);
-  });
-
-  it('should return array with single tag', () => {
-    mockGet.mockReturnValue('pubky');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['pubky']);
-  });
-
-  it('should return array with multiple tags', () => {
-    mockGet.mockReturnValue('pubky,bitcoin,nostr');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['pubky', 'bitcoin', 'nostr']);
-  });
-
-  it('should trim whitespace from tags', () => {
-    mockGet.mockReturnValue(' pubky , bitcoin , nostr ');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['pubky', 'bitcoin', 'nostr']);
-  });
-
-  it('should filter out empty tags', () => {
-    mockGet.mockReturnValue('pubky,,bitcoin,,,nostr');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['pubky', 'bitcoin', 'nostr']);
-  });
-
-  it('should limit tags to MAX_STREAM_TAGS', () => {
-    mockGet.mockReturnValue('tag1,tag2,tag3,tag4,tag5,tag6,tag7');
-    const { result } = renderHook(() => useSearchTags());
-    expect(result.current).toEqual(['tag1', 'tag2', 'tag3', 'tag4', 'tag5']);
-  });
-});
-
-describe('useContentSearchQuery', () => {
-  beforeEach(() => {
     mockQueryParam.value = null;
   });
 
-  it('returns only valid normalized q parameters', () => {
-    mockQueryParam.value = '  bitcoin wallet  ';
-    const { result, rerender } = renderHook(() => useContentSearchQuery());
-    expect(result.current).toBe('bitcoin wallet');
+  describe('content mode', () => {
+    it('returns content mode with a trimmed query for a valid q param', () => {
+      mockQueryParam.value = '  bitcoin wallet  ';
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'content', query: 'bitcoin wallet' });
+    });
 
-    mockQueryParam.value = 'b';
-    rerender();
-    expect(result.current).toBeNull();
+    it('wins over tags when both q and tags are present', () => {
+      mockQueryParam.value = 'bitcoin';
+      mockGet.mockReturnValue('pubky,nostr');
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'content', query: 'bitcoin' });
+    });
+  });
+
+  describe('invalid mode', () => {
+    it('returns invalid mode with a message when q is too short', () => {
+      mockQueryParam.value = 'b';
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'invalid', message: 'Search must be at least 2 characters', query: 'b' });
+    });
+
+    it('returns invalid mode with a message when q is too long', () => {
+      mockQueryParam.value = 'a'.repeat(31);
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({
+        mode: 'invalid',
+        message: 'Search can be max 30 characters',
+        query: 'a'.repeat(31),
+      });
+    });
+
+    it('returns invalid mode with a message when q has too many terms', () => {
+      mockQueryParam.value = 'one two three four five';
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({
+        mode: 'invalid',
+        message: 'Search can contain up to 4 terms',
+        query: 'one two three four five',
+      });
+    });
+
+    it('wins over tags when an invalid q is present', () => {
+      mockQueryParam.value = 'b';
+      mockGet.mockReturnValue('pubky');
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'invalid', message: 'Search must be at least 2 characters', query: 'b' });
+    });
+  });
+
+  describe('tags mode', () => {
+    it('falls back to tags when q is blank', () => {
+      mockQueryParam.value = '   ';
+      mockGet.mockReturnValue('pubky,bitcoin');
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'tags', tags: ['pubky', 'bitcoin'] });
+    });
+
+    it('trims whitespace and filters out empty tags', () => {
+      mockGet.mockReturnValue(' pubky ,, bitcoin ,,, nostr ');
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'tags', tags: ['pubky', 'bitcoin', 'nostr'] });
+    });
+
+    it('limits tags to MAX_STREAM_TAGS', () => {
+      // Default MAX_STREAM_TAGS is 5
+      mockGet.mockReturnValue('tag1,tag2,tag3,tag4,tag5,tag6,tag7');
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'tags', tags: ['tag1', 'tag2', 'tag3', 'tag4', 'tag5'] });
+    });
+  });
+
+  describe('none mode', () => {
+    it('returns none when neither q nor tags are present', () => {
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'none' });
+    });
+
+    it('returns none when tags param is whitespace only', () => {
+      mockGet.mockReturnValue('   ');
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'none' });
+    });
   });
 });

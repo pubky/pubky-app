@@ -31,6 +31,7 @@ exports[`SearchFeedFilters - Mobile Snapshots > matches full-text sidebar filter
         <div
           aria-labelledby="radix-normalized"
           class=""
+          data-cy="filter-layout-radiogroup"
           data-testid="filter-layout-radiogroup"
           role="radiogroup"
         >
@@ -582,6 +583,7 @@ exports[`SearchFeedFilters - Snapshots > matches full-text drawer filters snapsh
       <div
         aria-labelledby="radix-normalized"
         class=""
+        data-cy="filter-layout-radiogroup"
         data-testid="filter-layout-radiogroup"
         role="radiogroup"
       >
@@ -1197,6 +1199,7 @@ exports[`SearchFeedFilters - Snapshots > matches full-text filters snapshot with
         <div
           aria-labelledby="radix-normalized"
           class=""
+          data-cy="filter-layout-radiogroup"
           data-testid="filter-layout-radiogroup"
           role="radiogroup"
         >
@@ -2203,6 +2206,7 @@ exports[`SearchFeedFilters - Snapshots > matches tag-search filters snapshot 1`]
             aria-label="Recent"
             aria-pressed="true"
             class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-foreground m-0 h-full px-0 py-1"
+            data-cy="recent-sort-toggle"
             data-selected="true"
             data-slot="filter-item"
             data-testid="filter-item"
@@ -2251,6 +2255,7 @@ exports[`SearchFeedFilters - Snapshots > matches tag-search filters snapshot 1`]
             aria-label="Popularity"
             aria-pressed="false"
             class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+            data-cy="popularity-sort-toggle"
             data-selected="false"
             data-slot="filter-item"
             data-testid="filter-item"
@@ -2309,6 +2314,7 @@ exports[`SearchFeedFilters - Snapshots > matches tag-search filters snapshot 1`]
         <div
           aria-labelledby="radix-normalized"
           class=""
+          data-cy="filter-layout-radiogroup"
           data-testid="filter-layout-radiogroup"
           role="radiogroup"
         >

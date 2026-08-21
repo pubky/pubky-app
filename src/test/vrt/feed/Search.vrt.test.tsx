@@ -405,6 +405,23 @@ vi.mock('@/hooks/useHotTags/useHotTags', () => {
 // tagged cases leave `searchInputUi` cleared so suggestions stay closed.
 vi.mock('@/hooks/useSearchInput/useSearchInput', async () => {
   const React = await import('react');
+  // Stable function identities, matching the real hook's contract: `setInputValue`
+  // is a useState setter, and SearchInput's URL-sync effect lists it as a dep — a
+  // per-render vi.fn() here refires that effect every render and loops the store sync.
+  const handleInputChange = vi.fn();
+  const handleKeyDown = vi.fn();
+  const handleFocus = () => {
+    searchInputUi.isFocused = true;
+  };
+  const clearInputValue = () => {
+    searchInputUi.inputValue = '';
+  };
+  // Inert like handleInputChange: `searchInputUi` alone drives the field, so the
+  // URL-seeding effect can't clobber a preset value or shift existing baselines.
+  const setInputValue = vi.fn();
+  const setFocus = (focused: boolean) => {
+    searchInputUi.isFocused = focused;
+  };
   return {
     useSearchInput: () => {
       const containerRef = React.useRef<HTMLDivElement>(null);
@@ -414,17 +431,12 @@ vi.mock('@/hooks/useSearchInput/useSearchInput', async () => {
         isFocused: searchInputUi.isFocused,
         containerRef,
         inputRef,
-        handleInputChange: vi.fn(),
-        handleKeyDown: vi.fn(),
-        handleFocus: () => {
-          searchInputUi.isFocused = true;
-        },
-        clearInputValue: () => {
-          searchInputUi.inputValue = '';
-        },
-        setFocus: (focused: boolean) => {
-          searchInputUi.isFocused = focused;
-        },
+        handleInputChange,
+        handleKeyDown,
+        handleFocus,
+        clearInputValue,
+        setInputValue,
+        setFocus,
       };
     },
   };

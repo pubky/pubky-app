@@ -18,21 +18,25 @@ export function SearchSuggestions({
   autocompleteUsers = [],
   recentUsers = [],
   recentTags = [],
+  recentQueries = [],
   onTagClick,
   onUserClick,
+  onQueryClick,
   onShowAllResults,
   onClearRecentSearches,
 }: SearchSuggestionsProps) {
   // Limit recent items to display
   const displayRecentUsers = hasInput ? [] : (recentUsers || []).slice(0, MAX_RECENT_SEARCHES);
   const displayRecentTags = hasInput ? [] : (recentTags || []).slice(0, MAX_RECENT_SEARCHES);
+  const displayRecentQueries = hasInput ? [] : (recentQueries || []).slice(0, MAX_RECENT_SEARCHES);
 
   // Derive boolean flags for readability
   const hasAutocompleteTags = hasInput && autocompleteTags.length > 0;
   const hasAutocompleteUsers = hasInput && autocompleteUsers.length > 0;
   const hasRecentUsers = !hasInput && displayRecentUsers.length > 0;
   const hasRecentTags = !hasInput && displayRecentTags.length > 0;
-  const hasRecentSearches = hasRecentUsers || hasRecentTags;
+  const hasRecentQueries = !hasInput && displayRecentQueries.length > 0;
+  const hasRecentSearches = hasRecentUsers || hasRecentTags || hasRecentQueries;
   const hasHotTags = hotTags.length > 0;
 
   const renderAutocompleteContent = () => {
@@ -57,8 +61,10 @@ export function SearchSuggestions({
           <SearchRecentSection
             users={displayRecentUsers}
             tags={displayRecentTags}
+            queries={displayRecentQueries}
             onUserClick={onUserClick}
             onTagClick={onTagClick}
+            onQueryClick={onQueryClick}
             onClearAll={onClearRecentSearches}
           />
         )}
@@ -81,7 +87,13 @@ export function SearchSuggestions({
         {renderAutocompleteContent()}
         {renderRecentContent()}
         {hasInput && (
-          <Button type="button" variant={ButtonVariant.SECONDARY} size="sm" onClick={onShowAllResults}>
+          <Button
+            type="button"
+            variant={ButtonVariant.SECONDARY}
+            size="sm"
+            className="self-start"
+            onClick={onShowAllResults}
+          >
             <Search aria-hidden="true" />
             Show all results
           </Button>

@@ -26,7 +26,6 @@ vi.mock('@/atoms/Input/Input', () => {
       onChange,
       onKeyDown,
       onFocus,
-      readOnly,
       className,
       ...props
     }: React.InputHTMLAttributes<HTMLInputElement>) => (
@@ -37,7 +36,6 @@ vi.mock('@/atoms/Input/Input', () => {
         onChange={onChange}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
-        readOnly={readOnly}
         className={className}
         {...props}
       />
@@ -84,7 +82,6 @@ describe('SearchInputBar', () => {
     activeTags: [],
     inputValue: '',
     isFocused: false,
-    isReadOnly: false,
     isExpanded: false,
     suggestionsId: undefined,
     onTagRemove: vi.fn(),
@@ -219,13 +216,6 @@ describe('SearchInputBar', () => {
       fireEvent.focus(input);
 
       expect(onFocus).toHaveBeenCalled();
-    });
-
-    it('sets input to readOnly when isReadOnly is true', () => {
-      render(<SearchInputBar {...defaultProps} isReadOnly />);
-
-      const input = screen.getByRole('textbox');
-      expect(input).toHaveAttribute('readOnly');
     });
 
     it('displays current inputValue', () => {

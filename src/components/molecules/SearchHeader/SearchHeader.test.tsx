@@ -9,6 +9,12 @@ describe('SearchHeader', () => {
     expect(screen.getByRole('heading', { name: 'Results for: bitcoin wallet' })).toBeInTheDocument();
   });
 
+  it('falls back to tag criteria when the query is an empty string', () => {
+    render(<SearchHeader tags={['bitcoin', 'design']} query="" />);
+
+    expect(screen.getByRole('heading', { name: 'Results for: bitcoin, design' })).toBeInTheDocument();
+  });
+
   it('keeps existing tag criteria and renders nothing without search criteria', () => {
     const { rerender } = render(<SearchHeader tags={['bitcoin', 'design']} />);
     expect(screen.getByRole('heading', { name: 'Results for: bitcoin, design' })).toBeInTheDocument();

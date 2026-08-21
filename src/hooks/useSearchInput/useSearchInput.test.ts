@@ -45,7 +45,8 @@ describe('useSearchInput', () => {
     });
 
     expect(onEnter).toHaveBeenCalledWith('test query');
-    expect(result.current.inputValue).toBe('');
+    // The handler owns the input value after submit; the hook leaves it untouched
+    expect(result.current.inputValue).toBe('  test query  ');
     expect(result.current.isFocused).toBe(true); // Focus remains after Enter
   });
 
@@ -72,6 +73,16 @@ describe('useSearchInput', () => {
       result.current.handleKeyDown({ key: 'Escape' } as React.KeyboardEvent<HTMLInputElement>);
     });
     expect(result.current.isFocused).toBe(false);
+  });
+
+  it('sets input value via setInputValue', () => {
+    const { result } = renderHook(() => useSearchInput());
+
+    act(() => {
+      result.current.setInputValue('seeded from url');
+    });
+
+    expect(result.current.inputValue).toBe('seeded from url');
   });
 
   it('clears input value correctly', () => {

@@ -1,6 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAX_ACTIVE_SEARCH_TAGS } from '@/stores/search/search.constants';
 import { useTagSearch } from './useTagSearch';
 import { buildSearchUrl } from './useTagSearch.utils';
 
@@ -136,29 +135,6 @@ describe('useTagSearch', () => {
       });
 
       expect(mockRemoveActiveTag).toHaveBeenCalledWith('react');
-    });
-  });
-
-  describe('isReadOnly', () => {
-    it('returns false when under max tags', () => {
-      mockActiveTags = ['react'];
-      const { result } = renderHook(() => useTagSearch());
-
-      expect(result.current.isReadOnly).toBe(false);
-    });
-
-    it('returns true when at max tags', () => {
-      mockActiveTags = Array(MAX_ACTIVE_SEARCH_TAGS).fill('tag');
-      const { result } = renderHook(() => useTagSearch());
-
-      expect(result.current.isReadOnly).toBe(true);
-    });
-
-    it('returns false when empty', () => {
-      mockActiveTags = [];
-      const { result } = renderHook(() => useTagSearch());
-
-      expect(result.current.isReadOnly).toBe(false);
     });
   });
 

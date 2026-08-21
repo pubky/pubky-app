@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
+import { useSearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { useSearchStore } from '@/stores/search/search.store';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
@@ -10,7 +11,6 @@ import { SearchInput } from './SearchInput';
 
 // Mock next/navigation
 const mockPush = vi.fn();
-const mockSearchParams = new URLSearchParams();
 const mockPathname = vi.fn(() => '/home');
 const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
 const mockToast = vi.hoisted(() => vi.fn());
@@ -18,7 +18,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
-  useSearchParams: () => mockSearchParams,
   usePathname: () => mockPathname(),
 }));
 
@@ -30,10 +29,13 @@ vi.mock('@/hooks/useSearchInput/useSearchInput', () => ({
     inputValue: '',
     isFocused: false,
     containerRef: { current: null },
+    inputRef: { current: null },
     handleInputChange: vi.fn(),
     handleKeyDown: vi.fn(),
     handleFocus: vi.fn(),
     clearInputValue: vi.fn(),
+    setInputValue: vi.fn(),
+    setFocus: vi.fn(),
   })),
 }));
 
@@ -60,8 +62,11 @@ vi.mock('@/hooks/useTagSearch/useTagSearch', () => ({
     addTagToSearch: mockAddTagToSearch,
     removeTagFromSearch: mockRemoveTagFromSearch,
     activeTags: [],
-    isReadOnly: false,
   })),
+}));
+
+vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
+  useSearchCriteria: vi.fn(() => ({ mode: 'none' })),
 }));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
@@ -75,9 +80,11 @@ vi.mock('@/molecules/Toaster/use-toast', () => ({
 // Mock dependencies
 const mockAddUser = vi.fn();
 const mockAddTag = vi.fn();
+const mockAddQuery = vi.fn();
 const mockSetActiveTags = vi.fn();
 const mockAddActiveTag = vi.fn();
 const mockRemoveActiveTag = vi.fn();
+const mockClearRecentSearches = vi.fn();
 vi.mock('@/stores/search/search.store', () => ({
   useSearchStore: vi.fn(() => ({
     activeTags: [],
@@ -86,18 +93,19 @@ vi.mock('@/stores/search/search.store', () => ({
     removeActiveTag: mockRemoveActiveTag,
     recentUsers: [],
     recentTags: [],
+    recentQueries: [],
     addUser: mockAddUser,
     addTag: mockAddTag,
+    addQuery: mockAddQuery,
+    clearRecentSearches: mockClearRecentSearches,
   })),
 }));
 
 describe('SearchInput', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Reset URL search params
-    mockSearchParams.delete('q');
-    mockSearchParams.delete('tags');
     // Reset hooks to default state before each test
+    vi.mocked(useSearchCriteria).mockReturnValue({ mode: 'none' });
     vi.mocked(useSearchInput).mockReturnValue({
       inputValue: '',
       isFocused: false,
@@ -107,6 +115,7 @@ describe('SearchInput', () => {
       handleKeyDown: vi.fn(),
       handleFocus: vi.fn(),
       clearInputValue: vi.fn(),
+      setInputValue: vi.fn(),
       setFocus: vi.fn(),
     });
     vi.mocked(useHotTags).mockReturnValue({
@@ -125,7 +134,6 @@ describe('SearchInput', () => {
       addTagToSearch: mockAddTagToSearch,
       removeTagFromSearch: mockRemoveTagFromSearch,
       activeTags: [],
-      isReadOnly: false,
     });
     // Reset dependency mocks
     vi.mocked(useSearchStore).mockReturnValue({
@@ -135,8 +143,11 @@ describe('SearchInput', () => {
       removeActiveTag: mockRemoveActiveTag,
       recentUsers: [],
       recentTags: [],
+      recentQueries: [],
       addUser: mockAddUser,
       addTag: mockAddTag,
+      addQuery: mockAddQuery,
+      clearRecentSearches: mockClearRecentSearches,
     });
   });
 
@@ -182,7 +193,6 @@ describe('SearchInput', () => {
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
         activeTags: ['bitcoin', 'pubky'],
-        isReadOnly: false,
       });
 
       render(<SearchInput />);
@@ -196,7 +206,6 @@ describe('SearchInput', () => {
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
         activeTags: ['bitcoin'],
-        isReadOnly: false,
       });
 
       render(<SearchInput />);
@@ -210,7 +219,6 @@ describe('SearchInput', () => {
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
         activeTags: ['bitcoin'],
-        isReadOnly: false,
       });
 
       render(<SearchInput />);
@@ -231,6 +239,7 @@ describe('SearchInput', () => {
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
         clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
         setFocus: vi.fn(),
       });
 
@@ -249,6 +258,7 @@ describe('SearchInput', () => {
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
         clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
         setFocus: vi.fn(),
       });
       vi.mocked(useHotTags).mockReturnValue({
@@ -274,6 +284,7 @@ describe('SearchInput', () => {
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
         clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
         setFocus: vi.fn(),
       });
       vi.mocked(useHotTags).mockReturnValue({
@@ -301,6 +312,7 @@ describe('SearchInput', () => {
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
         clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
         setFocus: vi.fn(),
       });
       vi.mocked(useHotTags).mockReturnValue({
@@ -330,6 +342,7 @@ describe('SearchInput', () => {
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
         clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
         setFocus: vi.fn(),
       });
       vi.mocked(useHotTags).mockReturnValue({
@@ -361,6 +374,7 @@ describe('SearchInput', () => {
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
         clearInputValue,
+        setInputValue: vi.fn(),
         setFocus,
       });
       vi.mocked(useSearchAutocomplete).mockReturnValue({
@@ -382,25 +396,83 @@ describe('SearchInput', () => {
 
   describe('Content Search', () => {
     it('ignores active tags when a valid q parameter is present', () => {
-      mockSearchParams.set('q', 'bitcoin');
-      mockSearchParams.set('tags', 'nostr,pubky');
+      const setInputValue = vi.fn();
+      vi.mocked(useSearchCriteria).mockReturnValue({ mode: 'content', query: 'bitcoin' });
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: '',
+        isFocused: false,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue,
+        setFocus: vi.fn(),
+      });
       vi.mocked(useTagSearch).mockReturnValue({
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
         activeTags: ['nostr', 'pubky'],
-        isReadOnly: true,
       });
 
       render(<SearchInput />);
 
       expect(screen.queryByRole('button', { name: 'nostr tag' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'pubky tag' })).not.toBeInTheDocument();
-      expect(screen.getByRole('textbox')).not.toHaveAttribute('readOnly');
       expect(mockSetActiveTags).toHaveBeenCalledWith([]);
+      expect(setInputValue).toHaveBeenCalledWith('bitcoin');
+    });
+
+    it('seeds an invalid shared query into the input for editing', () => {
+      const setInputValue = vi.fn();
+      vi.mocked(useSearchCriteria).mockReturnValue({
+        mode: 'invalid',
+        message: 'Search can contain up to 4 terms',
+        query: 'one two three four five',
+      });
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: '',
+        isFocused: false,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue,
+        setFocus: vi.fn(),
+      });
+
+      render(<SearchInput />);
+
+      expect(setInputValue).toHaveBeenCalledWith('one two three four five');
+    });
+
+    it('leaves a typed draft untouched when the criteria are not a full-text query', () => {
+      const setInputValue = vi.fn();
+      vi.mocked(useSearchCriteria).mockReturnValue({ mode: 'tags', tags: ['bitcoin'] });
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'wal',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue,
+        setFocus: vi.fn(),
+      });
+
+      render(<SearchInput />);
+
+      // Nothing was ever seeded, so the sync effect must not touch the draft
+      expect(setInputValue).not.toHaveBeenCalled();
     });
 
     it('uses the same q-only navigation for Enter and Show all results', () => {
-      const clearInputValue = vi.fn();
+      const setInputValue = vi.fn();
       const setFocus = vi.fn();
       vi.mocked(useSearchInput).mockReturnValue({
         inputValue: 'bitcoin wallet',
@@ -410,7 +482,8 @@ describe('SearchInput', () => {
         handleInputChange: vi.fn(),
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
-        clearInputValue,
+        clearInputValue: vi.fn(),
+        setInputValue,
         setFocus,
       });
 
@@ -419,11 +492,14 @@ describe('SearchInput', () => {
       const onEnter = vi.mocked(useSearchInput).mock.calls[0]?.[0]?.onEnter;
       expect(onEnter?.('bitcoin wallet')).toBe(true);
       expect(mockPush).toHaveBeenLastCalledWith('/search?q=bitcoin+wallet');
+      expect(mockAddQuery).toHaveBeenCalledWith('bitcoin wallet');
 
       fireEvent.click(screen.getByRole('button', { name: 'Show all results' }));
       expect(mockPush).toHaveBeenLastCalledWith('/search?q=bitcoin+wallet');
+      expect(mockAddQuery).toHaveBeenCalledTimes(2);
       expect(mockSetActiveTags).toHaveBeenCalledWith([]);
-      expect(clearInputValue).toHaveBeenCalledOnce();
+      // Submit keeps the query visible in the input (same-URL resubmits never re-seed)
+      expect(setInputValue).toHaveBeenCalledWith('bitcoin wallet');
       expect(setFocus).toHaveBeenCalledWith(false);
     });
 
@@ -439,6 +515,7 @@ describe('SearchInput', () => {
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
         clearInputValue,
+        setInputValue: vi.fn(),
         setFocus,
       });
 
@@ -450,12 +527,51 @@ describe('SearchInput', () => {
         description: 'Search must be at least 2 characters',
       });
       expect(mockPush).not.toHaveBeenCalled();
+      expect(mockAddQuery).not.toHaveBeenCalled();
       expect(clearInputValue).not.toHaveBeenCalled();
       expect(setFocus).not.toHaveBeenCalled();
     });
 
-    it('clears and collapses the active search from the X action', () => {
-      const clearInputValue = vi.fn();
+    it('re-runs a recent full-text query when its chip is clicked', () => {
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: '',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
+        setFocus: vi.fn(),
+      });
+      vi.mocked(useSearchStore).mockReturnValue({
+        activeTags: [],
+        setActiveTags: mockSetActiveTags,
+        addActiveTag: mockAddActiveTag,
+        removeActiveTag: mockRemoveActiveTag,
+        recentUsers: [],
+        recentTags: [],
+        recentQueries: [{ query: 'bitcoin wallet', searchedAt: 1 }],
+        addUser: mockAddUser,
+        addTag: mockAddTag,
+        addQuery: mockAddQuery,
+        clearRecentSearches: mockClearRecentSearches,
+      });
+
+      render(<SearchInput />);
+
+      const queryChip = screen.getByTestId('recent-query-bitcoin wallet');
+      expect(queryChip).toBeInTheDocument();
+
+      fireEvent.click(queryChip);
+
+      expect(mockPush).toHaveBeenCalledWith('/search?q=bitcoin+wallet');
+      expect(mockAddQuery).toHaveBeenCalledWith('bitcoin wallet');
+    });
+
+    it('clears the draft and collapses the search from the X action', () => {
+      const setInputValue = vi.fn();
       const setFocus = vi.fn();
       vi.mocked(useSearchInput).mockReturnValue({
         inputValue: 'bitcoin',
@@ -465,15 +581,67 @@ describe('SearchInput', () => {
         handleInputChange: vi.fn(),
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
-        clearInputValue,
+        clearInputValue: vi.fn(),
+        setInputValue,
         setFocus,
       });
 
       render(<SearchInput />);
       fireEvent.click(screen.getByRole('button', { name: 'Clear and close search' }));
 
-      expect(clearInputValue).toHaveBeenCalledOnce();
+      expect(setInputValue).toHaveBeenLastCalledWith('');
       expect(setFocus).toHaveBeenCalledWith(false);
+    });
+
+    it('restores the active query instead of blanking it from the X action', () => {
+      const setInputValue = vi.fn();
+      const setFocus = vi.fn();
+      vi.mocked(useSearchCriteria).mockReturnValue({ mode: 'content', query: 'bitcoin wallet' });
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'bitcoin wal',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue,
+        setFocus,
+      });
+
+      render(<SearchInput />);
+      fireEvent.click(screen.getByRole('button', { name: 'Clear and close search' }));
+
+      // The blank input must never sit next to results still labeled by the query
+      expect(setInputValue).toHaveBeenLastCalledWith('bitcoin wallet');
+      expect(setFocus).toHaveBeenCalledWith(false);
+    });
+
+    it('does not re-run the URL sync when the criteria identity churns without a value change', () => {
+      const setInputValue = vi.fn();
+      // Fresh object every render — the app cannot rely on React Compiler
+      // memoization for correctness (the vitest/VRT pipeline runs without it).
+      vi.mocked(useSearchCriteria).mockImplementation(() => ({ mode: 'tags', tags: ['bitcoin'] }));
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'draft',
+        isFocused: false,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue,
+        setFocus: vi.fn(),
+      });
+
+      const { rerender } = render(<SearchInput />);
+      const callsAfterMount = mockSetActiveTags.mock.calls.length;
+      rerender(<SearchInput />);
+
+      expect(mockSetActiveTags).toHaveBeenCalledTimes(callsAfterMount);
+      expect(setInputValue).not.toHaveBeenCalled();
     });
   });
 
@@ -483,7 +651,6 @@ describe('SearchInput', () => {
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
         activeTags: ['bitcoin', 'pubky'],
-        isReadOnly: false,
       });
 
       render(<SearchInput />);
@@ -491,22 +658,6 @@ describe('SearchInput', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Remove bitcoin tag' }));
 
       expect(mockRemoveTagFromSearch).toHaveBeenCalledWith('bitcoin');
-    });
-  });
-
-  describe('ReadOnly State', () => {
-    it('sets input to readOnly when at max tags', async () => {
-      vi.mocked(useTagSearch).mockReturnValue({
-        addTagToSearch: mockAddTagToSearch,
-        removeTagFromSearch: mockRemoveTagFromSearch,
-        activeTags: ['tag1', 'tag2', 'tag3'],
-        isReadOnly: true,
-      });
-
-      render(<SearchInput />);
-
-      const input = screen.getByRole('textbox');
-      expect(input).toHaveAttribute('readOnly');
     });
   });
 
@@ -525,7 +676,6 @@ describe('SearchInput', () => {
         addTagToSearch: mockAddTagToSearch,
         removeTagFromSearch: mockRemoveTagFromSearch,
         activeTags: ['bitcoin', 'pubky'],
-        isReadOnly: false,
       });
 
       const { container } = render(<SearchInput />);
@@ -542,6 +692,7 @@ describe('SearchInput', () => {
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
         clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
         setFocus: vi.fn(),
       });
       vi.mocked(useHotTags).mockReturnValue({
@@ -569,6 +720,7 @@ describe('SearchInput', () => {
         handleKeyDown: vi.fn(),
         handleFocus: vi.fn(),
         clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
         setFocus: vi.fn(),
       });
 
@@ -581,7 +733,7 @@ describe('SearchInput', () => {
 describe('SearchInput - Mobile Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSearchParams.delete('tags');
+    vi.mocked(useSearchCriteria).mockReturnValue({ mode: 'none' });
     vi.mocked(useSearchInput).mockReturnValue({
       inputValue: '',
       isFocused: false,
@@ -591,6 +743,7 @@ describe('SearchInput - Mobile Snapshots', () => {
       handleKeyDown: vi.fn(),
       handleFocus: vi.fn(),
       clearInputValue: vi.fn(),
+      setInputValue: vi.fn(),
       setFocus: vi.fn(),
     });
     vi.mocked(useHotTags).mockReturnValue({
@@ -609,7 +762,6 @@ describe('SearchInput - Mobile Snapshots', () => {
       addTagToSearch: mockAddTagToSearch,
       removeTagFromSearch: mockRemoveTagFromSearch,
       activeTags: [],
-      isReadOnly: false,
     });
     vi.mocked(useSearchStore).mockReturnValue({
       activeTags: [],
@@ -618,8 +770,11 @@ describe('SearchInput - Mobile Snapshots', () => {
       removeActiveTag: mockRemoveActiveTag,
       recentUsers: [],
       recentTags: [],
+      recentQueries: [],
       addUser: mockAddUser,
       addTag: mockAddTag,
+      addQuery: mockAddQuery,
+      clearRecentSearches: mockClearRecentSearches,
     });
     mockUseIsMobile.mockReturnValue(true);
     setMobileViewport();

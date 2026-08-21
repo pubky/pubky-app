@@ -1,5 +1,4 @@
 import { FileApplication } from '@/application/file/file';
-import { SearchApplication } from '@/application/search/search';
 import type {
   TCacheStreamParams,
   TFetchMissingUsersParams,
@@ -31,7 +30,6 @@ import {
   isDeletedRetainingStream,
   isDiscoverCollectionsStream,
   isSkipPaginatedStream,
-  parseContentSearchStreamId,
   type PostStreamId,
 } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
@@ -666,26 +664,6 @@ export class PostStreamApplication {
     viewerId,
     order,
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
-    const contentSearch = parseContentSearchStreamId(streamId);
-    if (contentSearch) {
-      const skip = Math.max(0, streamTail);
-      const results = await SearchApplication.fetchPostsByContent({
-        q: contentSearch.query,
-        ...(contentSearch.kind !== 'all' ? { kind: contentSearch.kind } : {}),
-        skip,
-        limit,
-      });
-      const compositePostIds = results.map((result) => result.post_key);
-      const cacheMissPostIds = await this.getNotPersistedPostsInCache(compositePostIds);
-
-      return {
-        nextPageIds: compositePostIds,
-        cacheMissPostIds,
-        nextCursor: skip + compositePostIds.length,
-        reachedEnd: compositePostIds.length < limit,
-      };
-    }
-
     const { params, invokeEndpoint, extraParams } = createPostStreamParams({
       streamId,
       streamTail,

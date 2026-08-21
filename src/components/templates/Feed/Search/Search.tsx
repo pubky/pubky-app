@@ -1,9 +1,10 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
+import { Typography } from '@/atoms/Typography/Typography';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { useContentSearchQuery, useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
+import { useSearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { SearchEmptyState } from '@/molecules/SearchEmptyState/SearchEmptyState';
 import { SearchHeader } from '@/molecules/SearchHeader/SearchHeader';
 import { SearchInput } from '@/organisms/SearchInput/SearchInput';
@@ -18,6 +19,7 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
  * Features:
  * - Displays full-text results when a valid query is provided (takes precedence)
  * - Displays tag results when tags are provided
+ * - Explains why an invalid shared `?q=` URL shows no results instead of failing silently
  * - Shows empty state when neither criterion is present
  * - Uses TimelineFeed with SEARCH variant for infinite scroll
  * - Shows SearchInput on mobile (hidden on desktop where it's in the header)
@@ -28,28 +30,36 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
  * config for `/search` lives in `app/(feeds)/_shell/configs.tsx`.
  */
 export function Search() {
-  const tags = useSearchTags();
-  const query = useContentSearchQuery();
+  const criteria = useSearchCriteria();
   const isMobile = useIsMobile();
-  const hasTags = tags.length > 0;
-  const hasSearchCriteria = Boolean(query) || hasTags;
+  const hasResults = criteria.mode === 'content' || criteria.mode === 'tags';
 
   return (
     <>
       {/* Mobile search input - hidden on desktop (shown in header there) */}
       <Container className="lg:hidden">
-        <SearchInput autoFocus={!query && (!hasTags || isMobile)} />
+        <SearchInput autoFocus={criteria.mode !== 'content' && (criteria.mode !== 'tags' || isMobile)} />
       </Container>
 
-      {hasSearchCriteria ? (
+      {hasResults ? (
         <>
-          <SearchHeader tags={tags} query={query} />
+          <SearchHeader
+            tags={criteria.mode === 'tags' ? criteria.tags : []}
+            query={criteria.mode === 'content' ? criteria.query : null}
+          />
           <Container data-cy="post-search-results" overrideDefaults>
             <TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />
           </Container>
         </>
       ) : (
-        <SearchEmptyState />
+        <>
+          {criteria.mode === 'invalid' && (
+            <Typography role="alert" data-testid="search-invalid-query" className="text-muted-foreground">
+              {criteria.message}
+            </Typography>
+          )}
+          <SearchEmptyState />
+        </>
       )}
     </>
   );

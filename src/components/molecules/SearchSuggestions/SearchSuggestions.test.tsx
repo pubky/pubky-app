@@ -65,13 +65,13 @@ describe('SearchSuggestions', () => {
   const defaultProps = {
     hotTags,
     hasInput: false,
-    inputValue: '',
     onTagClick: vi.fn(),
     onUserClick: vi.fn(),
+    onQueryClick: vi.fn(),
     onShowAllResults: vi.fn(),
-    onRecentUserClick: vi.fn(),
-    onRecentTagClick: vi.fn(),
   };
+
+  const recentQueries = [{ query: 'bitcoin wallets', searchedAt: Date.now() }];
 
   it('renders hot tags section', () => {
     render(<SearchSuggestions {...defaultProps} />);
@@ -103,6 +103,18 @@ describe('SearchSuggestions', () => {
 
     rerender(<SearchSuggestions {...defaultProps} hasInput={false} onShowAllResults={onShowAllResults} />);
     expect(screen.queryByRole('button', { name: 'Show all results' })).not.toBeInTheDocument();
+  });
+
+  it('renders recent queries inside the recent section when input is empty', () => {
+    render(<SearchSuggestions {...defaultProps} recentQueries={recentQueries} />);
+
+    expect(screen.getByTestId('recent-query-bitcoin wallets')).toBeInTheDocument();
+  });
+
+  it('hides recent queries when input has content', () => {
+    render(<SearchSuggestions {...defaultProps} hasInput recentQueries={recentQueries} />);
+
+    expect(screen.queryByTestId('recent-query-bitcoin wallets')).not.toBeInTheDocument();
   });
 
   it('applies dropdown styles', () => {

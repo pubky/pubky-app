@@ -3,15 +3,11 @@
 import { useSearchParams } from 'next/navigation';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import { validateContentSearchQuery } from '@/libs/search/contentSearch';
-import {
-  buildContentSearchStreamId,
-  getPostStreamKind,
-  type PostStreamId,
-} from '@/models/stream/post/postStream.types';
+import { buildContentSearchStreamId, type PostStreamId } from '@/models/stream/post/postStream.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { useHomeStore } from '@/stores/home/home.store';
 import { type ContentType, REACH } from '@/stores/home/home.types';
-import { getStreamIdFromFilters } from '@/stores/home/home.utils';
+import { getKindFromContent, getStreamIdFromFilters } from '@/stores/home/home.utils';
 
 /**
  * Parses tags from a comma-separated string parameter.
@@ -33,92 +29,68 @@ function parseTags(tagsParam: string | null): string[] {
 }
 
 /**
- * Custom hook that returns the search streamId based on URL tags and Sort/Content filters
+ * The single source of truth for what the search page is searching for.
  *
- * This hook:
- * 1. Reads tags from URL query parameters (?tags=pubky,bitcoin)
- * 2. Reads the current filter state from useHomeStore (sort, content)
- * 3. Returns the corresponding search stream ID
+ * Precedence: a non-empty `?q=` param wins over `?tags=` — including when it is
+ * invalid (`mode: 'invalid'`), so a shared over-limit URL surfaces why the search
+ * was dropped instead of silently falling back to tag results.
+ */
+export type SearchCriteria =
+  | { mode: 'content'; query: string }
+  | { mode: 'tags'; tags: string[] }
+  // `query` carries the rejected input so the UI can offer it for editing.
+  | { mode: 'invalid'; message: string; query: string }
+  | { mode: 'none' };
+
+/**
+ * NOTE: the returned object's identity is only stable where the React Compiler
+ * memoizes (the app build) — never rely on it in effect dependencies; derive
+ * primitive values instead (see SearchInput's URL-sync effect).
+ */
+export function useSearchCriteria(): SearchCriteria {
+  const searchParams = useSearchParams();
+  const query = searchParams.get('q');
+
+  // A blank q carries no intended search; fall through to tags.
+  if (query !== null && query.trim() !== '') {
+    const validation = validateContentSearchQuery(query);
+    return validation.isValid
+      ? { mode: 'content', query: validation.query }
+      : { mode: 'invalid', message: validation.message, query: query.trim() };
+  }
+
+  const tags = parseTags(searchParams.get('tags'));
+  return tags.length > 0 ? { mode: 'tags', tags } : { mode: 'none' };
+}
+
+/**
+ * Custom hook that returns the search streamId based on the URL search criteria
+ * and Sort/Content filters.
  *
- * Stream ID format: {sorting}:{source}:{kind}:{tags}
- * Example: timeline:all:all:pubky,bitcoin
+ * Stream ID formats:
+ * - Tag search: `{sorting}:{source}:{kind}:{tags}` (e.g. `timeline:all:all:pubky,bitcoin`)
+ * - Full-text search: `content_search:q~{encodedQuery}:{kind}` (ignores sort; relevance-ranked)
  *
  * Note: Reach filter is always 'all' for search (we search all posts with the given tags).
  * Tags are limited to PUBKY_RUNTIME_MAX_STREAM_TAGS (default 5).
  *
- * @returns The search streamId or undefined if no tags provided
- *
- * @example
- * ```tsx
- * function SearchPage() {
- *   const streamId = useSearchStreamId();
- *   // With URL ?tags=pubky,bitcoin and default filters:
- *   // streamId will be 'timeline:all:all:pubky,bitcoin'
- *
- *   if (!streamId) {
- *     return <SearchEmptyState />;
- *   }
- *
- *   return <TimelinePosts streamId={streamId} />;
- * }
- * ```
+ * @returns The search streamId, or undefined when there is no valid search criteria
  */
 export function useSearchStreamId(contentOverride?: ContentType): PostStreamId | undefined {
-  const searchParams = useSearchParams();
-  const contentSearchQuery = useContentSearchQuery();
+  const criteria = useSearchCriteria();
   const sort = useHomeStore((state) => state.sort);
   const storeContent = useHomeStore((state) => state.content);
   const content = contentOverride ?? storeContent;
 
-  // Get base stream ID from filters (always use 'all' reach for search).
-  // Its kind segment is shared by tag and full-text searches; full-text ignores sort.
-  const baseStreamId = getStreamIdFromFilters(sort, REACH.ALL, content);
-  if (contentSearchQuery) {
-    return buildContentSearchStreamId(contentSearchQuery, getPostStreamKind(baseStreamId) ?? 'all');
+  if (criteria.mode === 'content') {
+    return buildContentSearchStreamId(criteria.query, getKindFromContent(content));
   }
 
-  const tags = parseTags(searchParams.get('tags'));
-  if (tags.length === 0) {
+  if (criteria.mode !== 'tags') {
     return undefined;
   }
 
-  return `${baseStreamId}:${tags.join(POST_STREAM_TAG_DELIMITER)}` as PostStreamId;
-}
-
-/** Returns a normalized Nexus-compatible `q` parameter, or null when absent/invalid. */
-export function useContentSearchQuery(): string | null {
-  const searchParams = useSearchParams();
-  const query = searchParams.get('q');
-  if (query === null) {
-    return null;
-  }
-
-  const validation = validateContentSearchQuery(query);
-  return validation.isValid ? validation.query : null;
-}
-
-/**
- * Custom hook that returns the tags array from URL query parameters
- *
- * @returns Array of tag strings from the URL, limited to MAX_STREAM_TAGS
- *
- * @example
- * ```tsx
- * function SearchHeader() {
- *   const tags = useSearchTags();
- *   // With URL ?tags=pubky,bitcoin
- *   // tags will be ['pubky', 'bitcoin']
- *
- *   return (
- *     <div>
- *       Searching for: {tags.join(', ')}
- *     </div>
- *   );
- * }
- * ```
- */
-export function useSearchTags(): string[] {
-  const searchParams = useSearchParams();
-
-  return parseTags(searchParams.get('tags'));
+  // Always use 'all' reach for search.
+  const baseStreamId = getStreamIdFromFilters(sort, REACH.ALL, content);
+  return `${baseStreamId}:${criteria.tags.join(POST_STREAM_TAG_DELIMITER)}` as PostStreamId;
 }

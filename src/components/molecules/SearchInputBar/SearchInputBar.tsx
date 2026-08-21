@@ -13,7 +13,6 @@ export function SearchInputBar({
   activeTags,
   inputValue,
   isFocused,
-  isReadOnly,
   isExpanded,
   suggestionsId,
   inputRef,
@@ -58,7 +57,6 @@ export function SearchInputBar({
         onKeyDown={onKeyDown}
         onFocus={onFocus}
         autoFocus={autoFocus}
-        readOnly={isReadOnly}
         data-cy="header-search-input"
         aria-label={'Search input'}
         aria-autocomplete="list"

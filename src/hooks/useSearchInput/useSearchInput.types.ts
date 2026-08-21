@@ -1,7 +1,7 @@
-import { RefObject } from 'react';
+import { Dispatch, RefObject, SetStateAction } from 'react';
 
 export interface UseSearchInputParams {
-  /** Callback when Enter is pressed with input value. Return false to keep input. */
+  /** Callback when Enter is pressed with the trimmed input value. The handler owns the input value after submit. */
   onEnter?: (value: string) => boolean | void;
 }
 
@@ -15,6 +15,8 @@ export interface UseSearchInputResult {
   handleFocus: () => void;
   /** Clears input value */
   clearInputValue: () => void;
+  /** Sets the input value programmatically (e.g. seeding from the URL query); accepts functional updates */
+  setInputValue: Dispatch<SetStateAction<string>>;
   /** Sets focus state (true = focused, false = blurred) */
   setFocus: (focused: boolean) => void;
 }

@@ -16,6 +16,4 @@ export interface UseTagSearchResult {
   removeTagFromSearch: (tag: string) => void;
   /** Current active tags from store */
   activeTags: string[];
-  /** Whether input should be read-only (at max tags) */
-  isReadOnly: boolean;
 }

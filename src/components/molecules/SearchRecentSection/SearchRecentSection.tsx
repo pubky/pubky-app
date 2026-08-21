@@ -3,9 +3,9 @@
 /**
  * SearchRecentSection
  *
- * Displays recent searches in one section with users and tags.
+ * Displays recent searches in one section: a row of users, then one mixed row of
+ * tag chips and full-text query pills sorted by recency (#1840 design).
  * Shows "Recent searches" header with X to clear all.
- * Users displayed horizontally, tags displayed horizontally below.
  * Note: Data is already limited by parent component.
  */
 import { X } from 'lucide-react';
@@ -16,8 +16,28 @@ import { SearchRecentItem } from '../SearchRecentItem/SearchRecentItem';
 import { RECENT_ITEM_TYPE } from '../SearchRecentItem/SearchRecentItem.constants';
 import type { SearchRecentSectionProps } from './SearchRecentSection.types';
 
-export function SearchRecentSection({ users, tags, onUserClick, onTagClick, onClearAll }: SearchRecentSectionProps) {
-  const hasItems = users.length > 0 || tags.length > 0;
+export function SearchRecentSection({
+  users,
+  tags,
+  queries,
+  onUserClick,
+  onTagClick,
+  onQueryClick,
+  onClearAll,
+}: SearchRecentSectionProps) {
+  // Tag and full-text searches share one row, interleaved by recency.
+  type RecentSearchChip = {
+    key: string;
+    searchedAt: number;
+    tag?: SearchRecentSectionProps['tags'][number];
+    query?: SearchRecentSectionProps['queries'][number];
+  };
+  const searchChips: RecentSearchChip[] = [
+    ...tags.map((tag) => ({ key: `tag-${tag.tag}`, searchedAt: tag.searchedAt, tag })),
+    ...queries.map((query) => ({ key: `query-${query.query}`, searchedAt: query.searchedAt, query })),
+  ].sort((a, b) => b.searchedAt - a.searchedAt);
+
+  const hasItems = users.length > 0 || searchChips.length > 0;
   if (!hasItems) {
     return null;
   }
@@ -49,12 +69,21 @@ export function SearchRecentSection({ users, tags, onUserClick, onTagClick, onCl
         </Container>
       )}
 
-      {/* Recent tags - horizontal */}
-      {tags.length > 0 && (
+      {/* Recent tag and full-text searches - one row, most recent first */}
+      {searchChips.length > 0 && (
         <Container overrideDefaults className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <SearchRecentItem key={tag.tag} type={RECENT_ITEM_TYPE.TAG} tag={tag} onTagClick={onTagClick} />
-          ))}
+          {searchChips.map((chip) =>
+            chip.tag ? (
+              <SearchRecentItem key={chip.key} type={RECENT_ITEM_TYPE.TAG} tag={chip.tag} onTagClick={onTagClick} />
+            ) : (
+              <SearchRecentItem
+                key={chip.key}
+                type={RECENT_ITEM_TYPE.QUERY}
+                query={chip.query}
+                onQueryClick={onQueryClick}
+              />
+            ),
+          )}
         </Container>
       )}
     </Container>

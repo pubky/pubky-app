@@ -133,7 +133,11 @@ export type FollowedCollectionsStreamId =
 export type DiscoverCollectionsStreamId = `${StreamSorting.ENGAGEMENT}:${StreamSource.ALL}:${StreamKind.COLLECTION}`;
 export type CollectionItemsStreamCompositeId = `${StreamSource.COLLECTION}:${string}:${string}`;
 export const CONTENT_SEARCH_STREAM_PREFIX = 'content_search' as const;
-export type ContentSearchStreamId = `${typeof CONTENT_SEARCH_STREAM_PREFIX}:${string}:${PostStreamKindSegment}`;
+// The marker plus encodeURIComponent (which escapes ':') guarantees the query segment can never
+// satisfy any legacy segment-based classifier (reserved words like 'bookmarks'/'author'/'wot').
+export const CONTENT_SEARCH_QUERY_MARKER = 'q~' as const;
+export type ContentSearchStreamId =
+  `${typeof CONTENT_SEARCH_STREAM_PREFIX}:${typeof CONTENT_SEARCH_QUERY_MARKER}${string}:${PostStreamKindSegment}`;
 
 export function buildPostReplyStreamId(compositePostId: string): ReplyStreamCompositeId {
   return `${StreamSource.REPLIES}:${compositePostId}`;
@@ -198,26 +202,36 @@ export function buildCollectionItemsStreamId(authorPubky: Pubky, postId: string)
 }
 
 export function buildContentSearchStreamId(query: string, kind: PostStreamKindSegment = 'all'): ContentSearchStreamId {
-  return `${CONTENT_SEARCH_STREAM_PREFIX}:${encodeURIComponent(query)}:${kind}`;
+  return `${CONTENT_SEARCH_STREAM_PREFIX}:${CONTENT_SEARCH_QUERY_MARKER}${encodeURIComponent(query)}:${kind}`;
 }
 
 export function parseContentSearchStreamId(streamId: string): { query: string; kind: PostStreamKindSegment } | null {
-  const [prefix, encodedQuery, kind, ...extra] = streamId.split(':');
+  const [prefix, markedQuery, kind, ...extra] = streamId.split(':');
   const parsedKind = toPostStreamKindSegment(kind);
-  if (prefix !== CONTENT_SEARCH_STREAM_PREFIX || !encodedQuery || !parsedKind || extra.length > 0) {
+  if (
+    prefix !== CONTENT_SEARCH_STREAM_PREFIX ||
+    !markedQuery?.startsWith(CONTENT_SEARCH_QUERY_MARKER) ||
+    !parsedKind ||
+    extra.length > 0
+  ) {
     return null;
   }
 
   try {
-    const query = decodeURIComponent(encodedQuery);
+    const query = decodeURIComponent(markedQuery.slice(CONTENT_SEARCH_QUERY_MARKER.length));
     return query ? { query, kind: parsedKind } : null;
   } catch {
     return null;
   }
 }
 
+/**
+ * Prefix shape check (like `isCollectionItemsStream`): true for any id in the content-search
+ * family, including malformed ones — those must still be treated as skip-paginated and never
+ * touch the timestamp-keyed cache. Use `parseContentSearchStreamId` where the query is consumed.
+ */
 export function isContentSearchStream(streamId: string): streamId is ContentSearchStreamId {
-  return parseContentSearchStreamId(streamId) !== null;
+  return streamId.startsWith(`${CONTENT_SEARCH_STREAM_PREFIX}:`);
 }
 
 export function isCollectionItemsStream(streamId: string): streamId is CollectionItemsStreamCompositeId {

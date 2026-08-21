@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { APP_ROUTES, getContentSearchUrl, getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
@@ -9,7 +9,7 @@ import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
-import { useContentSearchQuery } from '@/hooks/useSearchStreamId/useSearchStreamId';
+import { useSearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { validateContentSearchQuery } from '@/libs/search/contentSearch';
 import type { Pubky } from '@/models/models.types';
@@ -19,17 +19,16 @@ import { toast } from '@/molecules/Toaster/use-toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { SearchInputProps } from './SearchInput.types';
-import { parseTagsFromUrl } from './SearchInput.utils';
 
 export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { addTagToSearch, removeTagFromSearch, activeTags, isReadOnly } = useTagSearch();
-  const { setActiveTags, recentUsers, recentTags, addUser, clearRecentSearches } = useSearchStore();
+  const { addTagToSearch, removeTagFromSearch, activeTags } = useTagSearch();
+  const { setActiveTags, recentUsers, recentTags, recentQueries, addUser, addQuery, clearRecentSearches } =
+    useSearchStore();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const isMobile = useIsMobile();
-  const contentSearchQuery = useContentSearchQuery();
+  const criteria = useSearchCriteria();
 
   const submitContentSearch = (value: string): boolean => {
     const validation = validateContentSearchQuery(value);
@@ -38,7 +37,11 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
       return false;
     }
 
+    addQuery(validation.query);
     setActiveTags([]);
+    // The destination shows this query in the input; set it directly rather than
+    // clear-and-reseed — a same-query resubmit changes no URL and never re-seeds.
+    setInputValue(validation.query);
     router.push(getContentSearchUrl(validation.query));
     setFocus(false);
     return true;
@@ -53,14 +56,35 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     handleKeyDown,
     handleFocus,
     clearInputValue,
+    setInputValue,
     setFocus,
   } = useSearchInput({ onEnter: submitContentSearch });
 
-  const tagsParam = searchParams.get('tags');
+  // Keep the store and the input in sync with the URL criteria: active tag chips
+  // exist only for tag searches, and an active (or invalid shared) full-text query
+  // is shown in the input so it can be refined without retyping. Only values this
+  // effect seeded are ever cleared — a draft the user is typing must survive
+  // unrelated navigations (chip removal, route changes re-create searchParams).
+  // Deps are primitives on purpose: the criteria object's identity is only stable
+  // where the React Compiler runs, and correctness must not depend on that.
+  const urlQuery = criteria.mode === 'content' || criteria.mode === 'invalid' ? criteria.query : null;
+  // Tags can never contain ',' (the URL parser splits on it), so the join is lossless.
+  const urlTagsKey = criteria.mode === 'tags' ? criteria.tags.join(',') : null;
+  const lastSeededQueryRef = useRef<string | null>(null);
   useEffect(() => {
-    const urlTags = contentSearchQuery ? [] : parseTagsFromUrl(tagsParam);
-    setActiveTags(urlTags);
-  }, [contentSearchQuery, tagsParam, setActiveTags]);
+    setActiveTags(urlTagsKey === null ? [] : urlTagsKey.split(',').map((tag) => tag.toLowerCase()));
+
+    if (urlQuery !== null) {
+      lastSeededQueryRef.current = urlQuery;
+      setInputValue(urlQuery);
+      return;
+    }
+    const seeded = lastSeededQueryRef.current;
+    lastSeededQueryRef.current = null;
+    if (seeded !== null) {
+      setInputValue((prev) => (prev === seeded ? '' : prev));
+    }
+  }, [urlQuery, urlTagsKey, setActiveTags, setInputValue]);
 
   const { tags: hotTags } = useHotTags({ limit: CLICKABLE_TAGS_DEFAULT_MAX_LENGTH });
 
@@ -86,14 +110,10 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     }
   };
 
-  const handleShowAllResults = () => {
-    if (submitContentSearch(inputValue)) {
-      clearInputValue();
-    }
-  };
-
   const handleCloseSearch = () => {
-    clearInputValue();
+    // Discard edits and close: an active full-text query stays visible in the
+    // input (it still labels the shown results), a plain draft is cleared.
+    setInputValue(urlQuery ?? '');
     setFocus(false);
   };
 
@@ -106,10 +126,9 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     <Container ref={containerRef} data-testid="search-input" className="relative min-w-0">
       {/* Input bar with active tags */}
       <SearchInputBar
-        activeTags={contentSearchQuery ? [] : activeTags}
+        activeTags={criteria.mode === 'content' ? [] : activeTags}
         inputValue={inputValue}
         isFocused={isFocused}
-        isReadOnly={contentSearchQuery ? false : isReadOnly}
         isExpanded={hasSuggestions}
         suggestionsId={hasSuggestions ? suggestionsId : undefined}
         inputRef={inputRef}
@@ -132,9 +151,11 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
           autocompleteUsers={autocompleteUserData}
           recentUsers={recentUsers}
           recentTags={recentTags}
+          recentQueries={recentQueries}
           onTagClick={handleTagClick}
           onUserClick={handleUserClick}
-          onShowAllResults={handleShowAllResults}
+          onQueryClick={submitContentSearch}
+          onShowAllResults={() => submitContentSearch(inputValue)}
           onClearRecentSearches={clearRecentSearches}
         />
       )}

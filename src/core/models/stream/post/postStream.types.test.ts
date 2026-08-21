@@ -13,8 +13,10 @@ import {
   getPostStreamKind,
   getStreamDependencyScopes,
   isAuthorStreamSkippingMuteFilter,
+  isBookmarkStream,
   isCollectionItemsStream,
   isContentSearchStream,
+  isDeletedRetainingStream,
   isSkipPaginatedStream,
   isViewerExcludedWotStream,
   isWotDomainStream,
@@ -34,12 +36,60 @@ describe('post-stream id builders', () => {
     it('round-trips queries with spaces and punctuation without changing their kind', () => {
       const streamId = buildContentSearchStreamId('bitcoin: wallets & privacy', StreamKind.COLLECTION);
 
-      expect(streamId).toBe('content_search:bitcoin%3A%20wallets%20%26%20privacy:collection');
+      expect(streamId).toBe('content_search:q~bitcoin%3A%20wallets%20%26%20privacy:collection');
       expect(isContentSearchStream(streamId)).toBe(true);
       expect(parseContentSearchStreamId(streamId)).toEqual({
         query: 'bitcoin: wallets & privacy',
         kind: StreamKind.COLLECTION,
       });
+    });
+
+    it('shields reserved-word queries from every segment-based stream classifier', () => {
+      for (const reservedQuery of ['bookmarks', 'author', 'wot', 'wot_domain']) {
+        const streamId = buildContentSearchStreamId(reservedQuery);
+
+        expect(isBookmarkStream(streamId)).toBe(false);
+        expect(isDeletedRetainingStream(streamId)).toBe(false);
+        expect(isAuthorStreamSkippingMuteFilter(streamId)).toBe(false);
+        expect(isWotStream(streamId)).toBe(false);
+        expect(isWotDomainStream(streamId)).toBe(false);
+      }
+    });
+
+    it('round-trips queries whose text collides with the id syntax', () => {
+      const queries = [
+        'key:value colons',
+        '50% off',
+        'ビットコイン 🔥',
+        'inner   whitespace runs',
+        'q~literal marker prefix',
+      ];
+      for (const query of queries) {
+        expect(parseContentSearchStreamId(buildContentSearchStreamId(query))).toEqual({ query, kind: 'all' });
+        expect(parseContentSearchStreamId(buildContentSearchStreamId(query, StreamKind.COLLECTION))).toEqual({
+          query,
+          kind: StreamKind.COLLECTION,
+        });
+      }
+    });
+
+    it('rejects malformed content-search ids without throwing', () => {
+      // Old-format id from before the q~ marker existed.
+      expect(parseContentSearchStreamId('content_search:bitcoin:all')).toBeNull();
+      // Undecodable percent-encoding.
+      expect(parseContentSearchStreamId('content_search:q~%:all')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~bitcoin:not-a-kind')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~bitcoin:all:extra')).toBeNull();
+      expect(parseContentSearchStreamId('content_search:q~:all')).toBeNull();
+    });
+
+    it('keeps isContentSearchStream prefix-based so malformed family ids stay skip-paginated', () => {
+      expect(isContentSearchStream('content_search:bitcoin:all')).toBe(true);
+      expect(isContentSearchStream('content_search:q~%:all')).toBe(true);
+      expect(isContentSearchStream('content_search:q~bitcoin:not-a-kind')).toBe(true);
+      expect(isContentSearchStream('content_search:q~bitcoin:all:extra')).toBe(true);
+      expect(isContentSearchStream('content_search:q~:all')).toBe(true);
+      expect(isContentSearchStream('timeline:all:all')).toBe(false);
     });
   });
 

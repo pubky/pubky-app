@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
-import { SearchApplication } from '@/application/search/search';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
@@ -39,7 +38,7 @@ import {
   StreamSorting,
 } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
-import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
+import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { MuteFilter } from './muting/mute-filter';
@@ -402,14 +401,14 @@ describe('PostStreamApplication', () => {
   describe('getOrFetchStreamSlice', () => {
     it('fetches content-search pages in Nexus relevance order and advances their offset', async () => {
       const contentStreamId = buildContentSearchStreamId('bitcoin wallet', StreamKind.COLLECTION);
-      const results = [
-        { post_key: `${DEFAULT_AUTHOR}:post-2`, score: 4.2 },
-        { post_key: `${DEFAULT_AUTHOR}:post-1`, score: 3.1 },
-      ];
-      const searchSpy = vi.spyOn(SearchApplication, 'fetchPostsByContent').mockResolvedValue(results);
+      // Relevance-ordered (post-2 before post-1); null score marks the chunk skip-paginated.
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: [`${DEFAULT_AUTHOR}:post-2`, `${DEFAULT_AUTHOR}:post-1`],
+        last_post_score: null,
+      });
       const persistStreamSpy = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk');
 
-      const result = await PostStreamApplication.fetchStreamSlice({
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId: contentStreamId,
         limit: 2,
         streamHead: 0,
@@ -417,18 +416,17 @@ describe('PostStreamApplication', () => {
         viewerId: null,
       });
 
-      expect(searchSpy).toHaveBeenCalledWith({
-        q: 'bitcoin wallet',
-        kind: StreamKind.COLLECTION,
-        skip: 10,
-        limit: 2,
+      expect(nexusFetchSpy).toHaveBeenCalledTimes(1);
+      expect(nexusFetchSpy).toHaveBeenCalledWith({
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        extraParams: expect.objectContaining({ q: 'bitcoin wallet' }),
+        params: expect.objectContaining({ kind: StreamKind.COLLECTION, skip: 10, limit: 2 }),
       });
-      expect(result).toEqual({
-        nextPageIds: [`${DEFAULT_AUTHOR}:post-2`, `${DEFAULT_AUTHOR}:post-1`],
-        cacheMissPostIds: [`${DEFAULT_AUTHOR}:post-2`, `${DEFAULT_AUTHOR}:post-1`],
-        nextCursor: 12,
-        reachedEnd: false,
-      });
+      expect(result.nextPageIds).toEqual([`${DEFAULT_AUTHOR}:post-2`, `${DEFAULT_AUTHOR}:post-1`]);
+      // Offset cursor advances by the raw page length (10 already loaded + 2 fetched).
+      expect(result.nextCursor).toBe(12);
+      expect(result.reachedEnd).toBe(false);
+      // Skip-paginated streams never write to the timestamp-keyed local stream cache.
       expect(persistStreamSpy).not.toHaveBeenCalled();
     });
 

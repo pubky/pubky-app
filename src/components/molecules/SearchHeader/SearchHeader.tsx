@@ -15,7 +15,7 @@ export function SearchHeader({ tags, query }: SearchHeaderProps) {
     return null;
   }
 
-  const criteria = query ?? tags.join(', ');
+  const criteria = query || tags.join(', ');
 
   return (
     <Heading level={2} size="lg" className="font-light text-muted-foreground">

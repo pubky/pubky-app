@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Search } from './Search';
 
-const { mockUseContentSearchQuery, mockUseIsMobile, mockUseSearchTags } = vi.hoisted(() => ({
-  mockUseContentSearchQuery: vi.fn(() => null as string | null),
+const { mockUseIsMobile, mockUseSearchCriteria } = vi.hoisted(() => ({
   mockUseIsMobile: vi.fn(() => false),
-  mockUseSearchTags: vi.fn(() => ['pubky']),
+  mockUseSearchCriteria: vi.fn((): SearchCriteria => ({ mode: 'tags', tags: ['pubky'] })),
 }));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
@@ -14,8 +14,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
-  useContentSearchQuery: () => mockUseContentSearchQuery(),
-  useSearchTags: () => mockUseSearchTags(),
+  useSearchCriteria: () => mockUseSearchCriteria(),
 }));
 
 vi.mock('@/organisms/SearchInput/SearchInput', () => ({
@@ -66,8 +65,7 @@ describe('Search', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseIsMobile.mockReturnValue(false);
-    mockUseContentSearchQuery.mockReturnValue(null);
-    mockUseSearchTags.mockReturnValue(['pubky']);
+    mockUseSearchCriteria.mockReturnValue({ mode: 'tags', tags: ['pubky'] });
   });
 
   it('renders TimelineFeed with SEARCH variant when tags are present', () => {
@@ -86,8 +84,7 @@ describe('Search', () => {
   });
 
   it('renders full-text results and keeps the mobile input collapsed when q is present', () => {
-    mockUseContentSearchQuery.mockReturnValue('bitcoin wallet');
-    mockUseSearchTags.mockReturnValue(['ignored-tag']);
+    mockUseSearchCriteria.mockReturnValue({ mode: 'content', query: 'bitcoin wallet' });
 
     render(<Search />);
 
@@ -96,14 +93,30 @@ describe('Search', () => {
     expect(screen.getByTestId('search-input')).toHaveAttribute('data-auto-focus', 'false');
   });
 
-  it('renders the empty state when no tags are present', () => {
-    mockUseSearchTags.mockReturnValue([]);
+  it('renders the empty state when no search criteria are present', () => {
+    mockUseSearchCriteria.mockReturnValue({ mode: 'none' });
 
     render(<Search />);
 
     expect(screen.getByTestId('search-empty-state')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
     expect(screen.queryByTestId('search-header')).not.toBeInTheDocument();
+  });
+
+  it('explains an invalid query alongside the empty state instead of showing results', () => {
+    mockUseSearchCriteria.mockReturnValue({
+      mode: 'invalid',
+      message: 'Search can contain up to 4 terms',
+      query: 'one two three four five',
+    });
+
+    render(<Search />);
+
+    const invalidQuery = screen.getByTestId('search-invalid-query');
+    expect(invalidQuery).toHaveTextContent('Search can contain up to 4 terms');
+    expect(screen.getByRole('alert')).toBe(invalidQuery);
+    expect(screen.getByTestId('search-empty-state')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
   });
 
   it('renders the mobile SearchInput', () => {
@@ -126,25 +139,33 @@ describe('Search', () => {
 describe('Search - Snapshots', () => {
   beforeEach(() => {
     mockUseIsMobile.mockReturnValue(false);
-    mockUseContentSearchQuery.mockReturnValue(null);
-    mockUseSearchTags.mockReturnValue(['pubky']);
+    mockUseSearchCriteria.mockReturnValue({ mode: 'tags', tags: ['pubky'] });
   });
 
   it('matches snapshot with tags present', () => {
-    mockUseSearchTags.mockReturnValue(['pubky']);
+    mockUseSearchCriteria.mockReturnValue({ mode: 'tags', tags: ['pubky'] });
     const { container } = render(<Search />);
     expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with no tags', () => {
-    mockUseSearchTags.mockReturnValue([]);
+    mockUseSearchCriteria.mockReturnValue({ mode: 'none' });
     const { container } = render(<Search />);
     expect(container).toMatchSnapshot();
   });
 
   it('matches snapshot with full-text results', () => {
-    mockUseContentSearchQuery.mockReturnValue('bitcoin wallet');
-    mockUseSearchTags.mockReturnValue(['ignored-tag']);
+    mockUseSearchCriteria.mockReturnValue({ mode: 'content', query: 'bitcoin wallet' });
+    const { container } = render(<Search />);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot with an invalid query', () => {
+    mockUseSearchCriteria.mockReturnValue({
+      mode: 'invalid',
+      message: 'Search can contain up to 4 terms',
+      query: 'one two three four five',
+    });
     const { container } = render(<Search />);
     expect(container).toMatchSnapshot();
   });
@@ -153,8 +174,7 @@ describe('Search - Snapshots', () => {
 describe('Search - Mobile Snapshots', () => {
   beforeEach(() => {
     mockUseIsMobile.mockReturnValue(true);
-    mockUseContentSearchQuery.mockReturnValue(null);
-    mockUseSearchTags.mockReturnValue(['pubky']);
+    mockUseSearchCriteria.mockReturnValue({ mode: 'tags', tags: ['pubky'] });
     setMobileViewport();
   });
   afterEach(() => {

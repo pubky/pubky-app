@@ -1,10 +1,5 @@
 import { NexusSearchService } from '@/services/nexus/search/search';
-import type {
-  TContentSearchParams,
-  TContentSearchResult,
-  TPrefixSearchParams,
-  TSearchResult,
-} from '@/services/nexus/search/search.types';
+import type { TPrefixSearchParams, TSearchResult } from '@/services/nexus/search/search.types';
 
 /**
  * Search Application Layer
@@ -13,11 +8,6 @@ import type {
  */
 export class SearchApplication {
   private constructor() {}
-
-  /** Search post content, ordered by Nexus full-text relevance. */
-  static async fetchPostsByContent(params: TContentSearchParams): Promise<TContentSearchResult> {
-    return await NexusSearchService.postsByContent(params);
-  }
 
   /**
    * Search users by ID prefix (pubky)
