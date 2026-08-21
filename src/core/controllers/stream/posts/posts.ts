@@ -83,7 +83,13 @@ export class StreamPostsController {
       // Second-pass: cache-miss details are now resolved,
       // re-filter to catch posts that were fail-open in the first pass.
       // Only the visible page shrinks here — the raw anchor passes through untouched.
-      visibleIds = await PostStreamApplication.filterStreamPosts({ streamId, postIds: nextPageIds });
+      // Strict reply classification: after hydration, an author-scoped content-search
+      // result that still cannot be classified is hidden, never risked as a reply.
+      visibleIds = await PostStreamApplication.filterStreamPosts({
+        streamId,
+        postIds: nextPageIds,
+        strictReplyClassification: true,
+      });
     }
     return { nextPageIds: visibleIds, nextCursor, reachedEnd, lastRawPostId };
   }

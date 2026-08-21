@@ -91,7 +91,13 @@ describe('StreamPostsController', () => {
         cacheMissPostIds,
         viewerId,
       });
-      expect(filterStreamPostsSpy).toHaveBeenCalledWith({ streamId, postIds: nextPageIds });
+      // The post-hydration second pass classifies strictly: ids still lacking a
+      // relationships row on author-scoped content search are dropped, not risked.
+      expect(filterStreamPostsSpy).toHaveBeenCalledWith({
+        streamId,
+        postIds: nextPageIds,
+        strictReplyClassification: true,
+      });
       expect(result).toEqual({
         nextPageIds,
         nextCursor,

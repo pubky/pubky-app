@@ -425,6 +425,87 @@ describe('PostStreamApplication', () => {
 
       expect(result).toEqual([livePostId, deletedPostId]);
     });
+
+    describe('author-scoped content search (profile "Filter posts")', () => {
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+
+      const createPostRelationships = async (postId: string, replied: string | null = null) => {
+        await PostRelationshipsModel.create({ id: postId, replied, reposted: null, mentioned: [] });
+      };
+
+      it('excludes collection-kind posts (profile Posts tab contract)', async () => {
+        const shortPostId = `${DEFAULT_AUTHOR}:short-post`;
+        const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+        await createPostDetailWithKind(shortPostId, 'short');
+        await createPostDetailWithKind(collectionPostId, 'collection');
+        await createPostRelationships(shortPostId);
+        await createPostRelationships(collectionPostId);
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: scopedStreamId,
+          postIds: [shortPostId, collectionPostId],
+        });
+
+        expect(result).toEqual([shortPostId]);
+      });
+
+      it('drops replies classified via the local relationships row', async () => {
+        const rootPostId = `${DEFAULT_AUTHOR}:root-post`;
+        const replyPostId = `${DEFAULT_AUTHOR}:reply-post`;
+        await createPostDetailWithKind(rootPostId, 'short');
+        await createPostDetailWithKind(replyPostId, 'short');
+        await createPostRelationships(rootPostId, null);
+        await createPostRelationships(replyPostId, `pubky://${DEFAULT_AUTHOR}/pub/pubky.app/posts/parent-post`);
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: scopedStreamId,
+          postIds: [rootPostId, replyPostId],
+        });
+
+        expect(result).toEqual([rootPostId]);
+      });
+
+      it('keeps unclassifiable posts pre-hydration (fail-open first pass)', async () => {
+        const unclassifiedPostId = `${DEFAULT_AUTHOR}:no-relationships-post`;
+        await createPostDetailWithKind(unclassifiedPostId, 'short');
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: scopedStreamId,
+          postIds: [unclassifiedPostId],
+        });
+
+        expect(result).toEqual([unclassifiedPostId]);
+      });
+
+      it('drops still-unclassifiable posts in the strict post-hydration pass', async () => {
+        const classifiedPostId = `${DEFAULT_AUTHOR}:classified-post`;
+        const unclassifiedPostId = `${DEFAULT_AUTHOR}:no-relationships-post`;
+        await createPostDetailWithKind(classifiedPostId, 'short');
+        await createPostDetailWithKind(unclassifiedPostId, 'short');
+        await createPostRelationships(classifiedPostId, null);
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: scopedStreamId,
+          postIds: [classifiedPostId, unclassifiedPostId],
+          strictReplyClassification: true,
+        });
+
+        expect(result).toEqual([classifiedPostId]);
+      });
+
+      it('leaves the global (unscoped) content search untouched by the reply filter', async () => {
+        const replyPostId = `${DEFAULT_AUTHOR}:reply-post`;
+        await createPostDetailWithKind(replyPostId, 'short');
+        await createPostRelationships(replyPostId, `pubky://${DEFAULT_AUTHOR}/pub/pubky.app/posts/parent-post`);
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: buildContentSearchStreamId('bitcoin'),
+          postIds: [replyPostId],
+        });
+
+        expect(result).toEqual([replyPostId]);
+      });
+    });
   });
 
   describe('getOrFetchStreamSlice', () => {
@@ -537,6 +618,36 @@ describe('PostStreamApplication', () => {
         expect(result.nextCursor).toBe(1000);
         expect(result.reachedEnd).toBe(false);
       });
+    });
+
+    it('flags details-cached posts without a relationships row as cache misses on author-scoped search', async () => {
+      // Reply exclusion classifies via relationships.replied; a post whose details are cached
+      // but whose relationships row is missing must still be hydrated, or it would stay
+      // fail-open (then be dropped by the strict second pass) forever.
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const classifiedPostId = `${DEFAULT_AUTHOR}:classified-post`;
+      const unclassifiedPostId = `${DEFAULT_AUTHOR}:needs-hydration-post`;
+      await createPostDetailWithKind(classifiedPostId, 'short');
+      await createPostDetailWithKind(unclassifiedPostId, 'short');
+      await PostRelationshipsModel.create({ id: classifiedPostId, replied: null, reposted: null, mentioned: [] });
+
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: [classifiedPostId, unclassifiedPostId],
+        last_post_score: null,
+      });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: scopedStreamId,
+        limit: 2,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: null,
+      });
+
+      expect(result.cacheMissPostIds).toEqual([unclassifiedPostId]);
+      // Fail-open: the unclassified post stays visible until the controller's
+      // post-hydration second pass classifies (or strictly drops) it.
+      expect(result.nextPageIds).toEqual([classifiedPostId, unclassifiedPostId]);
     });
 
     it('should return posts from cache when available (no cursor)', async () => {

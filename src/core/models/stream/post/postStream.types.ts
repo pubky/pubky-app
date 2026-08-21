@@ -139,8 +139,10 @@ export const CONTENT_SEARCH_STREAM_PREFIX = 'content_search' as const;
 // The marker plus encodeURIComponent (which escapes ':') guarantees the query segment can never
 // satisfy any legacy segment-based classifier (reserved words like 'bookmarks'/'author'/'wot').
 const CONTENT_SEARCH_QUERY_MARKER = 'q~' as const;
+// Optional trailing author segment scopes the search to one profile's posts (profile "Filter
+// posts"): `content_search:q~<encodedQuery>:<kind>[:<authorPubky>]`. Pubkys contain no ':'.
 export type ContentSearchStreamId =
-  `${typeof CONTENT_SEARCH_STREAM_PREFIX}:${typeof CONTENT_SEARCH_QUERY_MARKER}${string}:${PostStreamKindSegment}`;
+  `${typeof CONTENT_SEARCH_STREAM_PREFIX}:${typeof CONTENT_SEARCH_QUERY_MARKER}${string}:${PostStreamKindSegment}${'' | `:${string}`}`;
 
 export function buildPostReplyStreamId(compositePostId: string): ReplyStreamCompositeId {
   return `${StreamSource.REPLIES}:${compositePostId}`;
@@ -177,13 +179,15 @@ export function buildAuthorCollectionsStreamId(authorPubky: Pubky): AuthorCollec
 /**
  * Author-scoped profile streams intentionally include posts from muted users
  * (viewing someone's profile shows their full timeline, same as bookmarks #1804).
+ * Author-scoped content search filters that same profile timeline, so it inherits the stance.
  */
 export function isAuthorStreamSkippingMuteFilter(streamId: string): boolean {
   const [firstSegment, secondSegment] = streamId.split(':');
   return (
     firstSegment === StreamSource.AUTHOR ||
     firstSegment === StreamSource.AUTHOR_REPLIES ||
-    secondSegment === StreamSource.AUTHOR
+    secondSegment === StreamSource.AUTHOR ||
+    isAuthorScopedContentSearchStream(streamId)
   );
 }
 
@@ -204,25 +208,38 @@ export function buildCollectionItemsStreamId(authorPubky: Pubky, postId: string)
   return `${StreamSource.COLLECTION}:${authorPubky}:${postId}`;
 }
 
-export function buildContentSearchStreamId(query: string, kind: PostStreamKindSegment = 'all'): ContentSearchStreamId {
-  return `${CONTENT_SEARCH_STREAM_PREFIX}:${CONTENT_SEARCH_QUERY_MARKER}${encodeURIComponent(query)}:${kind}`;
+export function buildContentSearchStreamId(
+  query: string,
+  kind: PostStreamKindSegment = 'all',
+  author?: Pubky,
+): ContentSearchStreamId {
+  const base =
+    `${CONTENT_SEARCH_STREAM_PREFIX}:${CONTENT_SEARCH_QUERY_MARKER}${encodeURIComponent(query)}:${kind}` as const;
+  return author ? `${base}:${author}` : base;
 }
 
-export function parseContentSearchStreamId(streamId: string): { query: string; kind: PostStreamKindSegment } | null {
-  const [prefix, markedQuery, kind, ...extra] = streamId.split(':');
+export function parseContentSearchStreamId(
+  streamId: string,
+): { query: string; kind: PostStreamKindSegment; author?: Pubky } | null {
+  const [prefix, markedQuery, kind, author, ...extra] = streamId.split(':');
   const parsedKind = toPostStreamKindSegment(kind);
   if (
     prefix !== CONTENT_SEARCH_STREAM_PREFIX ||
     !markedQuery?.startsWith(CONTENT_SEARCH_QUERY_MARKER) ||
     !parsedKind ||
-    extra.length > 0
+    extra.length > 0 ||
+    // A trailing ':' (empty author segment) is malformed, not an unscoped search.
+    author === ''
   ) {
     return null;
   }
 
   try {
     const query = decodeURIComponent(markedQuery.slice(CONTENT_SEARCH_QUERY_MARKER.length));
-    return query ? { query, kind: parsedKind } : null;
+    if (!query) {
+      return null;
+    }
+    return author ? { query, kind: parsedKind, author } : { query, kind: parsedKind };
   } catch {
     return null;
   }
@@ -235,6 +252,15 @@ export function parseContentSearchStreamId(streamId: string): { query: string; k
  */
 export function isContentSearchStream(streamId: string): streamId is ContentSearchStreamId {
   return streamId.startsWith(`${CONTENT_SEARCH_STREAM_PREFIX}:`);
+}
+
+/**
+ * Author-scoped content-search streams (`content_search:q~…:<kind>:<author>`) back the profile
+ * "Filter posts" bar. They inherit profile-tab semantics — no mute filter, no collections —
+ * unlike the global (unscoped) content search.
+ */
+export function isAuthorScopedContentSearchStream(streamId: string): boolean {
+  return parseContentSearchStreamId(streamId)?.author !== undefined;
 }
 
 export function isCollectionItemsStream(streamId: string): streamId is CollectionItemsStreamCompositeId {
