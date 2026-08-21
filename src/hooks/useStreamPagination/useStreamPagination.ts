@@ -90,6 +90,11 @@ export function useStreamPagination({
   // flight from the cursor it writes back. Reset in `clearState` (a fresh
   // fetch recounts consumed rows from scratch).
   const committedRemovalsRef = useRef(0);
+  // Monotonic token bumped by `clearState` (stream switch, refresh). A fetch snapshots it at
+  // entry and drops ALL of its state writes — success and failure — if a reset happened during
+  // its flight: a late-resolving request for a previous stream (or a pre-refresh cursor) must
+  // not overwrite the fresh stream's posts, cursors, hasMore, error, or loading flags.
+  const fetchGenerationRef = useRef(0);
   const activeStreamIdRef = useRef(streamId);
   activeStreamIdRef.current = streamId;
 
@@ -112,6 +117,8 @@ export function useStreamPagination({
       setLoadingState(isInitialLoad, true);
       setError(null);
       const committedRemovalsAtRequest = committedRemovalsRef.current;
+      const generationAtRequest = fetchGenerationRef.current;
+      const isStale = () => fetchGenerationRef.current !== generationAtRequest;
 
       try {
         let result: TReadPostStreamChunkResponse;
@@ -122,6 +129,7 @@ export function useStreamPagination({
           await StreamPostsController.prepareStreamForInitialLoad({ streamId });
 
           const cachedLastPostTimestamp = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
+          if (isStale()) return;
           setStreamTail(cachedLastPostTimestamp);
 
           result = await StreamPostsController.getOrFetchStreamSlice({
@@ -139,6 +147,10 @@ export function useStreamPagination({
             limit,
           });
         }
+
+        // A reset (stream switch or refresh) during the flight makes this response stale;
+        // every write below belongs to state that no longer exists.
+        if (isStale()) return;
 
         // Advance BOTH resume cursors from the response, even on a fully-filtered (empty)
         // page: `streamTail` by the raw backend cursor, `lastPostId` (the local cache-walk
@@ -198,13 +210,20 @@ export function useStreamPagination({
         optimisticPostIdsRef.current = displayedState.optimisticPostIds;
         setPostIds(displayedState.displayedPostIds);
       } catch (err) {
+        Logger.error('Failed to fetch stream slice:', err);
+        // A stale failure belongs to a discarded request: surfacing it (error banner,
+        // hasMore=false, onError) would poison the fresh stream's state.
+        if (isStale()) return;
         const errorMessage = isAppError(err) ? err.message : 'An unknown error occurred.';
         setError(errorMessage);
         setHasMore(false);
-        Logger.error('Failed to fetch stream slice:', err);
         onError?.(err);
       } finally {
-        setLoadingState(isInitialLoad, false);
+        // The fresh stream's fetch owns the loading flags now; `clearState` already
+        // reset `loadingMore` so a skipped write here cannot strand it.
+        if (!isStale()) {
+          setLoadingState(isInitialLoad, false);
+        }
       }
     },
     [streamId, lastPostId, streamTail, limit, setLoadingState, onError],
@@ -214,6 +233,8 @@ export function useStreamPagination({
    * Clears all state
    */
   const clearState = useCallback(({ preserveOptimisticPostIds = false, preserveHiddenPostIds = false } = {}) => {
+    // Invalidate in-flight fetches: their responses describe the state being cleared here.
+    fetchGenerationRef.current += 1;
     postIdsRef.current = [];
     if (!preserveHiddenPostIds) {
       hiddenPostCountsRef.current.clear();
@@ -233,6 +254,9 @@ export function useStreamPagination({
     committedRemovalsRef.current = 0;
     setHasMore(true);
     setError(null);
+    // An in-flight loadMore just became stale and will skip its own finally-clear;
+    // without this reset the stuck flag would permanently block `loadMore`.
+    setLoadingMore(false);
   }, []);
 
   /**
