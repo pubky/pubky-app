@@ -20,7 +20,7 @@ vi.mock('@/molecules/IllustratedEmptyState/IllustratedEmptyState', () => {
     }) => (
       <div data-testid="empty-state">
         <div data-testid="image" data-src={imageSrc} data-alt={imageAlt} />
-        <Icon data-testid="frown-icon" />
+        <Icon data-testid="bell-icon" />
         <h3>{title}</h3>
         <p>{subtitle}</p>
       </div>
@@ -31,7 +31,7 @@ vi.mock('@/molecules/IllustratedEmptyState/IllustratedEmptyState', () => {
 describe('NotificationsEmpty', () => {
   it('renders title', () => {
     render(<NotificationsEmpty />);
-    expect(screen.getByText(/Nothing to see here yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No notifications yet/i)).toBeInTheDocument();
   });
 
   it('renders description', () => {
@@ -41,9 +41,9 @@ describe('NotificationsEmpty', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders Frown icon', () => {
+  it('renders Bell icon', () => {
     render(<NotificationsEmpty />);
-    expect(screen.getByTestId('frown-icon')).toBeInTheDocument();
+    expect(screen.getByTestId('bell-icon')).toBeInTheDocument();
   });
 
   it('renders background image', () => {

@@ -1,6 +1,8 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { formatPublicKey } from '@/libs/utils/utils';
 import { PostHeaderUserInfo } from './PostHeaderUserInfo';
 
@@ -274,6 +276,67 @@ describe('PostHeaderUserInfo', () => {
     expect(screen.getAllByText(`@${formattedPublicKey}`).length).toBeGreaterThan(0);
   });
 
+  it('renders a status emoji immediately after the user name', () => {
+    render(
+      <TooltipProvider delayDuration={0}>
+        <PostHeaderUserInfo userId="userpubkykey" userName="Test User" status="vacationing" />
+      </TooltipProvider>,
+    );
+
+    const userName = screen.getAllByText('Test User')[0];
+    const statusEmoji = screen.getByRole('button', { name: 'Vacationing status' });
+
+    expect(userName.parentElement?.nextElementSibling).toBe(statusEmoji);
+    expect(statusEmoji).toHaveTextContent('🌴');
+  });
+
+  it('shows the status label in a tooltip when the emoji is hovered', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TooltipProvider delayDuration={0}>
+        <PostHeaderUserInfo userId="userpubkykey" userName="Test User" status="vacationing" />
+      </TooltipProvider>,
+    );
+
+    await user.hover(screen.getByRole('button', { name: 'Vacationing status' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Vacationing');
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveClass(
+        'bg-accent',
+        'font-medium',
+        'text-foreground',
+        '[&_svg]:fill-accent',
+      );
+    });
+  });
+
+  it('shows the status label when the emoji is tapped without bubbling to the post', async () => {
+    const onPostClick = vi.fn();
+
+    render(
+      <TooltipProvider delayDuration={0}>
+        <div onClick={onPostClick}>
+          <PostHeaderUserInfo userId="userpubkykey" userName="Test User" status="vacationing" />
+        </div>
+      </TooltipProvider>,
+    );
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Vacationing status' }), { pointerType: 'touch' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Vacationing');
+    });
+    expect(onPostClick).not.toHaveBeenCalled();
+  });
+
+  it('does not render a status emoji for no status', () => {
+    render(<PostHeaderUserInfo userId="userpubkykey" userName="Test User" status="noStatus" />);
+
+    expect(screen.queryByRole('button', { name: /status/i })).not.toBeInTheDocument();
+  });
+
   it('renders avatar with image when avatarUrl is provided', () => {
     render(<PostHeaderUserInfo userId="user123" userName="Test User" avatarUrl="https://example.com/avatar.png" />);
 
@@ -534,24 +597,26 @@ describe('PostHeaderUserInfo - Navigation', () => {
       'items-center',
     );
     expect(usernameLink.parentElement).toHaveClass('max-w-full', 'min-w-0');
-    expect(usernameLink).toHaveClass('block', 'w-full', 'min-w-0', 'max-w-full', 'overflow-hidden');
+    expect(usernameLink).toHaveClass('block', 'w-fit', 'min-w-0', 'max-w-full', 'overflow-hidden');
     expect(screen.getByText(longName)).toHaveClass('w-full', 'truncate', 'max-w-full');
   });
 
-  it('keeps the popover hover target constrained with max-w-full', () => {
+  it('keeps the popover hover target hugging the user info instead of the whole header row', () => {
     render(<PostHeaderUserInfo userId="testuser123" userName="Test User" />);
 
     const userInfoRoot = screen.getByTestId('popover-trigger').firstElementChild;
 
-    expect(userInfoRoot).toHaveClass('w-full', 'max-w-full', 'min-w-0');
+    expect(userInfoRoot).toHaveClass('w-fit', 'max-w-full', 'min-w-0');
+    expect(userInfoRoot).not.toHaveClass('w-full');
   });
 
-  it('keeps the username link constrained so long names truncate', () => {
+  it('keeps the username link hugging its text so it is not clickable across the header row', () => {
     render(<PostHeaderUserInfo userId="testuser123" userName="Test User" showPopover={false} />);
 
     const usernameLink = screen.getAllByTestId('profile-link')[1];
 
-    expect(usernameLink).toHaveClass('w-full', 'max-w-full', 'min-w-0', 'overflow-hidden');
+    expect(usernameLink).toHaveClass('w-fit', 'max-w-full', 'min-w-0', 'overflow-hidden');
+    expect(usernameLink).not.toHaveClass('w-full');
   });
 });
 

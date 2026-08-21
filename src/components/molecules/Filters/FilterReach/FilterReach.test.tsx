@@ -117,6 +117,18 @@ describe('FilterReach', () => {
     expect(followingRadio).toHaveAttribute('aria-label', 'Following');
     expect(friendsRadio).toHaveAttribute('aria-label', 'Friends');
   });
+
+  it('preserves data-cy selectors for e2e tests', () => {
+    render(<FilterReach showTaggedAs />);
+
+    expect(screen.getByLabelText('All')).toHaveAttribute('data-cy', 'all-reach-toggle');
+    expect(screen.getByLabelText('Following')).toHaveAttribute('data-cy', 'following-reach-toggle');
+    expect(screen.getByLabelText('Friends')).toHaveAttribute('data-cy', 'friends-reach-toggle');
+    expect(screen.getByLabelText('Me')).toHaveAttribute('data-cy', 'me-reach-toggle');
+    expect(screen.getByLabelText('My network')).toHaveAttribute('data-cy', 'network-reach-toggle');
+    expect(screen.getByLabelText('Tagged as')).toHaveAttribute('data-cy', 'tagged-as-reach-toggle');
+  });
+
   it('renders all items as disabled when disabled prop is true', () => {
     render(<FilterReach disabled />);
 

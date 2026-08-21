@@ -1,5 +1,6 @@
 import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 import {
+  type DeployEnv,
   PUBKY_RUNTIME_ENV_NAMES,
   type RuntimeConfig,
   runtimeConfigValueSchema,
@@ -28,12 +29,14 @@ declare global {
 }
 
 let memoizedConfig: RuntimeConfig | null = null;
+let didWarnModerationDisabled = false;
 
 const REQUIRED_NETWORK_ENV_MESSAGE =
   'Set all required PUBKY_RUNTIME_* network variables: ' +
   'PUBKY_RUNTIME_NEXUS_URL, PUBKY_RUNTIME_CDN_URL, PUBKY_RUNTIME_HOMESERVER, ' +
   'PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, ' +
-  'PUBKY_RUNTIME_PKARR_RELAYS, and PUBKY_RUNTIME_TESTNET. ' +
+  'PUBKY_RUNTIME_PKARR_RELAYS, PUBKY_RUNTIME_TESTNET, and PUBKY_RUNTIME_ENV ' +
+  '("production" or "staging"). ' +
   'Optional/defaulted PUBKY_RUNTIME_* values may be set independently.';
 
 /**
@@ -113,6 +116,18 @@ export function getRuntimeConfig(): RuntimeConfig {
   return memoizedConfig;
 }
 
+/** Emit one deployed-startup warning when moderation is intentionally disabled by missing config. */
+export function warnIfModerationDisabled(config: RuntimeConfig): void {
+  if (didWarnModerationDisabled || !isRuntimeConfigRequired() || isProductionBuildPhase() || config.moderationId) {
+    return;
+  }
+
+  didWarnModerationDisabled = true;
+  console.warn(
+    '[runtime-config] PUBKY_RUNTIME_MODERATION_ID is unset; moderation matching and the default follow are disabled.',
+  );
+}
+
 /**
  * Escape a JSON string for safe inlining inside an HTML <script> element.
  * Neutralizes `<` (covers `</script>`) and the JS-invalid line separators U+2028/U+2029.
@@ -139,6 +154,7 @@ export function serializeRuntimeConfig(): string {
  */
 export function resetRuntimeConfigForTests(): void {
   memoizedConfig = null;
+  didWarnModerationDisabled = false;
 }
 
 // Lazy getters: read the resolved config at call time (never captured at module load).
@@ -150,6 +166,7 @@ export const getHomegateUrl = (): string => getRuntimeConfig().homegateUrl;
 export const getDefaultHttpRelay = (): string => getRuntimeConfig().defaultHttpRelay;
 export const getPkarrRelays = (): string[] => getRuntimeConfig().pkarrRelays;
 export const getTestnet = (): boolean => getRuntimeConfig().testnet;
+export const getDeployEnv = (): DeployEnv => getRuntimeConfig().deployEnv;
 
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getSentryDsn = (): string | undefined => getRuntimeConfig().sentryDsn;
@@ -172,7 +189,7 @@ export const getTtlBatchIntervalMs = (): number => getRuntimeConfig().ttlBatchIn
 export const getTtlPostMaxBatchSize = (): number => getRuntimeConfig().ttlPostMaxBatchSize;
 export const getTtlUserMaxBatchSize = (): number => getRuntimeConfig().ttlUserMaxBatchSize;
 export const getTtlRetryDelayMs = (): number => getRuntimeConfig().ttlRetryDelayMs;
-export const getModerationId = (): string => getRuntimeConfig().moderationId;
+export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;
 export const getPreludeSdkKey = (): string | undefined => getRuntimeConfig().preludeSdkKey;

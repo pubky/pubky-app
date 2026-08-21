@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
+import { parseStatus } from '@/libs/status/status';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -20,6 +23,7 @@ import {
 interface PostHeaderUserInfoProps {
   userId: string;
   userName: string;
+  status?: string | null;
   avatarUrl?: string;
   showPopover?: boolean;
   showUserInfo?: boolean;
@@ -37,6 +41,7 @@ interface PostHeaderUserInfoProps {
 export function PostHeaderUserInfo({
   userId,
   userName,
+  status,
   avatarUrl,
   showPopover = true,
   showUserInfo = true,
@@ -47,7 +52,9 @@ export function PostHeaderUserInfo({
   characterLimit,
   characterLimitPlacement = 'metadata',
 }: PostHeaderUserInfoProps) {
+  const [isStatusTooltipOpen, setIsStatusTooltipOpen] = useState(false);
   const formattedPublicKey = formatPublicKey({ key: userId });
+  const parsedStatus = parseStatus(status || '');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const profileUrl = getUserProfileUrl(userId, currentUserPubky);
 
@@ -87,8 +94,8 @@ export function PostHeaderUserInfo({
     </Typography>
   );
 
-  const userNameContent = (
-    <Link href={profileUrl} onClick={handleLinkClick} className="block w-full max-w-full min-w-0 overflow-hidden">
+  const userNameLink = (
+    <Link href={profileUrl} onClick={handleLinkClick} className="block w-fit max-w-full min-w-0 overflow-hidden">
       <Typography
         className={cn(
           'block w-full max-w-full cursor-pointer truncate font-bold text-foreground',
@@ -101,14 +108,56 @@ export function PostHeaderUserInfo({
     </Link>
   );
 
-  // This container is also the UserInfoPopover hover target, so it must hug the avatar and
-  // name instead of stretching across the header row — otherwise the empty space next to the
-  // timestamp opens the popover. `max-w-full` keeps long names truncating inside tight layouts.
+  const userNameContent = parsedStatus.emoji ? (
+    <Container overrideDefaults className="flex max-w-full min-w-0 items-center gap-1.5">
+      {userNameLink}
+      <Tooltip open={isStatusTooltipOpen} onOpenChange={setIsStatusTooltipOpen}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`${parsedStatus.text} status`}
+            className={cn(
+              'shrink-0 rounded-sm border-0 bg-transparent p-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+              USERNAME_CLASS_BY_HEADER_SIZE[size],
+            )}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+
+              if (event.pointerType !== 'touch') return;
+
+              event.preventDefault();
+              setIsStatusTooltipOpen((open) => !open);
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          >
+            {parsedStatus.emoji}
+          </button>
+        </TooltipTrigger>
+        <TooltipPortal>
+          <TooltipContent className="bg-accent font-medium text-foreground [&_svg]:fill-accent">
+            {parsedStatus.text}
+          </TooltipContent>
+        </TooltipPortal>
+      </Tooltip>
+    </Container>
+  ) : (
+    userNameLink
+  );
+
+  // This container is also the UserInfoPopover hover target when showPopover is true, so it
+  // must hug the avatar and name (`w-fit`) instead of stretching across the header row —
+  // otherwise the empty space next to the timestamp opens the popover. Keep `w-full` when the
+  // popover is off (composer) so the character count can sit on the trailing edge. `max-w-full`
+  // keeps long names truncating inside tight layouts.
   const content = (
     <Container
       overrideDefaults
       className={cn(
-        'grid w-full max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center',
+        'grid max-w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center',
+        showPopover ? 'w-fit' : 'w-full',
         GAP_CLASS_BY_HEADER_SIZE[size],
       )}
     >

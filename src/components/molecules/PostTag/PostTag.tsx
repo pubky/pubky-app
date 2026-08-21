@@ -68,6 +68,7 @@ export function PostTag({
           onClick={handleClose}
           className="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
           aria-label={`Remove ${label} tag`}
+          data-cy="post-tag-remove-btn"
           role="button"
         >
           <X className="size-3" strokeWidth={2} />

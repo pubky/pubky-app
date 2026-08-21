@@ -90,7 +90,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
         >
           2
           <span
-            class="hidden sm:inline"
+            class="inline"
             data-testid="typography"
           >
              posts
@@ -191,45 +191,6 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
       </button>
       <button
         aria-expanded="false"
-        aria-label="Tag post (3)"
-        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
-        data-cy="post-tag-btn"
-        data-size="sm"
-        data-slot="button"
-        data-variant="secondary"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-tag"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
-          />
-          <circle
-            cx="7.5"
-            cy="7.5"
-            fill="currentColor"
-            r=".5"
-          />
-        </svg>
-        <span
-          class="text-xs leading-4 font-bold text-muted-foreground"
-          data-testid="typography"
-        >
-          3
-        </span>
-      </button>
-      <button
-        aria-expanded="false"
         aria-haspopup="menu"
         aria-label="Layout: Grid"
         class="items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 hidden lg:inline-flex lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
@@ -323,6 +284,45 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the non-owner Fol
             d="m6 9 6 6 6-6"
           />
         </svg>
+      </button>
+      <button
+        aria-expanded="false"
+        aria-label="Tag post (3)"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+        data-cy="post-tag-btn"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-tag"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+          />
+          <circle
+            cx="7.5"
+            cy="7.5"
+            fill="currentColor"
+            r=".5"
+          />
+        </svg>
+        <span
+          class="text-xs leading-4 font-bold text-muted-foreground"
+          data-testid="typography"
+        >
+          3
+        </span>
       </button>
     </div>
   </div>
@@ -422,7 +422,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner reorder
         >
           2
           <span
-            class="hidden sm:inline"
+            class="inline"
             data-testid="typography"
           >
              posts
@@ -787,7 +787,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot for the owner state 1
         >
           2
           <span
-            class="hidden sm:inline"
+            class="inline"
             data-testid="typography"
           >
              posts
@@ -1074,7 +1074,7 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
         >
           0
           <span
-            class="hidden sm:inline"
+            class="inline"
             data-testid="typography"
           >
              posts
@@ -1165,45 +1165,6 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
           data-testid="typography"
         >
           Share
-        </span>
-      </button>
-      <button
-        aria-expanded="false"
-        aria-label="Tag post (3)"
-        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
-        data-cy="post-tag-btn"
-        data-size="sm"
-        data-slot="button"
-        data-variant="secondary"
-      >
-        <svg
-          aria-hidden="true"
-          class="lucide lucide-tag"
-          fill="none"
-          height="24"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          width="24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
-          />
-          <circle
-            cx="7.5"
-            cy="7.5"
-            fill="currentColor"
-            r=".5"
-          />
-        </svg>
-        <span
-          class="text-xs leading-4 font-bold text-muted-foreground"
-          data-testid="typography"
-        >
-          3
         </span>
       </button>
       <button
@@ -1301,6 +1262,45 @@ exports[`CollectionHero - Snapshots > matches the snapshot when no cover image a
             d="m6 9 6 6 6-6"
           />
         </svg>
+      </button>
+      <button
+        aria-expanded="false"
+        aria-label="Tag post (3)"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 border-none shadow-xs"
+        data-cy="post-tag-btn"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-tag"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+          />
+          <circle
+            cx="7.5"
+            cy="7.5"
+            fill="currentColor"
+            r=".5"
+          />
+        </svg>
+        <span
+          class="text-xs leading-4 font-bold text-muted-foreground"
+          data-testid="typography"
+        >
+          3
+        </span>
       </button>
     </div>
   </div>

@@ -1,4 +1,4 @@
-import type { Capabilities, Session } from '@synonymdev/pubky';
+import type { Capabilities, PublicKey, Session } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
 
@@ -9,6 +9,10 @@ export type FetchOptions = {
 
 export type THomeserverSignUpParams = TKeypairParams & {
   signupToken: string;
+};
+
+export type THomeserverPublicKeyParams = {
+  publicKey: PublicKey;
 };
 
 /** Homeserver signup token verification outcome from GET /signup_tokens/<token>. */

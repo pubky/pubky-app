@@ -76,6 +76,11 @@ describe('PostTag', () => {
     expect(screen.getByText('16')).toHaveAttribute('data-cy', 'post-tag-count');
   });
 
+  it('preserves post-tag remove selector for e2e tests', () => {
+    render(<PostTag label="bitcoin" showClose />);
+    expect(screen.getByLabelText(/remove bitcoin tag/i)).toHaveAttribute('data-cy', 'post-tag-remove-btn');
+  });
+
   it('renders with custom color', () => {
     const { container } = render(<PostTag label="bitcoin" color="#123456" />);
     const tag = screen.getByRole('button');

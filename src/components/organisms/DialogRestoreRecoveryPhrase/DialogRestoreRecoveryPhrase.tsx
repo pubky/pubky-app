@@ -16,6 +16,7 @@ import {
 } from '@/atoms/Dialog/Dialog';
 import { AuthController } from '@/controllers/auth/auth';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { WordSlot } from '@/molecules/WordSlot/WordSlot';
 
@@ -50,12 +51,12 @@ export function DialogRestoreRecoveryPhrase({ onRestore }: DialogRestoreRecovery
       if (!hasErrors && allFilled) {
         onRestore?.();
       }
-    } catch {
-      // TODO: handle error based on the error type
-      // show error toast
+    } catch (error) {
       toast({
         variant: 'error',
-        description: 'Could not sign in. Try again.',
+        description: isWrongEnvironmentHomeserverError(error)
+          ? 'This key is linked to a different homeserver. Use a staging account on this site.'
+          : 'Could not sign in. Try again.',
       });
       setIsRestoring(false);
     }

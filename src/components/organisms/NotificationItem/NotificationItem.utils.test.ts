@@ -117,17 +117,6 @@ describe('NotificationItem utilities', () => {
         repost_uri: 'pubky://actor/pub/pubky.app/posts/repost-id',
       },
     },
-    {
-      label: 'deleted collection',
-      expected: '/post/viewer/linked-id',
-      notification: {
-        type: NotificationType.PostDeleted,
-        delete_source: PostChangedSource.Repost,
-        deleted_by: 'owner',
-        deleted_uri: 'pubky://owner/pub/pubky.app/posts/collection-id',
-        linked_uri: 'pubky://viewer/pub/pubky.app/posts/linked-id',
-      },
-    },
   ])('keeps the existing live post target for a $label notification', ({ notification, expected }) => {
     const flatNotification = {
       id: `${notification.type}:123:actor`,
@@ -137,5 +126,25 @@ describe('NotificationItem utilities', () => {
     } as FlatNotification;
 
     expect(getNotificationLink(flatNotification).notificationLink).toBe(expected);
+  });
+
+  it('gives a deleted notification no post target, keeping the row informational', () => {
+    // Design decision on PR #2314: the deleted post has no destination, so the row
+    // must not navigate anywhere (the viewer's linked post is deliberately not used).
+    const notification = {
+      id: 'post_deleted:123:owner',
+      type: NotificationType.PostDeleted,
+      timestamp: 123,
+      delete_source: PostChangedSource.Repost,
+      deleted_by: 'owner',
+      deleted_uri: 'pubky://owner/pub/pubky.app/posts/collection-id',
+      linked_uri: 'pubky://viewer/pub/pubky.app/posts/linked-id',
+      post_kind: 'collection',
+    } satisfies FlatNotification;
+
+    const { notificationLink, userProfileLink } = getNotificationLink(notification);
+
+    expect(notificationLink).toBeNull();
+    expect(userProfileLink).toBe('/profile/owner');
   });
 });

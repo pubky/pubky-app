@@ -87,6 +87,7 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
       ({
         userId,
         userName,
+        status,
         size,
         timeAgo,
         showUserInfo = true,
@@ -96,6 +97,7 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
       }: {
         userId: string;
         userName: string;
+        status?: string | null;
         size?: 'normal' | 'large' | 'extraLarge';
         timeAgo?: string | null;
         showUserInfo?: boolean;
@@ -105,6 +107,7 @@ vi.mock('@/molecules/PostHeaderUserInfo/PostHeaderUserInfo', () => {
       }) => (
         <div
           data-testid="post-header-user-info"
+          data-status={status || undefined}
           data-size={size}
           data-show-user-info={showUserInfo}
           data-visually-hide-avatar={visuallyHideAvatar || undefined}
@@ -197,7 +200,12 @@ describe('PostHeader', () => {
       isLoading: false,
     });
     mockUseUserDetails.mockReturnValue({
-      userDetails: { id: 'userpubkykey', name: 'Test User', image: 'test-image-id' } as NexusUserDetails,
+      userDetails: {
+        id: 'userpubkykey',
+        name: 'Test User',
+        image: 'test-image-id',
+        status: 'vacationing',
+      } as NexusUserDetails,
       isLoading: false,
     });
     mockUseAvatarUrl.mockReturnValue('https://example.com/avatar/userpubkykey.png');
@@ -206,6 +214,7 @@ describe('PostHeader', () => {
 
     expect(screen.getByTestId('avatar')).toBeInTheDocument();
     expect(screen.getByText('Test User')).toBeInTheDocument();
+    expect(screen.getByTestId('post-header-user-info')).toHaveAttribute('data-status', 'vacationing');
     expect(screen.getByText('2h')).toBeInTheDocument();
   });
 

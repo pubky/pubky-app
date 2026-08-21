@@ -53,7 +53,7 @@ vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
 }));
 
 vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
-  useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null } }),
+  useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null, status: 'vacationing' } }),
 }));
 
 vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
@@ -281,6 +281,8 @@ describe('VisualTimelinePosts', () => {
     });
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),
@@ -826,6 +828,7 @@ describe('VisualTimelinePosts', () => {
       expect.objectContaining({
         userId: 'author',
         userName: 'Author',
+        status: 'vacationing',
         avatarUrl: null,
       }),
       undefined,
@@ -1204,6 +1207,8 @@ describe('VisualTimelinePosts - Snapshots', () => {
     mockUseIsTouchDevice.mockReturnValue(false);
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),

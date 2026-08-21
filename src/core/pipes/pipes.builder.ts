@@ -3,12 +3,14 @@ import type { Pubky } from '@/models/models.types';
 
 export class PubkySpecsSingleton {
   private static builder: PubkySpecsBuilder | null = null;
+  private static builderPubky: Pubky | null = null;
 
   private constructor() {}
 
   static get(pubky: Pubky): PubkySpecsBuilder {
-    if (!this.builder) {
+    if (!this.builder || this.builderPubky !== pubky) {
       this.builder = new PubkySpecsBuilder(pubky);
+      this.builderPubky = pubky;
     }
     return this.builder;
   }
@@ -20,5 +22,6 @@ export class PubkySpecsSingleton {
    */
   static reset(): void {
     this.builder = null;
+    this.builderPubky = null;
   }
 }
