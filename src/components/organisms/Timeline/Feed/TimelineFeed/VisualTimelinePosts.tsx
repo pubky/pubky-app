@@ -161,7 +161,12 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
           <Container overrideDefaults className="flex items-start justify-between gap-4">
             <Container overrideDefaults className="min-w-0 flex-1">
               {userDetails ? (
-                <PostHeaderUserInfo userId={userId} userName={userDetails.name || ''} avatarUrl={avatarUrl} />
+                <PostHeaderUserInfo
+                  userId={userId}
+                  userName={userDetails.name || ''}
+                  status={userDetails.status}
+                  avatarUrl={avatarUrl}
+                />
               ) : (
                 <Container overrideDefaults className="flex items-center gap-2">
                   <Skeleton className="size-6 rounded-full bg-white/20" />

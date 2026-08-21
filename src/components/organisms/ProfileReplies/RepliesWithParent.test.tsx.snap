@@ -3,9 +3,9 @@
 exports[`RepliesWithParent > Snapshots > should match snapshot for empty state 1`] = `
 <div>
   <div
-    data-testid="timeline-empty"
+    data-testid="replies-empty"
   >
-    No replies
+    No replies yet
   </div>
 </div>
 `;

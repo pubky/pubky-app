@@ -66,6 +66,7 @@ export function PostHeader({
     <PostHeaderUserInfo
       userId={userId}
       userName={userDetails?.name || ''}
+      status={userDetails?.status}
       avatarUrl={avatarUrl}
       showPopover={showPopover}
       showUserInfo={showUserInfo}

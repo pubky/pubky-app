@@ -118,6 +118,7 @@ ENV HOSTNAME="0.0.0.0"
 #   PUBKY_RUNTIME_DEFAULT_HTTP_RELAY
 #   PUBKY_RUNTIME_PKARR_RELAYS   (JSON array string, e.g. '["https://pkarr.pubky.app"]')
 #   PUBKY_RUNTIME_TESTNET        ("true" | "false")
+#   PUBKY_RUNTIME_ENV            ("production" | "staging"; drives the staging sign-in guard)
 #
 # Optional (absent DSN disables Sentry entirely; rates have defaults 0.1 / 0.0 / 1.0):
 #   PUBKY_RUNTIME_SENTRY_DSN

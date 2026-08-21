@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
@@ -290,11 +290,11 @@ function setOwnerProfile(name: string | null, avatarUrl?: string) {
   });
 }
 
-function setBookmark({ isBookmarked = false, isToggling = false } = {}) {
+function setBookmark({ isBookmarked = false, isLoading = false, isToggling = false } = {}) {
   const toggle = vi.fn().mockResolvedValue(undefined);
   mockUseBookmark.mockReturnValue({
     isBookmarked,
-    isLoading: false,
+    isLoading,
     isToggling,
     toggle,
   });
@@ -348,7 +348,9 @@ describe('CollectionHero', () => {
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-    expect(screen.getByLabelText('2 posts')).toBeInTheDocument(); // compact-formatted item count
+    const countBadge = screen.getByLabelText('2 posts');
+    expect(countBadge).toBeInTheDocument(); // compact-formatted item count
+    expect(within(countBadge).getByText('posts', { exact: false })).toHaveClass('inline');
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
@@ -421,6 +423,14 @@ describe('CollectionHero', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: 'List' }));
 
     expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.LIST);
+  });
+
+  it('keeps the tag action last in the viewer action row', () => {
+    renderHero();
+
+    const layoutButton = screen.getByRole('button', { name: /Layout: Grid/ });
+    const tagButton = screen.getByLabelText('Tag post (3)');
+    expect(layoutButton.compareDocumentPosition(tagButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('hides the temporary layout override from the collection owner', () => {
@@ -747,6 +757,19 @@ describe('CollectionHero', () => {
       expect(toggle).not.toHaveBeenCalled();
     });
 
+    it('disables Follow and ignores clicks while bookmark state is loading', () => {
+      setAuthStore('some-other-user');
+      const toggle = setBookmark({ isBookmarked: false, isLoading: true });
+
+      renderHero();
+
+      const button = screen.getByLabelText('Follow');
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-busy', 'true');
+      fireEvent.click(button);
+      expect(toggle).not.toHaveBeenCalled();
+    });
+
     it('opens the repost dialog when a non-owner clicks Share', () => {
       setAuthStore('some-other-user');
       const { openRepostDialog } = setRepostDialogs();
@@ -795,7 +818,7 @@ describe('CollectionHero', () => {
     expect(mockUseBookmark).toHaveBeenCalledWith(
       COMPOSITE_ID,
       expect.objectContaining({
-        toastMessages: expect.objectContaining({ added: "You've followed this collection" }),
+        toastMessages: expect.objectContaining({ added: 'You are now following this collection.' }),
       }),
     );
   });

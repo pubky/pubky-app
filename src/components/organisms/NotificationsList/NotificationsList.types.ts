@@ -1,16 +1,22 @@
-import type { FlatNotification } from '@/models/notification/notification.types';
+import type { FlatNotification, NotificationType } from '@/models/notification/notification.types';
+
+/** Notification types whose repeats collapse into a grouped row. */
+export type GroupableNotificationType = NotificationType.PostDeleted | NotificationType.PostEdited;
+
+export type GroupableNotification = Extract<FlatNotification, { type: GroupableNotificationType }>;
 
 /**
- * Props for the NotificationsList component
+ * One rendered row: either a lone notification or a run of consecutive ones that share a
+ * type, an actor and a post kind. Grouped runs hold at least MIN_NOTIFICATION_GROUP_SIZE
+ * members, newest first (mirroring the source order).
  */
-export interface NotificationsListProps {
-  /**
-   * Array of all notifications to display
-   */
-  notifications: FlatNotification[];
+export type NotificationListEntry =
+  | { kind: 'single'; notification: FlatNotification }
+  | { kind: 'group'; notifications: GroupableNotification[] };
 
-  /**
-   * Array of unread notifications (used to determine which notifications should show the unread badge)
-   */
+export interface NotificationsListProps {
+  /** Rows to display, already grouped by `groupNotifications`. */
+  entries: NotificationListEntry[];
+  /** Used to decide which rows show the unread badge. */
   unreadNotifications: FlatNotification[];
 }

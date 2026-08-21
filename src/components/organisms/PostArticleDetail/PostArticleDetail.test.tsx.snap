@@ -86,42 +86,22 @@ exports[`PostArticleDetail > matches snapshot when blurred 1`] = `
     <div
       class="mt-3 mb-6"
       data-post-id="user123:post456"
-      data-testid="post-actions-bar"
+      data-testid="post-inline-tags-actions"
     >
       <button
-        data-testid="tag-button"
-      >
-        Tag
-      </button>
-      <button
-        data-testid="reply-button"
+        data-testid="inline-reply-button"
       >
         Reply
       </button>
       <button
-        data-testid="repost-button"
+        data-testid="inline-repost-button"
       >
         Repost
       </button>
     </div>
     <div
-      class="mx-0 mb-6 max-w-2/4"
-      data-testid="container"
-    >
-      <div
-        class="mx-0 hidden lg:flex"
-        data-post-id="user123:post456"
-        data-testid="post-tags-panel"
-      />
-    </div>
-    <div
       data-post-id="user123:post456"
       data-testid="post-content-blurred"
-    />
-    <div
-      class="mt-6 flex lg:hidden"
-      data-post-id="user123:post456"
-      data-testid="post-tags-panel"
     />
   </div>
 </div>
@@ -151,33 +131,18 @@ exports[`PostArticleDetail > matches snapshot with cover image 1`] = `
     <div
       class="mt-3 mb-6"
       data-post-id="snapshot-user:cover-post"
-      data-testid="post-actions-bar"
+      data-testid="post-inline-tags-actions"
     >
       <button
-        data-testid="tag-button"
-      >
-        Tag
-      </button>
-      <button
-        data-testid="reply-button"
+        data-testid="inline-reply-button"
       >
         Reply
       </button>
       <button
-        data-testid="repost-button"
+        data-testid="inline-repost-button"
       >
         Repost
       </button>
-    </div>
-    <div
-      class="mx-0 mb-6 max-w-2/4"
-      data-testid="container"
-    >
-      <div
-        class="mx-0 hidden lg:flex"
-        data-post-id="snapshot-user:cover-post"
-        data-testid="post-tags-panel"
-      />
     </div>
     <img
       alt="Article cover"
@@ -191,11 +156,6 @@ exports[`PostArticleDetail > matches snapshot with cover image 1`] = `
     >
       Article body with cover image
     </div>
-    <div
-      class="mt-6 flex lg:hidden"
-      data-post-id="snapshot-user:cover-post"
-      data-testid="post-tags-panel"
-    />
   </div>
 </div>
 `;
@@ -224,33 +184,18 @@ exports[`PostArticleDetail > matches snapshot with default props 1`] = `
     <div
       class="mt-3 mb-6"
       data-post-id="user123:post456"
-      data-testid="post-actions-bar"
+      data-testid="post-inline-tags-actions"
     >
       <button
-        data-testid="tag-button"
-      >
-        Tag
-      </button>
-      <button
-        data-testid="reply-button"
+        data-testid="inline-reply-button"
       >
         Reply
       </button>
       <button
-        data-testid="repost-button"
+        data-testid="inline-repost-button"
       >
         Repost
       </button>
-    </div>
-    <div
-      class="mx-0 mb-6 max-w-2/4"
-      data-testid="container"
-    >
-      <div
-        class="mx-0 hidden lg:flex"
-        data-post-id="user123:post456"
-        data-testid="post-tags-panel"
-      />
     </div>
     <div
       data-is-article="true"
@@ -258,11 +203,6 @@ exports[`PostArticleDetail > matches snapshot with default props 1`] = `
     >
       Test article body content
     </div>
-    <div
-      class="mt-6 flex lg:hidden"
-      data-post-id="user123:post456"
-      data-testid="post-tags-panel"
-    />
   </div>
 </div>
 `;

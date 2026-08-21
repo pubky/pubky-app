@@ -2,7 +2,12 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthController } from '@/controllers/auth/auth';
+import { AppError } from '@/libs/error/error';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { DialogRestoreEncryptedFile } from './DialogRestoreEncryptedFile';
+
+const mockToast = vi.fn();
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
@@ -68,6 +73,9 @@ vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     loginWithEncryptedFile: vi.fn(),
   },
+}));
+vi.mock('@/molecules/Toaster/use-toast', () => ({
+  toast: (...args: unknown[]) => mockToast(...args),
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: {
@@ -478,6 +486,38 @@ describe('DialogRestoreEncryptedFile', () => {
         screen.getByText('Invalid password or corrupted file. Please check your password and try again.'),
       ).toBeInTheDocument();
     });
+  });
+
+  it('shows the environment toast and exits loading when the encrypted file belongs elsewhere', async () => {
+    mockLoginWithEncryptedFile.mockRejectedValue(
+      new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER,
+        message: 'Wrong homeserver environment',
+        service: ErrorService.Homeserver,
+        operation: 'loginWithEncryptedFile',
+      }),
+    );
+
+    render(<DialogRestoreEncryptedFile onRestore={mockOnRestore} />);
+
+    const fileInput = screen.getByLabelText('Select file');
+    const passwordInput = screen.getByTestId('input');
+    const testFile = mockFile('production-account.pkarr');
+    fireEvent.change(fileInput, { target: { files: [testFile] } });
+    fireEvent.change(passwordInput, { target: { value: 'testpassword' } });
+    fireEvent.click(screen.getByText('Restore').closest('button')!);
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'This key is linked to a different homeserver. Use a staging account on this site.',
+      });
+      expect(screen.queryByText('Restoring...')).not.toBeInTheDocument();
+      expect(screen.getByText('Restore').closest('button')).not.toBeDisabled();
+      expect(passwordInput).not.toBeDisabled();
+    });
+    expect(mockOnRestore).not.toHaveBeenCalled();
   });
 
   it('handles generic errors', async () => {
