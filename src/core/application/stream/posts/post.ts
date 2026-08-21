@@ -10,6 +10,7 @@ import type {
 } from '@/application/stream/posts/post.types';
 import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
+import { CONTENT_SEARCH_MAX_SKIP } from '@/config/search';
 import {
   FORCE_FETCH_NEW_POSTS,
   NOT_FOUND_CACHED_STREAM,
@@ -665,6 +666,13 @@ export class PostStreamApplication {
     viewerId,
     order,
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
+    // Nexus bounds the by_content offset (skip ≤ CONTENT_SEARCH_MAX_SKIP, inclusive). A cursor
+    // already past the bound could only produce a request Nexus rejects — report the end
+    // defensively instead of issuing it.
+    if (isContentSearchStream(streamId) && streamTail > CONTENT_SEARCH_MAX_SKIP) {
+      return { nextPageIds: [], cacheMissPostIds: [], nextCursor: undefined, reachedEnd: true };
+    }
+
     const { params, invokeEndpoint, extraParams } = createPostStreamParams({
       streamId,
       streamTail,
@@ -696,12 +704,18 @@ export class PostStreamApplication {
 
     const cacheMissPostIds = await this.getNotPersistedPostsInCache(compositePostIds);
 
-    // reachedEnd is true when Nexus returned fewer posts than requested (actual end of stream)
+    // reachedEnd is true when Nexus returned fewer posts than requested (actual end of stream).
+    // Content search also ends when the NEXT offset (this skip + raw ids consumed) would
+    // overflow Nexus's inclusive skip bound: this valid page is still consumed, only the
+    // follow-up request is suppressed. A next offset landing exactly on the bound stays valid.
+    const overflowsContentSearchSkip =
+      isContentSearchStream(streamId) && streamTail + compositePostIds.length > CONTENT_SEARCH_MAX_SKIP;
+
     return {
       nextPageIds: compositePostIds,
       cacheMissPostIds,
       nextCursor: rawScore ?? undefined,
-      reachedEnd: compositePostIds.length < limit,
+      reachedEnd: compositePostIds.length < limit || overflowsContentSearchSkip,
     };
   }
 

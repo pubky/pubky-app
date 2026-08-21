@@ -459,6 +459,86 @@ describe('PostStreamApplication', () => {
       expect(persistStreamSpy).not.toHaveBeenCalled();
     });
 
+    describe('content-search skip bound (Nexus BoundedSkip, inclusive at 1000)', () => {
+      const contentStreamId = buildContentSearchStreamId('bitcoin');
+
+      it('still issues the request when the offset sits exactly on the bound', async () => {
+        const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+          post_keys: [`${DEFAULT_AUTHOR}:post-a`, `${DEFAULT_AUTHOR}:post-b`],
+          last_post_score: null,
+        });
+
+        const result = await PostStreamApplication.getOrFetchStreamSlice({
+          streamId: contentStreamId,
+          limit: 2,
+          streamHead: 0,
+          streamTail: 1000, // skip = 1000 is the last valid offset
+          viewerId: null,
+        });
+
+        expect(nexusFetchSpy).toHaveBeenCalledTimes(1);
+        expect(nexusFetchSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ params: expect.objectContaining({ skip: 1000 }) }),
+        );
+        // The page is consumed; only the follow-up (skip 1002 > 1000) is suppressed.
+        expect(result.nextPageIds).toEqual([`${DEFAULT_AUTHOR}:post-a`, `${DEFAULT_AUTHOR}:post-b`]);
+        expect(result.reachedEnd).toBe(true);
+      });
+
+      it('reports the end without calling Nexus when the incoming offset is already past the bound', async () => {
+        const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch');
+
+        const result = await PostStreamApplication.getOrFetchStreamSlice({
+          streamId: contentStreamId,
+          limit: 2,
+          streamHead: 0,
+          streamTail: 1001, // Nexus would reject this skip
+          viewerId: null,
+        });
+
+        expect(nexusFetchSpy).not.toHaveBeenCalled();
+        expect(result.nextPageIds).toEqual([]);
+        expect(result.reachedEnd).toBe(true);
+      });
+
+      it('marks a full page ended when the raw ids advance the offset past the bound', async () => {
+        vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+          post_keys: [`${DEFAULT_AUTHOR}:post-a`, `${DEFAULT_AUTHOR}:post-b`],
+          last_post_score: null,
+        });
+
+        const result = await PostStreamApplication.getOrFetchStreamSlice({
+          streamId: contentStreamId,
+          limit: 2,
+          streamHead: 0,
+          streamTail: 999, // valid request, but 999 + 2 = 1001 overflows the bound
+          viewerId: null,
+        });
+
+        expect(result.nextPageIds).toHaveLength(2);
+        expect(result.reachedEnd).toBe(true);
+      });
+
+      it('keeps paginating when the raw ids land the next offset exactly on the bound', async () => {
+        vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+          post_keys: [`${DEFAULT_AUTHOR}:post-a`, `${DEFAULT_AUTHOR}:post-b`],
+          last_post_score: null,
+        });
+
+        const result = await PostStreamApplication.getOrFetchStreamSlice({
+          streamId: contentStreamId,
+          limit: 2,
+          streamHead: 0,
+          streamTail: 998, // 998 + 2 = 1000: the next request is still valid
+          viewerId: null,
+        });
+
+        expect(result.nextPageIds).toHaveLength(2);
+        expect(result.nextCursor).toBe(1000);
+        expect(result.reachedEnd).toBe(false);
+      });
+    });
+
     it('should return posts from cache when available (no cursor)', async () => {
       const postIds = Array.from({ length: 20 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
