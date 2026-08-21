@@ -207,19 +207,55 @@ describe('DialogAddContent', () => {
     expect(trigger).not.toHaveClass('h-16');
   });
 
-  it('opens the desktop dialog with feed, URL, and create-post options', () => {
+  it('opens the dialog with the four add-post options in responsive grid order', () => {
     render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
 
     expect(screen.getByRole('dialog')).toHaveClass('outline-none', 'focus:outline-none', 'focus-visible:outline-none');
     expect(screen.getByTestId('dialog-title')).toHaveTextContent('Add Post');
+    expect(screen.getByText('Choose how to add posts to your collection.')).toHaveClass('sm:hidden');
+    expect(screen.getByText('There are several ways to add posts to your collection.')).toHaveClass(
+      'hidden',
+      'sm:inline',
+    );
     expect(screen.getByText('Add from feed')).toBeInTheDocument();
+    expect(screen.getByText('Select from posts')).toBeInTheDocument();
     expect(screen.getByText('Paste post url')).toBeInTheDocument();
     expect(screen.getByText('Create new post')).toBeInTheDocument();
-    expect(screen.getByText("What's on your mind?")).toBeInTheDocument();
+    expect(screen.getByText('Start writing')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Paste' })).toBeInTheDocument();
+
+    const options = document.querySelector('[data-cy="add-content-options"]');
+    expect(options).toHaveClass('grid', 'grid-cols-1', 'gap-3', 'sm:grid-cols-2');
+
+    const cards = options?.querySelectorAll('[data-slot="card"]');
+    expect(Array.from(cards ?? []).map((card) => card.querySelector('[data-slot="card-title"]')?.textContent)).toEqual([
+      'Add from feed',
+      'Select from posts',
+      'Paste post url',
+      'Create new post',
+    ]);
+  });
+
+  it('closes the dialog and navigates to profile posts without mutating content when Select is clicked', async () => {
+    render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+
+    const selectButton = screen.getByRole('button', { name: 'Select' });
+    expect(selectButton).toHaveAttribute('data-cy', 'add-content-select-from-posts');
+    fireEvent.click(selectButton);
+
+    expect(mocks.routerPush).toHaveBeenCalledWith('/profile/posts');
+    expect(mocks.getOrFetchPost).not.toHaveBeenCalled();
+    expect(mocks.bookmarkExists).not.toHaveBeenCalled();
+    expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
+    expect(mocks.getCollectionDetails).not.toHaveBeenCalled();
+    expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
+    expect(mocks.prependOptimisticPosts).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it.each(['add-content-feed-reply-pill', 'add-content-feed-repost-pill', 'add-content-feed-save-pill'])(
@@ -409,7 +445,7 @@ describe('DialogAddContent', () => {
     render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-    fireEvent.click(screen.getByRole('button', { name: /What's on your mind?/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Start writing/ }));
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: 'new post' })).toBeInTheDocument();
@@ -421,7 +457,7 @@ describe('DialogAddContent', () => {
     render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-    fireEvent.click(screen.getByRole('button', { name: /What's on your mind?/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Start writing/ }));
     fireEvent.click(screen.getByRole('button', { name: 'create post success' }));
 
     await waitFor(() =>
@@ -443,7 +479,7 @@ describe('DialogAddContent', () => {
     render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-    fireEvent.click(screen.getByRole('button', { name: /What's on your mind?/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Start writing/ }));
     fireEvent.click(screen.getByRole('button', { name: 'create post success' }));
 
     await waitFor(() =>

@@ -2,10 +2,10 @@
 
 import { type ComponentPropsWithoutRef, type ComponentRef, forwardRef, type SyntheticEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ClipboardPaste, Library, MessageCircle, Plus, Repeat, SquarePlus } from 'lucide-react';
-import { APP_ROUTES } from '@/app/routes';
+import { ClipboardPaste, Library, List as ListIcon, MessageCircle, Plus, Repeat, SquarePlus } from 'lucide-react';
+import { APP_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
-import { Card, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import {
   Dialog,
@@ -187,6 +187,28 @@ function FeedInstructionCard({ onOpenFeed }: { onOpenFeed: () => void }) {
   );
 }
 
+function SelectFromPostsCard({ onSelectFromPosts }: { onSelectFromPosts: () => void }) {
+  return (
+    <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
+      <CardHeader className="px-6">
+        <CardTitle className="text-base leading-none font-bold text-card-foreground">{'Select from posts'}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-6">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onSelectFromPosts}
+          data-cy="add-content-select-from-posts"
+        >
+          <ListIcon className="size-4" />
+          {'Select'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof useAddContentForm> }) {
   return (
     <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
@@ -234,17 +256,17 @@ function CreatePostCard({ onCreatePost }: { onCreatePost: () => void }) {
           type="button"
           onClick={onCreatePost}
           data-cy="add-content-create-post"
-          className="flex w-full cursor-pointer items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 text-left outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="flex w-full cursor-pointer items-center gap-3 rounded-md border border-dashed border-input px-4 py-3 text-left outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           <AvatarWithFallback
             avatarUrl={avatarUrl}
             name={displayName}
             fallbackSeed={currentUserPubky ?? displayName}
-            size="default"
+            size="md"
             alt={displayName}
           />
           <Typography overrideDefaults className="min-w-0 flex-1 truncate text-base font-medium text-input">
-            {"What's on your mind?"}
+            {'Start writing'}
           </Typography>
         </Button>
       </CardFooter>
@@ -257,11 +279,13 @@ function DialogAddContentBody({
   onSuccess,
   onCreatePost,
   onOpenFeed,
+  onSelectFromPosts,
 }: {
   target: NonNullable<DialogAddContentProps['target']>;
   onSuccess: (postId: string) => Promise<void>;
   onCreatePost: () => void;
   onOpenFeed: () => void;
+  onSelectFromPosts: () => void;
 }) {
   const addContentForm = useAddContentForm({
     target,
@@ -278,11 +302,17 @@ function DialogAddContentBody({
       <DialogHeader className="pr-0">
         <DialogTitle>{'Add Post'}</DialogTitle>
         <DialogDescription className="text-muted-foreground">
-          {'There are several ways to add posts to your collection.'}
+          <span className="sm:hidden">{'Choose how to add posts to your collection.'}</span>
+          <span className="hidden sm:inline">{'There are several ways to add posts to your collection.'}</span>
         </DialogDescription>
       </DialogHeader>
-      <Container overrideDefaults className="flex w-full flex-col gap-3">
+      <Container
+        overrideDefaults
+        data-cy="add-content-options"
+        className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2"
+      >
         <FeedInstructionCard onOpenFeed={onOpenFeed} />
+        <SelectFromPostsCard onSelectFromPosts={onSelectFromPosts} />
         <UrlPasteCard addContentForm={addContentForm} />
         <CreatePostCard onCreatePost={onCreatePost} />
       </Container>
@@ -317,6 +347,11 @@ export function DialogAddContent({
     router.push(APP_ROUTES.HOME);
   };
 
+  const handleSelectFromPosts = () => {
+    setOpen(false);
+    router.push(PROFILE_ROUTES.POSTS);
+  };
+
   const handlePostCreated = async (createdPostId: string) => {
     await saveCreatedPostToTarget({
       target,
@@ -340,6 +375,7 @@ export function DialogAddContent({
             onSuccess={handleSuccess}
             onCreatePost={handleCreatePost}
             onOpenFeed={handleOpenFeed}
+            onSelectFromPosts={handleSelectFromPosts}
           />
         </DialogContent>
       </Dialog>
