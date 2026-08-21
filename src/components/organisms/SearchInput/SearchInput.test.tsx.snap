@@ -22,28 +22,33 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - default stat
       type="text"
       value=""
     />
-    <svg
+    <span
       aria-hidden="true"
-      class="lucide lucide-search pointer-events-none size-4 shrink-0 text-muted-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
+      class="pointer-events-none flex size-8 shrink-0 items-center justify-center"
     >
-      <path
-        d="m21 21-4.34-4.34"
-      />
-      <circle
-        cx="11"
-        cy="11"
-        r="8"
-      />
-    </svg>
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-search size-4 text-muted-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21 21-4.34-4.34"
+        />
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+        />
+      </svg>
+    </span>
   </div>
 </div>
 `;
@@ -74,7 +79,7 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with
     />
     <button
       aria-label="Clear and close search"
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border hover:text-accent-foreground hover:bg-accent/50 size-8 border-none p-0 text-muted-foreground shadow-none"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border hover:text-accent-foreground hover:bg-accent/50 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
       data-size="icon"
       data-slot="button"
       data-variant="ghost"
@@ -125,7 +130,7 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with
           Hot tags
         </p>
         <div
-          class="flex flex-wrap gap-3"
+          class="flex flex-wrap gap-2"
           data-testid="container"
         >
           <button
@@ -223,7 +228,7 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with
     />
     <button
       aria-label="Clear and close search"
-      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border hover:text-accent-foreground hover:bg-accent/50 size-8 border-none p-0 text-muted-foreground shadow-none"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border hover:text-accent-foreground hover:bg-accent/50 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
       data-size="icon"
       data-slot="button"
       data-variant="ghost"
@@ -312,7 +317,7 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - with active 
   >
     <div
       aria-label="Active search tags"
-      class="flex min-w-0 items-center gap-2.5 overflow-x-auto py-2"
+      class="flex min-w-0 items-center gap-2 overflow-x-auto py-2"
       data-testid="container"
       role="list"
     >
@@ -444,28 +449,33 @@ exports[`SearchInput > SearchInput - Snapshots > matches snapshot - with active 
       type="text"
       value=""
     />
-    <svg
+    <span
       aria-hidden="true"
-      class="lucide lucide-search pointer-events-none size-4 shrink-0 text-muted-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
+      class="pointer-events-none flex size-8 shrink-0 items-center justify-center"
     >
-      <path
-        d="m21 21-4.34-4.34"
-      />
-      <circle
-        cx="11"
-        cy="11"
-        r="8"
-      />
-    </svg>
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-search size-4 text-muted-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21 21-4.34-4.34"
+        />
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+        />
+      </svg>
+    </span>
   </div>
 </div>
 `;
@@ -492,28 +502,33 @@ exports[`SearchInput - Mobile Snapshots > matches snapshot on mobile viewport 1`
       type="text"
       value=""
     />
-    <svg
+    <span
       aria-hidden="true"
-      class="lucide lucide-search pointer-events-none size-4 shrink-0 text-muted-foreground"
-      fill="none"
-      height="24"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
+      class="pointer-events-none flex size-8 shrink-0 items-center justify-center"
     >
-      <path
-        d="m21 21-4.34-4.34"
-      />
-      <circle
-        cx="11"
-        cy="11"
-        r="8"
-      />
-    </svg>
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-search size-4 text-muted-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21 21-4.34-4.34"
+        />
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+        />
+      </svg>
+    </span>
   </div>
 </div>
 `;

@@ -570,7 +570,7 @@ describe('SearchInput', () => {
       expect(mockAddQuery).toHaveBeenCalledWith('bitcoin wallet');
     });
 
-    it('clears the draft and collapses the search from the X action', () => {
+    it('clears a plain draft without navigating from the X action', () => {
       const setInputValue = vi.fn();
       const setFocus = vi.fn();
       vi.mocked(useSearchInput).mockReturnValue({
@@ -590,15 +590,16 @@ describe('SearchInput', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Clear and close search' }));
 
       expect(setInputValue).toHaveBeenLastCalledWith('');
+      expect(mockPush).not.toHaveBeenCalled();
       expect(setFocus).toHaveBeenCalledWith(false);
     });
 
-    it('restores the active query instead of blanking it from the X action', () => {
+    it('deletes the active search from the bar via the X action', () => {
       const setInputValue = vi.fn();
       const setFocus = vi.fn();
       vi.mocked(useSearchCriteria).mockReturnValue({ mode: 'content', query: 'bitcoin wallet' });
       vi.mocked(useSearchInput).mockReturnValue({
-        inputValue: 'bitcoin wal',
+        inputValue: 'bitcoin wallet',
         isFocused: true,
         containerRef: { current: null },
         inputRef: { current: null },
@@ -613,8 +614,33 @@ describe('SearchInput', () => {
       render(<SearchInput />);
       fireEvent.click(screen.getByRole('button', { name: 'Clear and close search' }));
 
-      // The blank input must never sit next to results still labeled by the query
-      expect(setInputValue).toHaveBeenLastCalledWith('bitcoin wallet');
+      expect(setInputValue).toHaveBeenLastCalledWith('');
+      expect(mockPush).toHaveBeenCalledWith('/search');
+      expect(setFocus).toHaveBeenCalledWith(false);
+    });
+
+    it('deletes active tag chips from the bar via the X action', () => {
+      const setInputValue = vi.fn();
+      const setFocus = vi.fn();
+      vi.mocked(useSearchCriteria).mockReturnValue({ mode: 'tags', tags: ['bitcoin', 'pubky'] });
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: '',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue,
+        setFocus,
+      });
+
+      render(<SearchInput />);
+      fireEvent.click(screen.getByRole('button', { name: 'Clear and close search' }));
+
+      // Navigating to the bare search route drops the tags param; the URL sync clears the chips
+      expect(mockPush).toHaveBeenCalledWith('/search');
       expect(setFocus).toHaveBeenCalledWith(false);
     });
 

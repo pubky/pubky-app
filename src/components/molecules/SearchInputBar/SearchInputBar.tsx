@@ -38,7 +38,7 @@ export function SearchInputBar({
       {hasActiveTags && (
         <Container
           overrideDefaults
-          className="flex min-w-0 items-center gap-2.5 overflow-x-auto py-2"
+          className="flex min-w-0 items-center gap-2 overflow-x-auto py-2"
           role="list"
           aria-label={'Active search tags'}
         >
@@ -69,19 +69,22 @@ export function SearchInputBar({
         )}
       />
 
+      {/* Both states share an identical 32px slot so the X sits exactly where the search icon sits */}
       {isFocused ? (
         <Button
           type="button"
           variant={ButtonVariant.GHOST}
           size="icon"
           aria-label="Clear and close search"
-          className="size-8 border-none p-0 text-muted-foreground shadow-none"
+          className="size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
           onClick={onCloseSearch}
         >
           <X className="size-4" aria-hidden="true" />
         </Button>
       ) : (
-        <Search className="pointer-events-none size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="pointer-events-none flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
+          <Search className="size-4 text-muted-foreground" />
+        </span>
       )}
     </Container>
   );

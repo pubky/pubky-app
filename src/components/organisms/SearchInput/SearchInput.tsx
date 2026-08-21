@@ -111,9 +111,14 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   };
 
   const handleCloseSearch = () => {
-    // Discard edits and close: an active full-text query stays visible in the
-    // input (it still labels the shown results), a plain draft is cleared.
-    setInputValue(urlQuery ?? '');
+    // X deletes the whole search from the bar (design decision): the typed
+    // draft, the active query, and any tag chips — the URL sync clears the
+    // store once the params are gone. A draft outside an active search just
+    // clears and closes.
+    setInputValue('');
+    if (criteria.mode !== 'none') {
+      router.push(APP_ROUTES.SEARCH);
+    }
     setFocus(false);
   };
 

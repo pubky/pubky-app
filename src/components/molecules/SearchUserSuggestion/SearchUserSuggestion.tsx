@@ -28,7 +28,7 @@ export function SearchUserSuggestion({ user, onClick }: SearchUserSuggestionProp
         size="md"
         className="shrink-0"
       />
-      <Container overrideDefaults className="min-w-0 flex-1 flex-col items-start">
+      <Container overrideDefaults className="flex min-w-0 flex-1 flex-col items-start">
         <Typography
           className="block max-w-full truncate text-sm font-bold text-foreground"
           overrideDefaults

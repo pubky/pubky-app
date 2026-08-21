@@ -46,7 +46,7 @@ exports[`SearchRecentSection > SearchRecentSection - Snapshots > matches snapsho
     </span>
   </div>
   <div
-    class="flex flex-wrap gap-2"
+    class="flex flex-wrap gap-x-6 gap-y-3"
   >
     <div
       data-testid="user-item-pk:user1"
@@ -103,7 +103,7 @@ exports[`SearchRecentSection > SearchRecentSection - Snapshots > matches snapsho
     </button>
   </div>
   <div
-    class="flex flex-wrap gap-2"
+    class="flex flex-wrap gap-x-6 gap-y-3"
   >
     <div
       data-testid="user-item-pk:user1"

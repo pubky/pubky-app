@@ -15,7 +15,7 @@ exports[`SearchUserSuggestion > SearchUserSuggestion - Snapshots > matches snaps
     Avatar
   </div>
   <div
-    class="min-w-0 flex-1 flex-col items-start"
+    class="flex min-w-0 flex-1 flex-col items-start"
   >
     <span
       class="block max-w-full truncate text-sm font-bold text-foreground"
@@ -48,7 +48,7 @@ exports[`SearchUserSuggestion > SearchUserSuggestion - Snapshots > matches snaps
     Avatar
   </div>
   <div
-    class="min-w-0 flex-1 flex-col items-start"
+    class="flex min-w-0 flex-1 flex-col items-start"
   >
     <span
       class="block max-w-full truncate text-sm font-bold text-foreground"

@@ -62,7 +62,7 @@ export function SearchRecentSection({
 
       {/* Recent users - horizontal */}
       {users.length > 0 && (
-        <Container overrideDefaults className="flex flex-wrap gap-2">
+        <Container overrideDefaults className="flex flex-wrap gap-x-6 gap-y-3">
           {users.map((user) => (
             <SearchRecentItem key={user.id} type={RECENT_ITEM_TYPE.USER} user={user} onUserClick={onUserClick} />
           ))}
