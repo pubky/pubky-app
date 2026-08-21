@@ -212,7 +212,13 @@ describe('DialogAddContent', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
 
-    expect(screen.getByRole('dialog')).toHaveClass('outline-none', 'focus:outline-none', 'focus-visible:outline-none');
+    expect(screen.getByRole('dialog')).toHaveClass(
+      'overflow-y-auto',
+      'outline-none',
+      'focus:outline-none',
+      'focus-visible:outline-none',
+    );
+    expect(screen.getByRole('dialog')).not.toHaveClass('overflow-hidden');
     expect(screen.getByTestId('dialog-title')).toHaveTextContent('Add Post');
     expect(screen.getByText('Choose how to add posts to your collection.')).toHaveClass('sm:hidden');
     expect(screen.getByText('There are several ways to add posts to your collection.')).toHaveClass(

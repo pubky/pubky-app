@@ -367,7 +367,7 @@ export function DialogAddContent({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>{trigger}</DialogTrigger>
         <DialogContent
-          className="flex w-xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
+          className="flex w-xl flex-col border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
           hiddenTitle={'Add Post'}
         >
           <DialogAddContentBody
