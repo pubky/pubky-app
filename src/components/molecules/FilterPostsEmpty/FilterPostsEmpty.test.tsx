@@ -30,7 +30,9 @@ describe('FilterPostsEmpty', () => {
     expect(screen.getByText('No posts match your search')).toBeInTheDocument();
     expect(screen.getByText('Try a different search term.')).toBeInTheDocument();
   });
+});
 
+describe('FilterPostsEmpty - Snapshots', () => {
   it('matches snapshot', () => {
     const { container } = render(<FilterPostsEmpty />);
     expect(container.firstChild).toMatchSnapshot();

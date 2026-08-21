@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`FilterPostsEmpty > matches snapshot 1`] = `
+exports[`FilterPostsEmpty - Snapshots > matches snapshot 1`] = `
 <div
   data-src="/images/tagged-empty-state.webp"
   data-testid="empty-state"

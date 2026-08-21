@@ -31,7 +31,9 @@ describe('FilterPostsBar', () => {
     fireEvent.change(input, { target: { value: 'bitcoin wallet' } });
     expect(onValueChange).toHaveBeenCalledWith('bitcoin wallet');
   });
+});
 
+describe('FilterPostsBar - Snapshots', () => {
   it('matches snapshot', () => {
     const { container } = render(<FilterPostsBar value="" onValueChange={vi.fn()} />);
     expect(container.firstChild).toMatchSnapshot();
