@@ -15,6 +15,7 @@ import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/atoms/Dialo
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
+import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { cn } from '@/libs/utils/utils';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsCarouselImage } from '../PostAttachmentsCarouselImage/PostAttachmentsCarouselImage';
@@ -153,7 +154,7 @@ export const PostAttachmentsImagesAndVideos = ({
               >
                 <Button overrideDefaults onClick={(e) => openPreview(i, e)}>
                   <Image
-                    src={media.type === 'image/gif' ? media.urls.main : (media.urls.feed ?? media.urls.main)}
+                    src={getAttachmentPreviewUrl(media)}
                     alt={media.name}
                     fill={!isOnlyMedia}
                     className={cn(

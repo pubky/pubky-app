@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ToastAction } from '@/atoms/Toast/Toast';
 import { PostController } from '@/controllers/post/post';
+import type { TEditPostAttachments } from '@/controllers/post/post.types';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -193,11 +194,14 @@ export function usePost(): UsePostReturn {
       const keptUris = existingAttachments.map((attachment) => attachment.uri);
       const originalUris = originalAttachmentUris ?? keptUris;
       const attachmentsChanged = attachments.length > 0 || keptUris.length !== originalUris.length;
+      const editAttachments: TEditPostAttachments | undefined = attachmentsChanged
+        ? { original: originalUris, kept: keptUris, added: attachments }
+        : undefined;
 
       await PostController.commitEdit({
         compositePostId: editPostId,
         content: isArticle ? JSON.stringify({ title: articleTitle.trim(), body: content.trim() }) : content.trim(),
-        attachments: attachmentsChanged ? { original: originalUris, kept: keptUris, added: attachments } : undefined,
+        attachments: editAttachments,
       });
       setContent('');
       setAttachments([]);

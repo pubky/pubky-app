@@ -711,7 +711,7 @@ describe('PostInputAttachments', () => {
       expect(screen.getByTestId('image')).toHaveAttribute('src', 'https://cdn.example.com/feed/file-1');
     });
 
-    it('uses the MAIN variant for existing GIFs (mirrors the feed rule so the animation is kept)', () => {
+    it('uses the MAIN variant for existing GIFs (mirrors the feed rule — Nexus FEED processing degrades GIFs)', () => {
       const existing = createExistingAttachment({
         type: 'image/gif',
         name: 'existing-animation.gif',
