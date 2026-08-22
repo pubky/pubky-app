@@ -3,6 +3,7 @@ import { db } from '@/database/franky/franky';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserTagsModel } from '@/models/user/tags/userTags';
+import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
 
@@ -61,6 +62,7 @@ const setupUserCounts = async (userId: Pubky, tags: number = 0, uniqueTags: numb
 describe('LocalUserTagService', () => {
   beforeEach(async () => {
     await db.initialize();
+    postStreamDirtyRegistry.reset();
     await db.transaction('rw', [UserTagsModel.table, UserCountsModel.table], async () => {
       await UserTagsModel.table.clear();
       await UserCountsModel.table.clear();
@@ -147,6 +149,28 @@ describe('LocalUserTagService', () => {
       );
 
       spy.mockRestore();
+    });
+
+    it('should mark profile-tag-dependent streams dirty when a tag is created (#2302)', async () => {
+      const domainStream = 'timeline:wot_domain:0:all:developer';
+      await setupUserCounts(testData.taggedPubky, 0, 0);
+
+      expect(postStreamDirtyRegistry.isDirty(domainStream)).toBe(false);
+
+      await LocalUserTagService.create(createTagParams('developer'));
+
+      expect(postStreamDirtyRegistry.isDirty(domainStream)).toBe(true);
+      // Follow- and friends-scoped streams are unaffected by profile tags.
+      expect(postStreamDirtyRegistry.isDirty('timeline:following:all')).toBe(false);
+      expect(postStreamDirtyRegistry.isDirty('timeline:friends:all')).toBe(false);
+    });
+
+    it('should not mark streams dirty for an idempotent duplicate tag', async () => {
+      await setupExistingUserTag('developer', [testData.taggerPubky], true);
+
+      await LocalUserTagService.create(createTagParams('developer'));
+
+      expect(postStreamDirtyRegistry.isDirty('timeline:wot_domain:0:all:developer')).toBe(false);
     });
   });
 
@@ -254,6 +278,30 @@ describe('LocalUserTagService', () => {
       });
 
       expect(result).toBe(true);
+    });
+
+    it('should mark profile-tag-dependent streams dirty when a tag is deleted (#2302)', async () => {
+      await setupUserCounts(testData.taggerPubky, 0, 0, 1);
+
+      await LocalUserTagService.delete({
+        taggedId: testData.taggedPubky,
+        label: 'developer',
+        taggerId: testData.taggerPubky,
+      });
+
+      expect(postStreamDirtyRegistry.isDirty('timeline:wot_domain:2:all:developer')).toBe(true);
+    });
+
+    it('should not mark streams dirty for an idempotent no-op delete', async () => {
+      await UserTagsModel.table.clear();
+
+      await LocalUserTagService.delete({
+        taggedId: testData.taggedPubky,
+        label: 'developer',
+        taggerId: testData.taggerPubky,
+      });
+
+      expect(postStreamDirtyRegistry.isDirty('timeline:wot_domain:2:all:developer')).toBe(false);
     });
   });
 });

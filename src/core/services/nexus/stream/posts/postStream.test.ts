@@ -15,6 +15,7 @@ import {
   type TStreamQueryParams,
   type TStreamWithObserverParams,
 } from '@/services/nexus/stream/posts/postStream.types';
+import { POST_STREAM_GRAMMAR_FIXTURES } from '@/test/fixtures/stream/postStreamIds';
 import { NexusPostStreamService } from './postStream';
 import { postStreamApi } from './postStream.api';
 import { StreamKind, StreamOrder } from './postStream.types';
@@ -847,6 +848,27 @@ describe('createPostStreamParams', () => {
 });
 
 describe('breakDownStreamId', () => {
+  it.each(POST_STREAM_GRAMMAR_FIXTURES)(
+    'parses the shared grammar fixture $streamId',
+    ({ streamId, source, ...fixture }) => {
+      const result = breakDownStreamId(streamId as PostStreamId);
+
+      expect(result.invokeEndpoint).toBe(source);
+      expect(result.wotDepth).toBe('depth' in fixture ? fixture.depth : undefined);
+    },
+  );
+
+  it('tolerates an empty optional post-tag segment in a wot_domain request breakdown', () => {
+    expect(breakDownStreamId('timeline:wot_domain:2:all:developer:' as PostStreamId)).toEqual({
+      sorting: 'timeline',
+      invokeEndpoint: StreamSource.WOT_DOMAIN,
+      kind: 'all',
+      wotDepth: 2,
+      domainTags: 'developer',
+      tags: undefined,
+    });
+  });
+
   describe('Timeline pattern', () => {
     it('should parse timeline:endpoint:kind:tags', () => {
       const result = breakDownStreamId('timeline:bookmarks:all:tech,ai' as PostStreamId);

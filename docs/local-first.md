@@ -184,13 +184,12 @@ await LocalUserService.upsertDetails(author); // Author not yet in DB!
 For immediate UI feedback, controllers manage store state while application handles persistence:
 
 ```typescript
-// Controller reads store state before delegating to application
+// Controller normalizes input before delegating to application
 // Real pattern: src/core/controllers/user/user.ts
 class UserController {
   static async commitFollow(eventType, { follower, followee }) {
     const normalizedFollowee = stripPubkyPrefix(followee);
     const { meta, follow } = FollowNormalizer.to({ follower, followee: normalizedFollowee });
-    const activeStreamId = this.getActiveStreamId(); // Controller reads from store
 
     await UserApplication.commitFollow({
       eventType,
@@ -198,7 +197,6 @@ class UserController {
       followJson: follow.toJson(),
       follower,
       followee: normalizedFollowee,
-      activeStreamId,
     });
   }
 }
@@ -206,14 +204,26 @@ class UserController {
 // Application handles local-first persistence
 // Real pattern: src/core/application/user/user.ts
 class UserApplication {
-  static async commitFollow({ eventType, followUrl, followJson, follower, followee, activeStreamId }) {
+  static async commitFollow({ eventType, followUrl, followJson, follower, followee }) {
     // 1. Write to IndexedDB first
-    await LocalFollowService.create({ follower, followee, activeStreamId });
+    await LocalFollowService.create({ follower, followee });
     // 2. Sync to homeserver
     await HomeserverService.request({ method: eventType, url: followUrl, bodyJson: followJson });
   }
 }
 ```
+
+## Deferred Stream Invalidation
+
+Some cached post streams derive their membership from mutable local state: Following/Friends timelines and `wot` streams depend on the follow graph, and `wot_domain` (Tagged as) streams depend on the viewer's profile tags. When that state changes (follow/unfollow, profile-tag create/delete), the cached streams are stale — but deleting them immediately would force-refresh a mounted feed and yank the reader's scroll position (#2294).
+
+Instead, invalidation is deferred through an in-memory dirty registry (`src/core/services/local/stream/posts/postStreamDirtyRegistry.ts`):
+
+1. **Mutations mark scopes dirty.** `LocalFollowService` marks `follow_graph` on every follow/unfollow and `friends` on friendship transitions; `LocalUserTagService` marks `profile_tag` on profile-tag writes (#2302). No Dexie stream rows are touched.
+2. **Streams classify their dependencies.** `getStreamDependencyScopes` in `src/core/models/stream/post/postStream.types.ts` maps a stream id to the scopes it depends on (`wot_domain` depths 1–2 depend on both the graph and profile tags).
+3. **Reconciliation happens on the next initial load.** `PostStreamApplication.prepareStreamForInitialLoad` (run on feed mount and pull-to-refresh) checks the registry; a dirty stream has its main and unread cache rows dropped and rebuilds from Nexus.
+
+The mounted feed's React state is never touched — the reader keeps their position, the "N new posts" pill keeps polling against the intact cache head, and fresh membership appears when they navigate back or pull to refresh. Being in-memory, a dirty flag does not survive a hard reload; that staleness window is bounded by the `getStreamCacheMaxAgeMs()` cache max-age check on initial load.
 
 ## Quick Checklist
 

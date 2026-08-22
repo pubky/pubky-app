@@ -3,10 +3,8 @@ import type { TUserCountsOrFetchResult } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TFollowParams, TPubkyListParams } from '@/controllers/user/user.type';
 import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
-import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
@@ -18,9 +16,6 @@ import type {
   NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
-import { useAuthStore } from '@/stores/auth/auth.store';
-import { useHomeStore } from '@/stores/home/home.store';
-import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
 
 export class UserController {
   private constructor() {} // Prevent instantiation
@@ -177,48 +172,12 @@ export class UserController {
     const normalizedFollowee = stripPubkyPrefix(followee) as Pubky;
     const { meta, follow } = FollowNormalizer.to({ follower, followee: normalizedFollowee });
 
-    // Get active stream ID from store (controller layer responsibility)
-    const activeStreamId = this.getActiveStreamId();
-
     await UserApplication.commitFollow({
       eventType,
       followUrl: meta.url,
       followJson: follow.toJson(),
       follower,
       followee: normalizedFollowee,
-      activeStreamId,
     });
-  }
-
-  /**
-   * Gets the currently active stream ID from the home store if on /home route.
-   * This is a controller responsibility - controllers can access UI state stores.
-   *
-   * @returns The active stream ID, or null if not on /home route or if retrieval fails
-   */
-  private static getActiveStreamId(): PostStreamId | null {
-    if (typeof window === 'undefined' || window.location.pathname !== '/home') {
-      return null;
-    }
-
-    try {
-      const homeState = useHomeStore.getState();
-      const authState = useAuthStore.getState();
-      if (!homeState.hasHydrated || !authState.hasHydrated) {
-        return null;
-      }
-
-      return getHomeStreamIdFromFilters({
-        sort: homeState.sort,
-        reach: homeState.reach,
-        content: homeState.content,
-        currentUserPubky: authState.currentUserPubky,
-        profileTags: homeState.profileTags,
-        taggedAsActive: homeState.taggedAsActive,
-      });
-    } catch (error) {
-      Logger.warn('Failed to get active stream ID', { error });
-      return null;
-    }
   }
 }

@@ -268,7 +268,6 @@ export class UserApplication {
     followJson,
     follower,
     followee,
-    activeStreamId,
     signal,
   }: TUserApplicationFollowParams) {
     if (signal?.aborted) return;
@@ -283,9 +282,9 @@ export class UserApplication {
     if (signal?.aborted) return;
 
     if (eventType === HttpMethod.PUT) {
-      await LocalFollowService.create({ follower, followee, activeStreamId });
+      await LocalFollowService.create({ follower, followee });
     } else if (eventType === HttpMethod.DELETE) {
-      await LocalFollowService.delete({ follower, followee, activeStreamId });
+      await LocalFollowService.delete({ follower, followee });
     }
 
     if (signal?.aborted) return;
@@ -329,7 +328,6 @@ export class UserApplication {
         followJson: follow.toJson(),
         follower,
         followee: moderationId,
-        activeStreamId: undefined,
         signal,
       });
     }

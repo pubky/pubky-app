@@ -50,10 +50,9 @@ describe('UserApplication.commitFollow', () => {
       followJson,
       follower,
       followee,
-      activeStreamId: undefined,
     });
 
-    expect(createSpy).toHaveBeenCalledWith({ follower, followee, activeStreamId: undefined });
+    expect(createSpy).toHaveBeenCalledWith({ follower, followee });
     expect(deleteSpy).not.toHaveBeenCalled();
     expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.PUT, url: followUrl, bodyJson: followJson });
   });
@@ -69,10 +68,9 @@ describe('UserApplication.commitFollow', () => {
       followJson,
       follower,
       followee,
-      activeStreamId: undefined,
     });
 
-    expect(deleteSpy).toHaveBeenCalledWith({ follower, followee, activeStreamId: undefined });
+    expect(deleteSpy).toHaveBeenCalledWith({ follower, followee });
     expect(createSpy).not.toHaveBeenCalled();
     expect(requestSpy).toHaveBeenCalledWith({ method: HttpMethod.DELETE, url: followUrl, bodyJson: followJson });
   });
@@ -88,7 +86,6 @@ describe('UserApplication.commitFollow', () => {
       followJson,
       follower,
       followee,
-      activeStreamId: undefined,
     });
 
     expect(deleteSpy).toHaveBeenCalledOnce();
@@ -116,7 +113,6 @@ describe('UserApplication.commitFollow', () => {
       followJson,
       follower,
       followee,
-      activeStreamId: undefined,
     });
 
     expect(events).toEqual([`${HttpMethod.PUT}:${markerUrl}`, 'local-delete', `${HttpMethod.DELETE}:${followUrl}`]);
@@ -140,7 +136,6 @@ describe('UserApplication.commitFollow', () => {
         followJson,
         follower,
         followee,
-        activeStreamId: undefined,
       }),
     ).rejects.toBe(failure);
 
@@ -160,7 +155,6 @@ describe('UserApplication.commitFollow', () => {
       followJson,
       follower,
       followee,
-      activeStreamId: undefined,
     });
 
     expect(createSpy).not.toHaveBeenCalled();
@@ -179,7 +173,6 @@ describe('UserApplication.commitFollow', () => {
         followJson,
         follower,
         followee,
-        activeStreamId: undefined,
       }),
     ).rejects.toThrow('local-fail');
 
@@ -198,7 +191,6 @@ describe('UserApplication.commitFollow', () => {
         followJson,
         follower,
         followee,
-        activeStreamId: undefined,
       }),
     ).rejects.toThrow('local-delete-fail');
 
@@ -217,7 +209,6 @@ describe('UserApplication.commitFollow', () => {
         followJson,
         follower,
         followee,
-        activeStreamId: undefined,
       }),
     ).rejects.toThrow('homeserver-fail');
 
@@ -342,7 +333,7 @@ describe('UserApplication.ensureModerationFollow', () => {
       `${HttpMethod.PUT}:${followUrl}`,
       `${HttpMethod.PUT}:${markerUrl}`,
     ]);
-    expect(localCreate).toHaveBeenCalledWith({ follower, followee: moderationId, activeStreamId: undefined });
+    expect(localCreate).toHaveBeenCalledWith({ follower, followee: moderationId });
     expect(exists).toHaveBeenCalledTimes(2);
     expect(toJson).toHaveBeenCalledOnce();
     expect(request).toHaveBeenNthCalledWith(1, {
@@ -592,7 +583,6 @@ describe('UserApplication.ensureModerationFollow', () => {
       followJson,
       follower,
       followee: moderationId,
-      activeStreamId: undefined,
     });
     expect(markerExists).toBe(true);
     expect(followExists).toBe(false);
