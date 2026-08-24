@@ -33,7 +33,6 @@ export function PostInputActionBar({
   postButtonIcon,
   hideArticleButton,
   isArticle,
-  isEdit,
 }: PostInputActionBarProps) {
   const isMobile = useIsMobile();
   const getButtonDataCy = (ariaLabel: string) => `post-input-action-bar-${ariaLabel.toLowerCase().replace(' ', '-')}`;
@@ -55,7 +54,7 @@ export function PostInputActionBar({
             <ActionButtonContent Icon={Smile} />
           </Button>
         ) : null}
-        {!isArticle && !isEdit ? (
+        {!isArticle ? (
           <Button
             data-cy={getButtonDataCy('Add image')}
             {...COMMON_BUTTON_PROPS}

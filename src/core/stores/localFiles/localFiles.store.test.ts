@@ -156,6 +156,73 @@ describe('LocalFilesStore', () => {
       useLocalFilesStore.getState().setPostAttachments(postId, attachments);
       expect(revokeObjectURLSpy).not.toHaveBeenCalled();
     });
+
+    describe('set-difference revoke (edit reuses previous blob URLs)', () => {
+      it('should not revoke a main URL that is reused in the incoming list', () => {
+        const reused = createMockAttachment('blob:http://localhost/reused');
+        const dropped = createMockAttachment('blob:http://localhost/dropped');
+
+        useLocalFilesStore.getState().setPostAttachments(postId, [reused, dropped]);
+        revokeObjectURLSpy.mockClear();
+
+        useLocalFilesStore
+          .getState()
+          .setPostAttachments(postId, [reused, createMockAttachment('blob:http://localhost/new')]);
+
+        expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:http://localhost/dropped');
+        expect(revokeObjectURLSpy).not.toHaveBeenCalledWith('blob:http://localhost/reused');
+        expect(revokeObjectURLSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('should keep a previous main URL alive when the incoming list reuses it as a feed URL', () => {
+        useLocalFilesStore
+          .getState()
+          .setPostAttachments(postId, [createMockAttachment('blob:http://localhost/shared')]);
+        revokeObjectURLSpy.mockClear();
+
+        useLocalFilesStore
+          .getState()
+          .setPostAttachments(postId, [
+            createMockAttachment('blob:http://localhost/main-new', 'blob:http://localhost/shared'),
+          ]);
+
+        expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+      });
+
+      it('should revoke every previous URL when the incoming list is all-new (create path)', () => {
+        useLocalFilesStore
+          .getState()
+          .setPostAttachments(postId, [
+            createMockAttachment('blob:http://localhost/prev1'),
+            createMockAttachment('blob:http://localhost/prev2'),
+          ]);
+        revokeObjectURLSpy.mockClear();
+
+        useLocalFilesStore
+          .getState()
+          .setPostAttachments(postId, [
+            createMockAttachment('blob:http://localhost/next1'),
+            createMockAttachment('blob:http://localhost/next2'),
+          ]);
+
+        expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:http://localhost/prev1');
+        expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:http://localhost/prev2');
+        expect(revokeObjectURLSpy).toHaveBeenCalledTimes(2);
+      });
+
+      it('should not revoke reused non-blob URLs and still skip revoking dropped non-blob URLs', () => {
+        const keptRemote = createMockAttachment('https://example.com/kept.png');
+        const droppedRemote = createMockAttachment('https://example.com/dropped.png');
+
+        useLocalFilesStore.getState().setPostAttachments(postId, [keptRemote, droppedRemote]);
+        revokeObjectURLSpy.mockClear();
+
+        useLocalFilesStore.getState().setPostAttachments(postId, [keptRemote]);
+
+        // Dropped remote URL is outside the incoming set but is not a blob: URL
+        expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('setCollectionCover', () => {

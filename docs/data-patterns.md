@@ -170,8 +170,9 @@ export class PostNormalizer {
     }
   }
 
-  // Edit an existing post
-  static async toEdit({ compositePostId, content, currentUserPubky }): Promise<PostResult> {
+  // Edit an existing post. `builder.editPost` swaps content only, so optional
+  // attachment/kind changes ride on the reconstructed original post.
+  static async toEdit({ compositePostId, content, currentUserPubky, attachments, kind }): Promise<PostResult> {
     const builder = PubkySpecsSingleton.get(authorId);
     return builder.editPost(originalPost, postId, content);
   }

@@ -10,6 +10,7 @@ import {
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
+import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { Logger } from '@/libs/logger/logger';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -30,6 +31,7 @@ const REAL_PLACEHOLDERS = {
 const mockSetContent = vi.fn();
 const mockSetTags = vi.fn();
 const mockSetAttachments = vi.fn();
+const mockSetExistingAttachments = vi.fn();
 const mockSetIsArticle = vi.fn();
 const mockSetArticleTitle = vi.fn();
 const mockReply = vi.fn();
@@ -39,9 +41,19 @@ const mockEdit = vi.fn();
 let mockContent = '';
 let mockTags: string[] = [];
 let mockAttachments: File[] = [];
+let mockExistingAttachments: ExistingAttachment[] = [];
 let mockIsArticle = false;
 let mockArticleTitle = '';
 let mockIsSubmitting = false;
+
+// Factory for the existing (already-persisted) attachments an edit session starts with
+const mockExistingAttachment = (uri: string, overrides?: Partial<ExistingAttachment>): ExistingAttachment => ({
+  uri,
+  type: 'image/png',
+  name: uri.split('/').pop() ?? 'file',
+  urls: { main: `blob:existing-${uri.split('/').pop()}` },
+  ...overrides,
+});
 
 const mockDeletePost = vi.fn();
 
@@ -60,6 +72,8 @@ vi.mock('@/hooks/usePost/usePost', () => ({
     setTags: mockSetTags,
     attachments: mockAttachments,
     setAttachments: mockSetAttachments,
+    existingAttachments: mockExistingAttachments,
+    setExistingAttachments: mockSetExistingAttachments,
     isArticle: mockIsArticle,
     setIsArticle: mockSetIsArticle,
     articleTitle: mockArticleTitle,
@@ -70,6 +84,12 @@ vi.mock('@/hooks/usePost/usePost', () => ({
     edit: mockEdit,
     isSubmitting: mockIsSubmitting,
   })),
+}));
+
+// Seeding/resolution of existing attachments is covered by useEditAttachments' own tests.
+// The real hook seeds from `uris` and snapshots them as `seededUris` — mirror that here.
+vi.mock('@/hooks/useEditAttachments/useEditAttachments', () => ({
+  useEditAttachments: vi.fn(({ uris }: { uris?: string[] }) => ({ seededUris: uris })),
 }));
 
 vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
@@ -148,6 +168,7 @@ describe('usePostInput', () => {
     mockContent = '';
     mockTags = [];
     mockAttachments = [];
+    mockExistingAttachments = [];
     mockIsArticle = false;
     mockArticleTitle = '';
     mockIsSubmitting = false;
@@ -486,8 +507,32 @@ describe('usePostInput', () => {
       expect(mockRepost).not.toHaveBeenCalled();
     });
 
-    it('does not submit edit when content is empty', async () => {
+    it('passes the seeded attachment snapshot to edit as originalAttachmentUris', async () => {
+      mockContent = 'Updated post content';
+      const editAttachmentUris = ['pubky://user/pub/pubky.app/files/F1', 'pubky://user/pub/pubky.app/files/F2'];
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editAttachmentUris,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockEdit).toHaveBeenCalledWith({
+        editPostId: 'post-to-edit-id',
+        originalAttachmentUris: editAttachmentUris,
+        onSuccess: expect.any(Function),
+      });
+    });
+
+    it('does not submit edit when content is empty and no attachments remain', async () => {
       mockContent = '';
+      mockExistingAttachments = [];
 
       const { result } = renderHook(() =>
         usePostInput({
@@ -503,7 +548,7 @@ describe('usePostInput', () => {
       expect(mockEdit).not.toHaveBeenCalled();
     });
 
-    it('does not submit edit when content is only whitespace', async () => {
+    it('does not submit edit when content is only whitespace and no attachments remain', async () => {
       mockContent = '   \n\t  ';
 
       const { result } = renderHook(() =>
@@ -518,6 +563,48 @@ describe('usePostInput', () => {
       });
 
       expect(mockEdit).not.toHaveBeenCalled();
+    });
+
+    it('submits edit with empty content when existing attachments remain', async () => {
+      mockContent = '';
+      mockExistingAttachments = [mockExistingAttachment('pubky://user/pub/pubky.app/files/F1')];
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editAttachmentUris: ['pubky://user/pub/pubky.app/files/F1'],
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockEdit).toHaveBeenCalledWith({
+        editPostId: 'post-to-edit-id',
+        originalAttachmentUris: ['pubky://user/pub/pubky.app/files/F1'],
+        onSuccess: expect.any(Function),
+      });
+    });
+
+    it('submits edit with empty content when new attachments were added', async () => {
+      mockContent = '';
+      mockAttachments = [new File(['test'], 'test.png', { type: 'image/png' })];
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editAttachmentUris: [],
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockEdit).toHaveBeenCalled();
     });
 
     it('allows repost with empty content', async () => {
@@ -1109,6 +1196,105 @@ describe('usePostInput', () => {
       // But onSuccess should still be called
       expect(mockOnSuccess).toHaveBeenCalledWith('edited-post-id');
     });
+
+    describe('edit success local files store write', () => {
+      beforeEach(() => {
+        mockEdit.mockImplementation(async ({ onSuccess }) => {
+          onSuccess('edited-post-id');
+        });
+      });
+
+      it('merges kept attachments (urls verbatim) with new files (fresh object URLs)', async () => {
+        mockContent = 'Updated post content';
+        mockExistingAttachments = [
+          mockExistingAttachment('pubky://user/pub/pubky.app/files/F1', {
+            type: 'image/png',
+            name: 'kept.png',
+            urls: { main: 'blob:kept-main', feed: 'blob:kept-feed' },
+          }),
+        ];
+        const newImage = new File(['image'], 'new-image.png', { type: 'image/png' });
+        const newVideo = new File(['video'], 'new-video.mp4', { type: 'video/mp4' });
+        mockAttachments = [newImage, newVideo];
+
+        const mockOnSuccess = vi.fn();
+        const { result } = renderHook(() =>
+          usePostInput({
+            variant: 'edit',
+            editPostId: 'post-to-edit-id',
+            onSuccess: mockOnSuccess,
+          }),
+        );
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockSetPostAttachments).toHaveBeenCalledWith('edited-post-id', [
+          {
+            type: 'image/png',
+            name: 'kept.png',
+            urls: { main: 'blob:kept-main', feed: 'blob:kept-feed' },
+          },
+          {
+            type: 'image/png',
+            name: 'new-image.png',
+            urls: { main: 'blob:new-image.png', feed: 'blob:new-image.png' },
+          },
+          {
+            type: 'video/mp4',
+            name: 'new-video.mp4',
+            urls: { main: 'blob:new-video.mp4', feed: undefined },
+          },
+        ]);
+        expect(mockOnSuccess).toHaveBeenCalledWith('edited-post-id');
+      });
+
+      it('writes an empty list when everything was removed and nothing added', async () => {
+        mockContent = 'Updated post content';
+        mockExistingAttachments = [];
+        mockAttachments = [];
+
+        const { result } = renderHook(() =>
+          usePostInput({
+            variant: 'edit',
+            editPostId: 'post-to-edit-id',
+            editAttachmentUris: ['pubky://user/pub/pubky.app/files/F1'],
+          }),
+        );
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockSetPostAttachments).toHaveBeenCalledWith('edited-post-id', []);
+        expect(mockCreateObjectURL).not.toHaveBeenCalled();
+      });
+
+      it('clears the store entry instead of merging when a kept attachment never resolved', async () => {
+        mockContent = 'Updated post content';
+        mockExistingAttachments = [
+          mockExistingAttachment('pubky://user/pub/pubky.app/files/F1', { urls: null }),
+          mockExistingAttachment('pubky://user/pub/pubky.app/files/F2'),
+        ];
+        mockAttachments = [new File(['image'], 'new-image.png', { type: 'image/png' })];
+
+        const { result } = renderHook(() =>
+          usePostInput({
+            variant: 'edit',
+            editPostId: 'post-to-edit-id',
+          }),
+        );
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(mockSetPostAttachments).toHaveBeenCalledWith('edited-post-id', []);
+        // The new file's object URL is never created when falling back to []
+        expect(mockCreateObjectURL).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('onContentChange callback', () => {
@@ -1122,16 +1308,17 @@ describe('usePostInput', () => {
         }),
       );
 
-      // The effect runs on mount with initial content, tags, attachments, and articleTitle
-      expect(mockOnContentChange).toHaveBeenCalledWith('', [], [], '');
+      // The effect runs on mount with initial content, tags, attachments, articleTitle, and existingAttachments
+      expect(mockOnContentChange).toHaveBeenCalledWith('', [], [], '', []);
     });
 
-    it('calls onContentChange with updated content, tags, attachments, and articleTitle', () => {
+    it('calls onContentChange with updated content, tags, attachments, articleTitle, and existingAttachments', () => {
       const mockOnContentChange = vi.fn();
       mockContent = 'Updated content';
       mockTags = ['tag1', 'tag2'];
       mockAttachments = [new File(['test'], 'test.png', { type: 'image/png' })];
       mockArticleTitle = 'Test Article Title';
+      mockExistingAttachments = [mockExistingAttachment('pubky://user/pub/pubky.app/files/F1')];
 
       renderHook(() =>
         usePostInput({
@@ -1145,6 +1332,7 @@ describe('usePostInput', () => {
         ['tag1', 'tag2'],
         mockAttachments,
         'Test Article Title',
+        mockExistingAttachments,
       );
     });
 
@@ -1677,6 +1865,44 @@ describe('usePostInput', () => {
 
       expect(result.current.setAttachments).toBe(mockSetAttachments);
     });
+
+    it('exposes existingAttachments and setExistingAttachments from usePost', () => {
+      mockExistingAttachments = [mockExistingAttachment('pubky://user/pub/pubky.app/files/F1')];
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+        }),
+      );
+
+      expect(result.current.existingAttachments).toBe(mockExistingAttachments);
+      expect(result.current.setExistingAttachments).toBe(mockSetExistingAttachments);
+    });
+  });
+
+  describe('removeExistingAttachment', () => {
+    it('filters the removed uri out of existingAttachments', () => {
+      const kept = mockExistingAttachment('pubky://user/pub/pubky.app/files/F1');
+      const removed = mockExistingAttachment('pubky://user/pub/pubky.app/files/F2');
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+        }),
+      );
+
+      act(() => {
+        result.current.removeExistingAttachment(removed.uri);
+      });
+
+      expect(mockSetExistingAttachments).toHaveBeenCalledTimes(1);
+      const updater = mockSetExistingAttachments.mock.calls[0][0] as (
+        prev: ExistingAttachment[],
+      ) => ExistingAttachment[];
+      expect(updater([kept, removed])).toEqual([kept]);
+    });
   });
 
   describe('article state', () => {
@@ -2079,6 +2305,63 @@ describe('usePostInput', () => {
       });
     });
 
+    it('counts existing attachments against the maximum and accepts only the remaining slots', () => {
+      // 8 existing attachments on the post being edited → only 2 slots remain
+      mockExistingAttachments = Array.from({ length: POST_ATTACHMENT_MAX_FILES - 2 }, (_, i) =>
+        mockExistingAttachment(`pubky://user/pub/pubky.app/files/F${i}`),
+      );
+      mockAttachments = [];
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+        }),
+      );
+
+      const files = Array.from({ length: 3 }, (_, i) => new File([`${i}`], `new-${i}.png`, { type: 'image/png' }));
+
+      act(() => {
+        result.current.handleFilesAdded(files);
+      });
+
+      // Only 2 of the 3 files fit
+      expect(mockSetAttachments).toHaveBeenCalledTimes(1);
+      const updater = mockSetAttachments.mock.calls[0][0] as (prev: File[]) => File[];
+      expect(updater([])).toEqual([files[0], files[1]]);
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: expect.stringContaining(`Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`),
+      });
+    });
+
+    it('rejects new files when existing and new attachments already reach the maximum', () => {
+      mockExistingAttachments = Array.from({ length: 4 }, (_, i) =>
+        mockExistingAttachment(`pubky://user/pub/pubky.app/files/F${i}`),
+      );
+      mockAttachments = Array.from(
+        { length: POST_ATTACHMENT_MAX_FILES - 4 },
+        (_, i) => new File([`${i}`], `${i}.png`, { type: 'image/png' }),
+      );
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+        }),
+      );
+
+      act(() => {
+        result.current.handleFilesAdded([new File(['test'], 'test.png', { type: 'image/png' })]);
+      });
+
+      expect(mockSetAttachments).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: `Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`,
+      });
+    });
+
     it('shows multiple errors with "Errors" title', () => {
       const { result } = renderHook(() =>
         usePostInput({
@@ -2404,6 +2687,29 @@ describe('usePostInput', () => {
 
       act(() => {
         result.current.handleFilesAdded([newFile]);
+      });
+
+      expect(mockSetAttachments).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith({
+        variant: 'error',
+        description: `Maximum ${ARTICLE_ATTACHMENT_MAX_FILES} files allowed`,
+      });
+    });
+
+    it('rejects adding a cover when an existing article cover remains', () => {
+      mockIsArticle = true;
+      mockAttachments = [];
+      mockExistingAttachments = [mockExistingAttachment('pubky://user/pub/pubky.app/files/COVER')];
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+        }),
+      );
+
+      act(() => {
+        result.current.handleFilesAdded([new File(['test'], 'test.png', { type: 'image/png' })]);
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();

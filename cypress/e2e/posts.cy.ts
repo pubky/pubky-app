@@ -121,6 +121,60 @@ describe('posts', () => {
     });
   });
 
+  it('can edit a post to change and then remove its image', () => {
+    const postContent = `I can edit this post's image! ${Date.now()}`;
+    createQuickPostWithImage(postContent);
+
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-text"]').should('contain.text', postContent);
+      cy.get('img').should('be.visible');
+    });
+
+    // Local blob URLs stay cached until reload; the unique static URL is only
+    // available after a refresh, so capture that before replacing the image.
+    cy.reload();
+    cy.findFirstPostInFeedFiltered(postContent).within(() => {
+      cy.get('[data-cy="post-text"]').should('contain.text', postContent);
+      cy.get('img')
+        .should('be.visible')
+        .and(($img) => {
+          expect($img.attr('src')).to.not.include('blob:');
+        })
+        .invoke('attr', 'src')
+        .as('originalImageSrc');
+    });
+
+    editPost({
+      filterText: postContent,
+      imageAction: { action: 'replace' },
+    });
+
+    cy.reload();
+    cy.get('@originalImageSrc').then((originalImageSrc) => {
+      cy.findFirstPostInFeedFiltered(postContent).within(() => {
+        cy.get('[data-cy="post-text"]').should('contain.text', postContent);
+        cy.get('img')
+          .should('be.visible')
+          .and(($img) => {
+            expect($img.attr('src')).to.not.equal(String(originalImageSrc));
+          });
+      });
+    });
+
+    editPost({ filterText: postContent, imageAction: { action: 'remove' } });
+
+    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-text"]').should('contain.text', postContent);
+      cy.get('img').should('not.exist');
+    });
+
+    cy.reload();
+    cy.findFirstPostInFeedFiltered(postContent).within(() => {
+      cy.get('[data-cy="post-text"]').should('contain.text', postContent);
+      cy.get('img').should('not.exist');
+    });
+  });
+
   it('can post with embedded link', () => {
     const link = 'https://www.youtube.com/watch?v=989-7xsRLR4';
     const embedId = '989-7xsRLR4';
@@ -634,6 +688,8 @@ describe('posts', () => {
   it.skip('can create an article from quick post box');
   it.skip('can create an article from new post');
   it.skip('new article modal is shown infront of new post modal'); // cover bug from pubky-app
+  it.skip('can edit an article');
+  it.skip('can edit an article to change and then remove its image');
 
   // todo: check if we want this functionality
   it.skip('signout when 401 response from homeserver when creating new post');

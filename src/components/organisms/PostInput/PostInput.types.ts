@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
@@ -31,8 +32,14 @@ interface PostInputBaseProps {
    * @default false
    */
   expanded?: boolean;
-  /** Callback when content, tags, attachments, or article title change, receives content, tags, attachments, and article title */
-  onContentChange?: (content: string, tags: string[], attachments: File[], articleTitle: string) => void;
+  /** Callback when content, tags, attachments, article title, or existing attachments (edit variant) change */
+  onContentChange?: (
+    content: string,
+    tags: string[],
+    attachments: File[],
+    articleTitle: string,
+    existingAttachments?: ExistingAttachment[],
+  ) => void;
   /** Callback when article mode changes */
   onArticleModeChange?: (isArticle: boolean) => void;
   /** Data Cy for the post input */
@@ -73,6 +80,7 @@ export type PostInputProps =
       editPostId?: never;
       editContent?: never;
       editIsArticle?: never;
+      editAttachments?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: repost */
@@ -83,6 +91,7 @@ export type PostInputProps =
       editPostId?: never;
       editContent?: never;
       editIsArticle?: never;
+      editAttachments?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: new root post */
@@ -92,6 +101,7 @@ export type PostInputProps =
       editPostId?: never;
       editContent?: never;
       editIsArticle?: never;
+      editAttachments?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: edit post */
@@ -104,4 +114,11 @@ export type PostInputProps =
       editContent: string;
       /** Editable article mode (required for edit) */
       editIsArticle: boolean;
+      /**
+       * The post's current attachment URIs, in display order (required for
+       * edit — pass `[]` for a post without attachments). Omitting it would
+       * make an attachment-adding edit silently drop the post's existing
+       * attachments, so the type forces every edit surface to provide it.
+       */
+      editAttachments: string[];
     });

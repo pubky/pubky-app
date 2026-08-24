@@ -1,5 +1,6 @@
 import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import type { RefObject } from 'react';
+import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
@@ -13,6 +14,8 @@ export interface UsePostInputOptions {
   originalPostId?: string;
   /** Optional edit post ID (required if variant is 'edit') */
   editPostId?: string;
+  /** The post's current attachment URIs (edit variant only) */
+  editAttachmentUris?: string[];
   /** Callback after successful post, receives the created post ID */
   onSuccess?: (createdPostId: string) => void;
   /** Custom placeholder text */
@@ -28,7 +31,13 @@ export interface UsePostInputOptions {
    */
   expanded?: boolean;
   /** Callback when content, tags, attachments, or article title change */
-  onContentChange?: (content: string, tags: string[], attachments: File[], articleTitle: string) => void;
+  onContentChange?: (
+    content: string,
+    tags: string[],
+    attachments: File[],
+    articleTitle: string,
+    existingAttachments?: ExistingAttachment[],
+  ) => void;
   /** Callback when article mode changes */
   onArticleModeChange?: (isArticle: boolean) => void;
 }
@@ -47,6 +56,8 @@ export interface UsePostInputReturn {
   setTags: React.Dispatch<React.SetStateAction<string[]>>;
   attachments: File[];
   setAttachments: React.Dispatch<React.SetStateAction<File[]>>;
+  existingAttachments: ExistingAttachment[];
+  setExistingAttachments: React.Dispatch<React.SetStateAction<ExistingAttachment[]>>;
   isArticle: boolean;
   setIsArticle: React.Dispatch<React.SetStateAction<boolean>>;
   articleTitle: string;
@@ -79,6 +90,7 @@ export interface UsePostInputReturn {
   handleEmojiSelect: (emoji: { native: string }) => void;
   handleFilesAdded: (files: File[]) => void;
   handleFileClick: () => void;
+  removeExistingAttachment: (uri: string) => void;
   handleDragEnter: (e: React.DragEvent) => void;
   handleDragLeave: (e: React.DragEvent) => void;
   handleDragOver: (e: React.DragEvent) => void;

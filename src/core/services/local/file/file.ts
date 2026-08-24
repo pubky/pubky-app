@@ -26,6 +26,28 @@ export class LocalFileService {
   }
 
   /**
+   * Whether any cached file record outside `excludeFileIds` points at `blobSrc`.
+   *
+   * Blob ids are content hashes, so byte-identical uploads share one blob —
+   * deletion must skip blobs still referenced by surviving records. This is
+   * local-only knowledge: sibling records never cached on this device are not
+   * seen (the complete fix is homeserver-side ref-counting, tracked as a
+   * follow-up).
+   */
+  static async hasOtherBlobReference({
+    blobSrc,
+    excludeFileIds,
+  }: {
+    blobSrc: string;
+    excludeFileIds: Set<string>;
+  }): Promise<boolean> {
+    const other = await FileDetailsModel.table
+      .filter((file) => file.src === blobSrc && !excludeFileIds.has(file.id))
+      .first();
+    return other !== undefined;
+  }
+
+  /**
    * Creates a new file record in the local database.
    * Instead of wait nexus to index the file, we create the file record immediately hardcoding the urls.
    * NOTE: In the future, if we store the files in another server, the urls might be different,
