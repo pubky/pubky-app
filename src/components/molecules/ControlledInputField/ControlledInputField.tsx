@@ -20,6 +20,7 @@ export function ControlledInputField<T extends FieldValues>({
   iconPosition,
   iconClassName,
   onClickIcon,
+  iconAriaLabel,
   disabled = false,
   loading = false,
   loadingText,
@@ -47,6 +48,7 @@ export function ControlledInputField<T extends FieldValues>({
           iconPosition={iconPosition}
           iconClassName={iconClassName}
           onClickIcon={onClickIcon}
+          iconAriaLabel={iconAriaLabel}
           disabled={disabled}
           loading={loading}
           loadingText={loadingText}

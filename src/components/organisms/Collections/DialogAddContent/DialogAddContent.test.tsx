@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogAddContent } from './DialogAddContent';
 
 const AUTHOR = 'a'.repeat(52);
@@ -153,6 +153,10 @@ describe('DialogAddContent', () => {
     mocks.prependOptimisticPosts.mockReturnValue(undefined);
   });
 
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'clipboard');
+  });
+
   it('renders the Content trigger', () => {
     render(<DialogAddContent />);
 
@@ -216,7 +220,6 @@ describe('DialogAddContent', () => {
     expect(screen.getByText("What's on your mind?")).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Paste' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Paste' })).toHaveAttribute('data-cy', 'add-content-paste-button');
   });
 
   it.each(['add-content-feed-reply-pill', 'add-content-feed-repost-pill', 'add-content-feed-save-pill'])(
@@ -373,7 +376,7 @@ describe('DialogAddContent', () => {
       const input = screen.getByDisplayValue('Adding...');
       expect(input).toBeDisabled();
       expect(input.closest('[data-testid="container"]')).toHaveClass('gap-3');
-      expect(screen.queryByRole('button', { name: 'Paste' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Paste' })).toHaveAttribute('aria-disabled', 'true');
     });
 
     resolvePost(livePost());

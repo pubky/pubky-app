@@ -76,7 +76,7 @@ describe('ControlledInputField', () => {
     expect(handlePaste).toHaveBeenCalled();
   });
 
-  it('forwards icon clicks', () => {
+  it('forwards icon clicks through an accessible icon button', () => {
     const handleClickIcon = vi.fn();
 
     render(
@@ -89,12 +89,13 @@ describe('ControlledInputField', () => {
             icon={<span>icon</span>}
             iconPosition="right"
             onClickIcon={handleClickIcon}
+            iconAriaLabel="Icon action"
           />
         )}
       </TestWrapper>,
     );
 
-    fireEvent.click(screen.getByText('icon'));
+    fireEvent.click(screen.getByRole('button', { name: 'Icon action' }));
 
     expect(handleClickIcon).toHaveBeenCalledTimes(1);
   });
