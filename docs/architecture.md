@@ -202,11 +202,11 @@ class PostApplication {
 }
 
 // GOOD — controller manages store, application handles IO
-// Real: src/core/controllers/user/user.ts
-class UserController {
-  static async commitFollow(eventType, { follower, followee }) {
-    const activeStreamId = this.getActiveStreamId(); // Controller reads store
-    await UserApplication.commitFollow({ eventType, follower, followee, activeStreamId });
+// Real: src/core/controllers/stream/posts/posts.ts
+class PostStreamController {
+  static async getOrFetchStreamSlice(params) {
+    const viewerId = useAuthStore.getState().currentUserPubky; // Controller reads store
+    return await PostStreamApplication.getOrFetchStreamSlice({ ...params, viewerId });
   }
 }
 ```
