@@ -890,6 +890,24 @@ describe('PostText', () => {
       expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
     });
 
+    it('keeps the inline more button when character truncation ends inside a fenced code block', () => {
+      const hiddenCode = 'const hiddenMarker = true;';
+      const content = ['```typescript', generateContent(TRUNCATION_LIMIT + 100), hiddenCode, '```'].join('\n');
+      const { container } = render(<PostText content={content} />);
+
+      const codeBlock = screen.getByTestId('post-code-block');
+      const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
+      expect(codeBlock).not.toHaveTextContent('...\u00a0');
+      expect(showMoreButton.parentElement).toHaveProperty('tagName', 'P');
+      expect(showMoreButton.previousSibling?.textContent).toBe('...\u00a0');
+      expect(container.textContent).not.toContain(hiddenCode);
+
+      fireEvent.click(showMoreButton);
+
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(container.textContent).toContain(hiddenCode);
+    });
+
     it('does not show Show more when blank markdown separators push raw lines over the line limit', () => {
       const content = ['ad', '', '', '', '', '', 'da'].join('\n');
       render(<PostText content={content} />);

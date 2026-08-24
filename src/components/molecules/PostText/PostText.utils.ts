@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import type {
   Blockquote,
+  Code,
   Heading,
   Link,
   List,
@@ -250,19 +251,8 @@ export const remarkMentions = createPatternPlugin({
   dataType: 'mention',
 });
 
-export const remarkInlineShowMore = () => (tree: Root) => {
-  const truncatedParagraphs: (Paragraph | Heading)[] = [];
-
-  visit(tree, (node) => {
-    if ((node.type === 'paragraph' || node.type === 'heading') && extractText(node).endsWith(TRUNCATION_ELLIPSIS)) {
-      truncatedParagraphs.push(node);
-    }
-  });
-
-  const truncatedParagraph = truncatedParagraphs.at(-1);
-  if (!truncatedParagraph) return;
-
-  truncatedParagraph.children.push({
+const createInlineShowMoreButton = (): Text =>
+  ({
     type: 'text',
     value: 'more',
     data: {
@@ -272,7 +262,49 @@ export const remarkInlineShowMore = () => (tree: Root) => {
         type: 'button',
       },
     },
-  } as Text);
+  }) as Text;
+
+type InlineShowMoreTarget =
+  | { type: 'inline'; node: Paragraph | Heading }
+  | { type: 'code'; node: Code; index: number; parent: Parent };
+
+export const remarkInlineShowMore = () => (tree: Root) => {
+  const targets: InlineShowMoreTarget[] = [];
+
+  visit(tree, (node, index, parent) => {
+    if ((node.type === 'paragraph' || node.type === 'heading') && extractText(node).endsWith(TRUNCATION_ELLIPSIS)) {
+      targets.push({ type: 'inline', node });
+    }
+
+    if (
+      node.type === 'code' &&
+      extractText(node).endsWith(TRUNCATION_ELLIPSIS) &&
+      typeof index === 'number' &&
+      parent
+    ) {
+      targets.push({ type: 'code', node, index, parent });
+    }
+  });
+
+  const target = targets.at(-1);
+  if (!target) return;
+
+  if (target.type === 'inline') {
+    target.node.children.push(createInlineShowMoreButton());
+    return;
+  }
+
+  target.node.value = target.node.value.slice(0, -TRUNCATION_ELLIPSIS.length);
+  target.parent.children.splice(target.index + 1, 0, {
+    type: 'paragraph',
+    children: [
+      {
+        type: 'text',
+        value: TRUNCATION_ELLIPSIS,
+      } as Text,
+      createInlineShowMoreButton(),
+    ],
+  } as Paragraph);
 };
 
 // Extract text safely - children from remark is typically a text node

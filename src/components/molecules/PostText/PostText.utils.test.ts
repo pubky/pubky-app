@@ -8,6 +8,7 @@ import {
   remarkDisallowMarkdownLinks,
   remarkExtractFirstParagraph,
   remarkHashtags,
+  remarkInlineShowMore,
   remarkMentions,
   remarkPlaintextCodeblock,
   truncateAtWordBoundary,
@@ -74,6 +75,53 @@ describe('remarkPlaintextCodeblock', () => {
     expect(codeBlock1.lang).toBe('plaintext');
     expect(codeBlock2.lang).toBe('python');
     expect(codeBlock3.lang).toBe('plaintext');
+  });
+});
+
+describe('remarkInlineShowMore', () => {
+  it('appends the more button to a truncated paragraph', () => {
+    const paragraph = createParagraph('Truncated...\u00a0');
+    const tree = createRoot([paragraph]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(paragraph.children.at(-1)).toMatchObject({
+      type: 'text',
+      value: 'more',
+      data: {
+        hName: 'button',
+        hProperties: {
+          'aria-label': 'Show full post content',
+          type: 'button',
+        },
+      },
+    });
+  });
+
+  it('moves a code-block ellipsis into a paragraph with the more button', () => {
+    const codeBlock: Code = { type: 'code', value: 'const value = true;...\u00a0', lang: 'typescript' };
+    const tree = createRoot([codeBlock]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(codeBlock.value).toBe('const value = true;');
+    expect(tree.children[1]).toMatchObject({
+      type: 'paragraph',
+      children: [
+        { type: 'text', value: '...\u00a0' },
+        {
+          type: 'text',
+          value: 'more',
+          data: {
+            hName: 'button',
+            hProperties: {
+              'aria-label': 'Show full post content',
+              type: 'button',
+            },
+          },
+        },
+      ],
+    });
   });
 });
 
