@@ -1,5 +1,5 @@
-// Consumed by `OwnProfile.vrt.test.tsx` for the Profile Tagged tab
-// (`useTagged` — tags other users have applied to Alice's profile).
+// Consumed by `Profile.vrt.test.tsx` for the Profile Tagged tab and
+// the other-user profile sidebar (`useTagged`).
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import { VRT_AUTHOR_PROFILES, VRT_AUTHOR_PUBKYS } from '../feed/profiles';
 
@@ -42,6 +42,28 @@ export const VRT_PROFILE_TAGGED_TAGS: readonly TagWithAvatars[] = [
   },
   {
     label: 'mentor',
+    taggers: [tagger('fynn')],
+    taggers_count: 1,
+    relationship: false,
+  },
+];
+
+/** Tags applied to Bran's profile — sidebar on the other-user Posts tab. */
+export const VRT_OTHER_PROFILE_TAGGED_TAGS: readonly TagWithAvatars[] = [
+  {
+    label: 'distsys',
+    taggers: [tagger('alice'), tagger('eira'), tagger('glen')],
+    taggers_count: 3,
+    relationship: true,
+  },
+  {
+    label: 'bitcoin',
+    taggers: [tagger('alice'), tagger('cleo')],
+    taggers_count: 2,
+    relationship: false,
+  },
+  {
+    label: 'coldbrew',
     taggers: [tagger('fynn')],
     taggers_count: 1,
     relationship: false,

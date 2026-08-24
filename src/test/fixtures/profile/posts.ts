@@ -1,4 +1,5 @@
-// Consumed by `OwnProfile.vrt.test.tsx` for the Posts and Replies tabs.
+// Consumed by `Profile.vrt.test.tsx` for own-profile Posts/Replies and
+// the other-user Posts tab.
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import type { NexusPostCounts, NexusPostDetails, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
@@ -188,6 +189,50 @@ export const VRT_PROFILE_REPLIES: readonly VRTProfilePostFixture[] = [
   }),
 ];
 
+/** Bran's posts — feeds the other-user Profile Posts tab (`author:{pubky}` stream). */
+export const VRT_OTHER_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
+  post({
+    author: VRT_AUTHOR_PUBKYS.bran,
+    postId: '0VRTOTHERPOST00001',
+    content: 'Consensus is a social protocol that happens to have a machine-checkable appendix. Cold brew helps both.',
+    kind: 'short',
+    agoMs: 25 * MINUTE_MS,
+    counts: { tags: 6, unique_tags: 3, replies: 8, reposts: 2 },
+    tags: [
+      { label: 'distsys', taggers: [VRT_AUTHOR_PUBKYS.alice], taggers_count: 4, relationship: true },
+      { label: 'bitcoin', taggers: [VRT_AUTHOR_PUBKYS.eira], taggers_count: 2, relationship: false },
+    ],
+  }),
+  post({
+    author: VRT_AUTHOR_PUBKYS.bran,
+    postId: '0VRTOTHERPOST00002',
+    content: 'Still the best primer I have on quorum-shift failures: https://example.com/papers/quorum-shift',
+    kind: 'link',
+    agoMs: 14 * HOUR_MS,
+    counts: { tags: 3, unique_tags: 2, replies: 1, reposts: 0 },
+    tags: [{ label: 'reading', taggers: [VRT_AUTHOR_PUBKYS.dion], taggers_count: 2, relationship: false }],
+  }),
+  post({
+    author: VRT_AUTHOR_PUBKYS.bran,
+    postId: '0VRTOTHERPOST00003',
+    content:
+      'Notes from last night’s partition drill: the replica that “won” had the stale clock, the one that lagged had the truth, and the clients split the difference until we forced a view change. Write-up incoming.',
+    kind: 'long',
+    agoMs: 2 * 24 * HOUR_MS,
+    counts: { tags: 4, unique_tags: 2, replies: 3, reposts: 1 },
+    tags: [{ label: 'distsys', taggers: [VRT_AUTHOR_PUBKYS.glen], taggers_count: 3, relationship: false }],
+  }),
+  post({
+    author: VRT_AUTHOR_PUBKYS.bran,
+    postId: '0VRTOTHERPOST00004',
+    content: 'If your mempool is a mood, mine is currently “retry with backoff”.',
+    kind: 'short',
+    agoMs: 4 * 24 * HOUR_MS,
+    counts: { tags: 1, unique_tags: 1, replies: 0, reposts: 0 },
+    tags: [{ label: 'bitcoin', taggers: [VRT_AUTHOR_PUBKYS.cleo], taggers_count: 1, relationship: false }],
+  }),
+];
+
 /** Posts authored by others, referenced as targets by `VRT_NOTIFICATIONS`. */
 export const VRT_NOTIFICATION_POSTS: readonly VRTProfilePostFixture[] = [
   post({
@@ -233,4 +278,5 @@ export const VRT_PROFILE_ALL_POSTS: readonly VRTProfilePostFixture[] = [
   ...VRT_PROFILE_REPLY_PARENTS,
   ...VRT_PROFILE_REPLIES,
   ...VRT_NOTIFICATION_POSTS,
+  ...VRT_OTHER_PROFILE_POSTS,
 ];

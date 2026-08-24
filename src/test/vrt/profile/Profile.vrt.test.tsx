@@ -9,6 +9,7 @@ import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.view
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { ProfilePageContainer } from '@/organisms/ProfilePageContainer/ProfilePageContainer';
+import type { Pubky } from '@/models/models.types';
 import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 import { ProfileNotificationsPage } from '@/templates/Profile/Notifications/ProfileNotificationsPage';
 import { ProfilePostsPage } from '@/templates/Profile/Posts/ProfilePostsPage';
@@ -21,6 +22,7 @@ import { ProfileCollectionsPage } from '@/templates/Profile/Collections/ProfileC
 
 const routeState = vi.hoisted(() => ({
   pathname: '/profile',
+  params: {} as Record<string, string>,
 }));
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
@@ -39,12 +41,14 @@ const fixtures = vi.hoisted(async () => {
     ]);
 
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
+  const otherPubky = profilesModule.VRT_AUTHOR_PUBKYS.bran;
 
   const allPostFixtures = [
     ...postsModule.VRT_PROFILE_POSTS,
     ...postsModule.VRT_PROFILE_REPLY_PARENTS,
     ...postsModule.VRT_PROFILE_REPLIES,
     ...postsModule.VRT_NOTIFICATION_POSTS,
+    ...postsModule.VRT_OTHER_PROFILE_POSTS,
   ];
   const entitiesByCompositeId = new Map<
     string,
@@ -55,6 +59,7 @@ const fixtures = vi.hoisted(async () => {
   ]);
 
   const postIds = postsModule.VRT_PROFILE_POSTS.map((post) => post.compositeId);
+  const otherPostIds = postsModule.VRT_OTHER_PROFILE_POSTS.map((post) => post.compositeId);
   const replyIds = postsModule.VRT_PROFILE_REPLIES.map((post) => post.compositeId);
   const collectionIds = collectionsModule.VRT_PROFILE_COLLECTIONS.map((collection) => collection.compositeId);
 
@@ -87,15 +92,23 @@ const fixtures = vi.hoisted(async () => {
     ...profilesModule.VRT_AUTHOR_PROFILES[viewerPubky],
     status: 'vacationing',
   };
+  const otherProfile = {
+    ...profilesModule.VRT_AUTHOR_PROFILES[otherPubky],
+    status: 'available',
+    links: [{ title: 'Site', url: 'https://example.com/bran' }],
+  };
 
   return {
     profiles: {
       ...profilesModule.VRT_AUTHOR_PROFILES,
       [viewerPubky]: viewerProfile,
+      [otherPubky]: otherProfile,
     },
     viewerPubky,
+    otherPubky,
     entitiesByCompositeId,
     postIds,
+    otherPostIds,
     replyIds,
     collectionIds,
     userTagsById,
@@ -106,6 +119,7 @@ const fixtures = vi.hoisted(async () => {
     notifications: notificationsModule.VRT_NOTIFICATIONS,
     unreadNotifications: notificationsModule.VRT_UNREAD_NOTIFICATIONS,
     taggedTags: tagsModule.VRT_PROFILE_TAGGED_TAGS,
+    otherTaggedTags: tagsModule.VRT_OTHER_PROFILE_TAGGED_TAGS,
     mockFeedApplication: mockApp.mockFeedApplication,
   };
 });
@@ -124,7 +138,7 @@ vi.mock('next/navigation', () => {
     useRouter: () => router,
     usePathname: () => routeState.pathname,
     useSearchParams: () => searchParams,
-    useParams: () => ({}),
+    useParams: () => routeState.params,
   };
 });
 
@@ -273,6 +287,7 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
       const id = String(streamId);
       if (id.startsWith('author_replies:')) return buildResult(f.replyIds);
       if (id.endsWith(':author:collection')) return buildResult(f.collectionIds);
+      if (id === `author:${f.otherPubky}`) return buildResult(f.otherPostIds);
       if (id.startsWith('author:')) return buildResult(f.postIds);
       return buildResult([]);
     },
@@ -299,6 +314,12 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => {
     error: null as string | null,
   };
   return { useFollowUser: () => result };
+});
+
+// Pin the unfollowed CTA so the other-user header shows Follow rather than Following.
+vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => {
+  const result = { isFollowing: false, isLoading: false };
+  return { useIsFollowing: () => result };
 });
 
 vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => {
@@ -575,7 +596,7 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', async () => {
 
 vi.mock('@/hooks/useProfileStats/useProfileStats', async () => {
   const f = await fixtures;
-  const stats = {
+  const ownStats = {
     notifications: f.unreadNotifications.length,
     posts: f.postIds.length,
     replies: f.replyIds.length,
@@ -585,7 +606,22 @@ vi.mock('@/hooks/useProfileStats/useProfileStats', async () => {
     friends: f.friends.length,
     uniqueTags: f.taggedTags.length,
   };
-  return { useProfileStats: () => ({ stats, isLoading: false }) };
+  const otherStats = {
+    notifications: 0,
+    posts: f.otherPostIds.length,
+    replies: 8,
+    collections: 2,
+    followers: 11,
+    following: 9,
+    friends: 4,
+    uniqueTags: f.otherTaggedTags.length,
+  };
+  return {
+    useProfileStats: (userId?: string) => ({
+      stats: userId === f.otherPubky ? otherStats : ownStats,
+      isLoading: false,
+    }),
+  };
 });
 
 vi.mock('@/hooks/useProfileActions/useProfileActions', () => ({
@@ -647,16 +683,19 @@ vi.mock('@/hooks/useProfileConnections/useProfileConnections', async () => {
 vi.mock('@/hooks/useTagged/useTagged', async () => {
   const f = await fixtures;
   return {
-    useTagged: () => ({
-      tags: f.taggedTags,
-      count: f.taggedTags.length,
-      isLoading: false,
-      isLoadingMore: false,
-      hasMore: false,
-      loadMore: async () => {},
-      handleTagAdd: async () => ({ success: true }),
-      handleTagToggle: async () => {},
-    }),
+    useTagged: (pubky?: string) => {
+      const tags = pubky === f.otherPubky ? f.otherTaggedTags : f.taggedTags;
+      return {
+        tags,
+        count: tags.length,
+        isLoading: false,
+        isLoadingMore: false,
+        hasMore: false,
+        loadMore: async () => {},
+        handleTagAdd: async () => ({ success: true }),
+        handleTagToggle: async () => {},
+      };
+    },
   };
 });
 
@@ -714,15 +753,26 @@ async function preloadImages(urls: readonly string[]) {
   );
 }
 
-function OwnProfileWithChrome({ children }: { children: React.ReactNode }) {
+function ProfileWithChrome({ children, pubky }: { children: React.ReactNode; pubky?: Pubky }) {
   return (
     <>
       <Header />
-      <ProfileProvider>
+      <ProfileProvider pubky={pubky}>
         <ProfilePageContainer>{children}</ProfilePageContainer>
       </ProfileProvider>
     </>
   );
+}
+
+async function renderProfileTab(
+  pathname: string,
+  page: React.ReactNode,
+  viewport: { width: number; height: number },
+  pubky?: Pubky,
+) {
+  routeState.pathname = pathname;
+  routeState.params = pubky ? { pubky } : {};
+  return renderForVRT(<ProfileWithChrome pubky={pubky}>{page}</ProfileWithChrome>, { viewport });
 }
 
 async function renderOwnProfileTab(
@@ -730,8 +780,16 @@ async function renderOwnProfileTab(
   page: React.ReactNode,
   viewport: { width: number; height: number },
 ) {
-  routeState.pathname = pathname;
-  return renderForVRT(<OwnProfileWithChrome>{page}</OwnProfileWithChrome>, { viewport });
+  return renderProfileTab(pathname, page, viewport);
+}
+
+function resetVrtRootScroll() {
+  const root = document.querySelector(`[data-testid="${VRT_ROOT_TESTID}"]`);
+  if (root instanceof HTMLElement) {
+    root.scrollTop = 0;
+    root.scrollLeft = 0;
+  }
+  window.scrollTo(0, 0);
 }
 
 describe('Own profile — notifications — visual regression', () => {
@@ -851,5 +909,32 @@ describe('Own profile — collections — visual regression', () => {
     const screen = await renderOwnProfileTab('/profile/collections', <ProfileCollectionsPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByRole('feed')).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-collections-mobile');
+  });
+});
+
+describe('Other profile — posts — visual regression', () => {
+  // Default `/profile/[pubky]` tab. Chrome differs from own profile (Follow CTA,
+  // no notifications tab / status picker). Other tabs reuse the same shells.
+  // Other-user mobile posts auto-scroll the feed under the sticky menu; reset
+  // to the top so the screenshot keeps the header and Follow button in frame.
+  async function renderOtherProfilePosts(viewport: { width: number; height: number }) {
+    const f = await fixtures;
+    const screen = await renderProfileTab(`/profile/${f.otherPubky}`, <ProfilePostsPage />, viewport, f.otherPubky);
+    await expect.element(screen.getByText('Bran Ó Conaill').first()).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: /^Follow$/ })).toBeVisible();
+    await expect.element(screen.getByText(/Cold brew helps both/)).toBeVisible();
+    await expect.element(screen.getByRole('feed')).toBeVisible();
+    resetVrtRootScroll();
+    return screen;
+  }
+
+  it("renders another user's posts at desktop viewport", async () => {
+    const screen = await renderOtherProfilePosts(VRT_VIEWPORT_DESKTOP);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('other-profile-posts-desktop');
+  });
+
+  it("renders another user's posts at mobile viewport", async () => {
+    const screen = await renderOtherProfilePosts(VRT_VIEWPORT_MOBILE);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('other-profile-posts-mobile');
   });
 });

@@ -1,4 +1,4 @@
-// Consumed by `OwnProfile.vrt.test.tsx` for the Profile Collections tab
+// Consumed by `Profile.vrt.test.tsx` for the Profile Collections tab
 // (`{pubky}:author:collection` stream). Kept separate from
 // `src/test/fixtures/feed/collections.ts` so this richer own-profile list
 // doesn't drift the already-baselined Collections overview fixtures.

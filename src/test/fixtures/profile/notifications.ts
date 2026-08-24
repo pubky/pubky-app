@@ -1,4 +1,4 @@
-// Consumed by `OwnProfile.vrt.test.tsx` for the (default) Notifications tab.
+// Consumed by `Profile.vrt.test.tsx` for the (default) Notifications tab.
 import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
 import { HOUR_MS, MINUTE_MS, VRT_FROZEN_NOW_MS } from '@/test-utils/vrt.clock';
 import { VRT_AUTHOR_PUBKYS } from '../feed/profiles';

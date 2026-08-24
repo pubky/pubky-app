@@ -1,4 +1,4 @@
-// Consumed by `OwnProfile.vrt.test.tsx` for the Followers, Following, and
+// Consumed by `Profile.vrt.test.tsx` for the Followers, Following, and
 // Friends tabs (`useProfileConnections`).
 import type { UserConnectionData } from '@/hooks/useProfileConnections/useProfileConnections.types';
 import { VRT_AUTHOR_PROFILES, VRT_AUTHOR_PUBKYS } from '../feed/profiles';
