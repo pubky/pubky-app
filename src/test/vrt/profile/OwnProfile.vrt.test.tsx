@@ -82,8 +82,17 @@ const fixtures = vi.hoisted(async () => {
     );
   }
 
+  // Own-profile header should show a status with emoji, not the empty "No Status" picker.
+  const viewerProfile = {
+    ...profilesModule.VRT_AUTHOR_PROFILES[viewerPubky],
+    status: 'vacationing',
+  };
+
   return {
-    profiles: profilesModule.VRT_AUTHOR_PROFILES,
+    profiles: {
+      ...profilesModule.VRT_AUTHOR_PROFILES,
+      [viewerPubky]: viewerProfile,
+    },
     viewerPubky,
     entitiesByCompositeId,
     postIds,
