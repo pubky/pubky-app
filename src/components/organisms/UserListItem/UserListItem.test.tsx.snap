@@ -1,16 +1,17 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`UserListItem - Snapshots > matches snapshot for card variant 1`] = `
-<div
-  class="gap-3 rounded-md bg-card p-4"
+<a
+  aria-label="Test User"
+  class="flex w-full flex-col gap-3 rounded-md bg-card p-4"
   data-testid="user-list-item-test-user-pubky-123456"
+  href="/profile/test-user-pubky-123456"
 >
   <div
     class="flex items-center justify-between gap-3"
   >
-    <a
+    <div
       class="flex min-w-0 flex-1 items-center gap-2"
-      href="/profile/test-user-pubky-123456"
     >
       <div
         data-testid="avatar"
@@ -30,7 +31,7 @@ exports[`UserListItem - Snapshots > matches snapshot for card variant 1`] = `
           test...3456
         </span>
       </div>
-    </a>
+    </div>
     <div
       class="hidden lg:block"
     >
@@ -117,7 +118,7 @@ exports[`UserListItem - Snapshots > matches snapshot for card variant 1`] = `
       </button>
     </div>
   </div>
-</div>
+</a>
 `;
 
 exports[`UserListItem - Snapshots > matches snapshot for compact variant 1`] = `

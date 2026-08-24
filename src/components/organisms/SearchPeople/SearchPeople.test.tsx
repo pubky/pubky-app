@@ -87,7 +87,6 @@ const defaultPeople = {
   loading: false,
   loadingMore: false,
   hasMore: false,
-  error: null,
   loadMore: vi.fn(),
 };
 

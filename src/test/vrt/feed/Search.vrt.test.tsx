@@ -465,7 +465,6 @@ vi.mock('@/hooks/useSearchPeople/useSearchPeople', async () => {
     loading: false,
     loadingMore: false,
     hasMore: false,
-    error: null,
     loadMore: async () => {},
   };
   return { useSearchPeople: () => result };

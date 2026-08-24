@@ -381,6 +381,9 @@ function FullVariant({
  * Self-contained card for grid surfaces (search People). Desktop: avatar +
  * name/pubky with TAGS/POSTS stats, then tag chips + follow button. Below lg
  * the card collapses to avatar + name/pubky only.
+ *
+ * The whole card is a link to the profile — inner CTAs (tag chips, follow)
+ * suppress their own events, same contract as `CollectionCard`.
  */
 function CardVariant({
   user,
@@ -402,13 +405,16 @@ function CardVariant({
   const profileUrl = getUserProfileUrl(user.id, currentUserPubky);
 
   return (
-    <Container
+    <Link
       ref={ttlRef}
-      className={cn('gap-3 rounded-md bg-card p-4', className)}
+      overrideDefaults
+      href={profileUrl}
+      aria-label={displayName}
+      className={cn('flex w-full flex-col gap-3 rounded-md bg-card p-4', className)}
       data-testid={dataTestId || `user-list-item-${user.id}`}
     >
       <Container overrideDefaults className="flex items-center justify-between gap-3">
-        <Link href={profileUrl} className="flex min-w-0 flex-1 items-center gap-2">
+        <Container overrideDefaults className="flex min-w-0 flex-1 items-center gap-2">
           <AvatarWithFallback avatarUrl={avatarUrl} name={displayName} fallbackSeed={user.id} size="md" />
           <Container overrideDefaults className="min-w-0 flex-1 truncate">
             <Typography data-cy="profile-follower-item-name" size="sm" className="truncate font-bold">
@@ -418,7 +424,7 @@ function CardVariant({
               {formattedPublicKey}
             </Typography>
           </Container>
-        </Link>
+        </Container>
         <Container overrideDefaults className="hidden lg:block">
           <UserStats tags={stats.tags} posts={stats.posts} />
         </Container>
@@ -441,7 +447,7 @@ function CardVariant({
           )}
         </Container>
       </Container>
-    </Container>
+    </Link>
   );
 }
 

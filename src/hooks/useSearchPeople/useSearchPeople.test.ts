@@ -276,7 +276,6 @@ describe('useSearchPeople', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(result.current.error).not.toBeNull();
     expect(result.current.hasMore).toBe(false);
     expect(result.current.users).toEqual([]);
   });

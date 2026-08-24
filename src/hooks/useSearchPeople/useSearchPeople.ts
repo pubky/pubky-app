@@ -8,7 +8,6 @@ import { SearchController } from '@/controllers/search/search';
 import { StreamUserController } from '@/controllers/stream/users/users';
 import { UserController } from '@/controllers/user/user';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
-import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
@@ -25,7 +24,6 @@ interface UseSearchPeopleResult {
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
-  error: string | null;
   loadMore: () => Promise<void>;
 }
 
@@ -60,7 +58,6 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const userIdsRef = useRef<Pubky[]>([]);
   // Bumped on every tags change (and unmount) so any in-flight fetch —
@@ -80,7 +77,6 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     userIdsRef.current = [];
     setUserIds([]);
     setSkip(0);
-    setError(null);
 
     if (!tagsKey) {
       setLoading(false);
@@ -114,7 +110,6 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
         setHasMore(results.length >= SEARCH_PEOPLE_PAGE_SIZE);
       } catch (err) {
         if (generation !== generationRef.current) return;
-        setError(isAppError(err) ? err.message : 'Failed to search people');
         setHasMore(false);
         Logger.error('[useSearchPeople] Initial fetch failed:', err);
         onErrorRef.current?.(err);
@@ -136,7 +131,6 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
 
     const generation = generationRef.current;
     setLoadingMore(true);
-    setError(null);
     try {
       const results = await SearchController.fetchUsersByTags({
         tags: tagsKey,
@@ -165,7 +159,6 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
       setUserIds(userIdsRef.current);
     } catch (err) {
       if (generation !== generationRef.current) return;
-      setError(isAppError(err) ? err.message : 'Failed to search people');
       setHasMore(false);
       Logger.error('[useSearchPeople] Load more failed:', err);
       onErrorRef.current?.(err);
@@ -247,5 +240,5 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   // read-back emission. Same guard as useUserStream's hydration flags.
   const detailsHydrated = userIds.length === 0 || userIds.some((id) => userDetailsMap.has(id));
 
-  return { users, loading: loading || !detailsHydrated, loadingMore, hasMore, error, loadMore };
+  return { users, loading: loading || !detailsHydrated, loadingMore, hasMore, loadMore };
 }

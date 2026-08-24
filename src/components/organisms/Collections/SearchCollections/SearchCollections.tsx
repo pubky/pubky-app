@@ -63,10 +63,7 @@ function SearchCollectionsStream({ streamId }: { streamId: PostStreamId }) {
 
   const visibleIds = isExpanded ? postIds : postIds.slice(0, SEARCH_COLLECTIONS_PREVIEW_COUNT);
   const showSeeAll =
-    !isExpanded &&
-    !showSkeletons &&
-    postIds.length > 0 &&
-    (postIds.length > SEARCH_COLLECTIONS_PREVIEW_COUNT || hasMore);
+    !isExpanded && postIds.length > 0 && (postIds.length > SEARCH_COLLECTIONS_PREVIEW_COUNT || hasMore);
   // A fully-filtered page keeps hasMore (see useStreamPagination) — with nothing
   // to preview, surface "Show more" directly so the cursor can still advance.
   const showShowMore = !loading && hasMore && (isExpanded || postIds.length === 0);

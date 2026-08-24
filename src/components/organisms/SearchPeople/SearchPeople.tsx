@@ -59,8 +59,7 @@ function SearchPeopleContent({ tags }: { tags: string[] }) {
   }
 
   const visibleUsers = isExpanded ? users : users.slice(0, SEARCH_PEOPLE_PREVIEW_COUNT);
-  const showSeeAll =
-    !isExpanded && !showSkeletons && users.length > 0 && (users.length > SEARCH_PEOPLE_PREVIEW_COUNT || hasMore);
+  const showSeeAll = !isExpanded && users.length > 0 && (users.length > SEARCH_PEOPLE_PREVIEW_COUNT || hasMore);
   // A fully-filtered page keeps hasMore — with nothing to preview, surface
   // "Show more" directly so the cursor can still advance.
   const showShowMore = !loading && hasMore && (isExpanded || users.length === 0);
