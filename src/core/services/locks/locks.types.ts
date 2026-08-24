@@ -46,13 +46,7 @@ export type TGuardedResource = {
   size: number;
 };
 
-/**
- * One unlock criterion.
- *
- * TODO:[Locks] #2040 — Phase 1 ships a `password` verifier, but the Lock Server only registers
- * `dev-static` today, so that placeholder is sent instead — see the content methods on
- * `LocksController`. Drop this note once the password verifier lands and the placeholder is gone.
- */
+/** One unlock criterion. */
 type TLockCriterion = {
   criterion_id: string;
   verifier_type: string;
@@ -168,7 +162,7 @@ interface LockServer {
  * The Lock server is a standalone service (not pubky.app-specific), so this type
  * belongs to the Lock SDK — hand-mirrored here until that ships a typed reader API.
  * The password/payment distinction is read from each criterion's `verifier_type`.
- * TODO:[Locks] #1998 — replace with the Lock SDK's type once available.
+ * TODO:[Locks] locks#22 — replace with the SDK's own type once it exports one.
  */
 export interface LockFile {
   version: number;

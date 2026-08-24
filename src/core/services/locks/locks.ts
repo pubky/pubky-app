@@ -109,7 +109,6 @@ export class LocksService {
 
   /**
    * Reads + validates a public lock file via the SDK (pkarr resolve + GET inside `readContentLock`).
-   * TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
    */
   static async readContentLock(lockUrl: string): Promise<unknown> {
     try {
@@ -133,8 +132,7 @@ export class LocksService {
   }
 
   // Reader calls are public (no session) → `toAppError`, not `toLocksError` (a 401 isn't an expired session).
-  // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
-  // TODO:[Locks] #2040 — `password` reaches here but isn't forwarded to lock-sdk (no password verifier yet).
+  // TODO:[Locks] #2369 — password and `dev-static` all go away here.
   static async submitProofBundle(bundle: TSubmittedProofBundle, _password: string): Promise<TVerificationTask> {
     try {
       const viewer = await this.getViewer();
@@ -144,7 +142,6 @@ export class LocksService {
     }
   }
 
-  // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
   static async lookupVerificationTask(creator: string, bundleId: string): Promise<TVerificationTask> {
     try {
       const viewer = await this.getViewer();
@@ -156,7 +153,6 @@ export class LocksService {
     }
   }
 
-  // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
   static async issueAccessCredential(creator: string, bundleId: string): Promise<TAccessCredential> {
     try {
       const viewer = await this.getViewer();
@@ -263,7 +259,6 @@ export class LocksService {
     const session = getLockSession();
     try {
       await ensureLocksSdkReady();
-      // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
       const response = (await session.creator.registerGuardedResource(
         new RegisterGuardedResourceOptions(path, contentType, bytes),
       )) as { creator: string; guarded_resource: TGuardedResource };
@@ -312,7 +307,8 @@ export class LocksService {
         .lockServer({ override: session.lockServer() })
         .build();
 
-      // TODO:[Locks] #2040 — lock-sdk returns `any`; validate this response with Zod instead of casting.
+      // TODO:[Locks] the SDK hands creator responses to JS unparsed (locks#22). Viewer
+      // responses are parsed on the Rust side, so only the creator ones need a guard until that lands.
       const response = (await session.creator.createContentLock(body)) as {
         lock_id: string;
         content_lock_path: string;

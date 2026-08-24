@@ -15,9 +15,6 @@ export class PostDetailsModel
   kind: string;
   uri: string;
   attachments: string[] | null;
-  // TODO:[Locks] #1998 — top-level lock URL; see NexusPostDetails.lock. Optional
-  // (matches the schema), but assigned in the constructor so `new PostDetailsModel(row)`
-  // (findById) doesn't drop it on read.
   lock?: string | null;
 
   constructor(postDetails: PostDetailsModelSchema) {

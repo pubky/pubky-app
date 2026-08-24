@@ -123,8 +123,8 @@ export function LockedPostCard({
           )}
         </div>
 
-        {/* TODO:[Locks] #1998 — Phase 1 is password-only, so the indicator is hardcoded. The payment
-            variant (price, from `verifierType`) arrives with the payment verifier. */}
+        {/* TODO:[Locks] #2369 — password and `dev-static` all go away here; the price variant reads
+            from `verifierType` instead. */}
         <div
           className={cn(
             'relative flex w-fit items-center gap-1 rounded-full bg-card p-1',

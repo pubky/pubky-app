@@ -41,14 +41,7 @@ const MAX_POLL_ATTEMPTS = 40;
 
 const isVerifying = (status: TVerificationStatus) => status === 'pending' || status === 'in_progress';
 
-// TODO:[Locks] #2040 — Phase 1 ships the `password` verifier, but the Lock Server does not implement
-// one yet: `VerifierType` (locks-core/src/lock_policy.rs) only has `DevStatic`, and unknown verifier
-// strings are rejected while parsing, so `password` cannot be sent today. `dev-static` is a
-// placeholder that always satisfies — it MUST be replaced (and this constant deleted) before ship.
-// Blocked on the Lock Server adding a password verifier.
-//
-// When it lands: the public lock file (`/pub/locks.app/<lock_id>.json`) carries `criteria[].params`
-// verbatim, so the creator's password must never be put there in plaintext.
+// TODO:[Locks] #2369 — password and `dev-static` all go away here.
 const CRITERION_ID = 'criterion-1';
 const VERIFIER_TYPE = 'dev-static';
 const VERIFIER_PARAMS = { satisfied: true };
@@ -164,10 +157,8 @@ export class LocksApplication {
    * A validation error (permanent data fault) drops only that attachment; any other failure rejects
    * the whole read so no caller persists a partial result — see the catch below.
    *
-   * TODO:[Locks] #2040 — both failure kinds surface only after the unlock is already paid for (credential
-   * issued), so the reader needs a user-facing retry UI that does not charge again — re-download for
-   * transient failures, re-fetch of the dropped attachment for permanent ones. Decide with the real
-   * payment verifier.
+   * TODO:[Locks] #2374 — a permanently dropped attachment still lets the marker land, so the lock
+   * reads as fully unlocked and the attachment is unrecoverable.
    */
   private static async readAttachments(
     lockFile: LockFile,
@@ -179,6 +170,9 @@ export class LocksApplication {
       uris.map(async (uri) => {
         try {
           const path = GuardedContentParser.attachmentUriToPath(uri);
+          // TODO:[Locks] locks#10 — bytes come from the homeserver but the type comes from
+          // the public `lock.json`, so the two can disagree. Both reads return bytes only today; take
+          // the type from the response header once the SDK exposes it.
           const contentType = lockFile.secondary_resources?.[path]?.content_type;
           // No descriptor = a permanent data-integrity error (the bytes live on a HS with no content
           // type, so they can never render). Report to Sentry, then drop this one attachment.
@@ -349,10 +343,6 @@ export class LocksApplication {
    * (`/priv/locks.app/content/`) — no unlock, no credential, no replication.
    * Only valid when the lock owner is the signed-in account (a == b); the caller
    * verifies that before calling.
-   *
-   * TODO:[Locks] #1998 — content types still come from the public `lock.json` (`secondary_resources`),
-   * since direct-read/proxy-read return bytes only. pubky/locks#25 makes the SDK preserve the
-   * response's content-type header; once it's integrated, read the type from there and drop this.
    */
   static async fetchOwnContent({ lockFile }: TFetchOwnContentParams): Promise<TUnlockedContent> {
     const primaryPath = lockFile.primary_resource?.path;
@@ -465,7 +455,6 @@ export class LocksApplication {
       });
     }
 
-    // TODO:[Locks] #2040 — lock-sdk returns `any`; validate with Zod instead of casting.
     return (await LocksService.readContentLock(lockUrl)) as LockFile;
   }
 }

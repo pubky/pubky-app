@@ -1,27 +1,11 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
-import { type LockFile, VerifierType } from '@/services/locks/locks.types';
+import { VerifierType } from '@/services/locks/locks.types';
+import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
 import { useLockFile } from './useLockFile';
 
-// TODO:[Locks] #1998 — inline test fixtures (sample lock file + author pubky) are
-// duplicated across the lock tests; consider extracting a shared test util/fixture.
-const MOCK_LOCK_AUTHOR_PUBKY = 'qr3xqyz3e5cyf9npgxc5zfp15ehhcis6gqsxob4une7bwwazekry';
-const MOCK_LOCK_FILE: LockFile = {
-  version: 1,
-  creator: 'pubkycreator123',
-  primary_resource: {
-    path: '/priv/locks.app/content/example.txt',
-    hash: '<hash>',
-    content_type: 'text/plain',
-    size: 13,
-  },
-  secondary_resources: {},
-  criteria: [{ criterion_id: 'criterion-1', verifier_type: 'password', params: { satisfied: true } }],
-  lock_logic: { type: 'all', criteria: ['criterion-1'] },
-  access_policy: { requested_credential_ttl_seconds: 900 },
-  lock_server: { override: 'pubkyserver123' },
-};
+const MOCK_LOCK_FILE = mockLockFile();
 
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: { fetchLockFile: vi.fn() },

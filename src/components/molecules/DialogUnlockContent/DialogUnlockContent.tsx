@@ -42,8 +42,7 @@ export function DialogUnlockContent({
     onOpenChange(next);
   };
 
-  // Gate is only "non-empty": Phase 1 has no server password verifier (dev-static passes everything).
-  // TODO:[Locks] #2040 — enforce the real password once it lands.
+  // TODO:[Locks] #2369 — password and `dev-static` all go away here.
   const handleSubmit = () => {
     if (!password || loading) return;
     onSubmit(password);

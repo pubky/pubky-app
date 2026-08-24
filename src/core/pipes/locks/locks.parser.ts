@@ -89,8 +89,7 @@ export class LockProofBundler {
   private constructor() {}
 
   static build(lockFile: LockFile, lockUrl: string, bundleId: string): TSubmittedProofBundle {
-    // TODO:[Locks] #2040 — every criterion is dev-static in Phase 1, so each proof just asserts
-    // satisfied; real verifier payloads (password/payment) land with the server verifiers.
+    // TODO:[Locks] #2369 — password and `dev-static` all go away here.
     const proofs: TProof[] = lockFile.criteria.map((criterion) => ({
       criterion_id: criterion.criterion_id,
       verifier_type: criterion.verifier_type,

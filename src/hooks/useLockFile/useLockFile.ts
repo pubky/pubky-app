@@ -12,7 +12,7 @@ import type { UseLockFileResult } from './useLockFile.types';
  * (no local cache to read). Failures never block the user —
  * the fetch is caught and surfaced as `hasError` for an "unavailable" UI.
  *
- * TODO:[Locks] #1998 — persist lock files to idb and read local-first (`useLocalFirstQuery`, ADR-0011).
+ * TODO:[Locks] #2296 — persist lock files to idb and read local-first (`useLocalFirstQuery`, ADR-0011).
  * A lock file is effectively immutable (its `lock_id` is a content hash), so a cached copy never goes
  * stale. Today every mount re-requests it through the SDK — the homeserver's ETag keeps that a cheap
  * 304 (no body re-download), but idb would skip the request (and the SDK call) entirely.

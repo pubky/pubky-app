@@ -33,7 +33,7 @@ let sdkReady: Promise<void> | null = null;
  * build of the SDK (wasm-pack `--target web`) requires this before any SDK class is used —
  * unlike `@synonymdev/pubky` / `pubky-app-specs`, which self-initialize on import.
  *
- * TODO: This only exists because the SDK is shipped as the web build. If the SDK is published
+ * TODO:[Locks] #2372 — This only exists because the SDK is shipped as the web build. If the SDK is published
  * as a bundler or self-contained (base64-inlined) build instead, wasm initializes on import and
  * this becomes unnecessary — the app would just `import` the SDK like the other wasm deps. Prefer
  * that; ask the SDK maintainers to ship it self-contained. Reference for the self-contained
