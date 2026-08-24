@@ -5,6 +5,7 @@ import { asInvalid } from '@/test-utils/type-assertions';
 import { POST_TEXT_PREVIEW_MAX_LINES, TRUNCATION_LIMIT } from './PostText.constants';
 import {
   extractTextFromChildren,
+  getCompactUrlText,
   remarkDisallowMarkdownLinks,
   remarkExtractFirstParagraph,
   remarkHashtags,
@@ -13,6 +14,61 @@ import {
   truncateAtWordBoundary,
   truncatePostPreviewText,
 } from './PostText.utils';
+
+describe('getCompactUrlText', () => {
+  it('shows only the host without the protocol, path, query, or fragment', () => {
+    expect(
+      getCompactUrlText(
+        'https://news.example.co.uk/story?id=42#comments',
+        'https://news.example.co.uk/story?id=42#comments',
+      ),
+    ).toBe('news.example.co.uk');
+  });
+
+  it('removes www from autolinks', () => {
+    expect(getCompactUrlText('www.example.com/story', 'http://www.example.com/story')).toBe('example.com');
+    expect(getCompactUrlText('https://www.example.com/story', 'https://www.example.com/story')).toBe('example.com');
+  });
+
+  it('supports HTTP URLs and preserves non-default ports', () => {
+    expect(getCompactUrlText('http://www.example.com:8080/story', 'http://www.example.com:8080/story')).toBe(
+      'example.com:8080',
+    );
+  });
+
+  it('keeps the full hostname visible when it merely starts with www', () => {
+    expect(
+      getCompactUrlText('https://www.example.com.evil.test/story', 'https://www.example.com.evil.test/story'),
+    ).toBe('example.com.evil.test');
+  });
+
+  it('omits URL credentials from the compact label', () => {
+    expect(
+      getCompactUrlText(
+        'https://user:password@www.example.com/private',
+        'https://user:password@www.example.com/private',
+      ),
+    ).toBe('example.com');
+  });
+
+  it('preserves the visible hostname while compacting', () => {
+    expect(getCompactUrlText('https://münich.example/story', 'https://münich.example/story')).toBe('münich.example');
+  });
+
+  it('compacts root URLs too', () => {
+    expect(getCompactUrlText('https://example.com', 'https://example.com')).toBe('example.com');
+    expect(getCompactUrlText('https://www.example.com/', 'https://www.example.com/')).toBe('example.com');
+  });
+
+  it('does not compact authored text whose destination differs', () => {
+    expect(getCompactUrlText('https://example.com/story', 'https://other.example/story')).toBeNull();
+  });
+
+  it('does not compact email links or malformed URLs', () => {
+    expect(getCompactUrlText('user@example.com', 'mailto:user@example.com')).toBeNull();
+    expect(getCompactUrlText('not a url', 'not a url')).toBeNull();
+  });
+});
 
 // Helper to create a simple paragraph node with text
 const createParagraph = (text: string): Paragraph => ({

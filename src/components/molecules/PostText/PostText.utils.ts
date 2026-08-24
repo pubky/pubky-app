@@ -258,6 +258,34 @@ export const extractTextFromChildren = (children: ReactNode) =>
       ? children[0]
       : '';
 
+/**
+ * Compacts a visibly raw HTTP(S) URL to its host without a leading www.
+ * Authored link labels are left unchanged so article Markdown such as
+ * [Read more](https://example.com/path) keeps its intended copy.
+ */
+export const getCompactUrlText = (displayText: string, href?: string): string | null => {
+  if (!href || !displayText) return null;
+
+  const hasImplicitHttpProtocol = /^www\./i.test(displayText);
+  const displayUrl = hasImplicitHttpProtocol ? `http://${displayText}` : displayText;
+
+  try {
+    const parsedDisplayUrl = new URL(displayUrl);
+    const parsedHref = new URL(href);
+
+    if (!['http:', 'https:'].includes(parsedDisplayUrl.protocol) || parsedDisplayUrl.href !== parsedHref.href) {
+      return null;
+    }
+
+    const authority = displayText.replace(/^https?:\/\//i, '').split(/[/?#]/, 1)[0];
+    const visibleHost = authority.slice(authority.lastIndexOf('@') + 1).replace(/^www\./i, '');
+
+    return visibleHost || null;
+  } catch {
+    return null;
+  }
+};
+
 interface PreviewTruncation {
   limit: number;
   wordBoundary: boolean;

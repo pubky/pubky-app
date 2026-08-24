@@ -1,8 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, createEvent, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { PostText } from './PostText';
-import { TRUNCATION_LIMIT } from './PostText.constants';
+import { POST_LINK_LONG_PRESS_DELAY_MS, TRUNCATION_LIMIT } from './PostText.constants';
+
+const render = (ui: ReactElement) => rtlRender(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
 
 // Mock next/navigation
 const mockUsePathname = vi.fn();
@@ -96,6 +100,10 @@ const generateContent = (length: number): string => {
 describe('PostText', () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/home');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('Basic rendering', () => {
@@ -283,6 +291,166 @@ describe('PostText', () => {
         // Should not throw
         fireEvent.click(link);
       });
+
+      it('shows only the host while preserving the full destination', () => {
+        render(<PostText content="Visit https://news.example.co.uk/story?id=42#comments" />);
+
+        const link = screen.getByRole('link', { name: 'https://news.example.co.uk/story?id=42#comments' });
+        expect(link).toHaveTextContent('news.example.co.uk');
+        expect(link).toHaveAttribute('href', 'https://news.example.co.uk/story?id=42#comments');
+      });
+
+      it('removes the protocol and www prefix', () => {
+        render(<PostText content="Visit https://www.example.com/path" />);
+
+        expect(screen.getByRole('link')).toHaveTextContent('example.com');
+      });
+
+      it('keeps a URL inline with its surrounding text', () => {
+        render(<PostText content="Read https://www.example.com/story for the details" />);
+
+        const link = screen.getByRole('link');
+        const paragraph = link.closest('p');
+
+        expect(link).toHaveClass('inline');
+        expect(paragraph).toHaveTextContent('Read example.com for the details');
+        expect(link.previousSibling?.textContent).toBe('Read ');
+        expect(link.nextSibling?.textContent).toBe(' for the details');
+      });
+
+      it('shows the full compacted URL in a tooltip on hover', async () => {
+        render(<PostText content="Visit https://example.com/a/very/long/path" />);
+
+        const link = screen.getByRole('link', { name: 'https://example.com/a/very/long/path' });
+        fireEvent.pointerMove(link, { pointerType: 'mouse' });
+
+        await waitFor(() => {
+          expect(screen.getByRole('tooltip')).toHaveTextContent('https://example.com/a/very/long/path');
+          expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveClass(
+            'bg-accent',
+            'font-medium',
+            'text-foreground',
+            '[&_svg]:fill-accent',
+          );
+        });
+      });
+
+      it('shows the full compacted URL in a tooltip on keyboard focus', async () => {
+        render(<PostText content="Visit https://example.com/a/very/long/path" />);
+
+        fireEvent.focus(screen.getByRole('link', { name: 'https://example.com/a/very/long/path' }));
+
+        await waitFor(() => {
+          expect(screen.getByRole('tooltip')).toHaveTextContent('https://example.com/a/very/long/path');
+        });
+      });
+
+      it('shows the full URL after a touch long press without following the link', () => {
+        vi.useFakeTimers();
+        const handleLinkClick = vi.fn();
+        render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
+
+        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        act(() => vi.advanceTimersByTime(POST_LINK_LONG_PRESS_DELAY_MS));
+        fireEvent.pointerUp(link, { pointerType: 'touch' });
+        fireEvent.click(link);
+
+        expect(screen.getByRole('tooltip')).toHaveTextContent('https://example.com/long/path');
+        expect(handleLinkClick).not.toHaveBeenCalled();
+      });
+
+      it('suppresses the native touch context menu but preserves desktop right-click', () => {
+        vi.useFakeTimers();
+        render(<PostText content="Visit https://example.com/long/path" />);
+
+        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
+        expect(link.style).toHaveProperty('WebkitTouchCallout', 'none');
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        act(() => vi.advanceTimersByTime(POST_LINK_LONG_PRESS_DELAY_MS));
+
+        const touchContextMenu = createEvent.contextMenu(link);
+        fireEvent(link, touchContextMenu);
+        expect(touchContextMenu.defaultPrevented).toBe(true);
+
+        fireEvent.pointerCancel(link, { pointerType: 'touch' });
+        fireEvent.pointerDown(link, { pointerType: 'mouse' });
+
+        const mouseContextMenu = createEvent.contextMenu(link);
+        fireEvent(link, mouseContextMenu);
+        expect(mouseContextMenu.defaultPrevented).toBe(false);
+      });
+
+      it('cancels the touch tooltip when the user scrolls', () => {
+        vi.useFakeTimers();
+        const handleLinkClick = vi.fn();
+        render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
+
+        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        fireEvent.pointerMove(link, { pointerType: 'touch', clientX: 25, clientY: 10 });
+        act(() => vi.advanceTimersByTime(POST_LINK_LONG_PRESS_DELAY_MS));
+        fireEvent.pointerUp(link, { pointerType: 'touch' });
+        fireEvent.click(link);
+
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+        expect(handleLinkClick).not.toHaveBeenCalled();
+      });
+
+      it('cancels the touch tooltip when the pointer leaves the link', () => {
+        vi.useFakeTimers();
+        render(<PostText content="Visit https://example.com/long/path" />);
+
+        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        fireEvent.pointerLeave(link, { pointerType: 'touch' });
+        act(() => vi.advanceTimersByTime(POST_LINK_LONG_PRESS_DELAY_MS));
+
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+      });
+
+      it('resets touch state after a cancelled gesture', () => {
+        vi.useFakeTimers();
+        const handleLinkClick = vi.fn();
+        render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
+
+        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        fireEvent.pointerCancel(link, { pointerType: 'touch' });
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        fireEvent.pointerUp(link, { pointerType: 'touch' });
+        fireEvent.click(link);
+
+        expect(handleLinkClick).toHaveBeenCalledWith('https://example.com/long/path', expect.any(Object));
+      });
+
+      it('keeps a normal touch tap as link navigation', () => {
+        vi.useFakeTimers();
+        const handleLinkClick = vi.fn();
+        render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
+
+        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        fireEvent.pointerUp(link, { pointerType: 'touch' });
+        fireEvent.click(link);
+
+        expect(handleLinkClick).toHaveBeenCalledWith('https://example.com/long/path', expect.any(Object));
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+      });
+
+      it('compacts raw URLs in articles', () => {
+        mockUsePathname.mockReturnValue('/post/author/post-id');
+        render(<PostText content="Source: https://example.com/article/chapter" isArticle />);
+
+        expect(screen.getByRole('link')).toHaveTextContent('example.com');
+      });
+
+      it('can preserve full URLs for non-post uses', () => {
+        render(<PostText content="Visit https://example.com/profile/path" compactUrls={false} />);
+
+        expect(screen.getByRole('link')).toHaveTextContent('https://example.com/profile/path');
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+      });
     });
 
     describe('Markdown links (disallowed)', () => {
@@ -314,6 +482,15 @@ describe('PostText', () => {
         expect(screen.getByText(/after/)).toBeInTheDocument();
         expect(screen.queryByRole('link')).not.toBeInTheDocument();
       });
+    });
+
+    it('preserves authored Markdown link labels in articles', () => {
+      render(<PostText content="[Read the source](https://example.com/a/long/path)" isArticle />);
+
+      expect(screen.getByRole('link', { name: 'Read the source' })).toHaveAttribute(
+        'href',
+        'https://example.com/a/long/path',
+      );
     });
 
     describe('Mixed autolinks and markdown links', () => {
