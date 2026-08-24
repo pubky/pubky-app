@@ -56,23 +56,28 @@ const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
   return null;
 };
 
+/**
+ * Shared tail of kind inference, applied after the callers' own guards
+ * (article on create, article/collection preservation on edit):
+ * URL in content → Link, else attachment media kind, else Short.
+ */
+const inferContentKind = (content: string, attachmentContentTypes: string[]): PubkyAppPostKind => {
+  if (hasSupportedUrl(content)) {
+    return PubkyAppPostKind.Link;
+  }
+
+  return getAttachmentKind(attachmentContentTypes) ?? PubkyAppPostKind.Short;
+};
+
 export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInferPostKindParams): PubkyAppPostKind => {
   if (isArticle) {
     return PubkyAppPostKind.Long;
   }
 
-  if (hasSupportedUrl(content)) {
-    return PubkyAppPostKind.Link;
-  }
-
-  const files = attachments ?? [];
-  const attachmentKind = getAttachmentKind(files.map((file) => file.type));
-
-  if (attachmentKind !== null) {
-    return attachmentKind;
-  }
-
-  return PubkyAppPostKind.Short;
+  return inferContentKind(
+    content,
+    (attachments ?? []).map((file) => file.type),
+  );
 };
 
 /**
@@ -93,11 +98,7 @@ export const inferPostKindForEdit = ({
     return PubkyAppPostKind.Collection;
   }
 
-  if (hasSupportedUrl(content)) {
-    return PubkyAppPostKind.Link;
-  }
-
-  return getAttachmentKind(attachmentContentTypes) ?? PubkyAppPostKind.Short;
+  return inferContentKind(content, attachmentContentTypes);
 };
 
 /**
