@@ -6,6 +6,7 @@ import type { EnrichedPostDetails } from '@/application/moderation/moderation.ty
 import { FileController } from '@/controllers/file/file';
 import { ModerationController } from '@/controllers/moderation/moderation';
 import { PostController } from '@/controllers/post/post';
+import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
@@ -98,8 +99,7 @@ function buildLocalTile(
 
   const attachmentId = `${post.id}:local:${attachment.name}:${index}`;
   const mediaKind = getVisualMediaKind(attachment.type);
-  const previewSrc =
-    attachment.type === 'image/gif' ? attachment.urls.main : (attachment.urls.feed ?? attachment.urls.main);
+  const previewSrc = getAttachmentPreviewUrl(attachment);
 
   return {
     id: attachmentId,

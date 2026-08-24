@@ -210,11 +210,13 @@ export const editPost = ({
   filterText,
   postIdx = 0,
   type = PostOrReply.Post,
+  imageAction,
 }: {
-  newPostContent: string;
+  newPostContent?: string;
   filterText?: string;
   postIdx?: number;
   type?: PostOrReply;
+  imageAction?: { action: 'replace' } | { action: 'remove' };
 }) => {
   cy.findPostInFeed(postIdx, filterText, CheckForNewPosts.Yes).within(() => {
     cy.get('[data-cy="post-more-btn"]').eq(type).should('be.visible').click();
@@ -225,9 +227,26 @@ export const editPost = ({
   cy.get('[data-cy="edit-post-input"]')
     .should('be.visible')
     .within(() => {
-      cy.get('textarea').clear().type(newPostContent);
+      if (newPostContent !== undefined) {
+        cy.get('textarea').clear().type(newPostContent);
+      }
+
+      if (imageAction) {
+        cy.get('[data-cy="post-input-attachment-remove"]').should('be.visible').click();
+        cy.get('img[alt="Image preview"]').should('not.exist');
+        if (imageAction.action === 'replace') {
+          addImage('mustache-edit.png');
+          cy.get('img[alt="Image preview"]').should('be.visible');
+        }
+        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postEdited');
+      }
+
       cy.get('[data-cy="post-input-action-bar-edit"]').click();
     });
+
+  if (imageAction) {
+    cy.wait('@postEdited').its('response.statusCode').should('be.oneOf', [200, 201, 204]);
+  }
 
   cy.get('[data-cy="edit-post-input"]').should('not.exist');
 };
@@ -370,9 +389,8 @@ export const countPostsInFeed = (filterText: string, expectedCount: number) => {
 };
 
 // can be used in post or article creation
-export const addImage = () => {
-  // upload image
-  const imagePath = Cypress.config('fixturesFolder') + '/mustache-you.png';
+export const addImage = (fileName = 'mustache-you.png') => {
+  const imagePath = Cypress.config('fixturesFolder') + `/${fileName}`;
   cy.get('input[type="file"]').selectFile(
     imagePath,
     { force: true }, // force to bypass visibility check of hidden input field

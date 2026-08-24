@@ -28,6 +28,7 @@ exports[`DialogEditPost - Snapshots > matches snapshot for long post (Edit Artic
     </div>
     <div
       data-cy="edit-post-input"
+      data-edit-attachments=""
       data-edit-content="{\\"title\\":\\"Snapshot article title\\",\\"body\\":\\"Snapshot article content\\"}"
       data-edit-is-article="true"
       data-edit-post-id="snapshot-article-id"
@@ -94,6 +95,7 @@ exports[`DialogEditPost - Snapshots > matches snapshot for short post (Edit Post
     </div>
     <div
       data-cy="edit-post-input"
+      data-edit-attachments="pubky://author/pub/pubky.app/files/snapshot-file-1"
       data-edit-content="Snapshot post content"
       data-edit-is-article="false"
       data-edit-post-id="snapshot-post-id"
@@ -160,6 +162,7 @@ exports[`DialogEditPost - Snapshots > matches snapshot when dialog is closed 1`]
     </div>
     <div
       data-cy="edit-post-input"
+      data-edit-attachments="pubky://author/pub/pubky.app/files/snapshot-file-1"
       data-edit-content="Snapshot post content"
       data-edit-is-article="false"
       data-edit-post-id="snapshot-post-id"

@@ -1323,11 +1323,11 @@ describe('Utils', () => {
         expect(canSubmitPost('edit', 'Updated content', [], false)).toBe(true);
       });
 
-      it('should return false when content is empty', () => {
+      it('should return false when no content and no attachments', () => {
         expect(canSubmitPost('edit', '', [], false)).toBe(false);
       });
 
-      it('should return false for whitespace-only content', () => {
+      it('should return false for whitespace-only content without attachments', () => {
         expect(canSubmitPost('edit', '   ', [], false)).toBe(false);
         expect(canSubmitPost('edit', '\n\t', [], false)).toBe(false);
       });
@@ -1336,9 +1336,12 @@ describe('Utils', () => {
         expect(canSubmitPost('edit', 'Updated content', [], false)).toBe(true);
       });
 
-      it('should return false with attachments but no content', () => {
+      it('should return true with attachments but no content', () => {
+        // Attachment-only edits are valid, matching post/reply behavior — the
+        // edit composer counts kept homeserver URIs as well as new Files.
         const mockFile = new File(['test'], 'test.png', { type: 'image/png' });
-        expect(canSubmitPost('edit', '', [mockFile], false)).toBe(false);
+        expect(canSubmitPost('edit', '', [mockFile], false)).toBe(true);
+        expect(canSubmitPost('edit', '', ['pubky://author/pub/pubky.app/files/kept1'], false)).toBe(true);
       });
 
       it('should require both content and title when isArticle is true', () => {

@@ -187,6 +187,7 @@ jobs:
             git rev-parse --verify "origin/${TARGET_BRANCH}"
           fi
 
+      # Will split into multiple commits if there are many changes
       - name: Commit and push signed baselines
         if: steps.changes.outputs.has_changes == 'true'
         uses: magmanu/github-action-bot-signed-commit@fb2582c7c22a7183a95504156c4ac02bb734d6ed # v1.0.4

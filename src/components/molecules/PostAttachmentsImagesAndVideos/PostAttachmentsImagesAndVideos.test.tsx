@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
@@ -153,6 +153,13 @@ vi.mock('@/atoms/Button/Button', () => {
   };
 });
 
+// Controllable carousel API state so tests can drive embla events ('select',
+// 'reInit') and the selected snap position
+const carouselApiState: { handlers: Record<string, () => void>; selectedSnap: number } = {
+  handlers: {},
+  selectedSnap: 0,
+};
+
 vi.mock('@/atoms/Carousel/Carousel', () => {
   return {
     Carousel: ({
@@ -174,8 +181,10 @@ vi.mock('@/atoms/Carousel/Carousel', () => {
       useEffect(() => {
         if (setApi) {
           setApi({
-            selectedScrollSnap: () => 0,
-            on: vi.fn(),
+            selectedScrollSnap: () => carouselApiState.selectedSnap,
+            on: (event: string, handler: () => void) => {
+              carouselApiState.handlers[event] = handler;
+            },
             off: vi.fn(),
           });
         }
@@ -337,6 +346,8 @@ describe('PostAttachmentsImagesAndVideos', () => {
     vi.clearAllMocks();
     dialogOpenState = false;
     dialogOpenStateSetByTest = false;
+    carouselApiState.handlers = {};
+    carouselApiState.selectedSnap = 0;
     // Mock fullscreenEnabled
     Object.defineProperty(document, 'fullscreenEnabled', {
       value: true,
@@ -633,6 +644,25 @@ describe('PostAttachmentsImagesAndVideos', () => {
       render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
 
       expect(screen.queryByText('1/1')).not.toBeInTheDocument();
+    });
+
+    it('resyncs the current index when the carousel re-initializes after the slide list shrinks', () => {
+      setDialogOpen(true);
+      const imagesAndVideos = [createMockImage(), createMockImage(), createMockImage()];
+      const { rerender } = render(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos} />);
+
+      // User swipes to the last slide
+      carouselApiState.selectedSnap = 2;
+      act(() => carouselApiState.handlers['select']?.());
+      expect(screen.getByText('3/3')).toBeInTheDocument();
+
+      // An edit removes an attachment while the lightbox is open — embla clamps
+      // its internal index and emits only 'reInit', never 'select'
+      rerender(<PostAttachmentsImagesAndVideos imagesAndVideos={imagesAndVideos.slice(0, 2)} />);
+      carouselApiState.selectedSnap = 1;
+      act(() => carouselApiState.handlers['reInit']?.());
+
+      expect(screen.getByText('2/2')).toBeInTheDocument();
     });
   });
 

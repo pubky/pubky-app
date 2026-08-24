@@ -7,6 +7,7 @@ interaction tests for those).
 
 - Test files: `*.vrt.test.tsx` (the `vrt` Vitest project in `vitest.config.ts`).
 - Run: `npm run test:vrt`. Update baselines: `npm run test:vrt:regenerate-baseline`.
+- Orphan check: `npm run test:vrt:check-baselines` (also in Code Quality CI).
 - Baselines: `__screenshots__/<file>/<name>-<browser>-<platform>.png`, one per
   browser (chromium/firefox/webkit) × platform (darwin/linux).
 - Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `VRT_ROOT_TESTID`),
@@ -119,6 +120,11 @@ npx vitest run --project vrt <path-to-your-dir-or-file> --update
 After any `--update`, run `git status` and revert baselines you didn't intend to
 touch (`git checkout -- <path>`). Pre-existing cross-machine drift (a baseline
 that fails on your Mac with the code reverted) is not yours to re-baseline.
+
+When you rename or delete a `*.vrt.test.tsx` file, `git mv` (or `git rm -r`) its
+`__screenshots__/<file>/` folder in the same change. Vitest does not prune
+stale folders; `npm run test:vrt:check-baselines` fails if a screenshot folder
+has no sibling test file.
 
 Prove a hypothesis on one test before regenerating many. If a shared helper
 (`vrt.tsx` / `vrt.setup.ts`) changes, re-run one image and eyeball it first.

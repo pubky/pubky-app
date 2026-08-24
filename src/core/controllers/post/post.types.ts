@@ -66,9 +66,35 @@ export interface TDeletePostParams {
   compositePostId: string;
 }
 
+export interface TEditPostAttachments {
+  /**
+   * The attachment URIs the edit composer was seeded from — the snapshot taken
+   * when the dialog opened. Removal is computed against THIS list, never the
+   * live post row: the row can change underneath an open dialog (another
+   * tab/device, background refresh), and diffing against it would delete files
+   * the user never saw.
+   */
+  original: string[];
+  /**
+   * Subset of `original` to keep, in display order (no duplicates). Attachments
+   * in `original` but not in `kept` were removed by the user and are deleted
+   * from the homeserver (best-effort) after a successful edit.
+   */
+  kept: string[];
+  /** New files to upload; appended after `kept` in display order. */
+  added: File[];
+}
+
 export interface TEditPostParams {
   compositePostId: string;
   content: string;
+  /**
+   * Attachment changes for the edit. `undefined` leaves attachments untouched
+   * (content-only edit); `{ kept: [], added: [] }` removes them all. Current
+   * attachments not listed in `kept` are deleted from the homeserver
+   * (best-effort) after a successful edit.
+   */
+  attachments?: TEditPostAttachments;
 }
 
 export interface TFileAttachmentsParams {

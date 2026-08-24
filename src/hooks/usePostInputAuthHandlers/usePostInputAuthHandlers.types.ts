@@ -19,6 +19,8 @@ export interface UsePostInputAuthHandlersOptions {
   handleArticleTitleChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleArticleBodyChange?: NonNullable<MDXEditorProps['onChange']>;
   handleArticleClick?: () => void;
+  /** PostInput edit mode only — omit in QuickReply. */
+  removeExistingAttachment?: (uri: string) => void;
 }
 
 export interface CreateKeyDownHandlerDeps {
@@ -44,4 +46,6 @@ export interface UsePostInputAuthHandlersReturn {
   handleArticleTitleChangeWithAuth?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleArticleBodyChangeWithAuth?: NonNullable<MDXEditorProps['onChange']>;
   handleArticleClickWithAuth?: () => void;
+  /** Present only when `removeExistingAttachment` is provided (PostInput edit mode). */
+  removeExistingAttachmentWithAuth?: (uri: string) => void;
 }

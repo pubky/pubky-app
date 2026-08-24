@@ -24,6 +24,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check VRT screenshot folders have sibling tests
+        run: bash src/test-utils/vrt.screenshot-siblings.sh
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
