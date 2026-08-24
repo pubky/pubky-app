@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
@@ -57,8 +56,6 @@ function BackupMethodCard({ title, imageSrc, imageAlt, dialog }: BackupMethodCar
 
 export function DialogBackup({ open, onOpenChange }: DialogBackupProps = {}) {
   const { mnemonic } = useOnboardingStore();
-  const t = useTranslations('settings.backup');
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open === undefined && (
@@ -68,34 +65,38 @@ export function DialogBackup({ open, onOpenChange }: DialogBackupProps = {}) {
             variant="outline"
             className="border text-xs font-bold text-primary-foreground shadow-sm hover:text-primary-foreground"
           >
-            {t('title')}
+            {'Backup'}
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-sm p-6 md:max-w-xl md:p-8" hiddenTitle={t('dialogTitle')}>
+      <DialogContent className="max-w-sm p-6 md:max-w-xl md:p-8" hiddenTitle={'Back up your pubky'}>
         <DialogHeader>
           <DialogTitle id="backup-dialog-title" className="text-xl md:text-2xl">
-            {t('dialogTitle')}
+            {'Back up your pubky'}
           </DialogTitle>
-          <DialogDescription id="backup-dialog-description">{t('subtitle')}</DialogDescription>
+          <DialogDescription id="backup-dialog-description">
+            {
+              'Safely back up and store the secret seed for your pubky. Which backup method do you prefer? You can choose multiple backup methods if you wish.'
+            }
+          </DialogDescription>
         </DialogHeader>
         <Container className="flex-col gap-3 md:flex-row">
           <BackupMethodCard
-            title={t('recoveryPhrase')}
+            title={'Recovery phrase'}
             imageSrc="/images/note.webp"
-            imageAlt={t('note')}
+            imageAlt={'Note'}
             dialog={<DialogBackupPhrase />}
           />
           <BackupMethodCard
-            title={t('encryptedFile')}
+            title={'Download encrypted file'}
             imageSrc="/images/folder.webp"
-            imageAlt={t('folder')}
+            imageAlt={'Folder'}
             dialog={<DialogBackupEncrypted />}
           />
           <BackupMethodCard
-            title={t('exportRing')}
+            title={'Export to Pubky Ring'}
             imageSrc="/images/keyring.webp"
-            imageAlt={t('keys')}
+            imageAlt={'Keys'}
             dialog={<DialogBackupExport mnemonic={mnemonic} />}
           />
         </Container>

@@ -2,7 +2,6 @@
 
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { Tag } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { SidebarButton } from '@/atoms/SidebarButton/SidebarButton';
@@ -38,7 +37,6 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
   { postId, widthMode = 'fit', autoFocusInput, enableLoadingSkeleton = true, className },
   ref,
 ) {
-  const t = useTranslations('common');
   const tagInputRef = useRef<TagInputHandle>(null);
   const [isExpanded, setIsExpanded] = useState(widthMode !== 'full');
   useImperativeHandle(ref, () => ({
@@ -117,9 +115,9 @@ export const PostTagsPanel = forwardRef<PostTagsPanelHandle, PostTagsPanelProps>
             icon={Tag}
             onClick={() => setIsExpanded(true)}
             data-testid="post-tags-panel-see-all"
-            aria-label={t('seeAll')}
+            aria-label={'See all'}
           >
-            {t('seeAll')}
+            {'See all'}
           </SidebarButton>
         )}
       </Container>

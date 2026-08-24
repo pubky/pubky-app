@@ -16,6 +16,7 @@ exports[`NotificationsContainer > matches snapshot 1`] = `
   </div>
   <div
     class="h-10"
+    data-cy="notifications-sentinel"
   />
 </div>
 `;

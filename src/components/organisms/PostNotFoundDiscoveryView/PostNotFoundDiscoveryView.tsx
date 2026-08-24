@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -19,14 +17,12 @@ interface PostNotFoundDiscoveryViewProps {
  * so this never nests inside another `ContentLayout`.
  */
 export function PostNotFoundDiscoveryView({ postId }: PostNotFoundDiscoveryViewProps) {
-  const tHot = useTranslations('hot');
-
   return (
     <Container overrideDefaults className="flex flex-col gap-12">
       <PostNotFound postId={postId} />
       <Container overrideDefaults className="flex flex-col gap-2">
         <Heading level={5} size="lg" className="font-light text-muted-foreground">
-          {tHot('trendingPosts')}
+          {'Trending posts'}
         </Heading>
         <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOT} />
       </Container>

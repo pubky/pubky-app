@@ -2,7 +2,6 @@
 
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { isDynamicPublicRoute, matchesAllowedRoute, PUBLIC_ROUTES } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { AuthController } from '@/controllers/auth/auth';
@@ -12,7 +11,9 @@ import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
 import { TimeoutErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { toast } from '@/molecules/Toaster/use-toast';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
@@ -40,7 +41,6 @@ interface RouteGuardProviderProps {
  * - NEEDS_PROFILE_CREATION users → profile creation route
  */
 export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
-  const t = useTranslations('common');
   const router = useRouter();
   const pathname = usePathname();
   const { status, isLoading } = useAuthStatus();
@@ -59,6 +59,13 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     if (session) return;
     if (!sessionExport) return;
     AuthController.restorePersistedSession().catch((error) => {
+      if (isWrongEnvironmentHomeserverError(error)) {
+        toast({
+          variant: 'error',
+          description: 'This key is linked to a different homeserver. Use a staging account on this site.',
+        });
+        return;
+      }
       Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
     });
   }, [hasHydrated, session, sessionExport]);
@@ -177,7 +184,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <Spinner className="mx-auto" />
-          <p className="mt-2 text-muted-foreground">{isLoading || wasDbReset ? t('loading') : t('redirecting')}</p>
+          <p className="mt-2 text-muted-foreground">{isLoading || wasDbReset ? 'Loading...' : 'Redirecting...'}</p>
         </div>
       </div>
     );

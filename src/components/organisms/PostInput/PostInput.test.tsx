@@ -16,8 +16,6 @@ import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
-// next-intl is mocked globally in src/config/test.ts
-
 const mockToast = vi.fn();
 const mockEnterSubmitHandler = vi.fn();
 const mockHandleMentionKeyDown = vi.fn(() => false);

@@ -2,11 +2,10 @@
 
 import { type ComponentPropsWithoutRef, type ComponentRef, forwardRef, type SyntheticEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Library, MessageCircle, Plus, Repeat, SquarePlus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { APP_ROUTES } from '@/app/routes';
+import { ClipboardPaste, Library, List as ListIcon, MessageCircle, Plus, Repeat, SquarePlus } from 'lucide-react';
+import { APP_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
-import { Card, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import {
   Dialog,
@@ -34,22 +33,20 @@ type DialogAddContentTriggerProps = ComponentPropsWithoutRef<typeof Button> & Pi
 
 const DialogAddContentHeroTrigger = forwardRef<ComponentRef<typeof Button>, DialogAddContentTriggerProps>(
   function DialogAddContentHeroTrigger({ dataCy, ...props }, ref) {
-    const t = useTranslations('collections.single');
-
     return (
       <Button
         ref={ref}
         variant="secondary"
         size="icon"
         type="button"
-        aria-label={t('content')}
+        aria-label={'Add Post'}
         data-cy={dataCy}
         className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
         {...props}
       >
         <SquarePlus className="size-4" />
         <Typography as="span" overrideDefaults className="hidden lg:inline">
-          {t('content')}
+          {'Add Post'}
         </Typography>
       </Button>
     );
@@ -58,21 +55,19 @@ const DialogAddContentHeroTrigger = forwardRef<ComponentRef<typeof Button>, Dial
 
 const DialogAddContentGridTrigger = forwardRef<ComponentRef<typeof Button>, DialogAddContentTriggerProps>(
   function DialogAddContentGridTrigger({ dataCy, ...props }, ref) {
-    const t = useTranslations('collections.single');
-
     return (
       <Button
         ref={ref}
         overrideDefaults
         type="button"
-        aria-label={t('addContent')}
+        aria-label={'Add Post'}
         data-cy={dataCy}
         className={GRID_DASHED_CTA_TRIGGER_CLASS}
         {...props}
       >
         <Plus className="size-3 shrink-0" />
         <Typography as="span" overrideDefaults className="text-sm font-bold">
-          {t('addContent')}
+          {'Add Post'}
         </Typography>
       </Button>
     );
@@ -81,21 +76,19 @@ const DialogAddContentGridTrigger = forwardRef<ComponentRef<typeof Button>, Dial
 
 const DialogAddContentListTrigger = forwardRef<ComponentRef<typeof Button>, DialogAddContentTriggerProps>(
   function DialogAddContentListTrigger({ dataCy, ...props }, ref) {
-    const t = useTranslations('collections.single');
-
     return (
       <Button
         ref={ref}
         overrideDefaults
         type="button"
-        aria-label={t('addContent')}
+        aria-label={'Add Post'}
         data-cy={dataCy}
         className="flex h-16 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input text-foreground transition-colors outline-none hover:border-foreground focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
         {...props}
       >
         <Plus className="size-3 shrink-0" />
         <Typography as="span" overrideDefaults className="text-sm font-bold">
-          {t('addContent')}
+          {'Add Post'}
         </Typography>
       </Button>
     );
@@ -160,12 +153,10 @@ function ActionPill({
 }
 
 function FeedInstructionCard({ onOpenFeed }: { onOpenFeed: () => void }) {
-  const t = useTranslations('collections.addContentDialog');
-
   return (
     <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
-        <CardTitle className="text-base leading-none font-bold text-card-foreground">{t('fromFeedTitle')}</CardTitle>
+        <CardTitle className="text-base leading-none font-bold text-card-foreground">{'Add from feed'}</CardTitle>
       </CardHeader>
       <CardFooter className="justify-start px-6">
         <Container overrideDefaults className="flex w-full flex-wrap items-center justify-start gap-2">
@@ -174,21 +165,21 @@ function FeedInstructionCard({ onOpenFeed }: { onOpenFeed: () => void }) {
             count={7}
             onClick={onOpenFeed}
             dataCy="add-content-feed-reply-pill"
-            ariaLabel={t('fromFeedTitle')}
+            ariaLabel={'Add from feed'}
           />
           <ActionPill
             icon={Repeat}
             count={3}
             onClick={onOpenFeed}
             dataCy="add-content-feed-repost-pill"
-            ariaLabel={t('fromFeedTitle')}
+            ariaLabel={'Add from feed'}
           />
           <ActionPill
             icon={Library}
             isHighlighted
             onClick={onOpenFeed}
             dataCy="add-content-feed-save-pill"
-            ariaLabel={t('fromFeedTitle')}
+            ariaLabel={'Add from feed'}
           />
         </Container>
       </CardFooter>
@@ -196,13 +187,33 @@ function FeedInstructionCard({ onOpenFeed }: { onOpenFeed: () => void }) {
   );
 }
 
-function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof useAddContentForm> }) {
-  const t = useTranslations('collections.addContentDialog');
-
+function SelectFromPostsCard({ onSelectFromPosts }: { onSelectFromPosts: () => void }) {
   return (
     <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
-        <CardTitle className="text-base leading-none font-bold text-card-foreground">{t('pasteTitle')}</CardTitle>
+        <CardTitle className="text-base leading-none font-bold text-card-foreground">{'Select from posts'}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-6">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onSelectFromPosts}
+          data-cy="add-content-select-from-posts"
+        >
+          <ListIcon className="size-4" />
+          {'Select'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof useAddContentForm> }) {
+  return (
+    <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
+      <CardHeader className="px-6">
+        <CardTitle className="text-base leading-none font-bold text-card-foreground">{'Paste post url'}</CardTitle>
       </CardHeader>
       <CardFooter className="flex-col items-stretch px-6">
         <ControlledInputField
@@ -213,9 +224,14 @@ function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof us
           size="md"
           disabled={addContentForm.isPending}
           loading={addContentForm.isPending}
-          loadingText={t('adding')}
+          loadingText={'Adding...'}
           onPaste={addContentForm.handlePaste}
-          className="mb-0 h-auto gap-2 border-input bg-background/10! px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
+          icon={<ClipboardPaste className="size-4" />}
+          iconPosition="right"
+          iconAriaLabel="Paste"
+          onClickIcon={() => void addContentForm.pasteFromClipboard()}
+          iconClassName="mr-0 size-6 shrink-0 rounded-full text-foreground hover:bg-accent/50 hover:text-accent-foreground"
+          className="mb-0 h-auto gap-3 border-input bg-background/10! px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
           inputClassName="h-auto p-0 shadow-none"
           dataCy="add-content-url-input"
         />
@@ -225,15 +241,14 @@ function UrlPasteCard({ addContentForm }: { addContentForm: ReturnType<typeof us
 }
 
 function CreatePostCard({ onCreatePost }: { onCreatePost: () => void }) {
-  const t = useTranslations('collections.addContentDialog');
   const { currentUserPubky, userDetails } = useCurrentUserProfile();
   const avatarUrl = useAvatarUrl(userDetails);
-  const displayName = userDetails?.name ?? currentUserPubky ?? t('createPostAvatarFallback');
+  const displayName = userDetails?.name ?? currentUserPubky ?? 'You';
 
   return (
     <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
-        <CardTitle className="text-base leading-none font-bold text-card-foreground">{t('createPostTitle')}</CardTitle>
+        <CardTitle className="text-base leading-none font-bold text-card-foreground">{'Create new post'}</CardTitle>
       </CardHeader>
       <CardFooter className="flex-col items-stretch px-6">
         <Button
@@ -241,17 +256,17 @@ function CreatePostCard({ onCreatePost }: { onCreatePost: () => void }) {
           type="button"
           onClick={onCreatePost}
           data-cy="add-content-create-post"
-          className="flex w-full cursor-pointer items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 text-left outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className="flex w-full cursor-pointer items-center gap-3 rounded-md border border-dashed border-input px-4 py-3 text-left outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           <AvatarWithFallback
             avatarUrl={avatarUrl}
             name={displayName}
             fallbackSeed={currentUserPubky ?? displayName}
-            size="default"
+            size="md"
             alt={displayName}
           />
           <Typography overrideDefaults className="min-w-0 flex-1 truncate text-base font-medium text-input">
-            {t('createPostPlaceholder')}
+            {'Start writing'}
           </Typography>
         </Button>
       </CardFooter>
@@ -264,13 +279,14 @@ function DialogAddContentBody({
   onSuccess,
   onCreatePost,
   onOpenFeed,
+  onSelectFromPosts,
 }: {
   target: NonNullable<DialogAddContentProps['target']>;
   onSuccess: (postId: string) => Promise<void>;
   onCreatePost: () => void;
   onOpenFeed: () => void;
+  onSelectFromPosts: () => void;
 }) {
-  const t = useTranslations('collections.addContentDialog');
   const addContentForm = useAddContentForm({
     target,
     onSuccess,
@@ -284,11 +300,19 @@ function DialogAddContentBody({
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
       <DialogHeader className="pr-0">
-        <DialogTitle>{t('title')}</DialogTitle>
-        <DialogDescription className="text-muted-foreground">{t('description')}</DialogDescription>
+        <DialogTitle>{'Add Post'}</DialogTitle>
+        <DialogDescription className="text-muted-foreground">
+          <span className="sm:hidden">{'Choose how to add posts to your collection.'}</span>
+          <span className="hidden sm:inline">{'There are several ways to add posts to your collection.'}</span>
+        </DialogDescription>
       </DialogHeader>
-      <Container overrideDefaults className="flex w-full flex-col gap-3">
+      <Container
+        overrideDefaults
+        data-cy="add-content-options"
+        className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2"
+      >
         <FeedInstructionCard onOpenFeed={onOpenFeed} />
+        <SelectFromPostsCard onSelectFromPosts={onSelectFromPosts} />
         <UrlPasteCard addContentForm={addContentForm} />
         <CreatePostCard onCreatePost={onCreatePost} />
       </Container>
@@ -302,7 +326,6 @@ export function DialogAddContent({
   target = { type: 'bookmarks' },
   triggerVariant = 'hero',
 }: DialogAddContentProps) {
-  const t = useTranslations('collections.addContentDialog');
   const [open, setOpen] = useState(false);
   const [newPostOpen, setNewPostOpen] = useState(false);
   const router = useRouter();
@@ -324,6 +347,11 @@ export function DialogAddContent({
     router.push(APP_ROUTES.HOME);
   };
 
+  const handleSelectFromPosts = () => {
+    setOpen(false);
+    router.push(PROFILE_ROUTES.POSTS);
+  };
+
   const handlePostCreated = async (createdPostId: string) => {
     await saveCreatedPostToTarget({
       target,
@@ -339,14 +367,15 @@ export function DialogAddContent({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>{trigger}</DialogTrigger>
         <DialogContent
-          className="flex w-xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
-          hiddenTitle={t('title')}
+          className="flex w-xl flex-col border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
+          hiddenTitle={'Add Post'}
         >
           <DialogAddContentBody
             target={target}
             onSuccess={handleSuccess}
             onCreatePost={handleCreatePost}
             onOpenFeed={handleOpenFeed}
+            onSelectFromPosts={handleSelectFromPosts}
           />
         </DialogContent>
       </Dialog>

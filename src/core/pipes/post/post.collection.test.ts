@@ -267,4 +267,42 @@ describe('CollectionPostContent', () => {
       expect(CollectionPostContent.removeItem(collection, 'https://example.com/missing')).toBe(collection);
     });
   });
+
+  describe('reorderItems', () => {
+    const uriA = 'https://example.com/post/a';
+    const uriB = 'https://example.com/post/b';
+    const uriC = 'https://example.com/post/c';
+
+    it('reorders items to the drafted order', () => {
+      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, uriB, uriC] });
+
+      expect(CollectionPostContent.reorderItems(collection, [uriC, uriA, uriB]).items).toEqual([uriC, uriA, uriB]);
+    });
+
+    it('returns the same collection when the drafted order matches the current order', () => {
+      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, uriB] });
+
+      expect(CollectionPostContent.reorderItems(collection, [uriA, uriB])).toBe(collection);
+    });
+
+    it('keeps items added since the draft was taken, leading the reordered set', () => {
+      // uriC was added (prepended) after the [uriB, uriA] draft was snapshotted.
+      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriC, uriA, uriB] });
+
+      expect(CollectionPostContent.reorderItems(collection, [uriB, uriA]).items).toEqual([uriC, uriB, uriA]);
+    });
+
+    it('drops drafted items that were removed since the draft was taken', () => {
+      // uriB was removed after the [uriC, uriB, uriA] draft was snapshotted.
+      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, uriC] });
+
+      expect(CollectionPostContent.reorderItems(collection, [uriC, uriB, uriA]).items).toEqual([uriC, uriA]);
+    });
+
+    it('trims drafted URIs before matching', () => {
+      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, uriB] });
+
+      expect(CollectionPostContent.reorderItems(collection, [`  ${uriB}  `, uriA]).items).toEqual([uriB, uriA]);
+    });
+  });
 });

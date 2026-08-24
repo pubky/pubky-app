@@ -40,15 +40,6 @@ function Popover({
     }
   };
 
-  const blurActiveElement = () => {
-    setTimeout(() => {
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement?.blur) {
-        activeElement.blur();
-      }
-    }, 0);
-  };
-
   const handleMouseEnter = () => {
     // Cancel any pending close
     if (closeTimeoutRef.current) {
@@ -90,11 +81,9 @@ function Popover({
       if (hoverCloseDelay > 0) {
         closeTimeoutRef.current = setTimeout(() => {
           handleOpenChange?.(false);
-          blurActiveElement();
         }, hoverCloseDelay);
       } else {
         handleOpenChange?.(false);
-        blurActiveElement();
       }
     }
   };
@@ -172,9 +161,11 @@ function PopoverContent({
   sideOffset = 0,
   onMouseEnter: propOnMouseEnter,
   onMouseLeave: propOnMouseLeave,
+  onOpenAutoFocus: propOnOpenAutoFocus,
+  onCloseAutoFocus: propOnCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
-  const { onMouseEnter: contextOnMouseEnter, onMouseLeave: contextOnMouseLeave } = useContext(PopoverContext);
+  const { hover, onMouseEnter: contextOnMouseEnter, onMouseLeave: contextOnMouseLeave } = useContext(PopoverContext);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     contextOnMouseEnter?.();
@@ -186,6 +177,19 @@ function PopoverContent({
     propOnMouseLeave?.(e);
   };
 
+  // Hover popovers are mouse-driven: they must never take focus on open nor
+  // move it on close, otherwise they steal focus from whatever the user is
+  // typing in (e.g. a tag input) just by moving the cursor.
+  const handleOpenAutoFocus = (e: Event) => {
+    propOnOpenAutoFocus?.(e);
+    if (hover) e.preventDefault();
+  };
+
+  const handleCloseAutoFocus = (e: Event) => {
+    propOnCloseAutoFocus?.(e);
+    if (hover) e.preventDefault();
+  };
+
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
@@ -195,6 +199,8 @@ function PopoverContent({
         sideOffset={sideOffset}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onOpenAutoFocus={handleOpenAutoFocus}
+        onCloseAutoFocus={handleCloseAutoFocus}
         className={cn(
           'z-50 mx-8 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover p-4 text-popover-foreground shadow-[0px_4px_6px_0px_rgba(5,5,10,0.25)] shadow-[0px_10px_15px_0px_rgba(5,5,10,0.50)] outline-hidden data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:mx-0',
           className,

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { ROOT_ROUTES } from '@/app/routes';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { AuthController } from '@/controllers/auth/auth';
@@ -16,7 +15,6 @@ export function Install() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const t = useTranslations('onboarding.install');
   const hasInitialisedFromUrlRef = useRef(false);
   const inviteCodeFromUrl = formatInviteCode(searchParams.get('inviteCode') ?? '');
   const hasInviteCodeFromUrl = inviteCodeFromUrl.length === 14;
@@ -37,7 +35,7 @@ export function Install() {
         if (status === 'valid') {
           useOnboardingStore.getState().setInviteCode(inviteCodeFromUrl);
           toast({
-            title: t('inviteCodeApplied'),
+            title: 'Invite code applied',
           });
           setIsVerifying(false);
           return;
@@ -46,26 +44,26 @@ export function Install() {
         if (status === 'used') {
           toast({
             variant: 'error',
-            title: t('usedInviteCode'),
+            title: 'Invite code already used',
           });
         } else {
           toast({
             variant: 'error',
-            title: t('invalidInviteCode'),
+            title: 'Invalid invite code',
           });
         }
       } catch {
         // The homeserver could not be reached, so we couldn't confirm the code.
         toast({
           variant: 'error',
-          title: t('verificationFailed'),
+          title: "Couldn't verify invite code",
         });
       }
 
       // Keep the verifying state to avoid flashing the install page before the redirect.
       router.replace(ROOT_ROUTES);
     })();
-  }, [hasInviteCodeFromUrl, inviteCodeFromUrl, router, t, toast]);
+  }, [hasInviteCodeFromUrl, inviteCodeFromUrl, router, toast]);
 
   if (isVerifying) {
     return (

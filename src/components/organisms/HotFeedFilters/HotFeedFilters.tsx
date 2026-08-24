@@ -1,7 +1,6 @@
 'use client';
 
 import { Calendar, CalendarRange, Clock, Star } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import {
   FilterHeader,
   FilterItem,
@@ -31,7 +30,6 @@ interface FilterTimeframeProps {
  * Filter component for selecting timeframe (Today, This Week, This Month, All Time).
  */
 export function FilterTimeframe({ selectedTab = TIMEFRAME.THIS_MONTH, onTabChange }: FilterTimeframeProps) {
-  const t = useTranslations('filters.timeframe');
   const timeframeTabs: {
     key: TimeframeType;
     label: string;
@@ -41,22 +39,22 @@ export function FilterTimeframe({ selectedTab = TIMEFRAME.THIS_MONTH, onTabChang
   }[] = [
     {
       key: TIMEFRAME.TODAY,
-      label: t('today'),
+      label: 'Today',
       icon: Star,
     },
     {
       key: TIMEFRAME.THIS_WEEK,
-      label: t('thisWeek'),
+      label: 'This Week',
       icon: CalendarRange,
     },
     {
       key: TIMEFRAME.THIS_MONTH,
-      label: t('thisMonth'),
+      label: 'This Month',
       icon: Calendar,
     },
     {
       key: TIMEFRAME.ALL_TIME,
-      label: t('allTime'),
+      label: 'All Time',
       icon: Clock,
     },
   ];
@@ -65,7 +63,7 @@ export function FilterTimeframe({ selectedTab = TIMEFRAME.THIS_MONTH, onTabChang
   };
   return (
     <FilterRoot>
-      <FilterHeader title={t('title')} />
+      <FilterHeader title={'Timeframe'} />
       <FilterList>
         {timeframeTabs.map(({ key, label, icon: Icon }) => {
           const isSelected = selectedTab === key;

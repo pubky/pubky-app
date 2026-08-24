@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Library, UserRound } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { APP_ROUTES, getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -25,28 +24,27 @@ interface CollectionNotFoundProps {
  * stays below it (the collection analog of the post not-found trending feed).
  */
 export function CollectionNotFound({ postId }: CollectionNotFoundProps) {
-  const t = useTranslations('collections.single.notFound');
   const router = useRouter();
   const viewProfilePubky = getValidAuthorPubkyFromPostCompositeId(postId);
 
   return (
     <IllustratedEmptyState
       imageSrc="/images/post-not-found-empty-state.webp"
-      imageAlt={t('imageAlt')}
+      imageAlt={'Collection Not Found'}
       icon={Library}
-      title={t('title')}
+      title={'Collection Not Found'}
       subtitle={
         <>
-          {t('subtitle1')}
+          {"This collection isn't available."}
           <br />
-          {t('subtitle2')}
+          {'It may have been removed or the link is no longer valid.'}
         </>
       }
     >
       <Container overrideDefaults className="flex flex-col flex-wrap items-center justify-center gap-3 sm:flex-row">
         <Button type="button" variant={ButtonVariant.SECONDARY} onClick={() => router.push(APP_ROUTES.COLLECTIONS)}>
           <ArrowLeft className="size-4 shrink-0" />
-          {t('backToCollections')}
+          {'Back to Collections'}
         </Button>
         {viewProfilePubky ? (
           <Button
@@ -55,7 +53,7 @@ export function CollectionNotFound({ postId }: CollectionNotFoundProps) {
             onClick={() => router.push(getProfileRoute(PROFILE_ROUTES.PROFILE, viewProfilePubky))}
           >
             <UserRound className="size-4 shrink-0" />
-            {t('viewProfile')}
+            {'View profile'}
           </Button>
         ) : null}
       </Container>

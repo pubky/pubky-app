@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import type { Pubky } from '@/models/models.types';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
@@ -11,6 +12,7 @@ import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
 import { UserTagsModel } from '@/models/user/tags/userTags';
+import { LocalMuteService } from '@/services/local/mute/mute';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import type { NexusPostsKeyStream } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
@@ -82,6 +84,19 @@ const setupMutedUsers = async (mutedUserIds: string[]) => {
 
 const clearMutedUsers = async () => {
   await UserStreamModel.table.clear();
+};
+
+/** Reset all tables + queue state shared by the real-Dexie integration describes. */
+const resetStreamTablesAndQueue = async () => {
+  await PostStreamModel.table.clear();
+  await UnreadPostStreamModel.table.clear();
+  await PostDetailsModel.table.clear();
+  await UserDetailsModel.table.clear();
+  await UserCountsModel.table.clear();
+  await UserRelationshipsModel.table.clear();
+  await UserTagsModel.table.clear();
+  await UserStreamModel.table.clear();
+  postStreamQueue.clear();
 };
 
 // ============================================================================
@@ -437,17 +452,7 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
   beforeEach(async () => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
-
-    // Clear all relevant tables
-    await PostStreamModel.table.clear();
-    await UnreadPostStreamModel.table.clear();
-    await PostDetailsModel.table.clear();
-    await UserDetailsModel.table.clear();
-    await UserCountsModel.table.clear();
-    await UserRelationshipsModel.table.clear();
-    await UserTagsModel.table.clear();
-    await UserStreamModel.table.clear();
-    postStreamQueue.clear();
+    await resetStreamTablesAndQueue();
   });
 
   afterEach(async () => {
@@ -776,9 +781,11 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       expect(result1.nextPageIds.every((id) => !id.startsWith(MUTED_AUTHOR))).toBe(true);
       expect(result1.nextCursor).toBeDefined();
 
-      // Unmute mid-scroll
+      // Unmute mid-scroll. The queue clear simulates continuing after a queue reset
+      // (stream change / refresh) — production unmute deliberately preserves the queue,
+      // covered by 'mute mid-scroll re-filters the overflow buffer instead of skipping past it'.
       await clearMutedUsers();
-      postStreamQueue.clear(); // Clear queue to ensure fresh state
+      postStreamQueue.clear();
 
       // Second page after unmuting - should continue from where we left off
       const result2 = await PostStreamApplication.getOrFetchStreamSlice({
@@ -846,5 +853,220 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       // Full cache hit with exactly limit posts - might have more
       expect(result.reachedEnd).toBe(false);
     });
+  });
+});
+
+// ============================================================================
+// Raw resume anchor across fully-filtered cache runs (#2251 follow-up)
+// ============================================================================
+//
+// The cache walk (`getStreamFromCache`) pages by `lastPostId` and ignores the
+// backend cursor. When a whole round is filtered to zero visible posts, the
+// caller has no visible id to anchor to — `lastRawPostId` (the last RAW post
+// scanned, visible or filtered) is what lets the next round resume instead of
+// restarting at the cache head and livelocking on runs of
+// limit × MAX_FETCH_ITERATIONS (= 200) consecutive filtered posts.
+//
+// These tests simulate useStreamPagination's exact cross-round behavior:
+// each round threads `lastPostId = previous lastRawPostId` and
+// `streamTail = previous nextCursor`.
+describe('Raw resume anchor (lastRawPostId) across fully-filtered cache runs', () => {
+  const streamId = PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId;
+  const viewerId = 'user-viewer' as Pubky;
+  const LIMIT = 10;
+
+  /** Details with descending indexed_at so array order matches newest-first stream order. */
+  const createDetailsForRun = async (postIds: string[], kind: string, newestTs: number, content?: string) => {
+    await Promise.all(
+      postIds.map((postId, i) =>
+        PostDetailsModel.create({
+          id: postId,
+          content: content ?? `Content for ${postId}`,
+          kind,
+          indexed_at: newestTs - i,
+          uri: `https://pubky.app/author/pub/pubky.app/posts/${postId}`,
+          attachments: null,
+        }),
+      ),
+    );
+  };
+
+  /** One useStreamPagination round: resume from the previous round's raw anchor + cursor. */
+  const runRound = async (anchor: { lastPostId?: string; streamTail: number }) => {
+    return await PostStreamApplication.getOrFetchStreamSlice({
+      streamId,
+      limit: LIMIT,
+      streamHead: 0,
+      streamTail: anchor.streamTail,
+      lastPostId: anchor.lastPostId,
+      viewerId,
+    });
+  };
+
+  const nextAnchor = (
+    result: Awaited<ReturnType<typeof runRound>>,
+    prev: { lastPostId?: string; streamTail: number },
+  ) => ({
+    lastPostId: result.lastRawPostId ?? prev.lastPostId,
+    streamTail: result.nextCursor ?? prev.streamTail,
+  });
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    await resetStreamTablesAndQueue();
+  });
+
+  afterEach(async () => {
+    vi.clearAllMocks();
+  });
+
+  it('resumes past a 200-post collection run at the cache head and surfaces the real posts on round 2 (QA livelock repro)', async () => {
+    // Cache head: 200 collections (newest, filtered out of this stream), then 10 real posts.
+    const collectionIds = Array.from({ length: 200 }, (_, i) => `qa-user:coll-${i + 1}`);
+    const realIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:real-${i + 1}`);
+    await createDetailsForRun(collectionIds, 'collection', BASE_TIMESTAMP + 1000);
+    await createDetailsForRun(realIds, 'short', BASE_TIMESTAMP);
+    await createStreamWithPosts(streamId, [...collectionIds, ...realIds]);
+
+    // The real posts are in the cache; Nexus must never be needed.
+    const nexusSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+      post_keys: [],
+      last_post_score: null,
+    });
+
+    // Round 1 (initial load): the whole iteration budget is consumed inside the run.
+    const seed = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+    const round1 = await runRound({ lastPostId: undefined, streamTail: seed });
+    expect(round1.nextPageIds).toHaveLength(0);
+    expect(round1.reachedEnd).toBe(false);
+    // The raw anchor still advanced through the whole scanned run.
+    expect(round1.lastRawPostId).toBe('qa-user:coll-200');
+
+    // Round 2: resuming from the raw anchor lands directly on the real posts.
+    const round2 = await runRound(nextAnchor(round1, { streamTail: seed }));
+    expect(round2.nextPageIds).toEqual(realIds);
+    expect(nexusSpy).not.toHaveBeenCalled();
+  });
+
+  it('resumes past a 200-post deleted-tombstone run', async () => {
+    const deletedIds = Array.from({ length: 200 }, (_, i) => `qa-user:gone-${i + 1}`);
+    const realIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:real-${i + 1}`);
+    await createDetailsForRun(deletedIds, 'short', BASE_TIMESTAMP + 1000, DELETED);
+    await createDetailsForRun(realIds, 'short', BASE_TIMESTAMP);
+    await createStreamWithPosts(streamId, [...deletedIds, ...realIds]);
+
+    const nexusSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+      post_keys: [],
+      last_post_score: null,
+    });
+
+    const seed = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+    const round1 = await runRound({ lastPostId: undefined, streamTail: seed });
+    expect(round1.nextPageIds).toHaveLength(0);
+    expect(round1.reachedEnd).toBe(false);
+    expect(round1.lastRawPostId).toBe('qa-user:gone-200');
+
+    const round2 = await runRound(nextAnchor(round1, { streamTail: seed }));
+    expect(round2.nextPageIds).toEqual(realIds);
+    expect(nexusSpy).not.toHaveBeenCalled();
+  });
+
+  it('resumes past an interior filtered run (anchor mid-stream)', async () => {
+    // 10 real posts, then a 200-collection run, then 10 more real posts.
+    const newestRealIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:real-${i + 1}`);
+    const collectionIds = Array.from({ length: 200 }, (_, i) => `qa-user:coll-${i + 1}`);
+    const oldestRealIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:real-${i + 11}`);
+    await createDetailsForRun(newestRealIds, 'short', BASE_TIMESTAMP + 3000);
+    await createDetailsForRun(collectionIds, 'collection', BASE_TIMESTAMP + 2000);
+    await createDetailsForRun(oldestRealIds, 'short', BASE_TIMESTAMP + 1000);
+    await createStreamWithPosts(streamId, [...newestRealIds, ...collectionIds, ...oldestRealIds]);
+
+    vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+      post_keys: [],
+      last_post_score: null,
+    });
+
+    const seed = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+    let anchor: { lastPostId?: string; streamTail: number } = { lastPostId: undefined, streamTail: seed };
+
+    const round1 = await runRound(anchor);
+    expect(round1.nextPageIds).toEqual(newestRealIds);
+    anchor = nextAnchor(round1, anchor);
+
+    // Round 2 burns its whole budget inside the interior run — empty, but anchored past it.
+    const round2 = await runRound(anchor);
+    expect(round2.nextPageIds).toHaveLength(0);
+    expect(round2.reachedEnd).toBe(false);
+    expect(round2.lastRawPostId).toBe('qa-user:coll-200');
+    anchor = nextAnchor(round2, anchor);
+
+    const round3 = await runRound(anchor);
+    expect(round3.nextPageIds).toEqual(oldestRealIds);
+  });
+
+  it('surfaces posts within one round when the filtered run is under limit×maxIterations (contrast)', async () => {
+    // 190 consecutive collections: the round's final iteration walks past the run.
+    const collectionIds = Array.from({ length: 190 }, (_, i) => `qa-user:coll-${i + 1}`);
+    const realIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:real-${i + 1}`);
+    await createDetailsForRun(collectionIds, 'collection', BASE_TIMESTAMP + 1000);
+    await createDetailsForRun(realIds, 'short', BASE_TIMESTAMP);
+    await createStreamWithPosts(streamId, [...collectionIds, ...realIds]);
+
+    vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+      post_keys: [],
+      last_post_score: null,
+    });
+
+    const seed = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+    const round1 = await runRound({ lastPostId: undefined, streamTail: seed });
+    expect(round1.nextPageIds).toEqual(realIds);
+  });
+
+  it('mute mid-scroll re-filters the overflow buffer instead of skipping past it', async () => {
+    // With a raw resume anchor, clearing the queue on mute would skip the buffered
+    // posts (the anchor already points past them). The mute service therefore keeps
+    // the buffer, and collect() re-filters it with the fresh mute list on read.
+    const rawPage: NexusPostsKeyStream = {
+      post_keys: [
+        ...Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`),
+        `${MUTED_AUTHOR}:post-11`,
+        `${MUTED_AUTHOR}:post-12`,
+        `${DEFAULT_AUTHOR}:post-13`,
+        `${DEFAULT_AUTHOR}:post-14`,
+        `${DEFAULT_AUTHOR}:post-15`,
+      ],
+      last_post_score: BASE_TIMESTAMP + 14,
+    };
+    const nexusSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(rawPage);
+
+    // Round 1 overflows: 10 returned, 5 buffered (2 from the soon-muted author).
+    const round1 = await runRound({ lastPostId: undefined, streamTail: 0 });
+    expect(round1.nextPageIds).toHaveLength(10);
+    expect(round1.lastRawPostId).toBe(`${DEFAULT_AUTHOR}:post-15`);
+
+    // User mutes the author mid-scroll — the buffer must survive.
+    await LocalMuteService.create({ muter: viewerId, mutee: MUTED_AUTHOR as Pubky });
+    expect(postStreamQueue.get(streamId)?.posts).toHaveLength(5);
+
+    // Round 2 is served from the re-filtered buffer: muted posts dropped, the
+    // remaining buffered posts still delivered, no Nexus round trip.
+    nexusSpy.mockClear();
+    const round2 = await PostStreamApplication.getOrFetchStreamSlice({
+      streamId,
+      limit: 3,
+      streamHead: 0,
+      streamTail: round1.nextCursor ?? 0,
+      lastPostId: round1.lastRawPostId,
+      viewerId,
+    });
+    expect(round2.nextPageIds).toEqual([
+      `${DEFAULT_AUTHOR}:post-13`,
+      `${DEFAULT_AUTHOR}:post-14`,
+      `${DEFAULT_AUTHOR}:post-15`,
+    ]);
+    expect(nexusSpy).not.toHaveBeenCalled();
+    // Buffer-only round: the raw anchor holds at the caller's own position.
+    expect(round2.lastRawPostId).toBe(`${DEFAULT_AUTHOR}:post-15`);
   });
 });

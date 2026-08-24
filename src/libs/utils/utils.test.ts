@@ -20,6 +20,7 @@ import {
   generateRandomColor,
   generateRandomUsername,
   getCharacterCount,
+  getDisplayTags,
   getValidAuthorPubkyFromPostCompositeId,
   hexToRgba,
   hoursAgo,
@@ -30,6 +31,7 @@ import {
   isValidTagLabel,
   minutesAgo,
   radixIdSerializer,
+  readFromClipboard,
   resolveDisplayName,
   sanitizeTagInput,
   shouldBypassLinkConfirmation,
@@ -418,6 +420,37 @@ describe('Utils', () => {
       });
 
       await expect(copyToClipboard({ text: 'test' })).rejects.toThrow('Fallback copy command was unsuccessful');
+    });
+  });
+
+  describe('readFromClipboard', () => {
+    afterEach(() => {
+      Object.defineProperty(navigator, 'clipboard', { value: undefined, writable: true });
+    });
+
+    it('should resolve with the clipboard text', async () => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { readText: vi.fn().mockResolvedValue('clipboard text') },
+        writable: true,
+      });
+
+      await expect(readFromClipboard()).resolves.toBe('clipboard text');
+    });
+
+    it('should throw when the Clipboard API is unavailable', async () => {
+      Object.defineProperty(navigator, 'clipboard', { value: undefined, writable: true });
+
+      await expect(readFromClipboard()).rejects.toThrow('Clipboard API not supported');
+    });
+
+    it('should propagate read rejections', async () => {
+      const denied = new Error('denied');
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { readText: vi.fn().mockRejectedValue(denied) },
+        writable: true,
+      });
+
+      await expect(readFromClipboard()).rejects.toThrow('denied');
     });
   });
 
@@ -1647,6 +1680,37 @@ describe('Utils', () => {
       focusAdjacentGridItem(button);
 
       expect(document.querySelector('[data-testid="next-tile"]')).toHaveFocus();
+    });
+  });
+
+  describe('getDisplayTags', () => {
+    it('returns an empty array for no tags', () => {
+      expect(getDisplayTags([])).toEqual([]);
+    });
+
+    it('caps the number of tags at maxCount', () => {
+      expect(getDisplayTags(['a', 'b', 'c', 'd'], { maxCount: 2 })).toEqual(['a', 'b']);
+    });
+
+    it('drops trailing tags that exceed the total character budget', () => {
+      expect(getDisplayTags(['12345', '12345', '12345'], { maxTotalChars: 10, maxCount: 3 })).toEqual([
+        '12345',
+        '12345',
+      ]);
+    });
+
+    it('counts over-long labels at their truncated display length (maxTagLength)', () => {
+      // Each label counts as 5 chars toward the budget, not its raw 10.
+      expect(getDisplayTags(['aaaaaaaaaa', 'bbbbbbbbbb'], { maxTagLength: 5, maxTotalChars: 10 })).toEqual([
+        'aaaaaaaaaa',
+        'bbbbbbbbbb',
+      ]);
+    });
+
+    it('always keeps the first tag even when it alone exceeds the budget', () => {
+      expect(getDisplayTags(['verylongtaglabel'], { maxTagLength: 20, maxTotalChars: 10 })).toEqual([
+        'verylongtaglabel',
+      ]);
     });
   });
 });

@@ -18,8 +18,7 @@ import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { usePostInput } from './usePostInput';
 
-// next-intl is mocked globally in src/config/test.ts
-// Real placeholders from messages/en.json for test assertions
+// Literal copies of POST_INPUT_PLACEHOLDER keep assertions independent of the component constants
 const REAL_PLACEHOLDERS = {
   reply: 'Write a reply...',
   post: "What's on your mind?",
@@ -725,16 +724,22 @@ describe('usePostInput', () => {
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
     });
 
-    it('does not prependPosts when the created post kind does not match a wot_domain stream kind', async () => {
+    /*
+      WoT-sourced streams are gated before the kind lookup (#2308), which also
+      covers the former kind-mismatch case on `timeline:wot_domain:…:image`.
+    */
+    it.each([
+      ['wot (My network)', 'timeline:wot:all'],
+      ['wot_domain (Tagged as)', 'timeline:wot_domain:2:all:bitcoin'],
+    ])('does not prependPosts on a %s stream even when the kind matches (#2308)', async (_label, streamId) => {
       mockContent = 'Test content';
       mockPost.mockImplementation(async ({ onSuccess }) => {
         onSuccess('created-post-id');
       });
       vi.mocked(useTimelineFeedContext).mockReturnValue({
         ...mockTimelineFeedContext,
-        streamId: 'timeline:wot_domain:2:image:bitcoin' as PostStreamId,
+        streamId: streamId as PostStreamId,
       });
-      vi.mocked(PostController.getDetails).mockResolvedValue({ kind: 'short' } as never);
 
       const mockOnSuccess = vi.fn();
       const { result } = renderHook(() =>
@@ -749,10 +754,73 @@ describe('usePostInput', () => {
       });
 
       await waitFor(() => {
-        expect(PostController.getDetails).toHaveBeenCalledWith({ compositeId: 'created-post-id' });
+        expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+      });
+      // The gate short-circuits before the kind lookup
+      expect(PostController.getDetails).not.toHaveBeenCalled();
+      expect(mockPrependPosts).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['following', PostStreamTypes.TIMELINE_FOLLOWING_ALL as string],
+      ['Me (sorted author)', 'timeline:author:test-user-pubky:all'],
+    ])('still prependPosts on the %s stream', async (_label, streamId) => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: streamId as PostStreamId,
+      });
+
+      const mockOnSuccess = vi.fn();
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+          onSuccess: mockOnSuccess,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(mockPrependPosts).toHaveBeenCalledWith('created-post-id');
+      });
+      expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
+    });
+
+    it('collapses PostInput when prepend is skipped on a WoT stream', async () => {
+      mockContent = 'Test content';
+      mockPost.mockImplementation(async ({ onSuccess }) => {
+        onSuccess('created-post-id');
+      });
+      vi.mocked(useTimelineFeedContext).mockReturnValue({
+        ...mockTimelineFeedContext,
+        streamId: 'timeline:wot:all' as PostStreamId,
+      });
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+
+      act(() => {
+        result.current.handleExpand();
+      });
+      expect(result.current.isExpanded).toBe(true);
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isExpanded).toBe(false);
       });
       expect(mockPrependPosts).not.toHaveBeenCalled();
-      expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
     });
 
     it('collapses PostInput when the created post kind does not match the stream content filter', async () => {

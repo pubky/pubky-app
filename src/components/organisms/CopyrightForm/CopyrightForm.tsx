@@ -1,7 +1,6 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Controller } from 'react-hook-form';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
@@ -16,7 +15,6 @@ import { ControlledInputField } from '@/molecules/ControlledInputField/Controlle
 import { ControlledTextareaField } from '@/molecules/ControlledTextareaField/ControlledTextareaField';
 
 export function CopyrightForm() {
-  const t = useTranslations('forms.copyright');
   const { form, onSubmit } = useCopyrightForm();
   const { isSubmitting, errors } = form.formState;
   const roleError = errors.role?.message;
@@ -27,17 +25,15 @@ export function CopyrightForm() {
         <Card className="rounded-t-lg rounded-b-none border border-border p-8 md:p-12">
           <Container className="gap-6">
             <Typography as="h1" size="lg">
-              {t('title')}
+              {'Copyright Removal Request'}
             </Typography>
 
             <Typography size="sm" className="font-normal text-muted-foreground">
-              {t('date', {
-                date: currentDate,
-              })}
+              {`Date: ${currentDate}`}
             </Typography>
 
             <Typography size="sm" className="font-normal text-muted-foreground">
-              {t('companyInfo')}
+              {'Synonym Software, S.A. de C.V. ("Synonym")'}
               <br />
               87 avenida norte, calle El Mirador, edificio Torre Futura, oficina 06, nivel 11, colonia Escalón, del
               municipio de San Salvador, departamento de San Salvador. Código postal 01101, República de El Salvador.
@@ -47,14 +43,14 @@ export function CopyrightForm() {
 
             <Container className="gap-6 rounded-lg bg-muted p-4">
               <Typography size="sm" className="font-normal text-muted-foreground">
-                {t('greeting')}
+                {'Dear Synonym:'}
                 <br />
                 <br />
-                {t('onBehalfOf')}
+                {'We write on behalf of:'}
               </Typography>
             </Container>
 
-            <Typography size="md">{t('rightsOwner')}</Typography>
+            <Typography size="md">{'Rights Owner Information'}</Typography>
 
             <Controller
               control={form.control}
@@ -72,8 +68,11 @@ export function CopyrightForm() {
                   aria-errormessage={roleError ? 'copyright-role-error' : undefined}
                   aria-describedby={roleError ? 'copyright-role-error' : undefined}
                 >
-                  <RadioGroupItem value={COPYRIGHT_ROLES.RIGHTS_OWNER} label={t('iAmOwner')} />
-                  <RadioGroupItem value={COPYRIGHT_ROLES.REPORTING_ON_BEHALF} label={t('iAmReporting')} />
+                  <RadioGroupItem value={COPYRIGHT_ROLES.RIGHTS_OWNER} label={'I am the rights owner'} />
+                  <RadioGroupItem
+                    value={COPYRIGHT_ROLES.REPORTING_ON_BEHALF}
+                    label={'I am reporting on behalf of my organization or client'}
+                  />
                 </RadioGroup>
               )}
             />
@@ -87,14 +86,14 @@ export function CopyrightForm() {
             <ControlledInputField<CopyrightFormData>
               name="nameOwner"
               control={form.control}
-              label={t('ownerName')}
+              label={'Name of the rights owner'}
               labelHint={
                 <Typography as="span" overrideDefaults className="text-xs normal-case">
                   {' '}
-                  {t('ownerNameHint')}
+                  {'(This may be your full name or the name of the organization)'}
                 </Typography>
               }
-              placeholder={t('ownerName')}
+              placeholder={'Name of the rights owner'}
               maxLength={50}
               disabled={isSubmitting}
             />
@@ -113,8 +112,8 @@ export function CopyrightForm() {
               <ControlledTextareaField<CopyrightFormData>
                 name="originalContentUrls"
                 control={form.control}
-                label={t('originalUrls')}
-                placeholder={t('originalUrlsPlaceholder')}
+                label={'Original Content URLs'}
+                placeholder={'Enter URLs of your original content'}
                 disabled={isSubmitting}
                 className="min-w-0"
                 textareaClassName="overflow-y-auto overflow-x-hidden break-words"
@@ -123,8 +122,8 @@ export function CopyrightForm() {
               <ControlledTextareaField<CopyrightFormData>
                 name="briefDescription"
                 control={form.control}
-                label={t('description')}
-                placeholder={t('descriptionPlaceholder')}
+                label={'Brief description of your original content'}
+                placeholder={'Describe your original content'}
                 disabled={isSubmitting}
                 className="min-w-0"
                 textareaClassName="overflow-y-auto overflow-x-hidden"
@@ -142,13 +141,13 @@ export function CopyrightForm() {
               </Typography>
             </Container>
 
-            <Typography size="md">{t('infringingTitle')}</Typography>
+            <Typography size="md">{'Infringing work details'}</Typography>
 
             <ControlledTextareaField<CopyrightFormData>
               name="infringingContentUrl"
               control={form.control}
-              label={t('infringingUrls')}
-              placeholder={t('infringingUrlsPlaceholder')}
+              label={'Infringing Content URLs'}
+              placeholder={'Enter URLs of infringing content'}
               disabled={isSubmitting}
               className="min-w-0"
               textareaClassName="overflow-y-auto overflow-x-hidden break-words"
@@ -173,14 +172,14 @@ export function CopyrightForm() {
               </Typography>
             </Container>
 
-            <Typography size="md">{t('contact')}</Typography>
+            <Typography size="md">{'Contact Information'}</Typography>
 
             <Container className="gap-8 xl:flex-row xl:justify-between">
               <ControlledInputField<CopyrightFormData>
                 name="firstName"
                 control={form.control}
-                label={t('firstName')}
-                placeholder={t('firstNamePlaceholder')}
+                label={'First Name'}
+                placeholder={'Satoshi'}
                 maxLength={30}
                 disabled={isSubmitting}
               />
@@ -188,8 +187,8 @@ export function CopyrightForm() {
               <ControlledInputField<CopyrightFormData>
                 name="lastName"
                 control={form.control}
-                label={t('lastName')}
-                placeholder={t('lastNamePlaceholder')}
+                label={'Last Name'}
+                placeholder={'Nakamoto'}
                 maxLength={30}
                 disabled={isSubmitting}
               />
@@ -199,8 +198,8 @@ export function CopyrightForm() {
               <ControlledInputField<CopyrightFormData>
                 name="email"
                 control={form.control}
-                label={t('email')}
-                placeholder={t('emailPlaceholder')}
+                label={'Email'}
+                placeholder={'email@example.com'}
                 maxLength={100}
                 disabled={isSubmitting}
               />
@@ -208,21 +207,21 @@ export function CopyrightForm() {
               <ControlledInputField<CopyrightFormData>
                 name="phoneNumber"
                 control={form.control}
-                label={t('phone')}
-                placeholder={t('phonePlaceholder')}
+                label={'Phone number'}
+                placeholder={'000-000-0000'}
                 maxLength={30}
                 disabled={isSubmitting}
               />
             </Container>
 
-            <Typography size="md">{t('address')}</Typography>
+            <Typography size="md">{'Address'}</Typography>
 
             <Container className="gap-8 xl:flex-row xl:justify-between">
               <ControlledInputField<CopyrightFormData>
                 name="streetAddress"
                 control={form.control}
-                label={t('street')}
-                placeholder={t('streetPlaceholder')}
+                label={'Street address'}
+                placeholder={'Street number and name'}
                 maxLength={100}
                 disabled={isSubmitting}
               />
@@ -230,8 +229,8 @@ export function CopyrightForm() {
               <ControlledInputField<CopyrightFormData>
                 name="country"
                 control={form.control}
-                label={t('country')}
-                placeholder={t('countryPlaceholder')}
+                label={'Country'}
+                placeholder={'United States'}
                 maxLength={50}
                 disabled={isSubmitting}
               />
@@ -241,8 +240,8 @@ export function CopyrightForm() {
               <ControlledInputField<CopyrightFormData>
                 name="city"
                 control={form.control}
-                label={t('city')}
-                placeholder={t('cityPlaceholder')}
+                label={'City'}
+                placeholder={'City name'}
                 maxLength={50}
                 disabled={isSubmitting}
               />
@@ -250,8 +249,8 @@ export function CopyrightForm() {
               <ControlledInputField<CopyrightFormData>
                 name="stateProvince"
                 control={form.control}
-                label={t('state')}
-                placeholder={t('statePlaceholder')}
+                label={'State/Province'}
+                placeholder={'State name'}
                 maxLength={50}
                 disabled={isSubmitting}
               />
@@ -260,8 +259,8 @@ export function CopyrightForm() {
             <ControlledInputField<CopyrightFormData>
               name="zipCode"
               control={form.control}
-              label={t('zip')}
-              placeholder={t('zipPlaceholder')}
+              label={'Zip code'}
+              placeholder={'000000'}
               maxLength={20}
               disabled={isSubmitting}
             />
@@ -269,14 +268,14 @@ export function CopyrightForm() {
             <Container overrideDefaults className="my-3 h-px w-full bg-border" aria-hidden="true" />
 
             <Typography as="h2" size="md">
-              {t('signature')}
+              {'Signature'}
             </Typography>
 
             <ControlledInputField<CopyrightFormData>
               name="signature"
               control={form.control}
-              label={t('signatureName')}
-              placeholder={t('signaturePlaceholder')}
+              label={'Full Name as Signature'}
+              placeholder={'Full name'}
               maxLength={100}
               disabled={isSubmitting}
             />
@@ -290,15 +289,15 @@ export function CopyrightForm() {
               disabled={isSubmitting}
               size="lg"
               className="w-auto"
-              aria-label={isSubmitting ? t('submitting') : t('submitForm')}
+              aria-label={isSubmitting ? 'Submitting...' : 'Submit Form'}
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
-                  {t('submitting')}
+                  {'Submitting...'}
                 </>
               ) : (
-                t('submitForm')
+                'Submit Form'
               )}
             </Button>
           </Container>

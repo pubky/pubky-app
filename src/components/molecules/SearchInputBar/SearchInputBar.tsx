@@ -1,7 +1,6 @@
 'use client';
 
 import { Search } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { SEARCH_CLOSED_STYLE, SEARCH_INPUT_EXPANDED_STYLE } from '@/config/search';
@@ -23,7 +22,6 @@ export function SearchInputBar({
   onFocus,
   autoFocus,
 }: SearchInputBarProps) {
-  const t = useTranslations('search');
   const hasActiveTags = activeTags.length > 0;
   return (
     <Container
@@ -41,7 +39,7 @@ export function SearchInputBar({
           overrideDefaults
           className="flex min-w-0 items-center gap-2.5 overflow-x-auto py-2"
           role="list"
-          aria-label={t('activeTags')}
+          aria-label={'Active search tags'}
         >
           {activeTags.map((tag) => (
             <PostTag key={tag} label={tag} showClose onClose={() => onTagRemove(tag)} className="max-w-none shrink-0" />
@@ -52,7 +50,7 @@ export function SearchInputBar({
       <Input
         ref={inputRef}
         type="text"
-        placeholder={hasActiveTags ? '' : t('placeholder')}
+        placeholder={hasActiveTags ? '' : 'Search'}
         value={inputValue}
         onChange={onInputChange}
         onKeyDown={onKeyDown}
@@ -60,7 +58,7 @@ export function SearchInputBar({
         autoFocus={autoFocus}
         readOnly={isReadOnly}
         data-cy="header-search-input"
-        aria-label={t('inputLabel')}
+        aria-label={'Search input'}
         aria-autocomplete="list"
         aria-controls={suggestionsId || undefined}
         aria-expanded={isExpanded}

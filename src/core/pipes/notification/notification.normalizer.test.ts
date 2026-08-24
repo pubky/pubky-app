@@ -107,18 +107,14 @@ describe('NotificationNormalizer', () => {
         expect(typeof result.last_read.timestamp).toBe('bigint');
       });
 
-      /**
-       * Note: createLastRead() takes no parameters, so validation only happens
-       * at singleton initialization. Once initialized, invalid pubkys don't throw.
-       */
       it.each([
         ['empty', INVALID_INPUTS.EMPTY],
         ['null', INVALID_INPUTS.NULL],
         ['undefined', INVALID_INPUTS.UNDEFINED],
-      ])('should not throw for %s pubky (singleton already initialized)', (_, invalidPubky) => {
-        NotificationNormalizer.to(TEST_PUBKY.USER_1); // Initialize
-        const result = NotificationNormalizer.to(invalidPubky);
-        expect(result).toBeDefined();
+      ])('should reject a %s pubky identity switch after initialization', (_, invalidPubky) => {
+        NotificationNormalizer.to(TEST_PUBKY.USER_1);
+
+        expect(() => NotificationNormalizer.to(invalidPubky)).toThrow(AppError);
       });
     });
   });

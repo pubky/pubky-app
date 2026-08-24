@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import type { AvatarGroupItem } from '@/molecules/AvatarGroup/AvatarGroup.types';
@@ -48,17 +46,10 @@ export function UserInfoPopoverStats({
   followingAvatars,
   maxAvatars,
 }: UserInfoPopoverStatsProps) {
-  const t = useTranslations('userList');
-
   return (
     <Container className="flex items-start gap-2.5" overrideDefaults>
-      <StatsColumn count={followersCount} label={t('followers')} avatars={followersAvatars} maxAvatars={maxAvatars} />
-      <StatsColumn
-        count={followingCount}
-        label={t('followingLabel')}
-        avatars={followingAvatars}
-        maxAvatars={maxAvatars}
-      />
+      <StatsColumn count={followersCount} label={'FOLLOWERS'} avatars={followersAvatars} maxAvatars={maxAvatars} />
+      <StatsColumn count={followingCount} label={'FOLLOWING'} avatars={followingAvatars} maxAvatars={maxAvatars} />
     </Container>
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { Logger } from '@/libs/logger/logger';
 import { useToast } from '@/molecules/Toaster/use-toast';
@@ -55,13 +54,12 @@ export interface UseBookmarkOptions {
  */
 export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBookmarkResult {
   const { toast } = useToast();
-  const tBookmark = useTranslations('toast.bookmark');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   // Resolve toast copy once per render so the `useCallback` dep array can track
   // string identity rather than the (possibly inline-allocated) options object.
-  const addedTitle = options?.toastMessages?.added ?? tBookmark('added');
-  const removedTitle = options?.toastMessages?.removed ?? tBookmark('removed');
+  const addedTitle = options?.toastMessages?.added ?? 'Post saved to bookmarks';
+  const removedTitle = options?.toastMessages?.removed ?? 'Post removed from bookmarks';
 
   const [isBookmarked, setIsBookmarked] = useState(options?.initialIsBookmarked ?? false);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +90,7 @@ export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBo
     if (!currentUserPubky) {
       toast({
         variant: 'error',
-        description: tBookmark('loginRequired'),
+        description: 'Sign in to bookmark posts',
       });
       return;
     }
@@ -133,18 +131,20 @@ export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBo
         // shows the new state, so the toast must not claim the action failed.
         toast({
           variant: 'warning',
-          description: isBookmarked ? tBookmark('removedSyncFailed') : tBookmark('addedSyncFailed'),
+          description: isBookmarked
+            ? 'Removed from bookmarks on this device, but syncing failed.'
+            : 'Saved to bookmarks on this device, but syncing failed.',
         });
       } else {
         toast({
           variant: 'error',
-          description: isBookmarked ? tBookmark('removeFailed') : tBookmark('addFailed'),
+          description: isBookmarked ? 'Could not remove bookmark' : 'Could not add bookmark',
         });
       }
     } finally {
       setIsToggling(false);
     }
-  }, [postId, currentUserPubky, isBookmarked, isToggling, toast, tBookmark, addedTitle, removedTitle]);
+  }, [postId, currentUserPubky, isBookmarked, isToggling, toast, addedTitle, removedTitle]);
 
   return {
     isBookmarked,

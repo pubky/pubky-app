@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
@@ -17,19 +17,6 @@ import type { CollectionHeroProps } from './CollectionHero.types';
 
 const mockUseAuthStore = vi.fn();
 const mockLocalCollections: Record<string, string | undefined> = {};
-
-vi.mock('next-intl', () => ({
-  useTranslations: (namespace?: string) => (key: string, values?: { count?: number }) =>
-    namespace === 'collections' && key === 'postCount'
-      ? values?.count === 1
-        ? 'post'
-        : 'posts'
-      : `${namespace ?? ''}.${key}`,
-  useFormatter: () => ({
-    number: (value: number, _options?: Intl.NumberFormatOptions) => String(value),
-  }),
-}));
-
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: vi.fn(),
 }));
@@ -75,15 +62,17 @@ vi.mock('@/molecules/DialogConfirmDelete/DialogConfirmDelete', () => ({
   DialogConfirmDelete: ({
     open,
     onConfirm,
-    i18nNamespace,
+    title,
+    description,
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onConfirm: () => void;
-    i18nNamespace?: string;
+    title?: string;
+    description?: string;
   }) =>
     open ? (
-      <div data-testid="dialog-confirm-delete" data-i18n-namespace={i18nNamespace}>
+      <div data-testid="dialog-confirm-delete" data-title={title} data-description={description}>
         <button data-testid="dialog-confirm-delete-btn" onClick={onConfirm}>
           confirm delete
         </button>
@@ -132,13 +121,8 @@ vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
     disabled?: boolean;
     target?: { type: string; collectionId?: string };
   }) => (
-    <button
-      type="button"
-      data-testid={dataCy ?? 'add-content-dialog'}
-      aria-label="collections.single.content"
-      disabled={disabled}
-    >
-      collections.single.content
+    <button type="button" data-testid={dataCy ?? 'add-content-dialog'} aria-label="Add Post" disabled={disabled}>
+      Add Post
     </button>
   ),
 }));
@@ -239,6 +223,12 @@ const COLLECTION_CONTENT_NO_COVER = JSON.stringify({
   items: [],
 });
 
+const COLLECTION_CONTENT_ONE_ITEM = JSON.stringify({
+  name: 'Single item',
+  description: null,
+  items: ['pubky://author/pub/pubky.app/posts/only'],
+});
+
 const mockUseUserProfile = vi.mocked(useUserProfile);
 const mockUseBookmark = vi.mocked(useBookmark);
 const mockUsePostCounts = vi.mocked(usePostCounts);
@@ -300,11 +290,11 @@ function setOwnerProfile(name: string | null, avatarUrl?: string) {
   });
 }
 
-function setBookmark({ isBookmarked = false, isToggling = false } = {}) {
+function setBookmark({ isBookmarked = false, isLoading = false, isToggling = false } = {}) {
   const toggle = vi.fn().mockResolvedValue(undefined);
   mockUseBookmark.mockReturnValue({
     isBookmarked,
-    isLoading: false,
+    isLoading,
     isToggling,
     toggle,
   });
@@ -358,7 +348,9 @@ describe('CollectionHero', () => {
 
     expect(screen.getByText('Based Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('A bit of Bitcoin purity amidst all of the madness.')).toBeInTheDocument();
-    expect(screen.getByLabelText('2 posts')).toBeInTheDocument(); // compact-formatted item count
+    const countBadge = screen.getByLabelText('2 posts');
+    expect(countBadge).toBeInTheDocument(); // compact-formatted item count
+    expect(within(countBadge).getByText('posts', { exact: false })).toHaveClass('inline');
     const avatar = screen.getByTestId('avatar-with-fallback');
     expect(avatar).toHaveAttribute('data-name', 'Bitcoin Wizard');
     expect(avatar).toHaveAttribute('data-avatar-url', 'https://example.com/avatar.png');
@@ -384,13 +376,13 @@ describe('CollectionHero', () => {
     expect(tags).toHaveAttribute('data-tagged-kind', String(TagKind.POST));
     expect(tags).toHaveAttribute('data-show-add-button', 'true');
     expect(tags).not.toHaveAttribute('data-max-visible-tags');
-    expect(screen.getByLabelText('post.actions.tagPost')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
   });
 
   it('toggles the editable tags panel from the tag CTA', () => {
     const { container } = renderHero();
 
-    fireEvent.click(screen.getByLabelText('post.actions.tagPost'));
+    fireEvent.click(screen.getByLabelText('Tag post (3)'));
 
     expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
     const panel = screen.getByTestId('post-tags-panel');
@@ -399,7 +391,7 @@ describe('CollectionHero', () => {
     expect(panel).toHaveAttribute('data-auto-focus-input', 'true');
     expect(panel).toHaveAttribute('data-enable-loading-skeleton', 'false');
     expect(container.querySelector('[data-cy="post-tags-expandable-row"]')).toHaveClass('items-end');
-    expect(screen.getByLabelText('post.actions.tagPost')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('Tag post (3)')).toHaveAttribute('aria-expanded', 'true');
     expect(container.querySelector('[data-cy="post-tags-expandable-row-actions"]')).not.toBeInTheDocument();
   });
 
@@ -423,14 +415,22 @@ describe('CollectionHero', () => {
     const onLayoutChange = vi.fn();
     renderHero({ onLayoutChange });
 
-    fireEvent.pointerDown(screen.getByRole('button', { name: /collections\.single\.layoutGrid/ }), {
+    fireEvent.pointerDown(screen.getByRole('button', { name: /Layout: Grid/ }), {
       button: 0,
       ctrlKey: false,
     });
 
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'collections.single.layoutList' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'List' }));
 
     expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.LIST);
+  });
+
+  it('keeps the tag action last in the viewer action row', () => {
+    renderHero();
+
+    const layoutButton = screen.getByRole('button', { name: /Layout: Grid/ });
+    const tagButton = screen.getByLabelText('Tag post (3)');
+    expect(layoutButton.compareDocumentPosition(tagButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('hides the temporary layout override from the collection owner', () => {
@@ -438,7 +438,7 @@ describe('CollectionHero', () => {
 
     renderHero();
 
-    expect(screen.queryByRole('button', { name: /collections\.single\.layoutGrid/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Layout: Grid/ })).not.toBeInTheDocument();
   });
 
   it('shows a skeleton (not the raw pubky) for the owner name while the profile is null', () => {
@@ -461,10 +461,10 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      expect(screen.getByText('moderation.collectionContentModerated')).toBeInTheDocument();
+      expect(screen.getByText('Collection content moderated.')).toBeInTheDocument();
       expect(screen.queryByText('Based Bitcoin')).not.toBeInTheDocument();
       // Action buttons belong to the real hero, not the placeholder.
-      expect(screen.queryByLabelText('collections.single.follow')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Follow')).not.toBeInTheDocument();
     });
 
     it('unblurs (via the composite id) when the placeholder is clicked', () => {
@@ -472,7 +472,7 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      fireEvent.click(screen.getByText('moderation.collectionContentModerated'));
+      fireEvent.click(screen.getByText('Collection content moderated.'));
 
       expect(mockUnBlur).toHaveBeenCalledTimes(1);
       expect(mockUnBlur).toHaveBeenCalledWith(COMPOSITE_ID);
@@ -485,22 +485,21 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      expect(screen.getByLabelText('collections.single.content')).toBeInTheDocument();
+      expect(screen.getByLabelText('Add Post')).toBeInTheDocument();
       expect(screen.getByTestId('collection-add-content')).toBeInTheDocument();
-      expect(screen.getByLabelText('collections.single.share')).toBeInTheDocument();
-      expect(screen.getByLabelText('collections.single.edit')).toBeInTheDocument();
-      expect(screen.getByLabelText('collections.single.delete')).toBeInTheDocument();
-      expect(screen.getByLabelText('post.actions.tagPost')).toBeInTheDocument();
+      expect(screen.getByLabelText('Share')).toBeInTheDocument();
+      expect(screen.getByLabelText('Edit')).toBeInTheDocument();
+      expect(screen.getByLabelText('Delete')).toBeInTheDocument();
+      expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
       expect(
-        screen
-          .getByLabelText('collections.single.delete')
-          .compareDocumentPosition(screen.getByLabelText('post.actions.tagPost')) & Node.DOCUMENT_POSITION_FOLLOWING,
+        screen.getByLabelText('Delete').compareDocumentPosition(screen.getByLabelText('Tag post (3)')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
-      expect(screen.getByText('collections.single.share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
-      expect(screen.getByText('collections.single.edit', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
-      expect(screen.getByText('collections.single.delete', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
-      expect(screen.queryByLabelText('collections.single.follow')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('collections.single.unfollow')).not.toBeInTheDocument();
+      expect(screen.getByText('Share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
+      expect(screen.getByText('Edit', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
+      expect(screen.getByText('Delete', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
+      expect(screen.queryByLabelText('Follow')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Unfollow')).not.toBeInTheDocument();
     });
 
     it('does not toggle the bookmark when the owner clicks Edit or Delete', () => {
@@ -509,8 +508,8 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      fireEvent.click(screen.getByLabelText('collections.single.edit'));
-      fireEvent.click(screen.getByLabelText('collections.single.delete'));
+      fireEvent.click(screen.getByLabelText('Edit'));
+      fireEvent.click(screen.getByLabelText('Delete'));
 
       expect(toggle).not.toHaveBeenCalled();
     });
@@ -521,10 +520,10 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      expect(screen.getByLabelText('collections.single.content')).toBeDisabled();
-      expect(screen.getByLabelText('collections.single.share')).toBeDisabled();
-      expect(screen.getByLabelText('collections.single.edit')).toBeDisabled();
-      expect(screen.getByLabelText('collections.single.delete')).toBeDisabled();
+      expect(screen.getByLabelText('Add Post')).toBeDisabled();
+      expect(screen.getByLabelText('Share')).toBeDisabled();
+      expect(screen.getByLabelText('Edit')).toBeDisabled();
+      expect(screen.getByLabelText('Delete')).toBeDisabled();
     });
 
     it('opens the DialogEditCollection (controlled, with the composite id) when the owner clicks Edit', () => {
@@ -535,7 +534,7 @@ describe('CollectionHero', () => {
       // Dialog is mounted but `open=false` until the user clicks Edit.
       expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByLabelText('collections.single.edit'));
+      fireEvent.click(screen.getByLabelText('Edit'));
 
       const dialog = screen.getByTestId('edit-collection-dialog');
       expect(dialog).toBeInTheDocument();
@@ -547,7 +546,7 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      expect(screen.queryByLabelText('collections.single.edit')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Edit')).not.toBeInTheDocument();
       expect(screen.queryByTestId('edit-collection-dialog')).not.toBeInTheDocument();
     });
 
@@ -557,14 +556,14 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      fireEvent.click(screen.getByLabelText('collections.single.share'));
+      fireEvent.click(screen.getByLabelText('Share'));
 
       expect(openRepostDialog).toHaveBeenCalledTimes(1);
       expect(mockUsePostReplyRepostDialogs).toHaveBeenCalledWith(COMPOSITE_ID, {
-        title: 'collections.single.shareTitle',
-        submitLabel: 'collections.single.share',
+        title: 'Share Collection',
+        submitLabel: 'Share',
         submitIcon: expect.anything(),
-        successToastTitle: 'collections.card.toast.shared',
+        successToastTitle: "You've shared this collection",
       });
       expect(screen.getByTestId('repost-dialogs')).toBeInTheDocument();
     });
@@ -577,12 +576,16 @@ describe('CollectionHero', () => {
         // Dialog mounts in closed state.
         expect(screen.queryByTestId('dialog-confirm-delete')).not.toBeInTheDocument();
 
-        fireEvent.click(screen.getByLabelText('collections.single.delete'));
+        fireEvent.click(screen.getByLabelText('Delete'));
 
         const dialog = screen.getByTestId('dialog-confirm-delete');
         expect(dialog).toBeInTheDocument();
-        // Must use the collection copy, not `dialogs.deletePost`.
-        expect(dialog).toHaveAttribute('data-i18n-namespace', 'dialogs.deleteCollection');
+        // Must use the collection copy, not the generic delete-post copy.
+        expect(dialog).toHaveAttribute('data-title', 'Delete collection?');
+        expect(dialog).toHaveAttribute(
+          'data-description',
+          "Are you sure you want to delete 'Based Bitcoin'? People following this collection will no longer have access to it. Posts inside the collection will not be deleted.",
+        );
       });
 
       it('awaits deletePost then redirects to /collections via router.replace', async () => {
@@ -591,7 +594,7 @@ describe('CollectionHero', () => {
         mockRouterReplace.mockClear();
         renderHero();
 
-        fireEvent.click(screen.getByLabelText('collections.single.delete'));
+        fireEvent.click(screen.getByLabelText('Delete'));
         fireEvent.click(screen.getByTestId('dialog-confirm-delete-btn'));
 
         // Await the microtask so the post-redirect chain settles.
@@ -609,9 +612,104 @@ describe('CollectionHero', () => {
         setAuthStore('some-other-user');
         renderHero();
 
-        expect(screen.queryByLabelText('collections.single.delete')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Delete')).not.toBeInTheDocument();
         expect(screen.queryByTestId('dialog-confirm-delete')).not.toBeInTheDocument();
       });
+    });
+  });
+
+  describe('CTA — reorder', () => {
+    function buildReorderProps(overrides: Partial<NonNullable<CollectionHeroProps['reorder']>> = {}) {
+      return {
+        isActive: false,
+        isSaving: false,
+        onEnter: vi.fn(),
+        onSave: vi.fn(),
+        onCancel: vi.fn(),
+        ...overrides,
+      };
+    }
+
+    it('renders an enabled Reorder button between Share and Edit for owners of multi-item collections', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const reorder = buildReorderProps();
+
+      renderHero({ reorder });
+
+      const button = screen.getByLabelText('Reorder');
+      expect(button).toBeEnabled();
+      expect(
+        screen.getByLabelText('Share').compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        button.compareDocumentPosition(screen.getByLabelText('Edit')) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      fireEvent.click(button);
+      expect(reorder.onEnter).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables the Reorder button when the collection has fewer than two items', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      setPostDetails(COLLECTION_CONTENT_ONE_ITEM);
+
+      renderHero({ reorder: buildReorderProps() });
+
+      expect(screen.getByLabelText('Reorder')).toBeDisabled();
+    });
+
+    it('disables the Reorder button while a delete is in flight', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      mockDeleteState.isDeleting = true;
+
+      renderHero({ reorder: buildReorderProps() });
+
+      expect(screen.getByLabelText('Reorder')).toBeDisabled();
+    });
+
+    it('does not render reorder actions for non-owners', () => {
+      setAuthStore('some-other-user');
+
+      renderHero({ reorder: buildReorderProps() });
+
+      expect(screen.queryByLabelText('Reorder')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Save order')).not.toBeInTheDocument();
+    });
+
+    it('swaps Reorder for Save order + Cancel and disables every other action while active', () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const reorder = buildReorderProps({ isActive: true });
+
+      renderHero({ reorder });
+
+      expect(screen.queryByLabelText('Reorder')).not.toBeInTheDocument();
+
+      const saveButton = screen.getByLabelText('Save order');
+      const cancelButton = screen.getByLabelText('Cancel');
+      expect(saveButton).toHaveAttribute('data-variant', 'default');
+      expect(cancelButton).toHaveAttribute('data-variant', 'destructive-soft');
+
+      fireEvent.click(saveButton);
+      fireEvent.click(cancelButton);
+      expect(reorder.onSave).toHaveBeenCalledTimes(1);
+      expect(reorder.onCancel).toHaveBeenCalledTimes(1);
+
+      expect(screen.getByLabelText('Add Post')).toBeDisabled();
+      expect(screen.getByLabelText('Share')).toBeDisabled();
+      expect(screen.getByLabelText('Edit')).toBeDisabled();
+      expect(screen.getByLabelText('Delete')).toBeDisabled();
+      expect(screen.getByLabelText('Tag post (3)')).toBeDisabled();
+    });
+
+    it('disables Save order and Cancel and swaps the check for a spinner while the commit is in flight', () => {
+      setAuthStore(AUTHOR_PUBKY);
+
+      renderHero({ reorder: buildReorderProps({ isActive: true, isSaving: true }) });
+
+      const saveButton = screen.getByLabelText('Save order');
+      expect(saveButton).toBeDisabled();
+      expect(screen.getByLabelText('Cancel')).toBeDisabled();
+      expect(saveButton.querySelector('.animate-spin')).not.toBeNull();
+      expect(saveButton.querySelector('.lucide-check')).toBeNull();
     });
   });
 
@@ -622,9 +720,9 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      expect(screen.getByLabelText('collections.single.follow')).toBeInTheDocument();
-      expect(screen.getByLabelText('post.actions.tagPost')).toBeInTheDocument();
-      expect(screen.queryByLabelText('collections.single.unfollow')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Follow')).toBeInTheDocument();
+      expect(screen.getByLabelText('Tag post (3)')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Unfollow')).not.toBeInTheDocument();
     });
 
     it('renders an Unfollow button when the post is already bookmarked', () => {
@@ -633,7 +731,7 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      expect(screen.getByLabelText('collections.single.unfollow')).toBeInTheDocument();
+      expect(screen.getByLabelText('Unfollow')).toBeInTheDocument();
     });
 
     it('invokes the bookmark toggle once when clicked', () => {
@@ -642,7 +740,7 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      fireEvent.click(screen.getByLabelText('collections.single.follow'));
+      fireEvent.click(screen.getByLabelText('Follow'));
 
       expect(toggle).toHaveBeenCalledTimes(1);
     });
@@ -653,8 +751,21 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      const button = screen.getByLabelText('collections.single.follow') as HTMLButtonElement;
+      const button = screen.getByLabelText('Follow') as HTMLButtonElement;
       expect(button).toBeDisabled();
+      fireEvent.click(button);
+      expect(toggle).not.toHaveBeenCalled();
+    });
+
+    it('disables Follow and ignores clicks while bookmark state is loading', () => {
+      setAuthStore('some-other-user');
+      const toggle = setBookmark({ isBookmarked: false, isLoading: true });
+
+      renderHero();
+
+      const button = screen.getByLabelText('Follow');
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-busy', 'true');
       fireEvent.click(button);
       expect(toggle).not.toHaveBeenCalled();
     });
@@ -665,8 +776,8 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      expect(screen.getByText('collections.single.share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
-      fireEvent.click(screen.getByLabelText('collections.single.share'));
+      expect(screen.getByText('Share', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
+      fireEvent.click(screen.getByLabelText('Share'));
 
       expect(mockRequireAuth).toHaveBeenCalledTimes(1);
       expect(openRepostDialog).toHaveBeenCalledTimes(1);
@@ -679,7 +790,7 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      fireEvent.click(screen.getByLabelText('collections.single.follow'));
+      fireEvent.click(screen.getByLabelText('Follow'));
 
       expect(mockRequireAuth).toHaveBeenCalledTimes(1);
       expect(toggle).not.toHaveBeenCalled();
@@ -692,7 +803,7 @@ describe('CollectionHero', () => {
 
       renderHero();
 
-      fireEvent.click(screen.getByLabelText('collections.single.share'));
+      fireEvent.click(screen.getByLabelText('Share'));
 
       expect(mockRequireAuth).toHaveBeenCalledTimes(1);
       expect(openRepostDialog).not.toHaveBeenCalled();
@@ -707,7 +818,7 @@ describe('CollectionHero', () => {
     expect(mockUseBookmark).toHaveBeenCalledWith(
       COMPOSITE_ID,
       expect.objectContaining({
-        toastMessages: expect.objectContaining({ added: 'collections.card.toast.followed' }),
+        toastMessages: expect.objectContaining({ added: 'You are now following this collection.' }),
       }),
     );
   });
@@ -752,6 +863,15 @@ describe('CollectionHero - Snapshots', () => {
     setAuthStore(AUTHOR_PUBKY);
 
     const { container } = renderHero();
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches the snapshot for the owner reorder-active state', () => {
+    setAuthStore(AUTHOR_PUBKY);
+
+    const { container } = renderHero({
+      reorder: { isActive: true, isSaving: false, onEnter: vi.fn(), onSave: vi.fn(), onCancel: vi.fn() },
+    });
     expect(container.firstChild).toMatchSnapshot();
   });
 

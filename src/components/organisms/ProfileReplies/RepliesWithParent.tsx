@@ -13,6 +13,7 @@ import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { RepliesEmpty } from '@/molecules/RepliesEmpty/RepliesEmpty';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
@@ -44,7 +45,13 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
 
   return (
-    <TimelineStateWrapper loading={loading} error={error} hasItems={postIds.length > 0}>
+    <TimelineStateWrapper
+      loading={loading}
+      error={error}
+      hasItems={postIds.length > 0}
+      hasMore={hasMore}
+      emptyComponent={<RepliesEmpty />}
+    >
       <Container>
         <Container overrideDefaults role="feed" className="space-y-4" onKeyDown={onListKeyDown}>
           {postIds.map((postId: string, index: number) => (
@@ -63,8 +70,9 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
             </Container>
           ))}
 
-          {/* Loading More Indicator */}
-          {loadingMore && <TimelineLoadingMore />}
+          {/* Loading More Indicator — suppressed while the list is empty: the wrapper's
+              skeleton already covers loading there (empty-but-hasMore chaining rounds). */}
+          {postIds.length > 0 && loadingMore && <TimelineLoadingMore />}
 
           {/* Error on loading more */}
           {error && postIds.length > 0 && <TimelineError message={error} />}

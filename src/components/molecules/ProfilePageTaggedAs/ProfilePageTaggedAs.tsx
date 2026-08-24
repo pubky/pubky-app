@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { Tag } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -14,7 +13,6 @@ import { ProfilePageTaggedAsSkeleton } from './ProfilePageTaggedAs.skeleton';
 import type { ProfilePageTaggedAsProps } from './ProfilePageTaggedAs.types';
 
 export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky }: ProfilePageTaggedAsProps) {
-  const t = useTranslations('profile.sidebar');
   const router = useRouter();
   const { requireAuth } = useRequireAuth();
 
@@ -25,7 +23,7 @@ export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky
   return (
     <Container data-cy="profile-tagged-section" overrideDefaults={true} className="flex flex-col gap-2">
       <Heading level={2} size="lg" className="font-light text-muted-foreground">
-        {t('taggedAs')}
+        {'Tagged as'}
       </Heading>
 
       <Container overrideDefaults={true} className="flex flex-col gap-2">
@@ -38,7 +36,7 @@ export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky
             ))}
             {tags.length === 0 && (
               <Typography as="span" className="text-sm font-medium text-muted-foreground">
-                {t('noTags')}
+                {'No tags added yet.'}
               </Typography>
             )}
           </>
@@ -54,7 +52,7 @@ export function ProfilePageTaggedAs({ tags, isLoading = false, onTagClick, pubky
       >
         <Tag size={16} className="text-foreground" />
         <Typography as="span" className="text-sm font-bold">
-          {t('addTag')}
+          {'Add Tag'}
         </Typography>
       </Button>
     </Container>

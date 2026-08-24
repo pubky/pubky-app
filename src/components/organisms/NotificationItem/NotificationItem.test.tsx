@@ -1,4 +1,4 @@
-import { act, fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import { fireEvent, render as rtlRender, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -58,12 +58,8 @@ vi.mock('@/services/local/post/post', () => ({
     readPostDetails: vi.fn(() => Promise.resolve(null)),
   },
 }));
-vi.mock('@/controllers/post/post', () => ({
-  PostController: {
-    get getOrFetch() {
-      return mockGetOrFetch;
-    },
-  },
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: (compositeId: string | null) => mockUsePostDetails(compositeId),
 }));
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
@@ -96,8 +92,14 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
 });
 
 // Mock molecules
-const mockToast = vi.fn();
-const mockGetOrFetch = vi.fn<() => Promise<{ kind: string; content: string } | null>>(() => Promise.resolve(null));
+// Hoisted so the module-level `toast` export can be mocked with it directly.
+const mockToast = vi.hoisted(() => vi.fn());
+/** The post the mocked live query currently reports; null models "not found". */
+const mockPostDetails = { value: null as { kind: string; content: string } | null };
+const mockUsePostDetails = vi.fn((compositeId: string | null) => ({
+  postDetails: compositeId ? mockPostDetails.value : null,
+  isLoading: false,
+}));
 vi.mock('@/molecules/NotificationIcon/NotificationIcon', () => {
   return {
     NotificationIcon: ({
@@ -141,6 +143,7 @@ vi.mock('@/molecules/PostTag/PostTag', () => {
 
 vi.mock('@/molecules/Toaster/use-toast', () => {
   return {
+    toast: mockToast,
     useToast: () => ({ toast: mockToast }),
   };
 });
@@ -186,8 +189,8 @@ describe('NotificationItem', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockToast.mockClear();
-    mockGetOrFetch.mockClear();
-    mockGetOrFetch.mockResolvedValue(null);
+    mockUsePostDetails.mockClear();
+    mockPostDetails.value = null;
     vi.mocked(useUserProfile).mockReturnValue({
       profile: { name: 'User', avatarUrl: undefined },
       isLoading: false,
@@ -417,10 +420,10 @@ describe('NotificationItem', () => {
       body: '## Introduction\n\nArticle body content here in **Markdown** format.',
     });
 
-    mockGetOrFetch.mockResolvedValue({
+    mockPostDetails.value = {
       kind: 'long',
       content: articleContent,
-    });
+    };
 
     const mentionNotification = {
       id: 'mention:123:user1',
@@ -442,10 +445,10 @@ describe('NotificationItem', () => {
   it('falls back to raw content without toast when article JSON parsing fails', async () => {
     const invalidJson = 'not valid json content';
 
-    mockGetOrFetch.mockResolvedValue({
+    mockPostDetails.value = {
       kind: 'long',
       content: invalidJson,
-    });
+    };
 
     const mentionNotification = {
       id: 'mention:123:user1',
@@ -470,10 +473,10 @@ describe('NotificationItem', () => {
       items: ['user1:post1'],
     });
 
-    mockGetOrFetch.mockResolvedValue({
+    mockPostDetails.value = {
       kind: 'collection',
       content: collectionContent,
-    });
+    };
 
     const mentionNotification = {
       id: 'mention:123:user1',
@@ -493,10 +496,10 @@ describe('NotificationItem', () => {
   it('falls back to raw content and shows toast when collection JSON parsing fails', async () => {
     const invalidJson = 'not valid json content';
 
-    mockGetOrFetch.mockResolvedValue({
+    mockPostDetails.value = {
       kind: 'collection',
       content: invalidJson,
-    });
+    };
 
     const mentionNotification = {
       id: 'mention:123:user1',
@@ -517,10 +520,10 @@ describe('NotificationItem', () => {
   });
 
   it('uses content directly for short posts', async () => {
-    mockGetOrFetch.mockResolvedValue({
+    mockPostDetails.value = {
       kind: 'short',
       content: 'This is a short post content',
-    });
+    };
 
     const mentionNotification = {
       id: 'mention:123:user1',
@@ -540,10 +543,10 @@ describe('NotificationItem', () => {
   });
 
   it('shows deleted message when post is deleted', async () => {
-    mockGetOrFetch.mockResolvedValue({
+    mockPostDetails.value = {
       kind: 'short',
       content: '[DELETED]',
-    });
+    };
 
     const mentionNotification = {
       id: 'mention:123:user1',
@@ -561,6 +564,26 @@ describe('NotificationItem', () => {
     await vi.waitFor(() => {
       expect(screen.getByText("'This post has been d...'")).toBeInTheDocument();
     });
+  });
+
+  it('renders a deleted notification without any post link', () => {
+    // Design decision on PR #2314: the deleted post has no destination, so the row is
+    // informational — only the avatar and username may link (to the actor's profile).
+    const deletedNotification = {
+      id: 'post_deleted:123:user1',
+      type: NotificationType.PostDeleted,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      delete_source: PostChangedSource.Repost,
+      deleted_by: 'user1',
+      deleted_uri: 'pubky://user1/pub/pubky.app/posts/post123',
+      linked_uri: 'pubky://viewer/pub/pubky.app/posts/linked123',
+    } as FlatNotification;
+
+    const { container } = render(<NotificationItem notification={deletedNotification} isUnread={false} />);
+
+    expect(screen.getByText('deleted a post').closest('a')).toBeNull();
+    const hrefs = [...container.querySelectorAll('a')].map((anchor) => anchor.getAttribute('href'));
+    expect(hrefs).toEqual(['/profile/user1', '/profile/user1']);
   });
 
   it('links to parent post (not the reply) for Reply notifications', () => {
@@ -617,10 +640,10 @@ describe('NotificationItem', () => {
     vi.setSystemTime(new Date('2026-07-16T12:00:00Z'));
 
     try {
-      mockGetOrFetch.mockResolvedValue({
+      mockPostDetails.value = {
         kind: 'collection',
         content: JSON.stringify({ name: 'Based Bitcoin', description: '', items: [] }),
-      });
+      };
 
       const collectionNotification = {
         id: 'post_edited:123:collection-owner',
@@ -639,10 +662,7 @@ describe('NotificationItem', () => {
         const preview = screen.getByText("'Based Bitcoin'");
         expect(preview).toHaveClass('hidden', 'sm:block', 'text-muted-foreground');
       });
-      expect(mockGetOrFetch).toHaveBeenCalledWith({
-        compositeId: 'collection-owner:collection-id',
-        viewerId: 'test-user-pubky',
-      });
+      expect(mockUsePostDetails).toHaveBeenCalledWith('collection-owner:collection-id');
     } finally {
       vi.useRealTimers();
     }
@@ -788,7 +808,7 @@ describe('NotificationItem', () => {
 describe('NotificationItem - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetOrFetch.mockResolvedValue(null);
+    mockPostDetails.value = null;
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-16T12:00:00Z'));
   });
@@ -834,10 +854,10 @@ describe('NotificationItem - Snapshots', () => {
   });
 
   it('matches snapshot for an edited collection with a title preview', async () => {
-    mockGetOrFetch.mockResolvedValue({
+    mockPostDetails.value = {
       kind: 'collection',
       content: JSON.stringify({ name: 'Based Bitcoin', description: '', items: [] }),
-    });
+    };
     const notification = {
       id: 'post_edited:123:collection-owner',
       type: NotificationType.PostEdited,
@@ -850,10 +870,8 @@ describe('NotificationItem - Snapshots', () => {
     } satisfies FlatNotification;
 
     render(<NotificationItem notification={notification} isUnread={false} />);
-    await act(async () => {
-      await mockGetOrFetch.mock.results[0]?.value;
-    });
 
+    // Collection names derive synchronously from the live query's value.
     expect(screen.getByText("'Based Bitcoin'")).toMatchSnapshot();
   });
 });

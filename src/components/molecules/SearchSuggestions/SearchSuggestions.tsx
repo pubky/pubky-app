@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { SEARCH_EXPANDED_STYLE } from '@/config/search';
 import { MAX_RECENT_SEARCHES } from '@/stores/search/search.constants';
@@ -22,8 +20,6 @@ export function SearchSuggestions({
   onUserClick,
   onClearRecentSearches,
 }: SearchSuggestionsProps) {
-  const t = useTranslations('search.sections');
-
   // Limit recent items to display
   const displayRecentUsers = hasInput ? [] : (recentUsers || []).slice(0, MAX_RECENT_SEARCHES);
   const displayRecentTags = hasInput ? [] : (recentTags || []).slice(0, MAX_RECENT_SEARCHES);
@@ -41,9 +37,9 @@ export function SearchSuggestions({
 
     return (
       <>
-        {hasAutocompleteTags && <SearchTagSection title={t('tags')} tags={autocompleteTags} onTagClick={onTagClick} />}
+        {hasAutocompleteTags && <SearchTagSection title={'Tags'} tags={autocompleteTags} onTagClick={onTagClick} />}
         {hasAutocompleteUsers && (
-          <SearchUsersSection title={t('users')} users={autocompleteUsers} onUserClick={onUserClick} />
+          <SearchUsersSection title={'Users'} users={autocompleteUsers} onUserClick={onUserClick} />
         )}
       </>
     );
@@ -63,7 +59,7 @@ export function SearchSuggestions({
             onClearAll={onClearRecentSearches}
           />
         )}
-        {hasHotTags && <SearchTagSection title={t('hotTags')} tags={hotTags} onTagClick={onTagClick} />}
+        {hasHotTags && <SearchTagSection title={'Hot tags'} tags={hotTags} onTagClick={onTagClick} />}
       </>
     );
   };

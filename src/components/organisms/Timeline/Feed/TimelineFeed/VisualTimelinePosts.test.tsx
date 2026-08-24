@@ -53,7 +53,7 @@ vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
 }));
 
 vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
-  useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null } }),
+  useUserDetails: () => ({ userDetails: { id: 'author', name: 'Author', image: null, status: 'vacationing' } }),
 }));
 
 vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
@@ -281,6 +281,8 @@ describe('VisualTimelinePosts', () => {
     });
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),
@@ -826,6 +828,7 @@ describe('VisualTimelinePosts', () => {
       expect.objectContaining({
         userId: 'author',
         userName: 'Author',
+        status: 'vacationing',
         avatarUrl: null,
       }),
       undefined,
@@ -916,6 +919,58 @@ describe('VisualTimelinePosts', () => {
           debounceMs: 20,
         });
       });
+    });
+
+    it('arms the observer when postIds is empty but hasMore (filtered stream region)', () => {
+      // A fully-filtered stream region leaves postIds itself empty — the sentinel
+      // must stay armed so load rounds chain toward the first visible posts.
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: [],
+        tail: [],
+        tiles: [],
+        hasPendingSnapshot: false,
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hasPendingPostDetails: false,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ hasMore: true }));
+    });
+
+    it('keeps the observer quiet while rows resolve for existing postIds (backfill effect owns that case)', () => {
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: [],
+        tail: [],
+        tiles: [],
+        hasPendingSnapshot: false,
+        hasPendingTiles: false,
+        hasPendingFiles: false,
+        hasPendingPostDetails: false,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ hasMore: false }));
     });
   });
 
@@ -1152,6 +1207,8 @@ describe('VisualTimelinePosts - Snapshots', () => {
     mockUseIsTouchDevice.mockReturnValue(false);
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),

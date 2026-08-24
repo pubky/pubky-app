@@ -65,6 +65,12 @@ vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
   };
 });
 
+vi.mock('@/molecules/RepliesEmpty/RepliesEmpty', () => {
+  return {
+    RepliesEmpty: () => <div data-testid="replies-empty">No replies yet</div>,
+  };
+});
+
 vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper')>();
@@ -74,16 +80,27 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
       loading,
       error,
       hasItems,
+      hasMore,
       children,
+      emptyComponent,
     }: {
       loading: boolean;
       error: string | null;
       hasItems: boolean;
+      hasMore?: boolean;
       children: React.ReactNode;
+      emptyComponent?: React.ReactNode;
     }) => {
       if (loading) return <div data-testid="timeline-loading">Loading...</div>;
       if (error && !hasItems) return <div data-testid="timeline-initial-error">Error: {error}</div>;
-      if (!hasItems) return <div data-testid="timeline-empty">No replies</div>;
+      if (!hasItems && hasMore)
+        return (
+          <>
+            <div data-testid="timeline-loading">Loading...</div>
+            {children}
+          </>
+        );
+      if (!hasItems) return emptyComponent ?? <div data-testid="timeline-empty">No replies</div>;
       return <>{children}</>;
     },
   };
@@ -131,6 +148,8 @@ describe('RepliesWithParent', () => {
     // Mock useInfiniteScroll
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
 
     // Mock useLiveQuery
@@ -180,6 +199,28 @@ describe('RepliesWithParent', () => {
   });
 
   describe('Empty States', () => {
+    it('keeps loading mounted instead of the empty state when empty but hasMore (filtered stream region)', () => {
+      mockUseStreamPagination.mockReturnValue({
+        postIds: [],
+        loading: false,
+        loadingMore: false,
+        error: null,
+        hasMore: true,
+        loadMore: vi.fn(),
+        refresh: vi.fn(),
+        prependPosts: vi.fn(),
+        prependOptimisticPosts: vi.fn(),
+        removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
+      });
+
+      render(<RepliesWithParent streamId={mockStreamId} />);
+
+      expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('replies-empty')).not.toBeInTheDocument();
+      expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
+    });
+
     it('should render empty state when no replies', () => {
       mockUseStreamPagination.mockReturnValue({
         postIds: [],
@@ -197,7 +238,7 @@ describe('RepliesWithParent', () => {
 
       render(<RepliesWithParent streamId={mockStreamId} />);
 
-      expect(screen.getByTestId('timeline-empty')).toBeInTheDocument();
+      expect(screen.getByTestId('replies-empty')).toBeInTheDocument();
     });
 
     it('should render end message when no more replies to load', () => {

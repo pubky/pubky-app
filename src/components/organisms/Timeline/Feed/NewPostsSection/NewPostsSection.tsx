@@ -1,6 +1,4 @@
 'use client';
-
-import { useTranslations } from 'next-intl';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
@@ -48,7 +46,6 @@ export function NewPostsSection({
   prependPosts,
 }: NewPostsSectionProps) {
   const { unreadPostIds } = useUnreadPosts({ streamId });
-  const t = useTranslations('toast.post');
   const isScrolled = useIsScrolledFromTop();
 
   const displayedPostIds = new Set(postIds);
@@ -72,6 +69,8 @@ export function NewPostsSection({
         Gate optimistic prepend by content kind (e.g. do not show a `short` post
         after "New posts" on `timeline:…:collection`). `!kind` keeps cache misses
         so a not-yet-indexed post can still appear; mirrors `usePostInput`.
+        Intentionally NOT gated by WoT source (unlike `usePostInput`, #2308):
+        unread ids come from polling this exact stream, so they belong in it.
       */
       if (postsToAdd.length > 0) {
         const details = await PostController.getDetailsByIds({ compositeIds: postsToAdd });
@@ -90,7 +89,7 @@ export function NewPostsSection({
       Logger.error('Failed to load new posts:', error);
       toast({
         variant: 'error',
-        description: t('failedToLoadPosts'),
+        description: 'Could not load new posts',
       });
     }
   };

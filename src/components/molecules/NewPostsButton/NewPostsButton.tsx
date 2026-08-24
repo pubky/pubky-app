@@ -18,13 +18,11 @@
  * ```
  */
 import { ArrowUp } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { cn } from '@/libs/utils/utils';
 import type { NewPostsButtonProps } from './NewPostsButton.types';
 
 export function NewPostsButton({ count, onClick, visible, isScrolled = false }: NewPostsButtonProps) {
-  const t = useTranslations('post');
   if (!visible || count === 0) return null;
   return (
     <Button
@@ -41,15 +39,7 @@ export function NewPostsButton({ count, onClick, visible, isScrolled = false }: 
       )}
     >
       <ArrowUp className={cn('h-4 w-4', !isScrolled && 'animate-bounce')} />
-      <span>
-        {count === 1
-          ? t('newPostsSingular', {
-              count,
-            })
-          : t('newPostsPlural', {
-              count,
-            })}
-      </span>
+      <span>{count === 1 ? `See ${count} new post` : `See ${count} new posts`}</span>
     </Button>
   );
 }

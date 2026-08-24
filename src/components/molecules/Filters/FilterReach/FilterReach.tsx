@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { HeartHandshake, Radio, Tags, UserRound, Waypoints } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { UsersRound2 } from '@/icons';
 import { REACH, type ReachType } from '@/stores/home/home.types';
 import { FilterProfileTags } from '../FilterProfileTags/FilterProfileTags';
@@ -40,52 +39,58 @@ export function FilterReach({
   onProfileTagRemove,
   profileTagsDisabled = false,
 }: FilterReachProps) {
-  const t = useTranslations('filters.reach');
   const reachItems: FilterListItem<ReachFilterValue>[] = showTaggedAs
     ? [
         {
           key: REACH.NETWORK,
-          label: t('network'),
+          label: 'My network',
           icon: Waypoints,
           disabled,
+          dataCy: 'network-reach-toggle',
         },
         {
           key: TAGGED_AS_FILTER_KEY,
-          label: t('taggedAs'),
+          label: 'Tagged as',
           icon: Tags,
           disabled,
+          dataCy: 'tagged-as-reach-toggle',
         },
         {
           key: REACH.FOLLOWING,
-          label: t('following'),
+          label: 'Following',
           icon: UsersRound2,
           disabled,
+          dataCy: 'following-reach-toggle',
         },
         {
           key: REACH.FRIENDS,
-          label: t('friends'),
+          label: 'Friends',
           icon: HeartHandshake,
           disabled,
+          dataCy: 'friends-reach-toggle',
         },
         {
           key: REACH.ME,
-          label: t('me'),
+          label: 'Me',
           icon: UserRound,
           disabled,
+          dataCy: 'me-reach-toggle',
         },
         {
           key: REACH.ALL,
-          label: t('all'),
+          label: 'All',
           icon: Radio,
           disabled,
+          dataCy: 'all-reach-toggle',
         },
       ]
     : [
         {
           key: REACH.ALL,
-          label: t('all'),
+          label: 'All',
           icon: Radio,
           disabled,
+          dataCy: 'all-reach-toggle',
         },
       ];
 
@@ -93,15 +98,17 @@ export function FilterReach({
     reachItems.push(
       {
         key: REACH.FOLLOWING,
-        label: t('following'),
+        label: 'Following',
         icon: UsersRound2,
         disabled,
+        dataCy: 'following-reach-toggle',
       },
       {
         key: REACH.FRIENDS,
-        label: t('friends'),
+        label: 'Friends',
         icon: HeartHandshake,
         disabled,
+        dataCy: 'friends-reach-toggle',
       },
     );
   }
@@ -129,7 +136,7 @@ export function FilterReach({
 
   return (
     <FilterRadioGroup
-      title={t('title')}
+      title={'Reach'}
       items={reachItems}
       itemExtras={showTaggedAs ? { [TAGGED_AS_FILTER_KEY]: profileTagEditor } : undefined}
       selectedValue={selectedTab}

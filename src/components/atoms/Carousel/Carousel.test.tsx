@@ -45,6 +45,7 @@ describe('Carousel', () => {
     expect(carousel).toBeInTheDocument();
     expect(carousel).toHaveAttribute('aria-roledescription', 'carousel');
     expect(carousel).toHaveAttribute('data-slot', 'carousel');
+    expect(carousel).toHaveAttribute('tabIndex', '0');
   });
 
   it('renders carousel content with correct structure', () => {

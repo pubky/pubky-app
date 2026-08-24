@@ -231,6 +231,108 @@ describe('Popover - Hover behavior', () => {
   });
 });
 
+describe('Popover - Focus preservation', () => {
+  let useIsTouchDeviceSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    useIsTouchDeviceSpy = vi.mocked(useIsTouchDevice).mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    useIsTouchDeviceSpy.mockRestore();
+  });
+
+  it('keeps focus on an outside element when the cursor crosses a hover trigger without opening', async () => {
+    render(
+      <>
+        <input data-testid="outside-input" />
+        <Popover hover hoverDelay={500} hoverCloseDelay={100}>
+          <PopoverTrigger asChild>
+            <button>Trigger</button>
+          </PopoverTrigger>
+          <PopoverContent>Content</PopoverContent>
+        </Popover>
+      </>,
+    );
+
+    const input = screen.getByTestId('outside-input');
+    input.focus();
+
+    const trigger = screen.getByTestId('popover-trigger');
+    fireEvent.mouseEnter(trigger);
+
+    // Leave before the open delay completes, then flush all pending timers
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+    fireEvent.mouseLeave(trigger);
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(screen.queryByText('Content')).not.toBeInTheDocument();
+    expect(input).toHaveFocus();
+  });
+
+  it('keeps focus on an outside element through a full hover open/close cycle', async () => {
+    render(
+      <>
+        <input data-testid="outside-input" />
+        <Popover hover hoverDelay={0} hoverCloseDelay={100}>
+          <PopoverTrigger asChild>
+            <button>Trigger</button>
+          </PopoverTrigger>
+          <PopoverContent>Content</PopoverContent>
+        </Popover>
+      </>,
+    );
+
+    const input = screen.getByTestId('outside-input');
+    input.focus();
+
+    const trigger = screen.getByTestId('popover-trigger');
+
+    fireEvent.mouseEnter(trigger);
+    expect(screen.getByText('Content')).toBeInTheDocument();
+    expect(input).toHaveFocus();
+
+    fireEvent.mouseLeave(trigger);
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(screen.queryByText('Content')).not.toBeInTheDocument();
+    expect(input).toHaveFocus();
+  });
+
+  it('returns focus to the trigger on close in click mode', async () => {
+    render(
+      <Popover>
+        <PopoverTrigger asChild>
+          <button>Trigger</button>
+        </PopoverTrigger>
+        <PopoverContent>Content</PopoverContent>
+      </Popover>,
+    );
+
+    const trigger = screen.getByTestId('popover-trigger');
+    fireEvent.click(trigger);
+    expect(screen.getByText('Content')).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    // Radix defers close auto-focus in a setTimeout(0)
+    await act(async () => {
+      vi.runAllTimers();
+    });
+
+    expect(screen.queryByText('Content')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+});
+
 describe('Popover - Snapshots', () => {
   it('matches snapshot for PopoverTrigger with default props', () => {
     const { container } = render(

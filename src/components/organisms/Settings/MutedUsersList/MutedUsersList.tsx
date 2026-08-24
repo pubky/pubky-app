@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { Megaphone } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { getUserProfileUrl } from '@/app/routes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/atoms/Avatar/Avatar';
 import { Button } from '@/atoms/Button/Button';
@@ -21,9 +20,6 @@ import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
 
 export function MutedUsersList() {
-  const t = useTranslations('mutedUsers');
-  const tCommon = useTranslations('common');
-  const tToast = useTranslations('toast.mute');
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { mutedUserIds, isLoading: isMutedLoading } = useMutedUsers();
   const { usersMap, isLoading: isUsersLoading } = useBulkUserAvatars(mutedUserIds);
@@ -35,14 +31,12 @@ export function MutedUsersList() {
     try {
       await toggleMute(userId, true);
       toast({
-        title: t('userUnmuted', {
-          username: userName || userId,
-        }),
+        title: `${userName || userId} unmuted`,
       });
     } catch (error) {
       toast({
         variant: 'error',
-        description: isAppError(error) ? error.message : tToast('failed'),
+        description: isAppError(error) ? error.message : 'Could not update mute status',
       });
     }
   };
@@ -59,21 +53,18 @@ export function MutedUsersList() {
       if (failedCount > 0) {
         toast({
           variant: 'warning',
-          title: t('partialSuccess'),
-          description: t('partialSuccessDesc', {
-            success: idsToUnmute.length - failedCount,
-            failed: failedCount,
-          }),
+          title: 'Partial success',
+          description: `${idsToUnmute.length - failedCount} users unmuted, ${failedCount} failed.`,
         });
       } else {
         toast({
-          title: t('allUsersUnmuted'),
+          title: 'All users unmuted',
         });
       }
     } catch (error) {
       toast({
         variant: 'error',
-        description: isAppError(error) ? error.message : tToast('failed'),
+        description: isAppError(error) ? error.message : 'Could not update mute status',
       });
     } finally {
       setIsLoadingUnmuteAll(false);
@@ -93,7 +84,7 @@ export function MutedUsersList() {
                 className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
               >
                 <Avatar className="h-10 w-10">
-                  {mutedUser?.avatar && <AvatarImage src={mutedUser.avatar} alt={mutedUser?.name ?? tCommon('user')} />}
+                  {mutedUser?.avatar && <AvatarImage src={mutedUser.avatar} alt={mutedUser?.name ?? 'User'} />}
                   <AvatarFallback className="overflow-hidden border-none">
                     <FacehashAvatar
                       seed={mutedUser?.id || mutedUser?.name || 'user'}
@@ -110,7 +101,7 @@ export function MutedUsersList() {
                 </Avatar>
                 <Container overrideDefaults className="flex min-w-0 flex-1 flex-col items-start">
                   <Typography as="span" overrideDefaults className="block max-w-full truncate text-base font-bold">
-                    {mutedUser?.name || tCommon('unknownUser')}
+                    {mutedUser?.name || 'Unknown User'}
                   </Typography>
                   <Typography
                     as="span"
@@ -130,7 +121,7 @@ export function MutedUsersList() {
                 disabled={isMuteLoading || isMuteUserLoading(mutedUser.id)}
               >
                 <Megaphone size={16} />
-                {t('unmute')}
+                {'Unmute'}
               </Button>
             </Container>
           ))}
@@ -143,13 +134,13 @@ export function MutedUsersList() {
               disabled={isLoadingUnmuteAll}
             >
               <Megaphone size={16} />
-              {t('unmuteAll')}
+              {'Unmute all users'}
             </Button>
           )}
         </>
       ) : (
         <Typography as="p" overrideDefaults className="w-full py-4 text-center text-lg text-muted-foreground">
-          {t('noMutedUsers')}
+          {'No muted users yet'}
         </Typography>
       )}
     </Container>

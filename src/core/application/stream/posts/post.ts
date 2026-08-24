@@ -38,6 +38,7 @@ import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalPostService } from '@/services/local/post/post';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
@@ -196,6 +197,22 @@ export class PostStreamApplication {
     // Initial loads and pull-to-refresh should start from the real stream head,
     // not reuse buffered overflow from a previous pagination session.
     postStreamQueue.remove(streamId);
+
+    // 0. Rebuild streams invalidated by follow/friendship/profile-tag mutations.
+    // Mutations only mark scopes dirty (mounted feeds are never disturbed);
+    // the stale membership is dropped here, on the next initial load (#2294).
+    if (postStreamDirtyRegistry.isDirty(streamId)) {
+      Logger.debug('[PostStreamApplication] Stream marked dirty by a dependency mutation, clearing both streams', {
+        streamId,
+      });
+      await Promise.all([
+        LocalStreamPostsService.deleteById({ streamId }),
+        LocalStreamPostsService.clearUnreadStream({ streamId }),
+      ]);
+      postStreamDirtyRegistry.markReconciled(streamId);
+      return;
+    }
+
     const now = Date.now();
 
     // 1. Check if main stream cache is stale
@@ -306,6 +323,14 @@ export class PostStreamApplication {
       return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
     }
 
+    // Coordinator head-polls (streamHead > 0) only need the fetch side effects (unread
+    // persist + counts + cache-miss ids); the response is discarded. Keep them out of the
+    // shared pagination queue: routing them through collect() consumes/rewrites the UI's
+    // overflow buffer, and with a raw resume anchor those buffered posts would be skipped.
+    if (streamHead > SKIP_FETCH_NEW_POSTS) {
+      return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
+    }
+
     // Author streams and bookmarks intentionally include posts from muted users:
     // bookmarks are explicit saves (#1804); profile is someone's full timeline.
     const shouldFilterMuted = !isAuthorStreamSkippingMuteFilter(streamId) && !isBookmarkStream(streamId);
@@ -318,7 +343,6 @@ export class PostStreamApplication {
     const isDiscover = isDiscoverCollectionsStream(streamId);
     const bookmarkedIds = isDiscover ? new Set(await BookmarkModel.findAll()) : new Set<string>();
 
-    let isFirstFetch = true;
     let lastReturnedPostId: string | undefined = lastPostId;
 
     const { posts, cacheMissIds, nextCursor, reachedEnd } = await postStreamQueue.collect(streamId, {
@@ -346,14 +370,15 @@ export class PostStreamApplication {
         // This ensures we exhaust cache before going to Nexus
         const result = await this.fetchStreamSliceInternal({
           streamId,
-          streamHead: isFirstFetch ? streamHead : SKIP_FETCH_NEW_POSTS,
+          // Head-polls (streamHead > 0) bypass collect() above, so every fetch here
+          // is a pagination read below the head.
+          streamHead: SKIP_FETCH_NEW_POSTS,
           streamTail: cursor,
           lastPostId: lastReturnedPostId,
           limit,
           viewerId,
           order,
         });
-        isFirstFetch = false;
 
         // Track last returned post for cache continuation
         if (result.nextPageIds.length > 0) {
@@ -381,6 +406,9 @@ export class PostStreamApplication {
       cacheMissPostIds: cacheMissIds,
       nextCursor,
       reachedEnd,
+      // The raw cache-walk anchor: last raw id scanned this round (buffer-only rounds
+      // scan nothing, so it holds at the caller's own lastPostId).
+      lastRawPostId: lastReturnedPostId,
     };
   }
 

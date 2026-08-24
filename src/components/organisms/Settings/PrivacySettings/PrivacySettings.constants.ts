@@ -11,22 +11,26 @@ type BooleanSettingsAction =
   | 'setNeverShowPosts';
 
 interface PrivacySettingConfig {
-  labelKey: string;
+  label: string;
   action: BooleanSettingsAction;
   disabled?: boolean;
 }
 
 /**
  * Configuration for privacy settings switches.
- * Maps each privacy preference key to its translation key, action, and disabled state.
+ * Maps each privacy preference key to its label copy, action, and disabled state.
  */
 export const PRIVACY_SETTINGS: Record<PrivacyType, PrivacySettingConfig> = {
-  showConfirm: { labelKey: 'showConfirmation', action: 'setShowConfirm' },
-  blurCensored: { labelKey: 'blurCensored', action: 'setBlurCensored' },
-  signOutInactive: { labelKey: 'signOutInactive', action: 'setSignOutInactive', disabled: true },
-  requirePin: { labelKey: 'requirePin', action: 'setRequirePin', disabled: true },
-  hideWhoToFollow: { labelKey: 'hideWhoToFollow', action: 'setHideWhoToFollow', disabled: true },
-  hideActiveFriends: { labelKey: 'hideActiveFriends', action: 'setHideActiveFriends', disabled: true },
-  hideSearch: { labelKey: 'hideSearch', action: 'setHideSearch', disabled: true },
-  neverShowPosts: { labelKey: 'neverShowPosts', action: 'setNeverShowPosts', disabled: true },
+  showConfirm: { label: 'Show confirmation before redirecting', action: 'setShowConfirm' },
+  blurCensored: { label: 'Blur censored posts or profile pictures', action: 'setBlurCensored' },
+  signOutInactive: { label: 'Sign me out when inactive for 5 minutes', action: 'setSignOutInactive', disabled: true },
+  requirePin: { label: 'Require PIN when inactive for 5 minutes', action: 'setRequirePin', disabled: true },
+  hideWhoToFollow: { label: "Hide your profile in 'Who to Follow'", action: 'setHideWhoToFollow', disabled: true },
+  hideActiveFriends: { label: "Hide your profile in 'Active Friends'", action: 'setHideActiveFriends', disabled: true },
+  hideSearch: { label: 'Hide your profile in search results', action: 'setHideSearch', disabled: true },
+  neverShowPosts: {
+    label: "Never show posts from people you don't follow",
+    action: 'setNeverShowPosts',
+    disabled: true,
+  },
 };

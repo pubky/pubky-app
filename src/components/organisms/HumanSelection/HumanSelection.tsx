@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
@@ -12,7 +11,6 @@ import { HumanBitcoinCard } from '../HumanBitcoinCard/HumanBitcoinCard';
 import type { HumanSelectionProps } from './HumanSelection.types';
 
 export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanSelectionProps) => {
-  const t = useTranslations('onboarding.human');
   // Show dev mode options if in development mode or Cypress is running (for E2E tests)
   const isCypressRunning = typeof window !== 'undefined' && 'Cypress' in window;
   const isDevMode = process.env.NODE_ENV === 'development' || isCypressRunning;
@@ -20,12 +18,11 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
     <React.Fragment>
       <PageHeader>
         <PageTitle size="large">
-          {t.rich('title', {
-            highlight: (chunks) => <span className="text-brand">{chunks}</span>,
-          })}
+          {"Prove you're "}
+          <span className="text-brand">{'not a Robot.'}</span>
         </PageTitle>
         <PageSubtitle>
-          {t('subtitle')}{' '}
+          {'Verify quickly using your phone number or a small payment. Or use an'}{' '}
           <Button
             overrideDefaults
             onClick={onInviteCodeClick}
@@ -33,7 +30,7 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
             data-testid="invite-code-link"
             data-cy="invite-code-link"
           >
-            {t('inviteCode')}
+            {'invite code.'}
           </Button>
         </PageSubtitle>
       </PageHeader>
@@ -48,11 +45,11 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
             as="p"
             className="absolute top-[-14px] left-[-6px] ml-4 bg-background px-2 text-base leading-6 font-medium text-secondary-foreground/80"
           >
-            {t('devMode')}
+            {'Dev Mode'}
           </Typography>
           <Container className="flex flex-row gap-2">
             <Button data-testid="human-dev-skip-btn" variant="secondary" onClick={() => onDevMode('skip')} className="">
-              {t('skip')}
+              {'Skip'}
             </Button>
             <Button
               data-testid="human-dev-invite-code-btn"
@@ -60,7 +57,7 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
               onClick={() => onDevMode('inviteCode')}
               className=""
             >
-              {t('enterInviteCode')}
+              {'Enter invite code'}
             </Button>
           </Container>
         </Container>

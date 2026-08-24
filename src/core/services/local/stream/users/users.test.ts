@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { getModeratedTags, getModerationId } from '@/config/moderation';
+import { getModeratedTags } from '@/config/moderation';
+import { APP_RUNTIME_DEFAULTS } from '@/libs/runtime-config/runtime-config.schema';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
 import { ModerationType } from '@/models/moderation/moderation.schema';
@@ -384,7 +385,7 @@ describe('LocalStreamUsersService', () => {
         const moderatedTags: NexusTag[] = [
           {
             label: getModeratedTags()[0],
-            taggers: [getModerationId()],
+            taggers: [APP_RUNTIME_DEFAULTS.moderationId],
             taggers_count: 1,
             relationship: true,
           },
@@ -443,7 +444,7 @@ describe('LocalStreamUsersService', () => {
           tags: [
             {
               label: getModeratedTags()[0],
-              taggers: [getModerationId()],
+              taggers: [APP_RUNTIME_DEFAULTS.moderationId],
               taggers_count: 1,
               relationship: true,
             },

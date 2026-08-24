@@ -31,14 +31,6 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
 vi.mock('@/molecules/Toaster/use-toast', () => ({
   useToast: () => ({ toast: mocks.toast }),
 }));
-
-vi.mock('next-intl', () => ({
-  useTranslations:
-    (namespace: string) =>
-    (key: string): string =>
-      `${namespace}.${key}`,
-}));
-
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
@@ -73,7 +65,7 @@ describe('useSaveCreatedPostToTarget', () => {
     });
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalledWith('author:post-1', collectionTarget);
-    expect(mocks.toast).toHaveBeenCalledWith({ title: 'toast.success', description: 'fab.addedToCollection' });
+    expect(mocks.toast).toHaveBeenCalledWith({ title: 'Success', description: 'Post added to collection.' });
   });
 
   it('bookmarks a created post, runs onSaved, and shows bookmark toast', async () => {
@@ -87,7 +79,7 @@ describe('useSaveCreatedPostToTarget', () => {
     expect(mocks.commitCreateBookmark).toHaveBeenCalledWith({ postId: 'author:post-2', userId: 'viewer-pubky' });
     expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalledWith('author:post-2', bookmarksTarget);
-    expect(mocks.toast).toHaveBeenCalledWith({ title: 'toast.bookmark.added' });
+    expect(mocks.toast).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
   });
 
   it('shows login-required feedback and skips bookmarking when the current pubky is missing', async () => {
@@ -101,7 +93,7 @@ describe('useSaveCreatedPostToTarget', () => {
 
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
-    expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'toast.bookmark.loginRequired' });
+    expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Sign in to bookmark posts' });
   });
 
   it('shows collection error feedback and skips onSaved when collection save fails', async () => {
@@ -120,7 +112,7 @@ describe('useSaveCreatedPostToTarget', () => {
       target: collectionTarget,
       createdPostId: 'author:post-4',
     });
-    expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'postSave.updateCollectionFailed' });
+    expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Failed to update collection.' });
   });
 
   it('shows bookmark error feedback and skips onSaved when bookmark save fails', async () => {
@@ -139,7 +131,7 @@ describe('useSaveCreatedPostToTarget', () => {
       target: bookmarksTarget,
       createdPostId: 'author:post-5',
     });
-    expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'toast.bookmark.addFailed' });
+    expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not add bookmark' });
   });
 
   it('awaits onSaved and routes its failure through the target error feedback', async () => {
@@ -157,6 +149,6 @@ describe('useSaveCreatedPostToTarget', () => {
       target: collectionTarget,
       createdPostId: 'author:post-6',
     });
-    expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'postSave.updateCollectionFailed' });
+    expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Failed to update collection.' });
   });
 });

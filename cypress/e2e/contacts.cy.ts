@@ -26,10 +26,6 @@ describe('contacts', () => {
     // Sign out of profile 1
     cy.signOut(HasBackedUp.Yes);
 
-    // todo: remove workaround once bug is fixed, https://github.com/pubky/franky/issues/496
-    cy.clearAllSessionStorage();
-    cy.reload();
-
     // Create profile 2
     cy.onboardAsNewUser(profileName2, "Man's second best friend", [BackupType.RecoveryPhraseWithoutConfirmation]);
 
@@ -51,7 +47,7 @@ describe('contacts', () => {
       .should('have.length', 1)
       .first()
       .within(() => {
-        // check that account 2 is listed as a follower
+        // check that profile 2 is listed as a follower
         cy.get('[data-cy="profile-follower-item-name"]').should('have.text', profileName2);
         // check 0 tags
         cy.get('[data-cy="profile-follower-item-tags-count"]').should('have.text', 0);

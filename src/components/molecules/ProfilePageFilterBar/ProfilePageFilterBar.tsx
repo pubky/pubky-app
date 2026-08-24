@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { Bell, HeartHandshake, Library, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { type FilterBarPageType, PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { Container } from '@/atoms/Container/Container';
 import { FilterItem, FilterItemIcon, FilterItemLabel } from '@/atoms/Filter/Filter';
@@ -19,7 +18,9 @@ export interface ProfilePageFilterBarItem {
   icon: React.ComponentType<{
     className?: string;
   }>;
-  labelKey: string;
+  /** Stable identifier used for data-cy hooks. */
+  id: string;
+  label: string;
   count: number | undefined;
   pageType: FilterBarPageType;
   /** When false, the tab renders without a count badge (set for tabs that have no stat). */
@@ -37,12 +38,13 @@ export interface ProfilePageFilterBarProps {
 }
 
 // Item configuration - single source of truth for filter items
-// Uses labelKey for i18n translation lookup in 'profile.tabs' namespace
 const FILTER_ITEMS_CONFIG: Array<{
   icon: React.ComponentType<{
     className?: string;
   }>;
-  labelKey: string;
+  /** Stable identifier used for data-cy hooks. */
+  id: string;
+  label: string;
   pageType: FilterBarPageType;
   statKey?: keyof ProfileStats;
   /** Whether this item should only be shown for own profile */
@@ -50,50 +52,58 @@ const FILTER_ITEMS_CONFIG: Array<{
 }> = [
   {
     icon: Bell,
-    labelKey: 'notifications',
+    id: 'notifications',
+    label: 'Notifications',
     pageType: PROFILE_PAGE_TYPES.NOTIFICATIONS,
     statKey: 'notifications',
     ownProfileOnly: true, // Notifications only make sense for logged-in user
   },
   {
     icon: StickyNote,
-    labelKey: 'posts',
+    id: 'posts',
+    label: 'Posts',
     pageType: PROFILE_PAGE_TYPES.POSTS,
     statKey: 'posts',
   },
   {
     icon: MessageCircle,
-    labelKey: 'replies',
+    id: 'replies',
+    label: 'Replies',
     pageType: PROFILE_PAGE_TYPES.REPLIES,
     statKey: 'replies',
   },
   {
     icon: UsersRound,
-    labelKey: 'followers',
+    id: 'followers',
+    label: 'Followers',
     pageType: PROFILE_PAGE_TYPES.FOLLOWERS,
     statKey: 'followers',
   },
   {
     icon: UsersRound2,
-    labelKey: 'following',
+    id: 'following',
+    label: 'Following',
     pageType: PROFILE_PAGE_TYPES.FOLLOWING,
     statKey: 'following',
   },
   {
     icon: HeartHandshake,
-    labelKey: 'friends',
+    id: 'friends',
+    label: 'Friends',
     pageType: PROFILE_PAGE_TYPES.FRIENDS,
     statKey: 'friends',
   },
   {
     icon: Tag,
-    labelKey: 'tagged',
+    id: 'tagged',
+    label: 'Tagged',
     pageType: PROFILE_PAGE_TYPES.UNIQUE_TAGS,
     statKey: 'uniqueTags',
   },
   {
     icon: Library,
-    labelKey: 'collections',
+    id: 'collections',
+    label: 'Collections',
     pageType: PROFILE_PAGE_TYPES.COLLECTIONS,
     statKey: 'collections',
   },
@@ -107,7 +117,8 @@ export const getDefaultItems = (stats?: ProfileStats, isOwnProfile: boolean = tr
     return true;
   }).map((config) => ({
     icon: config.icon,
-    labelKey: config.labelKey,
+    id: config.id,
+    label: config.label,
     pageType: config.pageType,
     showCount: config.statKey !== undefined,
     // If stats not provided, count is undefined (loading state)
@@ -123,7 +134,6 @@ export function ProfilePageFilterBar({
   onPageChangeAction,
   isOwnProfile = true,
 }: ProfilePageFilterBarProps) {
-  const t = useTranslations('profile.tabs');
   const { requireAuth } = useRequireAuth();
 
   // Use provided items or generate default items with stats
@@ -166,7 +176,6 @@ export function ProfilePageFilterBar({
           const isActive = item.pageType === activePage;
           const showCount = item.showCount !== false;
           const isLoading = showCount && item.count === undefined;
-          const label = t(item.labelKey);
           return (
             <FilterItem
               key={index}
@@ -175,19 +184,19 @@ export function ProfilePageFilterBar({
               className="w-full items-start justify-between px-0 py-1"
             >
               <Container
-                data-cy={`profile-filter-item-${item.labelKey}`}
+                data-cy={`profile-filter-item-${item.id}`}
                 overrideDefaults={true}
                 className="flex items-center gap-2"
               >
                 <FilterItemIcon icon={Icon} />
-                <FilterItemLabel>{label}</FilterItemLabel>
+                <FilterItemLabel>{item.label}</FilterItemLabel>
               </Container>
               {showCount &&
                 (isLoading ? (
                   <Spinner size="sm" className="size-4" />
                 ) : (
                   <Typography
-                    data-cy={`profile-filter-item-${item.labelKey}-count`}
+                    data-cy={`profile-filter-item-${item.id}-count`}
                     as="span"
                     className={`text-base font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
                   >

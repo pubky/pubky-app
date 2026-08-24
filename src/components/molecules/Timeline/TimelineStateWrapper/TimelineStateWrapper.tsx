@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { TimelineLoading } from '../TimelineLoading';
@@ -10,6 +9,14 @@ interface TimelineStateWrapperProps {
   loading: boolean;
   error: string | null;
   hasItems: boolean;
+  /**
+   * True while the stream may still surface posts (not exhausted). An empty list with
+   * `hasMore` keeps the loading state AND mounts the children: the infinite-scroll
+   * sentinel lives in the children, and showing the empty component instead would
+   * unmount it and permanently stall the feed one load-round away from real posts
+   * (heavily-filtered stream regions return empty pages while more content exists).
+   */
+  hasMore?: boolean;
   children: ReactNode;
   loadingComponent?: ReactNode;
   errorComponent?: ReactNode;
@@ -24,13 +31,12 @@ export function TimelineStateWrapper({
   loading,
   error,
   hasItems,
+  hasMore = false,
   children,
   loadingComponent,
   errorComponent,
   emptyComponent,
 }: TimelineStateWrapperProps) {
-  const t = useTranslations('empty');
-
   if (loading) {
     return <>{loadingComponent ?? <TimelineLoading />}</>;
   }
@@ -49,13 +55,22 @@ export function TimelineStateWrapper({
     );
   }
 
+  if (!hasItems && hasMore) {
+    return (
+      <>
+        {loadingComponent ?? <TimelineLoading />}
+        {children}
+      </>
+    );
+  }
+
   if (!hasItems) {
     return (
       <>
         {emptyComponent ?? (
           <Container data-cy="timeline-container" className="flex items-center justify-center py-8">
             <Typography size="md" className="text-muted-foreground">
-              {t('noPosts')}
+              {'No posts found'}
             </Typography>
           </Container>
         )}

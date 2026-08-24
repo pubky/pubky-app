@@ -1,19 +1,16 @@
 'use client';
 
-import { Frown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { Bell } from 'lucide-react';
 import { IllustratedEmptyState } from '../IllustratedEmptyState/IllustratedEmptyState';
 
 export function NotificationsEmpty() {
-  const t = useTranslations('notifications.empty');
-
   return (
     <IllustratedEmptyState
       imageSrc="/images/notifications-empty-state.webp"
-      imageAlt={t('alt')}
-      icon={Frown}
-      title={t('title')}
-      subtitle={t('subtitle')}
+      imageAlt={'Notifications - Empty state'}
+      icon={Bell}
+      title={'No notifications yet'}
+      subtitle={'Tags, follows, reposts and account information will be displayed here.'}
     />
   );
 }

@@ -26,6 +26,7 @@ import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.s
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import {
   type NexusFileDetails,
@@ -211,6 +212,7 @@ describe('PostStreamApplication', () => {
     await PostStreamModel.table.clear();
     await UnreadPostStreamModel.table.clear();
     postStreamQueue.clear();
+    postStreamDirtyRegistry.reset();
     await BookmarkModel.table.clear();
     await PostDetailsModel.table.clear();
     await UserDetailsModel.table.clear();
@@ -1887,6 +1889,72 @@ describe('PostStreamApplication', () => {
       expect(postStream?.stream).toEqual([unreadPostIds[0], unreadPostIds[1], mainPostIds[0], mainPostIds[1]]);
       expect(unreadStream).toBeNull();
     });
+
+    describe('dirty-registry reconciliation (deferred invalidation, #2294/#2302)', () => {
+      const followingStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+
+      const seedFreshFollowingStream = async () => {
+        const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+
+        const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
+        await PostStreamModel.create(followingStreamId, [mainPostId]);
+        await createPostDetailWithTimestamp(mainPostId, now - 1);
+
+        const unreadPostId = `${DEFAULT_AUTHOR}:unread-1`;
+        await UnreadPostStreamModel.create(followingStreamId, [unreadPostId]);
+        await createPostDetailWithTimestamp(unreadPostId, now - 1);
+
+        return { mainPostId, unreadPostId };
+      };
+
+      it('clears both streams and reconciles when a dependency mutation marked the stream dirty', async () => {
+        await seedFreshFollowingStream();
+        postStreamDirtyRegistry.markDirty('follow_graph');
+
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId: followingStreamId });
+
+        expect(await PostStreamModel.findById(followingStreamId)).toBeNull();
+        expect(await UnreadPostStreamModel.findById(followingStreamId)).toBeNull();
+        expect(postStreamDirtyRegistry.isDirty(followingStreamId)).toBe(false);
+      });
+
+      it('keeps a fresh cache on later initial loads once reconciled', async () => {
+        postStreamDirtyRegistry.markDirty('follow_graph');
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId: followingStreamId });
+
+        // The stream re-cached fresh data after reconciliation.
+        const { mainPostId } = await seedFreshFollowingStream();
+
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId: followingStreamId });
+
+        expect((await PostStreamModel.findById(followingStreamId))?.stream).toContain(mainPostId);
+      });
+
+      it('leaves a fresh dependent cache intact when no mutation happened', async () => {
+        const { mainPostId } = await seedFreshFollowingStream();
+
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId: followingStreamId });
+
+        expect((await PostStreamModel.findById(followingStreamId))?.stream).toContain(mainPostId);
+      });
+
+      it('never clears streams without dependency scopes, even when every scope is dirty', async () => {
+        const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+        const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
+        await createStreamWithPosts([mainPostId]);
+        await createPostDetailWithTimestamp(mainPostId, now - 1);
+
+        postStreamDirtyRegistry.markDirty('follow_graph');
+        postStreamDirtyRegistry.markDirty('friends');
+        postStreamDirtyRegistry.markDirty('profile_tag');
+
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+        expect((await PostStreamModel.findById(streamId))?.stream).toEqual([mainPostId]);
+      });
+    });
   });
 
   describe('mergeUnreadStreamWithPostStream', () => {
@@ -2525,6 +2593,94 @@ describe('PostStreamApplication', () => {
       expect(nexusFetchSpy).toHaveBeenCalledTimes(20);
       // All posts were muted, so we get nothing
       expect(result.nextPageIds).toHaveLength(0);
+      // The raw cache-walk anchor still advanced through the scanned (muted) run,
+      // so the caller can resume past it instead of restarting at the cache head.
+      expect(result.lastRawPostId).toBe('author-muted:post-10');
+    });
+
+    it('returns lastRawPostId equal to the caller lastPostId when a round is served purely from the overflow buffer', async () => {
+      await setupMutedUsers(['author-2'] as Pubky[]);
+
+      // First request overflows the queue: 15 non-muted posts, limit 10 → 5 buffered.
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: Array.from({ length: 15 }, (_, i) => `author-1:post-${i + 1}`),
+        last_post_score: BASE_TIMESTAMP + 14,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      const result1 = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+      expect(result1.nextPageIds).toHaveLength(10);
+      expect(result1.lastRawPostId).toBe('author-1:post-15');
+
+      // Second request is fully served from the buffer: nothing new is scanned, so the
+      // raw anchor must hold at the caller's own lastPostId, not move backward.
+      vi.spyOn(NexusPostStreamService, 'fetch').mockClear();
+      const result2 = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 5,
+        streamHead: 0,
+        streamTail: BASE_TIMESTAMP + 14,
+        lastPostId: 'author-1:post-15',
+        viewerId,
+      });
+
+      expect(result2.nextPageIds).toHaveLength(5);
+      expect(NexusPostStreamService.fetch).not.toHaveBeenCalled();
+      expect(result2.lastRawPostId).toBe('author-1:post-15');
+    });
+
+    it('head-poll calls (streamHead > 0) bypass the pagination queue and leave the overflow buffer untouched', async () => {
+      // Seed the buffer: 15 posts, limit 10 → 5 overflow buffered for the UI's next round.
+      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
+        post_keys: Array.from({ length: 15 }, (_, i) => `author-1:post-${i + 1}`),
+        last_post_score: BASE_TIMESTAMP + 14,
+      };
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+      const bufferedBefore = postStreamQueue.get(streamId);
+      expect(bufferedBefore?.posts).toHaveLength(5);
+
+      // A coordinator head-poll on the same stream must not consume or rewrite the buffer.
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: [`author-1:post-new-1`, `author-1:post-new-2`],
+        last_post_score: BASE_TIMESTAMP + 100,
+      });
+      await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: BASE_TIMESTAMP + 14,
+        streamTail: 0,
+        viewerId,
+      });
+
+      const bufferedAfter = postStreamQueue.get(streamId);
+      expect(bufferedAfter).toEqual(bufferedBefore);
+
+      // The UI's next round is still served from the intact buffer, without Nexus.
+      vi.spyOn(NexusPostStreamService, 'fetch').mockClear();
+      const nextRound = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 5,
+        streamHead: 0,
+        streamTail: BASE_TIMESTAMP + 14,
+        lastPostId: 'author-1:post-15',
+        viewerId,
+      });
+      expect(nextRound.nextPageIds).toHaveLength(5);
+      expect(NexusPostStreamService.fetch).not.toHaveBeenCalled();
     });
 
     it('should return partial results when max fetch iterations reached with some valid posts', async () => {

@@ -1,7 +1,6 @@
 'use client';
 
 import { Pencil } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -38,7 +37,6 @@ export function UserInfoPopoverContent({
   avatarUrl,
   formattedPublicKey,
 }: UserInfoPopoverContentProps) {
-  const t = useTranslations('userList');
   const {
     isCurrentUser,
     isLoading: isDataLoading,
@@ -92,10 +90,10 @@ export function UserInfoPopoverContent({
         maxAvatars={MAX_AVATARS}
       />
       {isCurrentUser ? (
-        <Button variant="secondary" size="sm" onClick={onEditClick} aria-label={t('editProfile')}>
+        <Button variant="secondary" size="sm" onClick={onEditClick} aria-label={'Edit profile'}>
           <Pencil className="size-4" />
           <Typography className="text-xs leading-4 font-bold" overrideDefaults>
-            {t('editProfile')}
+            {'Edit profile'}
           </Typography>
         </Button>
       ) : (

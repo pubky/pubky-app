@@ -36,7 +36,7 @@ exports[`CollectionHiddenItemsNotice - Snapshots > matches the snapshot 1`] = `
     class="text-sm font-medium text-muted-foreground"
     data-testid="typography"
   >
-    collections.single.hiddenItemsNotice
+    Some items in this collection are hidden due to the selected layout type.
   </p>
 </div>
 `;

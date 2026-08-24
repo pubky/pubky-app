@@ -32,6 +32,15 @@ const IMAGE_DIMENSION_HEADER_BYTES_LENGTH = 256 * 1024;
 const WEBP_ANIMATION_FLAG = 0x02;
 const WEBP_XMP_FLAG = 0x04;
 const WEBP_EXIF_FLAG = 0x08;
+const JPEG_APP1_MARKER = 0xe1;
+const JPEG_EXIF_IDENTIFIER = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00]; // "Exif\0\0"
+const TIFF_LITTLE_ENDIAN_BYTE = 0x49; // 'I'
+const TIFF_BIG_ENDIAN_BYTE = 0x4d; // 'M'
+const TIFF_MAGIC = 42;
+const TIFF_IFD_ENTRY_LENGTH = 12;
+const EXIF_ORIENTATION_TAG = 0x0112;
+/** EXIF orientations 5-8 rotate the image 90°, swapping display width/height. */
+const EXIF_ROTATED_ORIENTATIONS = new Set([5, 6, 7, 8]);
 const TEXT_DECODER = new TextDecoder();
 const SVG_ACTIVE_ELEMENT_NAMES = new Set([
   'animate',
@@ -176,6 +185,10 @@ function readUint24LittleEndian(bytes: Uint8Array, offset: number): number {
   return bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
 }
 
+function readUint32BigEndian(bytes: Uint8Array, offset: number): number {
+  return ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+}
+
 function isChunkType(bytes: Uint8Array, offset: number, type: string): boolean {
   return (
     bytes[offset] === type.charCodeAt(0) &&
@@ -185,39 +198,52 @@ function isChunkType(bytes: Uint8Array, offset: number, type: string): boolean {
   );
 }
 
-function hasAnimatedWebpChunk(bytes: Uint8Array): boolean {
+type WebpChunk = {
+  offset: number;
+  dataOffset: number;
+  chunkSize: number;
+};
+
+/**
+ * Walks the RIFF chunk table. A chunk whose header fits in the buffer is
+ * listed even when its declared payload overruns it, so header-level checks
+ * (fourCC, VP8X flags) still see truncated trailing chunks; `clean` is false
+ * for such malformed or truncated containers.
+ */
+function listWebpChunks(bytes: Uint8Array): { chunks: WebpChunk[]; clean: boolean } {
+  const chunks: WebpChunk[] = [];
   if (!isWebpSignature(bytes)) {
-    return false;
+    return { chunks, clean: false };
   }
 
   let offset = 12;
   while (offset + 8 <= bytes.length) {
     const chunkSize = readUint32LittleEndian(bytes, offset + 4);
     const dataOffset = offset + 8;
-
-    if (isChunkType(bytes, offset, 'ANIM')) {
-      return true;
-    }
-
-    if (
-      isChunkType(bytes, offset, 'VP8X') &&
-      chunkSize >= 1 &&
-      dataOffset < bytes.length &&
-      (bytes[dataOffset] & WEBP_ANIMATION_FLAG) !== 0
-    ) {
-      return true;
-    }
+    chunks.push({ offset, dataOffset, chunkSize });
 
     const paddedChunkSize = chunkSize + (chunkSize % 2);
     const nextOffset = dataOffset + paddedChunkSize;
     if (nextOffset <= offset || nextOffset > bytes.length) {
-      break;
+      return { chunks, clean: false };
     }
 
     offset = nextOffset;
   }
 
-  return false;
+  return { chunks, clean: true };
+}
+
+function hasAnimatedWebpChunk(bytes: Uint8Array): boolean {
+  const { chunks } = listWebpChunks(bytes);
+  return chunks.some(
+    ({ offset, dataOffset, chunkSize }) =>
+      isChunkType(bytes, offset, 'ANIM') ||
+      (isChunkType(bytes, offset, 'VP8X') &&
+        chunkSize >= 1 &&
+        dataOffset < bytes.length &&
+        (bytes[dataOffset] & WEBP_ANIMATION_FLAG) !== 0),
+  );
 }
 
 async function isAnimatedWebp(file: File): Promise<boolean> {
@@ -234,29 +260,21 @@ async function isAnimatedWebp(file: File): Promise<boolean> {
  * container is malformed.
  */
 function stripWebpMetadataChunks(bytes: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
-  if (!isWebpSignature(bytes)) {
+  const { chunks, clean } = listWebpChunks(bytes);
+  if (!clean) {
     return bytes;
   }
 
   const output = new Uint8Array(bytes.length);
   output.set(bytes.subarray(0, 12), 0); // RIFF header + 'WEBP' fourCC
   let writeOffset = 12;
-
-  let offset = 12;
   let strippedAny = false;
-  let clean = true;
-  while (offset + 8 <= bytes.length) {
-    const chunkSize = readUint32LittleEndian(bytes, offset + 4);
-    const paddedChunkSize = chunkSize + (chunkSize % 2);
-    const nextOffset = offset + 8 + paddedChunkSize;
-    if (nextOffset <= offset || nextOffset > bytes.length) {
-      clean = false;
-      break;
-    }
+
+  for (const { offset, dataOffset, chunkSize } of chunks) {
+    const nextOffset = dataOffset + chunkSize + (chunkSize % 2);
 
     if (isChunkType(bytes, offset, 'EXIF') || isChunkType(bytes, offset, 'XMP ')) {
       strippedAny = true;
-      offset = nextOffset;
       continue;
     }
 
@@ -266,10 +284,9 @@ function stripWebpMetadataChunks(bytes: Uint8Array<ArrayBuffer>): Uint8Array<Arr
       output[writeOffset + 8] &= ~(WEBP_EXIF_FLAG | WEBP_XMP_FLAG);
     }
     writeOffset += nextOffset - offset;
-    offset = nextOffset;
   }
 
-  if (!clean || !strippedAny) {
+  if (!strippedAny) {
     return bytes;
   }
 
@@ -291,13 +308,20 @@ function isJpegStartOfFrameMarker(marker: number): boolean {
   );
 }
 
-function parseJpegDimensions(bytes: Uint8Array): ImageDimensions | null {
-  if (!isJpegSignature(bytes)) {
-    return null;
-  }
+type JpegSegment = {
+  marker: number;
+  /** Position of the segment's 2-byte length field; payload follows it. */
+  offset: number;
+  segmentLength: number;
+};
 
+/**
+ * Yields JPEG marker segments in file order, stopping at start-of-scan/EOI
+ * (no segments live past the entropy-coded data) or on malformed structure.
+ */
+function* iterateJpegSegments(bytes: Uint8Array): Generator<JpegSegment> {
   let offset = 2;
-  while (offset + 9 < bytes.length) {
+  while (offset + 4 < bytes.length) {
     if (bytes[offset] !== 0xff) {
       offset += 1;
       continue;
@@ -311,7 +335,7 @@ function parseJpegDimensions(bytes: Uint8Array): ImageDimensions | null {
     offset += 1;
 
     if (marker === 0xda || marker === 0xd9) {
-      return null;
+      return;
     }
 
     if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
@@ -319,24 +343,111 @@ function parseJpegDimensions(bytes: Uint8Array): ImageDimensions | null {
     }
 
     if (offset + 2 > bytes.length) {
-      return null;
+      return;
     }
 
     const segmentLength = readUint16BigEndian(bytes, offset);
     if (segmentLength < 2 || offset + segmentLength > bytes.length) {
-      return null;
+      return;
     }
 
+    yield { marker, offset, segmentLength };
+    offset += segmentLength;
+  }
+}
+
+function parseJpegDimensions(bytes: Uint8Array): ImageDimensions | null {
+  if (!isJpegSignature(bytes)) {
+    return null;
+  }
+
+  for (const { marker, offset, segmentLength } of iterateJpegSegments(bytes)) {
     if (isJpegStartOfFrameMarker(marker) && segmentLength >= 7) {
       const height = readUint16BigEndian(bytes, offset + 3);
       const width = readUint16BigEndian(bytes, offset + 5);
       return width > 0 && height > 0 ? { width, height } : null;
     }
-
-    offset += segmentLength;
   }
 
   return null;
+}
+
+function parseTiffOrientation(bytes: Uint8Array, tiffOffset: number, endOffset: number): number | null {
+  if (tiffOffset + 8 > endOffset) {
+    return null;
+  }
+
+  const byteOrder = bytes[tiffOffset];
+  const isLittleEndian = byteOrder === TIFF_LITTLE_ENDIAN_BYTE;
+  if (bytes[tiffOffset + 1] !== byteOrder || (!isLittleEndian && byteOrder !== TIFF_BIG_ENDIAN_BYTE)) {
+    return null;
+  }
+
+  const readUint16 = isLittleEndian ? readUint16LittleEndian : readUint16BigEndian;
+  const readUint32 = isLittleEndian ? readUint32LittleEndian : readUint32BigEndian;
+
+  if (readUint16(bytes, tiffOffset + 2) !== TIFF_MAGIC) {
+    return null;
+  }
+
+  const ifdStart = tiffOffset + readUint32(bytes, tiffOffset + 4);
+  if (ifdStart + 2 > endOffset) {
+    return null;
+  }
+
+  const entryCount = readUint16(bytes, ifdStart);
+  for (let index = 0; index < entryCount; index += 1) {
+    const entryOffset = ifdStart + 2 + index * TIFF_IFD_ENTRY_LENGTH;
+    if (entryOffset + TIFF_IFD_ENTRY_LENGTH > endOffset) {
+      return null;
+    }
+
+    if (readUint16(bytes, entryOffset) === EXIF_ORIENTATION_TAG) {
+      // SHORT values sit left-justified in the 4-byte value field, so the
+      // endian-matched 16-bit read at the field start is correct for II and MM.
+      const orientation = readUint16(bytes, entryOffset + 8);
+      return orientation >= 1 && orientation <= 8 ? orientation : null;
+    }
+  }
+
+  return null;
+}
+
+function parseJpegExifOrientation(bytes: Uint8Array): number | null {
+  if (!isJpegSignature(bytes)) {
+    return null;
+  }
+
+  for (const { marker, offset, segmentLength } of iterateJpegSegments(bytes)) {
+    if (
+      marker === JPEG_APP1_MARKER &&
+      segmentLength >= 2 + JPEG_EXIF_IDENTIFIER.length &&
+      JPEG_EXIF_IDENTIFIER.every((value, index) => bytes[offset + 2 + index] === value)
+    ) {
+      return parseTiffOrientation(bytes, offset + 2 + JPEG_EXIF_IDENTIFIER.length, offset + segmentLength);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * JPEG SOF dimensions describe the stored pixels, while phone cameras save
+ * portrait shots as unrotated sensor pixels plus an EXIF orientation tag.
+ * Decoding with imageOrientation: 'from-image' applies that rotation, so for
+ * 90°-rotated files the resize target must be computed in display space or
+ * portrait photos get squeezed into landscape frames (#2268).
+ */
+function getOrientedJpegDimensions(header: Uint8Array): ImageDimensions | null {
+  const dimensions = parseJpegDimensions(header);
+  if (!dimensions) {
+    return null;
+  }
+
+  const orientation = parseJpegExifOrientation(header);
+  return orientation !== null && EXIF_ROTATED_ORIENTATIONS.has(orientation)
+    ? { width: dimensions.height, height: dimensions.width }
+    : dimensions;
 }
 
 function parsePngDimensions(bytes: Uint8Array): ImageDimensions | null {
@@ -351,15 +462,9 @@ function parsePngDimensions(bytes: Uint8Array): ImageDimensions | null {
 }
 
 function parseWebpDimensions(bytes: Uint8Array): ImageDimensions | null {
-  if (!isWebpSignature(bytes)) {
-    return null;
-  }
+  const { chunks } = listWebpChunks(bytes);
 
-  let offset = 12;
-  while (offset + 8 <= bytes.length) {
-    const chunkSize = readUint32LittleEndian(bytes, offset + 4);
-    const dataOffset = offset + 8;
-
+  for (const { offset, dataOffset, chunkSize } of chunks) {
     if (isChunkType(bytes, offset, 'VP8X') && chunkSize >= 10 && dataOffset + 10 <= bytes.length) {
       return {
         width: readUint24LittleEndian(bytes, dataOffset + 4) + 1,
@@ -384,17 +489,26 @@ function parseWebpDimensions(bytes: Uint8Array): ImageDimensions | null {
         height: 1 + (((b3 & 0x0f) << 10) | (b2 << 2) | ((b1 & 0xc0) >> 6)),
       };
     }
-
-    const paddedChunkSize = chunkSize + (chunkSize % 2);
-    const nextOffset = dataOffset + paddedChunkSize;
-    if (nextOffset <= offset || nextOffset > bytes.length) {
-      break;
-    }
-
-    offset = nextOffset;
   }
 
   return null;
+}
+
+/**
+ * WebP EXIF metadata may carry an orientation that decoders apply with
+ * imageOrientation: 'from-image', and the EXIF chunk usually sits after the
+ * image data — beyond the sliced header — so the rotation cannot be read
+ * cheaply. The VP8X flags byte at the container start reliably announces it.
+ */
+function hasWebpExifFlag(bytes: Uint8Array): boolean {
+  const { chunks } = listWebpChunks(bytes);
+  const vp8x = chunks.find(({ offset }) => isChunkType(bytes, offset, 'VP8X'));
+  return (
+    vp8x !== undefined &&
+    vp8x.chunkSize >= 1 &&
+    vp8x.dataOffset < bytes.length &&
+    (bytes[vp8x.dataOffset] & WEBP_EXIF_FLAG) !== 0
+  );
 }
 
 async function getImageDimensions(file: File, mimeType: string): Promise<ImageDimensions | null> {
@@ -402,11 +516,13 @@ async function getImageDimensions(file: File, mimeType: string): Promise<ImageDi
 
   switch (mimeType) {
     case 'image/jpeg':
-      return parseJpegDimensions(header);
+      return getOrientedJpegDimensions(header);
     case 'image/png':
       return parsePngDimensions(header);
     case WEBP_MIME_TYPE:
-      return parseWebpDimensions(header);
+      // Returning null skips decode-time resizing; the full-decode fallback
+      // scales from the oriented bitmap, preserving the aspect ratio.
+      return hasWebpExifFlag(header) ? null : parseWebpDimensions(header);
     default:
       return null;
   }
@@ -521,11 +637,27 @@ async function loadResizedImageBitmap(
       resizeQuality: 'high',
     });
 
+    if (bitmap.width === width && bitmap.height === height) {
+      return {
+        source: bitmap,
+        width,
+        height,
+        cleanup: () => bitmap.close(),
+      };
+    }
+
+    // The browser ignored or reordered the decode-time resize (some skip the
+    // resize options, some apply EXIF orientation after resizing). Decode
+    // without resizing and let the canvas draw scale from the true dimensions.
+    bitmap.close();
+    const orientedBitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const scaled = getScaledDimensions(orientedBitmap.width, orientedBitmap.height, maxDimension);
+
     return {
-      source: bitmap,
-      width,
-      height,
-      cleanup: () => bitmap.close(),
+      source: orientedBitmap,
+      width: scaled.width,
+      height: scaled.height,
+      cleanup: () => orientedBitmap.close(),
     };
   } catch {
     return null;
@@ -665,6 +797,8 @@ async function sanitizeSvgImage(file: File): Promise<Blob> {
  * - JPEG/WebP: progressively re-encoded at lower quality and dimensions until under 5MB
  * - PNG: progressively downscaled until under 5MB
  * - Oversized raster images: downscaled preserving aspect ratio
+ * - EXIF-rotated photos (portrait phone shots): resize target computed in
+ *   display space so the aspect ratio survives re-encoding
  * - GIF: keep bytes to preserve animation; reject when still over 5MB
  * - Animated WebP: skips canvas (keeps frames) but strips EXIF/XMP chunks; reject when still over 5MB
  * - SVG: best-effort XML rewrite that removes active content and risky references; reject when still over 5MB

@@ -9,7 +9,17 @@ export interface ProfileLink {
   url: string;
 }
 
-export type SubmitTextKey = 'saveProfile' | 'finish' | 'saving' | 'uploadingAvatar' | 'savingProfile' | 'tryAgain';
+/** Submit-button copy for each phase of the profile save flow. */
+export const PROFILE_SUBMIT_TEXT = {
+  saveProfile: 'Save Profile',
+  finish: 'Finish',
+  saving: 'Saving...',
+  uploadingAvatar: 'Uploading avatar...',
+  savingProfile: 'Saving profile...',
+  tryAgain: 'Try again!',
+} as const;
+
+export type SubmitText = (typeof PROFILE_SUBMIT_TEXT)[keyof typeof PROFILE_SUBMIT_TEXT];
 
 export interface ProfileFormState {
   name: string;
@@ -19,7 +29,7 @@ export interface ProfileFormState {
   avatarPreview: string | null;
   isSaving: boolean;
   isLoading: boolean;
-  submitTextKey: SubmitTextKey;
+  submitText: SubmitText;
 }
 
 export interface ProfileFormErrors {

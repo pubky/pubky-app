@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { postJson } from '@/libs/api/client-request';
 import { Logger } from '@/libs/logger/logger';
@@ -23,7 +22,6 @@ import { toast } from '@/molecules/Toaster/use-toast';
  */
 export function useFeedback() {
   const { currentUserPubky, userDetails } = useCurrentUserProfile();
-  const tFeedback = useTranslations('toast.feedback');
   const [feedback, setFeedback] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -39,7 +37,7 @@ export function useFeedback() {
     if (isSubmitting) return;
 
     if (!currentUserPubky || !userDetails?.name) {
-      toast({ variant: 'error', description: tFeedback('userNotLoaded') });
+      toast({ variant: 'error', description: 'Could not load profile' });
       return;
     }
 
@@ -57,12 +55,12 @@ export function useFeedback() {
       Logger.error('Error submitting feedback:', error);
       toast({
         variant: 'error',
-        description: error instanceof Error ? error.message : tFeedback('submitFailedDesc'),
+        description: error instanceof Error ? error.message : 'Could not submit feedback. Try again.',
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [feedback, isSubmitting, currentUserPubky, userDetails?.name, tFeedback]);
+  }, [feedback, isSubmitting, currentUserPubky, userDetails?.name]);
 
   const reset = useCallback(() => {
     setFeedback('');

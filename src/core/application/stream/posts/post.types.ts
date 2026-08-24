@@ -30,6 +30,13 @@ export interface TPostStreamChunkResponse {
   /** True only if we've reached the actual end of the stream (Nexus returned fewer posts than limit).
    * False if we hit MAX_FETCH_ITERATIONS or filled the limit. */
   reachedEnd?: boolean;
+  /** Id of the last RAW post scanned this round (visible or filtered) — the resume anchor
+   * for the local stream-cache walk. Advances by raw scanned data, never by the post-filter
+   * visible count (the cache-walk twin of `nextCursor`'s invariant). Holds at the caller's
+   * own `lastPostId` when a round is served purely from the overflow buffer; undefined when
+   * nothing was scanned or on paths that bypass the cache walk (e.g. ASCENDING order).
+   * May be a filtered-out (deleted/collection/muted) post id — do not dereference for display. */
+  lastRawPostId?: string;
 }
 
 export interface TPartialCacheHitParams {

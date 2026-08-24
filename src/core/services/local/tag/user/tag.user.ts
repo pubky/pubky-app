@@ -5,6 +5,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserTagsModel, type UserTagsModelSchema } from '@/models/user/tags/userTags';
+import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
@@ -13,7 +14,7 @@ export class LocalUserTagService {
 
   static async create({ taggerId, taggedId, label }: TLocalTagParams): Promise<boolean> {
     try {
-      return await db.transaction('rw', this.TAG_TABLES, async () => {
+      const didCreate = await db.transaction('rw', this.TAG_TABLES, async () => {
         const userTagsModel = await UserTagsModel.getOrCreate<Pubky, UserTagsModelSchema>(taggedId);
         const tagExists = userTagsModel.addTagger(label, taggerId);
 
@@ -31,6 +32,13 @@ export class LocalUserTagService {
         ]);
         return true;
       });
+
+      if (didCreate) {
+        // Profile tags define wot_domain (Tagged as) membership. Defer cache
+        // invalidation to each domain stream's next initial load (#2302).
+        postStreamDirtyRegistry.markDirty('profile_tag');
+      }
+      return didCreate;
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to create user tag', {
         service: ErrorService.Local,
@@ -74,6 +82,9 @@ export class LocalUserTagService {
           }),
         ]);
       });
+      // Profile tags define wot_domain (Tagged as) membership. Defer cache
+      // invalidation to each domain stream's next initial load (#2302).
+      postStreamDirtyRegistry.markDirty('profile_tag');
       return true;
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to delete user tag', {

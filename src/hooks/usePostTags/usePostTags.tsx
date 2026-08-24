@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useTranslations } from 'next-intl';
 import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
@@ -26,7 +25,6 @@ import type { UsePostTagsOptions, UsePostTagsResult } from './usePostTags.types'
  */
 export function usePostTags(postId: string | null | undefined, options: UsePostTagsOptions = {}): UsePostTagsResult {
   const { viewerId: customViewerId } = options;
-  const tTags = useTranslations('toast.tags');
 
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (unauthenticated views should still render tags)
@@ -236,12 +234,12 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     } catch {
       toast({
         variant: 'error',
-        description: tTags('loadFailed'),
+        description: 'Could not load more tags',
       });
     } finally {
       setIsLoadingMore(false);
     }
-  }, [postId, isLoadingMore, hasMore, viewerId, tTags]);
+  }, [postId, isLoadingMore, hasMore, viewerId]);
 
   const handleTagAdd = useCallback(
     async (tagString: string): Promise<{ success: boolean; error?: string }> => {
@@ -277,18 +275,18 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         setRecentlyAddedLabels((prev) => new Map(prev).set(labelLower, counter));
 
         toast({
-          title: tTags('added', { label }),
+          title: `Tag added: ${label}`,
         });
         return { success: true };
       } catch {
         toast({
           variant: 'error',
-          description: tTags('addFailed', { label }),
+          description: `Could not add tag: ${label}`,
         });
         return { success: false, error: 'Failed to add tag' };
       }
     },
-    [postId, viewerId, allTags, tTags],
+    [postId, viewerId, allTags],
   );
 
   const handleTagToggle = useCallback(
@@ -329,7 +327,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           });
 
           toast({
-            title: tTags('removed', { label: tag.label }),
+            title: `Tag removed: ${tag.label}`,
           });
           // Removing the tag clears its "recently added" pinning so the natural
           // ordering takes over again if it ever resurfaces.
@@ -354,7 +352,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           });
 
           toast({
-            title: tTags('added', { label: tag.label }),
+            title: `Tag added: ${tag.label}`,
           });
         }
       } catch {
@@ -368,13 +366,11 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         }
         toast({
           variant: 'error',
-          description: userIsTagger
-            ? tTags('removeFailed', { label: tag.label })
-            : tTags('addFailed', { label: tag.label }),
+          description: userIsTagger ? `Could not remove tag: ${tag.label}` : `Could not add tag: ${tag.label}`,
         });
       }
     },
-    [postId, viewerId, allTags, tagOrder, tTags],
+    [postId, viewerId, allTags, tagOrder],
   );
 
   return {

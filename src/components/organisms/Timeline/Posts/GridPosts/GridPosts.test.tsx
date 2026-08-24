@@ -58,15 +58,24 @@ vi.mock('@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper', async 
       loading,
       error,
       hasItems,
+      hasMore,
       children,
     }: {
       loading: boolean;
       error: string | null;
       hasItems: boolean;
+      hasMore?: boolean;
       children: React.ReactNode;
     }) => {
       if (loading) return <div data-testid="timeline-loading">Loading...</div>;
       if (error && !hasItems) return <div data-testid="timeline-initial-error">Error: {error}</div>;
+      if (!hasItems && hasMore)
+        return (
+          <>
+            <div data-testid="timeline-loading">Loading...</div>
+            {children}
+          </>
+        );
       if (!hasItems) return <div data-testid="timeline-empty">No posts</div>;
       return <>{children}</>;
     },
@@ -110,6 +119,8 @@ describe('TimelineGridPosts', () => {
 
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
 
     // Mock useLiveQuery to return no replies by default
@@ -155,6 +166,22 @@ describe('TimelineGridPosts', () => {
   });
 
   describe('Empty States', () => {
+    it('keeps loading mounted instead of the empty state when empty but hasMore (filtered stream region)', () => {
+      render(
+        <TimelineGridPosts
+          postIds={[]}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByTestId('timeline-empty')).not.toBeInTheDocument();
+      expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
+    });
+
     it('should render empty state when no posts are returned', async () => {
       render(
         <TimelineGridPosts
@@ -433,6 +460,8 @@ describe('TimelineGridPosts', () => {
     it('should render sentinel element for infinite scroll', async () => {
       mockUseInfiniteScroll.mockReturnValue({
         sentinelRef: vi.fn(),
+        isStalled: false,
+        resumeAutoLoad: vi.fn(),
       });
 
       const { container } = render(
@@ -497,6 +526,8 @@ describe('TimelineGridPosts - Snapshots', () => {
 
     mockUseInfiniteScroll.mockReturnValue({
       sentinelRef: vi.fn(),
+      isStalled: false,
+      resumeAutoLoad: vi.fn(),
     });
 
     // Mock useLiveQuery

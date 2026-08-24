@@ -23,7 +23,6 @@ import {
   UserRoundMinus,
   UserRoundPlus,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import { POST_ROUTES } from '@/app/routes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
@@ -47,10 +46,6 @@ import type {
 } from './usePostMenuActions.types';
 
 export function usePostMenuActions(postId: string, options: UsePostMenuActionsOptions): UsePostMenuActionsResult {
-  const t = useTranslations('post.actions');
-
-  const tMute = useTranslations('toast.mute');
-  const tCopy = useTranslations('toast.copy');
   const { onReportClick, onEditClick, onDeleteClick, isDeleting = false } = options;
   const parsedId = parseCompositeId(postId);
   // Normalize author ID to ensure consistent format (strip pubky: or pk: prefix)
@@ -64,13 +59,13 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser();
   const { isMuted, isLoading: isMutedUsersLoading } = useMutedUsers();
   const { copyToClipboard: copyPubky } = useCopyToClipboard({
-    successTitle: tCopy('pubkyCopied'),
+    successTitle: 'Pubky copied to clipboard',
   });
   const { copyToClipboard: copyLink } = useCopyToClipboard({
-    successTitle: tCopy('linkCopied'),
+    successTitle: 'Link copied to clipboard',
   });
   const { copyToClipboard: copyText } = useCopyToClipboard({
-    successTitle: tCopy('textCopied'),
+    successTitle: 'Text copied to clipboard',
   });
   const isOwnPost = currentUserPubky === postAuthorId;
   const isUserMuted = isMuted(postAuthorId);
@@ -86,13 +81,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   if (!isOwnPost) {
     menuItems.push({
       id: POST_MENU_ACTION_IDS.FOLLOW,
-      label: isFollowing
-        ? t('unfollowUser', {
-            username,
-          })
-        : t('followUser', {
-            username,
-          }),
+      label: isFollowing ? `Unfollow ${username}` : `Follow ${username}`,
       icon: isFollowing ? UserRoundMinus : UserRoundPlus,
       onClick: async () => {
         // useFollowUser handles all feedback (toast + state) and never throws.
@@ -104,7 +93,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   }
   menuItems.push({
     id: POST_MENU_ACTION_IDS.COPY_PUBKY,
-    label: t('copyPubky'),
+    label: 'Copy pubky',
     icon: Key,
     onClick: async () => {
       try {
@@ -112,7 +101,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       } catch (error) {
         toast({
           variant: 'error',
-          description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
+          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
         });
       }
     },
@@ -120,7 +109,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   });
   menuItems.push({
     id: POST_MENU_ACTION_IDS.COPY_LINK,
-    label: t('copyLink'),
+    label: 'Copy link to post',
     icon: Link,
     onClick: async () => {
       try {
@@ -128,7 +117,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       } catch (error) {
         toast({
           variant: 'error',
-          description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
+          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
         });
       }
     },
@@ -137,7 +126,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   if (!isArticle && !isCollection) {
     menuItems.push({
       id: POST_MENU_ACTION_IDS.COPY_TEXT,
-      label: t('copyText'),
+      label: 'Copy text of post',
       icon: FileText,
       onClick: async () => {
         try {
@@ -145,7 +134,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         } catch (error) {
           toast({
             variant: 'error',
-            description: isAppError(error) ? error.message : tCopy('copyFailedDesc'),
+            description: isAppError(error) ? error.message : 'Could not copy to clipboard',
           });
         }
       },
@@ -155,24 +144,18 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   if (!isOwnPost) {
     menuItems.push({
       id: POST_MENU_ACTION_IDS.MUTE,
-      label: isUserMuted
-        ? t('unmuteUser', {
-            username,
-          })
-        : t('muteUser', {
-            username,
-          }),
+      label: isUserMuted ? `Unmute ${username}` : `Mute ${username}`,
       icon: isUserMuted ? Megaphone : MegaphoneOff,
       onClick: async () => {
         try {
           await toggleMute(postAuthorId, isUserMuted);
           toast({
-            title: isUserMuted ? tMute('unmuted', { username }) : tMute('muted', { username }),
+            title: isUserMuted ? `${username} unmuted` : `${username} muted`,
           });
         } catch (error) {
           toast({
             variant: 'error',
-            description: isAppError(error) ? error.message : tMute('failed'),
+            description: isAppError(error) ? error.message : 'Could not update mute status',
           });
         }
       },
@@ -181,7 +164,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
     });
     menuItems.push({
       id: POST_MENU_ACTION_IDS.REPORT,
-      label: t('reportPost'),
+      label: 'Report post',
       icon: Flag,
       onClick: onReportClick,
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
@@ -190,14 +173,14 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   if (isOwnPost) {
     menuItems.push({
       id: POST_MENU_ACTION_IDS.EDIT,
-      label: t('editPost'),
+      label: 'Edit post',
       icon: Edit,
       onClick: onEditClick,
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });
     menuItems.push({
       id: POST_MENU_ACTION_IDS.DELETE,
-      label: t('deletePost'),
+      label: 'Delete post',
       icon: Trash,
       onClick: onDeleteClick,
       variant: POST_MENU_ACTION_VARIANTS.DESTRUCTIVE,

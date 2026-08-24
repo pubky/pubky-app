@@ -1,0 +1,58 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Collapsible - Snapshots > matches snapshot when closed 1`] = `
+<div
+  data-slot="collapsible"
+  data-state="closed"
+  data-testid="collapsible"
+>
+  <button
+    aria-controls="radix-normalized"
+    aria-expanded="false"
+    data-slot="collapsible-trigger"
+    data-state="closed"
+    data-testid="collapsible-trigger"
+    type="button"
+  >
+    Toggle
+  </button>
+  <div
+    data-slot="collapsible-content"
+    data-state="closed"
+    data-testid="collapsible-content"
+    hidden=""
+    id="radix-normalized"
+    style=""
+  />
+</div>
+`;
+
+exports[`Collapsible - Snapshots > matches snapshot when open 1`] = `
+<div
+  data-slot="collapsible"
+  data-state="open"
+  data-testid="collapsible"
+>
+  <button
+    aria-controls="radix-normalized"
+    aria-expanded="true"
+    data-slot="collapsible-trigger"
+    data-state="open"
+    data-testid="collapsible-trigger"
+    type="button"
+  >
+    Toggle
+  </button>
+  <div
+    data-slot="collapsible-content"
+    data-state="open"
+    data-testid="collapsible-content"
+    id="radix-normalized"
+    style="transition-duration: 0s; animation-name: none;"
+  >
+    <span>
+      Hidden content
+    </span>
+  </div>
+</div>
+`;
