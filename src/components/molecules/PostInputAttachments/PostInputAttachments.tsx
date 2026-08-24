@@ -152,6 +152,8 @@ export const PostInputAttachments = forwardRef<HTMLInputElement, PostInputAttach
                       size="icon"
                       onClick={a.onRemove}
                       disabled={isSubmitting}
+                      data-cy="post-input-attachment-remove"
+                      aria-label="Remove attachment"
                       className={cn(
                         'absolute right-4 z-10 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-100',
                         displayKind === 'image' || displayKind === 'video'
