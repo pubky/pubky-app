@@ -31,6 +31,7 @@ import {
   isValidTagLabel,
   minutesAgo,
   radixIdSerializer,
+  readFromClipboard,
   resolveDisplayName,
   sanitizeTagInput,
   shouldBypassLinkConfirmation,
@@ -419,6 +420,37 @@ describe('Utils', () => {
       });
 
       await expect(copyToClipboard({ text: 'test' })).rejects.toThrow('Fallback copy command was unsuccessful');
+    });
+  });
+
+  describe('readFromClipboard', () => {
+    afterEach(() => {
+      Object.defineProperty(navigator, 'clipboard', { value: undefined, writable: true });
+    });
+
+    it('should resolve with the clipboard text', async () => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { readText: vi.fn().mockResolvedValue('clipboard text') },
+        writable: true,
+      });
+
+      await expect(readFromClipboard()).resolves.toBe('clipboard text');
+    });
+
+    it('should throw when the Clipboard API is unavailable', async () => {
+      Object.defineProperty(navigator, 'clipboard', { value: undefined, writable: true });
+
+      await expect(readFromClipboard()).rejects.toThrow('Clipboard API not supported');
+    });
+
+    it('should propagate read rejections', async () => {
+      const denied = new Error('denied');
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { readText: vi.fn().mockRejectedValue(denied) },
+        writable: true,
+      });
+
+      await expect(readFromClipboard()).rejects.toThrow('denied');
     });
   });
 

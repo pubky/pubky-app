@@ -28,6 +28,53 @@ describe('InputField', () => {
     expect(handleClick).toHaveBeenCalled();
   });
 
+  it('renders a clickable icon as an accessible button', () => {
+    const handleClickIcon = vi.fn();
+    render(
+      <InputField
+        value="test"
+        icon={<span>icon</span>}
+        iconPosition="right"
+        onClickIcon={handleClickIcon}
+        iconAriaLabel="Paste"
+        iconClassName="mr-0"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Paste' }));
+
+    expect(handleClickIcon).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a clickable icon mounted but inert while loading', () => {
+    const handleClickIcon = vi.fn();
+    render(
+      <InputField
+        value="test"
+        loading={true}
+        icon={<span>icon</span>}
+        iconPosition="right"
+        onClickIcon={handleClickIcon}
+        iconAriaLabel="Paste"
+      />,
+    );
+
+    const iconButton = screen.getByRole('button', { name: 'Paste' });
+    expect(iconButton).toHaveAttribute('aria-disabled', 'true');
+
+    fireEvent.click(iconButton);
+
+    expect(handleClickIcon).not.toHaveBeenCalled();
+  });
+
+  it('associates the message with the input and announces errors', () => {
+    render(<InputField id="url" value="test" message="Enter a valid post URL." messageType="error" status="error" />);
+
+    const message = screen.getByRole('alert');
+    expect(message).toHaveTextContent('Enter a valid post URL.');
+    expect(screen.getByTestId('input')).toHaveAttribute('aria-describedby', 'url-message');
+  });
+
   it('handles paste events', () => {
     const handlePaste = vi.fn();
     render(<InputField value="test" onPaste={handlePaste} />);

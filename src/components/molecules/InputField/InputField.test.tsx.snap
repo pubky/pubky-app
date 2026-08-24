@@ -48,7 +48,7 @@ exports[`InputField - Snapshots > matches snapshot when not loading with icon 1`
   data-testid="container"
 >
   <div
-    class="mx-auto flex-col flex w-auto cursor-pointer items-center justify-center"
+    class="mx-auto flex-col flex w-auto items-center justify-center"
     data-testid="container"
   >
     <div
@@ -134,7 +134,7 @@ exports[`InputField - Snapshots > matches snapshot with icon 1`] = `
   data-testid="container"
 >
   <div
-    class="mx-auto flex-col flex w-auto cursor-pointer items-center justify-center"
+    class="mx-auto flex-col flex w-auto items-center justify-center"
     data-testid="container"
   >
     <div
