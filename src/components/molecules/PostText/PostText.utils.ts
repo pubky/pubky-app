@@ -264,16 +264,25 @@ const createInlineShowMoreButton = (): Text =>
     },
   }) as Text;
 
-type InlineShowMoreTarget =
-  | { type: 'inline'; node: Paragraph | Heading }
-  | { type: 'code'; node: Code; index: number; parent: Parent };
+const createEllipsisParagraph = (): Paragraph => ({
+  type: 'paragraph',
+  children: [{ type: 'text', value: TRUNCATION_ELLIPSIS } as Text],
+});
+
+const createInlineShowMoreParagraph = (): Paragraph => {
+  const paragraph = createEllipsisParagraph();
+  paragraph.children.push(createInlineShowMoreButton());
+  return paragraph;
+};
 
 export const remarkInlineShowMore = () => (tree: Root) => {
-  const targets: InlineShowMoreTarget[] = [];
+  let inline: Paragraph | Heading | undefined;
+  let code: { node: Code; index: number; parent: Parent } | undefined;
 
   visit(tree, (node, index, parent) => {
     if ((node.type === 'paragraph' || node.type === 'heading') && extractText(node).endsWith(TRUNCATION_ELLIPSIS)) {
-      targets.push({ type: 'inline', node });
+      inline = node;
+      code = undefined;
     }
 
     if (
@@ -282,29 +291,23 @@ export const remarkInlineShowMore = () => (tree: Root) => {
       typeof index === 'number' &&
       parent
     ) {
-      targets.push({ type: 'code', node, index, parent });
+      inline = undefined;
+      code = { node, index, parent };
     }
   });
 
-  const target = targets.at(-1);
-  if (!target) return;
-
-  if (target.type === 'inline') {
-    target.node.children.push(createInlineShowMoreButton());
+  if (inline) {
+    inline.children.push(createInlineShowMoreButton());
     return;
   }
 
-  target.node.value = target.node.value.slice(0, -TRUNCATION_ELLIPSIS.length);
-  target.parent.children.splice(target.index + 1, 0, {
-    type: 'paragraph',
-    children: [
-      {
-        type: 'text',
-        value: TRUNCATION_ELLIPSIS,
-      } as Text,
-      createInlineShowMoreButton(),
-    ],
-  } as Paragraph);
+  if (code) {
+    code.node.value = code.node.value.slice(0, -TRUNCATION_ELLIPSIS.length);
+    code.parent.children.splice(code.index + 1, 0, createInlineShowMoreParagraph());
+    return;
+  }
+
+  tree.children.push(createInlineShowMoreParagraph());
 };
 
 // Extract text safely - children from remark is typically a text node
@@ -438,11 +441,6 @@ const appendEllipsisToListItem = (listItem: ListItem): void => {
     children: [{ type: 'text', value: TRUNCATION_ELLIPSIS } as Text],
   } as Paragraph);
 };
-
-const createEllipsisParagraph = (): Paragraph => ({
-  type: 'paragraph',
-  children: [{ type: 'text', value: TRUNCATION_ELLIPSIS } as Text],
-});
 
 const appendEllipsisToPreviewNode = (node: unknown): boolean => {
   if (!node || typeof node !== 'object') return false;

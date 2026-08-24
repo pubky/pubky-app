@@ -897,7 +897,7 @@ describe('PostText', () => {
 
       const codeBlock = screen.getByTestId('post-code-block');
       const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
-      expect(codeBlock).not.toHaveTextContent('...\u00a0');
+      expect(codeBlock).not.toHaveTextContent('...');
       expect(showMoreButton.parentElement).toHaveProperty('tagName', 'P');
       expect(showMoreButton.previousSibling?.textContent).toBe('...\u00a0');
       expect(container.textContent).not.toContain(hiddenCode);
@@ -906,6 +906,34 @@ describe('PostText', () => {
 
       expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
       expect(container.textContent).toContain(hiddenCode);
+    });
+
+    it('keeps the more button when character truncation ends inside a GFM table', () => {
+      const hiddenTail = 'TABLE_HIDDEN_TAIL_MARKER';
+      const content = ['a', 'b', 'c', '| h1 | h2 |', '| --- | --- |', '| c1 | c2 |', hiddenTail].join('\n');
+      const { container } = render(<PostText content={content} />);
+
+      const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
+      expect(container.textContent).not.toContain(hiddenTail);
+
+      fireEvent.click(showMoreButton);
+
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(container.textContent).toContain(hiddenTail);
+    });
+
+    it('keeps the more button when character truncation ends inside a raw HTML block', () => {
+      const hiddenTail = 'HTML_HIDDEN_TAIL_MARKER';
+      const content = ['a', 'b', 'c', 'd', 'e', '<div>foo</div>', '', hiddenTail].join('\n');
+      const { container } = render(<PostText content={content} />);
+
+      const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
+      expect(container.textContent).not.toContain(hiddenTail);
+
+      fireEvent.click(showMoreButton);
+
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(container.textContent).toContain(hiddenTail);
     });
 
     it('does not show Show more when blank markdown separators push raw lines over the line limit', () => {

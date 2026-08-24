@@ -123,6 +123,31 @@ describe('remarkInlineShowMore', () => {
       ],
     });
   });
+
+  it('appends a fallback more paragraph when no truncated node matches', () => {
+    const htmlNode = { type: 'html', value: '<div>foo</div>...\u00a0' } as RootContent;
+    const tree = createRoot([htmlNode]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(tree.children[1]).toMatchObject({
+      type: 'paragraph',
+      children: [
+        { type: 'text', value: '...\u00a0' },
+        {
+          type: 'text',
+          value: 'more',
+          data: {
+            hName: 'button',
+            hProperties: {
+              'aria-label': 'Show full post content',
+              type: 'button',
+            },
+          },
+        },
+      ],
+    });
+  });
 });
 
 describe('remarkDisallowMarkdownLinks', () => {
