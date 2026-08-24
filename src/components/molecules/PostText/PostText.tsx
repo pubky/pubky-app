@@ -16,6 +16,7 @@ import {
   remarkDisallowMarkdownLinks,
   remarkExtractFirstParagraph,
   remarkHashtags,
+  remarkInlineShowMore,
   remarkMentions,
   remarkPlaintextCodeblock,
   remarkPlaintextTables,
@@ -34,7 +35,7 @@ import {
  * - Hashtag parsing (#tag → clickable search link)
  * - Mention parsing (pk:... or pubky... → clickable profile link)
  * - URL detection and linking
- * - Content truncation with in-place "Show more" on non-post pages
+ * - Content truncation with an inline "more" control on non-post pages
  *
  * Memoization prevents unnecessary re-renders when TTL refreshes update IndexedDB records
  * without changes to the actual post content.
@@ -54,6 +55,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
     remarkPlaintextCodeblock,
     remarkHashtags,
     remarkMentions,
+    ...(showMoreButton ? [remarkInlineShowMore] : []),
   ];
 
   // Memoize allowed elements array to avoid recreation on every render
@@ -72,6 +74,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
       'del',
       'blockquote',
       'hr',
+      'button',
       ...(isArticle ? ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] : []),
     ],
     [isArticle],
@@ -145,6 +148,23 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
           code(props) {
             return <PostCodeBlock {...props} />;
           },
+          button(props) {
+            const { children, className, node: _node, ref: _ref, ...rest } = props;
+
+            return (
+              <Button
+                {...rest}
+                overrideDefaults
+                className={cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsExpanded(true);
+                }}
+              >
+                {children}
+              </Button>
+            );
+          },
           h1(props) {
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
@@ -203,21 +223,6 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
       >
         {contentTruncated || content}
       </Markdown>
-
-      {showMoreButton && (
-        <Button
-          overrideDefaults
-          type="button"
-          aria-label="Show full post content"
-          className="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
-          onClick={(event) => {
-            event.stopPropagation();
-            setIsExpanded(true);
-          }}
-        >
-          Show more
-        </Button>
-      )}
     </Container>
   );
 });

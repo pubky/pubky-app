@@ -949,16 +949,19 @@ describe('PostText', () => {
       expect(screen.getByRole('button', { name: 'Show full post content' })).toBeInTheDocument();
     });
 
-    it('renders "Show more" button with correct styling classes', () => {
+    it('renders the "more" button inline after the truncation ellipsis with correct styling classes', () => {
       const longContent = generateContent(600);
       render(<PostText content={longContent} />);
 
       const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
       expect(showMoreButton).not.toHaveAttribute('data-allow-post-navigation');
       expect(showMoreButton).toHaveAttribute('type', 'button');
+      expect(showMoreButton).toHaveTextContent('more');
+      expect(showMoreButton.parentElement).toHaveProperty('tagName', 'P');
+      expect(showMoreButton.previousSibling?.textContent).toMatch(/\.\.\.\u00a0$/);
       expect(showMoreButton).toHaveClass('cursor-pointer');
       expect(showMoreButton).toHaveClass('text-brand');
-      expect(showMoreButton).toHaveClass('mt-4');
+      expect(showMoreButton).not.toHaveClass('mt-4');
     });
 
     it('expands truncated content in place and stops event propagation on "Show more" click', () => {
@@ -1271,7 +1274,7 @@ Third line`}
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot for truncated content with Show more button', () => {
+  it('matches snapshot for truncated content with inline more button', () => {
     const longContent =
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Extra text to make this longer than 500 characters for truncation testing purposes.';
     const { container } = render(<PostText content={longContent} />);

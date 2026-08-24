@@ -1001,7 +1001,7 @@ exports[`PostText - Snapshots > matches snapshot for strikethrough text 1`] = `
 </div>
 `;
 
-exports[`PostText - Snapshots > matches snapshot for truncated content with Show more button 1`] = `
+exports[`PostText - Snapshots > matches snapshot for truncated content with inline more button 1`] = `
 <div
   class="text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground"
   data-override-defaults="true"
@@ -1009,15 +1009,15 @@ exports[`PostText - Snapshots > matches snapshot for truncated content with Show
 >
   <p>
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse... 
+    <button
+      aria-label="Show full post content"
+      class="cursor-pointer text-brand transition-colors hover:text-brand/80"
+      data-override-defaults="true"
+      type="button"
+    >
+      more
+    </button>
   </p>
-  <button
-    aria-label="Show full post content"
-    class="mt-4 cursor-pointer text-brand transition-colors hover:text-brand/80"
-    data-override-defaults="true"
-    type="button"
-  >
-    Show more
-  </button>
 </div>
 `;
 

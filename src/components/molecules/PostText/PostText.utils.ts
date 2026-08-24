@@ -250,6 +250,31 @@ export const remarkMentions = createPatternPlugin({
   dataType: 'mention',
 });
 
+export const remarkInlineShowMore = () => (tree: Root) => {
+  const truncatedParagraphs: (Paragraph | Heading)[] = [];
+
+  visit(tree, (node) => {
+    if ((node.type === 'paragraph' || node.type === 'heading') && extractText(node).endsWith(TRUNCATION_ELLIPSIS)) {
+      truncatedParagraphs.push(node);
+    }
+  });
+
+  const truncatedParagraph = truncatedParagraphs.at(-1);
+  if (!truncatedParagraph) return;
+
+  truncatedParagraph.children.push({
+    type: 'text',
+    value: 'more',
+    data: {
+      hName: 'button',
+      hProperties: {
+        'aria-label': 'Show full post content',
+        type: 'button',
+      },
+    },
+  } as Text);
+};
+
 // Extract text safely - children from remark is typically a text node
 export const extractTextFromChildren = (children: ReactNode) =>
   typeof children === 'string'
