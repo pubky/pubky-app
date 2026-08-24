@@ -260,7 +260,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
   >
     <div
       aria-labelledby="radix-normalized"
-      class="relative z-50 duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 border p-6 sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:p-8 rounded-t-lg border-b-0 sm:border-b flex w-xl flex-col overflow-hidden border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
+      class="relative z-50 duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] max-w-[100vw] gap-6 overflow-y-auto border p-6 sm:max-w-[calc(100vw-2rem)] sm:rounded-xl sm:rounded-b-lg sm:p-8 rounded-t-lg border-b-0 sm:border-b flex w-xl flex-col border-border bg-popover shadow-2xl outline-none focus:outline-none focus-visible:outline-none"
       data-cy="dialog-content"
       data-slot="dialog-content"
       data-state="open"
@@ -297,11 +297,21 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
             data-slot="dialog-description"
             id="radix-normalized"
           >
-            There are several ways to add posts to your collection.
+            <span
+              class="sm:hidden"
+            >
+              Choose how to add posts to your collection.
+            </span>
+            <span
+              class="hidden sm:inline"
+            >
+              There are several ways to add posts to your collection.
+            </span>
           </p>
         </div>
         <div
-          class="flex w-full flex-col gap-3"
+          class="grid w-full grid-cols-1 gap-3 sm:grid-cols-2"
+          data-cy="add-content-options"
           data-testid="container"
         >
           <div
@@ -449,6 +459,70 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                 class="text-base leading-none font-bold text-card-foreground"
                 data-slot="card-title"
               >
+                Select from posts
+              </div>
+            </div>
+            <div
+              class="px-6"
+              data-slot="card-content"
+            >
+              <button
+                class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+                data-cy="add-content-select-from-posts"
+                data-size="sm"
+                data-slot="button"
+                data-variant="secondary"
+                type="button"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-list size-4"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M3 5h.01"
+                  />
+                  <path
+                    d="M3 12h.01"
+                  />
+                  <path
+                    d="M3 19h.01"
+                  />
+                  <path
+                    d="M8 5h13"
+                  />
+                  <path
+                    d="M8 12h13"
+                  />
+                  <path
+                    d="M8 19h13"
+                  />
+                </svg>
+                Select
+              </button>
+            </div>
+          </div>
+          <div
+            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
+            data-slot="card"
+            data-testid="card"
+          >
+            <div
+              class="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 px-6"
+              data-slot="card-header"
+            >
+              <div
+                class="text-base leading-none font-bold text-card-foreground"
+                data-slot="card-title"
+              >
                 Paste post url
               </div>
             </div>
@@ -457,7 +531,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
               data-slot="card-footer"
             >
               <div
-                class="flex mx-0 w-full cursor-pointer flex-row items-center rounded-md border bg-transparent border-dashed text-base mb-0 h-auto gap-2 border-input bg-background/10! px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
+                class="flex mx-0 w-full cursor-pointer flex-row items-center rounded-md border bg-transparent border-dashed text-base mb-0 h-auto gap-3 border-input bg-background/10! px-6 py-4 font-medium shadow-xs has-[input[aria-invalid=true]]:border-red-500"
                 data-testid="container"
               >
                 <input
@@ -471,6 +545,46 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                   type="text"
                   value=""
                 />
+                <button
+                  aria-disabled="false"
+                  aria-label="Paste"
+                  class="flex cursor-pointer items-center justify-center outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-disabled:cursor-default aria-disabled:opacity-50 mr-0 size-6 shrink-0 rounded-full text-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-clipboard-paste size-4"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M11 14h10"
+                    />
+                    <path
+                      d="M16 4h2a2 2 0 0 1 2 2v1.344"
+                    />
+                    <path
+                      d="m17 18 4-4-4-4"
+                    />
+                    <path
+                      d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 1.793-1.113"
+                    />
+                    <rect
+                      height="4"
+                      rx="1"
+                      width="8"
+                      x="8"
+                      y="2"
+                    />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -495,13 +609,13 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
               data-slot="card-footer"
             >
               <button
-                class="flex w-full cursor-pointer items-center gap-4 rounded-md border border-dashed border-input px-6 py-4 text-left outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                class="flex w-full cursor-pointer items-center gap-3 rounded-md border border-dashed border-input px-4 py-3 text-left outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 data-cy="add-content-create-post"
                 data-slot="button"
                 type="button"
               >
                 <span
-                  class="relative flex shrink-0 overflow-hidden rounded-full h-10 w-10"
+                  class="relative flex shrink-0 overflow-hidden rounded-full h-8 w-8"
                 >
                   <span
                     class="flex h-full w-full items-center justify-center rounded-full border border-muted-foreground bg-muted overflow-hidden border-none"
@@ -567,7 +681,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
                   class="min-w-0 flex-1 truncate text-base font-medium text-input"
                   data-testid="typography"
                 >
-                  What's on your mind?
+                  Start writing
                 </p>
               </button>
             </div>

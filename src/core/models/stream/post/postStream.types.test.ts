@@ -10,6 +10,7 @@ import {
   buildSortedAuthorStreamId,
   buildWotDomainStreamId,
   getPostStreamKind,
+  getStreamDependencyScopes,
   isAuthorStreamSkippingMuteFilter,
   isCollectionItemsStream,
   isSkipPaginatedStream,
@@ -20,6 +21,7 @@ import {
 import { StreamSorting } from '@/services/nexus/nexus.types';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { breakDownStreamId } from '@/services/nexus/stream/posts/postStream.utils';
+import { POST_STREAM_GRAMMAR_FIXTURES } from '@/test/fixtures/stream/postStreamIds';
 
 const TEST_PUBKY = 'erztyis9oiaho93ckucetcf5xnxacecqwhbst5hnd7mmkf69dhby' as Pubky;
 const TEST_POST_ID = 'post-pubky-id';
@@ -247,6 +249,26 @@ describe('getPostStreamKind', () => {
   it('returns undefined for invalid kind segments', () => {
     expect(getPostStreamKind('timeline:wot_domain:2:not-a-kind:bitcoin')).toBeUndefined();
     expect(getPostStreamKind('timeline:all:not-a-kind')).toBeUndefined();
+  });
+});
+
+describe('getStreamDependencyScopes', () => {
+  it.each(POST_STREAM_GRAMMAR_FIXTURES)('classifies $streamId', ({ streamId, scopes }) => {
+    expect(getStreamDependencyScopes(streamId)).toEqual(new Set(scopes));
+  });
+
+  it.each([
+    'recent:following:all',
+    'timeline:following',
+    'timeline:following:not-a-kind',
+    'timeline:following:all:tag:extra',
+    'timeline:wot_domain:3:all:developer',
+    'timeline:wot_domain:2:not-a-kind:developer',
+    'timeline:wot_domain:2:all:',
+    'timeline:wot_domain:2:all:developer:',
+    'timeline:wot_domain:0:all:',
+  ])('classifies malformed dependency stream %s as scopeless', (streamId) => {
+    expect(getStreamDependencyScopes(streamId).size).toBe(0);
   });
 });
 

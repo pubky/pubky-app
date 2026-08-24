@@ -57,6 +57,16 @@ describe('StatusPickerContent', () => {
       expect(screen.getByText(STATUS_EMOJIS.available)).toBeInTheDocument();
       expect(screen.getByText(STATUS_EMOJIS.away)).toBeInTheDocument();
       expect(screen.getByText(STATUS_EMOJIS.vacationing)).toBeInTheDocument();
+      expect(screen.queryByText('💭')).not.toBeInTheDocument();
+    });
+
+    it('renders an empty bordered circle for no status', () => {
+      render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} />);
+
+      const noStatusButton = screen.getByText(STATUS_LABELS.noStatus).closest('button');
+      const noStatusIcon = noStatusButton?.querySelector('[aria-hidden="true"]');
+
+      expect(noStatusIcon).toHaveClass('size-4', 'rounded-full', 'border', 'border-border');
     });
 
     it('renders custom status section', () => {

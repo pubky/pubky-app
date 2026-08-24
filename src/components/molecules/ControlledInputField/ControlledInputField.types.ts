@@ -22,6 +22,12 @@ export interface ControlledInputFieldProps<T extends FieldValues> {
   icon?: ReactNode;
   /** Icon position */
   iconPosition?: 'left' | 'right';
+  /** Optional class applied to the icon wrapper */
+  iconClassName?: string;
+  /** Optional click handler for the icon; renders the icon as an accessible button */
+  onClickIcon?: () => void;
+  /** Accessible name for the icon button when onClickIcon is set */
+  iconAriaLabel?: string;
   /** Disabled state */
   disabled?: boolean;
   /** Loading state */

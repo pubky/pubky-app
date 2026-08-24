@@ -26,6 +26,7 @@ import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.s
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
+import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import {
   type NexusFileDetails,
@@ -211,6 +212,7 @@ describe('PostStreamApplication', () => {
     await PostStreamModel.table.clear();
     await UnreadPostStreamModel.table.clear();
     postStreamQueue.clear();
+    postStreamDirtyRegistry.reset();
     await BookmarkModel.table.clear();
     await PostDetailsModel.table.clear();
     await UserDetailsModel.table.clear();
@@ -1886,6 +1888,72 @@ describe('PostStreamApplication', () => {
       const unreadStream = await UnreadPostStreamModel.findById(streamId);
       expect(postStream?.stream).toEqual([unreadPostIds[0], unreadPostIds[1], mainPostIds[0], mainPostIds[1]]);
       expect(unreadStream).toBeNull();
+    });
+
+    describe('dirty-registry reconciliation (deferred invalidation, #2294/#2302)', () => {
+      const followingStreamId = PostStreamTypes.TIMELINE_FOLLOWING_ALL as PostStreamId;
+
+      const seedFreshFollowingStream = async () => {
+        const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+
+        const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
+        await PostStreamModel.create(followingStreamId, [mainPostId]);
+        await createPostDetailWithTimestamp(mainPostId, now - 1);
+
+        const unreadPostId = `${DEFAULT_AUTHOR}:unread-1`;
+        await UnreadPostStreamModel.create(followingStreamId, [unreadPostId]);
+        await createPostDetailWithTimestamp(unreadPostId, now - 1);
+
+        return { mainPostId, unreadPostId };
+      };
+
+      it('clears both streams and reconciles when a dependency mutation marked the stream dirty', async () => {
+        await seedFreshFollowingStream();
+        postStreamDirtyRegistry.markDirty('follow_graph');
+
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId: followingStreamId });
+
+        expect(await PostStreamModel.findById(followingStreamId)).toBeNull();
+        expect(await UnreadPostStreamModel.findById(followingStreamId)).toBeNull();
+        expect(postStreamDirtyRegistry.isDirty(followingStreamId)).toBe(false);
+      });
+
+      it('keeps a fresh cache on later initial loads once reconciled', async () => {
+        postStreamDirtyRegistry.markDirty('follow_graph');
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId: followingStreamId });
+
+        // The stream re-cached fresh data after reconciliation.
+        const { mainPostId } = await seedFreshFollowingStream();
+
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId: followingStreamId });
+
+        expect((await PostStreamModel.findById(followingStreamId))?.stream).toContain(mainPostId);
+      });
+
+      it('leaves a fresh dependent cache intact when no mutation happened', async () => {
+        const { mainPostId } = await seedFreshFollowingStream();
+
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId: followingStreamId });
+
+        expect((await PostStreamModel.findById(followingStreamId))?.stream).toContain(mainPostId);
+      });
+
+      it('never clears streams without dependency scopes, even when every scope is dirty', async () => {
+        const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
+        vi.spyOn(Date, 'now').mockReturnValue(now);
+        const mainPostId = `${DEFAULT_AUTHOR}:post-main`;
+        await createStreamWithPosts([mainPostId]);
+        await createPostDetailWithTimestamp(mainPostId, now - 1);
+
+        postStreamDirtyRegistry.markDirty('follow_graph');
+        postStreamDirtyRegistry.markDirty('friends');
+        postStreamDirtyRegistry.markDirty('profile_tag');
+
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId });
+
+        expect((await PostStreamModel.findById(streamId))?.stream).toEqual([mainPostId]);
+      });
     });
   });
 
