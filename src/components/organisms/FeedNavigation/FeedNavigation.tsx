@@ -31,6 +31,10 @@ const FEED_TAB_INACTIVE_WIDTH_CLASS = 'min-w-12 flex-1';
 // Symmetric horizontal padding keeps every label centered; the active padding
 // also reserves the zone the edit pencil overlays on custom feed tabs.
 const FEED_TAB_ACTIVE_PADDING_CLASS = 'px-8';
+// The visible mobile pencil overlays the active custom feed tab. Slightly
+// wider symmetric padding preserves centering while separating it from the
+// feed name; desktop returns to the shared tab padding.
+const CUSTOM_FEED_TAB_ACTIVE_PADDING_CLASS = 'px-10 lg:px-8';
 const FEED_TAB_INACTIVE_PADDING_CLASS = 'px-2 lg:px-8';
 const FEED_TAB_LABEL_CLASS = 'truncate text-sm font-medium leading-5';
 // Hover-capable devices at lg+ park the pencil invisible AND non-interactive
@@ -152,7 +156,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 }
                 className={cn(
                   'flex h-full w-full min-w-0 items-center justify-center gap-2',
-                  isActive ? FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
+                  isActive ? CUSTOM_FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
                   isActive ? 'text-white' : 'text-muted-foreground group-hover:text-white',
                 )}
               >

@@ -397,6 +397,7 @@ describe('FeedNavigation', () => {
 
     const activeLabel = getLink('/feed/feed-active')?.querySelector('[data-testid="typography"]');
     expect(activeLabel).not.toHaveClass('hidden');
+    expect(getLink('/feed/feed-active')).toHaveClass('px-10', 'lg:px-8');
 
     const inactiveLabel = getLink('/feed/feed-other')?.querySelector('[data-testid="typography"]');
     expect(inactiveLabel).toHaveClass('hidden', 'lg:inline');
@@ -570,8 +571,7 @@ describe('FeedNavigation', () => {
 
     const homeLink = getLink('/home');
     expect(homeLink).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-1');
-    // Active tabs share one symmetric padding so the selected pill looks the
-    // same whether it is the reach tab or a custom feed tab.
+    // The reach tab keeps the shared active padding.
     expect(homeLink).toHaveClass('px-8');
 
     const customLink = getLink('/feed/feed-1');

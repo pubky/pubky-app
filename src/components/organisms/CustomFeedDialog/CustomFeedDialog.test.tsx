@@ -547,6 +547,7 @@ describe('CustomFeedDialog', () => {
     const saveButton = screen.getByTestId('save-feed-button');
     expect(saveButton).toBeInTheDocument();
     expect(saveButton).toHaveTextContent('Save Feed');
+    expect(saveButton.querySelector('.lucide-check')).toBeInTheDocument();
   });
 
   it('does not render Delete Feed button in create mode', () => {
@@ -571,6 +572,18 @@ describe('CustomFeedDialog', () => {
     const deleteButton = screen.getByTestId('delete-feed-button');
     expect(deleteButton).toBeInTheDocument();
     expect(deleteButton).toHaveTextContent('Delete Feed');
+    expect(deleteButton.querySelector('.lucide-trash-2')).toBeInTheDocument();
+  });
+
+  it('renders Delete Feed before Save Feed in edit mode', () => {
+    render(
+      <CustomFeedDialog mode="edit" feed={createMockFeed()}>
+        <button>Edit Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    const actions = within(screen.getByTestId('dialog-footer')).getAllByRole('button');
+    expect(actions).toEqual([screen.getByTestId('delete-feed-button'), screen.getByTestId('save-feed-button')]);
   });
 
   it('applies w-3xl class to dialog content', () => {

@@ -62,7 +62,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
       <a
         aria-current="page"
         aria-label="Active Feed"
-        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-8 text-white"
+        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-10 lg:px-8 text-white"
         data-override-defaults="true"
         data-testid="link"
         href="/feed/feed-active"
@@ -524,7 +524,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       <a
         aria-current="page"
         aria-label="Lightning"
-        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-8 text-white"
+        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-10 lg:px-8 text-white"
         data-override-defaults="true"
         data-testid="link"
         href="/feed/feed-2"

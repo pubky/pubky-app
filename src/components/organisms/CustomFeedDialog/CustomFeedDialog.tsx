@@ -2,9 +2,9 @@
 
 import { type ComponentType, type ReactNode, useEffect } from 'react';
 import {
+  Check,
   CirclePlay,
   Columns3,
-  Delete,
   Download,
   Flame,
   Image,
@@ -17,6 +17,7 @@ import {
   Rows4,
   SquareAsterisk,
   StickyNote,
+  Trash2,
 } from 'lucide-react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { Controller, useWatch } from 'react-hook-form';
@@ -101,7 +102,6 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   const { control } = form;
   const layout = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.LAYOUT });
   const content = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.CONTENT });
-  const icon = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.ICON });
   const reach = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.REACH });
   const domainTags = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.DOMAIN_TAGS }) ?? [];
 
@@ -550,18 +550,6 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
         )}
 
         <DialogFooter>
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={handleSaveFeed}
-            disabled={loading || !form.formState.isValid}
-            className="h-15 w-full"
-            data-testid="save-feed-button"
-          >
-            <DynamicLucideIcon name={icon} className="size-4" />
-            {'Save Feed'}
-          </Button>
-
           {mode === 'edit' && (
             <Button
               variant="destructive"
@@ -571,10 +559,22 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
               className="h-15 w-full"
               data-testid="delete-feed-button"
             >
-              <Delete className="size-4" />
+              <Trash2 className="size-4" />
               {'Delete Feed'}
             </Button>
           )}
+
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={handleSaveFeed}
+            disabled={loading || !form.formState.isValid}
+            className="h-15 w-full"
+            data-testid="save-feed-button"
+          >
+            <Check className="size-4" />
+            {'Save Feed'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -101,7 +101,7 @@ describe('Home', () => {
   it('renders FeedNavigation edge-to-edge on mobile in main content', () => {
     render(<Home />);
     const feedNavs = screen.getAllByTestId('feed-navigation');
-    const mainFeedNav = feedNavs.find((el) => el.getAttribute('data-classname') === '-mx-6 lg:mx-0');
+    const mainFeedNav = feedNavs.find((el) => el.getAttribute('data-classname') === '-mx-6 w-auto lg:mx-0 lg:w-full');
     expect(mainFeedNav).toBeInTheDocument();
   });
 
