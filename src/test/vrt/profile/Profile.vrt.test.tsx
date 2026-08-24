@@ -47,8 +47,10 @@ const fixtures = vi.hoisted(async () => {
     ...postsModule.VRT_PROFILE_POSTS,
     ...postsModule.VRT_PROFILE_REPLY_PARENTS,
     ...postsModule.VRT_PROFILE_REPLIES,
+    ...postsModule.VRT_PROFILE_THREAD_REPLIES,
     ...postsModule.VRT_NOTIFICATION_POSTS,
     ...postsModule.VRT_OTHER_PROFILE_POSTS,
+    ...postsModule.VRT_OTHER_PROFILE_THREAD_REPLIES,
   ];
   const entitiesByCompositeId = new Map<
     string,
@@ -62,6 +64,21 @@ const fixtures = vi.hoisted(async () => {
   const otherPostIds = postsModule.VRT_OTHER_PROFILE_POSTS.map((post) => post.compositeId);
   const replyIds = postsModule.VRT_PROFILE_REPLIES.map((post) => post.compositeId);
   const collectionIds = collectionsModule.VRT_PROFILE_COLLECTIONS.map((collection) => collection.compositeId);
+
+  const uriToParentId = new Map(
+    [...postsModule.VRT_PROFILE_POSTS, ...postsModule.VRT_OTHER_PROFILE_POSTS].map((parent) => [
+      parent.details.uri,
+      parent.compositeId,
+    ]),
+  );
+  const threadReplyIdsByParent = new Map<string, string[]>();
+  for (const reply of [...postsModule.VRT_PROFILE_THREAD_REPLIES, ...postsModule.VRT_OTHER_PROFILE_THREAD_REPLIES]) {
+    const parentId = reply.relationships.replied ? uriToParentId.get(reply.relationships.replied) : undefined;
+    if (!parentId) continue;
+    const ids = threadReplyIdsByParent.get(parentId) ?? [];
+    ids.push(reply.compositeId);
+    threadReplyIdsByParent.set(parentId, ids);
+  }
 
   // Decorative per-user tag pills for the Followers/Following/Friends tag row
   // (`UserListItem` → `ClickableTagsList` fetches by `taggedId = user.id`,
@@ -111,6 +128,7 @@ const fixtures = vi.hoisted(async () => {
     otherPostIds,
     replyIds,
     collectionIds,
+    threadReplyIdsByParent,
     userTagsById,
     profileCollectionCoverUrls: collectionsModule.VRT_PROFILE_COLLECTION_COVER_URLS,
     followers: connectionsModule.VRT_FOLLOWERS,
@@ -502,8 +520,10 @@ vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => {
   return { usePostTaggers: () => result };
 });
 
-vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => {
-  const result = {
+vi.mock('@/hooks/useThreadReplies/useThreadReplies', async () => {
+  const f = await fixtures;
+  const { DEFAULT_MAX_THREAD_REPLIES } = await import('@/hooks/useThreadReplies/useThreadReplies.constants');
+  const EMPTY = {
     replyIds: [] as string[],
     totalCount: 0,
     hasMore: false,
@@ -511,7 +531,42 @@ vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => {
     isExpandingAll: false,
     expandAll: async () => {},
   };
-  return { useThreadReplies: () => result };
+  const cache = new Map<string, typeof EMPTY>();
+  return {
+    useThreadReplies: (postId: string | null | undefined) => {
+      if (!postId) return EMPTY;
+      const cached = cache.get(postId);
+      if (cached) return cached;
+      const allIds = f.threadReplyIdsByParent.get(postId) ?? [];
+      const fixture = f.entitiesByCompositeId.get(postId) as { counts?: { replies?: number } } | undefined;
+      const totalCount = fixture?.counts?.replies ?? allIds.length;
+      const replyIds = allIds.slice(0, DEFAULT_MAX_THREAD_REPLIES);
+      const result = {
+        replyIds,
+        totalCount,
+        hasMore: totalCount > replyIds.length,
+        showAll: false,
+        isExpandingAll: false,
+        expandAll: async () => {},
+      };
+      cache.set(postId, result);
+      return result;
+    },
+  };
+});
+
+// Nested (Level 2+) replies stay empty so Dexie/Nexus fetch cannot race the screenshot.
+vi.mock('@/hooks/useNestedReplies/useNestedReplies', () => {
+  const result = {
+    nestedReplyIds: [] as string[],
+    hasMoreReplies: false,
+    hasNestedReplies: false,
+    replyCount: 0,
+    showAll: false,
+    isExpandingAll: false,
+    expandAll: async () => {},
+  };
+  return { useNestedReplies: () => result };
 });
 
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
@@ -810,13 +865,17 @@ describe('Own profile — notifications — visual regression', () => {
 describe('Own profile — posts — visual regression', () => {
   it('renders posts at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/posts', <ProfilePostsPage />, VRT_VIEWPORT_DESKTOP);
-    await expect.element(screen.getByRole('feed')).toBeVisible();
+    await expect.element(screen.getByRole('feed').first()).toBeVisible();
+    await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
+    await expect.element(screen.getByText('9 more replies')).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-posts-desktop');
   });
 
   it('renders posts at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/posts', <ProfilePostsPage />, VRT_VIEWPORT_MOBILE);
-    await expect.element(screen.getByRole('feed')).toBeVisible();
+    await expect.element(screen.getByRole('feed').first()).toBeVisible();
+    await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
+    await expect.element(screen.getByText('9 more replies')).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-posts-mobile');
   });
 });
@@ -923,7 +982,9 @@ describe('Other profile — posts — visual regression', () => {
     await expect.element(screen.getByText('Bran Ó Conaill').first()).toBeVisible();
     await expect.element(screen.getByRole('button', { name: /^Follow$/ })).toBeVisible();
     await expect.element(screen.getByText(/Cold brew helps both/)).toBeVisible();
-    await expect.element(screen.getByRole('feed')).toBeVisible();
+    await expect.element(screen.getByText(/Cold brew as a consensus primitive/)).toBeVisible();
+    await expect.element(screen.getByText('5 more replies')).toBeVisible();
+    await expect.element(screen.getByRole('feed').first()).toBeVisible();
     resetVrtRootScroll();
     return screen;
   }

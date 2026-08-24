@@ -1,5 +1,5 @@
-// Consumed by `Profile.vrt.test.tsx` for own-profile Posts/Replies and
-// the other-user Posts tab.
+// Consumed by `Profile.vrt.test.tsx` for own-profile Posts/Replies,
+// the other-user Posts tab, and Level-1 reply trees under those posts.
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import type { NexusPostCounts, NexusPostDetails, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
@@ -56,6 +56,23 @@ function post(input: {
     relationships: { replied, reposted: null, mentioned: [] },
     tags,
   };
+}
+
+/** Level-1 replies under a parent post. Oldest first; at most 3 are shown in the tree. */
+function threadReplies(
+  parent: VRTProfilePostFixture,
+  items: readonly { author: Pubky; postId: string; content: string; agoMs: number }[],
+): VRTProfilePostFixture[] {
+  return items.map((item) =>
+    post({
+      author: item.author,
+      postId: item.postId,
+      content: item.content,
+      kind: 'short',
+      agoMs: item.agoMs,
+      replied: parent.details.uri,
+    }),
+  );
 }
 
 /** Alice's own posts — feeds the Profile Posts tab (`author:{pubky}` stream). */
@@ -189,6 +206,72 @@ export const VRT_PROFILE_REPLIES: readonly VRTProfilePostFixture[] = [
   }),
 ];
 
+/** Level-1 replies under Alice's posts in the Profile Posts tab (≤3 shown per parent). */
+export const VRT_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] = [
+  ...threadReplies(VRT_PROFILE_POSTS[0], [
+    {
+      author: VRT_AUTHOR_PUBKYS.bran,
+      postId: '0VRTTHREADREPLY001',
+      content: 'The round-trip used to be the whole conversation.',
+      agoMs: 35 * MINUTE_MS,
+    },
+    {
+      author: VRT_AUTHOR_PUBKYS.cleo,
+      postId: '0VRTTHREADREPLY002',
+      content: 'Daily notes paying off in public. Love to see it.',
+      agoMs: 32 * MINUTE_MS,
+    },
+    {
+      author: VRT_AUTHOR_PUBKYS.eira,
+      postId: '0VRTTHREADREPLY003',
+      content: 'Local-first and still faster. That is the pitch.',
+      agoMs: 28 * MINUTE_MS,
+    },
+  ]),
+  ...threadReplies(VRT_PROFILE_POSTS[1], [
+    {
+      author: VRT_AUTHOR_PUBKYS.hana,
+      postId: '0VRTTHREADREPLY004',
+      content: 'Eight tabs is a lot until the shell is shared.',
+      agoMs: 150 * MINUTE_MS,
+    },
+    {
+      author: VRT_AUTHOR_PUBKYS.dion,
+      postId: '0VRTTHREADREPLY005',
+      content: 'Stat versus feed is the distinction I keep forgetting.',
+      agoMs: 2 * HOUR_MS,
+    },
+  ]),
+  ...threadReplies(VRT_PROFILE_POSTS[3], [
+    {
+      author: VRT_AUTHOR_PUBKYS.fynn,
+      postId: '0VRTTHREADREPLY006',
+      content: 'Composer motion is the only bit that still feels like a demo.',
+      agoMs: 28 * HOUR_MS,
+    },
+  ]),
+  ...threadReplies(VRT_PROFILE_POSTS[4], [
+    {
+      author: VRT_AUTHOR_PUBKYS.glen,
+      postId: '0VRTTHREADREPLY007',
+      content: 'Eight tabs, one shell — that is the architecture slide.',
+      agoMs: 46 * HOUR_MS,
+    },
+    {
+      author: VRT_AUTHOR_PUBKYS.bran,
+      postId: '0VRTTHREADREPLY008',
+      content: 'Counts as a feed if I can scroll it. Otherwise it is a stat.',
+      agoMs: 44 * HOUR_MS,
+    },
+    {
+      author: VRT_AUTHOR_PUBKYS.cleo,
+      postId: '0VRTTHREADREPLY009',
+      content: 'The rebuild write-up is going on the reading list.',
+      agoMs: 40 * HOUR_MS,
+    },
+  ]),
+];
+
 /** Bran's posts — feeds the other-user Profile Posts tab (`author:{pubky}` stream). */
 export const VRT_OTHER_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
   post({
@@ -231,6 +314,58 @@ export const VRT_OTHER_PROFILE_POSTS: readonly VRTProfilePostFixture[] = [
     counts: { tags: 1, unique_tags: 1, replies: 0, reposts: 0 },
     tags: [{ label: 'bitcoin', taggers: [VRT_AUTHOR_PUBKYS.cleo], taggers_count: 1, relationship: false }],
   }),
+];
+
+/** Level-1 replies under Bran's posts in the other-user Posts tab (≤3 shown per parent). */
+export const VRT_OTHER_PROFILE_THREAD_REPLIES: readonly VRTProfilePostFixture[] = [
+  ...threadReplies(VRT_OTHER_PROFILE_POSTS[0], [
+    {
+      author: VRT_AUTHOR_PUBKYS.cleo,
+      postId: '0VRTOTHERREPLY0001',
+      content: 'The social layer is the hard part. Machines just keep the minutes.',
+      agoMs: 22 * MINUTE_MS,
+    },
+    {
+      author: VRT_AUTHOR_PUBKYS.alice,
+      postId: '0VRTOTHERREPLY0002',
+      content: 'Cold brew as a consensus primitive. I will steal that.',
+      agoMs: 18 * MINUTE_MS,
+    },
+    {
+      author: VRT_AUTHOR_PUBKYS.dion,
+      postId: '0VRTOTHERREPLY0003',
+      content: 'Filing this under send-to-the-next-intern.',
+      agoMs: 10 * MINUTE_MS,
+    },
+  ]),
+  ...threadReplies(VRT_OTHER_PROFILE_POSTS[1], [
+    {
+      author: VRT_AUTHOR_PUBKYS.eira,
+      postId: '0VRTOTHERREPLY0004',
+      content: 'Still the one I send people. The diagrams finally clicked.',
+      agoMs: 13 * HOUR_MS,
+    },
+  ]),
+  ...threadReplies(VRT_OTHER_PROFILE_POSTS[2], [
+    {
+      author: VRT_AUTHOR_PUBKYS.glen,
+      postId: '0VRTOTHERREPLY0005',
+      content: 'Stale clock, true replica — that split is going in the runbook.',
+      agoMs: 46 * HOUR_MS,
+    },
+    {
+      author: VRT_AUTHOR_PUBKYS.alice,
+      postId: '0VRTOTHERREPLY0006',
+      content: 'Write-up please. I want the client-split bit in particular.',
+      agoMs: 44 * HOUR_MS,
+    },
+    {
+      author: VRT_AUTHOR_PUBKYS.hana,
+      postId: '0VRTOTHERREPLY0007',
+      content: 'Same failure mode we hit last quarter, different names.',
+      agoMs: 40 * HOUR_MS,
+    },
+  ]),
 ];
 
 /** Posts authored by others, referenced as targets by `VRT_NOTIFICATIONS`. */
@@ -277,6 +412,8 @@ export const VRT_PROFILE_ALL_POSTS: readonly VRTProfilePostFixture[] = [
   ...VRT_PROFILE_POSTS,
   ...VRT_PROFILE_REPLY_PARENTS,
   ...VRT_PROFILE_REPLIES,
+  ...VRT_PROFILE_THREAD_REPLIES,
   ...VRT_NOTIFICATION_POSTS,
   ...VRT_OTHER_PROFILE_POSTS,
+  ...VRT_OTHER_PROFILE_THREAD_REPLIES,
 ];
