@@ -153,6 +153,18 @@ export async function copyToClipboard({ text }: CopyToClipboardProps) {
   }
 }
 
+/**
+ * Read text from the clipboard. Throws when the Clipboard API is unavailable
+ * (non-secure context, unsupported browser) or the read is denied.
+ */
+export async function readFromClipboard(): Promise<string> {
+  if (typeof navigator === 'undefined' || !navigator.clipboard?.readText) {
+    throw new Error('Clipboard API not supported');
+  }
+
+  return navigator.clipboard.readText();
+}
+
 const customCases = [
   { name: 'bitcoin', color: '#FF9900' },
   { name: 'synonym', color: '#FF6600' },
