@@ -2,14 +2,12 @@
 
 import * as React from 'react';
 import { HeartHandshake, Radio, Tags, UserRound, Waypoints } from 'lucide-react';
+import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { UsersRound2 } from '@/icons';
-import { REACH, type ReachType } from '@/stores/home/home.types';
+import { REACH, type ReachFilterValue, type ReachType } from '@/stores/home/home.types';
 import { FilterProfileTags } from '../FilterProfileTags/FilterProfileTags';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import type { BaseFilterProps, FilterListItem } from '../Filters.types';
-
-export const TAGGED_AS_FILTER_KEY = 'tagged_as' as const;
-export type ReachFilterValue = ReachType | typeof TAGGED_AS_FILTER_KEY;
 
 /**
  * Canonical label + icon for each reach filter value. Single source for every

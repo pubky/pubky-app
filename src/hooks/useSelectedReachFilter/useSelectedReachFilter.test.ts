@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
+import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { REACH, type ReachType } from '@/stores/home/home.types';
 import { useSelectedReachFilter } from './useSelectedReachFilter';
 

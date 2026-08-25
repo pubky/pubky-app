@@ -1,8 +1,8 @@
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { z } from 'zod';
 import { DEFAULT_CUSTOM_FEED_ICON } from '@/config/feed';
+import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import { TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
 
 /** Sentinel for "no content filter" — stored as `null` on the feed record. */
 export const CUSTOM_FEED_CONTENT_ALL = 'ALL';

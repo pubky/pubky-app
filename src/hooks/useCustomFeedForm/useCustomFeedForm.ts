@@ -6,8 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { PubkyAppFeedReach } from 'pubky-app-specs';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { APP_ROUTES } from '@/app/routes';
+import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { FeedController } from '@/controllers/feed/feed';
-import { TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import {
   CUSTOM_FEED_CONTENT_ALL,

@@ -1,8 +1,9 @@
 'use client';
 
+import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { type ReachFilterValue, TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
 import { useHomeStore } from '@/stores/home/home.store';
+import { type ReachFilterValue } from '@/stores/home/home.types';
 import { REACH } from '@/stores/home/home.types';
 
 /**

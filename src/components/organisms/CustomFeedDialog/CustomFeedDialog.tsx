@@ -29,6 +29,7 @@ import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
 import { Typography } from '@/atoms/Typography/Typography';
+import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { useControlledState } from '@/hooks/useControlledState/useControlledState';
 import { useCustomFeedForm } from '@/hooks/useCustomFeedForm/useCustomFeedForm';
 import {
@@ -39,14 +40,11 @@ import {
 } from '@/hooks/useCustomFeedForm/useCustomFeedForm.types';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
-import {
-  REACH_FILTER_META,
-  type ReachFilterValue,
-  TAGGED_AS_FILTER_KEY,
-} from '@/molecules/Filters/FilterReach/FilterReach';
+import { REACH_FILTER_META } from '@/molecules/Filters/FilterReach/FilterReach';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { IconPickerDialog } from '@/organisms/IconPickerDialog/IconPickerDialog';
+import { type ReachFilterValue } from '@/stores/home/home.types';
 import { HOME_PROFILE_TAGS_MAX_SELECTED } from '@/stores/home/home.types';
 import { pubkyReachToHomeReach } from '@/utils/pubky-app-spec-feed-mappers';
 
