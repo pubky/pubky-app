@@ -113,6 +113,69 @@ describe('useConfirmableDialog', () => {
     expect(result.current.showConfirmDialog).toBe(true);
   });
 
+  it('shows confirm dialog when closing with existing attachments only (edit)', () => {
+    const { result } = renderHook(() =>
+      useConfirmableDialog({
+        onClose: mockOnClose,
+      }),
+    );
+
+    act(() => {
+      result.current.handleContentChange('', [], [], '', [{ uri: 'pubky://user/pub/pubky.app/files/F1' }]);
+    });
+
+    act(() => {
+      result.current.handleOpenChange(false);
+    });
+
+    expect(mockOnClose).not.toHaveBeenCalled();
+    expect(result.current.showConfirmDialog).toBe(true);
+  });
+
+  it('treats omitted existingAttachments as empty', () => {
+    const { result } = renderHook(() =>
+      useConfirmableDialog({
+        onClose: mockOnClose,
+      }),
+    );
+
+    // 5th argument omitted — legacy 4-arg callers must still close directly
+    act(() => {
+      result.current.handleContentChange('', [], [], '');
+    });
+
+    act(() => {
+      result.current.handleOpenChange(false);
+    });
+
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+    expect(result.current.showConfirmDialog).toBe(false);
+  });
+
+  it('resets existing attachments tracking when dialog opens', () => {
+    const { result } = renderHook(() =>
+      useConfirmableDialog({
+        onClose: mockOnClose,
+      }),
+    );
+
+    act(() => {
+      result.current.handleContentChange('', [], [], '', [{ uri: 'pubky://user/pub/pubky.app/files/F1' }]);
+    });
+
+    // Open dialog (simulates re-opening) — clears the tracked existing attachments
+    act(() => {
+      result.current.handleOpenChange(true);
+    });
+
+    act(() => {
+      result.current.handleOpenChange(false);
+    });
+
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+    expect(result.current.showConfirmDialog).toBe(false);
+  });
+
   it('shows confirm dialog when closing with article title only', () => {
     const { result } = renderHook(() =>
       useConfirmableDialog({

@@ -8,6 +8,7 @@ import {
   remarkDisallowMarkdownLinks,
   remarkExtractFirstParagraph,
   remarkHashtags,
+  remarkInlineShowMore,
   remarkMentions,
   remarkPlaintextCodeblock,
   truncateAtWordBoundary,
@@ -74,6 +75,101 @@ describe('remarkPlaintextCodeblock', () => {
     expect(codeBlock1.lang).toBe('plaintext');
     expect(codeBlock2.lang).toBe('python');
     expect(codeBlock3.lang).toBe('plaintext');
+  });
+});
+
+describe('remarkInlineShowMore', () => {
+  const showMoreButton = {
+    type: 'text',
+    value: 'more',
+    data: {
+      hName: 'button',
+      hProperties: {
+        'aria-label': 'Show full post content',
+        'data-type': 'show-more',
+        type: 'button',
+      },
+    },
+  };
+
+  const ellipsisWithButton = {
+    type: 'paragraph',
+    children: [{ type: 'text', value: '...\u00a0' }, showMoreButton],
+  };
+
+  it('appends the more button to a truncated paragraph', () => {
+    const paragraph = createParagraph('Truncated...\u00a0');
+    const tree = createRoot([paragraph]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(paragraph.children.at(-1)).toMatchObject(showMoreButton);
+  });
+
+  it('appends the more button to a truncated heading', () => {
+    const heading: Heading = {
+      type: 'heading',
+      depth: 1,
+      children: [{ type: 'text', value: 'Title...\u00a0' } as Text],
+    };
+    const tree = createRoot([heading]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(heading.children.at(-1)).toMatchObject(showMoreButton);
+  });
+
+  it('moves a code-block ellipsis into a paragraph with the more button', () => {
+    const codeBlock: Code = { type: 'code', value: 'const value = true;...\u00a0', lang: 'typescript' };
+    const tree = createRoot([codeBlock]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(codeBlock.value).toBe('const value = true;');
+    expect(tree.children[1]).toMatchObject(ellipsisWithButton);
+  });
+
+  it('removes the ellipsis from a block that cannot host the button so it is not rendered twice', () => {
+    const htmlNode = { type: 'html', value: '<div>foo</div>...\u00a0' } as RootContent;
+    const tree = createRoot([htmlNode]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(htmlNode).toMatchObject({ value: '<div>foo</div>' });
+    expect(tree.children[1]).toMatchObject(ellipsisWithButton);
+  });
+
+  it('places the button after a blockquote instead of inside the quoted text', () => {
+    const quoted = createParagraph('Quoted line...\u00a0');
+    const blockquote: Blockquote = { type: 'blockquote', children: [quoted] };
+    const tree = createRoot([blockquote]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(getParagraphPlainText(quoted)).toBe('Quoted line');
+    expect(tree.children[1]).toMatchObject(ellipsisWithButton);
+  });
+
+  it('ignores a user-authored ellipsis in an earlier paragraph', () => {
+    const pasted = createParagraph('I pasted this...\u00a0');
+    const truncatedBlock = createParagraph('| c1 | c2 | ... |');
+    const tree = createRoot([pasted, truncatedBlock]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(pasted.children).toHaveLength(1);
+    expect(truncatedBlock.children.at(-1)).toMatchObject(showMoreButton);
+  });
+
+  it('leaves an earlier code block ending with a user-authored ellipsis untouched', () => {
+    const codeBlock: Code = { type: 'code', value: 'const a = 1;...\u00a0', lang: 'js' };
+    const truncatedBlock = createParagraph('| c1 | c2 |');
+    const tree = createRoot([codeBlock, truncatedBlock]);
+
+    remarkInlineShowMore()(tree);
+
+    expect(codeBlock.value).toBe('const a = 1;...\u00a0');
+    expect(truncatedBlock.children.at(-1)).toMatchObject(showMoreButton);
   });
 });
 

@@ -34,25 +34,38 @@ export function useConfirmableDialog({
 }: UseConfirmableDialogOptions): UseConfirmableDialogReturn {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [resetKey, setResetKey] = useState(0);
-  const contentRef = useRef({ content: '', tags: [] as string[], attachments: [] as File[], articleTitle: '' });
+  const contentRef = useRef({
+    content: '',
+    tags: [] as string[],
+    attachments: [] as File[],
+    articleTitle: '',
+    existingAttachments: [] as unknown[],
+  });
 
   const internalHasContent = () => {
     return (
       contentRef.current.content.trim().length > 0 ||
       contentRef.current.tags.length > 0 ||
       contentRef.current.attachments.length > 0 ||
-      contentRef.current.articleTitle.trim().length > 0
+      contentRef.current.articleTitle.trim().length > 0 ||
+      contentRef.current.existingAttachments.length > 0
     );
   };
 
-  const handleContentChange = (content: string, tags: string[], attachments: File[], articleTitle: string) => {
-    contentRef.current = { content, tags, attachments, articleTitle };
+  const handleContentChange = (
+    content: string,
+    tags: string[],
+    attachments: File[],
+    articleTitle: string,
+    existingAttachments: unknown[] = [],
+  ) => {
+    contentRef.current = { content, tags, attachments, articleTitle, existingAttachments };
   };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
       setShowConfirmDialog(false);
-      contentRef.current = { content: '', tags: [], attachments: [], articleTitle: '' };
+      contentRef.current = { content: '', tags: [], attachments: [], articleTitle: '', existingAttachments: [] };
     } else {
       const contentExists = externalHasContent ? externalHasContent() : internalHasContent();
       if (contentExists) {

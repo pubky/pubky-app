@@ -26,8 +26,36 @@ export interface UsePostRepostOptions {
 
 export interface UsePostEditOptions {
   editPostId: string;
+  /**
+   * The attachment URIs the edit composer was seeded from (the snapshot taken
+   * when the dialog opened — NOT the live post row, which can change underneath
+   * an open dialog). Used to detect whether the attachment set changed; when it
+   * didn't, the edit is committed content-only.
+   */
+  originalAttachmentUris?: string[];
   onSuccess?: (createdPostId: string) => void;
 }
+
+/**
+ * An attachment already persisted on the post being edited. Identified by its
+ * homeserver file URI; removing it from the composer removes it from the post
+ * (and deletes the file) on submit.
+ */
+export type ExistingAttachment = {
+  /** Homeserver file URI (`pubky://…/files/<id>`) — kept on the post when submitted. */
+  uri: string;
+  /** MIME content type; placeholder until metadata resolves. */
+  type: string;
+  name: string;
+  /** Resolved render URLs (local blob or CDN); `null` while metadata is loading. */
+  urls: { main: string; feed?: string } | null;
+  /**
+   * Set when metadata resolution (local + Nexus backfill) has terminally failed.
+   * Distinguishes "still loading" (skeleton) from "unknowable" (generic file
+   * card, still removable and still kept on submit).
+   */
+  resolutionFailed?: boolean;
+};
 
 export interface UsePostReturn {
   content: string;
@@ -36,6 +64,8 @@ export interface UsePostReturn {
   setTags: Dispatch<SetStateAction<string[]>>;
   attachments: File[];
   setAttachments: Dispatch<SetStateAction<File[]>>;
+  existingAttachments: ExistingAttachment[];
+  setExistingAttachments: Dispatch<SetStateAction<ExistingAttachment[]>>;
   isArticle: boolean;
   setIsArticle: Dispatch<SetStateAction<boolean>>;
   articleTitle: string;

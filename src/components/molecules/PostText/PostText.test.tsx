@@ -890,6 +890,52 @@ describe('PostText', () => {
       expect(screen.queryByText(/\.\.\./)).not.toBeInTheDocument();
     });
 
+    it('keeps the inline more button when character truncation ends inside a fenced code block', () => {
+      const hiddenCode = 'const hiddenMarker = true;';
+      const content = ['```typescript', generateContent(TRUNCATION_LIMIT + 100), hiddenCode, '```'].join('\n');
+      const { container } = render(<PostText content={content} />);
+
+      const codeBlock = screen.getByTestId('post-code-block');
+      const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
+      expect(codeBlock).not.toHaveTextContent('...');
+      expect(showMoreButton.parentElement).toHaveProperty('tagName', 'P');
+      expect(showMoreButton.previousSibling?.textContent).toBe('...\u00a0');
+      expect(container.textContent).not.toContain(hiddenCode);
+
+      fireEvent.click(showMoreButton);
+
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(container.textContent).toContain(hiddenCode);
+    });
+
+    it('keeps the more button when character truncation ends inside a GFM table', () => {
+      const hiddenTail = 'TABLE_HIDDEN_TAIL_MARKER';
+      const content = ['a', 'b', 'c', '| h1 | h2 |', '| --- | --- |', '| c1 | c2 |', hiddenTail].join('\n');
+      const { container } = render(<PostText content={content} />);
+
+      const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
+      expect(container.textContent).not.toContain(hiddenTail);
+
+      fireEvent.click(showMoreButton);
+
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(container.textContent).toContain(hiddenTail);
+    });
+
+    it('keeps the more button when character truncation ends inside a raw HTML block', () => {
+      const hiddenTail = 'HTML_HIDDEN_TAIL_MARKER';
+      const content = ['a', 'b', 'c', 'd', 'e', '<div>foo</div>', '', hiddenTail].join('\n');
+      const { container } = render(<PostText content={content} />);
+
+      const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
+      expect(container.textContent).not.toContain(hiddenTail);
+
+      fireEvent.click(showMoreButton);
+
+      expect(screen.queryByRole('button', { name: 'Show full post content' })).not.toBeInTheDocument();
+      expect(container.textContent).toContain(hiddenTail);
+    });
+
     it('does not show Show more when blank markdown separators push raw lines over the line limit', () => {
       const content = ['ad', '', '', '', '', '', 'da'].join('\n');
       render(<PostText content={content} />);
@@ -949,16 +995,13 @@ describe('PostText', () => {
       expect(screen.getByRole('button', { name: 'Show full post content' })).toBeInTheDocument();
     });
 
-    it('renders "Show more" button with correct styling classes', () => {
+    it('renders the "more" button inline directly after the truncation ellipsis', () => {
       const longContent = generateContent(600);
       render(<PostText content={longContent} />);
 
       const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
       expect(showMoreButton).not.toHaveAttribute('data-allow-post-navigation');
-      expect(showMoreButton).toHaveAttribute('type', 'button');
-      expect(showMoreButton).toHaveClass('cursor-pointer');
-      expect(showMoreButton).toHaveClass('text-brand');
-      expect(showMoreButton).toHaveClass('mt-4');
+      expect(showMoreButton.previousSibling?.textContent).toMatch(/\.\.\.\u00a0$/);
     });
 
     it('expands truncated content in place and stops event propagation on "Show more" click', () => {
@@ -1271,7 +1314,7 @@ Third line`}
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('matches snapshot for truncated content with Show more button', () => {
+  it('matches snapshot for truncated content with inline more button', () => {
     const longContent =
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Extra text to make this longer than 500 characters for truncation testing purposes.';
     const { container } = render(<PostText content={longContent} />);

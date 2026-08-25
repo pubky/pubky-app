@@ -21,6 +21,7 @@ import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import {
   buildAuthorCollectionsStreamId,
+  getPostStreamKind,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
@@ -144,22 +145,88 @@ export class LocalPostService {
   }
 
   /**
-   * Edit a post's content in the local database.
+   * Edit a post's content (and optionally attachments/kind) in the local database.
    *
    * @param params.compositePostId - Composite post ID (author:postId)
    * @param params.content - New content for the post
+   * @param params.attachments - New attachment URIs (`null` clears them); `undefined` leaves the column untouched
+   * @param params.kind - New lowercase kind; `undefined` leaves the column untouched
    *
    * @throws {DatabaseError} When database operations fail
    */
-  static async edit({ compositePostId, content }: { compositePostId: string; content: string }) {
+  static async edit({
+    compositePostId,
+    content,
+    attachments,
+    kind,
+  }: {
+    compositePostId: string;
+    content: string;
+    attachments?: string[] | null;
+    kind?: string;
+  }) {
     try {
-      await PostDetailsModel.update(compositePostId, { content });
+      const changes: Partial<PostDetailsModelSchema> = { content };
+      if (attachments !== undefined) {
+        changes.attachments = attachments;
+      }
+      if (kind !== undefined) {
+        changes.kind = kind;
+      }
+
+      await db.transaction('rw', [PostDetailsModel.table, PostTtlModel.table], async () => {
+        await PostDetailsModel.update(compositePostId, changes);
+        // Touch TTL so the coordinator considers the edited post fresh and
+        // doesn't overwrite the local edit with stale (pre-edit) Nexus data
+        await PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt: Date.now() });
+      });
       Logger.debug('Post edited successfully', { compositePostId });
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to edit post', {
         service: ErrorService.Local,
         operation: 'edit',
         context: { compositePostId },
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Remove a post from every cached stream filtered to `kind`.
+   *
+   * Used after an edit changes a post's kind: the post would otherwise linger
+   * in the old kind's filtered feeds (e.g. a text post sitting in the Images
+   * tab after its image was removed) — permanently, since stream persistence
+   * only merges and never evicts. Scans all cached stream ids and matches
+   * their kind slot via the canonical `getPostStreamKind` parser, covering
+   * every kind-bearing shape (timeline, wot, tagged, sorted-author "Me",
+   * author-kind). The post is deliberately NOT inserted into the new kind's
+   * streams locally — correct placement needs Nexus stream ordering.
+   *
+   * @throws {DatabaseError} When database operations fail
+   */
+  static async removeFromKindStreams({ compositePostId, kind }: { compositePostId: string; kind: string }) {
+    try {
+      const [streamIds, unreadStreamIds] = await Promise.all([
+        PostStreamModel.table.toCollection().primaryKeys(),
+        UnreadPostStreamModel.table.toCollection().primaryKeys(),
+      ]);
+
+      const matchesKind = (streamId: unknown) => getPostStreamKind(String(streamId)) === kind;
+
+      await Promise.all([
+        ...streamIds
+          .filter(matchesKind)
+          .map((streamId) => PostStreamModel.removeItems(streamId as PostStreamId, [compositePostId])),
+        ...unreadStreamIds
+          .filter(matchesKind)
+          .map((streamId) => UnreadPostStreamModel.removeItems(streamId as PostStreamId, [compositePostId])),
+      ]);
+    } catch (error) {
+      throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to remove post from kind streams', {
+        service: ErrorService.Local,
+        operation: 'removeFromKindStreams',
+        context: { compositePostId, kind },
         cause: error,
       });
     }

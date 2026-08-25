@@ -7,6 +7,14 @@ type TInferPostKindParams = {
   isArticle?: boolean;
 };
 
+type TInferPostKindForEditParams = {
+  content: string;
+  /** MIME content types of the resulting attachment set (kept + added). */
+  attachmentContentTypes: string[];
+  /** Stored lowercase kind of the post being edited. */
+  currentKind: string;
+};
+
 type TResolveTagTargetCompositeIdParams = {
   authorId: string;
   newPostId: string;
@@ -32,20 +40,33 @@ const hasSupportedUrl = (content: string): boolean => {
   return Boolean(match?.[0]?.url);
 };
 
-const getAttachmentKind = (attachments: File[]): PubkyAppPostKind | null => {
-  if (attachments.some((file) => file.type.startsWith('video/'))) {
+const getAttachmentKind = (contentTypes: string[]): PubkyAppPostKind | null => {
+  if (contentTypes.some((type) => type.startsWith('video/'))) {
     return PubkyAppPostKind.Video;
   }
 
-  if (attachments.some((file) => file.type.startsWith('image/'))) {
+  if (contentTypes.some((type) => type.startsWith('image/'))) {
     return PubkyAppPostKind.Image;
   }
 
-  if (attachments.length > 0) {
+  if (contentTypes.length > 0) {
     return PubkyAppPostKind.File;
   }
 
   return null;
+};
+
+/**
+ * Shared tail of kind inference, applied after the callers' own guards
+ * (article on create, article/collection preservation on edit):
+ * URL in content → Link, else attachment media kind, else Short.
+ */
+const inferContentKind = (content: string, attachmentContentTypes: string[]): PubkyAppPostKind => {
+  if (hasSupportedUrl(content)) {
+    return PubkyAppPostKind.Link;
+  }
+
+  return getAttachmentKind(attachmentContentTypes) ?? PubkyAppPostKind.Short;
 };
 
 export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInferPostKindParams): PubkyAppPostKind => {
@@ -53,18 +74,31 @@ export const inferPostKindForCreate = ({ content, attachments, isArticle }: TInf
     return PubkyAppPostKind.Long;
   }
 
-  if (hasSupportedUrl(content)) {
-    return PubkyAppPostKind.Link;
+  return inferContentKind(
+    content,
+    (attachments ?? []).map((file) => file.type),
+  );
+};
+
+/**
+ * Kind for an edited post whose attachment set changed. Articles and
+ * collections keep their kind; everything else re-runs the create-time
+ * inference against the resulting attachment content types.
+ */
+export const inferPostKindForEdit = ({
+  content,
+  attachmentContentTypes,
+  currentKind,
+}: TInferPostKindForEditParams): PubkyAppPostKind => {
+  if (currentKind === 'long') {
+    return PubkyAppPostKind.Long;
   }
 
-  const files = attachments ?? [];
-  const attachmentKind = getAttachmentKind(files);
-
-  if (attachmentKind !== null) {
-    return attachmentKind;
+  if (currentKind === 'collection') {
+    return PubkyAppPostKind.Collection;
   }
 
-  return PubkyAppPostKind.Short;
+  return inferContentKind(content, attachmentContentTypes);
 };
 
 /**

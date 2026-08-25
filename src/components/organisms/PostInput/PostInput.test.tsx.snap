@@ -666,6 +666,18 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant 1`] = `
             </div>
           </div>
           <div
+            data-existing-count="0"
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
+          >
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
             data-testid="post-input-expanded-controls"
             style="opacity: 1; filter: blur(0px);"
           >
@@ -751,11 +763,170 @@ exports[`PostInput - Snapshots > matches snapshot for edit variant with article 
             data-testid="post-header"
           />
           <div
+            data-existing-count="0"
+            data-is-article="true"
+            data-submitting="false"
+            data-testid="post-input-attachments"
+          >
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+          </div>
+          <div
             contenteditable="true"
             data-readonly="false"
             data-testid="markdown-editor"
           >
             Existing article body
+          </div>
+          <div
+            data-testid="post-input-expanded-controls"
+            style="opacity: 1; filter: blur(0px);"
+          >
+            <div
+              class="gap-4"
+              data-testid="container"
+            >
+              <div
+                data-disabled="true"
+                data-testid="post-input-tags"
+              />
+              <div
+                data-post-disabled="false"
+                data-testid="post-input-action-bar"
+              >
+                <button
+                  aria-label="Add emoji"
+                  data-testid="emoji-button"
+                >
+                  Emoji
+                </button>
+                <button
+                  aria-label="Add image"
+                  data-testid="image-button"
+                >
+                  Image
+                </button>
+                <button
+                  aria-label="Add article"
+                  data-testid="article-button"
+                >
+                  Article
+                </button>
+                <button
+                  aria-label="Post"
+                  data-testid="post-button"
+                >
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PostInput - Snapshots > matches snapshot for edit variant with existing attachments 1`] = `
+<div
+  class="relative cursor-pointer rounded-md border border-dashed transition-colors duration-200 max-w-full min-w-0 p-6 border-input"
+  data-state="expanded"
+  data-testid="container"
+>
+  <div
+    class="min-w-0 contain-inline-size [&_textarea::placeholder]:transition-opacity [&_textarea::placeholder]:duration-150 focus-within:[&_textarea::placeholder]:opacity-0 motion-reduce:[&_textarea::placeholder]:transition-none"
+    data-testid="container"
+  >
+    <div
+      class="overflow-hidden"
+      data-testid="post-input-state-height"
+      style="height: auto;"
+    >
+      <div
+        class="relative"
+      >
+        <div
+          class="absolute top-0 left-0 z-10"
+          data-testid="post-input-stable-avatar"
+        >
+          <div
+            data-is-reply="true"
+            data-post-id="test-user-id:pubkey"
+            data-show-user-info="false"
+            data-size="normal"
+            data-testid="post-header"
+          />
+        </div>
+        <div
+          class="relative flex min-w-0 flex-col gap-4"
+          data-testid="post-input-state-content"
+        >
+          <div
+            class="relative flex min-w-0 flex-col gap-4"
+            data-override-defaults="true"
+            data-testid="container"
+          >
+            <div
+              data-testid="post-input-expanded-header"
+              style="opacity: 1; filter: blur(0px);"
+            >
+              <div
+                data-character-limit-placement="name-row"
+                data-count="21"
+                data-is-reply="true"
+                data-max="2000"
+                data-post-id="test-user-id:pubkey"
+                data-show-user-info="true"
+                data-size="normal"
+                data-testid="post-header"
+                data-visually-hide-avatar="true"
+              />
+            </div>
+            <div
+              class="flex w-full min-w-0 items-stretch gap-3"
+              data-override-defaults="true"
+              data-testid="container"
+            >
+              <div
+                class="relative flex min-w-0 flex-1 items-center"
+                data-override-defaults="true"
+                data-testid="container"
+              >
+                <textarea
+                  data-class-name="field-sizing-fixed w-full rounded-none"
+                  data-testid="textarea"
+                  placeholder="Edit post"
+                >
+                  Existing post content
+                </textarea>
+              </div>
+            </div>
+          </div>
+          <div
+            data-existing-count="1"
+            data-is-article="false"
+            data-submitting="false"
+            data-testid="post-input-attachments"
+          >
+            <button
+              data-testid="attachment-button"
+            >
+              Attach
+            </button>
+            <div
+              data-testid="existing-attachment-existing-image.jpg"
+            >
+              existing-image.jpg
+              <button
+                data-testid="remove-existing-existing-image.jpg"
+              >
+                Remove
+              </button>
+            </div>
           </div>
           <div
             data-testid="post-input-expanded-controls"

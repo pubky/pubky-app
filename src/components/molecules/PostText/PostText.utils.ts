@@ -250,6 +250,62 @@ export const remarkMentions = createPatternPlugin({
   dataType: 'mention',
 });
 
+const createInlineShowMoreButton = (): Text =>
+  ({
+    type: 'text',
+    value: 'more',
+    data: {
+      hName: 'button',
+      hProperties: {
+        'aria-label': 'Show full post content',
+        'data-type': 'show-more',
+        type: 'button',
+      },
+    },
+  }) as Text;
+
+const createEllipsisParagraph = (): Paragraph => ({
+  type: 'paragraph',
+  children: [{ type: 'text', value: TRUNCATION_ELLIPSIS } as Text],
+});
+
+const createInlineShowMoreParagraph = (): Paragraph => {
+  const paragraph = createEllipsisParagraph();
+  paragraph.children.push(createInlineShowMoreButton());
+  return paragraph;
+};
+
+// Blocks that cannot host the inline button get the ellipsis paragraph appended after them instead.
+// Their own trailing ellipsis is removed first so the preview does not render two of them.
+const stripTrailingEllipsis = (node: RootContent | undefined): void => {
+  if (!node) return;
+
+  if ('value' in node && typeof node.value === 'string') {
+    if (node.value.endsWith(TRUNCATION_ELLIPSIS)) {
+      node.value = node.value.slice(0, -TRUNCATION_ELLIPSIS.length);
+    }
+
+    return;
+  }
+
+  if ('children' in node) stripTrailingEllipsis(node.children.at(-1));
+};
+
+// truncatePostPreviewText appends the ellipsis to the very end of the preview text, so the cut is
+// always in the last top-level block. Attaching there instead of searching the tree for the
+// ellipsis keeps a user-authored ellipsis from stealing the button or losing its own characters.
+export const remarkInlineShowMore = () => (tree: Root) => {
+  const lastBlock = tree.children.at(-1);
+
+  if (lastBlock?.type === 'paragraph' || lastBlock?.type === 'heading') {
+    lastBlock.children.push(createInlineShowMoreButton());
+    return;
+  }
+
+  stripTrailingEllipsis(lastBlock);
+  tree.children.push(createInlineShowMoreParagraph());
+};
+
 // Extract text safely - children from remark is typically a text node
 export const extractTextFromChildren = (children: ReactNode) =>
   typeof children === 'string'
@@ -381,11 +437,6 @@ const appendEllipsisToListItem = (listItem: ListItem): void => {
     children: [{ type: 'text', value: TRUNCATION_ELLIPSIS } as Text],
   } as Paragraph);
 };
-
-const createEllipsisParagraph = (): Paragraph => ({
-  type: 'paragraph',
-  children: [{ type: 'text', value: TRUNCATION_ELLIPSIS } as Text],
-});
 
 const appendEllipsisToPreviewNode = (node: unknown): boolean => {
   if (!node || typeof node !== 'object') return false;

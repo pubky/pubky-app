@@ -24,8 +24,14 @@ export const useLocalFilesStore = create<LocalFilesStore>()(
       },
 
       setPostAttachments: (postId, attachments) => {
+        // Set-difference revoke: an edit's merged list may reuse blob URLs from
+        // the previous entry (kept attachments of a same-session create) — only
+        // URLs absent from the incoming list are revoked.
+        const nextUrls = new Set(attachments.flatMap((a) => [a.urls.main, a.urls.feed]));
         const prev = get().posts[postId];
-        prev?.forEach((a) => revokeBlobUrl(a.urls.main));
+        prev?.forEach((a) => {
+          if (!nextUrls.has(a.urls.main)) revokeBlobUrl(a.urls.main);
+        });
 
         if (attachments.length === 0) {
           // Remove key if empty array

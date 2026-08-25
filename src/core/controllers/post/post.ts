@@ -1,4 +1,4 @@
-import { postUriBuilder } from 'pubky-app-specs';
+import { postUriBuilder, PubkyAppPostKind } from 'pubky-app-specs';
 import { FileApplication } from '@/application/file/file';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { PostApplication } from '@/application/post/post';
@@ -33,7 +33,11 @@ import type { PostRelationshipsModelSchema } from '@/models/post/relationships/p
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
-import { inferPostKindForCreate, resolveTagTargetCompositeIdForPostCreate } from '@/pipes/post/post.kind';
+import {
+  inferPostKindForCreate,
+  inferPostKindForEdit,
+  resolveTagTargetCompositeIdForPostCreate,
+} from '@/pipes/post/post.kind';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { PostValidators } from '@/pipes/post/post.validators';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
@@ -530,11 +534,121 @@ export class PostController {
     await PostApplication.commitDelete({ compositePostId });
   }
 
-  static async commitEdit({ compositePostId, content }: TEditPostParams) {
+  /**
+   * Edit a post's content and, optionally, its attachments.
+   *
+   * Without `attachments` this is a content-only edit. With `attachments`,
+   * `kept` URIs are validated against the post's current attachments, `added`
+   * files are normalized here (no IO) and uploaded by the application layer,
+   * current attachments not in `kept` are deleted best-effort after a
+   * successful edit, and the post kind is recomputed to match the resulting
+   * attachment set (articles and collections keep their kind).
+   */
+  static async commitEdit({ compositePostId, content, attachments }: TEditPostParams) {
     const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
-    const { post, meta } = await PostNormalizer.toEdit({ compositePostId, content, currentUserPubky });
 
-    await PostApplication.commitEdit({ compositePostId, post, postUrl: meta.url });
+    if (!attachments) {
+      const { post, meta } = await PostNormalizer.toEdit({ compositePostId, content, currentUserPubky });
+
+      await PostApplication.commitEdit({ compositePostId, post, postUrl: meta.url });
+      return;
+    }
+
+    // Reject non-authors up front, before the CPU-heavy file sanitization below
+    // (`PostNormalizer.toEdit` only enforces the author check later). Mirrors
+    // the explicit guard in `commitEditCollection`.
+    const { pubky: authorId } = parseCompositeId(compositePostId);
+    if (authorId !== currentUserPubky) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Current user is not the author of this post', {
+        service: ErrorService.Local,
+        operation: 'commitEdit',
+        context: { compositePostId, currentUserPubky },
+      });
+    }
+
+    const current = await PostApplication.getDetails({ compositeId: compositePostId });
+    if (!current || isPostDeleted(current.content)) {
+      throw Err.client(ClientErrorCode.NOT_FOUND, 'Post not found', {
+        service: ErrorService.Local,
+        operation: 'commitEdit',
+        context: { compositePostId },
+      });
+    }
+
+    const { original, kept, added } = attachments;
+    const keptSet = new Set(kept);
+    if (keptSet.size !== kept.length || !kept.every((uri) => original.includes(uri))) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Kept attachments must be original post attachments', {
+        service: ErrorService.Local,
+        operation: 'commitEdit',
+        context: { compositePostId },
+      });
+    }
+
+    // Removals are diffed against the seeded snapshot (`original`), never the
+    // live row — only files the user actually saw and removed get deleted.
+    const removedUris = original.filter((uri) => !keptSet.has(uri));
+
+    const fileAttachments =
+      added.length > 0 ? await this.normalizeFileAttachments({ attachments: added, pubky: authorId }) : [];
+    const nextUris = [...kept, ...fileAttachments.map((f) => f.fileResult.meta.url)];
+
+    const kind = await this.inferKindForEdit({ content, currentKind: current.kind, kept, added });
+
+    const { post, meta } = await PostNormalizer.toEdit({
+      compositePostId,
+      content,
+      currentUserPubky,
+      attachments: nextUris.length > 0 ? nextUris : null,
+      kind,
+    });
+
+    await PostApplication.commitEdit({
+      compositePostId,
+      post,
+      postUrl: meta.url,
+      fileAttachments: fileAttachments.length > 0 ? fileAttachments : undefined,
+      removedUris: removedUris.length > 0 ? removedUris : undefined,
+    });
+  }
+
+  /**
+   * Kind for an edited post whose attachment set changed. Articles and
+   * collections keep their kind. Kept attachments resolve their content types
+   * from local file metadata; if any kept attachment has no local row its type
+   * is unknown, so the current kind is preserved rather than guessed.
+   */
+  private static async inferKindForEdit({
+    content,
+    currentKind,
+    kept,
+    added,
+  }: {
+    content: string;
+    currentKind: string;
+    kept: string[];
+    added: File[];
+  }): Promise<PubkyAppPostKind> {
+    if (currentKind === 'long' || currentKind === 'collection') {
+      return PostNormalizer.mapKindToEnum(currentKind);
+    }
+
+    let keptContentTypes: string[] = [];
+    if (kept.length > 0) {
+      const metadata = await FileApplication.getMetadata({ fileAttachments: kept });
+      const typeByUri = new Map(metadata.map((file) => [file.uri, file.content_type]));
+      const resolvedTypes = kept.map((uri) => typeByUri.get(uri));
+      if (resolvedTypes.some((type) => !type)) {
+        return PostNormalizer.mapKindToEnum(currentKind);
+      }
+      keptContentTypes = resolvedTypes as string[];
+    }
+
+    return inferPostKindForEdit({
+      content,
+      attachmentContentTypes: [...keptContentTypes, ...added.map((file) => file.type)],
+      currentKind,
+    });
   }
 
   /**

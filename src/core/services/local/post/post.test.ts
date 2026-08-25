@@ -14,14 +14,18 @@ import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import {
   buildAuthorCollectionsStreamId,
+  buildSortedAuthorStreamId,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
+import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
 import { LocalPostService } from '@/services/local/post/post';
 import type { TLocalSavePostParams } from '@/services/local/post/post.types';
+import { StreamSorting } from '@/services/nexus/nexus.types';
+import { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 
 // Test data
 const testData = {
@@ -843,6 +847,191 @@ describe('LocalPostService', () => {
         expect(stillTombstone!.content).toBe(DELETED);
       } finally {
         userCountsSpy.mockRestore();
+      }
+    });
+  });
+
+  describe('edit', () => {
+    const existingAttachments = [
+      `pubky://${testData.authorPubky}/pub/pubky.app/files/file1`,
+      `pubky://${testData.authorPubky}/pub/pubky.app/files/file2`,
+    ];
+
+    const setupPostWithAttachments = async (kind = 'image') => {
+      await setupExistingPost(testData.fullPostId1, 'Original content', undefined, kind);
+      await PostDetailsModel.table.update(testData.fullPostId1, { attachments: existingAttachments });
+    };
+
+    it('should update content only, leaving attachments and kind untouched', async () => {
+      await setupPostWithAttachments('image');
+
+      await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'Edited content' });
+
+      const details = await getSavedPost(testData.fullPostId1);
+      expect(details!.content).toBe('Edited content');
+      expect(details!.attachments).toEqual(existingAttachments);
+      expect(details!.kind).toBe('image');
+    });
+
+    it('should touch post TTL on every edit', async () => {
+      await setupExistingPost(testData.fullPostId1, 'Original content');
+
+      const beforeTimestamp = Date.now();
+      await LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'Edited content' });
+      const afterTimestamp = Date.now();
+
+      const postTtl = await getPostTtl(testData.fullPostId1);
+      expect(postTtl).toBeTruthy();
+      expect(postTtl!.lastUpdatedAt).toBeGreaterThanOrEqual(beforeTimestamp);
+      expect(postTtl!.lastUpdatedAt).toBeLessThanOrEqual(afterTimestamp);
+    });
+
+    it('should write attachments and kind when provided', async () => {
+      await setupExistingPost(testData.fullPostId1, 'Original content');
+      const nextAttachments = [`pubky://${testData.authorPubky}/pub/pubky.app/files/file3`];
+
+      await LocalPostService.edit({
+        compositePostId: testData.fullPostId1,
+        content: 'Edited content',
+        attachments: nextAttachments,
+        kind: 'image',
+      });
+
+      const details = await getSavedPost(testData.fullPostId1);
+      expect(details!.content).toBe('Edited content');
+      expect(details!.attachments).toEqual(nextAttachments);
+      expect(details!.kind).toBe('image');
+    });
+
+    it('should clear the attachments column when null is provided', async () => {
+      await setupPostWithAttachments('image');
+
+      await LocalPostService.edit({
+        compositePostId: testData.fullPostId1,
+        content: 'Edited content',
+        attachments: null,
+        kind: 'short',
+      });
+
+      const details = await getSavedPost(testData.fullPostId1);
+      expect(details!.attachments).toBeNull();
+      expect(details!.kind).toBe('short');
+    });
+
+    it('should throw WRITE_FAILED error and roll back the TTL touch on failure', async () => {
+      await setupExistingPost(testData.fullPostId1, 'Original content');
+      const spy = vi.spyOn(PostDetailsModel, 'update').mockRejectedValueOnce(new Error('boom'));
+
+      try {
+        await expect(
+          LocalPostService.edit({ compositePostId: testData.fullPostId1, content: 'Edited content' }),
+        ).rejects.toMatchObject({
+          name: 'AppError',
+          code: 'WRITE_FAILED',
+          message: 'Failed to edit post',
+        });
+
+        // Transactional: the failed edit must not leave a bumped TTL behind
+        const postTtl = await getPostTtl(testData.fullPostId1);
+        expect(postTtl).toBeNull();
+
+        const details = await getSavedPost(testData.fullPostId1);
+        expect(details!.content).toBe('Original content');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
+  describe('removeFromKindStreams', () => {
+    it('should remove the post from the kind-filtered timeline streams only', async () => {
+      const postId = testData.fullPostId1;
+      await setupUserCounts(testData.authorPubky);
+      // Puts the short-kind post into the all/kind timeline streams + author stream
+      await LocalPostService.create(createSaveParams('Test post'));
+      await UnreadPostStreamModel.prependItems(PostStreamTypes.TIMELINE_ALL_SHORT as PostStreamId, [postId]);
+
+      await LocalPostService.removeFromKindStreams({ compositePostId: postId, kind: 'short' });
+
+      const timelineAllShort = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_SHORT);
+      const timelineFollowingShort = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FOLLOWING_SHORT);
+      const timelineFriendsShort = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_FRIENDS_SHORT);
+      const unreadAllShort = await UnreadPostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_SHORT);
+      expect(timelineAllShort?.stream ?? []).not.toContain(postId);
+      expect(timelineFollowingShort?.stream ?? []).not.toContain(postId);
+      expect(timelineFriendsShort?.stream ?? []).not.toContain(postId);
+      expect(unreadAllShort?.stream ?? []).not.toContain(postId);
+
+      // The post still exists — the unfiltered and author streams keep it
+      const timelineAllAll = await PostStreamModel.table.get(PostStreamTypes.TIMELINE_ALL_ALL);
+      const authorStream = await PostStreamModel.table.get(`author:${testData.authorPubky}` as PostStreamId);
+      expect(timelineAllAll?.stream).toContain(postId);
+      expect(authorStream?.stream).toContain(postId);
+    });
+
+    it('should be a no-op for streams that do not contain the post', async () => {
+      await expect(
+        LocalPostService.removeFromKindStreams({ compositePostId: testData.fullPostId1, kind: 'image' }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('should remove the post from every cached stream whose kind slot matches, whatever the shape', async () => {
+      const postId = testData.fullPostId1;
+      const sortedAuthorShort = buildSortedAuthorStreamId(
+        StreamSorting.TIMELINE,
+        testData.authorPubky,
+        StreamKind.SHORT,
+      ) as PostStreamId;
+      const sortedAuthorShortTagged = buildSortedAuthorStreamId(
+        StreamSorting.TIMELINE,
+        testData.authorPubky,
+        StreamKind.SHORT,
+        ['bitcoin'],
+      ) as PostStreamId;
+      const wotShort = 'timeline:wot:short' as PostStreamId;
+      const engagementShort = PostStreamTypes.POPULARITY_ALL_SHORT as PostStreamId;
+
+      await Promise.all(
+        [sortedAuthorShort, sortedAuthorShortTagged, wotShort, engagementShort].map((streamId) =>
+          PostStreamModel.prependItems(streamId, [postId]),
+        ),
+      );
+      await UnreadPostStreamModel.prependItems(sortedAuthorShort, [postId]);
+
+      await LocalPostService.removeFromKindStreams({ compositePostId: postId, kind: 'short' });
+
+      for (const streamId of [sortedAuthorShort, sortedAuthorShortTagged, wotShort, engagementShort]) {
+        const stream = await PostStreamModel.table.get(streamId);
+        expect(stream?.stream ?? []).not.toContain(postId);
+      }
+      const unreadSortedAuthor = await UnreadPostStreamModel.table.get(sortedAuthorShort);
+      expect(unreadSortedAuthor?.stream ?? []).not.toContain(postId);
+    });
+
+    it('should keep the post in kind-less streams and in other kinds streams', async () => {
+      const postId = testData.fullPostId1;
+      const authorStream = `author:${testData.authorPubky}` as PostStreamId;
+      const timelineAllAll = PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId;
+      const sortedAuthorAll = buildSortedAuthorStreamId(
+        StreamSorting.TIMELINE,
+        testData.authorPubky,
+        'all',
+      ) as PostStreamId;
+      const timelineAllImage = PostStreamTypes.TIMELINE_ALL_IMAGE as PostStreamId;
+
+      await Promise.all(
+        [authorStream, timelineAllAll, sortedAuthorAll, timelineAllImage].map((streamId) =>
+          PostStreamModel.prependItems(streamId, [postId]),
+        ),
+      );
+
+      await LocalPostService.removeFromKindStreams({ compositePostId: postId, kind: 'short' });
+
+      // Kind-less shapes ('all' slot, bare author stream) are untouched, and a
+      // DIFFERENT kind's stream keeps the post too
+      for (const streamId of [authorStream, timelineAllAll, sortedAuthorAll, timelineAllImage]) {
+        const stream = await PostStreamModel.table.get(streamId);
+        expect(stream?.stream).toContain(postId);
       }
     });
   });

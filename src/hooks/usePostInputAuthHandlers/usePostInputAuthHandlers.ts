@@ -28,6 +28,7 @@ export function usePostInputAuthHandlers(options: UsePostInputAuthHandlersOption
     handleArticleTitleChange,
     handleArticleBodyChange,
     handleArticleClick,
+    removeExistingAttachment,
   } = options;
 
   const { isAuthenticated, requireAuth } = useRequireAuth();
@@ -107,5 +108,6 @@ export function usePostInputAuthHandlers(options: UsePostInputAuthHandlersOption
           requireAuth(handleArticleClick);
         }
       : undefined,
+    removeExistingAttachmentWithAuth: removeExistingAttachment ? guard(removeExistingAttachment) : undefined,
   };
 }
