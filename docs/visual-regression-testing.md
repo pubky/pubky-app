@@ -28,12 +28,15 @@ data dependency (store/hook/fetch/router) so the pixels are deterministic.
 
 ## Determinism
 
-Both VRT scripts pass `--no-file-parallelism`: parallel browser-page startup
-intermittently crashes the whole run before any test executes (an unhandled
+Both VRT scripts pass `--no-file-parallelism`. Run in parallel, the suite
+reliably dies before any test executes with an unhandled
 `route.fulfill: Target page, context or browser has been closed` rejection
-inside `@vitest/browser-playwright` when a page closes under an in-flight
-module request). Serialized runs are reliably stable; remove the flag only
-after verifying repeated parallel runs survive on a clean cache.
+from `@vitest/browser-playwright` — a page closes while the dev server is
+still serving it a module. Measured: parallel fails on every attempt,
+serialized passes on every attempt, on the same machine and cache.
+Pre-bundling the lazily-imported icon catalog via `optimizeDeps.include` was
+tried and does not help. The cost is wall-clock time; drop the flag when the
+teardown race is fixed upstream or root-caused here.
 
 Renders should be as close to identical as possible every run, on every OS.
 `vitest.config.ts` sets a small `toMatchScreenshot` tolerance
