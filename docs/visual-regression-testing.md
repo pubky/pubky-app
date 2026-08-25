@@ -28,16 +28,6 @@ data dependency (store/hook/fetch/router) so the pixels are deterministic.
 
 ## Determinism
 
-Both VRT scripts pass `--no-file-parallelism`. Run in parallel, the suite
-reliably dies before any test executes with an unhandled
-`route.fulfill: Target page, context or browser has been closed` rejection
-from `@vitest/browser-playwright` — a page closes while the dev server is
-still serving it a module. Measured: parallel fails on every attempt,
-serialized passes on every attempt, on the same machine and cache.
-Pre-bundling the lazily-imported icon catalog via `optimizeDeps.include` was
-tried and does not help. The cost is wall-clock time; drop the flag when the
-teardown race is fixed upstream or root-caused here.
-
 Renders should be as close to identical as possible every run, on every OS.
 `vitest.config.ts` sets a small `toMatchScreenshot` tolerance
 (`comparatorOptions.allowedMismatchedPixelRatio: 0.001`, i.e. 0.1%) so residual
