@@ -1,5 +1,8 @@
+import { useRef } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { Dialog, DialogContent } from '@/atoms/Dialog/Dialog';
 import type { Pubky } from '@/models/models.types';
 import { MentionPopover } from './MentionPopover';
 
@@ -151,6 +154,54 @@ describe('MentionPopover', () => {
       });
       getBoundingClientRect.mockRestore();
     }
+  });
+
+  describe('MentionPopover - portal target', () => {
+    function DialogComposer({ onSelect = vi.fn() }: { onSelect?: (userId: string) => void }) {
+      const anchorRef = useRef<HTMLTextAreaElement>(null);
+
+      return (
+        <Dialog open>
+          <DialogContent hiddenTitle="Reply to post">
+            <textarea ref={anchorRef} />
+            <MentionPopover {...defaultProps} onSelect={onSelect} anchorRef={anchorRef} />
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    it('mounts on the body when the anchor is not inside a dialog', () => {
+      const anchor = document.createElement('textarea');
+      document.body.appendChild(anchor);
+
+      try {
+        render(<MentionPopover {...defaultProps} anchorRef={{ current: anchor }} />);
+
+        expect(screen.getByTestId('mention-popover').parentElement).toBe(document.body);
+      } finally {
+        anchor.remove();
+      }
+    });
+
+    it('mounts inside the dialog content when the anchor is inside a dialog', () => {
+      render(<DialogComposer />);
+
+      // The dialog disables pointer events on the body, so a popover portalled
+      // there would be inert and taps would land on the dialog behind it.
+      expect(document.body.style.pointerEvents).toBe('none');
+      expect(screen.getByTestId('dialog-content')).toContainElement(screen.getByTestId('mention-popover'));
+    });
+
+    it('lets a suggestion be clicked while a dialog is open', async () => {
+      const user = userEvent.setup();
+      const onSelect = vi.fn();
+
+      render(<DialogComposer onSelect={onSelect} />);
+
+      await user.click(screen.getByTestId('user-suggestion-user1'));
+
+      expect(onSelect).toHaveBeenCalledWith('user1');
+    });
   });
 
   describe('MentionPopover - Snapshots', () => {

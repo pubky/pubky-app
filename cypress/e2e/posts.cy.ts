@@ -133,6 +133,7 @@ describe('posts', () => {
     // Local blob URLs stay cached until reload; the unique static URL is only
     // available after a refresh, so capture that before replacing the image.
     cy.reload();
+    waitForFeedToLoad();
     cy.findFirstPostInFeedFiltered(postContent).within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', postContent);
       cy.get('img')
@@ -150,6 +151,7 @@ describe('posts', () => {
     });
 
     cy.reload();
+    waitForFeedToLoad();
     cy.get('@originalImageSrc').then((originalImageSrc) => {
       cy.findFirstPostInFeedFiltered(postContent).within(() => {
         cy.get('[data-cy="post-text"]').should('contain.text', postContent);
@@ -169,6 +171,7 @@ describe('posts', () => {
     });
 
     cy.reload();
+    waitForFeedToLoad();
     cy.findFirstPostInFeedFiltered(postContent).within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', postContent);
       cy.get('img').should('not.exist');

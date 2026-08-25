@@ -878,6 +878,24 @@ describe('Own profile — posts — visual regression', () => {
     await expect.element(screen.getByText('9 more replies')).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-posts-mobile');
   });
+
+  it('truncates a long profile name before the status emoji at desktop viewport', async () => {
+    const screen = await renderOwnProfileTab('/profile/posts', <ProfilePostsPage />, VRT_VIEWPORT_DESKTOP);
+    await expect.element(screen.getByRole('feed').first()).toBeVisible();
+
+    const header = screen.getByTestId('profile-page-header');
+    const name = header.element().querySelector('[data-cy="profile-username-header"]');
+    const statusEmoji = header.getByRole('button', { name: 'Vacationing status' }).element();
+
+    expect(name).toBeInstanceOf(HTMLElement);
+    if (!(name instanceof HTMLElement)) return;
+
+    // Exercise the layout without changing the shared profile fixture and every profile screenshot baseline.
+    name.textContent = `Bobi${'W'.repeat(80)}`;
+
+    expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
+    expect(name.getBoundingClientRect().right).toBeLessThan(statusEmoji.getBoundingClientRect().left);
+  });
 });
 
 describe('Own profile — replies — visual regression', () => {
