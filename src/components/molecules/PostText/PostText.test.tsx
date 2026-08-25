@@ -1,10 +1,10 @@
-import { act, createEvent, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { createEvent, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { PostText } from './PostText';
-import { POST_LINK_LONG_PRESS_DELAY_MS, TRUNCATION_LIMIT } from './PostText.constants';
+import { TRUNCATION_LIMIT } from './PostText.constants';
 
 const render = (ui: ReactElement) => rtlRender(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
 
@@ -100,10 +100,6 @@ const generateContent = (length: number): string => {
 describe('PostText', () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/home');
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   describe('Basic rendering', () => {
@@ -312,7 +308,6 @@ describe('PostText', () => {
         const link = screen.getByRole('link');
         const paragraph = link.closest('p');
 
-        expect(link).toHaveClass('inline');
         expect(paragraph).toHaveTextContent('Read example.com for the details');
         expect(link.previousSibling?.textContent).toBe('Read ');
         expect(link.nextSibling?.textContent).toBe(' for the details');
@@ -345,97 +340,83 @@ describe('PostText', () => {
         });
       });
 
-      it('shows the full URL after a touch long press without following the link', () => {
-        vi.useFakeTimers();
-        const handleLinkClick = vi.fn();
-        render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
+      it('shows an international domain as the punycode the browser resolves', () => {
+        // The visible text reads "аpple.com" but its first character is Cyrillic U+0430.
+        render(<PostText content={'Login at https://\u0430pple.com/account'} />);
 
-        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
-        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
-        act(() => vi.advanceTimersByTime(POST_LINK_LONG_PRESS_DELAY_MS));
-        fireEvent.pointerUp(link, { pointerType: 'touch' });
-        fireEvent.click(link);
+        const link = screen.getByRole('link');
 
-        expect(screen.getByRole('tooltip')).toHaveTextContent('https://example.com/long/path');
-        expect(handleLinkClick).not.toHaveBeenCalled();
+        expect(link).toHaveTextContent('xn--pple-43d.com');
+        expect(link).toHaveAccessibleName('https://xn--pple-43d.com/account');
       });
 
-      it('suppresses the native touch context menu but preserves desktop right-click', () => {
-        vi.useFakeTimers();
+      it('keeps credentials out of the label, the accessible name, and the tooltip', async () => {
+        render(<PostText content="Visit https://user:secret@example.com/private" />);
+
+        const link = screen.getByRole('link');
+        expect(link).toHaveTextContent('example.com');
+        expect(link).toHaveAccessibleName('https://example.com/private');
+
+        fireEvent.pointerMove(link, { pointerType: 'mouse' });
+
+        await waitFor(() => {
+          expect(screen.getByRole('tooltip')).toHaveTextContent('https://example.com/private');
+        });
+        expect(screen.getByRole('tooltip')).not.toHaveTextContent('secret');
+      });
+
+      it('reveals the scheme of a www autolink, which the visible text omits', () => {
+        render(<PostText content="Go www.example.com/login now" />);
+
+        expect(screen.getByRole('link')).toHaveAccessibleName('http://www.example.com/login');
+      });
+
+      it('leaves the context menu alone so a touch long press keeps Copy Link', () => {
         render(<PostText content="Visit https://example.com/long/path" />);
 
-        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
-        expect(link.style).toHaveProperty('WebkitTouchCallout', 'none');
+        const link = screen.getByRole('link');
         fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
-        act(() => vi.advanceTimersByTime(POST_LINK_LONG_PRESS_DELAY_MS));
+        fireEvent.pointerUp(link, { pointerType: 'touch' });
 
-        const touchContextMenu = createEvent.contextMenu(link);
-        fireEvent(link, touchContextMenu);
-        expect(touchContextMenu.defaultPrevented).toBe(true);
+        const contextMenu = createEvent.contextMenu(link);
+        fireEvent(link, contextMenu);
 
-        fireEvent.pointerCancel(link, { pointerType: 'touch' });
-        fireEvent.pointerDown(link, { pointerType: 'mouse' });
-
-        const mouseContextMenu = createEvent.contextMenu(link);
-        fireEvent(link, mouseContextMenu);
-        expect(mouseContextMenu.defaultPrevented).toBe(false);
+        expect(contextMenu.defaultPrevented).toBe(false);
       });
 
-      it('cancels the touch tooltip when the user scrolls', () => {
-        vi.useFakeTimers();
+      it('hides the tooltip on touch, where the browser already reveals the full URL', async () => {
+        render(<PostText content="Visit https://example.com/a/very/long/path" />);
+
+        fireEvent.focus(screen.getByRole('link'));
+
+        await waitFor(() => {
+          expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveClass('pointer-coarse:hidden');
+        });
+      });
+
+      it('still activates on the first keyboard press after a touch scroll', () => {
         const handleLinkClick = vi.fn();
         render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
 
-        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
+        const link = screen.getByRole('link');
         fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
-        fireEvent.pointerMove(link, { pointerType: 'touch', clientX: 25, clientY: 10 });
-        act(() => vi.advanceTimersByTime(POST_LINK_LONG_PRESS_DELAY_MS));
+        fireEvent.pointerMove(link, { pointerType: 'touch', clientX: 10, clientY: 90 });
         fireEvent.pointerUp(link, { pointerType: 'touch' });
-        fireEvent.click(link);
-
-        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-        expect(handleLinkClick).not.toHaveBeenCalled();
-      });
-
-      it('cancels the touch tooltip when the pointer leaves the link', () => {
-        vi.useFakeTimers();
-        render(<PostText content="Visit https://example.com/long/path" />);
-
-        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
-        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
-        fireEvent.pointerLeave(link, { pointerType: 'touch' });
-        act(() => vi.advanceTimersByTime(POST_LINK_LONG_PRESS_DELAY_MS));
-
-        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-      });
-
-      it('resets touch state after a cancelled gesture', () => {
-        vi.useFakeTimers();
-        const handleLinkClick = vi.fn();
-        render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
-
-        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
-        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
-        fireEvent.pointerCancel(link, { pointerType: 'touch' });
-        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
-        fireEvent.pointerUp(link, { pointerType: 'touch' });
-        fireEvent.click(link);
+        fireEvent.click(link, { detail: 0 });
 
         expect(handleLinkClick).toHaveBeenCalledWith('https://example.com/long/path', expect.any(Object));
       });
 
       it('keeps a normal touch tap as link navigation', () => {
-        vi.useFakeTimers();
         const handleLinkClick = vi.fn();
         render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
 
-        const link = screen.getByRole('link', { name: 'https://example.com/long/path' });
+        const link = screen.getByRole('link');
         fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
         fireEvent.pointerUp(link, { pointerType: 'touch' });
         fireEvent.click(link);
 
         expect(handleLinkClick).toHaveBeenCalledWith('https://example.com/long/path', expect.any(Object));
-        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
       });
 
       it('compacts raw URLs in articles', () => {

@@ -37,6 +37,9 @@ import { PostTextLink } from './PostTextLink';
  * - Compact URL detection and linking with full-value tooltips
  * - Content truncation with in-place "Show more" on non-post pages
  *
+ * Compacted URLs render a tooltip, so this needs a `TooltipProvider` ancestor;
+ * the app-wide one in `src/app/layout.tsx` covers every current caller.
+ *
  * Memoization prevents unnecessary re-renders when TTL refreshes update IndexedDB records
  * without changes to the actual post content.
  */

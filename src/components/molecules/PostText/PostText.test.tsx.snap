@@ -142,8 +142,8 @@ exports[`PostText - Snapshots > matches snapshot for autolinked URL 1`] = `
   <p>
     Check out 
     <a
-      aria-label="https://example.com"
-      class="inline cursor-pointer text-brand transition-colors hover:text-brand/80"
+      aria-label="https://example.com/"
+      class="cursor-pointer text-brand transition-colors hover:text-brand/80"
       data-state="closed"
       href="https://example.com"
       rel="noopener noreferrer"
@@ -166,7 +166,7 @@ exports[`PostText - Snapshots > matches snapshot for autolinked URL with path an
     Check out 
     <a
       aria-label="https://example.com/path?query=value"
-      class="inline cursor-pointer text-brand transition-colors hover:text-brand/80"
+      class="cursor-pointer text-brand transition-colors hover:text-brand/80"
       data-state="closed"
       href="https://example.com/path?query=value"
       rel="noopener noreferrer"
@@ -293,8 +293,8 @@ exports[`PostText - Snapshots > matches snapshot for combined markdown elements 
     </em>
      text with a link 
     <a
-      aria-label="https://example.com"
-      class="inline cursor-pointer text-brand transition-colors hover:text-brand/80"
+      aria-label="https://example.com/"
+      class="cursor-pointer text-brand transition-colors hover:text-brand/80"
       data-state="closed"
       href="https://example.com"
       rel="noopener noreferrer"
@@ -395,7 +395,7 @@ exports[`PostText - Snapshots > matches snapshot for email autolink 1`] = `
   <p>
     Contact 
     <a
-      class="inline cursor-pointer text-brand transition-colors hover:text-brand/80"
+      class="cursor-pointer text-brand transition-colors hover:text-brand/80"
       href="mailto:user@example.com"
       rel="noopener noreferrer"
       target="_blank"
@@ -424,8 +424,8 @@ exports[`PostText - Snapshots > matches snapshot for hashtag alongside autolink 
   <p>
     Visit 
     <a
-      aria-label="https://example.com"
-      class="inline cursor-pointer text-brand transition-colors hover:text-brand/80"
+      aria-label="https://example.com/"
+      class="cursor-pointer text-brand transition-colors hover:text-brand/80"
       data-state="closed"
       href="https://example.com"
       rel="noopener noreferrer"
@@ -664,8 +664,8 @@ exports[`PostText - Snapshots > matches snapshot for mention alongside autolink 
   <p>
     Check pk:o1gg96ewuojmopcjbz8895478wench6tjmjh6kiwgbwycb35ory and 
     <a
-      aria-label="https://example.com"
-      class="inline cursor-pointer text-brand transition-colors hover:text-brand/80"
+      aria-label="https://example.com/"
+      class="cursor-pointer text-brand transition-colors hover:text-brand/80"
       data-state="closed"
       href="https://example.com"
       rel="noopener noreferrer"
@@ -1070,8 +1070,8 @@ exports[`PostText - Snapshots > matches snapshot for www autolink 1`] = `
   <p>
     Visit 
     <a
-      aria-label="www.example.com"
-      class="inline cursor-pointer text-brand transition-colors hover:text-brand/80"
+      aria-label="http://www.example.com/"
+      class="cursor-pointer text-brand transition-colors hover:text-brand/80"
       data-state="closed"
       href="http://www.example.com"
       rel="noopener noreferrer"

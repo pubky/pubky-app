@@ -1,141 +1,72 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { cn } from '@/libs/utils/utils';
-import { POST_LINK_LONG_PRESS_DELAY_MS } from './PostText.constants';
 import type { RemarkAnchorProps } from './PostText.types';
-import { getCompactUrlText } from './PostText.utils';
+import { extractTextFromChildren, getCompactUrl } from './PostText.utils';
 
 interface PostTextLinkProps extends RemarkAnchorProps {
-  compactUrl?: boolean;
+  compactUrl: boolean;
   onLinkClick?: (url: string, event: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
-const TOUCH_MOVE_TOLERANCE_PX = 10;
-
+/**
+ * Renders a link inside post or article content.
+ *
+ * A URL the author pasted raw is shown as its host alone, so a long address cannot
+ * dominate the post. The full destination stays available three ways, none of which
+ * this component has to implement itself: it is the anchor's accessible name, a
+ * tooltip shows it on hover and on keyboard focus, and the browser's own long-press
+ * menu — which additionally offers Copy Link and Open in New Tab — is left intact.
+ *
+ * Compacting a URL renders a tooltip, so this needs a `TooltipProvider` above it.
+ * The app-wide one in `src/app/layout.tsx` covers every current caller.
+ */
 export function PostTextLink({
   children,
   className,
-  compactUrl = true,
+  compactUrl,
   onLinkClick,
   node: _node,
   ref: _ref,
   ...rest
 }: PostTextLinkProps) {
-  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const isTouchInteractionRef = useRef(false);
-  const shouldSuppressClickRef = useRef(false);
-  const displayText = typeof children === 'string' ? children : null;
-  const compactUrlText = compactUrl && displayText ? getCompactUrlText(displayText, rest.href) : null;
-
-  useEffect(
-    () => () => {
-      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    },
-    [],
-  );
-
-  const clearLongPressTimer = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  const resetTouchInteraction = () => {
-    touchStartRef.current = null;
-    isTouchInteractionRef.current = false;
-    shouldSuppressClickRef.current = false;
-  };
+  const compacted = compactUrl ? getCompactUrl(extractTextFromChildren(children), rest.href) : null;
 
   const link = (
     <a
       {...rest}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={compactUrlText ? displayText || undefined : rest['aria-label']}
-      style={compactUrlText ? { ...rest.style, WebkitTouchCallout: 'none' } : rest.style}
-      onPointerDown={(event) => {
-        if (!compactUrlText || event.pointerType !== 'touch') {
-          clearLongPressTimer();
-          resetTouchInteraction();
-          return;
-        }
-
-        clearLongPressTimer();
-        isTouchInteractionRef.current = true;
-        shouldSuppressClickRef.current = false;
-        touchStartRef.current = { x: event.clientX, y: event.clientY };
-        longPressTimerRef.current = setTimeout(() => {
-          longPressTimerRef.current = null;
-          shouldSuppressClickRef.current = true;
-          setIsTooltipOpen(true);
-        }, POST_LINK_LONG_PRESS_DELAY_MS);
-      }}
-      onPointerMove={(event) => {
-        if (event.pointerType !== 'touch' || !touchStartRef.current) return;
-
-        const movedX = Math.abs(event.clientX - touchStartRef.current.x);
-        const movedY = Math.abs(event.clientY - touchStartRef.current.y);
-
-        if (movedX > TOUCH_MOVE_TOLERANCE_PX || movedY > TOUCH_MOVE_TOLERANCE_PX) {
-          clearLongPressTimer();
-          touchStartRef.current = null;
-          shouldSuppressClickRef.current = true;
-        }
-      }}
-      onPointerLeave={(event) => {
-        if (event.pointerType !== 'touch' || !touchStartRef.current) return;
-
-        clearLongPressTimer();
-        touchStartRef.current = null;
-        shouldSuppressClickRef.current = true;
-      }}
-      onPointerUp={() => {
-        clearLongPressTimer();
-        touchStartRef.current = null;
-      }}
-      onPointerCancel={() => {
-        clearLongPressTimer();
-        resetTouchInteraction();
-        setIsTooltipOpen(false);
-      }}
-      onContextMenu={(event) => {
-        if (isTouchInteractionRef.current) event.preventDefault();
-      }}
+      // Set explicitly rather than left to the spread: the visible text is only a
+      // host, so the accessible name has to carry the destination it stands for.
+      aria-label={compacted ? compacted.fullUrl : rest['aria-label']}
       onClick={(event) => {
         event.stopPropagation();
-
-        if (shouldSuppressClickRef.current) {
-          event.preventDefault();
-          resetTouchInteraction();
-          return;
-        }
-
-        resetTouchInteraction();
-        setIsTooltipOpen(false);
 
         if (onLinkClick && rest.href) {
           onLinkClick(rest.href, event);
         }
       }}
-      className={cn(className, 'inline cursor-pointer text-brand transition-colors hover:text-brand/80')}
+      className={cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
     >
-      {compactUrlText || children}
+      {compacted ? compacted.label : children}
     </a>
   );
 
-  if (!compactUrlText || !displayText) return link;
+  if (!compacted) return link;
 
   return (
-    <Tooltip open={isTooltipOpen} onOpenChange={setIsTooltipOpen}>
+    <Tooltip>
       <TooltipTrigger asChild>{link}</TooltipTrigger>
       <TooltipPortal>
-        <TooltipContent className="bg-accent font-medium wrap-anywhere text-foreground [&_svg]:fill-accent">
-          {displayText}
+        {/*
+          Hidden on touch, where the browser's own long-press menu already shows the
+          full URL. It would otherwise flash open on every tap: Radix opens on focus,
+          and on touch the focus lands after its pointer-down guard has been cleared.
+        */}
+        <TooltipContent className="bg-accent font-medium wrap-anywhere text-foreground pointer-coarse:hidden [&_svg]:fill-accent">
+          {compacted.fullUrl}
         </TooltipContent>
       </TooltipPortal>
     </Tooltip>

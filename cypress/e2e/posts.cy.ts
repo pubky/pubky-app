@@ -178,7 +178,10 @@ describe('posts', () => {
   it('can post with embedded link', () => {
     const link = 'https://www.youtube.com/watch?v=989-7xsRLR4';
     const embedId = '989-7xsRLR4';
-    const postContent = `I can post with an embedded link! ${link} ${Date.now()}`;
+    // A raw URL renders as its host alone, so the text used to find the post again
+    // must be the part of the content that is shown verbatim.
+    const marker = `I can post with an embedded link! ${Date.now()}`;
+    const postContent = `${marker} ${link}`;
 
     cy.get('[data-cy="home-post-input"]').within(() => {
       cy.get('textarea').click().type(postContent);
@@ -189,8 +192,13 @@ describe('posts', () => {
       cy.get('[data-cy="post-input-action-bar-post"]').click();
     });
 
-    cy.findFirstPostInFeedFiltered(postContent, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
-      cy.get('[data-cy="post-text"]').should('contain.text', postContent);
+    cy.findFirstPostInFeedFiltered(marker, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.get('[data-cy="post-text"]').should('contain.text', marker);
+      // Compacted to the host, with the full destination kept on the anchor itself.
+      cy.get('[data-cy="post-text"] a')
+        .should('have.text', 'youtube.com')
+        .and('have.attr', 'href', link)
+        .and('have.attr', 'aria-label', link);
       cy.get('iframe[data-testid="YouTube video player"]')
         .should('be.visible')
         .should('have.attr', 'src')
