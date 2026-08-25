@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
@@ -161,6 +162,22 @@ export async function preloadImages(urls: readonly string[]) {
       });
       await image.decode();
     }),
+  );
+}
+
+/** `next/dynamic` can take several seconds on CI. */
+const MARKDOWN_EDITOR_READY_TIMEOUT_MS = 15_000;
+
+/** Wait until the article editor chunk has mounted (textarea is in the DOM). */
+export async function waitForMarkdownEditorReady(root: ParentNode = document) {
+  await vi.waitFor(
+    () => {
+      const editor = root.querySelector('[data-testid="markdown-textarea"]');
+      if (!editor) {
+        throw new Error('Markdown editor did not hydrate');
+      }
+    },
+    { timeout: MARKDOWN_EDITOR_READY_TIMEOUT_MS },
   );
 }
 

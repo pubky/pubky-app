@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { preloadImages, renderForVRT, VRT_ROOT_TESTID, waitForMarkdownEditorReady } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -482,11 +482,7 @@ async function waitForArticleComposer(screen: Awaited<ReturnType<typeof renderFo
   await expect.element(screen.getByPlaceholder('Article Title')).toBeVisible();
   await expect.element(screen.getByText('Add image')).toBeVisible();
   await expect.element(screen.getByText('Publish')).toBeVisible();
-  // MarkdownEditor is a `next/dynamic` island; wait until the rich-text
-  // surface has hydrated so the screenshot is not the skeleton.
-  await vi.waitFor(() => {
-    expect(document.querySelector('[contenteditable="true"]')).toBeTruthy();
-  });
+  await waitForMarkdownEditorReady();
 }
 
 describe('Home (global feed) — visual regression', () => {

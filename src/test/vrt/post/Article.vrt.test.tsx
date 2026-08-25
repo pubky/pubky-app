@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { preloadImages, renderForVRT, VRT_ROOT_TESTID, waitForMarkdownEditorReady } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -547,10 +547,8 @@ async function renderEditArticle(viewport: { width: number; height: number }) {
   await expect.element(screen.getByTestId('dialog-content')).toBeVisible();
   await expect.element(screen.getByPlaceholder('Article Title')).toHaveValue(f.articleTitle);
   await expect.element(screen.getByAltText('Image preview')).toBeVisible();
-  await vi.waitFor(() => {
-    const dialog = document.querySelector('[data-testid="dialog-content"]');
-    expect(dialog?.querySelector('[contenteditable="true"]')).toBeTruthy();
-  });
+  const dialog = document.querySelector('[data-testid="dialog-content"]') ?? document;
+  await waitForMarkdownEditorReady(dialog);
   await waitForVisibleCollectionsNew();
   return screen;
 }
