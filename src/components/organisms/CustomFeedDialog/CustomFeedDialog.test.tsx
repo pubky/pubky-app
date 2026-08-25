@@ -401,6 +401,17 @@ describe('CustomFeedDialog', () => {
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-open', 'true');
   });
 
+  it('shows a stored reach this dialog cannot offer as a disabled option', () => {
+    // Followers has no home-store equivalent, so it is not an option — without
+    // this the Select would fall back to its placeholder and read as unset.
+    const feed = createMockFeed({ reach: PubkyAppFeedReach.Followers });
+
+    render(<CustomFeedDialog mode="edit" feed={feed} open />);
+
+    const unsupported = screen.getByText('Unsupported (set elsewhere)');
+    expect(unsupported).toBeInTheDocument();
+  });
+
   it('renders dialog title with translated title for create', () => {
     render(
       <CustomFeedDialog mode="create">

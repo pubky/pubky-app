@@ -1,5 +1,6 @@
 import type { IconNode } from 'lucide-react';
 import type { IconName } from 'lucide-react/dynamic.js';
+import { LUCIDE_ICON_NAME_PATTERN } from '@/config/feed';
 import { Logger } from '@/libs/logger/logger';
 
 // The full Lucide catalog ('lucide-react/dynamic.js', ~1960 dynamic-import
@@ -7,8 +8,6 @@ import { Logger } from '@/libs/logger/logger';
 // most a handful of icons do not ship it in their initial bundle. Sync
 // callers can therefore only check a name's *shape*; real validation happens
 // against the catalog once it is resident.
-export const LUCIDE_ICON_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 /**
  * Normalizes a stored icon name to the form the catalog is keyed by, or `null`
  * when it cannot be a Lucide name at all.
@@ -80,8 +79,17 @@ export function subscribeToLucideIcons(listener: () => void): () => void {
 export function getLucideIconState(name: IconName): LucideIconState | undefined {
   const state = iconStates.get(name);
   if (state) return state;
-  if (residentCatalog && !(name in residentCatalog.dynamicIconImports)) return UNKNOWN_ICON_STATE;
+  if (residentCatalog && !hasCatalogEntry(residentCatalog, name)) return UNKNOWN_ICON_STATE;
   return undefined;
+}
+
+/**
+ * Own-property check only: `'constructor' in dynamicIconImports` is true and
+ * resolves to `Object`, whose "module" has no `__iconNode` — rendering that
+ * would throw. Feed icons are peer-controlled, so this is reachable input.
+ */
+function hasCatalogEntry(catalog: LucideCatalog, name: IconName): boolean {
+  return Object.hasOwn(catalog.dynamicIconImports, name);
 }
 
 /**
@@ -100,8 +108,7 @@ export function requestLucideIcon(name: IconName): void {
   void (async () => {
     try {
       const catalog = await loadLucideCatalog();
-      const importIcon = catalog.dynamicIconImports[name];
-      if (!importIcon) {
+      if (!hasCatalogEntry(catalog, name)) {
         // The resident catalog answers this name from now on — drop the entry
         // so peer-controlled garbage names leave nothing behind.
         iconStates.delete(name);
@@ -109,15 +116,46 @@ export function requestLucideIcon(name: IconName): void {
         return;
       }
 
-      const iconModule = await importIcon();
+      const iconModule = await catalog.dynamicIconImports[name]();
+      if (!iconModule?.__iconNode) {
+        iconStates.delete(name);
+        notifyIconStateChange();
+        return;
+      }
+
       iconStates.set(name, { status: 'loaded', node: iconModule.__iconNode });
       notifyIconStateChange();
     } catch (error: unknown) {
       Logger.warn('Failed to load Lucide icon chunk', { name, error });
       iconStates.set(name, { status: 'error' });
       notifyIconStateChange();
+      listenForReconnect();
     }
   })();
+}
+
+let reconnectListenerAttached = false;
+
+/**
+ * The realistic cause of a failed chunk is a dropped connection, and nothing
+ * re-requests an icon that is already mounted. Retrying every failed name once
+ * the browser reports it is back online heals them without polling — bounded,
+ * because a retry that fails again simply re-arms this same listener.
+ */
+function listenForReconnect(): void {
+  if (reconnectListenerAttached || typeof window === 'undefined') return;
+  reconnectListenerAttached = true;
+
+  window.addEventListener(
+    'online',
+    () => {
+      reconnectListenerAttached = false;
+      for (const [name, state] of iconStates) {
+        if (state.status === 'error') requestLucideIcon(name);
+      }
+    },
+    { once: true },
+  );
 }
 
 /** Fire-and-forget warmup; silently skips names that cannot be Lucide icons. */
@@ -132,7 +170,11 @@ export interface LucidePickerIcon {
   name: IconName;
   /** Deprecated alias names resolving to this glyph — searchable, not shown. */
   aliases: readonly IconName[];
-  /** Search synonyms from lucide's tag metadata ('delete' finds trash icons). */
+  /**
+   * Search synonyms from lucide's tag metadata ('delete' finds trash icons),
+   * stored hyphenated so a multi-word query ('air conditioner', normalized to
+   * 'air-conditioner' by the picker) matches the same way a single word does.
+   */
   tags: readonly string[];
 }
 
@@ -162,11 +204,13 @@ export function loadLucidePickerIcons(): Promise<readonly LucidePickerIcon[]> {
       }
 
       return catalog.iconNames
-        .filter((name) => !(name in LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL))
+        .filter((name) => !Object.hasOwn(LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL, name))
         .map((name) => ({
           name,
           aliases: aliasesByCanonical.get(name) ?? [],
-          tags: LUCIDE_ICON_TAGS[name] ?? [],
+          tags: (Object.hasOwn(LUCIDE_ICON_TAGS, name) ? (LUCIDE_ICON_TAGS[name] ?? []) : []).map((tag) =>
+            tag.replace(/\s+/g, '-'),
+          ),
         }));
     });
     pickerIconsLoad.catch(() => {

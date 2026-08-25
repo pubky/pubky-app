@@ -18,6 +18,7 @@ import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useControlledState } from '@/hooks/useControlledState/useControlledState';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { Logger } from '@/libs/logger/logger';
 import {
   loadLucidePickerIcons,
   type LucidePickerIcon,
@@ -75,6 +76,7 @@ export function IconPickerDialog({
   const [query, setQuery] = useState('');
   const [renderedCount, setRenderedCount] = useState(APPEND_BATCH_SIZE);
   const [loadedPickerIcons, setLoadedPickerIcons] = useState<readonly LucidePickerIcon[] | null>(null);
+  const [catalogFailed, setCatalogFailed] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,7 +96,7 @@ export function IconPickerDialog({
         .filter((name) => name !== null)
         .map((name) => ({ name, aliases: [], tags: [] }))
     : (loadedPickerIcons ?? []);
-  const isCatalogLoading = !icons && loadedPickerIcons === null;
+  const isCatalogLoading = !icons && loadedPickerIcons === null && !catalogFailed;
   // Search matches the canonical name, its deprecated aliases ('home' finds
   // 'house'), and lucide's synonym tags ('delete' finds the trash icons);
   // name matches rank first so exact vocabulary lands above tag hits.
@@ -120,9 +122,20 @@ export function IconPickerDialog({
     if (!resolvedOpen || icons || loadedPickerIcons) return;
 
     let cancelled = false;
-    void loadLucidePickerIcons().then((entries) => {
-      if (!cancelled) setLoadedPickerIcons(entries);
-    });
+    setCatalogFailed(false);
+    // Both branches must be handled here: the loader attaches its own catch to
+    // the cached promise, but this `.then` derives a new one — leaving it
+    // unhandled would surface as an unhandled rejection and strand the grid in
+    // its loading state, since the effect's deps never change again.
+    loadLucidePickerIcons().then(
+      (entries) => {
+        if (!cancelled) setLoadedPickerIcons(entries);
+      },
+      (error: unknown) => {
+        Logger.warn('Failed to load the Lucide icon catalog', { error });
+        if (!cancelled) setCatalogFailed(true);
+      },
+    );
     return () => {
       cancelled = true;
     };
@@ -143,6 +156,8 @@ export function IconPickerDialog({
     if (!nextOpen) {
       setQuery('');
       setRenderedCount(APPEND_BATCH_SIZE);
+      // The loader drops its cached promise on failure, so reopening retries.
+      setCatalogFailed(false);
     }
     setOpen(nextOpen);
   };

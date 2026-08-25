@@ -26,7 +26,10 @@ import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
 // the selected tab shows icon + label, the rest collapse to icon-only cells.
 // At lg+ every tab is icon + label and shares the row evenly.
 const FEED_TAB_CLASS = 'relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40';
-const FEED_TAB_ACTIVE_WIDTH_CLASS = 'flex-none lg:flex-1';
+// Below lg the active tab hugs its label, but a feed name has no length limit
+// (specs does not cap it), so cap the tab or one long name pushes every other
+// tab off-screen; the label's `truncate` then does its job.
+const FEED_TAB_ACTIVE_WIDTH_CLASS = 'max-w-[60%] flex-none lg:max-w-none lg:flex-1';
 const FEED_TAB_INACTIVE_WIDTH_CLASS = 'min-w-12 flex-1';
 // Symmetric horizontal padding keeps every label centered; the active padding
 // also reserves the zone the edit pencil overlays on custom feed tabs.
@@ -74,12 +77,16 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
     isAuthenticated ? cachedFeeds : [],
   );
 
-  // A session that ends while the edit dialog is open would otherwise leave it
-  // mounted over a tab bar that no longer lists the feed, and saving would fail
-  // with a generic error instead of the sign-in prompt.
+  // `editingFeed` is a snapshot taken when the pencil was clicked. Drop it when
+  // the session ends or when a background sync removes that feed, so the dialog
+  // cannot outlive its record and fail the save with a generic error.
   useEffect(() => {
-    if (!isAuthenticated) setEditingFeed(null);
-  }, [isAuthenticated]);
+    if (!isAuthenticated) {
+      setEditingFeed(null);
+      return;
+    }
+    setEditingFeed((current) => (current && customFeeds.some((feed) => feed.id === current.id) ? current : null));
+  }, [isAuthenticated, customFeeds]);
 
   // Warm the icon chunk cache as soon as feed data lands so tab icons paint
   // without a visible swap.

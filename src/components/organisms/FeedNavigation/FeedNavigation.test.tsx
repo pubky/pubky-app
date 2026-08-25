@@ -453,6 +453,29 @@ describe('FeedNavigation', () => {
     expect(editDialog).toHaveAttribute('data-open', 'true');
   });
 
+  it('closes the edit dialog when a background sync removes the feed', () => {
+    mockCustomFeeds = [createMockFeed({ id: 'feed-gone', name: 'Doomed Feed' })];
+    const { rerender } = render(<FeedNavigation />);
+
+    fireEvent.click(screen.getByLabelText('Edit Doomed Feed'));
+    expect(screen.getByTestId('custom-feed-dialog-edit')).toHaveAttribute('data-feed-id', 'feed-gone');
+
+    // The feed disappears from the live query — the snapshot must not outlive it.
+    mockCustomFeeds = [];
+    rerender(<FeedNavigation />);
+
+    expect(screen.queryByTestId('custom-feed-dialog-edit')).not.toBeInTheDocument();
+  });
+
+  it('caps the active tab width so one long feed name cannot push the others off-screen', () => {
+    mockCustomFeeds = [createMockFeed({ id: 'feed-long', name: 'A'.repeat(200) })];
+    mockUsePathname.mockReturnValue('/feed/feed-long');
+
+    render(<FeedNavigation />);
+
+    expect(getLink('/feed/feed-long')?.parentElement).toHaveClass('max-w-[60%]', 'lg:max-w-none');
+  });
+
   it('shows the pencil on mobile only for the active custom feed', () => {
     mockCustomFeeds = [
       createMockFeed({ id: 'feed-active', name: 'Active Feed' }),

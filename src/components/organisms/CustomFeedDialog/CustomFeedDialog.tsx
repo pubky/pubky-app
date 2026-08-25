@@ -75,6 +75,9 @@ function parseReachValue(value: string): CustomFeedFormReach {
   return value === TAGGED_AS_FILTER_KEY ? TAGGED_AS_FILTER_KEY : (Number(value) as PubkyAppFeedReach);
 }
 
+/** Shown for a stored reach/content this dialog cannot offer as a choice. */
+const UNSUPPORTED_OPTION_LABEL = 'Unsupported (set elsewhere)';
+
 const REACH_OPTION_VALUES: CustomFeedFormReach[] = [
   PubkyAppFeedReach.Wot,
   TAGGED_AS_FILTER_KEY,
@@ -200,6 +203,13 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
     layout === PubkyAppFeedLayout.Visual
       ? allContentFilters.filter((filter) => isVisualCustomFeedContentSupported(filter.value))
       : allContentFilters;
+
+  // A feed authored elsewhere can hold a reach or content this dialog has no
+  // option for (PubkyAppFeedReach.Followers, PubkyAppPostKind.Unknown). Show
+  // the value as a disabled entry so the Select reflects what is stored rather
+  // than falling back to its placeholder and reading as "nothing selected".
+  const unsupportedReach = reachFilters.some((filter) => filter.value === reach) ? null : reach;
+  const unsupportedContent = contentFilters.some((filter) => filter.value === content) ? null : content;
 
   // Catches a stored feed whose layout/content pair another client left in a
   // combination this dialog cannot represent; user-driven layout changes are
@@ -358,6 +368,11 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                   </SelectTrigger>
 
                   <SelectContent>
+                    {unsupportedReach !== null && (
+                      <SelectItem disabled value={String(unsupportedReach)}>
+                        {UNSUPPORTED_OPTION_LABEL}
+                      </SelectItem>
+                    )}
                     {reachFilters.map((r) => (
                       <SelectItem key={r.value} value={String(r.value)}>
                         <r.icon /> {r.label}
@@ -445,6 +460,11 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                   </SelectTrigger>
 
                   <SelectContent>
+                    {unsupportedContent !== null && (
+                      <SelectItem disabled value={String(unsupportedContent)}>
+                        {UNSUPPORTED_OPTION_LABEL}
+                      </SelectItem>
+                    )}
                     {contentFilters.map((r) => (
                       <SelectItem key={r.value} value={String(r.value)}>
                         <r.icon /> {r.label}

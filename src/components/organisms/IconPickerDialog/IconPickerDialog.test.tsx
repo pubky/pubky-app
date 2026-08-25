@@ -126,6 +126,18 @@ describe('IconPickerDialog', () => {
     await waitFor(() => expect(screen.getByTestId('icon-picker-option-house')).toBeInTheDocument());
   });
 
+  it('surfaces a failed catalog load instead of hanging on the loading state', async () => {
+    const lucide = await import('@/libs/lucide/lucideIcons');
+    const spy = vi.spyOn(lucide, 'loadLucidePickerIcons').mockRejectedValue(new Error('chunk 404'));
+
+    render(<IconPickerDialog open onSelect={() => {}} />);
+
+    await waitFor(() => expect(screen.getByTestId('icon-picker-empty')).toBeInTheDocument());
+    expect(screen.queryByTestId('icon-picker-loading')).not.toBeInTheDocument();
+
+    spy.mockRestore();
+  });
+
   it('matches vocabulary searches through lucide tags', async () => {
     render(<IconPickerDialog open onSelect={() => {}} />);
     await waitForCatalog();

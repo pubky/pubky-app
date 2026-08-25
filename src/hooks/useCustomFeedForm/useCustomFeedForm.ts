@@ -63,6 +63,11 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
   // Re-seed only while the dialog is closed: a background sync may have changed
   // the stored feed since it was last opened, but re-seeding an *open* dialog
   // would throw away whatever the user is in the middle of typing.
+  //
+  // This matters for the create dialog, which stays mounted behind its trigger
+  // and toggles `open`. The edit dialog is mounted per open (FeedNavigation
+  // renders it only while a feed is being edited), so it seeds from
+  // `defaultValues` and this effect never runs for it.
   useEffect(() => {
     if (open) return;
     form.reset(feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults);

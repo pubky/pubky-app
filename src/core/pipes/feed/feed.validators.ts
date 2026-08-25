@@ -6,7 +6,7 @@ import {
   type TFeedPersistDeleteParams,
   type TFeedPersistParams,
 } from '@/application/feed/feed.types';
-import { DEFAULT_CUSTOM_FEED_ICON, isProfileTagReachSupported } from '@/config/feed';
+import { DEFAULT_CUSTOM_FEED_ICON, isProfileTagReachSupported, LUCIDE_ICON_NAME_PATTERN } from '@/config/feed';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -16,11 +16,11 @@ import { normalizeTagList } from './feed.utils';
 const MIN_TAGS = 1;
 const MAX_TAGS = validationLimits.feedTagsMaxCount;
 const MAX_ICON_LENGTH = validationLimits.feedIconMaxLength;
-// Mirrors the charset specs' createFeed enforces. Specs lowercases before
-// checking, so we normalize the same way before validating and storing —
-// otherwise a name like `Activity` would round-trip in a case the UI's
-// `toLucideIconName` cannot resolve, and the tab would show the fallback.
-const ICON_CHARSET = /^[a-z0-9-]+$/;
+// The stored icon must satisfy BOTH specs' charset and the UI resolver, so we
+// validate against the shared name pattern rather than specs' looser charset:
+// `-house` or `a--b` would pass specs and then render as the fallback forever.
+// Case and whitespace are normalized (specs lowercases too) so a name another
+// client wrote as `Activity` still resolves.
 
 export class FeedValidators {
   private constructor() {}
@@ -44,7 +44,7 @@ export class FeedValidators {
   static sanitizeIcon(icon: string | undefined | null): string {
     const normalized = icon?.trim().toLowerCase();
 
-    if (!normalized || normalized.length > MAX_ICON_LENGTH || !ICON_CHARSET.test(normalized)) {
+    if (!normalized || normalized.length > MAX_ICON_LENGTH || !LUCIDE_ICON_NAME_PATTERN.test(normalized)) {
       return DEFAULT_CUSTOM_FEED_ICON;
     }
 

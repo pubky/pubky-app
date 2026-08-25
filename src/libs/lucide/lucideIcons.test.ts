@@ -112,5 +112,10 @@ describe('lucideIcons', () => {
     // Synonym tags power vocabulary search ('delete' finds the trash icons).
     const trash = pickerIcons.find((icon) => icon.name === 'trash-2');
     expect(trash?.tags).toContain('delete');
+    // Multi-word tags are hyphenated to match the picker's normalized query,
+    // which turns 'air conditioner' into 'air-conditioner'.
+    const airVent = pickerIcons.find((icon) => icon.tags.some((tag) => tag.includes('air-condition')));
+    expect(airVent).toBeDefined();
+    expect(pickerIcons.every((icon) => icon.tags.every((tag) => !tag.includes(' ')))).toBe(true);
   });
 });
