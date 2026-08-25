@@ -2,8 +2,8 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -11,25 +11,42 @@ import { Header } from '@/organisms/Header/Header';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
 import { Home } from '@/templates/Feed/Home/Home';
+import { Fab } from '@/molecules/Fab/Fab';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
 // the first time the mocked module is consumed. The fixture modules are pure
 // data so the per-factory cost is negligible.
+//
+// Default Home screenshots keep `VRT_FEED_POSTS` only. Article-in-feed tests
+// prepend `VRT_ARTICLE` via this flag so existing baselines stay put.
+const feedState = vi.hoisted(() => ({
+  mode: 'default' as 'default' | 'article',
+}));
+
 const fixtures = vi.hoisted(async () => {
-  const [postsModule, profilesModule, whoToFollowModule, navModule, mockApp] = await Promise.all([
+  const [postsModule, articleModule, profilesModule, whoToFollowModule, navModule, mockApp] = await Promise.all([
     import('@/test/fixtures/feed/posts'),
+    import('@/test/fixtures/post/article'),
     import('@/test/fixtures/feed/profiles'),
     import('@/test/fixtures/feed/whoToFollow'),
     import('@/test/fixtures/feed/feedNavigation'),
     import('@/test/mocks/feedApplication'),
   ]);
   const postsByCompositeId = new Map(postsModule.VRT_FEED_POSTS.map((post) => [post.compositeId, post]));
+  postsByCompositeId.set(articleModule.VRT_ARTICLE.compositeId, articleModule.VRT_ARTICLE);
   const orderedCompositeIds = postsModule.VRT_FEED_POSTS.map((post) => post.compositeId);
+  const articleFeedPostIds = [articleModule.VRT_ARTICLE.compositeId, ...orderedCompositeIds];
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   return {
     postsByCompositeId,
     orderedCompositeIds,
+    articleFeedPostIds,
+    articleTitle: articleModule.VRT_ARTICLE_TITLE,
+    articleCoverUrl: articleModule.VRT_ARTICLE_COVER_URL,
+    articleCoverName: articleModule.VRT_ARTICLE_COVER_NAME,
+    articleCoverByUri: new Map([[articleModule.VRT_ARTICLE_COVER_URI, articleModule.VRT_ARTICLE_COVER_METADATA]]),
+    articleCoverUrls: { [articleModule.VRT_ARTICLE_COVER_FILE_ID]: articleModule.VRT_ARTICLE_COVER_URL },
     profiles: profilesModule.VRT_AUTHOR_PROFILES,
     viewerPubky,
     whoToFollow: whoToFollowModule.VRT_WHO_TO_FOLLOW,
@@ -95,6 +112,7 @@ vi.mock('@/stores/auth/auth.store', async () => {
       hasProfile: true,
       hasHydrated: true,
       isRestoringSession: false,
+      setShowSignInDialog: vi.fn(),
       selectCurrentUserPubky: () => f.viewerPubky,
     }),
   };
@@ -141,8 +159,7 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
   const f = await fixtures;
-  const result = {
-    postIds: f.orderedCompositeIds,
+  const shared = {
     loading: false,
     loadingMore: false,
     error: null,
@@ -152,7 +169,11 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
     prependPosts: async () => {},
     removePosts: () => {},
   };
-  return { useStreamPagination: () => result };
+  const defaultResult = { ...shared, postIds: f.orderedCompositeIds };
+  const articleResult = { ...shared, postIds: f.articleFeedPostIds };
+  return {
+    useStreamPagination: () => (feedState.mode === 'article' ? articleResult : defaultResult),
+  };
 });
 
 vi.mock('@/hooks/useUserStream/useUserStream', async () => {
@@ -403,9 +424,27 @@ vi.mock('@/application/feed/feed', async () => {
   return { FeedApplication: f.mockFeedApplication };
 });
 
-vi.mock('@/controllers/file/file', () => ({
-  FileController: {
-    getAvatarUrl: (userDetails: { image: string | null } | null | undefined) => userDetails?.image ?? null,
+vi.mock('@/controllers/file/file', async () => {
+  const f = await fixtures;
+  return {
+    FileController: {
+      getAvatarUrl: (userDetails: { image: string | null } | null | undefined) => userDetails?.image ?? null,
+      getFileUrl: ({ fileId }: { fileId: string }) => f.articleCoverUrls[fileId] ?? null,
+      getMetadata: async ({ fileAttachments }: { fileAttachments: string[] }) =>
+        fileAttachments.flatMap((uri) => {
+          const meta = f.articleCoverByUri.get(uri);
+          return meta ? [meta] : [];
+        }),
+      fetchFiles: async () => [],
+    },
+  };
+});
+
+vi.mock('@/controllers/search/search', () => ({
+  SearchController: {
+    fetchUsersById: async () => [],
+    getUsersByName: async () => [],
+    getTagsByPrefix: async () => [],
   },
 }));
 
@@ -424,13 +463,37 @@ function HomeWithLayout() {
   );
 }
 
+function HomeWithFab() {
+  return (
+    <>
+      <HomeWithLayout />
+      <Fab />
+    </>
+  );
+}
+
 async function waitForComposerMotion() {
   await new Promise<void>((resolve) => {
     setTimeout(resolve, 350);
   });
 }
 
+async function waitForArticleComposer(screen: Awaited<ReturnType<typeof renderForVRT>>) {
+  await expect.element(screen.getByPlaceholder('Article Title')).toBeVisible();
+  await expect.element(screen.getByText('Add image')).toBeVisible();
+  await expect.element(screen.getByText('Publish')).toBeVisible();
+  // MarkdownEditor is a `next/dynamic` island; wait until the rich-text
+  // surface has hydrated so the screenshot is not the skeleton.
+  await vi.waitFor(() => {
+    expect(document.querySelector('[contenteditable="true"]')).toBeTruthy();
+  });
+}
+
 describe('Home (global feed) — visual regression', () => {
+  beforeEach(() => {
+    feedState.mode = 'default';
+  });
+
   it('renders the global feed at desktop viewport', async () => {
     const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
     // The VRT root is the viewport-clamped wrapper added by `renderForVRT`,
@@ -462,5 +525,83 @@ describe('Home (global feed) — visual regression', () => {
     await waitForComposerMotion();
 
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-quick-reply-expanded-mobile');
+  });
+});
+
+describe('Home — article in feed — visual regression', () => {
+  beforeEach(() => {
+    feedState.mode = 'article';
+  });
+
+  async function renderHomeWithArticle(viewport: { width: number; height: number }) {
+    const f = await fixtures;
+    await preloadImages(['/pubky-logo.svg', f.articleCoverUrl]);
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport });
+    await expect.element(screen.getByText(f.articleTitle)).toBeVisible();
+    await expect.element(screen.getByAltText(f.articleCoverName)).toBeVisible();
+    return screen;
+  }
+
+  it('renders an article card at desktop viewport', async () => {
+    const screen = await renderHomeWithArticle(VRT_VIEWPORT_DESKTOP);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-article-desktop');
+  });
+
+  it('renders an article card at mobile viewport', async () => {
+    const screen = await renderHomeWithArticle(VRT_VIEWPORT_MOBILE);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-article-mobile');
+  });
+});
+
+describe('Home — creating article via feed composer — visual regression', () => {
+  beforeEach(() => {
+    feedState.mode = 'default';
+  });
+
+  async function renderHomeCreatingArticle(viewport: { width: number; height: number }) {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport });
+    await screen.getByPlaceholder("What's on your mind?").click();
+    await expect.element(screen.getByLabelText('Add article')).toBeVisible();
+    await waitForComposerMotion();
+    await screen.getByLabelText('Add article').click();
+    await waitForArticleComposer(screen);
+    await waitForComposerMotion();
+    return screen;
+  }
+
+  it('renders article mode in the feed composer at desktop viewport', async () => {
+    const screen = await renderHomeCreatingArticle(VRT_VIEWPORT_DESKTOP);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-create-article-desktop');
+  });
+
+  it('renders article mode in the feed composer at mobile viewport', async () => {
+    const screen = await renderHomeCreatingArticle(VRT_VIEWPORT_MOBILE);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-create-article-mobile');
+  });
+});
+
+describe('New article dialog — visual regression', () => {
+  beforeEach(() => {
+    feedState.mode = 'default';
+  });
+
+  async function renderNewArticleDialog(viewport: { width: number; height: number }) {
+    const screen = await renderForVRT(<HomeWithFab />, { viewport });
+    await screen.getByTestId('new-post-cta').click();
+    await expect.element(screen.getByTestId('dialog-content')).toBeVisible();
+    await screen.getByLabelText('Add article').click();
+    await waitForArticleComposer(screen);
+    await waitForComposerMotion();
+    return screen;
+  }
+
+  it('renders the new article dialog at desktop viewport', async () => {
+    const screen = await renderNewArticleDialog(VRT_VIEWPORT_DESKTOP);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('dialog-new-article-desktop');
+  });
+
+  it('renders the new article dialog at mobile viewport', async () => {
+    const screen = await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
+    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('dialog-new-article-mobile');
   });
 });

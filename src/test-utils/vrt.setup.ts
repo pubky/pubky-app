@@ -110,6 +110,22 @@ vi.mock('next/image', () => ({
   },
 }));
 
+// Dialogs portal to `document.body` in production, which sits outside the
+// `[data-testid="vrt-root"]` crop. Retarget Radix Dialog.Portal here so VRT
+// captures overlay + content without changing production Dialog.tsx.
+vi.mock('radix-ui', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('radix-ui')>();
+  const OriginalPortal = actual.Dialog.Portal;
+  function DialogPortal(props: { container?: Element | null; [key: string]: unknown }) {
+    const vrtRoot = document.querySelector<HTMLElement>('[data-testid="vrt-root"]') ?? undefined;
+    return createElement(OriginalPortal, { ...props, container: props.container ?? vrtRoot });
+  }
+  return {
+    ...actual,
+    Dialog: { ...actual.Dialog, Portal: DialogPortal },
+  };
+});
+
 // 3. Load Inter Tight from `@fontsource-variable/inter-tight` (committed npm
 //    dep; same font as the real app's `next/font/google` Inter Tight, just
 //    sourced locally so VRT has no network dependency). Vite resolves the
