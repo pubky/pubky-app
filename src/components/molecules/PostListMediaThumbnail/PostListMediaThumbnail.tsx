@@ -4,6 +4,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
 import { Video } from '@/atoms/Video/Video';
 import { usePostAttachmentsMedia } from '@/hooks/usePostAttachmentsMedia/usePostAttachmentsMedia';
+import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { cn } from '@/libs/utils/utils';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
 
@@ -21,9 +22,9 @@ export function PostListMediaThumbnail({ postId }: PostListMediaThumbnailProps) 
   const isVideoPreview = previewMedia?.type.startsWith('video') ?? false;
   const previewSrc = isVideoPreview
     ? previewMedia?.urls.main
-    : previewMedia?.type === 'image/gif'
-      ? previewMedia.urls.main
-      : (previewMedia?.urls.feed ?? previewMedia?.urls.main);
+    : previewMedia
+      ? getAttachmentPreviewUrl(previewMedia)
+      : undefined;
 
   if (!previewSrc) {
     return null;

@@ -111,13 +111,31 @@ describe('PostNormalizer', () => {
   describe('mapKindToEnum', () => {
     it.each([
       ['short', PubkyAppPostKind.Short],
+      ['SHORT', PubkyAppPostKind.Short],
+      ['0', PubkyAppPostKind.Short],
       ['long', PubkyAppPostKind.Long],
       ['LONG', PubkyAppPostKind.Long],
+      ['1', PubkyAppPostKind.Long],
       ['collection', PubkyAppPostKind.Collection],
       ['6', PubkyAppPostKind.Collection],
-      ['unknown', PubkyAppPostKind.Short], // defaults to Short
+      ['image', PubkyAppPostKind.Image],
+      ['IMAGE', PubkyAppPostKind.Image],
+      ['2', PubkyAppPostKind.Image],
+      ['video', PubkyAppPostKind.Video],
+      ['3', PubkyAppPostKind.Video],
+      ['link', PubkyAppPostKind.Link],
+      ['4', PubkyAppPostKind.Link],
+      ['file', PubkyAppPostKind.File],
+      ['5', PubkyAppPostKind.File],
     ])('should map "%s" to correct enum', (input, expected) => {
       expect(PostNormalizer.mapKindToEnum(input)).toBe(expected);
+    });
+
+    // Fails closed: Nexus can serve kinds this client doesn't know yet (an
+    // older build vs a newer spec); a silent Short fallback would make every
+    // edit of such a post rewrite its kind on the homeserver.
+    it.each([['unknown'], ['7'], [''], ['shorts']])('should throw for unrecognized kind "%s"', (input) => {
+      expect(() => PostNormalizer.mapKindToEnum(input)).toThrow('Unsupported post kind');
     });
   });
 
@@ -611,6 +629,84 @@ describe('PostNormalizer', () => {
         const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
         expect(originalPostArg.content).toBe('Original content');
         expect(originalPostArg.attachments).toEqual(['pubky://attachment1']);
+      });
+
+      describe('attachments and kind overrides', () => {
+        const storedAttachments = ['pubky://attachment1', 'pubky://attachment2'];
+
+        const setupStoredPost = (kind = 'short') => {
+          const mockPostDetails = createMockPostDetails(compositePostId, kind);
+          mockPostDetails.content = 'Original content';
+          mockPostDetails.attachments = [...storedAttachments];
+
+          vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(mockPostDetails);
+          vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
+        };
+
+        it('keeps stored attachments and kind when neither override is provided', async () => {
+          setupStoredPost();
+
+          await PostNormalizer.toEdit({
+            compositePostId,
+            content: 'Updated content',
+            currentUserPubky: TEST_PUBKY.USER_1,
+          });
+
+          const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
+          expect(originalPostArg.attachments).toEqual(storedAttachments);
+          // The WASM `kind` getter serializes enum variant names (PascalCase)
+          expect(originalPostArg.kind).toBe('Short');
+        });
+
+        it('replaces attachments while keeping the same post id and URL', async () => {
+          setupStoredPost();
+          const nextAttachments = ['pubky://next1', 'pubky://next2'];
+
+          const result = await PostNormalizer.toEdit({
+            compositePostId,
+            content: 'Updated content',
+            currentUserPubky: TEST_PUBKY.USER_1,
+            attachments: nextAttachments,
+          });
+
+          const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
+          expect(originalPostArg.attachments).toEqual(nextAttachments);
+          // The edit stays under the existing post id/URL — no new post is minted
+          expect(result.meta.id).toBe(TEST_POST_IDS.POST_1);
+          expect(result.meta.url).toBe(buildPubkyUri(TEST_PUBKY.USER_1, `posts/${TEST_POST_IDS.POST_1}`));
+        });
+
+        it.each([
+          ['an empty array', [] as string[]],
+          ['null', null],
+        ])('clears stored attachments when %s is provided', async (_, attachments) => {
+          setupStoredPost();
+
+          await PostNormalizer.toEdit({
+            compositePostId,
+            content: 'Updated content',
+            currentUserPubky: TEST_PUBKY.USER_1,
+            attachments,
+          });
+
+          const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
+          expect(originalPostArg.attachments).toBeUndefined();
+        });
+
+        it('overrides the stored kind when provided', async () => {
+          setupStoredPost('short');
+
+          await PostNormalizer.toEdit({
+            compositePostId,
+            content: 'Updated content',
+            currentUserPubky: TEST_PUBKY.USER_1,
+            attachments: ['pubky://next1'],
+            kind: PubkyAppPostKind.Image,
+          });
+
+          const originalPostArg = mockBuilder.editPost.mock.calls[0][0] as PubkyAppPost;
+          expect(originalPostArg.kind).toBe('Image');
+        });
       });
 
       it('should throw error when current user is not the author', async () => {

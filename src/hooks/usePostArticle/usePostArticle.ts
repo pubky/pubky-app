@@ -72,7 +72,11 @@ export function usePostArticle({
     let cancelled = false;
 
     const extractCoverImage = async () => {
-      if (!attachments?.length) return;
+      // An edit can remove the cover — clear previously extracted state
+      if (!attachments?.length) {
+        setCoverImage(null);
+        return;
+      }
 
       try {
         const attachment = (await FileController.getMetadata({ fileAttachments: attachments }))[0];
@@ -83,10 +87,15 @@ export function usePostArticle({
           const src = FileController.getFileUrl({ fileId: attachment.id, variant: coverImageVariant });
           const coverImage = { src, alt: attachment.name };
           setCoverImage(coverImage);
+        } else {
+          setCoverImage(null);
         }
       } catch {
         if (cancelled) return;
 
+        // Clear on failure too — an edit can have replaced or removed the
+        // cover, and keeping the previously extracted one would render stale
+        setCoverImage(null);
         toast({
           variant: 'error',
           description: 'Could not load cover image',

@@ -635,7 +635,7 @@ export function isValidTagLabel(value: string): boolean {
 export function canSubmitPost(
   variant: PostInputVariant,
   content: string,
-  attachments: File[],
+  attachments: ReadonlyArray<unknown>,
   isSubmitting: boolean,
   isArticle?: boolean,
   articleTitle?: string,
@@ -650,9 +650,7 @@ export function canSubmitPost(
     return !!content.trim() && !!articleTitle?.trim();
   }
 
-  // Edit mode requires content to submit
-  if (variant === 'edit') return !!content.trim();
-
+  // Posts, replies, and edits require content or attachments (edits count kept + new)
   return Boolean(content.trim()) || attachments.length > 0;
 }
 

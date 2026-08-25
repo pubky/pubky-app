@@ -22,6 +22,7 @@
     "test:snapshots": "vitest run --project unit --reporter=verbose --testNamePattern=\"[Ss]napshots?\"",
     "test:update-snapshots": "vitest run --project unit --update --testNamePattern=\"[Ss]napshots?\"",
     "test:vrt": "vitest run --project vrt",
+    "test:vrt:check-baselines": "bash src/test-utils/vrt.screenshot-siblings.sh",
     "test:vrt:regenerate-baseline": "vitest run --project vrt --update",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path .prettierignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path .prettierignore",

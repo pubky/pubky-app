@@ -26,6 +26,16 @@ vi.mock('@/molecules/Toaster/use-toast', () => {
   };
 });
 
+// Mock useLocalFilesStore
+const mockSetPostAttachments = vi.fn();
+vi.mock('@/stores/localFiles/localFiles.store', () => ({
+  useLocalFilesStore: {
+    getState: vi.fn(() => ({
+      setPostAttachments: mockSetPostAttachments,
+    })),
+  },
+}));
+
 // Mock organisms (useTimelineFeedContext)
 const mockRemovePosts = vi.fn();
 const mockPrependPosts = vi.fn();
@@ -91,6 +101,80 @@ describe('useDeletePost', () => {
     expect(PostController.commitDelete).toHaveBeenCalledWith({
       compositePostId: mockPostId,
     });
+  });
+
+  it('clears the local attachment cache after successful deletion', async () => {
+    mockDelete.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useDeletePost());
+
+    await act(async () => {
+      await result.current.deletePost(mockPostId);
+    });
+
+    expect(mockSetPostAttachments).toHaveBeenCalledWith(mockPostId, []);
+    // The cache is only cleared once the delete actually committed
+    expect(mockDelete).toHaveBeenCalledBefore(mockSetPostAttachments);
+  });
+
+  it('does not clear the local attachment cache when the post is restored to the timeline', async () => {
+    mockDelete.mockRejectedValue(new Error('Deletion failed'));
+    // Row exists with live content → local write never committed → restore
+    mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: 'Test post' });
+
+    const { result } = renderHook(() => useDeletePost());
+
+    await act(async () => {
+      await result.current.deletePost(mockPostId);
+    });
+
+    expect(mockPrependPosts).toHaveBeenCalledWith(mockPostId);
+    expect(mockSetPostAttachments).not.toHaveBeenCalled();
+  });
+
+  it('clears the local attachment cache when the local write committed as a tombstone but sync failed', async () => {
+    mockDelete.mockRejectedValue(new Error('homeserver sync failed'));
+    // Row exists but is tombstoned → local write committed → keep removal, clear cache
+    mockGetPostDetails.mockResolvedValue({ id: mockPostId, content: '[DELETED]' });
+
+    const { result } = renderHook(() => useDeletePost());
+
+    await act(async () => {
+      await result.current.deletePost(mockPostId);
+    });
+
+    expect(mockPrependPosts).not.toHaveBeenCalled();
+    expect(mockSetPostAttachments).toHaveBeenCalledWith(mockPostId, []);
+  });
+
+  it('clears the local attachment cache when the local row is gone but sync failed', async () => {
+    mockDelete.mockRejectedValue(new Error('homeserver sync failed'));
+    // Row removed → local write committed → keep removal, clear cache
+    mockGetPostDetails.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useDeletePost());
+
+    await act(async () => {
+      await result.current.deletePost(mockPostId);
+    });
+
+    expect(mockPrependPosts).not.toHaveBeenCalled();
+    expect(mockSetPostAttachments).toHaveBeenCalledWith(mockPostId, []);
+  });
+
+  it('does not clear the local attachment cache when the existence check itself fails', async () => {
+    mockDelete.mockRejectedValue(new Error('Deletion failed'));
+    // Couldn't verify → restore optimistically, keep the cache
+    mockGetPostDetails.mockRejectedValue(new Error('db unavailable'));
+
+    const { result } = renderHook(() => useDeletePost());
+
+    await act(async () => {
+      await result.current.deletePost(mockPostId);
+    });
+
+    expect(mockPrependPosts).toHaveBeenCalledWith(mockPostId);
+    expect(mockSetPostAttachments).not.toHaveBeenCalled();
   });
 
   it('shows success toast on successful deletion', async () => {

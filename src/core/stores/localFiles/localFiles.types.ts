@@ -45,7 +45,9 @@ export interface LocalFilesActions {
 
   /**
    * Set attachments for a post. Pass empty array to clear.
-   * Automatically revokes previous blob URLs to prevent memory leaks.
+   * Automatically revokes previous blob URLs to prevent memory leaks —
+   * except URLs reused by the incoming list (edits keep kept attachments'
+   * blob URLs alive).
    */
   setPostAttachments: (postId: string, attachments: AttachmentConstructed[]) => void;
 

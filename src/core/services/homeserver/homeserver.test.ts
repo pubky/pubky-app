@@ -251,6 +251,7 @@ describe('HomeserverService', () => {
         'putBlob',
         'list',
         'delete',
+        'deleteIdempotent',
         'get',
         'exists',
         'generateSignupToken',
@@ -1021,6 +1022,102 @@ describe('HomeserverService', () => {
           category: ErrorCategory.Auth,
           code: AuthErrorCode.FORBIDDEN,
         });
+      });
+    });
+
+    describe('deleteIdempotent', () => {
+      const testUrl = 'pubky://user/pub/pubky.app/files/file123';
+
+      it('should resolve on a successful first delete', async () => {
+        mockState.currentSession = createMockSession();
+
+        await expect(HomeserverService.deleteIdempotent(testUrl)).resolves.toBeUndefined();
+
+        expect(mockState.sessionStorageDelete).toHaveBeenCalledTimes(1);
+        expect(mockState.sessionStorageDelete).toHaveBeenCalledWith('/pub/pubky.app/files/file123');
+      });
+
+      it('should treat 404 as success without retrying (already gone = desired end state)', async () => {
+        mockState.currentSession = createMockSession();
+        mockState.sessionStorageDelete.mockRejectedValue({
+          name: 'RequestError',
+          message: 'Not Found',
+          data: { statusCode: 404 },
+        });
+
+        await expect(HomeserverService.deleteIdempotent(testUrl)).resolves.toBeUndefined();
+
+        expect(mockState.sessionStorageDelete).toHaveBeenCalledTimes(1);
+      });
+
+      it('should retry a transient failure and resolve once a later attempt succeeds', async () => {
+        vi.useFakeTimers();
+        try {
+          mockState.currentSession = createMockSession();
+          mockState.sessionStorageDelete
+            .mockRejectedValueOnce({ name: 'RequestError', message: 'Bad Gateway', data: { statusCode: 502 } })
+            .mockResolvedValueOnce(undefined);
+
+          const pending = HomeserverService.deleteIdempotent(testUrl);
+          await vi.runAllTimersAsync(); // skips the 500ms backoff between attempts
+
+          await expect(pending).resolves.toBeUndefined();
+          expect(mockState.sessionStorageDelete).toHaveBeenCalledTimes(2);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('should throw the last error after exhausting all 3 attempts on persistent failure', async () => {
+        vi.useFakeTimers();
+        try {
+          mockState.currentSession = createMockSession();
+          mockState.sessionStorageDelete.mockRejectedValue({
+            name: 'RequestError',
+            message: 'Service Unavailable',
+            data: { statusCode: 503 },
+          });
+
+          const pending = HomeserverService.deleteIdempotent(testUrl);
+          // Attach the rejection expectation before advancing timers so the
+          // rejection is never unhandled
+          const rejection = expect(pending).rejects.toMatchObject({
+            category: ErrorCategory.Server,
+            code: ServerErrorCode.SERVICE_UNAVAILABLE,
+          });
+          await vi.runAllTimersAsync();
+          await rejection;
+
+          expect(mockState.sessionStorageDelete).toHaveBeenCalledTimes(3);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('should not retry non-transient auth failures beyond the retry budget on 403', async () => {
+        // 403 is not 404, so it goes through the retry loop like any other
+        // failure and still surfaces after the budget is spent
+        vi.useFakeTimers();
+        try {
+          mockState.currentSession = createMockSession();
+          mockState.sessionStorageDelete.mockRejectedValue({
+            name: 'RequestError',
+            message: 'Forbidden',
+            data: { statusCode: 403 },
+          });
+
+          const pending = HomeserverService.deleteIdempotent(testUrl);
+          const rejection = expect(pending).rejects.toMatchObject({
+            category: ErrorCategory.Auth,
+            code: AuthErrorCode.FORBIDDEN,
+          });
+          await vi.runAllTimersAsync();
+          await rejection;
+
+          expect(mockState.sessionStorageDelete).toHaveBeenCalledTimes(3);
+        } finally {
+          vi.useRealTimers();
+        }
       });
     });
 

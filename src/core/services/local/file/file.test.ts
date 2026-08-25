@@ -335,4 +335,63 @@ describe('LocalFileService', () => {
       expect(saved?.owner_id).toBe(testPubky);
     });
   });
+
+  describe('hasOtherBlobReference', () => {
+    const sharedBlobSrc = `pubky://${testPubky}/pub/pubky.app/blobs/shared-blob`;
+
+    it('returns true when a cached record outside the exclude set points at the blob', async () => {
+      await LocalFileService.createMany({
+        files: [
+          createMockFile(testFileId1, { src: sharedBlobSrc }),
+          createMockFile(testFileId2, { src: sharedBlobSrc }),
+        ],
+      });
+
+      // Deleting file1 only: file2 still references the blob
+      const result = await LocalFileService.hasOtherBlobReference({
+        blobSrc: sharedBlobSrc,
+        excludeFileIds: new Set([compositeId1]),
+      });
+
+      expect(result).toBe(true);
+    });
+
+    it('returns false when every record referencing the blob is in the exclude set', async () => {
+      await LocalFileService.createMany({
+        files: [
+          createMockFile(testFileId1, { src: sharedBlobSrc }),
+          createMockFile(testFileId2, { src: sharedBlobSrc }),
+        ],
+      });
+
+      const result = await LocalFileService.hasOtherBlobReference({
+        blobSrc: sharedBlobSrc,
+        excludeFileIds: new Set([compositeId1, compositeId2]),
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it('returns false when no cached record points at the blob', async () => {
+      const result = await LocalFileService.hasOtherBlobReference({
+        blobSrc: sharedBlobSrc,
+        excludeFileIds: new Set<string>(),
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it('ignores records that reference a different blob', async () => {
+      await LocalFileService.createMany({
+        files: [createMockFile(testFileId2, { src: `pubky://${testPubky}/pub/pubky.app/blobs/other-blob` })],
+      });
+
+      const result = await LocalFileService.hasOtherBlobReference({
+        blobSrc: sharedBlobSrc,
+        excludeFileIds: new Set([compositeId1]),
+      });
+
+      expect(result).toBe(false);
+    });
+  });
 });
