@@ -147,3 +147,40 @@ export function getLabelFromUrl(url: string): string {
     return url;
   }
 }
+
+/**
+ * Extracts the host of an HTTP(S) URL for display in place of the full address.
+ *
+ * The host comes from the parsed URL rather than from the text it was written as,
+ * so the result is the host the browser will actually resolve: lowercased, with a
+ * default port dropped and an international domain in its punycode form. That
+ * matters wherever the shortened host is the only destination the reader sees —
+ * `https://аpple.com` (Cyrillic `а`) must not be presented as `apple.com`.
+ *
+ * @param url - The URL to extract the host from
+ * @returns The host without a leading `www.`, or null when the URL is not HTTP(S)
+ *
+ * @example
+ * ```ts
+ * getUrlHostLabel('https://www.example.com/a/long/path?utm=1');
+ * // Returns 'example.com'
+ *
+ * getUrlHostLabel('mailto:user@example.com');
+ * // Returns null
+ * ```
+ */
+export function getUrlHostLabel(url: string): string | null {
+  try {
+    const { protocol, host } = new URL(url);
+
+    if (protocol !== 'http:' && protocol !== 'https:') return null;
+
+    const withoutWww = host.startsWith('www.') ? host.slice(4) : host;
+
+    // Keep the `www.` when dropping it would leave a public suffix standing in for
+    // the site: `www.com` is a real host, and a label reading `com` names nothing.
+    return withoutWww.includes('.') ? withoutWww : host;
+  } catch {
+    return null;
+  }
+}

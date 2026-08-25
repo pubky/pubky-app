@@ -164,6 +164,24 @@ describe('ProfilePageHeader', () => {
     expect(actions).not.toHaveClass('lg:mt-3');
   });
 
+  it('constrains long names so they truncate before the status emoji', () => {
+    const props = {
+      ...mockProps,
+      profile: { ...mockProps.profile, name: `Bobi${'W'.repeat(80)}` },
+    };
+
+    render(<ProfilePageHeader {...props} />);
+
+    const name = screen.getByRole('heading', { name: props.profile.name });
+    const nameRow = name.parentElement;
+    const statusEmoji = screen.getByRole('button', { name: 'Vacationing status' });
+
+    expect(nameRow).toHaveClass('w-full', 'min-w-0');
+    expect(name).toHaveClass('min-w-0', 'truncate');
+    expect(name.nextElementSibling).toBe(statusEmoji);
+    expect(statusEmoji).toHaveClass('shrink-0');
+  });
+
   it('renders formatted public key', () => {
     render(<ProfilePageHeader {...mockProps} />);
 

@@ -10,11 +10,41 @@ import type { MentionPopoverProps } from './MentionPopover.types';
 const POPOVER_CLASSNAME =
   'fixed z-50 mt-1 w-[var(--mention-popover-width)] max-h-[var(--mention-popover-max-height)] overflow-y-auto rounded-md border border-border bg-popover p-2';
 
+/** Radix's modal content node, tagged in `Dialog.tsx`. */
+const DIALOG_CONTENT_SELECTOR = '[data-slot="dialog-content"]';
+
+/**
+ * Resolves the portal target for the popover.
+ *
+ * A modal Radix dialog puts `pointer-events: none` on `document.body` and locks
+ * wheel/touch scrolling outside its own content node, so a popover portalled to
+ * the body is inert while a composer dialog is open — taps fall straight through
+ * to whatever sits under it in the dialog. Mounting inside the dialog content
+ * keeps it interactive, and the popover being `fixed` means the dialog's
+ * `overflow-y-auto` still doesn't clip it. Outside a dialog the body remains the
+ * only target that escapes the composer's clipping ancestors.
+ */
+function usePortalContainer(anchorRef: MentionPopoverProps['anchorRef']) {
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+
+    if (!anchor) {
+      return;
+    }
+
+    setContainer(anchor.closest<HTMLElement>(DIALOG_CONTENT_SELECTOR) ?? document.body);
+  }, [anchorRef]);
+
+  return container;
+}
+
 /**
  * Tracks the anchor's viewport rect so the popover can be rendered in a portal.
  * The composers live inside clipping ancestors (the height-animating card and
  * the `lg:overflow-hidden` feed column), so an in-flow absolute popover gets cut
- * off; a fixed one in `document.body` escapes them all.
+ * off; a fixed one in a portal escapes them all.
  */
 function useAnchorRect(anchorRef: MentionPopoverProps['anchorRef']) {
   const [rect, setRect] = useState<{ top: number; left: number } | null>(null);
@@ -60,6 +90,7 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover, anchor
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
   const anchorRect = useAnchorRect(anchorRef);
+  const portalContainer = usePortalContainer(anchorRef);
 
   // Scroll selected item into view when using keyboard navigation (ArrowUp/ArrowDown).
   // Without this, items outside the visible area won't be visible when selected.
@@ -83,9 +114,9 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover, anchor
     }
   }, [selectedIndex]);
 
-  // `anchorRect` stays null until the layout effect runs, which also keeps the
-  // portal out of the server render.
-  if (users.length === 0 || !anchorRect) {
+  // Both stay null until the layout effects run, which also keeps the portal out
+  // of the server render.
+  if (users.length === 0 || !anchorRect || !portalContainer) {
     return null;
   }
 
@@ -117,6 +148,6 @@ export function MentionPopover({ users, selectedIndex, onSelect, onHover, anchor
         </Container>
       ))}
     </Container>,
-    document.body,
+    portalContainer,
   );
 }
