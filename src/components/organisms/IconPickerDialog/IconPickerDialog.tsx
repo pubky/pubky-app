@@ -16,13 +16,14 @@ import { DynamicLucideIcon } from '@/atoms/DynamicLucideIcon/DynamicLucideIcon';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useControlledState } from '@/hooks/useControlledState/useControlledState';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import {
-  isPlausibleLucideIconName,
   loadLucidePickerIcons,
   type LucidePickerIcon,
   preloadLucideIcons,
-} from '@/libs/utils/lucideIcons';
+  toLucideIconName,
+} from '@/libs/lucide/lucideIcons';
 import { cn } from '@/libs/utils/utils';
 
 // The grid renders progressively: the first batch on open, another batch each
@@ -66,13 +67,16 @@ export function IconPickerDialog({
   searchPlaceholder,
   emptyMessage,
 }: IconPickerDialogProps) {
-  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const { value: resolvedOpen, setValue: setOpen } = useControlledState<boolean>({
+    value: open,
+    defaultValue: defaultOpen,
+    onChange: onOpenChange,
+  });
   const [query, setQuery] = useState('');
   const [renderedCount, setRenderedCount] = useState(APPEND_BATCH_SIZE);
   const [loadedPickerIcons, setLoadedPickerIcons] = useState<readonly LucidePickerIcon[] | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const resolvedOpen = open ?? internalOpen;
 
   const resolvedTitle = title ?? 'Choose icon';
   const resolvedSearchPlaceholder = searchPlaceholder ?? 'Search for icon';
@@ -85,7 +89,10 @@ export function IconPickerDialog({
   const isFilterPending = deferredQuery !== normalizedQuery;
 
   const pickerIcons: readonly LucidePickerIcon[] = icons
-    ? icons.filter(isPlausibleLucideIconName).map((name) => ({ name, aliases: [], tags: [] }))
+    ? icons
+        .map(toLucideIconName)
+        .filter((name) => name !== null)
+        .map((name) => ({ name, aliases: [], tags: [] }))
     : (loadedPickerIcons ?? []);
   const isCatalogLoading = !icons && loadedPickerIcons === null;
   // Search matches the canonical name, its deprecated aliases ('home' finds
@@ -123,7 +130,7 @@ export function IconPickerDialog({
 
   useEffect(() => {
     if (!resolvedOpen) return;
-    const names = icons ? icons.filter(isPlausibleLucideIconName) : (loadedPickerIcons ?? []).map((icon) => icon.name);
+    const names = icons ?? (loadedPickerIcons ?? []).map((icon) => icon.name);
     preloadLucideIcons(names.slice(0, INITIAL_ICON_PRELOAD_COUNT));
   }, [resolvedOpen, icons, loadedPickerIcons]);
 
@@ -133,12 +140,11 @@ export function IconPickerDialog({
   }, [deferredQuery]);
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (open === undefined) setInternalOpen(nextOpen);
     if (!nextOpen) {
       setQuery('');
       setRenderedCount(APPEND_BATCH_SIZE);
     }
-    onOpenChange?.(nextOpen);
+    setOpen(nextOpen);
   };
 
   const handleSelect = (iconName: string) => {

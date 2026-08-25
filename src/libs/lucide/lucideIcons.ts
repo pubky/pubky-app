@@ -7,15 +7,21 @@ import { Logger } from '@/libs/logger/logger';
 // most a handful of icons do not ship it in their initial bundle. Sync
 // callers can therefore only check a name's *shape*; real validation happens
 // against the catalog once it is resident.
-const LUCIDE_ICON_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const LUCIDE_ICON_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
- * Shape check for a dynamic (kebab-case) Lucide icon name. Accepts names the
- * catalog may not contain (another client's icon set) — rendering falls back
- * once the catalog answers, and foreign names must round-trip unchanged.
+ * Normalizes a stored icon name to the form the catalog is keyed by, or `null`
+ * when it cannot be a Lucide name at all.
+ *
+ * Case and surrounding whitespace are normalized rather than rejected, so an
+ * icon another client wrote as `Activity` still renders its real glyph — the
+ * same normalization `FeedValidators.sanitizeIcon` applies before persisting.
+ * A name that is merely absent from the catalog stays a valid name here and
+ * falls back only once the catalog answers `unknown`.
  */
-export function isPlausibleLucideIconName(name: string | null | undefined): name is IconName {
-  return typeof name === 'string' && LUCIDE_ICON_NAME_PATTERN.test(name);
+export function toLucideIconName(name: string | null | undefined): IconName | null {
+  const normalized = name?.trim().toLowerCase();
+  return normalized && LUCIDE_ICON_NAME_PATTERN.test(normalized) ? (normalized as IconName) : null;
 }
 
 type LucideCatalog = typeof import('lucide-react/dynamic.js');
@@ -117,7 +123,8 @@ export function requestLucideIcon(name: IconName): void {
 /** Fire-and-forget warmup; silently skips names that cannot be Lucide icons. */
 export function preloadLucideIcons(names: Iterable<string | null | undefined>): void {
   for (const name of names) {
-    if (isPlausibleLucideIconName(name)) requestLucideIcon(name);
+    const iconName = toLucideIconName(name);
+    if (iconName) requestLucideIcon(iconName);
   }
 }
 
@@ -141,8 +148,8 @@ export function loadLucidePickerIcons(): Promise<readonly LucidePickerIcon[]> {
   if (!pickerIconsLoad) {
     pickerIconsLoad = Promise.all([
       loadLucideCatalog(),
-      import('@/libs/utils/lucideIcons.aliases'),
-      import('@/libs/utils/lucideIcons.tags'),
+      import('@/libs/lucide/lucideIcons.aliases'),
+      import('@/libs/lucide/lucideIcons.tags'),
     ]).then(([catalog, { LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL }, { LUCIDE_ICON_TAGS }]) => {
       const aliasesByCanonical = new Map<IconName, IconName[]>();
       for (const [alias, canonical] of Object.entries(LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL) as [IconName, IconName][]) {

@@ -46,8 +46,8 @@ vi.mock('@/stores/home/home.store', () => ({
 
 // Keep the icon utilities real (DynamicLucideIcon depends on them) but noop the
 // preloader so tests do not kick off background icon chunk loads.
-vi.mock('@/libs/utils/lucideIcons', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/libs/utils/lucideIcons')>()),
+vi.mock('@/libs/lucide/lucideIcons', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/libs/lucide/lucideIcons')>()),
   preloadLucideIcons: vi.fn(),
 }));
 

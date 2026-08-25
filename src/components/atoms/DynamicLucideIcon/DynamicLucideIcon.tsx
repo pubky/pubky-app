@@ -4,10 +4,10 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { Activity as ActivityFallback, Icon, type IconNode, type LucideIcon, type LucideProps } from 'lucide-react';
 import {
   getLucideIconState,
-  isPlausibleLucideIconName,
   requestLucideIcon,
   subscribeToLucideIcons,
-} from '@/libs/utils/lucideIcons';
+  toLucideIconName,
+} from '@/libs/lucide/lucideIcons';
 import { cn } from '@/libs/utils/utils';
 
 const EMPTY_ICON_NODE: IconNode = [];
@@ -30,9 +30,9 @@ interface DynamicLucideIconProps extends Omit<LucideProps, 'name'> {
  */
 export function DynamicLucideIcon({ name, fallback, className, ...iconProps }: DynamicLucideIconProps) {
   const FallbackIcon = fallback === undefined ? ActivityFallback : fallback;
-  // Shape check only — the catalog is lazy-loaded; a plausible-but-unknown
-  // name resolves to the `unknown` state and lands on the fallback.
-  const validName = isPlausibleLucideIconName(name) ? name : null;
+  // Normalized shape only — the catalog is lazy-loaded, so a name that looks
+  // like a Lucide name but is absent resolves to `unknown` and falls back.
+  const validName = toLucideIconName(name);
   const state = useSyncExternalStore(
     subscribeToLucideIcons,
     () => (validName ? getLucideIconState(validName) : undefined),

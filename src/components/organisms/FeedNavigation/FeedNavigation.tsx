@@ -14,8 +14,8 @@ import { FeedController } from '@/controllers/feed/feed';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSelectedReachFilter } from '@/hooks/useSelectedReachFilter/useSelectedReachFilter';
 import { Logger } from '@/libs/logger/logger';
+import { preloadLucideIcons } from '@/libs/lucide/lucideIcons';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
-import { preloadLucideIcons } from '@/libs/utils/lucideIcons';
 import { cn } from '@/libs/utils/utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { REACH_FILTER_META } from '@/molecules/Filters/FilterReach/FilterReach';
@@ -73,6 +73,13 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
     [isAuthenticated],
     isAuthenticated ? cachedFeeds : [],
   );
+
+  // A session that ends while the edit dialog is open would otherwise leave it
+  // mounted over a tab bar that no longer lists the feed, and saving would fail
+  // with a generic error instead of the sign-in prompt.
+  useEffect(() => {
+    if (!isAuthenticated) setEditingFeed(null);
+  }, [isAuthenticated]);
 
   // Warm the icon chunk cache as soon as feed data lands so tab icons paint
   // without a visible swap.

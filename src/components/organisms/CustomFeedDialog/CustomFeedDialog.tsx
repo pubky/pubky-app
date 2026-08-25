@@ -47,7 +47,7 @@ import {
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { IconPickerDialog } from '@/organisms/IconPickerDialog/IconPickerDialog';
-import { HOME_PROFILE_TAGS_MAX_SELECTED, REACH } from '@/stores/home/home.types';
+import { HOME_PROFILE_TAGS_MAX_SELECTED } from '@/stores/home/home.types';
 import { pubkyReachToHomeReach } from '@/utils/pubky-app-spec-feed-mappers';
 
 interface CustomFeedDialogSharedProps {
@@ -110,10 +110,13 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
 
   // Reach options derive from the shared REACH_FILTER_META so every surface
   // that renders a reach (sidebar filter, feed tab, this dialog) stays in sync.
-  const reachFilters = REACH_OPTION_VALUES.map((value) => {
-    const metaKey: ReachFilterValue =
-      value === TAGGED_AS_FILTER_KEY ? TAGGED_AS_FILTER_KEY : (pubkyReachToHomeReach(value) ?? REACH.ALL);
-    return { value, ...REACH_FILTER_META[metaKey] };
+  const reachFilters = REACH_OPTION_VALUES.flatMap((value) => {
+    // A spec reach with no home-store equivalent (e.g. Followers) has no label
+    // or icon of its own — drop it rather than defaulting it onto another
+    // option's identity, which would render two entries reading the same.
+    const metaKey: ReachFilterValue | undefined =
+      value === TAGGED_AS_FILTER_KEY ? TAGGED_AS_FILTER_KEY : pubkyReachToHomeReach(value);
+    return metaKey ? [{ value, ...REACH_FILTER_META[metaKey] }] : [];
   });
   const sortFilters = [
     {

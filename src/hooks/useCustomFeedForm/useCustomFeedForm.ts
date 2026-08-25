@@ -31,8 +31,6 @@ type UseCustomFeedFormResult = {
   submit: () => Promise<boolean>;
   /** Delete the feed being edited. Resolves `false` in create mode. */
   deleteFeed: () => Promise<boolean>;
-  /** Restore the form to the feed's stored values (or the create defaults). */
-  reset: () => void;
 };
 
 /**
@@ -61,8 +59,6 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
     defaultValues: feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults,
     mode: 'onChange',
   });
-
-  const reset = () => form.reset(feed ? customFeedFormValuesFromFeed(feed) : customFeedFormDefaults);
 
   // Re-seed only while the dialog is closed: a background sync may have changed
   // the stored feed since it was last opened, but re-seeding an *open* dialog
@@ -175,6 +171,5 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
     loading,
     submit,
     deleteFeed,
-    reset,
   };
 }

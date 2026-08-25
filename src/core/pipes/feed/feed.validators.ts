@@ -16,9 +16,11 @@ import { normalizeTagList } from './feed.utils';
 const MIN_TAGS = 1;
 const MAX_TAGS = validationLimits.feedTagsMaxCount;
 const MAX_ICON_LENGTH = validationLimits.feedIconMaxLength;
-// Mirrors the charset specs' createFeed enforces (it lowercases before
-// checking, so the case-insensitive match accepts exactly what specs accepts).
-const ICON_CHARSET = /^[a-z0-9-]+$/i;
+// Mirrors the charset specs' createFeed enforces. Specs lowercases before
+// checking, so we normalize the same way before validating and storing —
+// otherwise a name like `Activity` would round-trip in a case the UI's
+// `toLucideIconName` cannot resolve, and the tab would show the fallback.
+const ICON_CHARSET = /^[a-z0-9-]+$/;
 
 export class FeedValidators {
   private constructor() {}
@@ -34,18 +36,19 @@ export class FeedValidators {
    * the default keeps the feed.
    *
    * Names that are merely unknown to us (another client's icon set) pass
-   * through untouched — as long as they fit specs' constraints — so a
-   * round-trip through this app does not overwrite them; the UI already
-   * renders a fallback for names it cannot resolve.
+   * through — as long as they fit specs' constraints — so a round-trip through
+   * this app does not overwrite them; the UI already renders a fallback for
+   * names it cannot resolve. Only case and surrounding whitespace are
+   * normalized, matching both specs and the UI's `toLucideIconName`.
    */
   static sanitizeIcon(icon: string | undefined | null): string {
-    const trimmed = icon?.trim();
+    const normalized = icon?.trim().toLowerCase();
 
-    if (!trimmed || trimmed.length > MAX_ICON_LENGTH || !ICON_CHARSET.test(trimmed)) {
+    if (!normalized || normalized.length > MAX_ICON_LENGTH || !ICON_CHARSET.test(normalized)) {
       return DEFAULT_CUSTOM_FEED_ICON;
     }
 
-    return trimmed;
+    return normalized;
   }
 
   /** Validates that a feed has a supported reach and valid independent tag scopes. */

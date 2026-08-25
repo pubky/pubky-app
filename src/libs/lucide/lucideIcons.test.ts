@@ -1,27 +1,36 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   getLucideIconState,
-  isPlausibleLucideIconName,
   loadLucidePickerIcons,
   preloadLucideIcons,
   requestLucideIcon,
   subscribeToLucideIcons,
+  toLucideIconName,
 } from './lucideIcons';
 
 describe('lucideIcons', () => {
-  it('accepts kebab-case icon name shapes, including foreign ones', () => {
-    expect(isPlausibleLucideIconName('activity')).toBe(true);
-    expect(isPlausibleLucideIconName('alarm-clock-check')).toBe(true);
-    // Another client's icon set — must pass the shape check so it round-trips.
-    expect(isPlausibleLucideIconName('not-a-real-lucide-icon')).toBe(true);
+  it('normalizes kebab-case icon names, including foreign ones', () => {
+    expect(toLucideIconName('activity')).toBe('activity');
+    expect(toLucideIconName('alarm-clock-check')).toBe('alarm-clock-check');
+    // Another client's icon set — kept as a name so it round-trips; the
+    // catalog answers `unknown` and the UI falls back.
+    expect(toLucideIconName('not-a-real-lucide-icon')).toBe('not-a-real-lucide-icon');
   });
 
-  it('rejects missing and malformed icon names', () => {
-    expect(isPlausibleLucideIconName(undefined)).toBe(false);
-    expect(isPlausibleLucideIconName(null)).toBe(false);
-    expect(isPlausibleLucideIconName('')).toBe(false);
-    expect(isPlausibleLucideIconName('Not An Icon')).toBe(false);
-    expect(isPlausibleLucideIconName('-leading-dash')).toBe(false);
+  it('normalizes case and surrounding whitespace instead of rejecting them', () => {
+    // A client that stored `Activity` must still render the real glyph.
+    expect(toLucideIconName('Activity')).toBe('activity');
+    expect(toLucideIconName('Circle-Alert')).toBe('circle-alert');
+    expect(toLucideIconName('  house  ')).toBe('house');
+  });
+
+  it('returns null for missing and malformed icon names', () => {
+    expect(toLucideIconName(undefined)).toBeNull();
+    expect(toLucideIconName(null)).toBeNull();
+    expect(toLucideIconName('')).toBeNull();
+    expect(toLucideIconName('Not An Icon')).toBeNull();
+    expect(toLucideIconName('-leading-dash')).toBeNull();
+    expect(toLucideIconName('double--dash')).toBeNull();
   });
 
   it('loads an icon into the store and serves a stable snapshot afterwards', async () => {
@@ -78,8 +87,8 @@ describe('lucideIcons', () => {
     expect(getLucideIconState('wrench')).toBe(first);
   });
 
-  it('preloads plausible names and silently skips the rest', async () => {
-    expect(() => preloadLucideIcons(['Not An Icon', null, undefined, 'library'])).not.toThrow();
+  it('preloads normalizable names and silently skips the rest', async () => {
+    expect(() => preloadLucideIcons(['Not An Icon', null, undefined, 'Library'])).not.toThrow();
 
     await vi.waitFor(() => {
       expect(getLucideIconState('library')?.status).toBe('loaded');

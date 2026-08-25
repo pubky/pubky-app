@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { within } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getLucideIconState, requestLucideIcon } from '@/libs/utils/lucideIcons';
+import { getLucideIconState, requestLucideIcon } from '@/libs/lucide/lucideIcons';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { TAGGED_AS_FILTER_KEY } from '@/molecules/Filters/FilterReach/FilterReach';
 import { CustomFeedDialog } from './CustomFeedDialog';

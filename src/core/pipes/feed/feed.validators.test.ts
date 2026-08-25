@@ -36,6 +36,14 @@ describe('FeedValidators.sanitizeIcon', () => {
     expect(FeedValidators.sanitizeIcon(atLimit)).toBe(atLimit);
   });
 
+  it('normalizes case so the stored name is the one the UI can resolve', () => {
+    // The UI's `toLucideIconName` only resolves lowercase kebab names, so an
+    // icon another client wrote as `Activity` must be stored lowercased —
+    // otherwise the tab would silently render the fallback glyph.
+    expect(FeedValidators.sanitizeIcon('Activity')).toBe('activity');
+    expect(FeedValidators.sanitizeIcon('Circle-Alert')).toBe('circle-alert');
+  });
+
   it("passes through a name we do not recognise so another client's icon set survives a round-trip", () => {
     expect(FeedValidators.sanitizeIcon('some-other-client-icon')).toBe('some-other-client-icon');
   });

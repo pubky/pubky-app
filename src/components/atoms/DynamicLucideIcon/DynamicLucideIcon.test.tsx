@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { Library } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
-import { getLucideIconState, requestLucideIcon } from '@/libs/utils/lucideIcons';
+import { getLucideIconState, requestLucideIcon } from '@/libs/lucide/lucideIcons';
 import { DynamicLucideIcon } from './DynamicLucideIcon';
 
 // The icon cache is module-level and persists across tests in this file, so

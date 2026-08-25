@@ -91,17 +91,24 @@ async function waitForDynamicIconsReady(root: Element) {
   const hasPendingIcon = () => root.querySelector('svg.lucide:not(:has(*))') !== null;
   if (!hasPendingIcon()) return;
 
-  await withTimeout(
-    new Promise<void>((resolve) => {
-      const check = () => {
-        if (!hasPendingIcon()) resolve();
-        else requestAnimationFrame(check);
-      };
-      check();
-    }),
-    DYNAMIC_ICON_READY_TIMEOUT_MS,
-    () => `VRT dynamic icon timed out after ${DYNAMIC_ICON_READY_TIMEOUT_MS}ms (empty svg.lucide in capture root)`,
-  );
+  let frame = 0;
+  try {
+    await withTimeout(
+      new Promise<void>((resolve) => {
+        const check = () => {
+          if (!hasPendingIcon()) resolve();
+          else frame = requestAnimationFrame(check);
+        };
+        check();
+      }),
+      DYNAMIC_ICON_READY_TIMEOUT_MS,
+      () => `VRT dynamic icon timed out after ${DYNAMIC_ICON_READY_TIMEOUT_MS}ms (empty svg.lucide in capture root)`,
+    );
+  } finally {
+    // The poll must stop on timeout too, or it keeps burning frames for the
+    // rest of the page's life and slows every later capture in the file.
+    cancelAnimationFrame(frame);
+  }
 }
 
 async function waitForImagesReady(root: Element) {
