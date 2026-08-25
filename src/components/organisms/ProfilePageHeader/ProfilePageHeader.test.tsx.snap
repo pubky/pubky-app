@@ -30,7 +30,7 @@ exports[`ProfilePageHeader - Mobile Snapshots > matches snapshot on mobile viewp
       data-testid="container"
     >
       <div
-        class="max-width-profile-page-header flex w-fit min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
+        class="max-width-profile-page-header flex w-full min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
         data-testid="container"
       >
         <h1
@@ -339,7 +339,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
       data-testid="container"
     >
       <div
-        class="max-width-profile-page-header flex w-fit min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
+        class="max-width-profile-page-header flex w-full min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
         data-testid="container"
       >
         <h1
