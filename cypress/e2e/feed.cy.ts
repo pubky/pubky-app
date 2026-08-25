@@ -201,9 +201,10 @@ describe('feed and filters', () => {
 
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
-    // can see own posts
-    cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
+    // cannot see own posts
+    cannotFindPostInFeed(profile2.postText);
+    cannotFindPostInFeed(profile2.repostText);
+    // cannot see other people's posts
     cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile4.postText);
 
@@ -224,8 +225,8 @@ describe('feed and filters', () => {
     cy.findFirstPostInFeedFiltered(profile2.repostText).should('be.visible');
     // 1 occurrence of profile 2 reposting profile 1's post
     countPostsInFeed(profile1.postText2, 1);
-    // can see own post
-    cy.findFirstPostInFeedFiltered(profile3.postText).should('be.visible');
+    // cannot see own post
+    cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile1.postText1);
     cannotFindPostInFeed(profile4.postText);
 
@@ -247,7 +248,7 @@ describe('feed and filters', () => {
     cannotFindPostInFeed(profile2.postText);
     cannotFindPostInFeed(profile2.repostText);
     cannotFindPostInFeed(profile3.postText);
-    // cannot see own post when no one else's posts are seen in following filter
+    // cannot see own post
     cannotFindPostInFeed(profile4.postText);
     cy.get('[data-cy="timeline-container"]').should('contain.text', 'No posts found');
   });
@@ -267,12 +268,11 @@ describe('feed and filters', () => {
 
     cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
     cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
-    cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
-    // 2 occurrences of profile 1's post due to profile 2 reposting it
-    countPostsInFeed(profile1.postText2, 2);
-    // can see own post
-    cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
+    // 1 occurrence of own post due to profile 2 reposting it
+    countPostsInFeed(profile1.postText2, 1);
+    // cannot see own posts (that were not reposted by profile 2)
+    cannotFindPostInFeed(profile1.postText1);
+    cannotFindPostInFeed(profile1.postText3);
     cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile4.postText);
 
@@ -291,9 +291,10 @@ describe('feed and filters', () => {
 
     cy.findFirstPostInFeedFiltered(profile1.postText1).should('be.visible');
     cy.findFirstPostInFeedFiltered(profile1.postText2).should('be.visible');
-    // can see own posts
-    cy.findFirstPostInFeedFiltered(profile2.postText).should('be.visible');
-    cy.findFirstPostInFeedFilteredByType(profile2.repostText, PostType.Repost).should('be.visible');
+    // cannot see own posts
+    cannotFindPostInFeed(profile2.postText);
+    cannotFindPostInFeed(profile2.repostText);
+    // cannot see other people's posts
     cannotFindPostInFeed(profile3.postText);
     cannotFindPostInFeed(profile4.postText);
 
