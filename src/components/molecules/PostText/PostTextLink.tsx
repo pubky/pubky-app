@@ -2,6 +2,7 @@
 
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { cn } from '@/libs/utils/utils';
+import { INLINE_LINK_CLASSNAME } from './PostText.constants';
 import type { RemarkAnchorProps } from './PostText.types';
 import { extractTextFromChildren, getCompactUrl } from './PostText.utils';
 
@@ -48,7 +49,7 @@ export function PostTextLink({
           onLinkClick(rest.href, event);
         }
       }}
-      className={cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
+      className={cn(className, INLINE_LINK_CLASSNAME)}
     >
       {compacted ? compacted.label : children}
     </a>

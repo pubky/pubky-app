@@ -95,8 +95,8 @@ describe('posts', () => {
 
     cy.findFirstPostInFeed().within(() => {
       cy.get('[data-cy="post-text"]').should('contain.text', prefix.trim());
-      cy.contains('Show more').should('be.visible').click();
-      cy.contains('Show more').should('not.exist');
+      cy.get('button[aria-label="Show full post content"]').should('be.visible').click();
+      cy.get('button[aria-label="Show full post content"]').should('not.exist');
       cy.get('[data-cy="post-text"]').should('contain.text', postContent);
     });
     cy.location('pathname').should('eq', '/home');
