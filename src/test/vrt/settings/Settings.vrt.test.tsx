@@ -16,9 +16,7 @@ import { MutedUsers } from '@/templates/Settings/MutedUsers/MutedUsers';
 import { Notifications } from '@/templates/Settings/Notifications/Notifications';
 import { Privacy } from '@/templates/Settings/Privacy/Privacy';
 
-// Epic #2275 §7. `/settings/language` is not a route — language prefs were
-// removed from settings (see `settings.normalizer`). Covered tabs: account,
-// edit profile, notifications, privacy & safety, muted users, help.
+// Covers tabs: account, edit profile, notifications, privacy & safety, muted users, help.
 const routeState = vi.hoisted(() => ({
   pathname: '/settings/account',
 }));
