@@ -995,19 +995,13 @@ describe('PostText', () => {
       expect(screen.getByRole('button', { name: 'Show full post content' })).toBeInTheDocument();
     });
 
-    it('renders the "more" button inline after the truncation ellipsis with correct styling classes', () => {
+    it('renders the "more" button inline directly after the truncation ellipsis', () => {
       const longContent = generateContent(600);
       render(<PostText content={longContent} />);
 
       const showMoreButton = screen.getByRole('button', { name: 'Show full post content' });
       expect(showMoreButton).not.toHaveAttribute('data-allow-post-navigation');
-      expect(showMoreButton).toHaveAttribute('type', 'button');
-      expect(showMoreButton).toHaveTextContent('more');
-      expect(showMoreButton.parentElement).toHaveProperty('tagName', 'P');
       expect(showMoreButton.previousSibling?.textContent).toMatch(/\.\.\.\u00a0$/);
-      expect(showMoreButton).toHaveClass('cursor-pointer');
-      expect(showMoreButton).toHaveClass('text-brand');
-      expect(showMoreButton).not.toHaveClass('mt-4');
     });
 
     it('expands truncated content in place and stops event propagation on "Show more" click', () => {

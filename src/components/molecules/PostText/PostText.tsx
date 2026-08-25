@@ -11,7 +11,7 @@ import { cn } from '@/libs/utils/utils';
 import { PostMentions } from '@/organisms/PostMentions/PostMentions';
 import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
 import { PostHashtags } from '../PostHashtags/PostHashtags';
-import { PostTextProps, RemarkAnchorProps } from './PostText.types';
+import { PostTextProps, RemarkAnchorProps, RemarkButtonProps } from './PostText.types';
 import {
   remarkDisallowMarkdownLinks,
   remarkExtractFirstParagraph,
@@ -22,6 +22,8 @@ import {
   remarkPlaintextTables,
   truncatePostPreviewText,
 } from './PostText.utils';
+
+const INLINE_LINK_CLASSNAME = 'cursor-pointer text-brand transition-colors hover:text-brand/80';
 
 /**
  * Renders formatted text content with markdown, hashtags, mentions, and links.
@@ -112,7 +114,7 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
                     onLinkClick(rest.href, e);
                   }
                 }}
-                className={cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
+                className={cn(className, INLINE_LINK_CLASSNAME)}
               >
                 {children}
               </a>
@@ -148,14 +150,16 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
           code(props) {
             return <PostCodeBlock {...props} />;
           },
-          button(props) {
-            const { children, className, node: _node, ref: _ref, ...rest } = props;
+          button(props: RemarkButtonProps) {
+            const { children, className, 'data-type': dataType, node: _node, ref: _ref, ...rest } = props;
+
+            if (dataType !== 'show-more') return children;
 
             return (
               <Button
                 {...rest}
                 overrideDefaults
-                className={cn(className, 'cursor-pointer text-brand transition-colors hover:text-brand/80')}
+                className={cn(className, INLINE_LINK_CLASSNAME)}
                 onClick={(event) => {
                   event.stopPropagation();
                   setIsExpanded(true);

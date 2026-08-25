@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import type {
   Blockquote,
-  Code,
   Heading,
   Link,
   List,
@@ -259,6 +258,7 @@ const createInlineShowMoreButton = (): Text =>
       hName: 'button',
       hProperties: {
         'aria-label': 'Show full post content',
+        'data-type': 'show-more',
         type: 'button',
       },
     },
@@ -275,38 +275,34 @@ const createInlineShowMoreParagraph = (): Paragraph => {
   return paragraph;
 };
 
+// Blocks that cannot host the inline button get the ellipsis paragraph appended after them instead.
+// Their own trailing ellipsis is removed first so the preview does not render two of them.
+const stripTrailingEllipsis = (node: RootContent | undefined): void => {
+  if (!node) return;
+
+  if ('value' in node && typeof node.value === 'string') {
+    if (node.value.endsWith(TRUNCATION_ELLIPSIS)) {
+      node.value = node.value.slice(0, -TRUNCATION_ELLIPSIS.length);
+    }
+
+    return;
+  }
+
+  if ('children' in node) stripTrailingEllipsis(node.children.at(-1));
+};
+
+// truncatePostPreviewText appends the ellipsis to the very end of the preview text, so the cut is
+// always in the last top-level block. Attaching there instead of searching the tree for the
+// ellipsis keeps a user-authored ellipsis from stealing the button or losing its own characters.
 export const remarkInlineShowMore = () => (tree: Root) => {
-  let inline: Paragraph | Heading | undefined;
-  let code: { node: Code; index: number; parent: Parent } | undefined;
+  const lastBlock = tree.children.at(-1);
 
-  visit(tree, (node, index, parent) => {
-    if ((node.type === 'paragraph' || node.type === 'heading') && extractText(node).endsWith(TRUNCATION_ELLIPSIS)) {
-      inline = node;
-      code = undefined;
-    }
-
-    if (
-      node.type === 'code' &&
-      extractText(node).endsWith(TRUNCATION_ELLIPSIS) &&
-      typeof index === 'number' &&
-      parent
-    ) {
-      inline = undefined;
-      code = { node, index, parent };
-    }
-  });
-
-  if (inline) {
-    inline.children.push(createInlineShowMoreButton());
+  if (lastBlock?.type === 'paragraph' || lastBlock?.type === 'heading') {
+    lastBlock.children.push(createInlineShowMoreButton());
     return;
   }
 
-  if (code) {
-    code.node.value = code.node.value.slice(0, -TRUNCATION_ELLIPSIS.length);
-    code.parent.children.splice(code.index + 1, 0, createInlineShowMoreParagraph());
-    return;
-  }
-
+  stripTrailingEllipsis(lastBlock);
   tree.children.push(createInlineShowMoreParagraph());
 };
 
