@@ -5,6 +5,7 @@ import { asInvalid } from '@/test-utils/type-assertions';
 import { POST_TEXT_PREVIEW_MAX_LINES, TRUNCATION_LIMIT } from './PostText.constants';
 import {
   extractTextFromChildren,
+  getCompactUrl,
   remarkDisallowMarkdownLinks,
   remarkExtractFirstParagraph,
   remarkHashtags,
@@ -14,6 +15,81 @@ import {
   truncateAtWordBoundary,
   truncatePostPreviewText,
 } from './PostText.utils';
+
+describe('getCompactUrl', () => {
+  it('shows only the host without the protocol, path, query, or fragment', () => {
+    const url = 'https://news.example.co.uk/story?id=42#comments';
+
+    expect(getCompactUrl(url, url)).toEqual({ label: 'news.example.co.uk', fullUrl: url });
+  });
+
+  it('removes www from autolinks', () => {
+    expect(getCompactUrl('www.example.com/story', 'http://www.example.com/story')?.label).toBe('example.com');
+    expect(getCompactUrl('https://www.example.com/story', 'https://www.example.com/story')?.label).toBe('example.com');
+  });
+
+  it('keeps the scheme in the full URL of a www autolink, which the visible text omits', () => {
+    expect(getCompactUrl('www.example.com/login', 'http://www.example.com/login')?.fullUrl).toBe(
+      'http://www.example.com/login',
+    );
+  });
+
+  it('preserves a non-default port and drops a default one', () => {
+    expect(getCompactUrl('http://www.example.com:8080/story', 'http://www.example.com:8080/story')?.label).toBe(
+      'example.com:8080',
+    );
+    expect(getCompactUrl('https://example.com:443/x', 'https://example.com:443/x')?.label).toBe('example.com');
+  });
+
+  it('normalises host casing so the label cannot be dressed up', () => {
+    expect(getCompactUrl('WWW.Example.COM/path', 'http://WWW.Example.COM/path')?.label).toBe('example.com');
+  });
+
+  it('shows an international domain as the punycode the browser resolves', () => {
+    // The visible text reads "аpple.com" but the leading character is Cyrillic U+0430.
+    // Rendering it verbatim would put a bare, apparently genuine apple.com in the feed.
+    const homograph = 'https://\u0430pple.com/login';
+
+    expect(getCompactUrl(homograph, homograph)).toEqual({
+      label: 'xn--pple-43d.com',
+      fullUrl: 'https://xn--pple-43d.com/login',
+    });
+  });
+
+  it('keeps the full hostname visible when it merely starts with www', () => {
+    expect(
+      getCompactUrl('https://www.example.com.evil.test/story', 'https://www.example.com.evil.test/story')?.label,
+    ).toBe('example.com.evil.test');
+  });
+
+  it('keeps www when dropping it would leave a public suffix standing in for the site', () => {
+    expect(getCompactUrl('https://www.com/deals', 'https://www.com/deals')?.label).toBe('www.com');
+  });
+
+  it('omits URL credentials from both the label and the full URL', () => {
+    const url = 'https://user:password@www.example.com/private';
+
+    expect(getCompactUrl(url, url)).toEqual({ label: 'example.com', fullUrl: 'https://www.example.com/private' });
+  });
+
+  it('compacts root URLs too', () => {
+    expect(getCompactUrl('https://example.com', 'https://example.com')?.label).toBe('example.com');
+    expect(getCompactUrl('https://www.example.com/', 'https://www.example.com/')?.label).toBe('example.com');
+  });
+
+  it('does not compact authored text whose destination differs', () => {
+    expect(getCompactUrl('https://example.com/story', 'https://other.example/story')).toBeNull();
+  });
+
+  it('does not compact email links or malformed URLs', () => {
+    expect(getCompactUrl('user@example.com', 'mailto:user@example.com')).toBeNull();
+    expect(getCompactUrl('not a url', 'not a url')).toBeNull();
+  });
+
+  it('does not compact a non-HTTP scheme even when the text matches the destination', () => {
+    expect(getCompactUrl('ftp://example.com/file', 'ftp://example.com/file')).toBeNull();
+  });
+});
 
 // Helper to create a simple paragraph node with text
 const createParagraph = (text: string): Paragraph => ({
@@ -1615,6 +1691,32 @@ describe('truncateAtWordBoundary', () => {
     const text = 'Hello world test';
     const result = truncateAtWordBoundary(text, 12);
     expect(result.endsWith('...\u00A0')).toBe(true);
+  });
+
+  // A raw URL renders as its host alone, so half a URL would be shown as a tidy,
+  // plausible-looking link pointing at an address that does not resolve.
+  it('cuts before a URL rather than through it', () => {
+    const text = `Look at this https://example.com/${'x'.repeat(400)}`;
+
+    expect(truncateAtWordBoundary(text, 300)).toBe('Look at this...\u00A0');
+  });
+
+  it('keeps a URL whole when cutting before it would leave nothing', () => {
+    const text = `https://example.com/${'y'.repeat(400)}`;
+
+    expect(truncateAtWordBoundary(text, 300)).toBe(text);
+  });
+
+  it('cuts before a scheme-less www autolink too', () => {
+    const text = `Look at this www.example.com/${'x'.repeat(400)}`;
+
+    expect(truncateAtWordBoundary(text, 300)).toBe('Look at this...\u00A0');
+  });
+
+  it('still cuts normally when the limit falls after the URL', () => {
+    const text = `See https://example.com/a then ${'word '.repeat(200)}`;
+
+    expect(truncateAtWordBoundary(text, 300)).toContain('https://example.com/a');
   });
 });
 

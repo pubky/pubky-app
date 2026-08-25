@@ -16,6 +16,7 @@ import type {
 } from 'mdast';
 import { visit } from 'unist-util-visit';
 import { Identity } from '@/libs/identity/identity';
+import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
 import { isValidTagLabel } from '@/libs/utils/utils';
 import { HASHTAG_IN_TEXT_REGEX } from '@/libs/utils/utils.constants';
 import { POST_TEXT_PREVIEW_MAX_LINES, TRUNCATION_LIMIT } from './PostText.constants';
@@ -314,6 +315,51 @@ export const extractTextFromChildren = (children: ReactNode) =>
       ? children[0]
       : '';
 
+export interface CompactUrl {
+  /** The destination host, shown in place of the raw URL. */
+  label: string;
+  /** The full destination, minus any embedded credentials, for the tooltip and accessible name. */
+  fullUrl: string;
+}
+
+/**
+ * Compacts a visibly raw HTTP(S) URL to its host.
+ *
+ * Only the URL the reader can already see is compacted: an authored Markdown
+ * label such as [Read more](https://example.com/path) keeps its intended copy,
+ * which is checked by parsing the visible text and comparing it to the href.
+ *
+ * Both returned values are derived from the parsed href rather than from the
+ * text as written, so neither can disagree with where the browser will go.
+ */
+export const getCompactUrl = (displayText: string, href?: string): CompactUrl | null => {
+  if (!href || !displayText) return null;
+
+  // GFM autolinks bare `www.` text to an http:// href; restore the scheme so the
+  // comparison below comes down to whether the reader is seeing the URL itself.
+  const displayUrl = /^www\./i.test(displayText) ? `http://${displayText}` : displayText;
+
+  try {
+    const parsedDisplayUrl = new URL(displayUrl);
+    const parsedHref = new URL(href);
+
+    if (parsedDisplayUrl.href !== parsedHref.href) return null;
+
+    const label = getUrlHostLabel(parsedHref.href);
+
+    if (!label) return null;
+
+    // The label already drops them; keep them out of the tooltip and the
+    // accessible name too, so a password in a URL is never read out or serialised.
+    parsedHref.username = '';
+    parsedHref.password = '';
+
+    return { label, fullUrl: parsedHref.href };
+  } catch {
+    return null;
+  }
+};
+
 interface PreviewTruncation {
   limit: number;
   wordBoundary: boolean;
@@ -396,7 +442,9 @@ export const truncatePostPreviewText = (text: string): string | null => {
   const lineLimitedText = getLineLimitedPostPreviewText(meaningfulText);
 
   if (lineLimitedText.length > TRUNCATION_LIMIT) {
-    return truncateAtWordBoundary(lineLimitedText, TRUNCATION_LIMIT);
+    const truncated = truncateAtWordBoundary(lineLimitedText, TRUNCATION_LIMIT);
+
+    if (truncated !== lineLimitedText) return truncated;
   }
 
   return lineLimitedText.length < meaningfulText.length ? `${lineLimitedText}${TRUNCATION_ELLIPSIS}` : null;
@@ -804,16 +852,40 @@ export const remarkExtractFirstParagraph = () => (tree: Root) => {
   tree.children = previewChildren;
 };
 
+/**
+ * Moves a cut off the middle of a URL.
+ *
+ * Half a URL is still autolinked, and because a raw URL renders as its host
+ * alone the reader would be shown a tidy, plausible link pointing at a chopped
+ * address. Dropping the URL is preferred; it is kept whole only when cutting
+ * before it would leave the preview empty.
+ */
+const getUrlSafeCutIndex = (text: string, cutIndex: number): number => {
+  for (const match of text.matchAll(/(?:https?:\/\/|www\.)\S+/gi)) {
+    const start = match.index;
+    const end = start + match[0].length;
+
+    if (start >= cutIndex) break;
+    if (end > cutIndex) return text.slice(0, start).trim().length > 0 ? start : end;
+  }
+
+  return cutIndex;
+};
+
 // Truncate text at word boundaries to avoid cutting mid-word, mid-markdown, or mid-URL.
 // Falls back to hard cut if no suitable word boundary is found within 80% of the limit.
 export const truncateAtWordBoundary = (text: string, limit: number): string => {
   if (text.length <= limit) return text;
 
-  const truncated = text.slice(0, limit);
-  const lastSpace = truncated.lastIndexOf(' ');
+  const lastSpace = text.slice(0, limit).lastIndexOf(' ');
 
   // Only use word boundary if it's within 80% of the limit to avoid too-short truncation
   const minBoundary = Math.floor(limit * 0.8);
+  const cutIndex = getUrlSafeCutIndex(text, lastSpace > minBoundary ? lastSpace : limit);
 
-  return (lastSpace > minBoundary ? truncated.slice(0, lastSpace) : truncated) + TRUNCATION_ELLIPSIS;
+  // Keeping a trailing URL whole can leave nothing hidden; say so by returning the
+  // text unchanged, so callers do not offer a "Show more" that reveals nothing.
+  if (cutIndex >= text.length) return text;
+
+  return text.slice(0, cutIndex).trimEnd() + TRUNCATION_ELLIPSIS;
 };

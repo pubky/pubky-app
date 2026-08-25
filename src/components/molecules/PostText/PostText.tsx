@@ -11,6 +11,7 @@ import { cn } from '@/libs/utils/utils';
 import { PostMentions } from '@/organisms/PostMentions/PostMentions';
 import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
 import { PostHashtags } from '../PostHashtags/PostHashtags';
+import { INLINE_LINK_CLASSNAME } from './PostText.constants';
 import { PostTextProps, RemarkAnchorProps, RemarkButtonProps } from './PostText.types';
 import {
   remarkDisallowMarkdownLinks,
@@ -22,8 +23,7 @@ import {
   remarkPlaintextTables,
   truncatePostPreviewText,
 } from './PostText.utils';
-
-const INLINE_LINK_CLASSNAME = 'cursor-pointer text-brand transition-colors hover:text-brand/80';
+import { PostTextLink } from './PostTextLink';
 
 /**
  * Renders formatted text content with markdown, hashtags, mentions, and links.
@@ -36,13 +36,22 @@ const INLINE_LINK_CLASSNAME = 'cursor-pointer text-brand transition-colors hover
  * - Markdown formatting (bold, italic, code, lists, etc.)
  * - Hashtag parsing (#tag → clickable search link)
  * - Mention parsing (pk:... or pubky... → clickable profile link)
- * - URL detection and linking
+ * - Compact URL detection and linking with full-value tooltips
  * - Content truncation with an inline "more" control on non-post pages
+ *
+ * Compacted URLs render a tooltip, so this needs a `TooltipProvider` ancestor;
+ * the app-wide one in `src/app/layout.tsx` covers every current caller.
  *
  * Memoization prevents unnecessary re-renders when TTL refreshes update IndexedDB records
  * without changes to the actual post content.
  */
-export const PostText = memo(function PostText({ content, isArticle, onLinkClick, className }: PostTextProps) {
+export const PostText = memo(function PostText({
+  content,
+  isArticle,
+  compactUrls = true,
+  onLinkClick,
+  className,
+}: PostTextProps) {
   const pathname = usePathname();
   const onPostPage = pathname.startsWith(POST_ROUTES.POST);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -97,28 +106,12 @@ export const PostText = memo(function PostText({ content, isArticle, onLinkClick
         remarkPlugins={remarkPlugins}
         components={{
           a(props: RemarkAnchorProps) {
-            const { children, className, 'data-type': dataType, node: _node, ref: _ref, ...rest } = props;
+            const { 'data-type': dataType } = props;
 
             if (dataType === 'hashtag') return <PostHashtags {...props} />;
             if (dataType === 'mention') return <PostMentions {...props} />;
 
-            return (
-              <a
-                {...rest}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  e.stopPropagation();
-
-                  if (onLinkClick && rest.href) {
-                    onLinkClick(rest.href, e);
-                  }
-                }}
-                className={cn(className, INLINE_LINK_CLASSNAME)}
-              >
-                {children}
-              </a>
-            );
+            return <PostTextLink {...props} compactUrl={compactUrls} onLinkClick={onLinkClick} />;
           },
           blockquote(props) {
             const { children, className, node: _node, ref: _ref, ...rest } = props;

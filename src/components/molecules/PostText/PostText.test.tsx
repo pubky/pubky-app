@@ -1,8 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { createEvent, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { PostText } from './PostText';
 import { TRUNCATION_LIMIT } from './PostText.constants';
+
+const render = (ui: ReactElement) => rtlRender(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
 
 // Mock next/navigation
 const mockUsePathname = vi.fn();
@@ -283,6 +287,151 @@ describe('PostText', () => {
         // Should not throw
         fireEvent.click(link);
       });
+
+      it('shows only the host while preserving the full destination', () => {
+        render(<PostText content="Visit https://news.example.co.uk/story?id=42#comments" />);
+
+        const link = screen.getByRole('link', { name: 'https://news.example.co.uk/story?id=42#comments' });
+        expect(link).toHaveTextContent('news.example.co.uk');
+        expect(link).toHaveAttribute('href', 'https://news.example.co.uk/story?id=42#comments');
+      });
+
+      it('removes the protocol and www prefix', () => {
+        render(<PostText content="Visit https://www.example.com/path" />);
+
+        expect(screen.getByRole('link')).toHaveTextContent('example.com');
+      });
+
+      it('keeps a URL inline with its surrounding text', () => {
+        render(<PostText content="Read https://www.example.com/story for the details" />);
+
+        const link = screen.getByRole('link');
+        const paragraph = link.closest('p');
+
+        expect(paragraph).toHaveTextContent('Read example.com for the details');
+        expect(link.previousSibling?.textContent).toBe('Read ');
+        expect(link.nextSibling?.textContent).toBe(' for the details');
+      });
+
+      it('shows the full compacted URL in a tooltip on hover', async () => {
+        render(<PostText content="Visit https://example.com/a/very/long/path" />);
+
+        const link = screen.getByRole('link', { name: 'https://example.com/a/very/long/path' });
+        fireEvent.pointerMove(link, { pointerType: 'mouse' });
+
+        await waitFor(() => {
+          expect(screen.getByRole('tooltip')).toHaveTextContent('https://example.com/a/very/long/path');
+          expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveClass(
+            'bg-accent',
+            'font-medium',
+            'text-foreground',
+            '[&_svg]:fill-accent',
+          );
+        });
+      });
+
+      it('shows the full compacted URL in a tooltip on keyboard focus', async () => {
+        render(<PostText content="Visit https://example.com/a/very/long/path" />);
+
+        fireEvent.focus(screen.getByRole('link', { name: 'https://example.com/a/very/long/path' }));
+
+        await waitFor(() => {
+          expect(screen.getByRole('tooltip')).toHaveTextContent('https://example.com/a/very/long/path');
+        });
+      });
+
+      it('shows an international domain as the punycode the browser resolves', () => {
+        // The visible text reads "аpple.com" but its first character is Cyrillic U+0430.
+        render(<PostText content={'Login at https://\u0430pple.com/account'} />);
+
+        const link = screen.getByRole('link');
+
+        expect(link).toHaveTextContent('xn--pple-43d.com');
+        expect(link).toHaveAccessibleName('https://xn--pple-43d.com/account');
+      });
+
+      it('keeps credentials out of the label, the accessible name, and the tooltip', async () => {
+        render(<PostText content="Visit https://user:secret@example.com/private" />);
+
+        const link = screen.getByRole('link');
+        expect(link).toHaveTextContent('example.com');
+        expect(link).toHaveAccessibleName('https://example.com/private');
+
+        fireEvent.pointerMove(link, { pointerType: 'mouse' });
+
+        await waitFor(() => {
+          expect(screen.getByRole('tooltip')).toHaveTextContent('https://example.com/private');
+        });
+        expect(screen.getByRole('tooltip')).not.toHaveTextContent('secret');
+      });
+
+      it('reveals the scheme of a www autolink, which the visible text omits', () => {
+        render(<PostText content="Go www.example.com/login now" />);
+
+        expect(screen.getByRole('link')).toHaveAccessibleName('http://www.example.com/login');
+      });
+
+      it('leaves the context menu alone so a touch long press keeps Copy Link', () => {
+        render(<PostText content="Visit https://example.com/long/path" />);
+
+        const link = screen.getByRole('link');
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        fireEvent.pointerUp(link, { pointerType: 'touch' });
+
+        const contextMenu = createEvent.contextMenu(link);
+        fireEvent(link, contextMenu);
+
+        expect(contextMenu.defaultPrevented).toBe(false);
+      });
+
+      it('hides the tooltip on touch, where the browser already reveals the full URL', async () => {
+        render(<PostText content="Visit https://example.com/a/very/long/path" />);
+
+        fireEvent.focus(screen.getByRole('link'));
+
+        await waitFor(() => {
+          expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveClass('pointer-coarse:hidden');
+        });
+      });
+
+      it('still activates on the first keyboard press after a touch scroll', () => {
+        const handleLinkClick = vi.fn();
+        render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
+
+        const link = screen.getByRole('link');
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        fireEvent.pointerMove(link, { pointerType: 'touch', clientX: 10, clientY: 90 });
+        fireEvent.pointerUp(link, { pointerType: 'touch' });
+        fireEvent.click(link, { detail: 0 });
+
+        expect(handleLinkClick).toHaveBeenCalledWith('https://example.com/long/path', expect.any(Object));
+      });
+
+      it('keeps a normal touch tap as link navigation', () => {
+        const handleLinkClick = vi.fn();
+        render(<PostText content="Visit https://example.com/long/path" onLinkClick={handleLinkClick} />);
+
+        const link = screen.getByRole('link');
+        fireEvent.pointerDown(link, { pointerType: 'touch', clientX: 10, clientY: 10 });
+        fireEvent.pointerUp(link, { pointerType: 'touch' });
+        fireEvent.click(link);
+
+        expect(handleLinkClick).toHaveBeenCalledWith('https://example.com/long/path', expect.any(Object));
+      });
+
+      it('compacts raw URLs in articles', () => {
+        mockUsePathname.mockReturnValue('/post/author/post-id');
+        render(<PostText content="Source: https://example.com/article/chapter" isArticle />);
+
+        expect(screen.getByRole('link')).toHaveTextContent('example.com');
+      });
+
+      it('can preserve full URLs for non-post uses', () => {
+        render(<PostText content="Visit https://example.com/profile/path" compactUrls={false} />);
+
+        expect(screen.getByRole('link')).toHaveTextContent('https://example.com/profile/path');
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+      });
     });
 
     describe('Markdown links (disallowed)', () => {
@@ -314,6 +463,15 @@ describe('PostText', () => {
         expect(screen.getByText(/after/)).toBeInTheDocument();
         expect(screen.queryByRole('link')).not.toBeInTheDocument();
       });
+    });
+
+    it('preserves authored Markdown link labels in articles', () => {
+      render(<PostText content="[Read the source](https://example.com/a/long/path)" isArticle />);
+
+      expect(screen.getByRole('link', { name: 'Read the source' })).toHaveAttribute(
+        'href',
+        'https://example.com/a/long/path',
+      );
     });
 
     describe('Mixed autolinks and markdown links', () => {

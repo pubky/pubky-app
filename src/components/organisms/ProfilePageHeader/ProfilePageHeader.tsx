@@ -194,7 +194,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
 
         {bio && (
           <Container data-cy="profile-bio-header" overrideDefaults className="col-span-full min-w-0 lg:col-auto">
-            <PostText content={bio} />
+            <PostText content={bio} compactUrls={false} />
           </Container>
         )}
 
