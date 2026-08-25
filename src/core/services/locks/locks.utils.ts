@@ -1,5 +1,5 @@
 import { Locks, LocksOptions, type Session as LocksSdkSession } from '@pubky/locks-sdk';
-import { getLockServer, getPkarrRelays } from '@/config/network';
+import { getLockServer, getPaykitServerUrl, getPkarrRelays } from '@/config/network';
 import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -67,6 +67,21 @@ export function getLockServerPubky(): string {
     });
   }
   return lockServerPubky;
+}
+
+/**
+ * Paykit rejects a setup URL that is not built from an exact origin, so trim anything else the
+ * configured value carries. No Paykit Server configured means Locks is disabled.
+ */
+export function getPaykitServerOrigin(): string {
+  const paykitServerUrl = getPaykitServerUrl();
+  if (!paykitServerUrl) {
+    throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'No Paykit Server configured', {
+      service: ErrorService.Locks,
+      operation: 'getPaykitServerOrigin',
+    });
+  }
+  return new URL(paykitServerUrl).origin;
 }
 
 /**

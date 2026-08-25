@@ -5,7 +5,9 @@ import type { TLockDraft } from './usePostInputLock.types';
 
 const mocks = vi.hoisted(() => ({
   isAuthed: false,
+  isPaykitConnected: false,
   lockServer: 'lockpubky' as string | undefined,
+  paykitServerUrl: 'https://paykit.server' as string | undefined,
   publish: vi.fn(),
   toast: vi.fn(),
   prependPosts: vi.fn(),
@@ -14,9 +16,17 @@ const mocks = vi.hoisted(() => ({
   lockContentOptions: null as { lockedPost: { content: string; kind: unknown } } | null,
 }));
 
-vi.mock('@/config/network', () => ({ getLockServer: () => mocks.lockServer }));
+vi.mock('@/config/network', () => ({
+  getLockServer: () => mocks.lockServer,
+  getPaykitServerUrl: () => mocks.paykitServerUrl,
+}));
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
-  useLocksAuthStore: { getState: () => ({ selectIsLocksAuthenticated: () => mocks.isAuthed }) },
+  useLocksAuthStore: {
+    getState: () => ({
+      selectIsLocksAuthenticated: () => mocks.isAuthed,
+      selectIsPaykitConnected: () => mocks.isPaykitConnected,
+    }),
+  },
 }));
 vi.mock('@/hooks/useCreateLockContent/useCreateLockContent', () => ({
   useCreateLockContent: (options: { lockedPost: { content: string; kind: unknown } }) => {
@@ -69,10 +79,18 @@ const configureLock = (result: { current: ReturnType<typeof usePostInputLock> })
   act(() => result.current.handleLockApplied('Secret12!'));
 };
 
+/** Locks fully set up: signed into the Lock Server with a connected Bitkit payout account. */
+const setUpLocks = () => {
+  mocks.isAuthed = true;
+  mocks.isPaykitConnected = true;
+};
+
 describe('usePostInputLock', () => {
   beforeEach(() => {
     mocks.isAuthed = false;
+    mocks.isPaykitConnected = false;
     mocks.lockServer = 'lockpubky';
+    mocks.paykitServerUrl = 'https://paykit.server';
     mocks.publish.mockReset();
     mocks.toast.mockReset();
     mocks.prependPosts.mockReset();
@@ -102,6 +120,11 @@ describe('usePostInputLock', () => {
 
   it('exposes no lock switch when no Lock Server is configured', () => {
     mocks.lockServer = undefined;
+    expect(setup().result.current.lockSwitch).toBeUndefined();
+  });
+
+  it('exposes no lock switch when no Paykit Server is configured', () => {
+    mocks.paykitServerUrl = undefined;
     expect(setup().result.current.lockSwitch).toBeUndefined();
   });
 
@@ -136,7 +159,7 @@ describe('usePostInputLock', () => {
 
   describe('switching on', () => {
     it('captures the composer to lock, and only empties it once the lock is applied', () => {
-      mocks.isAuthed = true;
+      setUpLocks();
       const { result, captureComposer, clearComposer } = setup();
 
       act(() => result.current.lockSwitch?.onCheckedChange(true));
@@ -162,6 +185,27 @@ describe('usePostInputLock', () => {
       expect(result.current.lockSwitch?.checked).toBe(true);
     });
 
+    it('opens the modal when Bitkit is not connected, even with a Locks session', () => {
+      mocks.isAuthed = true;
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isAuthDialogOpen).toBe(true);
+      expect(result.current.isLockDialogOpen).toBe(false);
+    });
+
+    it('goes straight to the unlock-method dialog once Bitkit is connected', () => {
+      mocks.isAuthed = true;
+      mocks.isPaykitConnected = true;
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+
+      expect(result.current.isLockDialogOpen).toBe(true);
+      expect(result.current.isAuthDialogOpen).toBe(false);
+    });
+
     it('advances from sign-in to the unlock-method dialog, keeping the switch on', () => {
       const { result, restoreComposer } = setup();
 
@@ -180,7 +224,7 @@ describe('usePostInputLock', () => {
       ['the switch is turned off', (r: ReturnType<typeof usePostInputLock>) => r.lockSwitch?.onCheckedChange(false)],
       ['the unlock-method dialog is dismissed', (r: ReturnType<typeof usePostInputLock>) => r.closeLockDialog()],
     ])('when %s', (_name, abandon) => {
-      mocks.isAuthed = true;
+      setUpLocks();
       const { result, restoreComposer } = setup();
 
       act(() => result.current.lockSwitch?.onCheckedChange(true));
@@ -208,7 +252,7 @@ describe('usePostInputLock', () => {
 
       act(() => result.current.handleAuthSuccess());
       act(() => result.current.closeAuthDialog());
-      mocks.isAuthed = true;
+      setUpLocks();
 
       act(() => result.current.closeLockDialog());
       act(() => result.current.lockSwitch?.onCheckedChange(true));
@@ -219,7 +263,7 @@ describe('usePostInputLock', () => {
   });
 
   it('reports the switch state independently of whether the lock was configured', () => {
-    mocks.isAuthed = true;
+    setUpLocks();
     const { result } = setup();
 
     expect(result.current.isLockEnabled).toBe(false);
@@ -228,7 +272,7 @@ describe('usePostInputLock', () => {
   });
 
   it('tracks the lock title shown on the composer card', () => {
-    mocks.isAuthed = true;
+    setUpLocks();
     const { result } = setup();
 
     act(() => result.current.lockSwitch?.onCheckedChange(true));
@@ -249,7 +293,7 @@ describe('usePostInputLock', () => {
     });
 
     it('publishes nothing while the switch is on but the unlock method is not applied', async () => {
-      mocks.isAuthed = true;
+      setUpLocks();
       const { result, onNormalSubmit } = setup();
 
       act(() => result.current.lockSwitch?.onCheckedChange(true));
@@ -260,7 +304,7 @@ describe('usePostInputLock', () => {
     });
 
     it('publishes, commits optimistically, clears, and reports the new post on success', async () => {
-      mocks.isAuthed = true;
+      setUpLocks();
       mocks.publish.mockResolvedValue({ status: 'published', postId: 'alice:POST1' });
       const { result, clearComposer, clearTags, onPublished } = setup();
 
@@ -278,7 +322,7 @@ describe('usePostInputLock', () => {
     });
 
     it('reopens sign-in and keeps the lock when the session expired mid-publish', async () => {
-      mocks.isAuthed = true;
+      setUpLocks();
       mocks.publish.mockResolvedValue({ status: 'auth-expired' });
       const { result, onPublished } = setup();
 
@@ -292,7 +336,7 @@ describe('usePostInputLock', () => {
     });
 
     it('toasts and keeps the composer on a failed publish', async () => {
-      mocks.isAuthed = true;
+      setUpLocks();
       mocks.publish.mockResolvedValue({ status: 'failed' });
       const { result, clearComposer, onPublished } = setup();
 

@@ -44,7 +44,10 @@ export function PostInputActionBar({
   const postButtonText = isSubmitting ? 'Posting...' : postButtonLabel;
   const postButtonIconClassName = isSubmitting ? 'animate-spin' : undefined;
   return (
-    <Container className="flex w-full flex-row items-center justify-between gap-4" overrideDefaults>
+    <Container
+      className="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
+      overrideDefaults
+    >
       <Container className="flex items-center gap-2" overrideDefaults>
         {!isArticle ? (
           <Button
@@ -93,7 +96,7 @@ export function PostInputActionBar({
           </Container>
         ) : null}
       </Container>
-      <Container className="flex shrink-0 items-center justify-end gap-2" overrideDefaults>
+      <Container className="flex shrink-0 items-center justify-end gap-2 max-md:w-full" overrideDefaults>
         <Button
           data-cy={getButtonDataCy(postButtonAriaText)}
           {...COMMON_BUTTON_PROPS}
@@ -102,6 +105,7 @@ export function PostInputActionBar({
           aria-label={postButtonAriaText}
           variant={'default'}
           size={isMobile ? 'default' : 'sm'}
+          className="max-md:w-full"
         >
           <Container className="flex items-center gap-2" overrideDefaults>
             <PostButtonIconComponent className={cn('size-4 text-brand', postButtonIconClassName)} strokeWidth={2} />

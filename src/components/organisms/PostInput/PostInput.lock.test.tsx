@@ -37,9 +37,14 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) => selector({ currentUserPubky: 'alice' }),
 }));
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
-  useLocksAuthStore: { getState: () => ({ selectIsLocksAuthenticated: () => true }) },
+  useLocksAuthStore: {
+    getState: () => ({ selectIsLocksAuthenticated: () => true, selectIsPaykitConnected: () => true }),
+  },
 }));
-vi.mock('@/config/network', () => ({ getLockServer: () => 'lockpubky' }));
+vi.mock('@/config/network', () => ({
+  getLockServer: () => 'lockpubky',
+  getPaykitServerUrl: () => 'https://paykit.server',
+}));
 vi.mock('@/molecules/Toaster/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
 
 // Fake composer: real state for the fields the lock flow captures/clears, no-ops for the rest.

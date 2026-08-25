@@ -59,11 +59,31 @@ describe('useLocksAuthStore', () => {
     expect(state.selectLocksSessionSecret()).toBe('secret-abc');
   });
 
+  it('init clears a Paykit connection left over from the previous session', () => {
+    useLocksAuthStore.getState().setPaykitConnected(true);
+
+    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+
+    expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(false);
+  });
+
+  it('keeps the Paykit connection out of storage', () => {
+    useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+    useLocksAuthStore.getState().setPaykitConnected(true);
+
+    const persisted = JSON.parse(localStorage.getItem(LOCKS_AUTH_PERSIST_KEY) ?? '{}') as {
+      state?: Record<string, unknown>;
+    };
+    expect(persisted.state).not.toHaveProperty('paykitConnected');
+  });
+
   it('reset clears the session and secret', () => {
     useLocksAuthStore.getState().init({ session: fakeSession, secret: 'secret-abc' });
+    useLocksAuthStore.getState().setPaykitConnected(true);
     useLocksAuthStore.getState().reset();
     const state = useLocksAuthStore.getState();
     expect(state.selectIsLocksAuthenticated()).toBe(false);
     expect(state.selectLocksSessionSecret()).toBeNull();
+    expect(state.selectIsPaykitConnected()).toBe(false);
   });
 });

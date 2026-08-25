@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => {
     forServerWithOptions: vi.fn(() => fakeLocks),
     getTestnet: vi.fn(() => true),
     getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
+    getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
     setLockServicePointer,
     fakeSession,
     fakeLocks,
@@ -56,6 +57,7 @@ vi.mock('@/config/network', () => ({
   getTestnet: mocks.getTestnet,
   getHomeserver: () => 'homeservertestpubky',
   getLockServer: mocks.getLockServer,
+  getPaykitServerUrl: mocks.getPaykitServerUrl,
 }));
 
 vi.mock('@pubky/locks-sdk', () => {
@@ -428,5 +430,37 @@ describe('LocksService (reader unlock)', () => {
     const bytes = await LocksService.proxyReadGuardedResource('cred-abc', 'content/a.json');
     expect(mocks.fakeViewer.proxyReadGuardedResource).toHaveBeenCalledWith('cred-abc', 'content/a.json');
     expect(bytes).toEqual(new Uint8Array([1, 2, 3]));
+  });
+});
+
+describe('LocksService.generatePaykitSetupUrl', () => {
+  it('builds the /setup URL on the configured origin with both query params', () => {
+    mocks.getPaykitServerUrl.mockReturnValue('https://paykit.server');
+
+    const url = new URL(LocksService.generatePaykitSetupUrl({ returnTo: 'https://app.example', state: 'STATE' }));
+
+    expect(url.origin).toBe('https://paykit.server');
+    expect(url.pathname).toBe('/setup');
+    expect(url.searchParams.get('return_to')).toBe('https://app.example');
+    expect(url.searchParams.get('state')).toBe('STATE');
+  });
+
+  it('percent-encodes both params, so a state survives the round trip verbatim', () => {
+    mocks.getPaykitServerUrl.mockReturnValue('https://paykit.server');
+    const state = 'a b&c=d#e/f';
+
+    const raw = LocksService.generatePaykitSetupUrl({ returnTo: 'https://app.example/x?y=1', state });
+
+    expect(raw).not.toContain(' ');
+    expect(new URL(raw).searchParams.get('state')).toBe(state);
+    expect(new URL(raw).searchParams.get('return_to')).toBe('https://app.example/x?y=1');
+  });
+
+  it('drops any path on the configured Paykit URL', () => {
+    mocks.getPaykitServerUrl.mockReturnValue('https://paykit.server/nested/path');
+
+    expect(new URL(LocksService.generatePaykitSetupUrl({ returnTo: 'https://app.example', state: 'S' })).pathname).toBe(
+      '/setup',
+    );
   });
 });

@@ -21,6 +21,7 @@ import type {
   TCreateContentLockResult,
   TExchangeSessionCodeParams,
   TGenerateConnectUrlParams,
+  TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLocksSessionResult,
   TRegisterGuardedResourceParams,
@@ -33,6 +34,7 @@ import {
   ensureLocksSdkReady,
   getLockServerPubky,
   getLockSession,
+  getPaykitServerOrigin,
   initLockClient,
   toLocksError,
 } from './locks.utils';
@@ -188,6 +190,14 @@ export class LocksService {
     } catch (error) {
       throw toAppError(error, ErrorService.Locks, 'LocksService.generateConnectUrl');
     }
+  }
+
+  /** Builds the `/setup` URL for the Paykit-hosted payout-account page. */
+  static generatePaykitSetupUrl({ returnTo, state }: TGeneratePaykitSetupUrlParams): string {
+    const setupUrl = new URL('/setup', getPaykitServerOrigin());
+    setupUrl.searchParams.set('return_to', returnTo);
+    setupUrl.searchParams.set('state', state);
+    return setupUrl.toString();
   }
 
   /** Exchanges the one-time callback code for a Locks session. */

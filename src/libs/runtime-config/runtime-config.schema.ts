@@ -272,6 +272,8 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   playStoreUrl: urlValue.default(APP_RUNTIME_DEFAULTS.playStoreUrl),
   /** Lock Server pubky the composer's lock flow signs into. Absent = Locks disabled. */
   lockServer: nonEmptyStringValue.optional(),
+  /** Paykit Server address, where a creator connects the account that receives payments. Absent = Locks disabled. */
+  paykitServerUrl: urlValue.optional(),
 });
 
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
@@ -300,6 +302,7 @@ export const runtimeEnvInputSchema = z
     testnet: testnetFromString,
     deployEnv: deployEnvValue,
     lockServer: optionalTrimmedString,
+    paykitServerUrl: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -379,6 +382,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     testnet: z.string().default(String(NETWORK_RUNTIME_DEFAULTS.testnet)).pipe(testnetFromString),
     deployEnv: deployEnvValue.default(NETWORK_RUNTIME_DEFAULTS.deployEnv),
     lockServer: optionalTrimmedString,
+    paykitServerUrl: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
     sentryEnvironment: optionalTrimmedString,
     sentryTracesSampleRate: sampleRateFromString,
@@ -450,6 +454,7 @@ const NETWORK_RUNTIME_ENV_NAMES: Record<keyof NetworkRuntimeConfig, string> = {
 export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ...NETWORK_RUNTIME_ENV_NAMES,
   lockServer: 'PUBKY_RUNTIME_LOCK_SERVER',
+  paykitServerUrl: 'PUBKY_RUNTIME_PAYKIT_SERVER_URL',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',
   sentryEnvironment: 'PUBKY_RUNTIME_SENTRY_ENVIRONMENT',
   sentryTracesSampleRate: 'PUBKY_RUNTIME_SENTRY_TRACES_SAMPLE_RATE',

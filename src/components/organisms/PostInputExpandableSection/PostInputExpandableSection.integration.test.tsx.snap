@@ -50,7 +50,7 @@ exports[`PostInputExpandableSection - Mobile Snapshots > matches the mobile snap
     </div>
   </div>
   <div
-    class="flex w-full flex-row items-center justify-between gap-4"
+    class="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
     data-testid="container"
   >
     <div
@@ -142,12 +142,12 @@ exports[`PostInputExpandableSection - Mobile Snapshots > matches the mobile snap
       </button>
     </div>
     <div
-      class="flex shrink-0 items-center justify-end gap-2"
+      class="flex shrink-0 items-center justify-end gap-2 max-md:w-full"
       data-testid="container"
     >
       <button
         aria-label="Reply"
-        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-10 gap-1 px-4 py-2 has-[>svg]:px-4"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-10 gap-1 px-4 py-2 has-[>svg]:px-4 max-md:w-full"
         data-cy="post-input-action-bar-reply"
         data-size="default"
         data-slot="button"
@@ -238,7 +238,7 @@ exports[`PostInputExpandableSection - Snapshots > matches the desktop snapshot w
     </div>
   </div>
   <div
-    class="flex w-full flex-row items-center justify-between gap-4"
+    class="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
     data-testid="container"
   >
     <div
@@ -330,12 +330,12 @@ exports[`PostInputExpandableSection - Snapshots > matches the desktop snapshot w
       </button>
     </div>
     <div
-      class="flex shrink-0 items-center justify-end gap-2"
+      class="flex shrink-0 items-center justify-end gap-2 max-md:w-full"
       data-testid="container"
     >
       <button
         aria-label="Reply"
-        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-8 gap-1.5 px-3 has-[>svg]:px-3.5 max-md:w-full"
         data-cy="post-input-action-bar-reply"
         data-size="sm"
         data-slot="button"

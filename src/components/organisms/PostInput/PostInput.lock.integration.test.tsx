@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   post: vi.fn(), // PubkyAppPost constructor spy — records the locked post's content/kind
   hasExternalContent: undefined as (() => boolean) | undefined,
   locksAuthed: false,
+  paykitConnected: false,
   lockServer: 'lockpubky' as string | undefined,
   // Test handle into the fake composer state, refreshed on every render.
   composer: {} as {
@@ -50,10 +51,16 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) => selector({ currentUserPubky: 'alice' }),
 }));
 vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
-  useLocksAuthStore: { getState: () => ({ selectIsLocksAuthenticated: () => mocks.locksAuthed }) },
+  useLocksAuthStore: {
+    getState: () => ({
+      selectIsLocksAuthenticated: () => mocks.locksAuthed,
+      selectIsPaykitConnected: () => mocks.paykitConnected,
+    }),
+  },
 }));
 vi.mock('@/config/network', () => ({
   getLockServer: () => mocks.lockServer,
+  getPaykitServerUrl: () => 'https://paykit.server',
 }));
 vi.mock('@/molecules/Toaster/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
 
@@ -171,6 +178,7 @@ vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({
           data-testid="auth-success"
           onClick={() => {
             mocks.locksAuthed = true; // the real flow persists the session to the store
+            mocks.paykitConnected = true; // ...and the Bitkit step records the payout account
             props.onSuccess({});
           }}
         />
@@ -209,9 +217,15 @@ const fillValidPassword = () => {
   });
 };
 
-/** Seed a body, switch on (already signed in), set a valid password and apply it. */
-const configureLock = (body = 'secret body', files: File[] = []) => {
+/** Locks fully set up: signed into the Lock Server with a connected Bitkit payout account. */
+const setUpLocks = () => {
   mocks.locksAuthed = true;
+  mocks.paykitConnected = true;
+};
+
+/** Seed a body, switch on (already set up), set a valid password and apply it. */
+const configureLock = (body = 'secret body', files: File[] = []) => {
+  setUpLocks();
   act(() => mocks.composer.setContent(body));
   if (files.length > 0) act(() => mocks.composer.setAttachments(files));
   fireEvent.click(lockSwitch());
@@ -223,6 +237,7 @@ describe('PostInput lock flow (integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.locksAuthed = false;
+    mocks.paykitConnected = false;
     mocks.lockServer = 'lockpubky';
     mocks.createLockContent.mockResolvedValue({
       lock_id: 'L1',
@@ -296,7 +311,7 @@ describe('PostInput lock flow (integration)', () => {
       [
         'password dialog is cancelled',
         () => {
-          mocks.locksAuthed = true;
+          setUpLocks();
           fireEvent.click(lockSwitch());
           fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
         },
@@ -413,7 +428,7 @@ describe('PostInput lock flow (integration)', () => {
 
   it('keeps Apply Lock disabled for a password that fails the policy', () => {
     renderComposer();
-    mocks.locksAuthed = true;
+    setUpLocks();
     act(() => mocks.composer.setContent('secret body'));
     fireEvent.click(lockSwitch());
 

@@ -164,6 +164,11 @@ describe('runtimeEnvInputSchema', () => {
     );
   });
 
+  it('treats an empty Paykit Server URL as unset, and throws on a malformed one', () => {
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: '  ' }).paykitServerUrl).toBeUndefined();
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, paykitServerUrl: 'not-a-url' })).toThrow();
+  });
+
   it('throws on invalid optional boolean values', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, notificationPollOnStart: 'tru' })).toThrow();
     expect(() => runtimeEnvInputSchemaWithDefaults.parse({ streamPollOnStart: 'yes' })).toThrow();

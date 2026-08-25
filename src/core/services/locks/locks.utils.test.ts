@@ -3,7 +3,14 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
-import { ensureLocksSdkReady, getLockServerPubky, getLockSession, initLockClient, toLocksError } from './locks.utils';
+import {
+  ensureLocksSdkReady,
+  getLockServerPubky,
+  getLockSession,
+  getPaykitServerOrigin,
+  initLockClient,
+  toLocksError,
+} from './locks.utils';
 
 const mocks = vi.hoisted(() => ({
   addPkarrRelay: vi.fn(),
@@ -11,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   forServerWithOptions: vi.fn(() => ({ viewer: {} })),
   getTestnet: vi.fn(() => true),
   getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
+  getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
   init: vi.fn(async () => {}),
   session: null as unknown,
 }));
@@ -20,6 +28,7 @@ vi.mock('@/config/network', () => ({
   getTestnet: mocks.getTestnet,
   getHomeserver: () => 'homeservertestpubky',
   getLockServer: mocks.getLockServer,
+  getPaykitServerUrl: mocks.getPaykitServerUrl,
 }));
 
 vi.mock('@pubky/locks-sdk', () => {
@@ -177,5 +186,32 @@ describe('locks.utils', () => {
       await expect(ensure()).resolves.toBeUndefined();
       expect(mocks.init).toHaveBeenCalledTimes(2);
     });
+  });
+});
+
+describe('getPaykitServerOrigin', () => {
+  it('keeps only the origin, so a configured path cannot leak into the setup URL', () => {
+    mocks.getPaykitServerUrl.mockReturnValue('https://paykit.server/some/path?a=1');
+    expect(getPaykitServerOrigin()).toBe('https://paykit.server');
+  });
+
+  it('preserves a non-default port', () => {
+    mocks.getPaykitServerUrl.mockReturnValue('http://localhost:3001');
+    expect(getPaykitServerOrigin()).toBe('http://localhost:3001');
+  });
+
+  it('throws a validation error when no Paykit Server is configured', () => {
+    mocks.getPaykitServerUrl.mockReturnValue(undefined);
+    try {
+      getPaykitServerOrigin();
+      expect.unreachable('expected a validation error');
+    } catch (error) {
+      expect(isAppError(error)).toBe(true);
+      expect(error).toMatchObject({
+        category: ErrorCategory.Validation,
+        code: ValidationErrorCode.MISSING_FIELD,
+        service: ErrorService.Locks,
+      });
+    }
   });
 });

@@ -14,6 +14,7 @@ export interface LocksAuthState {
   // TODO:[Locks] #2283 — when locks-sdk exposes the creator pubky on `Session`, store it here as `creatorPubky`
   // (mirroring the homeserver store's `currentUserPubky`). Callers then read it from the store
   // instead of extracting `creator` from Lock Server responses (`LocksService`).
+  paykitConnected: boolean;
   hasHydrated: boolean;
 }
 
@@ -22,6 +23,7 @@ export interface LocksAuthActions {
   reset: () => void;
   /** Set the live session without touching the persisted secret (used on restore). */
   setSession: (session: LocksSdkSession | null) => void;
+  setPaykitConnected: (connected: boolean) => void;
   setHasHydrated: (hasHydrated: boolean) => void;
 }
 
@@ -29,6 +31,7 @@ export interface LocksAuthSelectors {
   selectIsLocksAuthenticated: () => boolean;
   selectLocksSession: () => LocksSdkSession | null;
   selectLocksSessionSecret: () => string | null;
+  selectIsPaykitConnected: () => boolean;
 }
 
 export type LocksAuthStore = LocksAuthState & LocksAuthActions & LocksAuthSelectors;
@@ -36,6 +39,7 @@ export type LocksAuthStore = LocksAuthState & LocksAuthActions & LocksAuthSelect
 export const locksAuthInitialState: LocksAuthState = {
   session: null,
   locksSessionSecret: null,
+  paykitConnected: false,
   hasHydrated: false,
 };
 
@@ -43,5 +47,6 @@ export enum LocksAuthActionTypes {
   INIT = 'INIT',
   RESET = 'RESET',
   SET_SESSION = 'SET_SESSION',
+  SET_PAYKIT_CONNECTED = 'SET_PAYKIT_CONNECTED',
   SET_HAS_HYDRATED = 'SET_HAS_HYDRATED',
 }

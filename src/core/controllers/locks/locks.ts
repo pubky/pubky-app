@@ -19,6 +19,7 @@ import type {
   TFetchLockFileParams,
   TFetchLockFileResult,
   TGetConnectUrlParams,
+  TGetPaykitSetupUrlParams,
   TLocksSessionResult,
   TUnlockedAttachment,
   TUnlockedContent,
@@ -46,6 +47,11 @@ export class LocksController {
   static getConnectUrl({ state }: TGetConnectUrlParams): Promise<string> {
     const returnTo = window.location.origin;
     return LocksApplication.generateConnectUrl({ returnTo, state });
+  }
+
+  /** Builds the Paykit `/setup` URL to load in the payout-account iframe's src. */
+  static getPaykitSetupUrl({ state }: TGetPaykitSetupUrlParams): string {
+    return LocksApplication.generatePaykitSetupUrl({ returnTo: window.location.origin, state });
   }
 
   /**
@@ -106,6 +112,10 @@ export class LocksController {
    */
   static clearSession(): void {
     useLocksAuthStore.getState().reset();
+  }
+
+  static markPaykitConnected(): void {
+    useLocksAuthStore.getState().setPaykitConnected(true);
   }
 
   /**

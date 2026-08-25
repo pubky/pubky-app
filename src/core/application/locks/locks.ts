@@ -14,6 +14,7 @@ import type {
   TExchangeSessionCodeParams,
   TFetchLockFileParams,
   TGenerateConnectUrlParams,
+  TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLocksSessionResult,
   TRegisterGuardedResourceResult,
@@ -59,6 +60,10 @@ export class LocksApplication {
 
   static generateConnectUrl(params: TGenerateConnectUrlParams): Promise<string> {
     return LocksService.generateConnectUrl(params);
+  }
+
+  static generatePaykitSetupUrl(params: TGeneratePaykitSetupUrlParams): string {
+    return LocksService.generatePaykitSetupUrl(params);
   }
 
   /** Whether the Lock Server at `origin` is ready to serve — gates the auth flow before the iframe. */

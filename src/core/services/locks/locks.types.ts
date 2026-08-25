@@ -18,6 +18,20 @@ export type TGetConnectUrlParams = {
   state: string;
 };
 
+/** Params to build the Paykit `/setup` URL for the creator's payout account. */
+export type TGeneratePaykitSetupUrlParams = {
+  /** Parent (pubky-app) origin; Paykit targets its postMessage + `frame-ancestors` at it. */
+  returnTo: string;
+  /** Opaque CSRF value echoed back in the callback for verification. */
+  state: string;
+};
+
+/** Controller-facing params for the Paykit setup URL; `returnTo` is derived inside the controller. */
+export type TGetPaykitSetupUrlParams = {
+  /** Opaque CSRF value echoed back in the callback for verification. */
+  state: string;
+};
+
 /** Params to exchange a one-time callback code for a Locks session. */
 export type TExchangeSessionCodeParams = {
   code: string;

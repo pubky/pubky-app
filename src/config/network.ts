@@ -6,6 +6,7 @@ import {
   getHomeserver,
   getHomeserverUrl,
   getLockServer,
+  getPaykitServerUrl,
   getPkarrRelays,
   getTestnet,
 } from '@/libs/runtime-config/runtime-config';
@@ -20,6 +21,7 @@ export {
   getHomeserver,
   getHomeserverUrl,
   getLockServer,
+  getPaykitServerUrl,
   getPkarrRelays,
   getTestnet,
 };

@@ -2,7 +2,7 @@
 
 exports[`PostInputActionBar - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div
-  class="flex w-full flex-row items-center justify-between gap-4"
+  class="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -128,12 +128,13 @@ exports[`PostInputActionBar - Mobile Snapshots > matches snapshot on mobile view
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center justify-end gap-2"
+    class="flex shrink-0 items-center justify-end gap-2 max-md:w-full"
     data-override-defaults="true"
     data-testid="container"
   >
     <button
       aria-label="Post"
+      class="max-md:w-full"
       data-size="default"
       data-variant="default"
       disabled=""
@@ -179,7 +180,7 @@ exports[`PostInputActionBar - Mobile Snapshots > matches snapshot on mobile view
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with all callbacks 1`] = `
 <div
-  class="flex w-full flex-row items-center justify-between gap-4"
+  class="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -302,12 +303,13 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with all callbacks 1`
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center justify-end gap-2"
+    class="flex shrink-0 items-center justify-end gap-2 max-md:w-full"
     data-override-defaults="true"
     data-testid="container"
   >
     <button
       aria-label="Post"
+      class="max-md:w-full"
       data-size="sm"
       data-variant="default"
     >
@@ -352,7 +354,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with all callbacks 1`
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with default props 1`] = `
 <div
-  class="flex w-full flex-row items-center justify-between gap-4"
+  class="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -478,12 +480,13 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with default props 1`
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center justify-end gap-2"
+    class="flex shrink-0 items-center justify-end gap-2 max-md:w-full"
     data-override-defaults="true"
     data-testid="container"
   >
     <button
       aria-label="Post"
+      class="max-md:w-full"
       data-size="sm"
       data-variant="default"
       disabled=""
@@ -529,7 +532,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with default props 1`
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with disabled post button 1`] = `
 <div
-  class="flex w-full flex-row items-center justify-between gap-4"
+  class="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -655,12 +658,13 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with disabled post bu
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center justify-end gap-2"
+    class="flex shrink-0 items-center justify-end gap-2 max-md:w-full"
     data-override-defaults="true"
     data-testid="container"
   >
     <button
       aria-label="Post"
+      class="max-md:w-full"
       data-size="sm"
       data-variant="default"
       disabled=""
@@ -706,7 +710,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with disabled post bu
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with hideArticleButton prop 1`] = `
 <div
-  class="flex w-full flex-row items-center justify-between gap-4"
+  class="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -795,12 +799,13 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with hideArticleButto
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center justify-end gap-2"
+    class="flex shrink-0 items-center justify-end gap-2 max-md:w-full"
     data-override-defaults="true"
     data-testid="container"
   >
     <button
       aria-label="Post"
+      class="max-md:w-full"
       data-size="sm"
       data-variant="default"
       disabled=""
@@ -846,7 +851,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with hideArticleButto
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with isArticle prop 1`] = `
 <div
-  class="flex w-full flex-row items-center justify-between gap-4"
+  class="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -894,12 +899,13 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with isArticle prop 1
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center justify-end gap-2"
+    class="flex shrink-0 items-center justify-end gap-2 max-md:w-full"
     data-override-defaults="true"
     data-testid="container"
   >
     <button
       aria-label="Post"
+      class="max-md:w-full"
       data-size="sm"
       data-variant="default"
       disabled=""
@@ -945,7 +951,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with isArticle prop 1
 
 exports[`PostInputActionBar - Snapshots > matches snapshot with isEdit prop 1`] = `
 <div
-  class="flex w-full flex-row items-center justify-between gap-4"
+  class="flex w-full flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between"
   data-override-defaults="true"
   data-testid="container"
 >
@@ -1034,12 +1040,13 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with isEdit prop 1`] 
     </button>
   </div>
   <div
-    class="flex shrink-0 items-center justify-end gap-2"
+    class="flex shrink-0 items-center justify-end gap-2 max-md:w-full"
     data-override-defaults="true"
     data-testid="container"
   >
     <button
       aria-label="Post"
+      class="max-md:w-full"
       data-size="sm"
       data-variant="default"
       disabled=""

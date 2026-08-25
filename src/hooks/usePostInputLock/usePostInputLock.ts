@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { getLockServer } from '@/config/network';
+import { getLockServer, getPaykitServerUrl } from '@/config/network';
 import { PostController } from '@/controllers/post/post';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
 import { Logger } from '@/libs/logger/logger';
@@ -59,6 +59,16 @@ export function usePostInputLock({
   const timelineFeed = useTimelineFeedContext();
 
   const lockServerPubky = getLockServer() ?? '';
+  const paykitServerUrl = getPaykitServerUrl() ?? '';
+
+  /**
+   * Signed into the Lock Server AND holding a connected Bitkit payout account. The connection is
+   * per browser session, so this is false again after a reload.
+   */
+  const isLocksSetUp = () => {
+    const store = useLocksAuthStore.getState();
+    return store.selectIsLocksAuthenticated() && store.selectIsPaykitConnected();
+  };
 
   // Optimistic commit of the just-published announcement, like a normal post: local blobs (so the
   // creator's own media shows before Nexus indexes it) + a timeline prepend. The announcement is
@@ -140,8 +150,9 @@ export function usePostInputLock({
     // Seed the card's title with the default so it reads as real, editable text (not a placeholder).
     setLockTitle('Locked post');
 
-    // Gate on the Locks session: authenticated → lock content dialog; otherwise sign in first.
-    if (useLocksAuthStore.getState().selectIsLocksAuthenticated()) {
+    // Gate on Locks setup: fully set up → lock content dialog; otherwise the modal, which opens at
+    // whichever step is still missing.
+    if (isLocksSetUp()) {
       setIsLockDialogOpen(true);
     } else {
       setIsAuthDialogOpen(true);
@@ -209,10 +220,9 @@ export function usePostInputLock({
   };
 
   return {
-    // No Lock Server → no switch. Disable turning it ON while the composer is empty (nothing to lock);
-    // once ON the composer is empty by design (holds the teaser), so keep it toggleable to turn off.
+    // Locks needs both servers (Lock Server and Paykit Server), so a missing one → No Locks feature.
     lockSwitch:
-      isEnabled && lockServerPubky
+      isEnabled && lockServerPubky && paykitServerUrl
         ? { checked: lockEnabled, onCheckedChange, disabled: !lockEnabled && !canEnable }
         : undefined,
     isLockEnabled: lockEnabled,
