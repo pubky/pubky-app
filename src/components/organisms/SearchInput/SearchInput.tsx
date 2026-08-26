@@ -68,11 +68,13 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   // Deps are primitives on purpose: the criteria object's identity is only stable
   // where the React Compiler runs, and correctness must not depend on that.
   const urlQuery = criteria.mode === 'content' || criteria.mode === 'invalid' ? criteria.query : null;
-  // Tags can never contain ',' (the URL parser splits on it), so the join is lossless.
+  // Tags can never contain ',' (the URL parser splits on it), so the join is
+  // lossless — and the parser already trims + lowercases, so the split-back
+  // needs no re-normalization.
   const urlTagsKey = criteria.mode === 'tags' ? criteria.tags.join(',') : null;
   const lastSeededQueryRef = useRef<string | null>(null);
   useEffect(() => {
-    setActiveTags(urlTagsKey === null ? [] : urlTagsKey.split(',').map((tag) => tag.toLowerCase()));
+    setActiveTags(urlTagsKey === null ? [] : urlTagsKey.split(','));
 
     if (urlQuery !== null) {
       lastSeededQueryRef.current = urlQuery;

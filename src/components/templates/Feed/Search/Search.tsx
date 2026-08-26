@@ -55,7 +55,10 @@ export function Search() {
     <>
       {/* Mobile search input - hidden on desktop (shown in header there) */}
       <Container className="lg:hidden">
-        <SearchInput autoFocus={criteria.mode !== 'content' && (criteria.mode !== 'tags' || isMobile)} />
+        {/* No autofocus with results in the bar (content mode, desktop tag mode) —
+            and none in invalid mode either: focusing opens the suggestions dropdown
+            z-50 over the alert that explains why there are no results. */}
+        <SearchInput autoFocus={criteria.mode === 'none' || (isMobile && criteria.mode === 'tags')} />
       </Container>
 
       {hasResults ? (

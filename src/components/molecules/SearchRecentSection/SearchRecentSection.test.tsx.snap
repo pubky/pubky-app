@@ -77,8 +77,9 @@ exports[`SearchRecentSection > SearchRecentSection - Snapshots > matches snapsho
     </span>
     <button
       aria-label="Clear all recent searches"
-      class="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      class="flex cursor-pointer items-center gap-1 rounded text-xs text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
       data-testid="clear-all-button"
+      type="button"
     >
       <svg
         aria-hidden="true"

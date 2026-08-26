@@ -74,6 +74,16 @@ describe('SearchRecentItem', () => {
     expect(screen.getByText('bitcoin wallets')).toBeInTheDocument();
   });
 
+  it('query chip keeps the base focus-visible ring and never submits an enclosing form', () => {
+    render(<SearchRecentItem type={RECENT_ITEM_TYPE.QUERY} query={mockQuery} onQueryClick={vi.fn()} />);
+
+    const chip = screen.getByTestId(`recent-query-${mockQuery.query}`);
+    // Buttons default to type="submit" inside a <form>.
+    expect(chip).toHaveAttribute('type', 'button');
+    // The base Button class carries the focus ring; `overrideDefaults` would drop it.
+    expect(chip.className).toContain('focus-visible:ring-ring/50');
+  });
+
   it('calls onUserClick with user when user item is clicked', () => {
     const onUserClick = vi.fn();
     render(<SearchRecentItem type={RECENT_ITEM_TYPE.USER} user={mockUser} onUserClick={onUserClick} />);

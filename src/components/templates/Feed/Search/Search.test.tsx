@@ -166,6 +166,22 @@ describe('Search', () => {
     expect(screen.getByRole('alert')).toBe(invalidQuery);
     expect(screen.getByTestId('search-empty-state')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
+    // Never autofocus here: focusing opens the suggestions dropdown (z-50)
+    // over the alert that explains why there are no results.
+    expect(screen.getByTestId('search-input')).toHaveAttribute('data-auto-focus', 'false');
+  });
+
+  it('autofocuses the input only when there is nothing in the bar to cover', () => {
+    mockUseSearchCriteria.mockReturnValue({ mode: 'none' });
+    const { unmount } = render(<Search />);
+    expect(screen.getByTestId('search-input')).toHaveAttribute('data-auto-focus', 'true');
+    unmount();
+
+    // Mobile tag search keeps the refine-focus behavior.
+    mockUseIsMobile.mockReturnValue(true);
+    mockUseSearchCriteria.mockReturnValue({ mode: 'tags', tags: ['pubky'] });
+    render(<Search />);
+    expect(screen.getByTestId('search-input')).toHaveAttribute('data-auto-focus', 'true');
   });
 
   it('renders the mobile SearchInput', () => {

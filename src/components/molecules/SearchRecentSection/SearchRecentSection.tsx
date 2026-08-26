@@ -6,12 +6,14 @@
  * Displays recent searches in one section: a row of users, then one mixed row of
  * tag chips and full-text query pills sorted by recency (#1840 design).
  * Shows "Recent searches" header with X to clear all.
- * Note: Data is already limited by parent component.
+ * The parent caps each incoming list at MAX_RECENT_SEARCHES; the merged
+ * tag+query row is capped here again so it never doubles that limit.
  */
 import { X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { MAX_RECENT_SEARCHES } from '@/stores/search/search.constants';
 import { SearchRecentItem } from '../SearchRecentItem/SearchRecentItem';
 import { RECENT_ITEM_TYPE } from '../SearchRecentItem/SearchRecentItem.constants';
 import type { SearchRecentSectionProps } from './SearchRecentSection.types';
@@ -35,7 +37,11 @@ export function SearchRecentSection({
   const searchChips: RecentSearchChip[] = [
     ...tags.map((tag) => ({ key: `tag-${tag.tag}`, searchedAt: tag.searchedAt, tag })),
     ...queries.map((query) => ({ key: `query-${query.query}`, searchedAt: query.searchedAt, query })),
-  ].sort((a, b) => b.searchedAt - a.searchedAt);
+  ]
+    .sort((a, b) => b.searchedAt - a.searchedAt)
+    // Cap the MERGED row: each source list is already capped, but together they
+    // could double the limit and push "Hot tags" out of short viewports.
+    .slice(0, MAX_RECENT_SEARCHES);
 
   const hasItems = users.length > 0 || searchChips.length > 0;
   if (!hasItems) {
@@ -49,8 +55,11 @@ export function SearchRecentSection({
         </Typography>
         {onClearAll && (
           <Button
+            type="button"
             overrideDefaults
-            className="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            // `overrideDefaults` drops the base focus ring — restore it so the
+            // only header control stays visible to keyboard users.
+            className="flex cursor-pointer items-center gap-1 rounded text-xs text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             onClick={onClearAll}
             data-testid="clear-all-button"
             aria-label={'Clear all recent searches'}

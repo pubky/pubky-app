@@ -202,6 +202,24 @@ describe('SearchRecentSection', () => {
     expect(chipTexts).toEqual(['Tag: newest-tag', 'Query: new query', 'Query: old query', 'Tag: oldest-tag']);
   });
 
+  it('caps the merged tag+query row at MAX_RECENT_SEARCHES, keeping the most recent', () => {
+    // 5 tags + 5 queries, each list at its own cap — the merged row must not
+    // double to 10 chips (#1840 dropdown height).
+    render(
+      <SearchRecentSection
+        users={[]}
+        tags={[1, 3, 5, 7, 9].map((searchedAt) => ({ tag: `tag-${searchedAt}`, searchedAt }))}
+        queries={[2, 4, 6, 8, 10].map((searchedAt) => ({ query: `query ${searchedAt}`, searchedAt }))}
+        onUserClick={vi.fn()}
+        onTagClick={vi.fn()}
+        onQueryClick={vi.fn()}
+      />,
+    );
+
+    const chipTexts = screen.getAllByTestId(/^(tag-item-|recent-query-)/).map((element) => element.textContent);
+    expect(chipTexts).toEqual(['Query: query 10', 'Tag: tag-9', 'Query: query 8', 'Tag: tag-7', 'Query: query 6']);
+  });
+
   it('renders the section when only queries are non-empty', () => {
     render(
       <SearchRecentSection

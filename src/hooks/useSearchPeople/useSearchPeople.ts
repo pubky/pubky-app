@@ -27,8 +27,19 @@ interface UseSearchPeopleResult {
   loadMore: () => Promise<void>;
 }
 
-/** Sentinel id list: no details emission has arrived yet (never equals a state array). */
-const NO_DETAILS_EMISSION: Pubky[] = [];
+/** Sentinel epoch: no hydration emission has arrived yet (list epochs start at 1). */
+const NO_HYDRATION_EMISSION = -1;
+
+interface HydrationEmission {
+  epoch: number;
+  details: Map<Pubky, NexusUserDetails>;
+  counts: Map<Pubky, NexusUserCounts>;
+  relationships: Map<Pubky, UserRelationshipsModelSchema>;
+}
+
+function emptyHydrationEmission(epoch: number): HydrationEmission {
+  return { epoch, details: new Map(), counts: new Map(), relationships: new Map() };
+}
 
 /** Response ids in order, with duplicates within the same page dropped. */
 function uniquePageIds(results: TUserTagSearchResult[]): Pubky[] {
@@ -57,6 +68,9 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   const tagsKey = tags.slice(0, SEARCH_PEOPLE_MAX_TAGS).join(',');
 
   const [userIds, setUserIds] = useState<Pubky[]>([]);
+  // Bumped only when the id list is REPLACED (tags change), never when a
+  // loadMore page is appended — the hydration gate below keys on it.
+  const [listEpoch, setListEpoch] = useState(0);
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -79,6 +93,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
 
     userIdsRef.current = [];
     setUserIds([]);
+    setListEpoch((epoch) => epoch + 1);
     setSkip(0);
 
     if (!tagsKey) {
@@ -173,51 +188,31 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   };
 
   // Reactive read-back from Dexie so follow/unfollow and late hydration
-  // propagate without refetching. Each emission carries the id list it was
-  // computed for, so a settled-but-empty read is distinguishable from "Dexie
-  // has not emitted yet" (see `detailsHydrated`).
-  const userDetailsQuery = useLiveQuery(
-    async () => {
+  // propagate without refetching. One query over all three tables gives every
+  // emission a consistent snapshot — cards can never render details with
+  // zeroed counts or a missing relationship from a lagging sibling query.
+  // Each emission carries the list epoch it ran for (see `hydrated` below).
+  const hydration = useLiveQuery(
+    async (): Promise<HydrationEmission> => {
       try {
-        if (userIds.length === 0) return { ids: userIds, details: new Map<Pubky, NexusUserDetails>() };
-        return { ids: userIds, details: await UserController.getManyDetails({ userIds }) };
+        if (userIds.length === 0) return emptyHydrationEmission(listEpoch);
+        const [details, counts, relationships] = await Promise.all([
+          UserController.getManyDetails({ userIds }),
+          UserController.getManyCounts({ userIds }),
+          UserController.getManyRelationships({ userIds }),
+        ]);
+        return { epoch: listEpoch, details, counts, relationships };
       } catch (err) {
-        Logger.error('[useSearchPeople] Failed to query user details:', err);
-        return { ids: userIds, details: new Map<Pubky, NexusUserDetails>() };
+        Logger.error('[useSearchPeople] Failed to query user hydration:', err);
+        return emptyHydrationEmission(listEpoch);
       }
     },
-    [userIds],
-    { ids: NO_DETAILS_EMISSION, details: new Map<Pubky, NexusUserDetails>() },
+    [userIds, listEpoch],
+    emptyHydrationEmission(NO_HYDRATION_EMISSION),
   );
-  const userDetailsMap = userDetailsQuery.details;
-
-  const userCountsMap = useLiveQuery(
-    async () => {
-      try {
-        if (userIds.length === 0) return new Map<Pubky, NexusUserCounts>();
-        return await UserController.getManyCounts({ userIds });
-      } catch (err) {
-        Logger.error('[useSearchPeople] Failed to query user counts:', err);
-        return new Map<Pubky, NexusUserCounts>();
-      }
-    },
-    [userIds],
-    new Map<Pubky, NexusUserCounts>(),
-  );
-
-  const userRelationshipsMap = useLiveQuery(
-    async () => {
-      try {
-        if (userIds.length === 0) return new Map<Pubky, UserRelationshipsModelSchema>();
-        return await UserController.getManyRelationships({ userIds });
-      } catch (err) {
-        Logger.error('[useSearchPeople] Failed to query user relationships:', err);
-        return new Map<Pubky, UserRelationshipsModelSchema>();
-      }
-    },
-    [userIds],
-    new Map<Pubky, UserRelationshipsModelSchema>(),
-  );
+  const userDetailsMap = hydration.details;
+  const userCountsMap = hydration.counts;
+  const userRelationshipsMap = hydration.relationships;
 
   const users = userIds
     .filter((id) => !isMuted(id))
@@ -243,11 +238,15 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   // `useLiveQuery` returns its default synchronously and only fills it a tick
   // later (Dexie defers emissions), so without this gate the section would flash
   // empty — or unmount entirely — between fetch settle and the read-back
-  // emission. The gate asks whether the read-back has emitted for the ids
-  // currently on screen, NOT whether anything hydrated: a page where no id
-  // hydrates (stale search index, or a swallowed `by_ids` failure) is settled
-  // and empty, and must not pin the section on skeletons forever.
-  const detailsHydrated = userDetailsQuery.ids === userIds;
+  // emission. The gate keys on the list EPOCH, not the id array identity:
+  // a loadMore append keeps the epoch, so the previous emission stays valid and
+  // the section never flips back to loading mid-append (new cards pop in when
+  // their emission lands). A replaced list (tags change) bumps the epoch and
+  // gates until the first emission for it. The gate asks whether an emission
+  // arrived, NOT whether anything hydrated: a page where no id hydrates (stale
+  // search index, or a swallowed `by_ids` failure) is settled and empty, and
+  // must not pin the section on skeletons forever.
+  const hydrated = hydration.epoch === listEpoch;
 
-  return { users, loading: loading || !detailsHydrated, loadingMore, hasMore, loadMore };
+  return { users, loading: loading || !hydrated, loadingMore, hasMore, loadMore };
 }

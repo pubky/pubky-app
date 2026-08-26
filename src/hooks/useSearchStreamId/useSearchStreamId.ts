@@ -11,9 +11,11 @@ import { getKindFromContent, getStreamIdFromFilters } from '@/stores/home/home.u
 
 /**
  * Parses tags from a comma-separated string parameter.
- * Trims whitespace, filters empty values, and limits to MAX_STREAM_TAGS.
+ * Trims whitespace, lowercases (tags are case-insensitive everywhere else:
+ * store writes, stream requests, chip rendering), filters empty values, and
+ * limits to MAX_STREAM_TAGS.
  *
- * @param tagsParam - The raw tags parameter from URL (e.g., "pubky, bitcoin, nostr")
+ * @param tagsParam - The raw tags parameter from URL (e.g., "pubky, Bitcoin, nostr")
  * @returns Array of parsed tag strings
  */
 function parseTags(tagsParam: string | null): string[] {
@@ -23,7 +25,7 @@ function parseTags(tagsParam: string | null): string[] {
 
   return tagsParam
     .split(',')
-    .map((tag) => tag.trim())
+    .map((tag) => tag.trim().toLowerCase())
     .filter((tag) => tag.length > 0)
     .slice(0, getMaxStreamTags());
 }

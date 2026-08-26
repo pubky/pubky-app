@@ -276,6 +276,35 @@ describe('PostStreamApplication', () => {
       expect(result).toEqual([shortPostId, collectionPostId]);
     });
 
+    it('excludes collection-kind posts from narrower-kind content search streams', async () => {
+      // Only `kind=all` means "including collections" in content search; an
+      // explicit non-collection kind keeps the local backstop like every other
+      // stream family.
+      const imagePostId = `${DEFAULT_AUTHOR}:image-post`;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(imagePostId, 'short');
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: buildContentSearchStreamId('bitcoin', StreamKind.IMAGE),
+        postIds: [imagePostId, collectionPostId],
+      });
+
+      expect(result).toEqual([imagePostId]);
+    });
+
+    it('keeps collection-kind posts in collection-kind content search streams', async () => {
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: buildContentSearchStreamId('bitcoin', StreamKind.COLLECTION),
+        postIds: [collectionPostId],
+      });
+
+      expect(result).toEqual([collectionPostId]);
+    });
+
     it('keeps collection-kind posts in wot_domain collection content streams', async () => {
       const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
       await createPostDetailWithKind(collectionPostId, 'collection');

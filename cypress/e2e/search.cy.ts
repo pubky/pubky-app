@@ -89,8 +89,17 @@ describe('search', () => {
     // check that the post is still visible in search results
     cy.findPostInSearchResults(postTag1).should('be.visible');
 
-    // open search results for both tags (tag1 and tag2)
-    cy.visit(`/search?tags=${tag1},${tag2}`);
+    // add the second tag through the UI: type a prefix and click the
+    // autocomplete tag suggestion (covers addTagToSearch → buildSearchUrl →
+    // router.push, which a direct cy.visit would skip)
+    cy.get('[data-cy="header-search-input"]').filter(':visible').type(tag2);
+    cy.get(`[data-cy="post-tag"][data-tag-label="${tag2}"]`, { timeout: 10000 }).filter(':visible').click();
+
+    // the URL now carries both tags
+    cy.location('search', { timeout: 10000 }).should('contain', `tags=${tag1},${tag2}`);
+
+    // close the suggestions dropdown before asserting on the results below it
+    cy.get('body').click(0, 0);
 
     // confirm both tags remain displayed in the search bar
     cy.get('[data-cy="header-search"]').innerTextShouldContain(tag1).innerTextShouldContain(tag2);

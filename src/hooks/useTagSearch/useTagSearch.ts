@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { APP_ROUTES } from '@/app/routes';
 import { useSearchStore } from '@/stores/search/search.store';
 import type { TagSearchOptions, UseTagSearchResult } from './useTagSearch.types';
 import { buildSearchUrl, calculateNewTags } from './useTagSearch.utils';
@@ -39,11 +38,11 @@ export function useTagSearch(): UseTagSearchResult {
 
       removeActiveTag(normalizedTag);
 
-      if (newTags.length === 0) {
-        router.push(APP_ROUTES.HOME);
-      } else {
-        router.push(buildSearchUrl(newTags));
-      }
+      // Removing the last chip lands on the `/search` empty state — the same
+      // destination as clearing the whole search from the bar's X, so the two
+      // "search is now empty" paths cannot diverge (`buildSearchUrl([])` is
+      // `/search`).
+      router.push(buildSearchUrl(newTags));
     },
     [router, activeTags, removeActiveTag],
   );

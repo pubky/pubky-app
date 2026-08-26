@@ -533,28 +533,27 @@ vi.mock('@/hooks/useSearchInput/useSearchInput', async () => {
   const handleFocus = () => {
     searchInputUi.isFocused = true;
   };
-  const clearInputValue = () => {
-    searchInputUi.inputValue = '';
-  };
-  // Inert like handleInputChange: `searchInputUi` alone drives the field, so the
-  // URL-seeding effect can't clobber a preset value or shift existing baselines.
-  const setInputValue = vi.fn();
   const setFocus = (focused: boolean) => {
     searchInputUi.isFocused = focused;
   };
   return {
     useSearchInput: () => {
+      // Real state seeded from the per-case preset: `setInputValue` must be
+      // LIVE (not inert) so the full-text case exercises SearchInput's URL
+      // seeding for real — if `?q=` ever stops reaching the input, the
+      // content baselines show an empty bar and the diff fails.
+      const [inputValue, setInputValue] = React.useState(searchInputUi.inputValue);
       const containerRef = React.useRef<HTMLDivElement>(null);
       const inputRef = React.useRef<HTMLInputElement>(null);
       return {
-        inputValue: searchInputUi.inputValue,
+        inputValue,
         isFocused: searchInputUi.isFocused,
         containerRef,
         inputRef,
         handleInputChange,
         handleKeyDown,
         handleFocus,
-        clearInputValue,
+        clearInputValue: () => setInputValue(''),
         setInputValue,
         setFocus,
       };
@@ -675,17 +674,22 @@ describe('Search (tagged results) — visual regression', () => {
 });
 
 describe('Search (full-text results) — visual regression', () => {
+  // No input preset here on purpose: SearchInput's URL-sync effect must seed
+  // `?q=` into the bar itself (the mocked `setInputValue` is live), so these
+  // baselines show — and guard — the query text in the input.
   beforeEach(() => {
     setContentSearchQuery('bitcoin design');
   });
 
   it('renders relevance-ranked content results at desktop viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-desktop');
   });
 
   it('renders relevance-ranked content results at mobile viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-mobile');
   });
 });

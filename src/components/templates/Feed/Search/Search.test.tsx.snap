@@ -60,7 +60,7 @@ exports[`Search - Snapshots > matches snapshot with an invalid query 1`] = `
     data-testid="container"
   >
     <div
-      data-auto-focus="true"
+      data-auto-focus="false"
       data-testid="search-input"
     >
       SearchInput

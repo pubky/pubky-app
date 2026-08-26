@@ -114,7 +114,9 @@ describe('useTagSearch', () => {
       expect(mockPush).toHaveBeenCalledWith('/search?tags=typescript');
     });
 
-    it('navigates to home when removing last tag', () => {
+    it('lands on the /search empty state when removing the last tag', () => {
+      // Same destination as clearing the search from the bar's X — the two
+      // "search is now empty" paths must not diverge.
       mockActiveTags = ['react'];
       const { result } = renderHook(() => useTagSearch());
 
@@ -123,7 +125,7 @@ describe('useTagSearch', () => {
       });
 
       expect(mockRemoveActiveTag).toHaveBeenCalledWith('react');
-      expect(mockPush).toHaveBeenCalledWith('/home');
+      expect(mockPush).toHaveBeenCalledWith('/search');
     });
 
     it('normalizes tag before removing', () => {

@@ -135,7 +135,7 @@ export type CollectionItemsStreamCompositeId = `${StreamSource.COLLECTION}:${str
 export const CONTENT_SEARCH_STREAM_PREFIX = 'content_search' as const;
 // The marker plus encodeURIComponent (which escapes ':') guarantees the query segment can never
 // satisfy any legacy segment-based classifier (reserved words like 'bookmarks'/'author'/'wot').
-export const CONTENT_SEARCH_QUERY_MARKER = 'q~' as const;
+const CONTENT_SEARCH_QUERY_MARKER = 'q~' as const;
 export type ContentSearchStreamId =
   `${typeof CONTENT_SEARCH_STREAM_PREFIX}:${typeof CONTENT_SEARCH_QUERY_MARKER}${string}:${PostStreamKindSegment}`;
 

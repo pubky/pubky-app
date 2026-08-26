@@ -83,6 +83,12 @@ describe('useSearchStreamId', () => {
       expect(result.current).toBe('timeline:all:all:pubky,bitcoin,nostr');
     });
 
+    it('should lowercase tags so shared uppercase URLs hit the same stream cache', () => {
+      mockGet.mockReturnValue('Bitcoin,NOSTR');
+      const { result } = renderHook(() => useSearchStreamId());
+      expect(result.current).toBe('timeline:all:all:bitcoin,nostr');
+    });
+
     it('should filter out empty tags', () => {
       mockGet.mockReturnValue('pubky,,bitcoin,,,nostr');
       const { result } = renderHook(() => useSearchStreamId());
@@ -266,6 +272,12 @@ describe('useSearchCriteria', () => {
       mockGet.mockReturnValue(' pubky ,, bitcoin ,,, nostr ');
       const { result } = renderHook(() => useSearchCriteria());
       expect(result.current).toEqual({ mode: 'tags', tags: ['pubky', 'bitcoin', 'nostr'] });
+    });
+
+    it('lowercases tags — the store, chips, and stream ids all assume lowercase', () => {
+      mockGet.mockReturnValue('Bitcoin,NOSTR');
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'tags', tags: ['bitcoin', 'nostr'] });
     });
 
     it('limits tags to MAX_STREAM_TAGS', () => {

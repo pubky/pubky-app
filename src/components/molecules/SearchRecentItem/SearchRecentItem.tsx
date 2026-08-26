@@ -1,5 +1,6 @@
 'use client';
 import { Button } from '@/atoms/Button/Button';
+import { cn } from '@/libs/utils/utils';
 import { PostTag } from '../PostTag/PostTag';
 import { SearchRecentUserItem } from '../SearchRecentUserItem/SearchRecentUserItem';
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
@@ -42,9 +43,16 @@ export function SearchRecentItem({
 
     return (
       <Button
-        overrideDefaults
+        type="button"
+        variant="outline"
+        size="sm"
         onClick={handleClick}
-        className="h-8 max-w-full shrink-0 cursor-pointer truncate rounded-md border border-input bg-background px-3 text-sm leading-5 font-bold text-foreground transition-opacity hover:opacity-80"
+        // Keeps the base focus-visible ring (unlike `overrideDefaults`, which
+        // would drop it — same approach as PostTagAddButton).
+        className={cn(
+          'h-8 max-w-full shrink-0 truncate rounded-md bg-background px-3 text-sm leading-5 font-bold text-foreground',
+          'shadow-none transition-opacity hover:bg-background hover:text-foreground hover:opacity-80',
+        )}
         // Not a tag: activating it runs a full-text search, so announce it as one.
         aria-label={`Search for ${query.query}`}
         data-testid={`recent-query-${query.query}`}

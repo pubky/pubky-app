@@ -48,27 +48,28 @@ vi.mock('@/config/search', async (importOriginal) => {
   return { ...actual, SEARCH_PEOPLE_PAGE_SIZE: 3 };
 });
 
-// Dispatch each useLiveQuery call to the matching prebuilt map by sniffing the
-// query function body — same pattern as useProfileConnections.test.tsx.
+// The hook reads all three tables in ONE live query whose emission carries the
+// list epoch it ran for; the mock emits a combined snapshot of the prebuilt
+// maps, tagged with the epoch taken from the query deps.
 let mockUserDetailsMap = new Map<Pubky, NexusUserDetails>();
 let mockUserCountsMap = new Map<Pubky, NexusUserCounts>();
 let mockUserRelationshipsMap = new Map<Pubky, UserRelationshipsModelSchema>();
-// When set, the details emission carries a foreign id list — the real gap
-// between fetch settle and the Dexie live-query emission for the new ids.
-let mockDetailsEmissionPending = false;
-const PENDING_EMISSION_IDS: Pubky[] = [];
+// When set, the emission carries a stale epoch — the real gap between fetch
+// settle and the Dexie live-query emission for a freshly replaced id list.
+let mockHydrationEmissionPending = false;
 
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: <T>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
     const queryFnString = queryFn.toString();
-    // The details read-back tags each emission with the ids it ran for; a
-    // synchronous mock is always settled for the ids it was given.
     if (queryFnString.includes('getManyDetails')) {
-      const ids = mockDetailsEmissionPending ? PENDING_EMISSION_IDS : deps[0];
-      return { ids, details: mockUserDetailsMap } as T;
+      const epoch = deps[1] as number;
+      return {
+        epoch: mockHydrationEmissionPending ? epoch - 1 : epoch,
+        details: mockUserDetailsMap,
+        counts: mockUserCountsMap,
+        relationships: mockUserRelationshipsMap,
+      } as T;
     }
-    if (queryFnString.includes('getManyCounts')) return mockUserCountsMap as T;
-    if (queryFnString.includes('getManyRelationships')) return mockUserRelationshipsMap as T;
     return defaultValue;
   },
 }));
@@ -106,7 +107,7 @@ beforeEach(() => {
   mockUserDetailsMap = new Map();
   mockUserCountsMap = new Map();
   mockUserRelationshipsMap = new Map();
-  mockDetailsEmissionPending = false;
+  mockHydrationEmissionPending = false;
   mockFetchUsersByTags.mockResolvedValue([]);
   mockGetOrFetchUsers.mockResolvedValue([]);
   mockGetAvatarUrl.mockReturnValue('avatar-url');
@@ -137,11 +138,11 @@ describe('useSearchPeople', () => {
     expect(mockFetchUsersByTags).toHaveBeenCalledWith({ tags: 'a,b,c,d,e', skip: 0, limit: 3 });
   });
 
-  it('keeps loading until the details read-back emits for the fetched ids', async () => {
+  it('keeps loading until the hydration read-back emits for the fetched list', async () => {
     mockFetchUsersByTags.mockResolvedValue(scored([USER_A]));
-    // Emission still carries the previous id list — the gap between fetch
+    // Emission still carries the previous list epoch — the gap between fetch
     // settle and the Dexie live-query emission for the new ids.
-    mockDetailsEmissionPending = true;
+    mockHydrationEmissionPending = true;
 
     const { result } = renderHook(() => useSearchPeople(['synonym']));
 
@@ -270,6 +271,28 @@ describe('useSearchPeople', () => {
     expect(mockGetOrFetchUsers).toHaveBeenLastCalledWith({ userIds: [USER_D] });
     expect(result.current.users.map((user) => user.name)).toEqual(['Alice', 'Bob', 'Cleo', 'Dion']);
     expect(result.current.hasMore).toBe(false);
+  });
+
+  it('stays settled while an appended page hydrates — loadMore must never flip loading back', async () => {
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_A, USER_B, USER_C]));
+    seedUser(USER_A, 'Alice');
+    seedUser(USER_B, 'Bob');
+    seedUser(USER_C, 'Cleo');
+
+    const { result } = renderHook(() => useSearchPeople(['synonym']));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // USER_D is deliberately NOT seeded: its hydration emission has not landed
+    // yet. Appending must not re-enter loading (the "Show more" button would
+    // leave the DOM under the pointer) — the existing cards stay settled and
+    // the new one pops in when its emission arrives.
+    mockFetchUsersByTags.mockResolvedValueOnce(scored([USER_D]));
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.users.map((user) => user.name)).toEqual(['Alice', 'Bob', 'Cleo']);
   });
 
   it('stops paginating when a page comes back empty', async () => {
