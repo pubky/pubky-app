@@ -145,7 +145,7 @@ describe('ProfilePageHeader', () => {
   it('renders name and bio correctly', () => {
     render(<ProfilePageHeader {...mockProps} />);
 
-    expect(screen.getByText('Satoshi Nakamoto')).toHaveClass('leading-8', 'lg:leading-none');
+    expect(screen.getByText('Satoshi Nakamoto')).toHaveClass('leading-8', 'lg:leading-none', 'lg:pb-1', 'lg:-mb-1');
     expect(
       screen.getByText('Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.'),
     ).toBeInTheDocument();
@@ -167,7 +167,7 @@ describe('ProfilePageHeader', () => {
   it('constrains long names so they truncate before the status emoji', () => {
     const props = {
       ...mockProps,
-      profile: { ...mockProps.profile, name: `Bobi${'W'.repeat(80)}` },
+      profile: { ...mockProps.profile, name: `Orange-Otter-Phoenix-${'gypqj'.repeat(16)}` },
     };
 
     render(<ProfilePageHeader {...props} />);
