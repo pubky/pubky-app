@@ -896,8 +896,10 @@ describe('Own profile — posts — visual regression', () => {
     const nameStyle = getComputedStyle(name);
 
     expect(nameStyle.lineHeight).toBe('60px');
-    expect(nameStyle.paddingBottom).toBe('4px');
-    expect(nameStyle.marginBottom).toBe('-4px');
+    expect(nameStyle.overflow).toBe('clip');
+    expect(nameStyle.paddingBottom).toBe('0px');
+    expect(nameStyle.marginBottom).toBe('0px');
+    expect(nameStyle.overflowClipMargin).toBe('9px');
     expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
     expect(name.getBoundingClientRect().right).toBeLessThan(statusEmoji.getBoundingClientRect().left);
   });
