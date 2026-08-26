@@ -148,11 +148,10 @@ describe('ProfilePageHeader', () => {
     expect(screen.getByText('Satoshi Nakamoto')).toHaveClass(
       'leading-8',
       'lg:leading-none',
-      'overflow-x-clip',
-      'overflow-y-clip',
-      'text-ellipsis',
-      'whitespace-nowrap',
-      '[overflow-clip-margin:0.15em]',
+      'truncate',
+      // Descender room that Safari honors too (it lacks overflow-clip-margin support)
+      'pb-[0.15em]',
+      '-mb-[0.15em]',
     );
     expect(
       screen.getByText('Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.'),
@@ -185,7 +184,7 @@ describe('ProfilePageHeader', () => {
     const statusEmoji = screen.getByRole('button', { name: 'Vacationing status' });
 
     expect(nameRow).toHaveClass('w-full', 'min-w-0');
-    expect(name).toHaveClass('min-w-0', 'overflow-x-clip', 'text-ellipsis', 'whitespace-nowrap');
+    expect(name).toHaveClass('min-w-0', 'truncate');
     expect(name.nextElementSibling).toBe(statusEmoji);
     expect(statusEmoji).toHaveClass('shrink-0');
   });
