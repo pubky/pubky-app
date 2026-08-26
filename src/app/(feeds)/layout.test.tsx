@@ -38,25 +38,21 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
     feedVariant,
     leftSidebarContent,
     rightSidebarContent,
-    rightDrawerContentMobile,
     showRightMobileButton,
   }: {
     children: React.ReactNode;
     feedVariant?: string;
     leftSidebarContent?: React.ReactNode;
     rightSidebarContent?: React.ReactNode;
-    rightDrawerContentMobile?: React.ReactNode;
     showRightMobileButton?: boolean;
   }) => (
     <div
       data-testid="content-layout"
       data-feed-variant={feedVariant ?? ''}
       data-show-right-mobile-button={showRightMobileButton === false ? 'false' : 'true'}
-      data-has-right-drawer-mobile={rightDrawerContentMobile ? 'true' : 'false'}
     >
       <div data-testid="left-sidebar">{leftSidebarContent}</div>
       <div data-testid="right-sidebar">{rightSidebarContent}</div>
-      <div data-testid="right-drawer-mobile">{rightDrawerContentMobile}</div>
       <div data-testid="children">{children}</div>
     </div>
   ),
@@ -66,7 +62,6 @@ const SHELL_CONFIG = {
   feedVariant: 'home' as const,
   leftSidebarContent: <div data-testid="config-left">left</div>,
   rightSidebarContent: <div data-testid="config-right">right</div>,
-  rightDrawerContentMobile: <div data-testid="config-right-mobile">right-mobile</div>,
 };
 
 describe('FeedsLayout', () => {
@@ -89,7 +84,6 @@ describe('FeedsLayout', () => {
     expect(layout).toHaveAttribute('data-feed-variant', 'home');
     expect(screen.getByTestId('config-left')).toBeInTheDocument();
     expect(screen.getByTestId('config-right')).toBeInTheDocument();
-    expect(screen.getByTestId('config-right-mobile')).toBeInTheDocument();
   });
 
   it('renders children inside ContentLayout when post slot is not active', () => {
@@ -144,7 +138,6 @@ describe('FeedsLayout', () => {
       feedVariant: 'custom' as const,
       leftSidebarContent: <div data-testid="feed-left">feed-left</div>,
       rightSidebarContent: <div data-testid="feed-right">feed-right</div>,
-      rightDrawerContentMobile: <div data-testid="feed-right-mobile">feed-right-mobile</div>,
     };
 
     // First render: user is on /feed/abc123 and resolver returns the feed config.
@@ -194,7 +187,6 @@ describe('FeedsLayout', () => {
       feedVariant: 'home' as const,
       leftSidebarContent: <div data-testid="feed-left">feed-left</div>,
       rightSidebarContent: <div data-testid="feed-right">feed-right</div>,
-      rightDrawerContentMobile: <div data-testid="feed-right-mobile">feed-right-mobile</div>,
     };
 
     // First render on a real feeds route to populate the cache.

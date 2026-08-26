@@ -31,9 +31,6 @@ describe('tryResolveFeedsShellConfig', () => {
     expect(config).not.toBeNull();
     expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.HOME);
     expect(config?.showRightMobileButton).toBeUndefined();
-    // Feed selection lives in the FeedNavigation tab bar; the mobile right
-    // drawer falls back to rightDrawerContent (Who to follow / Hot tags / ...).
-    expect(config?.rightDrawerContentMobile).toBeUndefined();
     expect(config?.rightDrawerContent).toBeDefined();
     expect(config?.hasGradientBackground).toBe(false);
     expect(config?.classNameMobileHeader).toBe('pb-0');
@@ -43,7 +40,6 @@ describe('tryResolveFeedsShellConfig', () => {
     const config = tryResolveFeedsShellConfig('/feed/abc123');
     expect(config).not.toBeNull();
     expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.CUSTOM);
-    expect(config?.rightDrawerContentMobile).toBeUndefined();
     expect(config?.rightDrawerContent).toBeDefined();
     expect(config?.hasGradientBackground).toBe(false);
     expect(config?.classNameMobileHeader).toBe('pb-0');
@@ -54,7 +50,6 @@ describe('tryResolveFeedsShellConfig', () => {
     expect(config).not.toBeNull();
     expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.SEARCH);
     expect(config?.showRightMobileButton).toBe(false);
-    expect(config?.rightDrawerContentMobile).toBeUndefined();
   });
 
   it('returns null for the intercepted-post pathname', () => {

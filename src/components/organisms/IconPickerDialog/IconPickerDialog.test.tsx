@@ -158,6 +158,17 @@ describe('IconPickerDialog', () => {
     expect(screen.getByTestId('icon-picker-sentinel')).toBeInTheDocument();
   });
 
+  it('paints catalog icons straight from the bundle, with no per-icon load', async () => {
+    render(<IconPickerDialog open onSelect={() => {}} />);
+    await waitForCatalog();
+
+    // The picker loads every icon node in one chunk, so a cell must never show
+    // the empty placeholder svg that the per-icon path renders while loading.
+    const cells = screen.getAllByTestId(/icon-picker-option-/);
+    expect(cells.length).toBeGreaterThan(0);
+    expect(cells.every((cell) => (cell.querySelector('svg')?.childElementCount ?? 0) > 0)).toBe(true);
+  });
+
   it('supports context-specific accessible copy', () => {
     render(
       <IconPickerDialog

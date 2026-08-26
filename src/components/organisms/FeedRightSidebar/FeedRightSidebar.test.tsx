@@ -3,12 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { HomeFeedRightDrawer, HomeFeedRightSidebar, HotFeedRightDrawer, HotFeedRightSidebar } from './FeedRightSidebar';
 
 // Mock Molecules
-vi.mock('@/molecules/FeedSection/FeedSection', () => {
-  return {
-    FeedSection: () => <div data-testid="feed-section">FeedSection</div>,
-  };
-});
-
 // Mock Organisms
 vi.mock('@/organisms/ActiveUsers/ActiveUsers', () => {
   return {

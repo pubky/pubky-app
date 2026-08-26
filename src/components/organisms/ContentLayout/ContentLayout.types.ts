@@ -8,7 +8,6 @@ export interface ContentLayoutProps {
   leftDrawerContent?: React.ReactNode;
   rightDrawerContent?: React.ReactNode;
   leftDrawerContentMobile?: React.ReactNode;
-  rightDrawerContentMobile?: React.ReactNode;
   showLeftSidebar?: boolean;
   showRightSidebar?: boolean;
   showLeftMobileButton?: boolean;

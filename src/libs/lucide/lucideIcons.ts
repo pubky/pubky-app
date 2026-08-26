@@ -102,8 +102,9 @@ export function requestLucideIcon(name: IconName): void {
   const current = getLucideIconState(name);
   if (current && current.status !== 'error') return;
 
+  // Deliberately not notifying: `loading` and "never requested" both render the
+  // same empty svg, so waking every subscriber here cannot change any output.
   iconStates.set(name, { status: 'loading' });
-  notifyIconStateChange();
 
   void (async () => {
     try {
@@ -115,6 +116,10 @@ export function requestLucideIcon(name: IconName): void {
         notifyIconStateChange();
         return;
       }
+
+      // The picker's bundle may have landed while this request was in flight;
+      // overwriting an identical node would only churn every subscriber.
+      if (getLucideIconState(name)?.status === 'loaded') return;
 
       const iconModule = await catalog.dynamicIconImports[name]();
       if (!iconModule?.__iconNode) {
@@ -166,6 +171,35 @@ export function preloadLucideIcons(names: Iterable<string | null | undefined>): 
   }
 }
 
+let allIconNodesLoad: Promise<readonly IconName[]> | null = null;
+
+/**
+ * Loads every canonical icon in one chunk and fills the store with it.
+ *
+ * The picker renders up to ~1700 cells and lucide ships one chunk per icon, so
+ * the per-icon path costs one request per cell (~539B on the wire, ~920KB over
+ * a full scroll). This is a single ~109KB chunk, after which every cell renders
+ * synchronously and issues no request at all. Returns the canonical names so
+ * the picker can enumerate without also pulling the catalog.
+ */
+function loadAllLucideIconNodes(): Promise<readonly IconName[]> {
+  if (!allIconNodesLoad) {
+    allIconNodesLoad = import('@/libs/lucide/lucideIcons.nodes').then(({ LUCIDE_ICON_NODES }) => {
+      const names = Object.keys(LUCIDE_ICON_NODES) as IconName[];
+      for (const name of names) {
+        const node = LUCIDE_ICON_NODES[name];
+        if (node) iconStates.set(name, { status: 'loaded', node });
+      }
+      notifyIconStateChange();
+      return names;
+    });
+    allIconNodesLoad.catch(() => {
+      allIconNodesLoad = null;
+    });
+  }
+  return allIconNodesLoad;
+}
+
 export interface LucidePickerIcon {
   name: IconName;
   /** Deprecated alias names resolving to this glyph — searchable, not shown. */
@@ -189,10 +223,10 @@ let pickerIconsLoad: Promise<readonly LucidePickerIcon[]> | null = null;
 export function loadLucidePickerIcons(): Promise<readonly LucidePickerIcon[]> {
   if (!pickerIconsLoad) {
     pickerIconsLoad = Promise.all([
-      loadLucideCatalog(),
+      loadAllLucideIconNodes(),
       import('@/libs/lucide/lucideIcons.aliases'),
       import('@/libs/lucide/lucideIcons.tags'),
-    ]).then(([catalog, { LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL }, { LUCIDE_ICON_TAGS }]) => {
+    ]).then(([canonicalNames, { LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL }, { LUCIDE_ICON_TAGS }]) => {
       const aliasesByCanonical = new Map<IconName, IconName[]>();
       for (const [alias, canonical] of Object.entries(LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL) as [IconName, IconName][]) {
         const aliases = aliasesByCanonical.get(canonical);
@@ -203,15 +237,14 @@ export function loadLucidePickerIcons(): Promise<readonly LucidePickerIcon[]> {
         }
       }
 
-      return catalog.iconNames
-        .filter((name) => !Object.hasOwn(LUCIDE_DEPRECATED_ALIAS_TO_CANONICAL, name))
-        .map((name) => ({
-          name,
-          aliases: aliasesByCanonical.get(name) ?? [],
-          tags: (Object.hasOwn(LUCIDE_ICON_TAGS, name) ? (LUCIDE_ICON_TAGS[name] ?? []) : []).map((tag) =>
-            tag.replace(/\s+/g, '-'),
-          ),
-        }));
+      // The bundle is already alias-free, so nothing needs filtering out here.
+      return canonicalNames.map((name) => ({
+        name,
+        aliases: aliasesByCanonical.get(name) ?? [],
+        tags: (Object.hasOwn(LUCIDE_ICON_TAGS, name) ? (LUCIDE_ICON_TAGS[name] ?? []) : []).map((tag) =>
+          tag.replace(/\s+/g, '-'),
+        ),
+      }));
     });
     pickerIconsLoad.catch(() => {
       pickerIconsLoad = null;
