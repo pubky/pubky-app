@@ -2,8 +2,8 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { describe, it, vi } from 'vitest';
+import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -466,16 +466,16 @@ function HotWithHeader() {
 
 describe('Hot — visual regression', () => {
   it('renders the hot discovery page at desktop viewport', async () => {
-    const screen = await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
     // Viewport-clamped root: first fold only (featured tags + overview; active
     // users / trending posts sit below the fold on desktop).
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('hot-desktop');
+    await matchVrtFrameScreenshot('hot-desktop');
   });
 
   it('renders the hot discovery page at mobile viewport', async () => {
-    const screen = await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     // Mobile defaults to the Tags tab (HotMobileMenu); Users/Posts stay mounted
     // but CSS-hidden so the snapshot matches the Tags first fold.
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('hot-mobile');
+    await matchVrtFrameScreenshot('hot-mobile');
   });
 });

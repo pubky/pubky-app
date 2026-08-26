@@ -10,15 +10,15 @@ interaction tests for those).
 - Orphan check: `npm run test:vrt:check-baselines` (also in Code Quality CI).
 - Baselines: `__screenshots__/<file>/<name>-<browser>-<platform>.png`, one per
   browser (chromium/firefox/webkit) × platform (darwin/linux).
-- Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `VRT_ROOT_TESTID`),
+- Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `matchVrtFrameScreenshot`),
   `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`.
 - Reference example: `src/test/vrt/feed/Home.vrt.test.tsx`.
 
 ## Writing a test
 
 ```tsx
-const screen = await renderForVRT(<Component />, { viewport: VRT_VIEWPORT_DESKTOP });
-await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('name-desktop');
+await renderForVRT(<Component />, { viewport: VRT_VIEWPORT_DESKTOP });
+await matchVrtFrameScreenshot('name-desktop');
 ```
 
 `renderForVRT` wraps the tree in a viewport-clamped root (the screenshot is

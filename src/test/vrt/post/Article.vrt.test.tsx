@@ -4,13 +4,7 @@
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
-import {
-  matchVrtFrameScreenshot,
-  preloadImages,
-  renderForVRT,
-  VRT_ROOT_TESTID,
-  waitForMarkdownEditorReady,
-} from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForMarkdownEditorReady } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -573,19 +567,19 @@ describe('Article — editing — visual regression', () => {
 
 describe('Article — published page — columns layout — visual regression', () => {
   it('renders a published article at desktop viewport', async () => {
-    const screen = await renderPublishedArticle('columns', VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('article-page-columns-desktop');
+    await renderPublishedArticle('columns', VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('article-page-columns-desktop');
   });
 
   it('renders a published article at mobile viewport', async () => {
-    const screen = await renderPublishedArticle('columns', VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('article-page-mobile');
+    await renderPublishedArticle('columns', VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('article-page-mobile');
   });
 });
 
 describe('Article — published page — wide layout — visual regression', () => {
   it('renders a published article at desktop viewport', async () => {
-    const screen = await renderPublishedArticle('wide', VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('article-page-wide-desktop');
+    await renderPublishedArticle('wide', VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('article-page-wide-desktop');
   });
 });

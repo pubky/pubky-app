@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ScreenshotMatcherOptions } from '@vitest/browser/context';
 import type { ReactNode } from 'react';
 import { expect, vi } from 'vitest';
 import { page } from 'vitest/browser';
@@ -15,20 +16,18 @@ export interface RenderForVRTOptions {
 export const VRT_ROOT_TESTID = 'vrt-root';
 
 /**
- * Screenshot the iframe document so Radix Dialog portals on `document.body`
- * are included. Do not reparent those nodes into `vrt-root`: React still
- * thinks they live on `body`, and `removeChild` then throws NotFoundError
- * (and can leave the Vitest browser process hanging).
+ * Playwright leaves the cursor in the centre of the body by default. On a
+ * small mobile viewport that can land on an action button, so the
+ * screenshot captures the `:hover` state (e.g. `bg-brand/30` instead of
+ * `bg-brand/16`). Move the cursor to the top-left corner of the viewport
+ * so hover states are deterministic across tests and CI runners.
  *
- * Do not `vi.mock('radix-ui')` to retarget the portal either —
- * `importOriginal()` of that barrel can shift `oklch` brand green on
- * unrelated screenshots.
+ * `page.unhover()` moves the cursor to the body, which can still leave it
+ * over a centre-screen button. Create a small transparent but actionable target
+ * at (0, 0), hover it to move the cursor into the corner, then remove the
+ * target so it cannot block interactions or interfere with the screenshot.
  */
 async function moveCursorToTopLeftCorner() {
-  // `page.unhover()` moves the cursor to the body, which can still leave it
-  // over a centre-screen button. Create a small transparent but actionable target
-  // at (0, 0), hover it to move the cursor into the corner, then remove the
-  // target so it cannot block interactions or interfere with the screenshot.
   document.querySelectorAll('[data-vrt-cursor-target="true"]').forEach((el) => el.remove());
   const target = document.createElement('div');
   target.setAttribute('data-vrt-cursor-target', 'true');
@@ -53,10 +52,20 @@ async function moveCursorToTopLeftCorner() {
   }
 }
 
-export async function matchVrtFrameScreenshot(name: string) {
+/**
+ * Screenshot the iframe document so Radix Dialog portals on `document.body`
+ * are included. Do not reparent those nodes into `vrt-root`: React still
+ * thinks they live on `body`, and `removeChild` then throws NotFoundError
+ * (and can leave the Vitest browser process hanging).
+ *
+ * Do not `vi.mock('radix-ui')` to retarget the portal either —
+ * `importOriginal()` of that barrel can shift `oklch` brand green on
+ * unrelated screenshots.
+ */
+export async function matchVrtFrameScreenshot(name: string, options?: ScreenshotMatcherOptions) {
   await moveCursorToTopLeftCorner();
   await waitForImagesReady(document.documentElement);
-  await expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name);
+  await expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name, options);
 }
 
 interface VRTProvidersProps {
@@ -89,11 +98,6 @@ function VRTProviders({ children, viewport, queryClient }: VRTProvidersProps) {
 
 export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) {
   await page.viewport(options.viewport.width, options.viewport.height);
-  // Playwright leaves the cursor in the centre of the body by default. On a
-  // small mobile viewport that can land on an action button, so the
-  // screenshot captures the `:hover` state (e.g. `bg-brand/30` instead of
-  // `bg-brand/16`). Move the cursor to the top-left corner of the viewport
-  // before rendering so hover states are deterministic across tests and CI runners.
   await moveCursorToTopLeftCorner();
   freezeNow();
   mockMathRandom(0xdeadbeef);

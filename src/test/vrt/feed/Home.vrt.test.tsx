@@ -4,13 +4,7 @@
 /* eslint-disable simple-import-sort/imports */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
-import {
-  matchVrtFrameScreenshot,
-  preloadImages,
-  renderForVRT,
-  VRT_ROOT_TESTID,
-  waitForMarkdownEditorReady,
-} from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForMarkdownEditorReady } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -498,16 +492,13 @@ describe('Home (global feed) — visual regression', () => {
   });
 
   it('renders the global feed at desktop viewport', async () => {
-    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
-    // The VRT root is the viewport-clamped wrapper added by `renderForVRT`,
-    // so the screenshot is exactly the viewport size. Without it, the body
-    // locator captures the full scrollable document height.
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-desktop');
+    await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await matchVrtFrameScreenshot('home-feed-desktop');
   });
 
   it('renders the global feed at mobile viewport', async () => {
-    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-mobile');
+    await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await matchVrtFrameScreenshot('home-feed-mobile');
   });
 
   it('renders an expanded QuickReply at desktop viewport', async () => {
@@ -517,7 +508,7 @@ describe('Home (global feed) — visual regression', () => {
     await expect(screen.getByTestId('quick-reply-expanded-content')).toBeVisible();
     await waitForComposerMotion();
 
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-quick-reply-expanded-desktop');
+    await matchVrtFrameScreenshot('home-feed-quick-reply-expanded-desktop');
   });
 
   it('renders an expanded QuickReply at mobile viewport', async () => {
@@ -527,7 +518,7 @@ describe('Home (global feed) — visual regression', () => {
     await expect(screen.getByTestId('quick-reply-expanded-content')).toBeVisible();
     await waitForComposerMotion();
 
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-quick-reply-expanded-mobile');
+    await matchVrtFrameScreenshot('home-feed-quick-reply-expanded-mobile');
   });
 });
 
@@ -542,17 +533,16 @@ describe('Home — article in feed — visual regression', () => {
     const screen = await renderForVRT(<HomeWithLayout />, { viewport });
     await expect.element(screen.getByText(f.articleTitle)).toBeVisible();
     await expect.element(screen.getByAltText(f.articleCoverName)).toBeVisible();
-    return screen;
   }
 
   it('renders an article card at desktop viewport', async () => {
-    const screen = await renderHomeWithArticle(VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-article-desktop');
+    await renderHomeWithArticle(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('home-feed-article-desktop');
   });
 
   it('renders an article card at mobile viewport', async () => {
-    const screen = await renderHomeWithArticle(VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-article-mobile');
+    await renderHomeWithArticle(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('home-feed-article-mobile');
   });
 });
 
@@ -569,17 +559,16 @@ describe('Home — creating article via feed composer — visual regression', ()
     await screen.getByLabelText('Add article').click();
     await waitForArticleComposer();
     await waitForComposerMotion();
-    return screen;
   }
 
   it('renders article mode in the feed composer at desktop viewport', async () => {
-    const screen = await renderHomeCreatingArticle(VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-create-article-desktop');
+    await renderHomeCreatingArticle(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('home-feed-create-article-desktop');
   });
 
   it('renders article mode in the feed composer at mobile viewport', async () => {
-    const screen = await renderHomeCreatingArticle(VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('home-feed-create-article-mobile');
+    await renderHomeCreatingArticle(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('home-feed-create-article-mobile');
   });
 });
 
