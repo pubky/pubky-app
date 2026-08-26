@@ -8,6 +8,7 @@ import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForMarkdownEd
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
+import { COMPOSER_EXPAND_DURATION } from '@/libs/motion/composerMotion';
 import { Header } from '@/organisms/Header/Header';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
@@ -474,9 +475,22 @@ function HomeWithFab() {
 }
 
 async function waitForComposerMotion() {
+  // Expand tween is 280ms plus a 100ms settle in `useComposerHeightAnimation`.
+  // A shorter wait can screenshot while the card still clips the textarea.
   await new Promise<void>((resolve) => {
-    setTimeout(resolve, 350);
+    setTimeout(resolve, Math.ceil(COMPOSER_EXPAND_DURATION * 1000) + 150);
   });
+}
+
+async function expandFirstQuickReply(screen: Awaited<ReturnType<typeof renderForVRT>>) {
+  const textarea = screen.getByTestId('quick-reply-textarea').first();
+  await textarea.click();
+  await expect(screen.getByTestId('quick-reply-expanded-content')).toBeVisible();
+  await waitForComposerMotion();
+  // Re-click after the expand tween so `:focus-within` hides the prompt.
+  // `matchVrtFrameScreenshot` parks the pointer only — it must not steal focus.
+  await textarea.click();
+  await expect.element(textarea).toHaveFocus();
 }
 
 async function waitForArticleComposer() {
@@ -503,21 +517,13 @@ describe('Home (global feed) — visual regression', () => {
 
   it('renders an expanded QuickReply at desktop viewport', async () => {
     const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
-
-    await screen.getByTestId('quick-reply-textarea').first().click();
-    await expect(screen.getByTestId('quick-reply-expanded-content')).toBeVisible();
-    await waitForComposerMotion();
-
+    await expandFirstQuickReply(screen);
     await matchVrtFrameScreenshot('home-feed-quick-reply-expanded-desktop');
   });
 
   it('renders an expanded QuickReply at mobile viewport', async () => {
     const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
-
-    await screen.getByTestId('quick-reply-textarea').first().click();
-    await expect(screen.getByTestId('quick-reply-expanded-content')).toBeVisible();
-    await waitForComposerMotion();
-
+    await expandFirstQuickReply(screen);
     await matchVrtFrameScreenshot('home-feed-quick-reply-expanded-mobile');
   });
 });

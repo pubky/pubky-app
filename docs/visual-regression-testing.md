@@ -132,9 +132,17 @@ may persist.
 `renderForVRT` and `matchVrtFrameScreenshot` instead create a temporary 8x8
 transparent target at the top-left corner of the viewport, hover it to move the
 pointer to `(0, 0)`, and then remove the target so it cannot block interactions
-or affect the screenshot. The baseline is always the resting state. If a test
+or affect the screenshot. The helper does not click or move keyboard focus —
+click-outside would collapse QuickReply, and a focused composer would lose
+`:focus-within`. The baseline is always free of accidental `:hover`. If a test
 moves the cursor by clicking, use `matchVrtFrameScreenshot()` (or call the helper
 again) before the final screenshot.
+
+Expanded QuickReply tests click the textarea again after the expand motion so
+the field stays focused. Product CSS then hides the prompt
+(`focus-within:[&_textarea::placeholder]:opacity-0`); VRT already sets
+`caret-color: transparent` and `transition: none` on `::placeholder`, so the
+capture is an empty focused input with no caret and no prompt.
 
 ## Artifact: sub-pixel seams on segmented elements
 

@@ -16,16 +16,18 @@ export interface RenderForVRTOptions {
 export const VRT_ROOT_TESTID = 'vrt-root';
 
 /**
+ * Park the pointer at `(0, 0)` so the screenshot is free of `:hover` styles.
+ *
  * Playwright leaves the cursor in the centre of the body by default. On a
  * small mobile viewport that can land on an action button, so the
  * screenshot captures the `:hover` state (e.g. `bg-brand/30` instead of
- * `bg-brand/16`). Move the cursor to the top-left corner of the viewport
- * so hover states are deterministic across tests and CI runners.
+ * `bg-brand/16`). `page.unhover()` is not enough — it moves the cursor to
+ * the body, which can still sit over a centre-screen button.
  *
- * `page.unhover()` moves the cursor to the body, which can still leave it
- * over a centre-screen button. Create a small transparent but actionable target
- * at (0, 0), hover it to move the cursor into the corner, then remove the
- * target so it cannot block interactions or interfere with the screenshot.
+ * Hover a throwaway 8×8 target at the corner, then remove it. Do not click
+ * or move keyboard focus: click-outside handlers (QuickReply) would collapse
+ * the card, and tests that need a focused field (expanded QuickReply) would
+ * lose `:focus-within`.
  */
 async function moveCursorToTopLeftCorner() {
   document.querySelectorAll('[data-vrt-cursor-target="true"]').forEach((el) => el.remove());
