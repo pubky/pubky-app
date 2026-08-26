@@ -24,13 +24,14 @@ import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
 
 // Below lg the strip is a sticky tab bar under the compact mobile header:
 // the selected tab shows icon + label, the rest collapse to icon-only cells.
-// At lg+ every tab is icon + label and shares the row evenly.
+// At lg+ every tab is icon + label. Content-aware flex bases let a longer
+// title use space that a shorter sibling does not need before truncating.
 const FEED_TAB_CLASS = 'relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40';
 // Below lg the active tab hugs its label, but a feed name has no length limit
 // (specs does not cap it), so cap the tab or one long name pushes every other
 // tab off-screen; the label's `truncate` then does its job.
-const FEED_TAB_ACTIVE_WIDTH_CLASS = 'max-w-[60%] flex-none lg:max-w-none lg:flex-1';
-const FEED_TAB_INACTIVE_WIDTH_CLASS = 'min-w-12 flex-1';
+const FEED_TAB_ACTIVE_WIDTH_CLASS = 'max-w-[60%] flex-none lg:max-w-none lg:flex-auto';
+const FEED_TAB_INACTIVE_WIDTH_CLASS = 'min-w-12 flex-1 lg:flex-auto';
 // Symmetric horizontal padding keeps every label centered; the active padding
 // also reserves the zone the edit pencil overlays on custom feed tabs.
 const FEED_TAB_ACTIVE_PADDING_CLASS = 'px-8';
