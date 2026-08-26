@@ -24,7 +24,37 @@ export const VRT_ROOT_TESTID = 'vrt-root';
  * `importOriginal()` of that barrel can shift `oklch` brand green on
  * unrelated screenshots.
  */
+async function moveCursorToTopLeftCorner() {
+  // `page.unhover()` moves the cursor to the body, which can still leave it
+  // over a centre-screen button. Create a small transparent but actionable target
+  // at (0, 0), hover it to move the cursor into the corner, then remove the
+  // target so it cannot block interactions or interfere with the screenshot.
+  document.querySelectorAll('[data-vrt-cursor-target="true"]').forEach((el) => el.remove());
+  const target = document.createElement('div');
+  target.setAttribute('data-vrt-cursor-target', 'true');
+  target.setAttribute('aria-hidden', 'true');
+  target.style.position = 'fixed';
+  target.style.left = '0';
+  target.style.top = '0';
+  target.style.width = '8px';
+  target.style.height = '8px';
+  target.style.opacity = '0.01';
+  target.style.backgroundColor = 'transparent';
+  target.style.pointerEvents = 'auto';
+  target.style.zIndex = '10000';
+  document.body.appendChild(target);
+  try {
+    await page
+      .elementLocator(target)
+      .hover()
+      .catch(() => undefined);
+  } finally {
+    target.remove();
+  }
+}
+
 export async function matchVrtFrameScreenshot(name: string) {
+  await moveCursorToTopLeftCorner();
   await waitForImagesReady(document.documentElement);
   await expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name);
 }
@@ -59,6 +89,12 @@ function VRTProviders({ children, viewport, queryClient }: VRTProvidersProps) {
 
 export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) {
   await page.viewport(options.viewport.width, options.viewport.height);
+  // Playwright leaves the cursor in the centre of the body by default. On a
+  // small mobile viewport that can land on an action button, so the
+  // screenshot captures the `:hover` state (e.g. `bg-brand/30` instead of
+  // `bg-brand/16`). Move the cursor to the top-left corner of the viewport
+  // before rendering so hover states are deterministic across tests and CI runners.
+  await moveCursorToTopLeftCorner();
   freezeNow();
   mockMathRandom(0xdeadbeef);
   // Fresh QueryClient per test keeps cache state isolated; instantiating here

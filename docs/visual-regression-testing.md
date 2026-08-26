@@ -116,6 +116,26 @@ Query dialog contents with `page.getBy…` from `vitest/browser`, not the render
 `screen` (which is scoped to `vrt-root`). Production `Dialog.tsx` stays
 unchanged.
 
+## Gotcha: Playwright cursor position can trigger `:hover` states
+
+Playwright's default pointer position can land on interactive elements inside a
+small mobile viewport, especially when the browser window is larger than the
+VRT viewport. The screenshot then captures the `:hover` state instead of the
+resting state (e.g. `bg-brand/30` instead of `bg-brand/16`), producing a brighter
+button on some browser/OS pairs but not others. This looks like a random colour
+shift but is actually cursor position.
+
+`page.elementLocator(...).unhover()` moves the pointer to `document.body`, but
+on a small viewport the body centre can still be over a button, so the issue
+may persist.
+
+`renderForVRT` and `matchVrtFrameScreenshot` instead create a temporary 8x8
+transparent target at the top-left corner of the viewport, hover it to move the
+pointer to `(0, 0)`, and then remove the target so it cannot block interactions
+or affect the screenshot. The baseline is always the resting state. If a test
+moves the cursor by clicking, use `matchVrtFrameScreenshot()` (or call the helper
+again) before the final screenshot.
+
 ## Artifact: sub-pixel seams on segmented elements
 
 A baseline may show thin tick lines that you don't see in your real browser.
