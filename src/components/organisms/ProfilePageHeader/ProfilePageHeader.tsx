@@ -132,11 +132,13 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
             overrideDefaults
             className="max-width-profile-page-header flex w-full min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
           >
+            {/* leading-none + ellipsis clips Inter Tight descenders. Clip (not hidden) plus
+                overflow-clip-margin keeps the 60px line and paints the missing ~9px. */}
             <Typography
               data-cy="profile-username-header"
               as="h1"
               size="lg"
-              className="min-w-0 truncate text-2xl leading-8 text-white lg:text-6xl lg:leading-none"
+              className="min-w-0 overflow-x-clip overflow-y-clip leading-8 text-ellipsis whitespace-nowrap text-white [overflow-clip-margin:0.15em] lg:text-6xl lg:leading-none"
             >
               {name}
             </Typography>

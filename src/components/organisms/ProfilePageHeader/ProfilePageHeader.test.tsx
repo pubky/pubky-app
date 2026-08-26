@@ -145,7 +145,15 @@ describe('ProfilePageHeader', () => {
   it('renders name and bio correctly', () => {
     render(<ProfilePageHeader {...mockProps} />);
 
-    expect(screen.getByText('Satoshi Nakamoto')).toHaveClass('leading-8', 'lg:leading-none');
+    expect(screen.getByText('Satoshi Nakamoto')).toHaveClass(
+      'leading-8',
+      'lg:leading-none',
+      'overflow-x-clip',
+      'overflow-y-clip',
+      'text-ellipsis',
+      'whitespace-nowrap',
+      '[overflow-clip-margin:0.15em]',
+    );
     expect(
       screen.getByText('Authored the Bitcoin white paper, developed Bitcoin, mined first block, disappeared.'),
     ).toBeInTheDocument();
@@ -167,7 +175,7 @@ describe('ProfilePageHeader', () => {
   it('constrains long names so they truncate before the status emoji', () => {
     const props = {
       ...mockProps,
-      profile: { ...mockProps.profile, name: `Bobi${'W'.repeat(80)}` },
+      profile: { ...mockProps.profile, name: `Orange-Otter-Phoenix-${'gypqj'.repeat(16)}` },
     };
 
     render(<ProfilePageHeader {...props} />);
@@ -177,7 +185,7 @@ describe('ProfilePageHeader', () => {
     const statusEmoji = screen.getByRole('button', { name: 'Vacationing status' });
 
     expect(nameRow).toHaveClass('w-full', 'min-w-0');
-    expect(name).toHaveClass('min-w-0', 'truncate');
+    expect(name).toHaveClass('min-w-0', 'overflow-x-clip', 'text-ellipsis', 'whitespace-nowrap');
     expect(name.nextElementSibling).toBe(statusEmoji);
     expect(statusEmoji).toHaveClass('shrink-0');
   });

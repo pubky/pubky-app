@@ -34,7 +34,7 @@ exports[`ProfilePageHeader - Mobile Snapshots > matches snapshot on mobile viewp
         data-testid="container"
       >
         <h1
-          class="font-bold min-w-0 truncate text-2xl leading-8 text-white lg:text-6xl lg:leading-none"
+          class="text-2xl font-bold min-w-0 overflow-x-clip overflow-y-clip leading-8 text-ellipsis whitespace-nowrap text-white [overflow-clip-margin:0.15em] lg:text-6xl lg:leading-none"
           data-cy="profile-username-header"
           data-testid="typography"
         >
@@ -343,7 +343,7 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         data-testid="container"
       >
         <h1
-          class="font-bold min-w-0 truncate text-2xl leading-8 text-white lg:text-6xl lg:leading-none"
+          class="text-2xl font-bold min-w-0 overflow-x-clip overflow-y-clip leading-8 text-ellipsis whitespace-nowrap text-white [overflow-clip-margin:0.15em] lg:text-6xl lg:leading-none"
           data-cy="profile-username-header"
           data-testid="typography"
         >
