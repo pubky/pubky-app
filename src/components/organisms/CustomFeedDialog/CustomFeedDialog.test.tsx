@@ -597,14 +597,14 @@ describe('CustomFeedDialog', () => {
     expect(actions).toEqual([screen.getByTestId('delete-feed-button'), screen.getByTestId('save-feed-button')]);
   });
 
-  it('applies w-3xl class to dialog content', () => {
+  it('limits the dialog content to the xl width preset', () => {
     render(
       <CustomFeedDialog mode="create">
         <button>Create Feed</button>
       </CustomFeedDialog>,
     );
 
-    expect(screen.getByTestId('custom-feed-dialog-content')).toHaveClass('w-3xl');
+    expect(screen.getByTestId('custom-feed-dialog-content')).toHaveClass('w-xl');
   });
 
   // -- Trigger disabled state --

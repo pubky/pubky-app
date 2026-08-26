@@ -14,7 +14,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
     </button>
   </div>
   <div
-    class="w-3xl"
+    class="w-xl"
     data-testid="custom-feed-dialog-content"
   >
     <div
@@ -992,7 +992,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
     </span>
   </div>
   <div
-    class="w-3xl"
+    class="w-xl"
     data-testid="custom-feed-dialog-content"
   >
     <div
@@ -1968,7 +1968,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
     </button>
   </div>
   <div
-    class="w-3xl"
+    class="w-xl"
     data-testid="custom-feed-dialog-content"
   >
     <div
@@ -3018,7 +3018,7 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
     </button>
   </div>
   <div
-    class="w-3xl"
+    class="w-xl"
     data-testid="custom-feed-dialog-content"
   >
     <div

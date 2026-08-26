@@ -29,7 +29,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the empty state 1`]
   >
     <div
       aria-labelledby="radix-normalized"
-      class="relative z-50 duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] border bg-background shadow-lg sm:rounded-xl sm:rounded-b-lg rounded-t-lg border-b-0 sm:border-b flex h-110 w-145 max-w-[calc(100vw-2rem)] flex-col gap-6 overflow-hidden p-6 sm:max-w-145 sm:p-8"
+      class="relative z-50 duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] border bg-background shadow-lg sm:rounded-xl sm:rounded-b-lg rounded-t-lg border-b-0 sm:border-b flex h-110 w-lg max-w-[calc(100vw-2rem)] flex-col gap-6 overflow-hidden p-6 sm:max-w-lg sm:p-8"
       data-cy="dialog-content"
       data-slot="dialog-content"
       data-state="open"
@@ -165,7 +165,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the icon grid 1`] =
   >
     <div
       aria-labelledby="radix-normalized"
-      class="relative z-50 duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] border bg-background shadow-lg sm:rounded-xl sm:rounded-b-lg rounded-t-lg border-b-0 sm:border-b flex h-110 w-145 max-w-[calc(100vw-2rem)] flex-col gap-6 overflow-hidden p-6 sm:max-w-145 sm:p-8"
+      class="relative z-50 duration-200 m-0 sm:m-4 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 max-h-[calc(100dvh-2rem)] border bg-background shadow-lg sm:rounded-xl sm:rounded-b-lg rounded-t-lg border-b-0 sm:border-b flex h-110 w-lg max-w-[calc(100vw-2rem)] flex-col gap-6 overflow-hidden p-6 sm:max-w-lg sm:p-8"
       data-cy="dialog-content"
       data-slot="dialog-content"
       data-state="open"
@@ -222,7 +222,7 @@ exports[`IconPickerDialog - Snapshots > matches snapshot for the icon grid 1`] =
         data-testid="icon-picker-scroll-area"
       >
         <div
-          class="grid grid-cols-6 gap-x-2 gap-y-4 sm:grid-cols-11"
+          class="grid grid-cols-6 gap-x-2 gap-y-4 sm:grid-cols-10"
           data-testid="icon-picker-grid"
         >
           <button
