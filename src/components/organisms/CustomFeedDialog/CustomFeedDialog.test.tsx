@@ -446,7 +446,7 @@ describe('CustomFeedDialog', () => {
 
     const input = screen.getByTestId('feed-name-input');
     expect(input).toBeInTheDocument();
-    expect(input).toHaveAttribute('placeholder', 'Not your keys...');
+    expect(input).toHaveAttribute('placeholder', 'Name your feed');
   });
 
   it('renders the generic icon picker with the default feed icon', () => {
