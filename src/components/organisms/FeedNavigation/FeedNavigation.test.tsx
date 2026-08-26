@@ -403,8 +403,25 @@ describe('FeedNavigation', () => {
     expect(inactiveLabel).toHaveClass('hidden', 'lg:inline');
 
     // The active tab hugs its content on mobile; inactive tabs share the row.
-    expect(getLink('/feed/feed-active')?.parentElement).toHaveClass('flex-none', 'lg:flex-1');
+    expect(getLink('/feed/feed-active')?.parentElement).toHaveClass('flex-none', 'lg:flex-auto');
     expect(getLink('/feed/feed-other')?.parentElement).toHaveClass('min-w-12', 'flex-1');
+  });
+
+  it('gives desktop tabs content-aware flex bases before truncating feed names', () => {
+    mockCustomFeeds = [
+      createMockFeed({ id: 'feed-short', name: 'K' }),
+      createMockFeed({ id: 'feed-long', name: 'New custom feed with a longer title' }),
+    ];
+
+    render(<FeedNavigation />);
+
+    const shortTab = getLink('/feed/feed-short')?.parentElement;
+    const longTab = getLink('/feed/feed-long')?.parentElement;
+
+    expect(shortTab).toHaveClass('lg:flex-auto');
+    expect(longTab).toHaveClass('lg:flex-auto');
+    expect(shortTab).not.toHaveClass('lg:flex-1');
+    expect(longTab).not.toHaveClass('lg:flex-1');
   });
 
   // ── Edit dialog for custom feeds ────────────────────────────────────────
@@ -593,7 +610,7 @@ describe('FeedNavigation', () => {
     render(<FeedNavigation />);
 
     const homeLink = getLink('/home');
-    expect(homeLink).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-1');
+    expect(homeLink).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-auto');
     // The reach tab keeps the shared active padding.
     expect(homeLink).toHaveClass('px-8');
 
