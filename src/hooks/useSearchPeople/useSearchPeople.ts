@@ -68,8 +68,11 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   const tagsKey = tags.slice(0, SEARCH_PEOPLE_MAX_TAGS).join(',');
 
   const [userIds, setUserIds] = useState<Pubky[]>([]);
-  // Bumped only when the id list is REPLACED (tags change), never when a
-  // loadMore page is appended — the hydration gate below keys on it.
+  // Bumped only when a REPLACED id list is committed (initial page for new
+  // tags), never on reset or when a loadMore page is appended — the hydration
+  // gate below keys on it. Bumping at commit (not at fetch start) matters: the
+  // live query re-runs for the emptied id list while the fetch is in flight,
+  // and that emission must not carry the epoch the gate is waiting for.
   const [listEpoch, setListEpoch] = useState(0);
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -93,7 +96,6 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
 
     userIdsRef.current = [];
     setUserIds([]);
-    setListEpoch((epoch) => epoch + 1);
     setSkip(0);
 
     if (!tagsKey) {
@@ -123,6 +125,9 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
 
         userIdsRef.current = ids;
         setUserIds(ids);
+        // Commit the new epoch with the ids so the gate below re-arms in the
+        // same batch — every emission before this one carries an older epoch.
+        setListEpoch((epoch) => epoch + 1);
         // Cursor advances by the raw response length, not the deduped one.
         setSkip(results.length);
         setHasMore(results.length >= SEARCH_PEOPLE_PAGE_SIZE);
@@ -241,11 +246,13 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   // emission. The gate keys on the list EPOCH, not the id array identity:
   // a loadMore append keeps the epoch, so the previous emission stays valid and
   // the section never flips back to loading mid-append (new cards pop in when
-  // their emission lands). A replaced list (tags change) bumps the epoch and
-  // gates until the first emission for it. The gate asks whether an emission
-  // arrived, NOT whether anything hydrated: a page where no id hydrates (stale
-  // search index, or a swallowed `by_ids` failure) is settled and empty, and
-  // must not pin the section on skeletons forever.
+  // their emission lands). A replaced list bumps the epoch when it is COMMITTED,
+  // so at commit time the retained emission still carries the previous epoch
+  // (the live query last ran for the emptied in-flight list) and the gate holds
+  // until the first read-back for the committed ids. The gate asks whether that
+  // emission arrived, NOT whether anything hydrated: a page where no id hydrates
+  // (stale search index, or a swallowed `by_ids` failure) is settled and empty,
+  // and must not pin the section on skeletons forever.
   const hydrated = hydration.epoch === listEpoch;
 
   return { users, loading: loading || !hydrated, loadingMore, hasMore, loadMore };

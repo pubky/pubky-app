@@ -46,7 +46,7 @@ export function useSearchAutocomplete({
         let userByIdPromise: Promise<string[]> | null = null;
 
         if (tagPrefix !== null) {
-          tagPromise = SearchController.getTagsByPrefix({
+          tagPromise = SearchController.fetchTagsByPrefix({
             prefix: tagPrefix,
             limit: AUTOCOMPLETE_TAG_LIMIT,
           }).catch((error) => {

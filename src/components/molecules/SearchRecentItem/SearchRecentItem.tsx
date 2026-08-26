@@ -1,5 +1,5 @@
 'use client';
-import { Button } from '@/atoms/Button/Button';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { cn } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { PostTag } from '../PostTag/PostTag';
@@ -68,7 +68,7 @@ export function SearchRecentItem({
     return (
       <Button
         type="button"
-        variant="outline"
+        variant={ButtonVariant.OUTLINE}
         size="sm"
         onClick={handleClick}
         // Keeps the base focus-visible ring (unlike `overrideDefaults`, which

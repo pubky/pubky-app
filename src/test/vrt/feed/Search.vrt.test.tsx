@@ -693,14 +693,16 @@ describe('Search (full-text results) — visual regression', () => {
   it('renders relevance-ranked content results at desktop viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
     await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
-    await expect.element(screen.getByRole('heading', { name: 'Tags' })).toBeVisible();
+    // exact: the accessible-name match is a substring match, so plain 'Tags'
+    // also resolves the right sidebar's 'Hot tags' heading (strict-mode error).
+    await expect.element(screen.getByRole('heading', { name: 'Tags', exact: true })).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-desktop');
   });
 
   it('renders relevance-ranked content results at mobile viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
-    await expect.element(screen.getByRole('heading', { name: 'Tags' })).toBeVisible();
+    await expect.element(screen.getByRole('heading', { name: 'Tags', exact: true })).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-mobile');
   });
 });

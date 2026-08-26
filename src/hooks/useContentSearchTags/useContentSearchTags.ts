@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { SEARCH_CONTENT_TAGS_MAX_TOTAL, SEARCH_CONTENT_TAGS_PER_TERM_LIMIT } from '@/config/search';
 import { SearchController } from '@/controllers/search/search';
-import { Logger } from '@/libs/logger/logger';
 
 interface UseContentSearchTagsResult {
   /** Deduped tag names — exact term matches first, then prefix extensions. */
@@ -26,12 +25,8 @@ interface UseContentSearchTagsResult {
 export function useContentSearchTags(query: string | null): UseContentSearchTagsResult {
   const [tags, setTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(query !== null);
-  // Guards against out-of-order async responses overwriting newer results.
-  const requestIdRef = useRef(0);
 
   useEffect(() => {
-    const requestId = ++requestIdRef.current;
-
     if (query === null) {
       setTags([]);
       setIsLoading(false);
@@ -39,6 +34,9 @@ export function useContentSearchTags(query: string | null): UseContentSearchTags
     }
 
     setIsLoading(true);
+    // Set by the cleanup when the query changes or the hook unmounts, so a
+    // response that lost the race can never overwrite newer results.
+    let cancelled = false;
 
     // The query arrives normalized (trimmed, whitespace collapsed) from
     // `validateContentSearchQuery`. Tags are lowercase everywhere (store
@@ -49,17 +47,16 @@ export function useContentSearchTags(query: string | null): UseContentSearchTags
     void (async () => {
       const resultsPerTerm = await Promise.all(
         terms.map((term) =>
-          SearchController.getTagsByPrefix({ prefix: term, limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT }).catch(
-            (error) => {
-              Logger.error('[useContentSearchTags] Failed to fetch tags for term:', error);
-              return [] as string[];
-            },
+          // A failed term degrades to no suggestions for it (the row is a
+          // best-effort pivot, not primary content). The controller chain has
+          // already logged the failure — no extra logging here.
+          SearchController.fetchTagsByPrefix({ prefix: term, limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT }).catch(
+            () => [] as string[],
           ),
         ),
       );
 
-      // A newer query started while we awaited; its effect owns the state now.
-      if (requestId !== requestIdRef.current) return;
+      if (cancelled) return;
 
       // Exact term matches lead the row (most likely pivot target), prefix
       // extensions follow, both in term order.
@@ -78,6 +75,10 @@ export function useContentSearchTags(query: string | null): UseContentSearchTags
       setTags(merged);
       setIsLoading(false);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [query]);
 
   return { tags, isLoading };

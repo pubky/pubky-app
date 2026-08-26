@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -44,14 +45,58 @@ export function Search() {
   // Same resolution SearchTimelineFeed uses internally, so the template's
   // section gating can never disagree with the feed's effective layout.
   const { isVisualActive } = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.SEARCH);
-  const showSections = criteria.mode === 'tags' && content === CONTENT.ALL && !isVisualActive;
-  const hasResults = criteria.mode === 'content' || criteria.mode === 'tags';
+  const showTagSections = content === CONTENT.ALL && !isVisualActive;
 
   const feed = (
     <Container data-cy="post-search-results" overrideDefaults>
       <TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />
     </Container>
   );
+
+  let results: ReactNode;
+  switch (criteria.mode) {
+    case 'tags':
+      results = showTagSections ? (
+        <Container overrideDefaults className="flex w-full flex-col gap-6">
+          <SearchPeople />
+          <SearchCollections />
+          <Container overrideDefaults className="flex w-full flex-col gap-4">
+            <Heading level={2} size="lg" className="font-light text-muted-foreground">
+              {'Posts'}
+            </Heading>
+            {feed}
+          </Container>
+        </Container>
+      ) : (
+        feed
+      );
+      break;
+    case 'content':
+      results = (
+        <Container overrideDefaults className="flex w-full flex-col gap-6">
+          <SearchContentTags />
+          {feed}
+        </Container>
+      );
+      break;
+    case 'invalid':
+      results = (
+        <>
+          <Typography role="alert" data-testid="search-invalid-query" className="text-muted-foreground">
+            {criteria.message}
+          </Typography>
+          <SearchEmptyState />
+        </>
+      );
+      break;
+    case 'none':
+      results = <SearchEmptyState />;
+      break;
+    default: {
+      const exhaustive: never = criteria;
+      results = exhaustive;
+    }
+  }
 
   return (
     <>
@@ -63,36 +108,7 @@ export function Search() {
         <SearchInput autoFocus={criteria.mode === 'none' || (isMobile && criteria.mode === 'tags')} />
       </Container>
 
-      {hasResults ? (
-        showSections ? (
-          <Container overrideDefaults className="flex w-full flex-col gap-6">
-            <SearchPeople />
-            <SearchCollections />
-            <Container overrideDefaults className="flex w-full flex-col gap-4">
-              <Heading level={2} size="lg" className="font-light text-muted-foreground">
-                {'Posts'}
-              </Heading>
-              {feed}
-            </Container>
-          </Container>
-        ) : criteria.mode === 'content' ? (
-          <Container overrideDefaults className="flex w-full flex-col gap-6">
-            <SearchContentTags />
-            {feed}
-          </Container>
-        ) : (
-          feed
-        )
-      ) : (
-        <>
-          {criteria.mode === 'invalid' && (
-            <Typography role="alert" data-testid="search-invalid-query" className="text-muted-foreground">
-              {criteria.message}
-            </Typography>
-          )}
-          <SearchEmptyState />
-        </>
-      )}
+      {results}
     </>
   );
 }

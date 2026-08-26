@@ -30,21 +30,23 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const isMobile = useIsMobile();
   const criteria = useSearchCriteria();
 
-  const submitContentSearch = (value: string): boolean => {
+  const submitContentSearch = (value: string): void => {
     const validation = validateContentSearchQuery(value);
     if (!validation.isValid) {
       toast({ variant: 'error', description: validation.message });
-      return false;
+      return;
     }
 
     addQuery(validation.query);
-    setActiveTags([]);
+    // Tag chips are NOT cleared here: the bar already hides them on content
+    // results (see the render below), and the URL-sync effect empties the store
+    // once the params actually change — clearing eagerly would blank the chips
+    // while the old tag results are still on screen (or if navigation fails).
     // The destination shows this query in the input; set it directly rather than
     // clear-and-reseed — a same-query resubmit changes no URL and never re-seeds.
     setInputValue(validation.query);
     router.push(getContentSearchUrl(validation.query));
     setFocus(false);
-    return true;
   };
 
   const {

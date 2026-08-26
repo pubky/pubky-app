@@ -9,7 +9,7 @@ import { AUTOCOMPLETE_DEBOUNCE_MS } from './useSearchAutocomplete.constants';
 const {
   mockUserDetailsMap,
   setMockUserDetailsMap,
-  mockGetTagsByPrefix,
+  mockFetchTagsByPrefix,
   mockGetUsersByName,
   mockFetchUsersById,
   mockGetManyDetails,
@@ -22,7 +22,7 @@ const {
     setMockUserDetailsMap: (value: Map<Pubky, NexusUserDetails>) => {
       userDetailsMap.current = value;
     },
-    mockGetTagsByPrefix: vi.fn(),
+    mockFetchTagsByPrefix: vi.fn(),
     mockGetUsersByName: vi.fn(),
     mockFetchUsersById: vi.fn(),
     mockGetManyDetails: vi.fn(),
@@ -45,7 +45,7 @@ vi.mock('dexie-react-hooks', () => ({
 // Mock dependencies
 vi.mock('@/controllers/search/search', () => ({
   SearchController: {
-    getTagsByPrefix: (...args: unknown[]) => mockGetTagsByPrefix(...args),
+    fetchTagsByPrefix: (...args: unknown[]) => mockFetchTagsByPrefix(...args),
     getUsersByName: (...args: unknown[]) => mockGetUsersByName(...args),
     fetchUsersById: (...args: unknown[]) => mockFetchUsersById(...args),
   },
@@ -86,7 +86,7 @@ async function flushAutocompleteSearch() {
 describe('useSearchAutocomplete', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    mockGetTagsByPrefix.mockResolvedValue(['tech', 'technology', 'techno']);
+    mockFetchTagsByPrefix.mockResolvedValue(['tech', 'technology', 'techno']);
     mockGetUsersByName.mockResolvedValue(['pk:user1', 'pk:user2']);
     mockFetchUsersById.mockResolvedValue(['pk:abc123']);
     mockGetManyDetails.mockImplementation(({ userIds }: { userIds: Pubky[] }) => {
@@ -167,7 +167,7 @@ describe('useSearchAutocomplete', () => {
       await Promise.resolve();
     });
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'tech', limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'tech', limit: 3 });
     expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'tech', limit: 10 });
     // Should also search by user ID for non-prefixed queries
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'tech', limit: 10 });
@@ -186,7 +186,7 @@ describe('useSearchAutocomplete', () => {
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'abc', limit: 10 });
     // Should not search by name or tags when doing explicit ID search with prefix
     expect(mockGetUsersByName).not.toHaveBeenCalled();
-    expect(mockGetTagsByPrefix).not.toHaveBeenCalled();
+    expect(mockFetchTagsByPrefix).not.toHaveBeenCalled();
   });
 
   it.each(['p', 'pu', 'pub', 'pubk', 'pubky'])('searches tags and usernames but not user IDs for %s', async (query) => {
@@ -194,7 +194,7 @@ describe('useSearchAutocomplete', () => {
 
     await flushAutocompleteSearch();
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: query, limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: query, limit: 3 });
     expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: query, limit: 10 });
     expect(mockFetchUsersById).not.toHaveBeenCalled();
   });
@@ -204,7 +204,7 @@ describe('useSearchAutocomplete', () => {
 
     await flushAutocompleteSearch();
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'pubky-feedback', limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'pubky-feedback', limit: 3 });
     expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'pubky-feedback', limit: 10 });
     expect(mockFetchUsersById).not.toHaveBeenCalled();
   });
@@ -214,7 +214,7 @@ describe('useSearchAutocomplete', () => {
 
     await flushAutocompleteSearch();
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'pubkyabc', limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'pubkyabc', limit: 3 });
     expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'pubkyabc', limit: 10 });
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'abc', limit: 10 });
   });
@@ -224,7 +224,7 @@ describe('useSearchAutocomplete', () => {
 
     await flushAutocompleteSearch();
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'IH4', limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'IH4', limit: 3 });
     expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'IH4', limit: 10 });
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'IH4', limit: 10 });
   });
@@ -234,7 +234,7 @@ describe('useSearchAutocomplete', () => {
 
     await flushAutocompleteSearch();
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'pubkyIH4', limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'pubkyIH4', limit: 3 });
     expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'pubkyIH4', limit: 10 });
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'IH4', limit: 10 });
   });
@@ -248,7 +248,7 @@ describe('useSearchAutocomplete', () => {
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'abc123', limit: 10 });
     // Should also search by name and tags
     expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: 'abc123', limit: 10 });
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'abc123', limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'abc123', limit: 3 });
   });
 
   it('does not search by ID if prefix is too short', async () => {
@@ -291,7 +291,7 @@ describe('useSearchAutocomplete', () => {
   });
 
   it('returns empty arrays on API error', async () => {
-    mockGetTagsByPrefix.mockRejectedValue(new Error('API Error'));
+    mockFetchTagsByPrefix.mockRejectedValue(new Error('API Error'));
     mockGetUsersByName.mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() => useSearchAutocomplete({ query: 'tech' }));
@@ -318,7 +318,7 @@ describe('useSearchAutocomplete', () => {
     await flushAutocompleteSearch();
 
     // Should have searched with 'test'
-    expect(mockGetTagsByPrefix).toHaveBeenLastCalledWith({ prefix: 'test', limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenLastCalledWith({ prefix: 'test', limit: 3 });
   });
 
   it('trims whitespace from query', async () => {
@@ -326,7 +326,7 @@ describe('useSearchAutocomplete', () => {
 
     await flushAutocompleteSearch();
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'tech', limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'tech', limit: 3 });
   });
 
   it('searches by user ID when query starts with pubky: (with colon)', async () => {
@@ -338,7 +338,7 @@ describe('useSearchAutocomplete', () => {
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: 'abc123', limit: 10 });
     // Should not search by name or tags when doing explicit ID search with prefix
     expect(mockGetUsersByName).not.toHaveBeenCalled();
-    expect(mockGetTagsByPrefix).not.toHaveBeenCalled();
+    expect(mockFetchTagsByPrefix).not.toHaveBeenCalled();
   });
 
   it('skips tag search when query exceeds TAG_MAX_LENGTH', async () => {
@@ -347,7 +347,7 @@ describe('useSearchAutocomplete', () => {
 
     await flushAutocompleteSearch();
 
-    expect(mockGetTagsByPrefix).not.toHaveBeenCalled();
+    expect(mockFetchTagsByPrefix).not.toHaveBeenCalled();
     // User searches should still proceed
     expect(mockGetUsersByName).toHaveBeenCalledWith({ prefix: longQuery, limit: 10 });
     expect(mockFetchUsersById).toHaveBeenCalledWith({ prefix: longQuery, limit: 10 });
@@ -359,6 +359,6 @@ describe('useSearchAutocomplete', () => {
 
     await flushAutocompleteSearch();
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: exactQuery, limit: 3 });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: exactQuery, limit: 3 });
   });
 });

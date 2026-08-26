@@ -41,12 +41,9 @@ interface SearchRecentSectionProps {
 }
 
 /** Tag and full-text searches share one row, interleaved by recency. */
-type RecentSearchChip = {
-  key: string;
-  searchedAt: number;
-  tag?: SearchRecentSectionProps['tags'][number];
-  query?: SearchRecentSectionProps['queries'][number];
-};
+type RecentSearchChip =
+  | { kind: 'tag'; key: string; searchedAt: number; item: RecentTagSearchItem }
+  | { kind: 'query'; key: string; searchedAt: number; item: RecentQuerySearchItem };
 
 export function SearchRecentSection({
   users,
@@ -58,8 +55,17 @@ export function SearchRecentSection({
   onClearAll,
 }: SearchRecentSectionProps) {
   const searchChips: RecentSearchChip[] = [
-    ...tags.map((tag) => ({ key: `tag-${tag.tag}`, searchedAt: tag.searchedAt, tag })),
-    ...queries.map((query) => ({ key: `query-${query.query}`, searchedAt: query.searchedAt, query })),
+    ...tags.map(
+      (tag): RecentSearchChip => ({ kind: 'tag', key: `tag-${tag.tag}`, searchedAt: tag.searchedAt, item: tag }),
+    ),
+    ...queries.map(
+      (query): RecentSearchChip => ({
+        kind: 'query',
+        key: `query-${query.query}`,
+        searchedAt: query.searchedAt,
+        item: query,
+      }),
+    ),
   ]
     .sort((a, b) => b.searchedAt - a.searchedAt)
     // Cap the MERGED row: each source list is already capped, but together they
@@ -105,13 +111,13 @@ export function SearchRecentSection({
       {searchChips.length > 0 && (
         <Container overrideDefaults className="flex flex-wrap gap-2">
           {searchChips.map((chip) =>
-            chip.tag ? (
-              <SearchRecentItem key={chip.key} type={RECENT_ITEM_TYPE.TAG} tag={chip.tag} onTagClick={onTagClick} />
+            chip.kind === 'tag' ? (
+              <SearchRecentItem key={chip.key} type={RECENT_ITEM_TYPE.TAG} tag={chip.item} onTagClick={onTagClick} />
             ) : (
               <SearchRecentItem
                 key={chip.key}
                 type={RECENT_ITEM_TYPE.QUERY}
-                query={chip.query}
+                query={chip.item}
                 onQueryClick={onQueryClick}
               />
             ),

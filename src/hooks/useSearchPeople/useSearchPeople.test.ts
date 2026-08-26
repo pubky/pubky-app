@@ -23,9 +23,9 @@ vi.mock('@/controllers/stream/users/users', () => ({
 
 vi.mock('@/controllers/user/user', () => ({
   UserController: {
-    getManyDetails: vi.fn(),
-    getManyCounts: vi.fn(),
-    getManyRelationships: vi.fn(),
+    getManyDetails: ({ userIds }: { userIds: Pubky[] }) => mockHydrationRead(mockUserDetailsMap, userIds),
+    getManyCounts: ({ userIds }: { userIds: Pubky[] }) => mockHydrationRead(mockUserCountsMap, userIds),
+    getManyRelationships: ({ userIds }: { userIds: Pubky[] }) => mockHydrationRead(mockUserRelationshipsMap, userIds),
   },
 }));
 
@@ -48,31 +48,53 @@ vi.mock('@/config/search', async (importOriginal) => {
   return { ...actual, SEARCH_PEOPLE_PAGE_SIZE: 3 };
 });
 
-// The hook reads all three tables in ONE live query whose emission carries the
-// list epoch it ran for; the mock emits a combined snapshot of the prebuilt
-// maps, tagged with the epoch taken from the query deps.
+// Seeded lookup tables the hook's live query reads back through UserController.
 let mockUserDetailsMap = new Map<Pubky, NexusUserDetails>();
 let mockUserCountsMap = new Map<Pubky, NexusUserCounts>();
 let mockUserRelationshipsMap = new Map<Pubky, UserRelationshipsModelSchema>();
-// When set, the emission carries a stale epoch — the real gap between fetch
-// settle and the Dexie live-query emission for a freshly replaced id list.
-let mockHydrationEmissionPending = false;
+// When set, the read-back never resolves — models the gap between fetch settle
+// and the Dexie live-query emission for a freshly committed id list.
+let mockHydrationBlocked = false;
 
-vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: <T>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
-    const queryFnString = queryFn.toString();
-    if (queryFnString.includes('getManyDetails')) {
-      const epoch = deps[1] as number;
-      return {
-        epoch: mockHydrationEmissionPending ? epoch - 1 : epoch,
-        details: mockUserDetailsMap,
-        counts: mockUserCountsMap,
-        relationships: mockUserRelationshipsMap,
-      } as T;
+function mockHydrationRead<T>(source: Map<Pubky, T>, userIds: Pubky[]): Promise<Map<Pubky, T>> {
+  if (mockHydrationBlocked) {
+    return new Promise(() => {});
+  }
+  const picked = new Map<Pubky, T>();
+  for (const id of userIds) {
+    const value = source.get(id);
+    if (value !== undefined) {
+      picked.set(id, value);
     }
-    return defaultValue;
-  },
-}));
+  }
+  return Promise.resolve(picked);
+}
+
+// Faithful fake of the useLiveQuery contract, so the tests exercise the real
+// emission sequence: the default is returned synchronously, each deps change
+// re-runs the querier, the result lands asynchronously, and the PREVIOUS
+// emission is retained until then — the property the hook's hydration gate is
+// built around. (The factory is hoisted, so React must be imported inside it.)
+vi.mock('dexie-react-hooks', async () => {
+  const { useEffect, useState } = await import('react');
+  return {
+    useLiveQuery: <T>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
+      const [emission, setEmission] = useState<T>(defaultValue);
+      /* eslint-disable react-hooks/exhaustive-deps -- the fake forwards the caller's deps array verbatim, like the real useLiveQuery */
+      useEffect(() => {
+        let cancelled = false;
+        void Promise.resolve(queryFn()).then((result) => {
+          if (!cancelled) setEmission(result);
+        });
+        return () => {
+          cancelled = true;
+        };
+      }, deps);
+      /* eslint-enable react-hooks/exhaustive-deps */
+      return emission;
+    },
+  };
+});
 
 const USER_A = asOpaque<Pubky>('usera8ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
 const USER_B = asOpaque<Pubky>('userb8ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy');
@@ -107,7 +129,7 @@ beforeEach(() => {
   mockUserDetailsMap = new Map();
   mockUserCountsMap = new Map();
   mockUserRelationshipsMap = new Map();
-  mockHydrationEmissionPending = false;
+  mockHydrationBlocked = false;
   mockFetchUsersByTags.mockResolvedValue([]);
   mockGetOrFetchUsers.mockResolvedValue([]);
   mockGetAvatarUrl.mockReturnValue('avatar-url');
@@ -140,9 +162,13 @@ describe('useSearchPeople', () => {
 
   it('keeps loading until the hydration read-back emits for the fetched list', async () => {
     mockFetchUsersByTags.mockResolvedValue(scored([USER_A]));
-    // Emission still carries the previous list epoch — the gap between fetch
-    // settle and the Dexie live-query emission for the new ids.
-    mockHydrationEmissionPending = true;
+    seedUser(USER_A, 'Alice');
+    // Hold the read-back: the fetch settles and commits the id list, but the
+    // live-query emission for it never lands. The retained emission ran for the
+    // emptied in-flight list and carries the PREVIOUS epoch, so the gate must
+    // keep the section loading instead of flashing settled-empty (would regress
+    // if the epoch were bumped at fetch start again).
+    mockHydrationBlocked = true;
 
     const { result } = renderHook(() => useSearchPeople(['synonym']));
 

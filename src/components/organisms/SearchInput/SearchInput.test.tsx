@@ -488,22 +488,21 @@ describe('SearchInput', () => {
       });
 
       render(<SearchInput />);
-      // The URL-sync effect also clears tags on mount (default criteria are
-      // mode 'none') — reset so the assertions below can only be satisfied by
-      // the submit path itself.
+      // The URL-sync effect clears tags on mount (default criteria are mode
+      // 'none') — reset to prove the submit path itself never touches them:
+      // chips must stay visible until the URL actually flips to content mode.
       mockSetActiveTags.mockClear();
 
       const onEnter = vi.mocked(useSearchInput).mock.calls[0]?.[0]?.onEnter;
-      expect(onEnter?.('bitcoin wallet')).toBe(true);
+      onEnter?.('bitcoin wallet');
       expect(mockPush).toHaveBeenLastCalledWith('/search?q=bitcoin+wallet');
       expect(mockAddQuery).toHaveBeenCalledWith('bitcoin wallet');
-      expect(mockSetActiveTags).toHaveBeenCalledExactlyOnceWith([]);
+      expect(mockSetActiveTags).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getByRole('button', { name: 'Show all results' }));
       expect(mockPush).toHaveBeenLastCalledWith('/search?q=bitcoin+wallet');
       expect(mockAddQuery).toHaveBeenCalledTimes(2);
-      expect(mockSetActiveTags).toHaveBeenCalledTimes(2);
-      expect(mockSetActiveTags).toHaveBeenLastCalledWith([]);
+      expect(mockSetActiveTags).not.toHaveBeenCalled();
       // Submit keeps the query visible in the input (same-URL resubmits never re-seed)
       expect(setInputValue).toHaveBeenCalledWith('bitcoin wallet');
       expect(setFocus).toHaveBeenCalledWith(false);

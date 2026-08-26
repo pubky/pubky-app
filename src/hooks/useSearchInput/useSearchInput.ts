@@ -2,7 +2,7 @@ import { type Dispatch, type RefObject, type SetStateAction, useEffect, useRef, 
 
 interface UseSearchInputParams {
   /** Callback when Enter is pressed with the trimmed input value. The handler owns the input value after submit. */
-  onEnter?: (value: string) => boolean | void;
+  onEnter?: (value: string) => void;
 }
 
 interface UseSearchInputResult {

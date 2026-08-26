@@ -7,20 +7,16 @@ import { useContentSearchTags } from './useContentSearchTags';
 
 vi.mock('@/controllers/search/search', () => ({
   SearchController: {
-    getTagsByPrefix: vi.fn(),
+    fetchTagsByPrefix: vi.fn(),
   },
 }));
 
-vi.mock('@/libs/logger/logger', () => ({
-  Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
-}));
-
-const mockGetTagsByPrefix = vi.mocked(SearchController.getTagsByPrefix);
+const mockFetchTagsByPrefix = vi.mocked(SearchController.fetchTagsByPrefix);
 
 describe('useContentSearchTags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetTagsByPrefix.mockResolvedValue([]);
+    mockFetchTagsByPrefix.mockResolvedValue([]);
   });
 
   it('returns empty tags without fetching when the query is null', () => {
@@ -28,7 +24,7 @@ describe('useContentSearchTags', () => {
 
     expect(result.current.tags).toEqual([]);
     expect(result.current.isLoading).toBe(false);
-    expect(mockGetTagsByPrefix).not.toHaveBeenCalled();
+    expect(mockFetchTagsByPrefix).not.toHaveBeenCalled();
   });
 
   it('fetches one prefix lookup per query term with the per-term limit', async () => {
@@ -36,9 +32,12 @@ describe('useContentSearchTags', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledTimes(2);
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'bitcoin', limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT });
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({ prefix: 'design', limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledTimes(2);
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({
+      prefix: 'bitcoin',
+      limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
+    });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'design', limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT });
   });
 
   it('lowercases terms and dedupes repeated terms before fetching', async () => {
@@ -46,14 +45,14 @@ describe('useContentSearchTags', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledExactlyOnceWith({
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledExactlyOnceWith({
       prefix: 'bitcoin',
       limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
     });
   });
 
   it('orders exact term matches before prefix extensions and dedupes across terms', async () => {
-    mockGetTagsByPrefix.mockImplementation(async ({ prefix }) => {
+    mockFetchTagsByPrefix.mockImplementation(async ({ prefix }) => {
       if (prefix === 'bitcoin') return ['bitcoin-maxi', 'bitcoin'];
       if (prefix === 'design') return ['design', 'designer', 'bitcoin-maxi'];
       return [];
@@ -67,7 +66,7 @@ describe('useContentSearchTags', () => {
   });
 
   it('caps the merged row at the total limit', async () => {
-    mockGetTagsByPrefix.mockImplementation(async ({ prefix }) => [`${prefix}1`, `${prefix}2`, `${prefix}3`]);
+    mockFetchTagsByPrefix.mockImplementation(async ({ prefix }) => [`${prefix}1`, `${prefix}2`, `${prefix}3`]);
 
     const { result } = renderHook(() => useContentSearchTags('aa bb cc dd'));
 
@@ -78,7 +77,7 @@ describe('useContentSearchTags', () => {
   });
 
   it('keeps results from healthy terms when another term fails', async () => {
-    mockGetTagsByPrefix.mockImplementation(async ({ prefix }) => {
+    mockFetchTagsByPrefix.mockImplementation(async ({ prefix }) => {
       if (prefix === 'bitcoin') throw new Error('nexus down');
       return ['design'];
     });
@@ -96,14 +95,14 @@ describe('useContentSearchTags', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledExactlyOnceWith({
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledExactlyOnceWith({
       prefix: 'bitcoin',
       limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
     });
   });
 
   it('replaces results when the query changes and clears them when it becomes null', async () => {
-    mockGetTagsByPrefix.mockImplementation(async ({ prefix }) => [prefix]);
+    mockFetchTagsByPrefix.mockImplementation(async ({ prefix }) => [prefix]);
 
     const { result, rerender } = renderHook(({ query }: { query: string | null }) => useContentSearchTags(query), {
       initialProps: { query: 'bitcoin' as string | null },

@@ -65,9 +65,9 @@ export function SearchSuggestions({
   onClearRecentSearches,
 }: SearchSuggestionsProps) {
   // Limit recent items to display
-  const displayRecentUsers = hasInput ? [] : (recentUsers || []).slice(0, MAX_RECENT_SEARCHES);
-  const displayRecentTags = hasInput ? [] : (recentTags || []).slice(0, MAX_RECENT_SEARCHES);
-  const displayRecentQueries = hasInput ? [] : (recentQueries || []).slice(0, MAX_RECENT_SEARCHES);
+  const displayRecentUsers = hasInput ? [] : recentUsers.slice(0, MAX_RECENT_SEARCHES);
+  const displayRecentTags = hasInput ? [] : recentTags.slice(0, MAX_RECENT_SEARCHES);
+  const displayRecentQueries = hasInput ? [] : recentQueries.slice(0, MAX_RECENT_SEARCHES);
 
   // Derive boolean flags for readability
   const hasAutocompleteTags = hasInput && autocompleteTags.length > 0;
