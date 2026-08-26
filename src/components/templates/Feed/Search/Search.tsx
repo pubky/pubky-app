@@ -1,25 +1,27 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
+import { Heading } from '@/atoms/Heading/Heading';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { SearchEmptyState } from '@/molecules/SearchEmptyState/SearchEmptyState';
-import { SearchHeader } from '@/molecules/SearchHeader/SearchHeader';
+import { SearchCollections } from '@/organisms/Collections/SearchCollections/SearchCollections';
 import { SearchInput } from '@/organisms/SearchInput/SearchInput';
+import { SearchPeople } from '@/organisms/SearchPeople/SearchPeople';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
+import { useHomeStore } from '@/stores/home/home.store';
+import { CONTENT } from '@/stores/home/home.types';
 
 /**
  * Search Template
  *
- * Template for the Search page that displays posts filtered by tags.
- * Tags are parsed from URL query parameters (?tags=pubky,bitcoin).
- *
- * Features:
- * - Displays search results when tags are provided
- * - Shows empty state when no tags in URL
- * - Uses TimelineFeed with SEARCH variant for infinite scroll
- * - Shows SearchInput on mobile (hidden on desktop where it's in the header)
+ * Search results for the tags in the URL (?tags=pubky,bitcoin): People and
+ * Collections sections (expandable previews), then the posts feed under a
+ * "Posts" heading. Sections render only in the default view (Content filter =
+ * All, visual layout inactive) — narrower filters show the bare feed, avoiding
+ * duplication with the Collections content filter. Empty state without tags.
  *
  * Rendered as `{children}` inside the shared `(feeds)/layout.tsx`, which hoists
  * the `ContentLayout` shell (sidebars, drawers, right rail) across the feed
@@ -30,7 +32,18 @@ export function Search() {
   // Get tags from URL query params
   const tags = useSearchTags();
   const isMobile = useIsMobile();
+  const content = useHomeStore((state) => state.content);
+  // Same resolution SearchTimelineFeed uses internally, so the template's
+  // section gating can never disagree with the feed's effective layout.
+  const { isVisualActive } = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.SEARCH);
   const hasTags = tags.length > 0;
+  const showSections = content === CONTENT.ALL && !isVisualActive;
+
+  const feed = (
+    <Container data-cy="post-search-results" overrideDefaults>
+      <TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />
+    </Container>
+  );
 
   return (
     <>
@@ -40,12 +53,20 @@ export function Search() {
       </Container>
 
       {hasTags ? (
-        <>
-          <SearchHeader tags={tags} />
-          <Container data-cy="post-search-results" overrideDefaults>
-            <TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />
+        showSections ? (
+          <Container overrideDefaults className="flex w-full flex-col gap-6">
+            <SearchPeople />
+            <SearchCollections />
+            <Container overrideDefaults className="flex w-full flex-col gap-4">
+              <Heading level={2} size="lg" className="font-light text-muted-foreground">
+                {'Posts'}
+              </Heading>
+              {feed}
+            </Container>
           </Container>
-        </>
+        ) : (
+          feed
+        )
       ) : (
         <SearchEmptyState />
       )}

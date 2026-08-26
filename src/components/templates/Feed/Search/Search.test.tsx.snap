@@ -14,19 +14,40 @@ exports[`Search - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
     </div>
   </div>
   <div
-    data-testid="search-header"
-  >
-    SearchHeader
-  </div>
-  <div
-    data-cy="post-search-results"
+    class="flex w-full flex-col gap-6"
     data-testid="container"
   >
     <div
-      data-testid="timeline-feed"
-      data-variant="search"
+      data-testid="search-people"
     >
-      TimelineFeed
+      SearchPeople
+    </div>
+    <div
+      data-testid="search-collections"
+    >
+      SearchCollections
+    </div>
+    <div
+      class="flex w-full flex-col gap-4"
+      data-testid="container"
+    >
+      <h2
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="heading-2"
+      >
+        Posts
+      </h2>
+      <div
+        data-cy="post-search-results"
+        data-testid="container"
+      >
+        <div
+          data-testid="timeline-feed"
+          data-variant="search"
+        >
+          TimelineFeed
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -67,9 +88,57 @@ exports[`Search - Snapshots > matches snapshot with tags present 1`] = `
     </div>
   </div>
   <div
-    data-testid="search-header"
+    class="flex w-full flex-col gap-6"
+    data-testid="container"
   >
-    SearchHeader
+    <div
+      data-testid="search-people"
+    >
+      SearchPeople
+    </div>
+    <div
+      data-testid="search-collections"
+    >
+      SearchCollections
+    </div>
+    <div
+      class="flex w-full flex-col gap-4"
+      data-testid="container"
+    >
+      <h2
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="heading-2"
+      >
+        Posts
+      </h2>
+      <div
+        data-cy="post-search-results"
+        data-testid="container"
+      >
+        <div
+          data-testid="timeline-feed"
+          data-variant="search"
+        >
+          TimelineFeed
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Search - Snapshots > matches snapshot with tags present and a non-All content filter 1`] = `
+<div>
+  <div
+    class="lg:hidden"
+    data-testid="container"
+  >
+    <div
+      data-auto-focus="false"
+      data-testid="search-input"
+    >
+      SearchInput
+    </div>
   </div>
   <div
     data-cy="post-search-results"

@@ -3,6 +3,7 @@ import {
   SEARCH_PATH_PARAMS,
   type TPrefixSearchParams,
   type TTagSearchParams,
+  type TUsersByTagsSearchParams,
 } from '@/services/nexus/search/search.types';
 
 /**
@@ -46,6 +47,12 @@ export const searchApi = {
       excludeKeys: SEARCH_PATH_PARAMS,
     });
   },
+  // `tags` is a query param here (unlike the path-segment routes above)
+  byTags: (params: TUsersByTagsSearchParams) =>
+    buildUrlWithQuery({
+      baseRoute: `${PREFIX}/users/by_tags`,
+      params,
+    }),
 };
 
 export type SearchApiEndpoint = keyof typeof searchApi;
