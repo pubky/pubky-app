@@ -34,12 +34,12 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode default
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        Feed Name
+        Feed Title
       </label>
       <input
         class="h-14 border-dashed"
         data-testid="feed-name-input"
-        placeholder="Not your keys..."
+        placeholder="Name your feed"
         required=""
         value=""
       />
@@ -1012,12 +1012,12 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for create mode with di
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        Feed Name
+        Feed Title
       </label>
       <input
         class="h-14 border-dashed"
         data-testid="feed-name-input"
-        placeholder="Not your keys..."
+        placeholder="Name your feed"
         required=""
         value=""
       />
@@ -1988,12 +1988,12 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with cust
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        Feed Name
+        Feed Title
       </label>
       <input
         class="h-14 border-dashed"
         data-testid="feed-name-input"
-        placeholder="Not your keys..."
+        placeholder="Name your feed"
         required=""
         value="Bitcoin News"
       />
@@ -3038,12 +3038,12 @@ exports[`CustomFeedDialog - Snapshots > matches snapshot for edit mode with null
         class="text-xs tracking-wide text-muted-foreground uppercase"
         data-testid="label"
       >
-        Feed Name
+        Feed Title
       </label>
       <input
         class="h-14 border-dashed"
         data-testid="feed-name-input"
-        placeholder="Not your keys..."
+        placeholder="Name your feed"
         required=""
         value="Bitcoin News"
       />

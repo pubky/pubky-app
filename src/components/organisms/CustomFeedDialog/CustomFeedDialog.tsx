@@ -298,7 +298,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
         </DialogHeader>
 
         <Container className="gap-y-2">
-          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Feed Name'}</Label>
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Feed Title'}</Label>
 
           <Controller
             name={CUSTOM_FEED_FORM_FIELDS.NAME}
@@ -306,7 +306,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
             render={({ field }) => (
               <Input
                 required
-                placeholder={'Not your keys...'}
+                placeholder={'Name your feed'}
                 value={field.value}
                 onChange={field.onChange}
                 onBlur={field.onBlur}
