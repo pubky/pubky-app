@@ -182,7 +182,7 @@ export function IconPickerDialog({
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
       <DialogContent
-        className="flex h-110 w-145 max-w-[calc(100vw-2rem)] flex-col gap-6 overflow-hidden p-6 sm:max-w-145 sm:p-8"
+        className="flex h-110 w-lg max-w-[calc(100vw-2rem)] flex-col gap-6 overflow-hidden p-6 sm:max-w-lg sm:p-8"
         data-testid="icon-picker-dialog-content"
         onClick={(event) => event.stopPropagation()}
       >
@@ -246,7 +246,7 @@ export function IconPickerDialog({
             <>
               <Container
                 overrideDefaults
-                className="grid grid-cols-6 gap-x-2 gap-y-4 sm:grid-cols-11"
+                className="grid grid-cols-6 gap-x-2 gap-y-4 sm:grid-cols-10"
                 data-testid="icon-picker-grid"
               >
                 {visibleIcons.map(({ name: iconName }) => {

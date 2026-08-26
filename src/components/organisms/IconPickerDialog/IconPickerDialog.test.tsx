@@ -47,6 +47,13 @@ describe('IconPickerDialog', () => {
     await waitForResolvedIcons(TEST_ICONS);
   });
 
+  it('uses the lg width preset with a ten-column desktop grid', () => {
+    render(<IconPickerDialog open onSelect={() => {}} icons={TEST_ICONS} />);
+
+    expect(screen.getByTestId('icon-picker-dialog-content')).toHaveClass('w-lg', 'sm:max-w-lg');
+    expect(screen.getByTestId('icon-picker-grid')).toHaveClass('grid-cols-6', 'sm:grid-cols-10');
+  });
+
   it('announces the result count to assistive tech', () => {
     render(<IconPickerDialog open onSelect={() => {}} icons={TEST_ICONS} />);
 
