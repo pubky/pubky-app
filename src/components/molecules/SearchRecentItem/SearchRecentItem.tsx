@@ -1,10 +1,34 @@
 'use client';
 import { Button } from '@/atoms/Button/Button';
 import { cn } from '@/libs/utils/utils';
+import type { Pubky } from '@/models/models.types';
 import { PostTag } from '../PostTag/PostTag';
 import { SearchRecentUserItem } from '../SearchRecentUserItem/SearchRecentUserItem';
+import type {
+  RecentQuerySearchItem,
+  RecentTagSearchItem,
+  RecentUserSearchItem,
+} from '../SearchRecentUserItem/SearchRecentUserItem.types';
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
-import type { SearchRecentItemProps } from './SearchRecentItem.types';
+
+type RecentItemType = (typeof RECENT_ITEM_TYPE)[keyof typeof RECENT_ITEM_TYPE];
+
+interface SearchRecentItemProps {
+  /** Type of recent search item */
+  type: RecentItemType;
+  /** User data (required if type is 'user') */
+  user?: RecentUserSearchItem;
+  /** Tag data (required if type is 'tag') */
+  tag?: RecentTagSearchItem;
+  /** Query data (required if type is 'query') */
+  query?: RecentQuerySearchItem;
+  /** Callback when user item is clicked (only for type='user') */
+  onUserClick?: (userId: Pubky) => void;
+  /** Callback when tag item is clicked (only for type='tag') */
+  onTagClick?: (tag: string) => void;
+  /** Callback when query item is clicked (only for type='query') */
+  onQueryClick?: (query: string) => void;
+}
 
 /**
  * SearchRecentItem

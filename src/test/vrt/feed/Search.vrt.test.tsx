@@ -561,6 +561,15 @@ vi.mock('@/hooks/useSearchInput/useSearchInput', async () => {
   };
 });
 
+// Tags pivot row on the full-text results page — deterministic prefix matches
+// for the `bitcoin design` query (exact terms first, then extensions).
+vi.mock('@/hooks/useContentSearchTags/useContentSearchTags', () => ({
+  useContentSearchTags: (query: string | null) => ({
+    tags: query === null ? [] : ['bitcoin', 'design', 'bitcoiners', 'design-systems'],
+    isLoading: false,
+  }),
+}));
+
 // When the field is focused with a query, return fixture users (by_name / by_id path).
 vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', async () => {
   const f = await fixtures;
@@ -684,12 +693,14 @@ describe('Search (full-text results) — visual regression', () => {
   it('renders relevance-ranked content results at desktop viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
     await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
+    await expect.element(screen.getByRole('heading', { name: 'Tags' })).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-desktop');
   });
 
   it('renders relevance-ranked content results at mobile viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
+    await expect.element(screen.getByRole('heading', { name: 'Tags' })).toBeVisible();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-mobile');
   });
 });

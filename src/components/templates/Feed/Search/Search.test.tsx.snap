@@ -95,14 +95,24 @@ exports[`Search - Snapshots > matches snapshot with full-text results 1`] = `
     </div>
   </div>
   <div
-    data-cy="post-search-results"
+    class="flex w-full flex-col gap-6"
     data-testid="container"
   >
     <div
-      data-testid="timeline-feed"
-      data-variant="search"
+      data-testid="search-content-tags"
     >
-      TimelineFeed
+      SearchContentTags
+    </div>
+    <div
+      data-cy="post-search-results"
+      data-testid="container"
+    >
+      <div
+        data-testid="timeline-feed"
+        data-variant="search"
+      >
+        TimelineFeed
+      </div>
     </div>
   </div>
 </div>

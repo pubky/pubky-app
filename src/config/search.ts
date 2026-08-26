@@ -26,6 +26,15 @@ export const CONTENT_SEARCH_QUERY_MIN_LENGTH = 2;
 export const CONTENT_SEARCH_QUERY_MAX_LENGTH = 30;
 export const CONTENT_SEARCH_QUERY_MAX_TERMS = 4;
 
+/** Tag prefix matches fetched per query term for the `/search` full-text Tags row. */
+export const SEARCH_CONTENT_TAGS_PER_TERM_LIMIT = 3;
+
+/**
+ * Cap of the merged `/search` full-text Tags row — per-term results times
+ * `CONTENT_SEARCH_QUERY_MAX_TERMS` could otherwise reach 12 chips.
+ */
+export const SEARCH_CONTENT_TAGS_MAX_TOTAL = 8;
+
 /**
  * Search bar closed state style (pill shape)
  * - Gradient background matching Figma design

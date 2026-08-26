@@ -9,6 +9,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useSearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { SearchEmptyState } from '@/molecules/SearchEmptyState/SearchEmptyState';
 import { SearchCollections } from '@/organisms/Collections/SearchCollections/SearchCollections';
+import { SearchContentTags } from '@/organisms/SearchContentTags/SearchContentTags';
 import { SearchInput } from '@/organisms/SearchInput/SearchInput';
 import { SearchPeople } from '@/organisms/SearchPeople/SearchPeople';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
@@ -25,7 +26,8 @@ import { CONTENT } from '@/stores/home/home.types';
  * above the posts feed under a "Posts" heading. Sections render only in the
  * default view (Content filter = All, visual layout inactive) — narrower filters
  * show the bare feed, avoiding duplication with the Collections content filter.
- * Both sections are tag-driven, so full-text search shows the posts feed alone.
+ * Both sections are tag-driven; full-text search instead shows a Tags row
+ * (prefix matches of the query terms) above its feed, as a pivot to tag search.
  *
  * An invalid shared `?q=` URL explains itself instead of failing silently;
  * without any criteria the empty state renders.
@@ -72,6 +74,11 @@ export function Search() {
               </Heading>
               {feed}
             </Container>
+          </Container>
+        ) : criteria.mode === 'content' ? (
+          <Container overrideDefaults className="flex w-full flex-col gap-6">
+            <SearchContentTags />
+            {feed}
           </Container>
         ) : (
           feed

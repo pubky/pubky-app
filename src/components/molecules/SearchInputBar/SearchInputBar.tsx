@@ -1,13 +1,40 @@
 'use client';
 
 import { Search, X } from 'lucide-react';
+import type { ChangeEvent, KeyboardEvent, RefObject } from 'react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { SEARCH_CLOSED_STYLE, SEARCH_INPUT_EXPANDED_STYLE } from '@/config/search';
 import { cn } from '@/libs/utils/utils';
 import { PostTag } from '../PostTag/PostTag';
-import type { SearchInputBarProps } from './SearchInputBar.types';
+
+interface SearchInputBarProps {
+  /** Currently active search tags */
+  activeTags: string[];
+  /** Current input value */
+  inputValue: string;
+  /** Whether the input is focused/expanded */
+  isFocused: boolean;
+  /** Whether suggestions popover is expanded */
+  isExpanded?: boolean;
+  /** ID of the suggestions listbox (for ARIA relationship) */
+  suggestionsId?: string;
+  /** Ref for the input element */
+  inputRef?: RefObject<HTMLInputElement | null>;
+  /** Callback when a tag's close button is clicked */
+  onTagRemove: (tag: string) => void;
+  /** Callback when input value changes */
+  onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  /** Callback when a key is pressed in the input */
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  /** Callback when input receives focus */
+  onFocus: () => void;
+  /** Clears the typed value and collapses the active search UI. */
+  onCloseSearch: () => void;
+  /** Whether to auto-focus the input on mount */
+  autoFocus?: boolean;
+}
 
 export function SearchInputBar({
   activeTags,

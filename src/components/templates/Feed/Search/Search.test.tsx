@@ -36,6 +36,10 @@ vi.mock('@/organisms/SearchPeople/SearchPeople', () => ({
   SearchPeople: () => <div data-testid="search-people">SearchPeople</div>,
 }));
 
+vi.mock('@/organisms/SearchContentTags/SearchContentTags', () => ({
+  SearchContentTags: () => <div data-testid="search-content-tags">SearchContentTags</div>,
+}));
+
 vi.mock('@/organisms/SearchInput/SearchInput', () => ({
   SearchInput: ({ autoFocus }: { autoFocus?: boolean }) => (
     <div data-auto-focus={String(Boolean(autoFocus))} data-testid="search-input">
@@ -135,10 +139,31 @@ describe('Search', () => {
 
     expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
     expect(screen.getByTestId('search-input')).toHaveAttribute('data-auto-focus', 'false');
-    // People and Collections are tag-driven, so a full-text query shows the feed alone
+    // A full-text query shows the Tags pivot row above its feed — People and
+    // Collections stay tag-driven
+    expect(screen.getByTestId('search-content-tags')).toBeInTheDocument();
     expect(screen.queryByTestId('search-people')).not.toBeInTheDocument();
     expect(screen.queryByTestId('search-collections')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Posts' })).not.toBeInTheDocument();
+  });
+
+  it('renders the Tags pivot row above the full-text feed', () => {
+    mockUseSearchCriteria.mockReturnValue({ mode: 'content', query: 'bitcoin wallet' });
+
+    render(<Search />);
+
+    const tagsRow = screen.getByTestId('search-content-tags');
+    const feed = screen.getByTestId('timeline-feed');
+    expect(tagsRow.compareDocumentPosition(feed) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('mounts the Tags pivot row only for full-text results', () => {
+    render(<Search />);
+    expect(screen.queryByTestId('search-content-tags')).not.toBeInTheDocument();
+
+    mockUseSearchCriteria.mockReturnValue({ mode: 'none' });
+    render(<Search />);
+    expect(screen.queryByTestId('search-content-tags')).not.toBeInTheDocument();
   });
 
   it('renders the empty state when no search criteria are present', () => {

@@ -13,10 +13,40 @@ import { X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import type { Pubky } from '@/models/models.types';
 import { MAX_RECENT_SEARCHES } from '@/stores/search/search.constants';
 import { SearchRecentItem } from '../SearchRecentItem/SearchRecentItem';
 import { RECENT_ITEM_TYPE } from '../SearchRecentItem/SearchRecentItem.constants';
-import type { SearchRecentSectionProps } from './SearchRecentSection.types';
+import type {
+  RecentQuerySearchItem,
+  RecentTagSearchItem,
+  RecentUserSearchItem,
+} from '../SearchRecentUserItem/SearchRecentUserItem.types';
+
+interface SearchRecentSectionProps {
+  /** Recent user searches */
+  users: RecentUserSearchItem[];
+  /** Recent tag searches */
+  tags: RecentTagSearchItem[];
+  /** Recent full-text query searches */
+  queries: RecentQuerySearchItem[];
+  /** Callback when a user item is clicked */
+  onUserClick: (userId: Pubky) => void;
+  /** Callback when a tag item is clicked */
+  onTagClick: (tag: string) => void;
+  /** Callback when a query item is clicked (re-runs the full-text search) */
+  onQueryClick: (query: string) => void;
+  /** Callback to clear all recent searches */
+  onClearAll?: () => void;
+}
+
+/** Tag and full-text searches share one row, interleaved by recency. */
+type RecentSearchChip = {
+  key: string;
+  searchedAt: number;
+  tag?: SearchRecentSectionProps['tags'][number];
+  query?: SearchRecentSectionProps['queries'][number];
+};
 
 export function SearchRecentSection({
   users,
@@ -27,13 +57,6 @@ export function SearchRecentSection({
   onQueryClick,
   onClearAll,
 }: SearchRecentSectionProps) {
-  // Tag and full-text searches share one row, interleaved by recency.
-  type RecentSearchChip = {
-    key: string;
-    searchedAt: number;
-    tag?: SearchRecentSectionProps['tags'][number];
-    query?: SearchRecentSectionProps['queries'][number];
-  };
   const searchChips: RecentSearchChip[] = [
     ...tags.map((tag) => ({ key: `tag-${tag.tag}`, searchedAt: tag.searchedAt, tag })),
     ...queries.map((query) => ({ key: `query-${query.query}`, searchedAt: query.searchedAt, query })),

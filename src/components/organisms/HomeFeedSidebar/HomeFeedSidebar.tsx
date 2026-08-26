@@ -1,7 +1,7 @@
 'use client';
 
 import { Container } from '@/atoms/Container/Container';
-import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
@@ -18,7 +18,15 @@ import {
   resolveVisualFeedContent,
   VISUAL_DISABLED_CONTENT,
 } from '../Timeline/Feed/TimelineFeed/TimelineFeedVisual.helpers';
-import type { HomeFeedSidebarProps } from './HomeFeedSidebar.types';
+
+interface HomeFeedSidebarProps {
+  hideReachFilter?: boolean;
+  hideSortFilter?: boolean;
+  hideLayoutFilter?: boolean;
+  allowVisualLayout?: boolean;
+  feedVariant?: TimelineFeedVariant;
+  variant?: 'sidebar' | 'drawer';
+}
 
 /**
  * HomeFeedFilters
