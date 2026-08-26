@@ -27,6 +27,9 @@ interface UseSearchPeopleResult {
   loadMore: () => Promise<void>;
 }
 
+/** Sentinel id list: no details emission has arrived yet (never equals a state array). */
+const NO_DETAILS_EMISSION: Pubky[] = [];
+
 /** Response ids in order, with duplicates within the same page dropped. */
 function uniquePageIds(results: TUserTagSearchResult[]): Pubky[] {
   const seen = new Set<Pubky>();
@@ -170,20 +173,23 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   };
 
   // Reactive read-back from Dexie so follow/unfollow and late hydration
-  // propagate without refetching.
-  const userDetailsMap = useLiveQuery(
+  // propagate without refetching. Each emission carries the id list it was
+  // computed for, so a settled-but-empty read is distinguishable from "Dexie
+  // has not emitted yet" (see `detailsHydrated`).
+  const userDetailsQuery = useLiveQuery(
     async () => {
       try {
-        if (userIds.length === 0) return new Map<Pubky, NexusUserDetails>();
-        return await UserController.getManyDetails({ userIds });
+        if (userIds.length === 0) return { ids: userIds, details: new Map<Pubky, NexusUserDetails>() };
+        return { ids: userIds, details: await UserController.getManyDetails({ userIds }) };
       } catch (err) {
         Logger.error('[useSearchPeople] Failed to query user details:', err);
-        return new Map<Pubky, NexusUserDetails>();
+        return { ids: userIds, details: new Map<Pubky, NexusUserDetails>() };
       }
     },
     [userIds],
-    new Map<Pubky, NexusUserDetails>(),
+    { ids: NO_DETAILS_EMISSION, details: new Map<Pubky, NexusUserDetails>() },
   );
+  const userDetailsMap = userDetailsQuery.details;
 
   const userCountsMap = useLiveQuery(
     async () => {
@@ -234,11 +240,14 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     })
     .filter((user): user is UserListItemData => user !== null);
 
-  // `useLiveQuery` returns its default empty Map synchronously and only fills
-  // it a tick later (Dexie defers emissions), so without this gate the section
-  // would flash empty — or unmount entirely — between fetch settle and the
-  // read-back emission. Same guard as useUserStream's hydration flags.
-  const detailsHydrated = userIds.length === 0 || userIds.some((id) => userDetailsMap.has(id));
+  // `useLiveQuery` returns its default synchronously and only fills it a tick
+  // later (Dexie defers emissions), so without this gate the section would flash
+  // empty — or unmount entirely — between fetch settle and the read-back
+  // emission. The gate asks whether the read-back has emitted for the ids
+  // currently on screen, NOT whether anything hydrated: a page where no id
+  // hydrates (stale search index, or a swallowed `by_ids` failure) is settled
+  // and empty, and must not pin the section on skeletons forever.
+  const detailsHydrated = userDetailsQuery.ids === userIds;
 
   return { users, loading: loading || !detailsHydrated, loadingMore, hasMore, loadMore };
 }

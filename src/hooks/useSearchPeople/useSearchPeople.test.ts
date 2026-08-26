@@ -53,11 +53,20 @@ vi.mock('@/config/search', async (importOriginal) => {
 let mockUserDetailsMap = new Map<Pubky, NexusUserDetails>();
 let mockUserCountsMap = new Map<Pubky, NexusUserCounts>();
 let mockUserRelationshipsMap = new Map<Pubky, UserRelationshipsModelSchema>();
+// When set, the details emission carries a foreign id list — the real gap
+// between fetch settle and the Dexie live-query emission for the new ids.
+let mockDetailsEmissionPending = false;
+const PENDING_EMISSION_IDS: Pubky[] = [];
 
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: <T>(queryFn: () => Promise<T> | T, _deps: unknown[], defaultValue: T): T => {
+  useLiveQuery: <T>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
     const queryFnString = queryFn.toString();
-    if (queryFnString.includes('getManyDetails')) return mockUserDetailsMap as T;
+    // The details read-back tags each emission with the ids it ran for; a
+    // synchronous mock is always settled for the ids it was given.
+    if (queryFnString.includes('getManyDetails')) {
+      const ids = mockDetailsEmissionPending ? PENDING_EMISSION_IDS : deps[0];
+      return { ids, details: mockUserDetailsMap } as T;
+    }
     if (queryFnString.includes('getManyCounts')) return mockUserCountsMap as T;
     if (queryFnString.includes('getManyRelationships')) return mockUserRelationshipsMap as T;
     return defaultValue;
@@ -97,6 +106,7 @@ beforeEach(() => {
   mockUserDetailsMap = new Map();
   mockUserCountsMap = new Map();
   mockUserRelationshipsMap = new Map();
+  mockDetailsEmissionPending = false;
   mockFetchUsersByTags.mockResolvedValue([]);
   mockGetOrFetchUsers.mockResolvedValue([]);
   mockGetAvatarUrl.mockReturnValue('avatar-url');
@@ -129,8 +139,9 @@ describe('useSearchPeople', () => {
 
   it('keeps loading until the details read-back emits for the fetched ids', async () => {
     mockFetchUsersByTags.mockResolvedValue(scored([USER_A]));
-    // No seeded details — simulates the gap between fetch settle and the
-    // Dexie live-query emission.
+    // Emission still carries the previous id list — the gap between fetch
+    // settle and the Dexie live-query emission for the new ids.
+    mockDetailsEmissionPending = true;
 
     const { result } = renderHook(() => useSearchPeople(['synonym']));
 
@@ -138,6 +149,18 @@ describe('useSearchPeople', () => {
     await act(async () => {});
 
     expect(result.current.loading).toBe(true);
+    expect(result.current.users).toEqual([]);
+  });
+
+  it('settles as loaded-empty when the read-back emits without hydrating anything', async () => {
+    mockFetchUsersByTags.mockResolvedValue(scored([USER_A]));
+    // Nothing seeded: a stale search index, or a swallowed `by_ids` failure,
+    // leaves every id unhydrated. The section must settle instead of pinning
+    // itself on skeletons forever (#2355 review).
+
+    const { result } = renderHook(() => useSearchPeople(['synonym']));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.users).toEqual([]);
   });
 
