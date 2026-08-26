@@ -89,7 +89,7 @@ export function useSearchStreamId(contentOverride?: ContentType): PostStreamId |
  *
  * @example
  * ```tsx
- * function SearchHeader() {
+ * function SearchSummary() {
  *   const tags = useSearchTags();
  *   // With URL ?tags=pubky,bitcoin
  *   // tags will be ['pubky', 'bitcoin']

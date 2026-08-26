@@ -1,11 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CONTENT } from '@/stores/home/home.types';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Search } from './Search';
 
-const { mockUseIsMobile, mockUseSearchTags } = vi.hoisted(() => ({
+const { mockUseIsMobile, mockUseSearchTags, mockHomeState, mockLayoutResolution } = vi.hoisted(() => ({
   mockUseIsMobile: vi.fn(() => false),
   mockUseSearchTags: vi.fn(() => ['pubky']),
+  mockHomeState: { content: 'all' },
+  mockLayoutResolution: { isVisualActive: false },
 }));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
@@ -14,6 +17,22 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 
 vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
   useSearchTags: () => mockUseSearchTags(),
+}));
+
+vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
+  useFeedLayoutResolution: () => mockLayoutResolution,
+}));
+
+vi.mock('@/stores/home/home.store', () => ({
+  useHomeStore: (selector: (state: { content: string }) => unknown) => selector(mockHomeState),
+}));
+
+vi.mock('@/organisms/Collections/SearchCollections/SearchCollections', () => ({
+  SearchCollections: () => <div data-testid="search-collections">SearchCollections</div>,
+}));
+
+vi.mock('@/organisms/SearchPeople/SearchPeople', () => ({
+  SearchPeople: () => <div data-testid="search-people">SearchPeople</div>,
 }));
 
 vi.mock('@/organisms/SearchInput/SearchInput', () => ({
@@ -34,10 +53,6 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
 
 vi.mock('@/molecules/SearchEmptyState/SearchEmptyState', () => ({
   SearchEmptyState: () => <div data-testid="search-empty-state">SearchEmptyState</div>,
-}));
-
-vi.mock('@/molecules/SearchHeader/SearchHeader', () => ({
-  SearchHeader: () => <div data-testid="search-header">SearchHeader</div>,
 }));
 
 vi.mock('@/atoms/Container/Container', () => ({
@@ -61,6 +76,8 @@ describe('Search', () => {
     vi.clearAllMocks();
     mockUseIsMobile.mockReturnValue(false);
     mockUseSearchTags.mockReturnValue(['pubky']);
+    mockHomeState.content = CONTENT.ALL;
+    mockLayoutResolution.isVisualActive = false;
   });
 
   it('renders TimelineFeed with SEARCH variant when tags are present', () => {
@@ -71,11 +88,43 @@ describe('Search', () => {
     expect(timelineFeed).toHaveAttribute('data-variant', 'search');
   });
 
-  it('renders search results header when tags are present', () => {
+  it('renders the People and Collections sections and Posts heading in the default view', () => {
     render(<Search />);
 
-    expect(screen.getByTestId('search-header')).toBeInTheDocument();
-    expect(screen.queryByTestId('search-empty-state')).not.toBeInTheDocument();
+    expect(screen.getByTestId('search-people')).toBeInTheDocument();
+    expect(screen.getByTestId('search-collections')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Posts' })).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
+  });
+
+  it('renders the People section above the Collections section', () => {
+    render(<Search />);
+
+    const people = screen.getByTestId('search-people');
+    const collections = screen.getByTestId('search-collections');
+    expect(people.compareDocumentPosition(collections) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('renders the bare feed when the content filter is not All', () => {
+    mockHomeState.content = CONTENT.COLLECTIONS;
+
+    render(<Search />);
+
+    expect(screen.queryByTestId('search-people')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('search-collections')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Posts' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
+  });
+
+  it('renders the bare feed when visual layout is active', () => {
+    mockLayoutResolution.isVisualActive = true;
+
+    render(<Search />);
+
+    expect(screen.queryByTestId('search-people')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('search-collections')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Posts' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('timeline-feed')).toBeInTheDocument();
   });
 
   it('renders the empty state when no tags are present', () => {
@@ -85,7 +134,8 @@ describe('Search', () => {
 
     expect(screen.getByTestId('search-empty-state')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-feed')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('search-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('search-people')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('search-collections')).not.toBeInTheDocument();
   });
 
   it('renders the mobile SearchInput', () => {
@@ -108,10 +158,19 @@ describe('Search', () => {
 describe('Search - Snapshots', () => {
   beforeEach(() => {
     mockUseIsMobile.mockReturnValue(false);
+    mockHomeState.content = CONTENT.ALL;
+    mockLayoutResolution.isVisualActive = false;
   });
 
   it('matches snapshot with tags present', () => {
     mockUseSearchTags.mockReturnValue(['pubky']);
+    const { container } = render(<Search />);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot with tags present and a non-All content filter', () => {
+    mockUseSearchTags.mockReturnValue(['pubky']);
+    mockHomeState.content = CONTENT.COLLECTIONS;
     const { container } = render(<Search />);
     expect(container).toMatchSnapshot();
   });
@@ -126,6 +185,8 @@ describe('Search - Snapshots', () => {
 describe('Search - Mobile Snapshots', () => {
   beforeEach(() => {
     mockUseIsMobile.mockReturnValue(true);
+    mockHomeState.content = CONTENT.ALL;
+    mockLayoutResolution.isVisualActive = false;
     setMobileViewport();
   });
   afterEach(() => {

@@ -8,15 +8,15 @@ exports[`Home - Snapshots > matches snapshot 1`] = `
     DialogWelcome
   </div>
   <div
-    data-testid="alert-backup"
-  >
-    AlertBackup
-  </div>
-  <div
-    data-classname="hidden lg:flex"
+    data-classname="-mx-6 w-auto lg:mx-0 lg:w-full"
     data-testid="feed-navigation"
   >
     FeedNavigation
+  </div>
+  <div
+    data-testid="alert-backup"
+  >
+    AlertBackup
   </div>
   <div
     data-testid="timeline-feed"

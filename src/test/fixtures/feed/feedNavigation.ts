@@ -23,6 +23,7 @@ export const VRT_FEED_NAVIGATION: readonly FeedModelSchema[] = [
   {
     id: 'vrt-feed-global',
     name: 'Global',
+    icon: 'globe',
     tags: [],
     domain_tags: [],
     reach: PubkyAppFeedReach.All,
@@ -47,6 +48,7 @@ export const VRT_FEED_NAVIGATION: readonly FeedModelSchema[] = [
   {
     id: 'vrt-feed-photography',
     name: 'Photography',
+    icon: 'camera',
     tags: ['photography', 'goldenhour'],
     domain_tags: [],
     reach: PubkyAppFeedReach.All,

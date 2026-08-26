@@ -1,6 +1,6 @@
 import { baseUriBuilder, feedUriBuilder } from 'pubky-app-specs';
 import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/application/feed/feed.types';
-import { isProfileTagReachSupported } from '@/config/feed';
+import { DEFAULT_CUSTOM_FEED_ICON, isProfileTagReachSupported } from '@/config/feed';
 import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -14,6 +14,7 @@ import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
+import { FeedValidators } from '@/pipes/feed/feed.validators';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFeedService } from '@/services/local/feed/feed';
@@ -55,6 +56,7 @@ export class FeedApplication {
     const feedSchema: FeedModelSchema = {
       id: newId,
       name: feed.name,
+      icon: feed.icon ?? DEFAULT_CUSTOM_FEED_ICON,
       tags: tags ?? [],
       domain_tags: domain_tags ?? [],
       reach,
@@ -122,12 +124,14 @@ export class FeedApplication {
    * Fields present in `changes` override the existing values; omitted fields keep their current value.
    * The result is passed to FeedNormalizer which recomputes the HashId — if any config field
    * (tags, domain_tags, reach, sort, content, layout) changed, the feed will get a new ID.
+   * Presentation fields (`name` and `icon`) do not affect the ID.
    */
   static async prepareUpdateParams({ feedId, changes }: TFeedUpdateParams): Promise<TFeedCreateParams> {
     const existing = await LocalFeedService.read({ feedId });
 
     return {
       name: changes.name ?? existing.name,
+      icon: FeedValidators.sanitizeIcon(changes.icon ?? existing.icon),
       tags: changes.tags ?? existing.tags,
       domain_tags: changes.domain_tags ?? existing.domain_tags,
       reach: changes.reach ?? existing.reach,
@@ -200,6 +204,7 @@ export class FeedApplication {
       return {
         id: feedMeta.id,
         name: feed.name,
+        icon: feed.icon ?? DEFAULT_CUSTOM_FEED_ICON,
         tags: tags ?? [],
         domain_tags: domain_tags ?? [],
         reach,
@@ -232,9 +237,19 @@ export class FeedApplication {
     const builder = PubkySpecsSingleton.get(userId);
 
     const { tags, domain_tags, reach, layout, sort, content } = remoteFeed.feed;
-    const replayTags = Array.isArray(tags) ? tags : undefined;
-    const replayDomainTags = Array.isArray(domain_tags) ? domain_tags : undefined;
-    return builder.createFeed(replayTags, reach, layout, sort, content, remoteFeed.name, replayDomainTags);
+    // Replay absent tags as `undefined` (not `[]`) so foreign HashIds stay stable.
+    const normalizedTags = Array.isArray(tags) ? tags : undefined;
+    const normalizedDomainTags = Array.isArray(domain_tags) ? domain_tags : undefined;
+    return builder.createFeed({
+      tags: normalizedTags,
+      reach,
+      layout,
+      sort,
+      content: content ?? undefined,
+      name: remoteFeed.name,
+      domainTags: normalizedDomainTags,
+      icon: FeedValidators.sanitizeIcon(remoteFeed.icon),
+    });
   }
 
   /**

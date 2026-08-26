@@ -1,6 +1,22 @@
 /**
  * Feed-related UI constants shared across hooks, components, and templates.
  */
+export const DEFAULT_CUSTOM_FEED_ICON = 'activity';
+
+/**
+ * A dynamic Lucide icon name: lowercase kebab-case. Shared by the UI resolver
+ * and the persistence validator so a name that survives one cannot be rejected
+ * by the other and silently render as the fallback glyph.
+ */
+export const LUCIDE_ICON_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * UI-only reach value: "Tagged as" is not a stored reach but a WoT reach plus
+ * profile tags. Lives here so hooks and core-adjacent code can reference it
+ * without importing from a filter component.
+ */
+export const TAGGED_AS_FILTER_KEY = 'tagged_as' as const;
+
 export const TIMELINE_FEED_VARIANT = {
   HOME: 'home',
   CUSTOM: 'custom',

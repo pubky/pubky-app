@@ -2,14 +2,36 @@
 
 import * as React from 'react';
 import { HeartHandshake, Radio, Tags, UserRound, Waypoints } from 'lucide-react';
+import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { UsersRound2 } from '@/icons';
-import { REACH, type ReachType } from '@/stores/home/home.types';
+import { REACH, type ReachFilterValue, type ReachType } from '@/stores/home/home.types';
 import { FilterProfileTags } from '../FilterProfileTags/FilterProfileTags';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import type { BaseFilterProps, FilterListItem } from '../Filters.types';
 
-export const TAGGED_AS_FILTER_KEY = 'tagged_as' as const;
-export type ReachFilterValue = ReachType | typeof TAGGED_AS_FILTER_KEY;
+/**
+ * Canonical label + icon for each reach filter value. Single source for every
+ * surface that renders a reach (this filter, the feed navigation tab, ...) so
+ * they cannot drift apart.
+ */
+export const REACH_FILTER_META: Record<ReachFilterValue, { label: string; icon: FilterListItem['icon'] }> = {
+  [REACH.NETWORK]: { label: 'My network', icon: Waypoints },
+  [TAGGED_AS_FILTER_KEY]: { label: 'Tagged as', icon: Tags },
+  [REACH.FOLLOWING]: { label: 'Following', icon: UsersRound2 },
+  [REACH.FRIENDS]: { label: 'Friends', icon: HeartHandshake },
+  [REACH.ME]: { label: 'Me', icon: UserRound },
+  [REACH.ALL]: { label: 'All', icon: Radio },
+};
+
+/** Cypress hooks for the reach radiogroup — the WoT feed E2E selects by these. */
+const REACH_FILTER_DATA_CY: Record<ReachFilterValue, string> = {
+  [REACH.NETWORK]: 'network-reach-toggle',
+  [TAGGED_AS_FILTER_KEY]: 'tagged-as-reach-toggle',
+  [REACH.FOLLOWING]: 'following-reach-toggle',
+  [REACH.FRIENDS]: 'friends-reach-toggle',
+  [REACH.ME]: 'me-reach-toggle',
+  [REACH.ALL]: 'all-reach-toggle',
+};
 
 interface FilterReachSharedProps {
   profileTags?: string[];
@@ -39,79 +61,16 @@ export function FilterReach({
   onProfileTagRemove,
   profileTagsDisabled = false,
 }: FilterReachProps) {
-  const reachItems: FilterListItem<ReachFilterValue>[] = showTaggedAs
-    ? [
-        {
-          key: REACH.NETWORK,
-          label: 'My network',
-          icon: Waypoints,
-          disabled,
-          dataCy: 'network-reach-toggle',
-        },
-        {
-          key: TAGGED_AS_FILTER_KEY,
-          label: 'Tagged as',
-          icon: Tags,
-          disabled,
-          dataCy: 'tagged-as-reach-toggle',
-        },
-        {
-          key: REACH.FOLLOWING,
-          label: 'Following',
-          icon: UsersRound2,
-          disabled,
-          dataCy: 'following-reach-toggle',
-        },
-        {
-          key: REACH.FRIENDS,
-          label: 'Friends',
-          icon: HeartHandshake,
-          disabled,
-          dataCy: 'friends-reach-toggle',
-        },
-        {
-          key: REACH.ME,
-          label: 'Me',
-          icon: UserRound,
-          disabled,
-          dataCy: 'me-reach-toggle',
-        },
-        {
-          key: REACH.ALL,
-          label: 'All',
-          icon: Radio,
-          disabled,
-          dataCy: 'all-reach-toggle',
-        },
-      ]
-    : [
-        {
-          key: REACH.ALL,
-          label: 'All',
-          icon: Radio,
-          disabled,
-          dataCy: 'all-reach-toggle',
-        },
-      ];
+  const orderedReachKeys: ReachFilterValue[] = showTaggedAs
+    ? [REACH.NETWORK, TAGGED_AS_FILTER_KEY, REACH.FOLLOWING, REACH.FRIENDS, REACH.ME, REACH.ALL]
+    : [REACH.ALL, REACH.FOLLOWING, REACH.FRIENDS];
 
-  if (!showTaggedAs) {
-    reachItems.push(
-      {
-        key: REACH.FOLLOWING,
-        label: 'Following',
-        icon: UsersRound2,
-        disabled,
-        dataCy: 'following-reach-toggle',
-      },
-      {
-        key: REACH.FRIENDS,
-        label: 'Friends',
-        icon: HeartHandshake,
-        disabled,
-        dataCy: 'friends-reach-toggle',
-      },
-    );
-  }
+  const reachItems: FilterListItem<ReachFilterValue>[] = orderedReachKeys.map((key) => ({
+    key,
+    ...REACH_FILTER_META[key],
+    disabled,
+    dataCy: REACH_FILTER_DATA_CY[key],
+  }));
 
   const handleReachChange = (value: ReachFilterValue) => {
     if (showTaggedAs) {

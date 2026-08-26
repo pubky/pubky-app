@@ -31,14 +31,18 @@ describe('tryResolveFeedsShellConfig', () => {
     expect(config).not.toBeNull();
     expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.HOME);
     expect(config?.showRightMobileButton).toBeUndefined();
-    expect(config?.rightDrawerContentMobile).toBeDefined();
+    expect(config?.rightDrawerContent).toBeDefined();
+    expect(config?.hasGradientBackground).toBe(false);
+    expect(config?.classNameMobileHeader).toBe('pb-0');
   });
 
   it('returns the customFeed config for /feed/<id>', () => {
     const config = tryResolveFeedsShellConfig('/feed/abc123');
     expect(config).not.toBeNull();
     expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.CUSTOM);
-    expect(config?.rightDrawerContentMobile).toBeDefined();
+    expect(config?.rightDrawerContent).toBeDefined();
+    expect(config?.hasGradientBackground).toBe(false);
+    expect(config?.classNameMobileHeader).toBe('pb-0');
   });
 
   it('returns the search config with showRightMobileButton=false and no mobile right drawer', () => {
@@ -46,7 +50,6 @@ describe('tryResolveFeedsShellConfig', () => {
     expect(config).not.toBeNull();
     expect(config?.feedVariant).toBe(TIMELINE_FEED_VARIANT.SEARCH);
     expect(config?.showRightMobileButton).toBe(false);
-    expect(config?.rightDrawerContentMobile).toBeUndefined();
   });
 
   it('returns null for the intercepted-post pathname', () => {
