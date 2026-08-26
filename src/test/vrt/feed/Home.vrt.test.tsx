@@ -3,7 +3,13 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID, waitForMarkdownEditorReady } from '@/test-utils/vrt';
+import {
+  attachDialogPortalsToVrtRoot,
+  preloadImages,
+  renderForVRT,
+  VRT_ROOT_TESTID,
+  waitForMarkdownEditorReady,
+} from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -584,20 +590,25 @@ describe('New article dialog — visual regression', () => {
   async function renderNewArticleDialog(viewport: { width: number; height: number }) {
     const screen = await renderForVRT(<HomeWithFab />, { viewport });
     await screen.getByTestId('new-post-cta').click();
+    attachDialogPortalsToVrtRoot();
     await expect.element(screen.getByTestId('dialog-content')).toBeVisible();
     await screen.getByLabelText('Add article').click();
+    attachDialogPortalsToVrtRoot();
     await waitForArticleComposer(screen);
     await waitForComposerMotion();
+    attachDialogPortalsToVrtRoot();
     return screen;
   }
 
   it('renders the new article dialog at desktop viewport', async () => {
     const screen = await renderNewArticleDialog(VRT_VIEWPORT_DESKTOP);
+    attachDialogPortalsToVrtRoot();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('dialog-new-article-desktop');
   });
 
   it('renders the new article dialog at mobile viewport', async () => {
     const screen = await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
+    attachDialogPortalsToVrtRoot();
     await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('dialog-new-article-mobile');
   });
 });

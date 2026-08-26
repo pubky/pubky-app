@@ -93,6 +93,24 @@ a tall page section by section (header / card / footer as separate snapshots).
 
 See [Vitest Discussion #7749](https://github.com/vitest-dev/vitest/discussions/7749).
 
+## Limitation: dialogs portal to `document.body`
+
+Radix `Dialog.Portal` mounts overlay + content on `document.body`, outside
+`[data-testid="vrt-root"]`, so an element screenshot of the VRT root would miss
+them.
+
+Do **not** `vi.mock('radix-ui')` to retarget the portal. `importOriginal()` of
+that barrel pulls in every Radix primitive (including `Slot`, used by every
+`Button`) and can shift `oklch` brand green on unrelated screenshots — often
+only on some browser/OS pairs, so it looks random. The onboarding Finish / Pay
+Once buttons are a typical false positive.
+
+Instead, `attachDialogPortalsToVrtRoot()` (exported from `vrt.tsx`; also run
+from a `document.body` `MutationObserver` started in `renderForVRT`) moves
+`[data-slot="dialog-overlay"]` and the dialog content host into the VRT root
+after they mount. Call the helper after opening a dialog and immediately before
+`toMatchScreenshot`. Production `Dialog.tsx` stays unchanged.
+
 ## Artifact: sub-pixel seams on segmented elements
 
 A baseline may show thin tick lines that you don't see in your real browser.

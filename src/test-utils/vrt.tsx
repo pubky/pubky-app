@@ -14,6 +14,45 @@ export interface RenderForVRTOptions {
 
 export const VRT_ROOT_TESTID = 'vrt-root';
 
+/**
+ * Radix Dialog.Portal mounts overlay + content on `document.body` (`asChild`),
+ * which sits outside `[data-testid="vrt-root"]`. Move those hosts into the VRT
+ * root so queries and screenshots include them.
+ *
+ * Do not `vi.mock('radix-ui')` to retarget the portal: `importOriginal()` of
+ * that barrel defeats tree-shaking of `Slot` (every Button) and can shift
+ * `oklch` brand green on unrelated screenshots, often only on some
+ * browser/OS pairs.
+ */
+export function attachDialogPortalsToVrtRoot() {
+  const root = document.querySelector(`[data-testid="${VRT_ROOT_TESTID}"]`);
+  if (!root) return;
+
+  const overlay = document.querySelector('[data-slot="dialog-overlay"]');
+  if (overlay instanceof HTMLElement && !root.contains(overlay)) {
+    root.appendChild(overlay);
+  }
+
+  const content = document.querySelector('[data-testid="dialog-content"]');
+  if (!(content instanceof HTMLElement) || root.contains(content)) return;
+
+  let host: HTMLElement = content;
+  while (host.parentElement && host.parentElement !== document.body) {
+    host = host.parentElement;
+  }
+  if (host.parentElement === document.body && host !== root) {
+    root.appendChild(host);
+  }
+}
+
+let dialogPortalObserver: MutationObserver | null = null;
+
+function startDialogPortalObserver() {
+  if (dialogPortalObserver || typeof MutationObserver === 'undefined') return;
+  dialogPortalObserver = new MutationObserver(attachDialogPortalsToVrtRoot);
+  dialogPortalObserver.observe(document.body, { childList: true });
+}
+
 interface VRTProvidersProps {
   children: ReactNode;
   viewport: VrtViewport;
@@ -43,6 +82,7 @@ function VRTProviders({ children, viewport, queryClient }: VRTProvidersProps) {
 }
 
 export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) {
+  startDialogPortalObserver();
   await page.viewport(options.viewport.width, options.viewport.height);
   freezeNow();
   mockMathRandom(0xdeadbeef);
@@ -71,6 +111,7 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
   // then decode + two animation frames so paint catches up. Broken assets fail
   // the test instead of becoming a blank baseline.
   const root = document.querySelector(`[data-testid="${VRT_ROOT_TESTID}"]`);
+  attachDialogPortalsToVrtRoot();
   if (root) {
     await waitForImagesReady(root);
   }
