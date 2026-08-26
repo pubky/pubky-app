@@ -238,6 +238,8 @@ A single-step widening cast like `value as unknown` or `[] as unknown[]` (inside
 
 Stock Lucide icons imported from `lucide-react` and custom SVG icons from `@/icons` (`src/libs/icons/icons.tsx`) should **always** use real implementations in tests—do not `vi.mock('lucide-react')` or `vi.mock('@/icons')` to stub icons. This ensures snapshots capture actual SVG output and visual regression tests detect icon changes.
 
+`DynamicLucideIcon` is also real, but resolves its icon chunk **asynchronously**: a first render shows an empty size-preserving svg (`<svg class="lucide">` with no children), and the resolved paths appear after the dynamic import settles. Before asserting on paths or matching a snapshot, either await resolution (`waitFor` on `svg.childElementCount > 0` — avoid `querySelector('svg *')`, jsdom's selector engine misses svg descendants) or warm the icon with `requestLucideIcon(name)` from `@/libs/lucide/lucideIcons` and wait until `getLucideIconState(name)?.status === 'loaded'`. Note the icon cache is **module-level and persists across tests within a file** — a loading-state assertion needs an icon name no earlier test in the file has loaded.
+
 Application import conventions (where to import icons, URL helpers, and what not to do) are documented in **`docs/components.md`** — _Icons (Lucide and custom)_.
 
 ### Radix UI Components: Always Real

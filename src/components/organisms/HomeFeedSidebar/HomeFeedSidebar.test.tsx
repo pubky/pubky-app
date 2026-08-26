@@ -80,7 +80,8 @@ vi.mock('@/stores/home/home.types', () => ({
   },
 }));
 vi.mock('@/stores/home/home.store', () => ({
-  useHomeStore: () => mockUseHomeStore(),
+  useHomeStore: (selector?: (state: unknown) => unknown) =>
+    selector ? selector(mockUseHomeStore()) : mockUseHomeStore(),
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -93,9 +94,11 @@ vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
 }));
 
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
+  // Mirror the real hook: authentication is derived from the auth store, so
+  // signed-out tests (mockCurrentUserPubky.value = null) flow through here.
   useRequireAuth: () => ({
     requireAuth: (action: () => unknown) => action(),
-    isAuthenticated: true,
+    isAuthenticated: Boolean(mockCurrentUserPubky.value),
   }),
 }));
 

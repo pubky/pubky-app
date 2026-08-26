@@ -15,8 +15,9 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
 export function Custom() {
   return (
     <>
+      {/* First child so the mobile tab bar sits directly under the compact header (Hot pattern). */}
+      <FeedNavigation className="-mx-6 w-auto lg:mx-0 lg:w-full" />
       <AlertBackup />
-      <FeedNavigation className="hidden lg:flex" />
       <TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM}>
         <PostInput variant={POST_INPUT_VARIANT.POST} />
       </TimelineFeed>

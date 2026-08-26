@@ -61,13 +61,14 @@ export interface RemoteFeedParams {
 
 export interface HomeserverFeedJson {
   name: string;
+  icon?: string | null;
   feed: {
     tags?: string[] | null;
     domain_tags?: string[] | null;
     reach: string;
     layout: string;
     sort: string;
-    content: string | null;
+    content?: string | null;
   };
   created_at: number;
 }

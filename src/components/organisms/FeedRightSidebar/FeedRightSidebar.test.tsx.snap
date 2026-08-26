@@ -30,16 +30,6 @@ exports[`HomeFeedRightDrawer > matches snapshot 1`] = `
 </div>
 `;
 
-exports[`HomeFeedRightDrawerMobile > matches snapshot 1`] = `
-<div>
-  <div
-    data-testid="feed-section"
-  >
-    FeedSection
-  </div>
-</div>
-`;
-
 exports[`HomeFeedRightSidebar > matches snapshot 1`] = `
 <div>
   <div

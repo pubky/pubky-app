@@ -63,10 +63,10 @@ describe('Custom', () => {
     expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
   });
 
-  it('renders FeedNavigation with hidden lg:flex className in main content', () => {
+  it('renders FeedNavigation edge-to-edge on mobile in main content', () => {
     render(<Custom />);
     const feedNavs = screen.getAllByTestId('feed-navigation');
-    const mainFeedNav = feedNavs.find((el) => el.getAttribute('data-classname') === 'hidden lg:flex');
+    const mainFeedNav = feedNavs.find((el) => el.getAttribute('data-classname') === '-mx-6 w-auto lg:mx-0 lg:w-full');
     expect(mainFeedNav).toBeInTheDocument();
   });
 

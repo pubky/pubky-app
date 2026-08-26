@@ -72,8 +72,43 @@ export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) 
   const root = document.querySelector(`[data-testid="${VRT_ROOT_TESTID}"]`);
   if (root) {
     await waitForImagesReady(root);
+    await waitForDynamicIconsReady(root);
   }
   return screen;
+}
+
+/** Per-capture budget for lazily-loaded Lucide icon chunks. */
+const DYNAMIC_ICON_READY_TIMEOUT_MS = 8_000;
+
+/**
+ * DynamicLucideIcon renders an empty, size-preserving `svg.lucide` while its
+ * chunk loads. Capturing that frame would bake a blank icon box into the
+ * baseline nondeterministically (whichever state the race happened to be in),
+ * so wait until no icon under the root is still empty — a hung chunk fails the
+ * test instead of becoming a blank baseline, matching the image policy above.
+ */
+async function waitForDynamicIconsReady(root: Element) {
+  const hasPendingIcon = () => root.querySelector('svg.lucide:not(:has(*))') !== null;
+  if (!hasPendingIcon()) return;
+
+  let frame = 0;
+  try {
+    await withTimeout(
+      new Promise<void>((resolve) => {
+        const check = () => {
+          if (!hasPendingIcon()) resolve();
+          else frame = requestAnimationFrame(check);
+        };
+        check();
+      }),
+      DYNAMIC_ICON_READY_TIMEOUT_MS,
+      () => `VRT dynamic icon timed out after ${DYNAMIC_ICON_READY_TIMEOUT_MS}ms (empty svg.lucide in capture root)`,
+    );
+  } finally {
+    // The poll must stop on timeout too, or it keeps burning frames for the
+    // rest of the page's life and slows every later capture in the file.
+    cancelAnimationFrame(frame);
+  }
 }
 
 async function waitForImagesReady(root: Element) {

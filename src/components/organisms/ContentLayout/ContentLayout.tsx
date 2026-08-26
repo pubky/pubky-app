@@ -57,7 +57,6 @@ export function ContentLayout({
   leftDrawerContent,
   rightDrawerContent,
   leftDrawerContentMobile,
-  rightDrawerContentMobile,
   showLeftSidebar = true,
   showRightSidebar = true,
   showLeftMobileButton = true,
@@ -161,9 +160,9 @@ export function ContentLayout({
       )}
 
       {/* Drawer for right sidebar - slides in from right */}
-      {(rightDrawerContent || rightDrawerContentMobile) && (
+      {rightDrawerContent && (
         <SideDrawer open={drawerRightOpen} onOpenChangeAction={setDrawerRightOpen} position="right">
-          {isMobile && rightDrawerContentMobile ? rightDrawerContentMobile : rightDrawerContent}
+          {rightDrawerContent}
         </SideDrawer>
       )}
     </>

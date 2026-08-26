@@ -1,5 +1,5 @@
 'use client';
-import { Activity, SlidersHorizontal } from 'lucide-react';
+import { Lightbulb, SlidersHorizontal } from 'lucide-react';
 import type React from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -37,6 +37,7 @@ export function MobileHeader({
   const { isPublicExploreRoute } = usePublicRoute();
   // Layout filters drawer: signed-in users and guests on explore/public routes (/home, /post/..., etc.)
   const showLeftIcon = showLeftButton && (isAuthenticated || isPublicExploreRoute);
+  const rightButtonLabel = isAuthenticated ? 'Open right panel' : 'Join Pubky';
   return (
     <Container
       overrideDefaults
@@ -62,7 +63,7 @@ export function MobileHeader({
 
         <Logo />
 
-        {/* Right icon - always Activity; action depends on auth */}
+        {/* Right icon - always Lightbulb; action depends on auth */}
         {showRightButton ? (
           <Button
             variant="ghost"
@@ -75,18 +76,12 @@ export function MobileHeader({
               }
               onRightIconClick?.();
             }}
-            aria-label="Join Pubky"
+            aria-label={rightButtonLabel}
           >
-            <Activity className="size-6" />
+            <Lightbulb className="size-6" />
           </Button>
         ) : (
-          <SideSlot>
-            {showRightButton ? (
-              <Button variant="ghost" size="icon" onClick={onRightIconClick}>
-                <Activity className="size-6" />
-              </Button>
-            ) : null}
-          </SideSlot>
+          <SideSlot />
         )}
       </Container>
     </Container>

@@ -6,7 +6,7 @@ import {
   type TFeedPersistDeleteParams,
   type TFeedPersistParams,
 } from '@/application/feed/feed.types';
-import { isProfileTagReachSupported } from '@/config/feed';
+import { DEFAULT_CUSTOM_FEED_ICON, isProfileTagReachSupported, LUCIDE_ICON_NAME_PATTERN } from '@/config/feed';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -15,9 +15,41 @@ import { normalizeTagList } from './feed.utils';
 
 const MIN_TAGS = 1;
 const MAX_TAGS = validationLimits.feedTagsMaxCount;
+const MAX_ICON_LENGTH = validationLimits.feedIconMaxLength;
+// The stored icon must satisfy BOTH specs' charset and the UI resolver, so we
+// validate against the shared name pattern rather than specs' looser charset:
+// `-house` or `a--b` would pass specs and then render as the fallback forever.
+// Case and whitespace are normalized (specs lowercases too) so a name another
+// client wrote as `Activity` still resolves.
 
 export class FeedValidators {
   private constructor() {}
+
+  /**
+   * Coerces an icon coming from storage or a remote payload into a value
+   * `PubkySpecsBuilder.createFeed` will accept.
+   *
+   * Specs rejects an empty icon, one longer than `feedIconMaxLength`, and one
+   * with characters outside `[a-z0-9-]`, and `createFeed` throws on rejection
+   * — during bootstrap that throw is caught per-feed, so an unusable icon
+   * would silently drop the whole feed from the user's list. Falling back to
+   * the default keeps the feed.
+   *
+   * Names that are merely unknown to us (another client's icon set) pass
+   * through — as long as they fit specs' constraints — so a round-trip through
+   * this app does not overwrite them; the UI already renders a fallback for
+   * names it cannot resolve. Only case and surrounding whitespace are
+   * normalized, matching both specs and the UI's `toLucideIconName`.
+   */
+  static sanitizeIcon(icon: string | undefined | null): string {
+    const normalized = icon?.trim().toLowerCase();
+
+    if (!normalized || normalized.length > MAX_ICON_LENGTH || !LUCIDE_ICON_NAME_PATTERN.test(normalized)) {
+      return DEFAULT_CUSTOM_FEED_ICON;
+    }
+
+    return normalized;
+  }
 
   /** Validates that a feed has a supported reach and valid independent tag scopes. */
   static validateTagScope(

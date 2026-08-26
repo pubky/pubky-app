@@ -26,26 +26,28 @@ describe('FeedNormalizer', () => {
   // Mock builder factory
   const createMockBuilder = () => ({
     createFeed: vi.fn(
-      (
-        tags: string[],
-        reach: string,
-        layout: string,
-        sort: string,
-        content: string | null,
-        name: string,
-        domainTags?: string[],
-      ) => {
+      (input: {
+        tags?: string[];
+        reach: string;
+        layout: string;
+        sort: string;
+        content?: string;
+        name: string;
+        domainTags?: string[];
+        icon: string;
+      }) => {
         const mockFeed = {
-          name,
+          name: input.name,
+          icon: input.icon,
           feed: {
-            tags,
-            domain_tags: domainTags,
+            tags: input.tags,
+            domain_tags: input.domainTags,
             reach: PubkyAppFeedReach.All,
             layout: 0,
             sort: PubkyAppFeedSort.Recent,
-            content: content ? PubkyAppPostKind.Short : null,
+            content: input.content ? PubkyAppPostKind.Short : null,
           },
-          toJson: vi.fn(() => ({ name, tags, reach, layout, sort, content })),
+          toJson: vi.fn(() => input),
         };
         return asOpaque<FeedResult>({
           feed: mockFeed,
@@ -74,6 +76,7 @@ describe('FeedNormalizer', () => {
   describe('to', () => {
     const createValidParams = (): TFeedCreateParams => ({
       name: testData.feedName,
+      icon: 'activity',
       tags: testData.tags,
       domain_tags: [],
       reach: PubkyAppFeedReach.All,
@@ -87,15 +90,16 @@ describe('FeedNormalizer', () => {
 
       const result = FeedNormalizer.to({ params, userId: testData.userPubky });
 
-      expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-        ['bitcoin', 'lightning'],
-        'all',
-        'columns',
-        'recent',
-        null,
-        testData.feedName,
-        undefined,
-      );
+      expect(mockBuilder.createFeed).toHaveBeenCalledWith({
+        tags: ['bitcoin', 'lightning'],
+        reach: 'all',
+        layout: 'columns',
+        sort: 'recent',
+        content: undefined,
+        name: testData.feedName,
+        domainTags: undefined,
+        icon: 'activity',
+      });
       expect(result).toBeTruthy();
     });
 
@@ -106,13 +110,7 @@ describe('FeedNormalizer', () => {
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
       expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-        ['bitcoin', 'lightning', 'tech'],
-        expect.any(String),
-        expect.any(String),
-        expect.any(String),
-        expect.any(Object),
-        expect.any(String),
-        undefined,
+        expect.objectContaining({ tags: ['bitcoin', 'lightning', 'tech'] }),
       );
     });
 
@@ -122,15 +120,7 @@ describe('FeedNormalizer', () => {
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
-      expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-        ['bitcoin', 'lightning'],
-        expect.any(String),
-        expect.any(String),
-        expect.any(String),
-        expect.any(Object),
-        expect.any(String),
-        undefined,
-      );
+      expect(mockBuilder.createFeed).toHaveBeenCalledWith(expect.objectContaining({ tags: ['bitcoin', 'lightning'] }));
     });
 
     it('should deduplicate tags', () => {
@@ -139,15 +129,7 @@ describe('FeedNormalizer', () => {
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
-      expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-        ['bitcoin'],
-        expect.any(String),
-        expect.any(String),
-        expect.any(String),
-        expect.any(Object),
-        expect.any(String),
-        undefined,
-      );
+      expect(mockBuilder.createFeed).toHaveBeenCalledWith(expect.objectContaining({ tags: ['bitcoin'] }));
     });
 
     it('should trim feed name', () => {
@@ -156,14 +138,19 @@ describe('FeedNormalizer', () => {
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
-      expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-        expect.any(Array),
-        expect.any(String),
-        expect.any(String),
-        expect.any(String),
-        expect.any(Object),
-        'Bitcoin News',
-        undefined,
+      expect(mockBuilder.createFeed).toHaveBeenCalledWith(expect.objectContaining({ name: 'Bitcoin News' }));
+    });
+
+    it('coerces a malformed icon to the default and keeps foreign valid names', () => {
+      FeedNormalizer.to({ params: { ...createValidParams(), icon: 'Not A Valid Icon!' }, userId: testData.userPubky });
+      expect(mockBuilder.createFeed).toHaveBeenLastCalledWith(expect.objectContaining({ icon: 'activity' }));
+
+      FeedNormalizer.to({
+        params: { ...createValidParams(), icon: 'another-clients-icon' },
+        userId: testData.userPubky,
+      });
+      expect(mockBuilder.createFeed).toHaveBeenLastCalledWith(
+        expect.objectContaining({ icon: 'another-clients-icon' }),
       );
     });
 
@@ -173,15 +160,7 @@ describe('FeedNormalizer', () => {
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
-      expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-        expect.any(Array),
-        'following',
-        expect.any(String),
-        expect.any(String),
-        expect.any(Object),
-        expect.any(String),
-        undefined,
-      );
+      expect(mockBuilder.createFeed).toHaveBeenCalledWith(expect.objectContaining({ reach: 'following' }));
     });
 
     it('should convert sort enum to string', () => {
@@ -190,15 +169,7 @@ describe('FeedNormalizer', () => {
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
-      expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-        expect.any(Array),
-        expect.any(String),
-        expect.any(String),
-        'popularity',
-        expect.any(Object),
-        expect.any(String),
-        undefined,
-      );
+      expect(mockBuilder.createFeed).toHaveBeenCalledWith(expect.objectContaining({ sort: 'popularity' }));
     });
 
     it('should convert content enum to string when specified', () => {
@@ -207,15 +178,7 @@ describe('FeedNormalizer', () => {
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
-      expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-        expect.any(Array),
-        expect.any(String),
-        expect.any(String),
-        expect.any(String),
-        'image',
-        expect.any(String),
-        undefined,
-      );
+      expect(mockBuilder.createFeed).toHaveBeenCalledWith(expect.objectContaining({ content: 'image' }));
     });
 
     it('should pass null content when All is selected', () => {
@@ -224,15 +187,7 @@ describe('FeedNormalizer', () => {
 
       FeedNormalizer.to({ params, userId: testData.userPubky });
 
-      expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-        expect.any(Array),
-        expect.any(String),
-        expect.any(String),
-        expect.any(String),
-        null,
-        expect.any(String),
-        undefined,
-      );
+      expect(mockBuilder.createFeed).toHaveBeenCalledWith(expect.objectContaining({ content: undefined }));
     });
 
     describe('tag normalization', () => {
@@ -243,13 +198,14 @@ describe('FeedNormalizer', () => {
         const result = FeedNormalizer.to({ params, userId: testData.userPubky });
 
         expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-          [],
-          'all',
-          'columns',
-          'recent',
-          null,
-          testData.feedName,
-          undefined,
+          expect.objectContaining({
+            tags: [],
+            reach: 'all',
+            layout: 'columns',
+            sort: 'recent',
+            content: undefined,
+            name: testData.feedName,
+          }),
         );
         expect(result).toBeTruthy();
       });
@@ -261,13 +217,7 @@ describe('FeedNormalizer', () => {
         FeedNormalizer.to({ params, userId: testData.userPubky });
 
         expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-          ['bitcoin', 'lightning', 'tech'],
-          'all',
-          'columns',
-          'recent',
-          null,
-          testData.feedName,
-          undefined,
+          expect.objectContaining({ tags: ['bitcoin', 'lightning', 'tech'] }),
         );
       });
 
@@ -278,13 +228,7 @@ describe('FeedNormalizer', () => {
         FeedNormalizer.to({ params, userId: testData.userPubky });
 
         expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-          ['bitcoin', 'lightning'],
-          'all',
-          'columns',
-          'recent',
-          null,
-          testData.feedName,
-          undefined,
+          expect.objectContaining({ tags: ['bitcoin', 'lightning'] }),
         );
       });
 
@@ -295,13 +239,7 @@ describe('FeedNormalizer', () => {
         FeedNormalizer.to({ params, userId: testData.userPubky });
 
         expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-          ['bitcoin', 'lightning'],
-          'all',
-          'columns',
-          'recent',
-          null,
-          testData.feedName,
-          undefined,
+          expect.objectContaining({ tags: ['bitcoin', 'lightning'] }),
         );
       });
 
@@ -311,15 +249,16 @@ describe('FeedNormalizer', () => {
 
         FeedNormalizer.to({ params, userId: testData.userPubky });
 
-        expect(mockBuilder.createFeed).toHaveBeenCalledWith(
-          ['bitcoin', 'lightning'],
-          'all',
-          'columns',
-          'recent',
-          null,
-          testData.feedName,
-          ['bitcoiner', '🔥'],
-        );
+        expect(mockBuilder.createFeed).toHaveBeenCalledWith({
+          tags: ['bitcoin', 'lightning'],
+          reach: 'all',
+          layout: 'columns',
+          sort: 'recent',
+          content: undefined,
+          name: testData.feedName,
+          domainTags: ['bitcoiner', '🔥'],
+          icon: 'activity',
+        });
       });
     });
 
@@ -345,7 +284,14 @@ describe('FeedNormalizer', () => {
         const builder = new PubkySpecsBuilder(testData.userPubky);
         vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(builder);
         const params = createValidParams();
-        const legacy = builder.createFeed(params.tags, 'all', 'columns', 'recent', null, params.name, undefined);
+        const legacy = builder.createFeed({
+          tags: params.tags,
+          reach: 'all',
+          layout: 'columns',
+          sort: 'recent',
+          name: params.name,
+          icon: params.icon,
+        });
 
         const normalized = FeedNormalizer.to({ params, userId: testData.userPubky });
 
@@ -356,7 +302,14 @@ describe('FeedNormalizer', () => {
       it('converges a foreign absent-tags feed once on its first edit', () => {
         const builder = new PubkySpecsBuilder(testData.userPubky);
         vi.spyOn(PubkySpecsSingleton, 'get').mockReturnValue(builder);
-        const foreign = builder.createFeed(undefined, 'wot', 'columns', 'recent', null, 'Foreign Feed', ['bitcoiner']);
+        const foreign = builder.createFeed({
+          reach: 'wot',
+          layout: 'columns',
+          sort: 'recent',
+          name: 'Foreign Feed',
+          domainTags: ['bitcoiner'],
+          icon: 'activity',
+        });
         const canonicalParams = createValidParams();
         canonicalParams.tags = [];
         canonicalParams.domain_tags = ['bitcoiner'];

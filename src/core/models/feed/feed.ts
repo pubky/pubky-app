@@ -11,6 +11,7 @@ export class FeedModel extends RecordModelBase<string, FeedModelSchema> implemen
   static table: Table<FeedModelSchema, string> = db.table('feeds');
 
   name: string;
+  icon?: string;
   tags: string[];
   domain_tags: string[];
   reach: PubkyAppFeedReach;
@@ -23,6 +24,7 @@ export class FeedModel extends RecordModelBase<string, FeedModelSchema> implemen
   constructor(feed: FeedModelSchema) {
     super(feed);
     this.name = feed.name;
+    this.icon = feed.icon;
     this.tags = feed.tags;
     this.domain_tags = feed.domain_tags;
     this.reach = feed.reach;

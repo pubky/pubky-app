@@ -3,6 +3,11 @@ import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKi
 export interface FeedModelSchema {
   id: string;
   name: string;
+  /**
+   * Lucide icon name in kebab-case.
+   * Optional because feeds created before pubky-app-specs 0.7 have no icon.
+   */
+  icon?: string;
   tags: string[];
   domain_tags: string[];
   reach: PubkyAppFeedReach;
