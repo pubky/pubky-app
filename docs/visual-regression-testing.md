@@ -105,11 +105,16 @@ that barrel pulls in every Radix primitive (including `Slot`, used by every
 only on some browser/OS pairs, so it looks random. The onboarding Finish / Pay
 Once buttons are a typical false positive.
 
-Instead, `attachDialogPortalsToVrtRoot()` (exported from `vrt.tsx`; also run
-from a `document.body` `MutationObserver` started in `renderForVRT`) moves
-`[data-slot="dialog-overlay"]` and the dialog content host into the VRT root
-after they mount. Call the helper after opening a dialog and immediately before
-`toMatchScreenshot`. Production `Dialog.tsx` stays unchanged.
+Do **not** move portal DOM nodes into `vrt-root` either. React still thinks they
+live on `document.body`; the next commit then throws `NotFoundError` from
+`removeChild` and can leave the Vitest browser process hanging
+(`close timed out after 10000ms`).
+
+Instead, screenshot the iframe document with `matchVrtFrameScreenshot()`
+(exported from `vrt.tsx`) so overlay + content on `body` are in the crop.
+Query dialog contents with `page.getBy…` from `vitest/browser`, not the render
+`screen` (which is scoped to `vrt-root`). Production `Dialog.tsx` stays
+unchanged.
 
 ## Artifact: sub-pixel seams on segmented elements
 

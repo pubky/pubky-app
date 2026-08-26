@@ -3,8 +3,9 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import {
-  attachDialogPortalsToVrtRoot,
+  matchVrtFrameScreenshot,
   preloadImages,
   renderForVRT,
   VRT_ROOT_TESTID,
@@ -549,29 +550,24 @@ async function renderEditArticle(viewport: { width: number; height: number }) {
   routeState.params = { userId: f.article.details.author, postId: f.article.postId };
   await preloadImages([...CHROME_IMAGE_URLS, f.articleCoverUrl]);
 
-  const screen = await renderForVRT(<EditArticleWithChrome postId={f.article.compositeId} />, { viewport });
-  attachDialogPortalsToVrtRoot();
-  await expect.element(screen.getByTestId('dialog-content')).toBeVisible();
-  await expect.element(screen.getByPlaceholder('Article Title')).toHaveValue(f.articleTitle);
-  await expect.element(screen.getByAltText('Image preview')).toBeVisible();
+  await renderForVRT(<EditArticleWithChrome postId={f.article.compositeId} />, { viewport });
+  await expect.element(page.getByTestId('dialog-content')).toBeVisible();
+  await expect.element(page.getByPlaceholder('Article Title')).toHaveValue(f.articleTitle);
+  await expect.element(page.getByAltText('Image preview')).toBeVisible();
   const dialog = document.querySelector('[data-testid="dialog-content"]') ?? document;
   await waitForMarkdownEditorReady(dialog);
   await waitForVisibleCollectionsNew();
-  attachDialogPortalsToVrtRoot();
-  return screen;
 }
 
 describe('Article — editing — visual regression', () => {
   it('renders the edit article dialog at desktop viewport', async () => {
-    const screen = await renderEditArticle(VRT_VIEWPORT_DESKTOP);
-    attachDialogPortalsToVrtRoot();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('article-editing-desktop');
+    await renderEditArticle(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('article-editing-desktop');
   });
 
   it('renders the edit article dialog at mobile viewport', async () => {
-    const screen = await renderEditArticle(VRT_VIEWPORT_MOBILE);
-    attachDialogPortalsToVrtRoot();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('article-editing-mobile');
+    await renderEditArticle(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('article-editing-mobile');
   });
 });
 

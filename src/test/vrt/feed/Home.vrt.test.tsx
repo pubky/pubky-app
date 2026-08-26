@@ -3,8 +3,9 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import {
-  attachDialogPortalsToVrtRoot,
+  matchVrtFrameScreenshot,
   preloadImages,
   renderForVRT,
   VRT_ROOT_TESTID,
@@ -484,10 +485,10 @@ async function waitForComposerMotion() {
   });
 }
 
-async function waitForArticleComposer(screen: Awaited<ReturnType<typeof renderForVRT>>) {
-  await expect.element(screen.getByPlaceholder('Article Title')).toBeVisible();
-  await expect.element(screen.getByText('Add image')).toBeVisible();
-  await expect.element(screen.getByText('Publish')).toBeVisible();
+async function waitForArticleComposer() {
+  await expect.element(page.getByPlaceholder('Article Title')).toBeVisible();
+  await expect.element(page.getByText('Add image')).toBeVisible();
+  await expect.element(page.getByText('Publish')).toBeVisible();
   await waitForMarkdownEditorReady();
 }
 
@@ -566,7 +567,7 @@ describe('Home — creating article via feed composer — visual regression', ()
     await expect.element(screen.getByLabelText('Add article')).toBeVisible();
     await waitForComposerMotion();
     await screen.getByLabelText('Add article').click();
-    await waitForArticleComposer(screen);
+    await waitForArticleComposer();
     await waitForComposerMotion();
     return screen;
   }
@@ -588,27 +589,21 @@ describe('New article dialog — visual regression', () => {
   });
 
   async function renderNewArticleDialog(viewport: { width: number; height: number }) {
-    const screen = await renderForVRT(<HomeWithFab />, { viewport });
-    await screen.getByTestId('new-post-cta').click();
-    attachDialogPortalsToVrtRoot();
-    await expect.element(screen.getByTestId('dialog-content')).toBeVisible();
-    await screen.getByLabelText('Add article').click();
-    attachDialogPortalsToVrtRoot();
-    await waitForArticleComposer(screen);
+    await renderForVRT(<HomeWithFab />, { viewport });
+    await page.getByTestId('new-post-cta').click();
+    await expect.element(page.getByTestId('dialog-content')).toBeVisible();
+    await page.getByLabelText('Add article').click();
+    await waitForArticleComposer();
     await waitForComposerMotion();
-    attachDialogPortalsToVrtRoot();
-    return screen;
   }
 
   it('renders the new article dialog at desktop viewport', async () => {
-    const screen = await renderNewArticleDialog(VRT_VIEWPORT_DESKTOP);
-    attachDialogPortalsToVrtRoot();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('dialog-new-article-desktop');
+    await renderNewArticleDialog(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('dialog-new-article-desktop');
   });
 
   it('renders the new article dialog at mobile viewport', async () => {
-    const screen = await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
-    attachDialogPortalsToVrtRoot();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('dialog-new-article-mobile');
+    await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('dialog-new-article-mobile');
   });
 });
