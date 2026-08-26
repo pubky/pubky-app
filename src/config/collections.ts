@@ -27,6 +27,13 @@ export function isCollectionLayout(value: unknown): value is CollectionLayout {
 export const COLLECTIONS_SECTION_PAGE_SIZE = 20;
 
 /**
+ * Cards shown in the collapsed `/search` Collections preview — two full rows
+ * of the 2-col desktop grid. "See all" expands the section to the paginated
+ * grid driven by `COLLECTIONS_SECTION_PAGE_SIZE`.
+ */
+export const SEARCH_COLLECTIONS_PREVIEW_COUNT = 4;
+
+/**
  * Max raw pages the stream layer fetches per Discover slice request (initial
  * load or one "Show more" click) while client-side filtering (own / followed /
  * deleted / empty) empties them. Deliberately far below the shared queue

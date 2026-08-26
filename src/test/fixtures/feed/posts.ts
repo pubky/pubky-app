@@ -1,4 +1,5 @@
-// Consumed by VRT test harness (Home.vrt.test.tsx, Search.vrt.test.tsx, and post-data hook mocks).
+// Consumed by VRT test harness (Home.vrt.test.tsx, Search.vrt.test.tsx,
+// SinglePost.vrt.test.tsx, and post-data hook mocks).
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import type { NexusPostCounts, NexusPostDetails, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
@@ -248,3 +249,6 @@ export const VRT_FEED_POSTS: readonly VRTPostFixture[] = [
   CLEO_IMAGE,
   BRAN_TEXT,
 ];
+
+/** Featured root post for SinglePost VRT (`/post/[userId]/[postId]`). */
+export const VRT_SINGLE_POST = BRAN_TEXT;

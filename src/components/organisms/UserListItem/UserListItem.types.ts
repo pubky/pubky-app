@@ -33,7 +33,7 @@ export interface UserListItemProps {
   /** User data */
   user: UserListItemData;
   /** Display variant */
-  variant?: 'compact' | 'full';
+  variant?: 'compact' | 'full' | 'card';
   /** Whether the current user is following this user (overrides user.isFollowing) */
   isFollowing?: boolean;
   /** Whether follow action is loading for this specific user */

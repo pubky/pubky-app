@@ -1,7 +1,7 @@
 import { Link, Mail, Music, Phone } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import { Facebook, Github, Gitlab, Instagram, Linkedin, Slack, Telegram, Twitch, XTwitter, Youtube } from '@/icons';
-import { getIconFromUrl, getLabelFromUrl } from './urlToIcon';
+import { getIconFromUrl, getLabelFromUrl, getUrlHostLabel } from './urlToIcon';
 
 describe('getIconFromUrl', () => {
   describe('Social Media', () => {
@@ -183,5 +183,38 @@ describe('getLabelFromUrl', () => {
   it('should handle URLs with query parameters', () => {
     const label = getLabelFromUrl('https://youtube.com/watch?v=123');
     expect(label).toBe('youtube.com/watch');
+  });
+});
+
+describe('getUrlHostLabel', () => {
+  it('returns the host without a leading www', () => {
+    expect(getUrlHostLabel('https://www.example.com/a/long/path?utm=1')).toBe('example.com');
+    expect(getUrlHostLabel('https://news.example.co.uk/story#x')).toBe('news.example.co.uk');
+  });
+
+  it('takes the host from the parsed URL, not from how it was written', () => {
+    // Same three cases a reader could be fooled by: mixed case, a default port, and
+    // a Cyrillic lookalike domain (U+0430) that must not be shown as apple.com.
+    expect(getUrlHostLabel('HTTPS://Example.COM/Path')).toBe('example.com');
+    expect(getUrlHostLabel('https://example.com:443/x')).toBe('example.com');
+    expect(getUrlHostLabel('https://\u0430pple.com/login')).toBe('xn--pple-43d.com');
+  });
+
+  it('keeps a non-default port, which changes where the link goes', () => {
+    expect(getUrlHostLabel('http://www.example.com:8080/story')).toBe('example.com:8080');
+  });
+
+  it('keeps www when dropping it would leave a public suffix alone', () => {
+    expect(getUrlHostLabel('https://www.com/deals')).toBe('www.com');
+  });
+
+  it('returns null for schemes that are not http(s)', () => {
+    expect(getUrlHostLabel('mailto:user@example.com')).toBeNull();
+    expect(getUrlHostLabel('tel:+15551234')).toBeNull();
+    expect(getUrlHostLabel('ftp://example.com/file')).toBeNull();
+  });
+
+  it('returns null for a malformed URL', () => {
+    expect(getUrlHostLabel('not a url')).toBeNull();
   });
 });

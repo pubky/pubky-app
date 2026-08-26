@@ -130,7 +130,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
         >
           <Container
             overrideDefaults
-            className="max-width-profile-page-header flex w-fit min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
+            className="max-width-profile-page-header flex w-full min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
           >
             <Typography
               data-cy="profile-username-header"
@@ -194,7 +194,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
 
         {bio && (
           <Container data-cy="profile-bio-header" overrideDefaults className="col-span-full min-w-0 lg:col-auto">
-            <PostText content={bio} />
+            <PostText content={bio} compactUrls={false} />
           </Container>
         )}
 

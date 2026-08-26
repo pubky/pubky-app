@@ -1,0 +1,96 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SearchCollections - Snapshots > matches snapshot in the collapsed preview state 1`] = `
+<div>
+  <div
+    class="flex w-full flex-col gap-4"
+    data-cy="search-collections-section"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center justify-between gap-3"
+      data-testid="container"
+    >
+      <h2
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="heading-2"
+      >
+        Collections
+      </h2>
+      <button
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
+        data-cy="search-collections-see-all"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+      >
+        See all
+      </button>
+    </div>
+    <div
+      class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
+      data-testid="container"
+    >
+      <div
+        data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+        data-post-id="post0"
+        data-testid="collection-card"
+      />
+      <div
+        data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+        data-post-id="post1"
+        data-testid="collection-card"
+      />
+      <div
+        data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+        data-post-id="post2"
+        data-testid="collection-card"
+      />
+      <div
+        data-author-pubky="o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy"
+        data-post-id="post3"
+        data-testid="collection-card"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SearchCollections - Snapshots > matches snapshot while loading 1`] = `
+<div>
+  <div
+    class="flex w-full flex-col gap-4"
+    data-cy="search-collections-section"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center justify-between gap-3"
+      data-testid="container"
+    >
+      <h2
+        class="text-2xl font-light text-muted-foreground"
+        data-testid="heading-2"
+      >
+        Collections
+      </h2>
+    </div>
+    <div
+      class="grid w-full grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6"
+      data-testid="container"
+    >
+      <div
+        data-testid="collection-card-skeleton"
+      />
+      <div
+        data-testid="collection-card-skeleton"
+      />
+      <div
+        data-testid="collection-card-skeleton"
+      />
+      <div
+        data-testid="collection-card-skeleton"
+      />
+    </div>
+  </div>
+</div>
+`;

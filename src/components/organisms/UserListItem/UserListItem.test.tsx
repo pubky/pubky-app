@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { UserListItem } from './UserListItem';
 import type { UserListItemData } from './UserListItem.types';
@@ -178,6 +178,53 @@ describe('UserListItem - followButtonVariant', () => {
   });
 });
 
+describe('UserListItem - card variant', () => {
+  it('renders name, formatted pubky, stats and tags in a self-contained card', () => {
+    render(<UserListItem user={mockUser} variant="card" onFollowClick={vi.fn()} />);
+
+    expect(screen.getByText('Test User')).toBeInTheDocument();
+    // TAGS/POSTS stats with values
+    expect(screen.getByText('TAGS')).toBeInTheDocument();
+    expect(screen.getByText('POSTS')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByTestId('tags-list')).toBeInTheDocument();
+    // Self-contained card keeps its background at every breakpoint
+    const root = screen.getByTestId(`user-list-item-${mockUser.id}`);
+    expect(root).toHaveClass('bg-card');
+    expect(root.className).not.toContain('lg:bg-transparent');
+  });
+
+  it('links the whole card to the profile without nesting anchors', () => {
+    render(<UserListItem user={mockUser} variant="card" onFollowClick={vi.fn()} />);
+
+    const root = screen.getByTestId(`user-list-item-${mockUser.id}`);
+    expect(root.tagName).toBe('A');
+    expect(root).toHaveAttribute('href', expect.stringContaining(mockUser.id));
+    // Nested anchors are invalid HTML — the identity block must not be a link.
+    expect(root.querySelector('a')).toBeNull();
+  });
+
+  it('renders a single icon follow button whose click does not navigate', () => {
+    const onFollowClick = vi.fn();
+    render(<UserListItem user={mockUser} variant="card" onFollowClick={onFollowClick} />);
+
+    const followButton = screen.getByRole('button', { name: /Follow Test User/i });
+    expect(followButton).toHaveAttribute('data-size', 'icon');
+    // fireEvent.click returns false when preventDefault was called — the
+    // follow click must not bubble into the card link's navigation.
+    expect(fireEvent.click(followButton)).toBe(false);
+    expect(onFollowClick).toHaveBeenCalledWith(mockUser.id, false, 'Test User');
+  });
+
+  it('renders the Me button for the current user', () => {
+    render(<UserListItem user={mockUser} variant="card" isCurrentUser />);
+
+    expect(screen.getByRole('button', { name: /This is you/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Follow Test User/i })).not.toBeInTheDocument();
+  });
+});
+
 describe('UserListItem - Snapshots', () => {
   it('matches snapshot for compact variant', () => {
     const { container } = render(<UserListItem user={mockUser} variant="compact" onFollowClick={vi.fn()} />);
@@ -203,6 +250,11 @@ describe('UserListItem - Snapshots', () => {
 
   it('matches snapshot for full variant', () => {
     const { container } = render(<UserListItem user={mockUser} variant="full" onFollowClick={vi.fn()} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot for card variant', () => {
+    const { container } = render(<UserListItem user={mockUser} variant="card" onFollowClick={vi.fn()} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });

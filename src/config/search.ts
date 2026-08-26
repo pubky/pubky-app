@@ -1,4 +1,20 @@
 /**
+ * Cards shown in the collapsed `/search` People preview — two full rows of the
+ * 2-col grid. "See all" expands the section to the paginated grid.
+ */
+export const SEARCH_PEOPLE_PREVIEW_COUNT = 4;
+
+/** Users fetched per `search/users/by_tags` page for the `/search` People section. */
+export const SEARCH_PEOPLE_PAGE_SIZE = 20;
+
+/**
+ * Hard label ceiling of the Nexus `search/users/by_tags` endpoint (1-5; more
+ * returns 400). Clamped at the request boundary so the endpoint stays immune
+ * to `PUBKY_RUNTIME_MAX_STREAM_TAGS` being raised above 5.
+ */
+export const SEARCH_PEOPLE_MAX_TAGS = 5;
+
+/**
  * Search suggestions dropdown viewport safety cap
  * - The panel hugs its content (#1840 design: no internal scrolling); this cap only
  *   stops it from overflowing short viewports, where overflow-y-auto kicks in as a
