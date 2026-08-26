@@ -290,7 +290,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
           }
         }}
         onCloseAutoFocus={(e) => e.preventDefault()}
-        className="w-3xl"
+        className="w-xl"
         data-testid="custom-feed-dialog-content"
       >
         <DialogHeader>
