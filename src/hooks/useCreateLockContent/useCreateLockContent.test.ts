@@ -58,6 +58,7 @@ const teaser = { lock_title: 'My quote', teaser_description: 'a public teaser' }
 const params = (lockedAttachments: File[] = [], announcementAttachments: File[] = []) => ({
   lockedPost: { content: 'locked body', kind: PubkyAppPostKind.Short, attachments: lockedAttachments },
   announcement: { teaser, attachments: announcementAttachments, tags: ['bitcoin'] },
+  lockConfig: { method: 'password' } as const,
 });
 
 describe('useCreateLockContent', () => {
@@ -185,6 +186,29 @@ describe('useCreateLockContent', () => {
 
     expect(outcome).toEqual({ status: 'auth-expired' });
     expect(mocks.clearSession).toHaveBeenCalledTimes(1);
+  });
+
+  describe('price guard', () => {
+    const withPrice = (amountSats: string) => ({ ...params(), lockConfig: { method: 'payment', amountSats } as const });
+
+    it('sends the applied price on to the lock', async () => {
+      const { result } = renderHook(() => useCreateLockContent(withPrice('1234')));
+
+      await act(() => result.current.publish());
+
+      const [{ lockConfig }] = mocks.createLockContent.mock.calls[0];
+      expect(lockConfig).toEqual({ method: 'payment', amountSats: '1234' });
+    });
+
+    it.each(['0', '', '12.5'])('never creates the lock for the price %j', async (amountSats) => {
+      const { result } = renderHook(() => useCreateLockContent(withPrice(amountSats)));
+
+      const outcome = await act(() => result.current.publish());
+
+      expect(outcome).toEqual({ status: 'failed' });
+      // Same reason as the announcement guard below: a rejected input must not leave an orphaned lock.
+      expect(mocks.createLockContent).not.toHaveBeenCalled();
+    });
   });
 
   describe('announcement length guard', () => {

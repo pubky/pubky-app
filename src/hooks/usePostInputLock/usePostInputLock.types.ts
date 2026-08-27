@@ -1,3 +1,5 @@
+import type { TLockConfig } from '@/application/locks/locks.types';
+
 /**
  * The composer state captured when the lock switch goes on: this is the content that gets locked.
  * `isArticle` / `articleTitle` travel with it so an unlocked article renders as an article again.
@@ -56,7 +58,7 @@ export interface UsePostInputLockReturn {
   handleAuthSuccess: () => void;
   isLockDialogOpen: boolean;
   closeLockDialog: () => void;
-  handleLockApplied: (password: string) => void;
+  handleLockApplied: (config: TLockConfig) => void;
   /** Title of the locked content, shown on the composer's "Locked post" card. */
   lockTitle: string;
   setLockTitle: (title: string) => void;

@@ -9,6 +9,7 @@ import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Tabs, TabsList, TabsTrigger } from '@/atoms/Tabs/Tabs';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
 import { calculatePasswordStrength } from '@/libs/password/password';
 import { cn } from '@/libs/utils/utils';
 import type { DialogLockContentProps, LockMethod } from './DialogLockContent.types';
@@ -24,11 +25,25 @@ const PASSWORD_RULE_LABELS: Record<string, string> = {
   special: 'At least 1 special character',
 };
 
-export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockContentProps) {
+const satsFormatter = new Intl.NumberFormat('en-US');
+const usdFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
+// Only the leading run of digits counts. Grouping separators go first so the formatted value the
+// field shows survives a round trip; a pasted "1.5" then stops at the dot instead of becoming 15;
+// and leading zeros go because the Lock Server wants a bare positive integer ("07" is rejected).
+const toSats = (value: string) =>
+  value
+    .replace(/[,\s]/g, '')
+    .replace(/\D.*$/, '')
+    .replace(/^0+(?=\d)/, '');
+
+export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockContentProps) {
   const [method, setMethod] = useState<LockMethod>('password');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
+  // Bare digits — sats are whole units, and the value travels to the Lock Server as a string.
+  const [amount, setAmount] = useState('');
+  const { rate: btcRate, status: rateStatus } = useBtcRate();
 
   // Policy: ≥8 chars, ≥1 number, ≥1 special character — reuses the shared strength checks so the
   // special-character definition stays consistent across the app.
@@ -41,12 +56,19 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
   const passwordsMatch = password === repeatPassword;
   const showMismatch = repeatPassword.length > 0 && !passwordsMatch;
   const isPassword = method === 'password';
-  const canApply = isPassword && meetsPolicy && passwordsMatch;
+
+  const amountSats = Number(amount);
+  // `toSats` already rules out signs and decimals, so the safe-integer check is only about overflow.
+  const isValidAmount = amountSats > 0 && Number.isSafeInteger(amountSats);
+  const usdValue = btcRate && isValidAmount ? amountSats * btcRate.satUsd : null;
+
+  const canApply = isPassword ? meetsPolicy && passwordsMatch : isValidAmount;
 
   const resetFields = () => {
     setMethod('password');
     setPassword('');
     setRepeatPassword('');
+    setAmount('');
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -58,7 +80,7 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
   // and the announcement — belongs to the composer's Post button, so never add a network call here.
   const handleApply = () => {
     if (!canApply) return;
-    onApplied(password);
+    onApplied(isPassword ? { method: 'password' } : { method: 'payment', amountSats: amount });
     resetFields();
   };
 
@@ -102,7 +124,9 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
               aria-hidden={!isPassword}
               className={cn('col-start-1 row-start-1 flex flex-col gap-6', !isPassword && 'invisible')}
             >
-              <Typography className="text-base text-secondary-foreground">{'Set the password people need to enter to unlock your content.'}</Typography>
+              <Typography className="text-base text-secondary-foreground">
+                {'Set the password people need to enter to unlock your content.'}
+              </Typography>
 
               <Container overrideDefaults className="flex flex-col gap-2">
                 <Label htmlFor="lock-password" className={FIELD_LABEL_CLASS}>
@@ -162,8 +186,44 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
             </form>
 
             {!isPassword && (
-              <Container overrideDefaults className="col-start-1 row-start-1 flex items-center justify-center">
-                <Typography className="text-base text-muted-foreground">{'To be developed'}</Typography>
+              <Container overrideDefaults className="col-start-1 row-start-1 flex flex-col gap-6">
+                <Typography className="text-base text-secondary-foreground">
+                  {'Set the price people need to pay to unlock your content.'}
+                </Typography>
+
+                <Container overrideDefaults className="flex flex-col gap-2">
+                  <Label htmlFor="lock-amount" className={FIELD_LABEL_CLASS}>
+                    {'Bitcoin Amount'}
+                  </Label>
+                  <Container
+                    overrideDefaults
+                    className={cn(PASSWORD_FIELD_CLASS, 'flex items-center gap-3 bg-[rgba(5,5,10,0.1)]')}
+                  >
+                    <span aria-hidden className="shrink-0 text-base text-foreground">
+                      {'₿'}
+                    </span>
+                    <Input
+                      id="lock-amount"
+                      inputMode="numeric"
+                      value={amount ? satsFormatter.format(amountSats) : ''}
+                      onChange={(event) => setAmount(toSats(event.target.value))}
+                      placeholder="0"
+                      className="h-auto flex-1 border-0 bg-transparent p-0 text-base shadow-none"
+                      autoComplete="off"
+                    />
+                    {usdValue !== null && (
+                      <Typography className="shrink-0 text-sm text-muted-foreground">
+                        {usdFormatter.format(usdValue)}
+                      </Typography>
+                    )}
+                  </Container>
+
+                  {rateStatus === 'failed' && (
+                    <Typography className="pt-1 text-xs text-muted-foreground">
+                      {"The dollar value can't be shown right now. Your price in sats is unaffected."}
+                    </Typography>
+                  )}
+                </Container>
               </Container>
             )}
           </Container>

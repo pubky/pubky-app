@@ -247,7 +247,11 @@ describe('LocksController (content)', () => {
   it('createLockContent delegates to the application workflow', async () => {
     const lock = { lock_id: 'LOCK1', content_lock_path: '/pub/locks.app/LOCK1.json', creator: 'pubkybob' };
     mocks.createLockContent.mockResolvedValue(lock);
-    const params = { attachments: [], buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }) };
+    const params = {
+      attachments: [],
+      buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
+      lockConfig: { method: 'password' } as const,
+    };
 
     await expect(LocksController.createLockContent(params)).resolves.toBe(lock);
     expect(mocks.createLockContent).toHaveBeenCalledWith(params);

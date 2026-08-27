@@ -78,7 +78,7 @@ describe('LockFileParser', () => {
     it('resolves payment from a payment criterion', () => {
       const paymentLock = {
         ...MOCK_LOCK_FILE,
-        criteria: [{ criterion_id: 'criterion-1', verifier_type: 'payment', params: {} }],
+        criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: {} }],
       };
       expect(LockFileParser.resolveVerifierType(paymentLock)).toBe(VerifierType.PAYMENT);
     });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import type { TLockConfig } from '@/application/locks/locks.types';
 import { getLockServer, getPaykitServerUrl } from '@/config/network';
 import { PostController } from '@/controllers/post/post';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
@@ -49,7 +50,8 @@ export function usePostInputLock({
   const [lockEnabled, setLockEnabled] = useState(false);
   const [isLockDialogOpen, setIsLockDialogOpen] = useState(false);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
-  const [isLockConfigured, setIsLockConfigured] = useState(false);
+  const [lockConfig, setLockConfig] = useState<TLockConfig | null>(null);
+  const isLockConfigured = lockConfig !== null;
   const [lockDraft, setLockDraft] = useState<TLockDraft | null>(null);
   const [lockTitle, setLockTitle] = useState('');
   // The auth modal fires `onOpenChange(false)` on both cancel and the success "Continue"; this flag
@@ -116,11 +118,12 @@ export function usePostInputLock({
       attachments: announcementAttachments,
       tags: announcementTags,
     },
+    lockConfig,
   });
 
   const resetLock = () => {
     setLockEnabled(false);
-    setIsLockConfigured(false);
+    setLockConfig(null);
     setIsLockDialogOpen(false);
     setIsAuthDialogOpen(false);
     setLockDraft(null);
@@ -177,10 +180,9 @@ export function usePostInputLock({
     revertToNormalPost();
   };
 
-  // TODO:[Locks] #2369 — password and `dev-static` all go away here.
-  const handleLockApplied = (_password: string) => {
+  const handleLockApplied = (config: TLockConfig) => {
+    setLockConfig(config);
     setIsLockDialogOpen(false);
-    setIsLockConfigured(true);
     // Only now swap the still-visible locked draft for the empty announcement composer.
     clearComposer();
   };

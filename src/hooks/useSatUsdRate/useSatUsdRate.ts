@@ -1,36 +1,36 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { HomegateController } from '@/controllers/homegate/homegate';
 import type { BtcRate } from '@/services/exchangerate/exchangerate.types';
 
+export type TBtcRateResult = { rate: BtcRate | null; status: 'loading' | 'ready' | 'failed' };
+
 /**
- * Fetch the current SAT/USD exchange rate.
- * The rate is cached at the service layer for 30 minutes.
+ * Fetch the current SAT/USD exchange rate. Cached for a minute at the service layer.
  *
- * @returns The current SAT/USD rate, or null if the rate is not available
+ * `status` separates "still loading" from "gave up", so a caller can stay quiet until the rate
+ * either arrives or fails rather than flashing an error while the request is in flight.
  *
  * @example
  * ```tsx
- * const rate = useBtcRate();
- * if (rate === null) return <div>Rate not available</div>;
- *
- * const sats = 1000;
- * const usd = sats * rate.satUsd;
- * return <div>{sats} SAT = ${usd}</div>;
+ * const { rate, status } = useBtcRate();
+ * if (status === 'failed') return <div>Rate not available</div>;
+ * if (rate) return <div>{sats} SAT = ${sats * rate.satUsd}</div>;
  * ```
  */
-export function useBtcRate(): BtcRate | null {
-  const [rate, setRate] = useState<BtcRate | null>(null);
+export function useBtcRate(): TBtcRateResult {
+  const [result, setResult] = useState<TBtcRateResult>({ rate: null, status: 'loading' });
 
   useEffect(() => {
     // Avoid fetching on server to prevent hydration errors
     if (typeof window === 'undefined') return;
 
-    HomegateController.getBtcRate()
-      .then(setRate)
-      .catch(() => setRate(null));
+    // Through our own route, not the rate API directly: the upstream sends no CORS header.
+    fetch('/api/btc-rate')
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+      .then((json) => setResult({ rate: { ...json, lastUpdatedAt: new Date(json.lastUpdatedAt) }, status: 'ready' }))
+      .catch(() => setResult({ rate: null, status: 'failed' }));
   }, []);
 
-  return rate;
+  return result;
 }

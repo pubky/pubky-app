@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TLockConfig } from '@/application/locks/locks.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -156,11 +157,15 @@ vi.mock('@/molecules/DialogLockContent/DialogLockContent', () => ({
   DialogLockContent: (props: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onApplied: (password: string) => void;
+    onApplied: (config: TLockConfig) => void;
   }) =>
     props.open ? (
       <div data-testid="lock-dialog">
-        <button data-testid="apply-lock" onClick={() => props.onApplied('Secret12!')} />
+        <button data-testid="apply-lock" onClick={() => props.onApplied({ method: 'password' })} />
+        <button
+          data-testid="apply-lock-price"
+          onClick={() => props.onApplied({ method: 'payment', amountSats: '1234' })}
+        />
         <button data-testid="cancel-lock" onClick={() => props.onOpenChange(false)} />
       </div>
     ) : null,

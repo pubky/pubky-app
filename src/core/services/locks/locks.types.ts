@@ -128,7 +128,7 @@ export type TCreateContentLockResult = {
  */
 export enum VerifierType {
   PASSWORD = 'password',
-  PAYMENT = 'payment',
+  PAYMENT = 'paykit-payment',
 }
 
 /** Primary for Lock. The entry-point PubkyAppPost; carries its own `path`. */
@@ -149,7 +149,7 @@ interface LockAttachmentResource {
 /** A single unlock requirement. `verifier_type` decides how it is satisfied. */
 interface LockCriterion {
   criterion_id: string;
-  /** Raw verifier kind (e.g. "password", "payment"); map via `LockFileParser`. */
+  /** Raw verifier kind (e.g. "password", "paykit-payment"); map via `LockFileParser`. */
   verifier_type: string;
   params: Record<string, unknown>;
 }

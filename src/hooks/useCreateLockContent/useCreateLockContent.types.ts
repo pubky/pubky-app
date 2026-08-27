@@ -1,4 +1,5 @@
 import type { PubkyAppPostKind } from 'pubky-app-specs';
+import type { TLockConfig } from '@/application/locks/locks.types';
 import type { AppError } from '@/libs/error/error';
 import type { TLockTeaser } from '@/libs/post/lockTeaser';
 
@@ -21,6 +22,8 @@ type TLockAnnouncement = {
 export type TUseCreateLockContentParams = {
   lockedPost: TLockedPost;
   announcement: TLockAnnouncement;
+  /** Null until the creator applies a lock in the dialog; `publish` rejects that case. */
+  lockConfig: TLockConfig | null;
 };
 
 /**
