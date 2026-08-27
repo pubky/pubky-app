@@ -27,11 +27,17 @@ import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
 // At lg+ every tab is icon + label. Content-aware flex bases let a longer
 // title use space that a shorter sibling does not need before truncating.
 const FEED_TAB_CLASS = 'relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40';
-// Below lg the active tab hugs its label, but a feed name has no length limit
-// (specs does not cap it), so cap the tab or one long name pushes every other
-// tab off-screen; the label's `truncate` then does its job.
+// Below lg the active custom-feed tab hugs its label, but a feed name has no
+// length limit (specs does not cap it), so cap the tab or one long name pushes
+// every other tab off-screen; the label's `truncate` then does its job.
 const FEED_TAB_ACTIVE_WIDTH_CLASS = 'max-w-[60%] flex-none lg:max-w-none lg:flex-auto';
 const FEED_TAB_INACTIVE_WIDTH_CLASS = 'min-w-12 flex-1 lg:flex-auto';
+// All's label+padding is wider than the + icon, so flex-grow from content size
+// lands around 60/40. Equal grid columns (flex again at lg) keep a true split
+// when the strip is just All + Create.
+const FEED_TAB_EQUAL_CELL_CLASS = 'min-w-0 w-full lg:min-w-40 lg:w-auto lg:flex-auto';
+const FEED_NAV_TWO_TAB_ROW_CLASS = 'grid w-full grid-cols-2 overflow-x-auto lg:flex lg:flex-row';
+const FEED_NAV_MULTI_TAB_ROW_CLASS = 'flex w-full flex-row overflow-x-auto';
 // Symmetric horizontal padding keeps every label centered; the active padding
 // also reserves the zone the edit pencil overlays on custom feed tabs.
 const FEED_TAB_ACTIVE_PADDING_CLASS = 'px-8';
@@ -101,6 +107,13 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const selectedReach = useSelectedReachFilter();
   const { label: reachLabel, icon: ReachIcon } = REACH_FILTER_META[selectedReach] ?? REACH_FILTER_META[REACH.ALL];
   const isHomeActive = pathname === APP_ROUTES.HOME;
+  const hasCustomFeeds = customFeeds.length > 0;
+  const reachTabWidthClass = hasCustomFeeds
+    ? isHomeActive
+      ? FEED_TAB_ACTIVE_WIDTH_CLASS
+      : FEED_TAB_INACTIVE_WIDTH_CLASS
+    : FEED_TAB_EQUAL_CELL_CLASS;
+  const createFeedWidthClass = hasCustomFeeds ? FEED_TAB_INACTIVE_WIDTH_CLASS : FEED_TAB_EQUAL_CELL_CLASS;
 
   return (
     <Container
@@ -114,7 +127,10 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
         className,
       )}
     >
-      <Container overrideDefaults className="flex w-full flex-row overflow-x-auto">
+      <Container
+        overrideDefaults
+        className={hasCustomFeeds ? FEED_NAV_MULTI_TAB_ROW_CLASS : FEED_NAV_TWO_TAB_ROW_CLASS}
+      >
         <Link
           overrideDefaults
           href={APP_ROUTES.HOME}
@@ -128,9 +144,8 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           }
           className={cn(
             FEED_TAB_CLASS,
-            isHomeActive
-              ? cn(FEED_TAB_ACTIVE_WIDTH_CLASS, FEED_TAB_ACTIVE_PADDING_CLASS)
-              : cn(FEED_TAB_INACTIVE_WIDTH_CLASS, FEED_TAB_INACTIVE_PADDING_CLASS),
+            reachTabWidthClass,
+            isHomeActive ? FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
             isHomeActive ? 'border-white text-white' : 'border-border text-muted-foreground hover:text-white',
           )}
         >
@@ -200,9 +215,9 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
               aria-label="Create feed"
               className={cn(
                 FEED_TAB_CLASS,
-                FEED_TAB_INACTIVE_WIDTH_CLASS,
+                createFeedWidthClass,
                 FEED_TAB_INACTIVE_PADDING_CLASS,
-                'cursor-pointer border-border text-muted-foreground hover:text-white',
+                'h-full cursor-pointer border-border text-muted-foreground hover:text-white',
               )}
             >
               <PlusCircle className="size-5 shrink-0" />
@@ -217,9 +232,9 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
             aria-label="Create feed"
             className={cn(
               FEED_TAB_CLASS,
-              FEED_TAB_INACTIVE_WIDTH_CLASS,
+              createFeedWidthClass,
               FEED_TAB_INACTIVE_PADDING_CLASS,
-              'cursor-pointer border-border text-muted-foreground hover:text-white',
+              'h-full cursor-pointer border-border text-muted-foreground hover:text-white',
             )}
             onClick={() => requireAuth(() => undefined)}
           >
