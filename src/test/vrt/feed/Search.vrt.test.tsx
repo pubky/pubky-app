@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -637,13 +637,13 @@ beforeEach(() => {
 
 describe('Search (empty state) — visual regression', () => {
   it('renders the search empty state at desktop viewport', async () => {
-    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-empty-desktop');
+    await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await matchVrtFrameScreenshot('search-empty-desktop');
   });
 
   it('renders the search empty state at mobile viewport', async () => {
-    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-empty-mobile');
+    await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await matchVrtFrameScreenshot('search-empty-mobile');
   });
 });
 
@@ -672,13 +672,13 @@ describe('Search (tagged results) — visual regression', () => {
   });
 
   it('renders tagged search results at desktop viewport', async () => {
-    const screen = await renderTaggedSearch(VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-desktop');
+    await renderTaggedSearch(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('search-tagged-desktop');
   });
 
   it('renders tagged search results at mobile viewport', async () => {
-    const screen = await renderTaggedSearch(VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-mobile');
+    await renderTaggedSearch(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('search-tagged-mobile');
   });
 });
 
@@ -696,14 +696,14 @@ describe('Search (full-text results) — visual regression', () => {
     // exact: the accessible-name match is a substring match, so plain 'Tags'
     // also resolves the right sidebar's 'Hot tags' heading (strict-mode error).
     await expect.element(screen.getByRole('heading', { name: 'Tags', exact: true })).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-desktop');
+    await matchVrtFrameScreenshot('search-content-desktop');
   });
 
   it('renders relevance-ranked content results at mobile viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
     await expect.element(screen.getByRole('heading', { name: 'Tags', exact: true })).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-content-mobile');
+    await matchVrtFrameScreenshot('search-content-mobile');
   });
 });
 
@@ -719,13 +719,13 @@ describe('Search (profile results) — visual regression', () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
     await expect.element(screen.getByRole('button', { name: 'Clear and close search' })).toBeVisible();
     await expect.element(screen.getByRole('button', { name: 'Show all results' })).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-profiles-desktop');
+    await matchVrtFrameScreenshot('search-profiles-desktop');
   });
 
   it('renders profile search suggestions at mobile viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expect.element(screen.getByRole('button', { name: 'Clear and close search' })).toBeVisible();
     await expect.element(screen.getByRole('button', { name: 'Show all results' })).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-profiles-mobile');
+    await matchVrtFrameScreenshot('search-profiles-mobile');
   });
 });

@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
@@ -68,11 +68,15 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
   }),
 }));
 
-// `HumanBitcoinCard` fetches Lightning availability + BTC rate over the network.
-// Left unmocked, the fetch result is non-deterministic (resolves to a real
-// geo-block/error that differs by run, OS, and CI region), so pin both to the
-// "available" happy path with fixed amounts. This snapshots the real payment
-// card instead of a flaky blurred/unavailable state.
+// `HumanSmsCard` / `HumanBitcoinCard` fetch Homegate availability over the
+// network. Left unmocked, the first paint is a skeleton (`null`) and the
+// settled result is non-deterministic (geo-block/error differs by run, OS,
+// and CI region). Pin both to the "available" happy path so the snapshot is
+// the real cards, not a flaky skeleton or blurred/unavailable state.
+vi.mock('@/hooks/useSmsVerificationInfo/useSmsVerificationInfo', () => ({
+  useSmsVerificationInfo: () => ({ available: true as const }),
+}));
+
 vi.mock('@/hooks/useLnVerificationInfo/useLnVerificationInfo', () => ({
   useLnVerificationInfo: () => ({ available: true as const, amountSat: 1000 }),
 }));
@@ -81,14 +85,24 @@ vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
   useBtcRate: () => ({ satUsd: 0.0005, btcUsd: 50_000, lastUpdatedAt: new Date(0) }),
 }));
 
+async function waitForVerificationCards(screen: Awaited<ReturnType<typeof renderForVRT>>) {
+  await expect.element(screen.getByTestId('sms-verification-card')).toBeVisible();
+  await expect.element(screen.getByTestId('human-sms-card-receive-sms-btn')).toBeVisible();
+  await expect.element(screen.getByTestId('bitcoin-payment-card')).toBeVisible();
+}
+
 describe('Human (onboarding) — visual regression', () => {
   it('renders the human-verification selection at desktop viewport', async () => {
+    await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp']);
     const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-human-desktop');
+    await waitForVerificationCards(screen);
+    await matchVrtFrameScreenshot('onboarding-human-desktop');
   });
 
   it('renders the human-verification selection at mobile viewport', async () => {
+    await preloadImages(['/images/sms-verification-phone.webp', '/images/bitcoin-payment.webp']);
     const screen = await renderForVRT(<HumanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-human-mobile');
+    await waitForVerificationCards(screen);
+    await matchVrtFrameScreenshot('onboarding-human-mobile');
   });
 });

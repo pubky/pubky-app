@@ -2,8 +2,8 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { describe, it, vi } from 'vitest';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
@@ -84,13 +84,13 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 describe('OnboardingScanPage (onboarding) — visual regression', () => {
   it('renders the scan/QR page at desktop viewport', async () => {
     await preloadImages(SCAN_PAGE_IMAGE_URLS);
-    const screen = await renderForVRT(<ScanWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-scan-desktop');
+    await renderForVRT(<ScanWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await matchVrtFrameScreenshot('onboarding-scan-desktop');
   });
 
   it('renders the scan/QR page at mobile viewport', async () => {
     await preloadImages(SCAN_PAGE_IMAGE_URLS);
-    const screen = await renderForVRT(<ScanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-scan-mobile');
+    await renderForVRT(<ScanWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await matchVrtFrameScreenshot('onboarding-scan-mobile');
   });
 });
