@@ -10,7 +10,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { buildLockTeaserContent, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
-import { stripPubkyPrefix } from '@/libs/utils/utils';
+import { isPositiveIntegerString, stripPubkyPrefix } from '@/libs/utils/utils';
 import type { TGuardedResource } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
@@ -25,7 +25,6 @@ import type {
 // `octet-stream`. pubky-app still knows the primary is a `PubkyAppPost` — by convention, it always is.
 const POST_CONTENT_TYPE = 'application/octet-stream';
 
-const isPositiveIntegerString = (value: string) => /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value));
 
 /**
  * Publishes a locked post: the attachments become guarded resources, the post referencing them becomes

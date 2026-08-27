@@ -1,4 +1,4 @@
-import { isPubkyIdentifier } from '@/libs/utils/utils';
+import { isPositiveIntegerString, isPubkyIdentifier } from '@/libs/utils/utils';
 import {
   type GuardedPost,
   guardedPostSchema,
@@ -79,6 +79,17 @@ export class LockFileParser {
     if (rawVerifierType === VerifierType.PASSWORD) return VerifierType.PASSWORD;
     if (rawVerifierType === VerifierType.PAYMENT) return VerifierType.PAYMENT;
     return null;
+  }
+
+  /**
+   * A payment lock's price in sats, or null for any other lock. `params` is untyped and the file is
+   * creator-published, so the value is only accepted in the shape the Lock Server's payment verifier
+   * requires — a positive integer string.
+   */
+  static resolvePriceSats(lockFile: LockFile | null): string | null {
+    if (this.resolveVerifierType(lockFile) !== VerifierType.PAYMENT) return null;
+    const amount = lockFile?.criteria?.[0]?.params?.amount;
+    return typeof amount === 'string' && isPositiveIntegerString(amount) ? amount : null;
   }
 }
 

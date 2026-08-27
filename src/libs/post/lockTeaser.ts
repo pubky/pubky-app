@@ -1,6 +1,9 @@
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { getCharacterCount } from '@/libs/utils/utils';
 
+/** Title shown when the creator typed none; also what the composer seeds the field with. */
+export const DEFAULT_LOCK_TITLE = 'Locked content';
+
 /** JSON envelope stored (stringified) in the announcement's `content`. Owned by pubky.app, not the spec. */
 export type TLockTeaser = {
   lock_title: string;

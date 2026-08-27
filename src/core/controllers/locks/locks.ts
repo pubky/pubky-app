@@ -162,7 +162,11 @@ export class LocksController {
    */
   static async fetchLockFile(params: TFetchLockFileParams): Promise<TFetchLockFileResult> {
     const lockFile = await LocksApplication.fetchLockFile(params);
-    return { lockFile, verifierType: LockFileParser.resolveVerifierType(lockFile) };
+    return {
+      lockFile,
+      verifierType: LockFileParser.resolveVerifierType(lockFile),
+      priceSats: LockFileParser.resolvePriceSats(lockFile),
+    };
   }
 
   /** Announcement content of a lock post; null when the post's `content` isn't valid announcement JSON. */

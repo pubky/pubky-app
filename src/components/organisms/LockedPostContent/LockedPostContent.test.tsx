@@ -41,14 +41,16 @@ vi.mock('../PostBody/PostBody', () => ({
 const mockLockData = ({
   lockContent = { lock_title: 'Secret', teaser_description: 'A teaser' },
   lockFile = null,
+  priceSats = null,
   hasError = false,
 }: {
   lockContent?: LockPostContent | null;
   lockFile?: LockFile | null;
+  priceSats?: string | null;
   hasError?: boolean;
 }) => {
   vi.mocked(LocksController.getLockContent).mockReturnValue(lockContent);
-  vi.mocked(useLockFile).mockReturnValue({ lockFile, hasError });
+  vi.mocked(useLockFile).mockReturnValue({ lockFile, priceSats, hasError });
 };
 
 const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
@@ -69,6 +71,25 @@ describe('LockedPostContent', () => {
     expect(useLockFile).toHaveBeenCalledWith(LOCK_URL);
     expect(screen.getByText('A teaser')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Secret');
+  });
+
+  it('shows the price on the card for a payment lock', () => {
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }), priceSats: '1000' });
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    expect(screen.getByText('₿1,000')).toBeInTheDocument();
+  });
+
+  it('shows the mask on the card for a password lock', () => {
+    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    expect(screen.getByText('••••••')).toBeInTheDocument();
+  });
+
+  // The price only becomes known with the lock file, so until then the card must not claim a method.
+  it('shows the mask while the lock file is still loading', () => {
+    mockLockData({ lockFile: null, priceSats: null });
+    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+    expect(screen.getByText('••••••')).toBeInTheDocument();
   });
 
   it('renders nothing when the teaser content is unparseable', () => {
@@ -253,7 +274,7 @@ describe('LockedPostContent', () => {
   it('reads the creator own content directly when the lock owner is the signed-in user (a == b)', async () => {
     // stripPubkyPrefix('pubkypubkyreader') === 'pubkyreader' === currentUserPubky → own lock.
     const lockFile = asOpaque<LockFile>({ creator: 'pubkypubkyreader' });
-    mockLockData({ lockFile });
+    mockLockData({ lockFile, priceSats: '1000' });
     vi.mocked(LocksController.fetchOwnContent).mockResolvedValue({
       post: { content: 'my own locked content', kind: 'short', attachments: null },
       attachments: [],
@@ -265,6 +286,7 @@ describe('LockedPostContent', () => {
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
     // Own lock keeps the lock card (Unlock present but disabled) + a "My locked content" label.
     expect(screen.getByText('My locked content')).toBeInTheDocument();
+    expect(screen.getByText('₿1,000')).toBeInTheDocument(); // the price the creator set stays visible
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
     expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
   });

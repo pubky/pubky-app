@@ -24,6 +24,7 @@ import {
   getValidAuthorPubkyFromPostCompositeId,
   hexToRgba,
   hoursAgo,
+  isPositiveIntegerString,
   isPostDeleted,
   isPubkyIdentifier,
   isSameDomain,
@@ -238,6 +239,29 @@ describe('Utils', () => {
       expect(result).toBe(formatPublicKey({ key: PUBKY }));
       expect(result).toContain('...');
       expect(result).not.toBe(PUBKY);
+    });
+  });
+
+  describe('isPositiveIntegerString', () => {
+    it.each(['1', '12', '1000', '9007199254740991'])('accepts the bare integer %s', (value) => {
+      expect(isPositiveIntegerString(value)).toBe(true);
+    });
+
+    it.each([
+      ['zero', '0'],
+      ['leading zeros', '007'],
+      ['signed', '-1'],
+      ['explicitly signed', '+1'],
+      ['decimal', '1.5'],
+      ['grouped', '1,000'],
+      ['exponent notation', '1e3'],
+      ['untrimmed', ' 12 '],
+      ['empty', ''],
+      // Number() would round these and the caller would report a value nobody set.
+      ['one past the safe-integer range', '9007199254740992'],
+      ['far past the safe-integer range', '99999999999999999999'],
+    ])('rejects %s', (_label, value) => {
+      expect(isPositiveIntegerString(value)).toBe(false);
     });
   });
 

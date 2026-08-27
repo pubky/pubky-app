@@ -5,17 +5,35 @@ import { LockedPostCard, SLIDE_MS } from './LockedPostCard';
 describe('LockedPostCard', () => {
   it('falls back to the default title while the creator has not typed one', () => {
     render(<LockedPostCard title="" />);
-    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked post');
+    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked content');
   });
 
   it('falls back to the default title for a whitespace-only title', () => {
     render(<LockedPostCard title="   " />);
-    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked post');
+    expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Locked content');
   });
 
   it('shows the creator-typed title', () => {
     render(<LockedPostCard title="My most famous quote" />);
     expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('My most famous quote');
+  });
+
+  it('shows the masked password beside Unlock for a password lock', () => {
+    render(<LockedPostCard title="" unlockInfo={{ method: 'password' }} />);
+    expect(screen.getByText('••••••')).toBeInTheDocument();
+  });
+
+  it('shows the grouped price beside Unlock for a payment lock', () => {
+    render(<LockedPostCard title="" unlockInfo={{ method: 'payment', amountSats: '1000' }} />);
+    expect(screen.getByText('₿1,000')).toBeInTheDocument();
+    expect(screen.queryByText('••••••')).not.toBeInTheDocument();
+  });
+
+  // The reader's lock file arrives after the first paint, and can fail to arrive at all. The mask
+  // fills the slot until then so the pill is never half-empty.
+  it('falls back to the mask while the unlock method is unknown', () => {
+    render(<LockedPostCard title="" />);
+    expect(screen.getByText('••••••')).toBeInTheDocument();
   });
 
   // Composer preview: no `onUnlock`, so the lock (which does not exist until Post) cannot be opened.

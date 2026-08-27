@@ -1,14 +1,18 @@
 'use client';
 
 import { type MouseEvent, useEffect, useRef, useState } from 'react';
-import { Check, LockOpen, Pencil, Shield, StickyNote } from 'lucide-react';
+import { Check, LockOpen, Pencil, Shield, StickyNote, Wallet } from 'lucide-react';
+import type { TLockConfig } from '@/application/locks/locks.types';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
+import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
 import { cn } from '@/libs/utils/utils';
 
 interface LockedPostCardProps {
   /** Creator-typed lock title for the reader/preview view. Ignored when `editableTitle` is set. */
   title?: string;
+  /** How the lock opens, shown beside Unlock. Nullish until known → the masked dots. */
+  unlockInfo?: TLockConfig | null;
   onUnlock?: () => void;
   /** Whether the unlock modal is open. Keeps the slid-over button parked until the modal closes. */
   unlockOpen?: boolean;
@@ -22,8 +26,10 @@ interface LockedPostCardProps {
   className?: string;
 }
 
-/** Masked dots stand in for the password the reader will have to enter. */
-const PASSWORD_MASK = '••••••';
+/** Stands in for an unlock requirement the reader can't be shown — a password, or an unresolved lock. */
+const HIDDEN_REQUIREMENT_MASK = '••••••';
+
+const satsFormatter = new Intl.NumberFormat('en-US');
 
 /** Slide-over duration — the single source for both the CSS transition and the deferred modal open.
  *  Exported for tests (they advance fake timers by exactly this). */
@@ -32,6 +38,7 @@ export const SLIDE_MS = 200;
 /** The shared lock card. */
 export function LockedPostCard({
   title,
+  unlockInfo,
   onUnlock,
   unlockOpen,
   disabled,
@@ -39,9 +46,14 @@ export function LockedPostCard({
   className,
 }: LockedPostCardProps) {
   const isDisabled = disabled ?? !onUnlock;
+  const UnlockInfoIcon = unlockInfo?.method === 'payment' ? Wallet : Shield;
+  const unlockInfoLabel =
+    unlockInfo?.method === 'payment'
+      ? `₿${satsFormatter.format(Number(unlockInfo.amountSats))}`
+      : HIDDEN_REQUIREMENT_MASK;
 
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const maskRef = useRef<HTMLDivElement>(null);
+  const lockInfoRef = useRef<HTMLDivElement>(null);
   const slideTimer = useRef<number | null>(null);
   const [slideX, setSlideX] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -64,9 +76,9 @@ export function LockedPostCard({
     if (isDisabled || slideTimer.current !== null) return;
 
     const button = buttonRef.current;
-    const mask = maskRef.current;
-    // Slide the button's left edge onto the mask's, covering the dots; then open the modal.
-    if (button && mask) setSlideX(mask.offsetLeft - button.offsetLeft);
+    const lockInfo = lockInfoRef.current;
+    // Slide the button's left edge onto the price/mask's, covering it; then open the modal.
+    if (button && lockInfo) setSlideX(lockInfo.offsetLeft - button.offsetLeft);
     slideTimer.current = window.setTimeout(() => {
       slideTimer.current = null;
       onUnlock?.();
@@ -98,7 +110,7 @@ export function LockedPostCard({
                 onChange={(event) => editableTitle.onChange(event.target.value)}
                 onFocus={() => setIsEditing(true)}
                 onBlur={() => setIsEditing(false)}
-                placeholder={'Locked post'}
+                placeholder={DEFAULT_LOCK_TITLE}
                 disabled={editableTitle.disabled}
                 maxLength={editableTitle.maxLength}
                 aria-label={'Lock title'}
@@ -115,14 +127,13 @@ export function LockedPostCard({
             <>
               <StickyNote className="size-6 shrink-0 text-muted-foreground" aria-hidden />
               <h4 className="min-w-0 flex-1 text-xl leading-7 font-bold text-foreground">
-                {title?.trim() || 'Locked post'}
+                {title?.trim() || DEFAULT_LOCK_TITLE}
               </h4>
             </>
           )}
         </div>
 
-        {/* TODO:[Locks] #2369 — password and `dev-static` all go away here; the price variant reads
-            from `verifierType` instead. */}
+        {/* TODO:[Locks] #2369 — the password variant goes away here, leaving only the price. */}
         <div
           className={cn(
             'relative flex w-fit items-center gap-1 rounded-full bg-card p-1',
@@ -141,9 +152,9 @@ export function LockedPostCard({
             <LockOpen className="size-4 shrink-0" aria-hidden />
             {'Unlock'}
           </Button>
-          <div ref={maskRef} className="flex items-center gap-1.5 px-4 text-brand">
-            <Shield className="size-4 shrink-0" aria-hidden />
-            <span className="text-xs leading-4 font-medium tracking-[1.2px]">{PASSWORD_MASK}</span>
+          <div ref={lockInfoRef} className="flex items-center gap-1.5 px-4 text-brand">
+            <UnlockInfoIcon className="size-4 shrink-0" aria-hidden />
+            <span className="text-xs leading-4 font-medium tracking-[1.2px]">{unlockInfoLabel}</span>
           </div>
         </div>
       </div>

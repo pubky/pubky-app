@@ -18,6 +18,7 @@ describe('useLockFile', () => {
     vi.mocked(LocksController.fetchLockFile).mockResolvedValue({
       lockFile: MOCK_LOCK_FILE,
       verifierType: VerifierType.PASSWORD,
+      priceSats: null,
     });
   });
 
@@ -27,6 +28,17 @@ describe('useLockFile', () => {
     await waitFor(() => expect(result.current.lockFile).toEqual(MOCK_LOCK_FILE));
     expect(result.current.hasError).toBe(false);
     expect(LocksController.fetchLockFile).toHaveBeenCalledWith({ lockUrl: LOCK_URL });
+  });
+
+  it('exposes the price of a payment lock', async () => {
+    vi.mocked(LocksController.fetchLockFile).mockResolvedValue({
+      lockFile: MOCK_LOCK_FILE,
+      verifierType: VerifierType.PAYMENT,
+      priceSats: '1000',
+    });
+    const { result } = renderHook(() => useLockFile(LOCK_URL));
+
+    await waitFor(() => expect(result.current.priceSats).toBe('1000'));
   });
 
   it('skips fetching when the url is nullish', () => {

@@ -270,7 +270,7 @@ describe('PostInput lock flow (integration)', () => {
     fireEvent.change(screen.getByPlaceholderText('Write a short announcement to tease your content.'), {
       target: { value: 'come see this' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Locked post'), { target: { value: 'My title' } });
+    fireEvent.change(screen.getByPlaceholderText('Locked content'), { target: { value: 'My title' } });
     fireEvent.click(postButton());
 
     await waitFor(() => expect(mocks.commitCreate).toHaveBeenCalledTimes(1));

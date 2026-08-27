@@ -7,6 +7,7 @@ import { PostController } from '@/controllers/post/post';
 import { useCreateLockContent } from '@/hooks/useCreateLockContent/useCreateLockContent';
 import { Logger } from '@/libs/logger/logger';
 import { buildArticleContent } from '@/libs/post/articleContent';
+import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { inferPostKindForCreate } from '@/pipes/post/post.kind';
@@ -151,7 +152,7 @@ export function usePostInputLock({
     setLockDraft(captureComposer());
     setLockEnabled(true);
     // Seed the card's title with the default so it reads as real, editable text (not a placeholder).
-    setLockTitle('Locked post');
+    setLockTitle(DEFAULT_LOCK_TITLE);
 
     // Gate on Locks setup: fully set up → lock content dialog; otherwise the modal, which opens at
     // whichever step is still missing.
@@ -229,6 +230,7 @@ export function usePostInputLock({
         : undefined,
     isLockEnabled: lockEnabled,
     isLockConfigured,
+    lockConfig,
     lockServerPubky,
     isAuthDialogOpen,
     closeAuthDialog,

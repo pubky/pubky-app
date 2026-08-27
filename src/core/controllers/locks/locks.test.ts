@@ -271,8 +271,22 @@ describe('LocksController.fetchLockFile', () => {
     await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
       lockFile: MOCK_LOCK_FILE,
       verifierType: VerifierType.PASSWORD,
+      priceSats: null,
     });
     expect(LocksApplication.fetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL });
+  });
+
+  it('resolves the price of a payment lock', async () => {
+    const paymentLock = mockLockFile({
+      criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
+    });
+    vi.mocked(LocksApplication.fetchLockFile).mockResolvedValue(paymentLock);
+
+    await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
+      lockFile: paymentLock,
+      verifierType: VerifierType.PAYMENT,
+      priceSats: '1000',
+    });
   });
 
   it('resolves a null verifier type without a lock file', async () => {
@@ -281,6 +295,7 @@ describe('LocksController.fetchLockFile', () => {
     await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
       lockFile: null,
       verifierType: null,
+      priceSats: null,
     });
   });
 });

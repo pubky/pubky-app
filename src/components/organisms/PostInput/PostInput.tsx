@@ -176,6 +176,7 @@ export function PostInput({
     lockSwitch,
     isLockEnabled,
     isLockConfigured,
+    lockConfig,
     lockServerPubky,
     isAuthDialogOpen,
     closeAuthDialog,
@@ -525,6 +526,7 @@ export function PostInput({
                       lockCard={
                         isLockConfigured ? (
                           <LockedPostCard
+                            unlockInfo={lockConfig}
                             editableTitle={{
                               value: lockTitle,
                               onChange: setLockTitle,
