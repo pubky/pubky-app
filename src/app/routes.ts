@@ -29,13 +29,12 @@ export enum APP_ROUTES {
 }
 
 /**
- * Canonical builder for full-text content search URLs (`/search?q=…`).
+ * Builds a full-text search URL (`/search?q=…`).
  *
- * Every submit path (search bar Enter, recent-query chips) must produce the
- * exact same URL for the same query — the `q` param is what `useSearchCriteria`
- * parses back into content mode, and it doubles as the stream cache key.
- * `URLSearchParams` handles the encoding so callers never hand-build the
- * query string (spaces, `&`, `#` in queries would otherwise corrupt the URL).
+ * All submit paths (Enter, "Show all results", recent-query chips) go through
+ * this one builder, so the same query always produces the same URL — results
+ * are cached per URL — and special characters in the query (spaces, `&`, `#`)
+ * are always encoded correctly.
  */
 export function getContentSearchUrl(query: string): string {
   const params = new URLSearchParams({ q: query });
