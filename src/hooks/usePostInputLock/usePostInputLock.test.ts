@@ -13,7 +13,10 @@ const mocks = vi.hoisted(() => ({
   prependPosts: vi.fn(),
   setPostAttachments: vi.fn(),
   // Last options handed to useCreateLockContent — the locked post the hook would publish.
-  lockContentOptions: null as { lockedPost: { content: string; kind: unknown } } | null,
+  lockContentOptions: null as {
+    lockedPost: { content: string; kind: unknown };
+    lockConfig: unknown;
+  } | null,
 }));
 
 vi.mock('@/config/network', () => ({
@@ -29,7 +32,7 @@ vi.mock('@/stores/locksAuth/locksAuth.store', () => ({
   },
 }));
 vi.mock('@/hooks/useCreateLockContent/useCreateLockContent', () => ({
-  useCreateLockContent: (options: { lockedPost: { content: string; kind: unknown } }) => {
+  useCreateLockContent: (options: { lockedPost: { content: string; kind: unknown }; lockConfig: unknown }) => {
     mocks.lockContentOptions = options;
     return { publish: mocks.publish, isPublishing: false };
   },
@@ -76,7 +79,7 @@ const setup = (isEnabled = true, canEnable = true, draftOverride: TLockDraft = d
 /** Switch on, sign-in skipped (already authenticated), unlock method applied. */
 const configureLock = (result: { current: ReturnType<typeof usePostInputLock> }) => {
   act(() => result.current.lockSwitch?.onCheckedChange(true));
-  act(() => result.current.handleLockApplied('Secret12!'));
+  act(() => result.current.handleLockApplied({ method: 'password' }));
 };
 
 /** Locks fully set up: signed into the Lock Server with a connected Bitkit payout account. */
@@ -169,7 +172,7 @@ describe('usePostInputLock', () => {
       expect(clearComposer).not.toHaveBeenCalled();
       expect(result.current.isLockDialogOpen).toBe(true);
 
-      act(() => result.current.handleLockApplied('Secret12!'));
+      act(() => result.current.handleLockApplied({ method: 'password' }));
 
       // Applying the lock swaps the draft for the empty announcement composer.
       expect(clearComposer).toHaveBeenCalledTimes(1);
@@ -280,6 +283,29 @@ describe('usePostInputLock', () => {
 
     act(() => result.current.setLockTitle('My most famous quote'));
     expect(result.current.lockTitle).toBe('My most famous quote');
+  });
+
+  describe('lock config', () => {
+    it('hands the applied price to the publish hook', () => {
+      setUpLocks();
+      const { result } = setup();
+
+      act(() => result.current.lockSwitch?.onCheckedChange(true));
+      act(() => result.current.handleLockApplied({ method: 'payment', amountSats: '1234' }));
+
+      expect(mocks.lockContentOptions?.lockConfig).toEqual({ method: 'payment', amountSats: '1234' });
+    });
+
+    it('discards the price when the lock is abandoned', () => {
+      setUpLocks();
+      const { result } = setup();
+
+      configureLock(result);
+      act(() => result.current.lockSwitch?.onCheckedChange(false));
+
+      expect(mocks.lockContentOptions?.lockConfig).toBeNull();
+      expect(result.current.isLockConfigured).toBe(false);
+    });
   });
 
   describe('submitOrPublish', () => {

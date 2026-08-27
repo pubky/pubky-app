@@ -4,9 +4,8 @@ import { createQueryClient } from '@/libs/query-client/query-client.factory';
 /**
  * Exchange Rate API Query Client
  *
- * Used for caching BTC/USD exchange rate responses from BlockTank API.
- * The exchange rate is cached for 30 minutes since it doesn't need
- * real-time precision for display purposes.
+ * Caches BTC/USD rate responses from the BlockTank API. The rate is only ever shown next to an
+ * amount the user is choosing, never used to compute what is charged, so a short cache is enough.
  */
 export const exchangerateQueryClient = createQueryClient({
   retry: {
@@ -22,6 +21,5 @@ export const exchangerateQueryClient = createQueryClient({
       default: { initial: 1_000, max: 30_000 },
     },
   },
-  // Exchange rate doesn't need real-time precision, cache for 30 minutes
-  staleTime: 30 * 60 * 1000,
+  staleTime: 60 * 1000,
 });

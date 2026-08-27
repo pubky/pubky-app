@@ -25,6 +25,8 @@ import type {
 // `octet-stream`. pubky-app still knows the primary is a `PubkyAppPost` — by convention, it always is.
 const POST_CONTENT_TYPE = 'application/octet-stream';
 
+const isPositiveIntegerString = (value: string) => /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value));
+
 /**
  * Publishes a locked post: the attachments become guarded resources, the post referencing them becomes
  * the lock's entry point, the two are bundled into one content lock, and a public announcement carrying
@@ -33,6 +35,7 @@ const POST_CONTENT_TYPE = 'application/octet-stream';
 export function useCreateLockContent({
   lockedPost,
   announcement,
+  lockConfig,
 }: TUseCreateLockContentParams): TUseCreateLockContentReturn {
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
@@ -50,7 +53,21 @@ export function useCreateLockContent({
           operation: 'useCreateLockContent.publish',
         });
 
-      // Runs before the lock is created, so a rejected announcement cannot orphan one.
+      // The composer only enables Post once a lock is applied, so a missing config is a programming error.
+      if (!lockConfig)
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'No lock configuration', {
+          service: ErrorService.Local,
+          operation: 'useCreateLockContent.publish',
+        });
+
+      // The price and teaser checks run before the lock is created, so a rejected input cannot orphan one.
+      if (lockConfig.method === 'payment' && !isPositiveIntegerString(lockConfig.amountSats)) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Lock price is not a positive whole number of sats', {
+          service: ErrorService.Local,
+          operation: 'useCreateLockContent.publish',
+        });
+      }
+
       if (!isLockTeaserWithinLimit(announcement.teaser)) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Lock announcement exceeds the post length limit', {
           service: ErrorService.Local,
@@ -83,7 +100,7 @@ export function useCreateLockContent({
           bytes: new Uint8Array(await file.arrayBuffer()),
         })),
       );
-      const lock = await LocksController.createLockContent({ attachments: files, buildPost });
+      const lock = await LocksController.createLockContent({ attachments: files, buildPost, lockConfig });
       // The lock lives on the Lock-Server-authenticated pubky's homeserver, which may differ from the
       // pubky.app account. Build the URL from `lock.creator`, stripping its `pubky` prefix to the raw
       // z32 host the `pubky://` scheme expects.

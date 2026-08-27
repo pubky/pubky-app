@@ -243,9 +243,13 @@ profile/(own)/layout.tsx → ProfilePageContainer
 
 ## Phase 1 & marker tracking
 
-Phase 1 (epic **#1998**) is password locks only: the Lock Server does not implement a real
-verifier yet, so every criterion uses a `dev-static` placeholder that always passes.
-Payment, creator-configurable credential TTLs, and IndexedDB caching all come later.
+Phase 1 (epic **#1998**) was password locks only: every criterion used a `dev-static`
+placeholder that always passes. Phase 2 (**#2364**) adds the price: a payment lock writes a
+single `paykit-payment` criterion instead, holding the recipient (always the lock's creator),
+the amount in sats as a string, and `BTC` as the asset. The password path still writes
+`dev-static` until **#2369** removes it. Reader-side payment is **#2368**, so a payment lock
+cannot be unlocked from pubky-app yet. Creator-configurable credential TTLs and IndexedDB
+caching still come later.
 
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.

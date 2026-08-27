@@ -24,6 +24,7 @@ import type {
   TUnlockResult,
   TVerificationStatus,
 } from '@/services/locks/locks.types';
+import { VerifierType } from '@/services/locks/locks.types';
 import type {
   TCreateLockContentParams,
   TFetchOwnContentParams,
@@ -42,10 +43,13 @@ const MAX_POLL_ATTEMPTS = 40;
 
 const isVerifying = (status: TVerificationStatus) => status === 'pending' || status === 'in_progress';
 
-// TODO:[Locks] #2369 — password and `dev-static` all go away here.
+// v1 payment locks must hold exactly one criterion, referenced once by the lock logic.
 const CRITERION_ID = 'criterion-1';
-const VERIFIER_TYPE = 'dev-static';
-const VERIFIER_PARAMS = { satisfied: true };
+// TODO:[Locks] #2369 — password and `dev-static` all go away here.
+const PLACEHOLDER_VERIFIER_TYPE = 'dev-static';
+const PLACEHOLDER_VERIFIER_PARAMS = { satisfied: true };
+// Only asset the Lock Server's v1 payment verifier takes.
+const PAYMENT_ASSET = 'BTC';
 const CREDENTIAL_TTL_SECONDS = 900;
 
 /**
@@ -412,6 +416,7 @@ export class LocksApplication {
   static async createLockContent({
     attachments = [],
     buildPost,
+    lockConfig,
   }: TCreateLockContentParams): Promise<TCreateContentLockResult> {
     // The guarded bytes land on the Lock-Server-authenticated account, which may differ from the
     // pubky.app user. Capture that owner from the upload response so `buildPost` can reference the
@@ -425,10 +430,21 @@ export class LocksApplication {
     }
     const post = await this.upload(buildPost(attachmentResources, owner));
 
+    // The payout recipient has to equal the lock's creator, and the upload response names that
+    // account — so the criterion can only be built here, once the primary resource is up.
+    const criterion =
+      lockConfig.method === 'payment'
+        ? {
+            criterion_id: CRITERION_ID,
+            verifier_type: VerifierType.PAYMENT,
+            params: { recipient_pubky: post.creator, amount: lockConfig.amountSats, asset: PAYMENT_ASSET },
+          }
+        : { criterion_id: CRITERION_ID, verifier_type: PLACEHOLDER_VERIFIER_TYPE, params: PLACEHOLDER_VERIFIER_PARAMS };
+
     return LocksService.createContentLock({
       primaryResource: post.resource,
       secondaryResources: attachmentResources,
-      criteria: [{ criterion_id: CRITERION_ID, verifier_type: VERIFIER_TYPE, params: VERIFIER_PARAMS }],
+      criteria: [criterion],
       lockLogic: { type: 'all', criteria: [CRITERION_ID] },
       accessPolicy: { requested_credential_ttl_seconds: CREDENTIAL_TTL_SECONDS },
     });

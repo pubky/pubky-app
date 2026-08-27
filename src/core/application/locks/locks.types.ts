@@ -38,6 +38,17 @@ export type TFetchOwnContentParams = {
 };
 
 /**
+ * How the creator chose to gate the content, as configured in the lock dialog. `amountSats` stays a
+ * string end to end — the Lock Server wants the amount as a positive integer string, not a number.
+ *
+ * The password itself is not carried: the placeholder verifier ignores it, so keeping the plaintext
+ * alive in composer state for the whole authoring session would buy nothing.
+ *
+ * TODO:[Locks] #2369 — password and `dev-static` all go away here.
+ */
+export type TLockConfig = { method: 'password' } | { method: 'payment'; amountSats: string };
+
+/**
  * One file to guard. The storage path is minted per upload, so the original filename is not part of
  * it — carry that name as metadata inside the post JSON, like a normal post's `PubkyAppFile.name`.
  */
@@ -65,4 +76,6 @@ export type TCreateLockContentParams = {
    * It is undefined only when there are no attachments (and so no URIs to build).
    */
   buildPost: (attachmentResources: TGuardedResource[], ownerPubky?: string) => TLockContentFile;
+  /** How the content is gated. The criterion is assembled from it at publish time. */
+  lockConfig: TLockConfig;
 };

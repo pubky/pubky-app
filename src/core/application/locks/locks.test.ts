@@ -49,6 +49,7 @@ const file = (contentType = 'application/json') => ({ contentType, bytes: new Ui
 const descriptor = (path: string) => ({ path, hash: 'HASH', content_type: 'application/json', size: 1 });
 /** Default builder: ignores the attachment paths and returns a fixed post JSON. */
 const buildPost = () => file();
+const passwordConfig = { method: 'password' } as const;
 
 describe('LocksApplication (content)', () => {
   beforeEach(() => {
@@ -77,6 +78,7 @@ describe('LocksApplication (content)', () => {
         seenOwner = ownerPubky;
         return file();
       },
+      lockConfig: passwordConfig,
     });
 
     // Attachments upload first (id-1, id-2); the post is uploaded last (id-3).
@@ -99,6 +101,7 @@ describe('LocksApplication (content)', () => {
     await LocksApplication.createLockContent({
       attachments: [file('image/png'), file('image/png')],
       buildPost,
+      lockConfig: passwordConfig,
     });
 
     const paths = mocks.registerGuardedResource.mock.calls.map(([params]) => params.path);
@@ -108,7 +111,7 @@ describe('LocksApplication (content)', () => {
   it('builds the post with an empty list when there are no attachments', async () => {
     const builder = vi.fn(() => file());
 
-    await LocksApplication.createLockContent({ buildPost: builder });
+    await LocksApplication.createLockContent({ buildPost: builder, lockConfig: passwordConfig });
 
     expect(builder).toHaveBeenCalledWith([], undefined);
     expect(mocks.registerGuardedResource).toHaveBeenCalledTimes(1);
@@ -116,7 +119,7 @@ describe('LocksApplication (content)', () => {
   });
 
   it('sends the placeholder dev-static criterion and lock logic', async () => {
-    await LocksApplication.createLockContent({ buildPost });
+    await LocksApplication.createLockContent({ buildPost, lockConfig: passwordConfig });
 
     const [params] = mocks.createContentLock.mock.calls[0];
     expect(params.criteria).toEqual([
@@ -126,12 +129,32 @@ describe('LocksApplication (content)', () => {
     expect(params.accessPolicy).toEqual({ requested_credential_ttl_seconds: 900 });
   });
 
+  it('sends the paykit-payment criterion, paying the account the post landed on', async () => {
+    await LocksApplication.createLockContent({ buildPost, lockConfig: { method: 'payment', amountSats: '1234' } });
+
+    const [params] = mocks.createContentLock.mock.calls[0];
+    expect(params.criteria).toEqual([
+      {
+        criterion_id: 'criterion-1',
+        verifier_type: 'paykit-payment',
+        // The recipient comes from the upload response, not the pubky.app account.
+        params: { recipient_pubky: 'pubkybob', amount: '1234', asset: 'BTC' },
+      },
+    ]);
+    // v1 wants that single criterion referenced exactly once.
+    expect(params.lockLogic).toEqual({ type: 'all', criteria: ['criterion-1'] });
+  });
+
   it('does not build the post or create the lock when an attachment upload fails', async () => {
     mocks.registerGuardedResource.mockRejectedValueOnce(new Error('upload failed'));
     const builder = vi.fn(() => file());
 
     await expect(
-      LocksApplication.createLockContent({ attachments: [file('image/png')], buildPost: builder }),
+      LocksApplication.createLockContent({
+        attachments: [file('image/png')],
+        buildPost: builder,
+        lockConfig: passwordConfig,
+      }),
     ).rejects.toThrow('upload failed');
 
     expect(builder).not.toHaveBeenCalled();

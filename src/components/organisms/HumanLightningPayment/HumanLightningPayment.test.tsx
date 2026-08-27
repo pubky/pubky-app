@@ -15,7 +15,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 }));
 
 vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
-  useBtcRate: () => ({ satUsd: 0.0005 }),
+  useBtcRate: () => ({ rate: { satUsd: 0.0005 }, status: 'ready' }),
 }));
 
 vi.mock('@/libs/utils/utils', async (importOriginal) => {
