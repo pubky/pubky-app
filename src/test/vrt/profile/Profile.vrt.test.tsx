@@ -896,10 +896,12 @@ describe('Own profile — posts — visual regression', () => {
     const nameStyle = getComputedStyle(name);
 
     expect(nameStyle.lineHeight).toBe('60px');
-    expect(nameStyle.overflow).toBe('clip');
-    expect(nameStyle.paddingBottom).toBe('0px');
-    expect(nameStyle.marginBottom).toBe('0px');
-    expect(nameStyle.overflowClipMargin).toBe('9px');
+    expect(nameStyle.overflow).toBe('hidden');
+    // Descender room comes from padding (0.15em at 60px), cancelled out of layout
+    // by the matching negative margin — works in WebKit too, unlike the previous
+    // overflow-clip-margin approach (unsupported there, so Safari kept clipping).
+    expect(nameStyle.paddingBottom).toBe('9px');
+    expect(nameStyle.marginBottom).toBe('-9px');
     expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
     expect(name.getBoundingClientRect().right).toBeLessThan(statusEmoji.getBoundingClientRect().left);
   });

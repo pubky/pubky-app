@@ -132,13 +132,16 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
             overrideDefaults
             className="max-width-profile-page-header flex w-full min-w-0 items-center gap-2 sm:max-w-xl lg:max-w-full lg:gap-3"
           >
-            {/* leading-none + ellipsis clips Inter Tight descenders. Clip (not hidden) plus
-                overflow-clip-margin keeps the 60px line and paints the missing ~9px. */}
+            {/* leading-none + ellipsis clips Inter Tight descenders. Bottom padding keeps the
+                missing ~9px inside the clip box (overflow clips at the padding edge) and the
+                negative margin cancels it out of layout, so the 60px line and the emoji
+                alignment hold. Padding instead of overflow-clip-margin: Safari does not
+                support clip-margin, so descenders stayed clipped there. */}
             <Typography
               data-cy="profile-username-header"
               as="h1"
               size="lg"
-              className="min-w-0 overflow-x-clip overflow-y-clip leading-8 text-ellipsis whitespace-nowrap text-white [overflow-clip-margin:0.15em] lg:text-6xl lg:leading-none"
+              className="-mb-[0.15em] min-w-0 truncate pb-[0.15em] leading-8 text-white lg:text-6xl lg:leading-none"
             >
               {name}
             </Typography>
