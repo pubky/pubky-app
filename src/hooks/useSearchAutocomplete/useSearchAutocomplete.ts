@@ -126,6 +126,11 @@ export function useSearchAutocomplete({
       return;
     }
 
+    // Loading starts at the keystroke, not when the debounce fires — the
+    // dropdown skeleton must cover the debounce window too, or the first
+    // half-second of typing would show no feedback at all.
+    setIsSearching(true);
+
     // Trigger debounced search
     const debouncedFn = debouncedSearchRef.current;
     debouncedFn(query.trim());

@@ -89,7 +89,11 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const { tags: hotTags } = useHotTags({ limit: CLICKABLE_TAGS_DEFAULT_MAX_LENGTH });
 
   const hasInput = inputValue.trim().length > 0;
-  const { tags: autocompleteTags, users: autocompleteUserData } = useSearchAutocomplete({
+  const {
+    tags: autocompleteTags,
+    users: autocompleteUserData,
+    isLoading: isAutocompleteLoading,
+  } = useSearchAutocomplete({
     query: inputValue,
     enabled: isFocused && hasInput,
   });
@@ -149,6 +153,7 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
           aria-label="Search suggestions"
           hotTags={hotTags}
           hasInput={hasInput}
+          isLoading={isAutocompleteLoading}
           autocompleteTags={autocompleteTags}
           autocompleteUsers={autocompleteUserData}
           recentUsers={recentUsers}

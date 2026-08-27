@@ -16,6 +16,7 @@ import type {
 } from '../SearchRecentUserItem/SearchRecentUserItem.types';
 import { SearchTagSection } from '../SearchTagSection/SearchTagSection';
 import { SearchUsersSection } from '../SearchUsersSection/SearchUsersSection';
+import { SearchSuggestionsSkeleton } from './SearchSuggestions.skeleton';
 
 interface SearchSuggestionsProps {
   /** ID for ARIA relationship with input */
@@ -26,6 +27,8 @@ interface SearchSuggestionsProps {
   hotTags: HotTag[];
   /** Whether input has content */
   hasInput: boolean;
+  /** True while autocomplete lookups for the current input are in flight */
+  isLoading?: boolean;
   /** Autocomplete tag suggestions */
   autocompleteTags?: AutocompleteTag[];
   /** Autocomplete user suggestions */
@@ -53,6 +56,7 @@ export function SearchSuggestions({
   'aria-label': ariaLabel,
   hotTags,
   hasInput,
+  isLoading = false,
   autocompleteTags = [],
   autocompleteUsers = [],
   recentUsers = [],
@@ -78,8 +82,14 @@ export function SearchSuggestions({
   const hasRecentSearches = hasRecentUsers || hasRecentTags || hasRecentQueries;
   const hasHotTags = hotTags.length > 0;
 
+  // Skeleton only before the first response for the current input. While a
+  // query is being refined the previous suggestions stay on screen (the hook
+  // keeps them until fresh results land), so nothing flickers per keystroke.
+  const showAutocompleteSkeleton = hasInput && isLoading && !hasAutocompleteTags && !hasAutocompleteUsers;
+
   const renderAutocompleteContent = () => {
     if (!hasInput) return null;
+    if (showAutocompleteSkeleton) return <SearchSuggestionsSkeleton />;
 
     return (
       <>
@@ -117,6 +127,7 @@ export function SearchSuggestions({
       id={id}
       role="region"
       aria-label={ariaLabel}
+      aria-busy={showAutocompleteSkeleton || undefined}
       data-testid="search-suggestions"
       className="absolute top-full right-0 left-0 z-50 overflow-y-auto rounded-t-none rounded-b-2xl border-x border-b border-border"
       style={SEARCH_EXPANDED_STYLE}
