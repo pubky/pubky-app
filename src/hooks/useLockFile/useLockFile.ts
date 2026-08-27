@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
-import type { LockFile } from '@/services/locks/locks.types';
+import type { TFetchLockFileResult } from '@/services/locks/locks.types';
 import type { UseLockFileResult } from './useLockFile.types';
 
 /**
@@ -20,11 +20,11 @@ import type { UseLockFileResult } from './useLockFile.types';
  * @param lockUrl - The post's `lock` URL, or null/undefined to skip.
  */
 export function useLockFile(lockUrl: string | null | undefined): UseLockFileResult {
-  const [lockFile, setLockFile] = useState<LockFile | null>(null);
+  const [result, setResult] = useState<TFetchLockFileResult | null>(null);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    setLockFile(null);
+    setResult(null);
     setHasError(false);
 
     if (!lockUrl) return;
@@ -32,9 +32,8 @@ export function useLockFile(lockUrl: string | null | undefined): UseLockFileResu
     let cancelled = false;
 
     LocksController.fetchLockFile({ lockUrl })
-      // `verifierType` is dropped until the payment verifier UI needs it (see `LockedPostCard`).
-      .then((result) => {
-        if (!cancelled) setLockFile(result.lockFile);
+      .then((fetched) => {
+        if (!cancelled) setResult(fetched);
       })
       .catch(() => {
         // The AppError was already logged + captured to Sentry by the Err.* factory
@@ -47,5 +46,5 @@ export function useLockFile(lockUrl: string | null | undefined): UseLockFileResu
     };
   }, [lockUrl]);
 
-  return { lockFile, hasError };
+  return { lockFile: result?.lockFile ?? null, priceSats: result?.priceSats ?? null, hasError };
 }

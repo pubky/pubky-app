@@ -54,7 +54,7 @@ export function DialogUnlockContent({
         <Container overrideDefaults className="flex items-center gap-2 rounded-md bg-muted p-6">
           <Link className="size-6 shrink-0 text-muted-foreground" aria-hidden />
           <Typography className="min-w-0 flex-1 truncate text-xl font-bold text-foreground">
-            {lockTitle || 'Locked post'}
+            {lockTitle || 'Locked content'}
           </Typography>
         </Container>
 

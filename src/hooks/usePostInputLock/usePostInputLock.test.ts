@@ -279,7 +279,7 @@ describe('usePostInputLock', () => {
     const { result } = setup();
 
     act(() => result.current.lockSwitch?.onCheckedChange(true));
-    expect(result.current.lockTitle).toBe('Locked post'); // seeded default
+    expect(result.current.lockTitle).toBe('Locked content'); // seeded default
 
     act(() => result.current.setLockTitle('My most famous quote'));
     expect(result.current.lockTitle).toBe('My most famous quote');
@@ -294,6 +294,7 @@ describe('usePostInputLock', () => {
       act(() => result.current.handleLockApplied({ method: 'payment', amountSats: '1234' }));
 
       expect(mocks.lockContentOptions?.lockConfig).toEqual({ method: 'payment', amountSats: '1234' });
+      expect(result.current.lockConfig).toEqual({ method: 'payment', amountSats: '1234' }); // and to the card
     });
 
     it('discards the price when the lock is abandoned', () => {
@@ -304,6 +305,7 @@ describe('usePostInputLock', () => {
       act(() => result.current.lockSwitch?.onCheckedChange(false));
 
       expect(mocks.lockContentOptions?.lockConfig).toBeNull();
+      expect(result.current.lockConfig).toBeNull();
       expect(result.current.isLockConfigured).toBe(false);
     });
   });

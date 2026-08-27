@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Lock } from 'lucide-react';
+import type { TLockConfig } from '@/application/locks/locks.types';
 import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
@@ -46,7 +47,13 @@ export function LockedPostContent({
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState(false);
   const lockContent = LocksController.getLockContent(content);
-  const { lockFile } = useLockFile(lock);
+  const { lockFile, priceSats } = useLockFile(lock);
+  // Null until the lock file lands, so the card never names an unlock method it cannot know yet.
+  const unlockInfo: TLockConfig | null = !lockFile
+    ? null
+    : priceSats
+      ? { method: 'payment', amountSats: priceSats }
+      : { method: 'password' };
   const { unlockedPost, applyUnlockedContent, media, isOwnLock } = useUnlockedContent({ lock, lockFile, authorId });
   const { toast } = useToast();
 
@@ -86,7 +93,7 @@ export function LockedPostContent({
       {unlockedPost ? (
         <>
           {/* Own lock: keep the (now inert) lock card above the content so the price/terms stay visible. */}
-          {isOwnLock && <LockedPostCard title={lockContent.lock_title} />}
+          {isOwnLock && <LockedPostCard title={lockContent.lock_title} unlockInfo={unlockInfo} />}
           <div className="flex w-full flex-col gap-4">
             <div className="border-t border-border" />
             {/* Access indicator: the creator's own content vs. a lock the reader unlocked. */}
@@ -116,6 +123,7 @@ export function LockedPostContent({
         // No lock file (still loading, or its fetch failed) → nothing to unlock against.
         <LockedPostCard
           title={lockContent.lock_title}
+          unlockInfo={unlockInfo}
           unlockOpen={isUnlockOpen}
           onUnlock={
             !lockFile

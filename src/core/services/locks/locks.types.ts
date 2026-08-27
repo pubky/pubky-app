@@ -263,6 +263,7 @@ export interface TFetchLockFileParams {
 export interface TFetchLockFileResult {
   lockFile: LockFile | null;
   verifierType: VerifierType | null;
+  priceSats: string | null;
 }
 
 /** One proof for a lock criterion. `payload` is verifier-specific (dev-static: `{ satisfied: true }`). */
