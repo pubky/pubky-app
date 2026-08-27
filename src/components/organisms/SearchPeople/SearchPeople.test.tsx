@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SEARCH_PEOPLE_PREVIEW_COUNT } from '@/config/search';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
-import { useSearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import type { Pubky } from '@/models/models.types';
 import type { UserListItemData } from '@/organisms/UserListItem/UserListItem.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -12,7 +12,7 @@ import { SearchPeople } from './SearchPeople';
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
+vi.mock('@/hooks/useSearchCriteria/useSearchCriteria', () => ({
   useSearchCriteria: vi.fn(),
 }));
 

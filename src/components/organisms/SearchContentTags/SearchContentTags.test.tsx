@@ -1,16 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
+import type { SearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { SearchContentTags } from './SearchContentTags';
 
 const { mockUseSearchCriteria, mockUseContentSearchTags, mockAddTagToSearch } = vi.hoisted(() => ({
   mockUseSearchCriteria: vi.fn((): SearchCriteria => ({ mode: 'content', query: 'bitcoin design' })),
-  mockUseContentSearchTags: vi.fn((_query: string | null) => ({ tags: ['bitcoin', 'design'], isLoading: false })),
+  mockUseContentSearchTags: vi.fn((_query: string | null) => ({ tags: ['bitcoin', 'design'] })),
   mockAddTagToSearch: vi.fn(),
 }));
 
-vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
+vi.mock('@/hooks/useSearchCriteria/useSearchCriteria', () => ({
   useSearchCriteria: () => mockUseSearchCriteria(),
 }));
 
@@ -26,7 +26,7 @@ describe('SearchContentTags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseSearchCriteria.mockReturnValue({ mode: 'content', query: 'bitcoin design' });
-    mockUseContentSearchTags.mockReturnValue({ tags: ['bitcoin', 'design'], isLoading: false });
+    mockUseContentSearchTags.mockReturnValue({ tags: ['bitcoin', 'design'] });
   });
 
   it('renders the Tags heading and one chip per tag', () => {
@@ -57,7 +57,7 @@ describe('SearchContentTags', () => {
   });
 
   it('renders nothing when there are no matches', () => {
-    mockUseContentSearchTags.mockReturnValue({ tags: [], isLoading: false });
+    mockUseContentSearchTags.mockReturnValue({ tags: [] });
 
     const { container } = render(<SearchContentTags />);
 

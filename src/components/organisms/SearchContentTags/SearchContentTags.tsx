@@ -3,7 +3,7 @@
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { useContentSearchTags } from '@/hooks/useContentSearchTags/useContentSearchTags';
-import { useSearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 

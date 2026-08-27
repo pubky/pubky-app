@@ -22,6 +22,10 @@ export const SEARCH_PEOPLE_MAX_TAGS = 5;
  */
 const SEARCH_SUGGESTIONS_MAX_HEIGHT = 'calc(100dvh - 10rem)';
 
+/**
+ * Limits for the full-text `?q=` query, enforced by `validateContentSearchQuery`,
+ * which also interpolates them into its user-facing error messages.
+ */
 export const CONTENT_SEARCH_QUERY_MIN_LENGTH = 2;
 export const CONTENT_SEARCH_QUERY_MAX_LENGTH = 30;
 export const CONTENT_SEARCH_QUERY_MAX_TERMS = 4;

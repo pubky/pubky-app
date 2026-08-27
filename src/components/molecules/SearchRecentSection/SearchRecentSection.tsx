@@ -88,7 +88,7 @@ export function SearchRecentSection({
             overrideDefaults
             // `overrideDefaults` drops the base focus ring — restore it so the
             // only header control stays visible to keyboard users.
-            className="flex cursor-pointer items-center gap-1 rounded text-xs text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="flex cursor-pointer items-center rounded text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
             onClick={onClearAll}
             data-testid="clear-all-button"
             aria-label={'Clear all recent searches'}

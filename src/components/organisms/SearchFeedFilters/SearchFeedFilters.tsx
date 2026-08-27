@@ -1,7 +1,7 @@
 'use client';
 
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
-import { useSearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '../HomeFeedSidebar/HomeFeedSidebar';
 
 type SearchFeedFiltersProps = {

@@ -2,8 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
-import { useSearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { useSearchStore } from '@/stores/search/search.store';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
@@ -65,7 +65,7 @@ vi.mock('@/hooks/useTagSearch/useTagSearch', () => ({
   })),
 }));
 
-vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
+vi.mock('@/hooks/useSearchCriteria/useSearchCriteria', () => ({
   useSearchCriteria: vi.fn(() => ({ mode: 'none' })),
 }));
 

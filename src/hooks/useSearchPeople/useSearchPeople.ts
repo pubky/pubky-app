@@ -27,7 +27,7 @@ interface UseSearchPeopleResult {
   loadMore: () => Promise<void>;
 }
 
-/** Sentinel epoch: no hydration emission has arrived yet (list epochs start at 1). */
+/** Sentinel epoch meaning "no read-back has emitted yet" — never matches a real list epoch. */
 const NO_HYDRATION_EMISSION = -1;
 
 interface HydrationEmission {
@@ -40,6 +40,9 @@ interface HydrationEmission {
 function emptyHydrationEmission(epoch: number): HydrationEmission {
   return { epoch, details: new Map(), counts: new Map(), relationships: new Map() };
 }
+
+// Hoisted so the default passed to useLiveQuery is not re-allocated every render.
+const INITIAL_HYDRATION_EMISSION = emptyHydrationEmission(NO_HYDRATION_EMISSION);
 
 /** Response ids in order, with duplicates within the same page dropped. */
 function uniquePageIds(results: TUserTagSearchResult[]): Pubky[] {
@@ -55,24 +58,20 @@ function uniquePageIds(results: TUserTagSearchResult[]): Pubky[] {
 }
 
 /**
- * useSearchPeople
- *
  * Users whose profile is tagged with the searched tags, in backend score
  * order, for the `/search` People section. Ids come from
- * `search/users/by_tags` (skip-paginated), get hydrated in one round trip via
- * `stream/users/by_ids`, and are read back reactively from Dexie. Users that
- * fail to hydrate (e.g. deleted) and muted users are dropped from the result.
+ * `search/users/by_tags` (skip-paginated), are hydrated in one
+ * `stream/users/by_ids` round trip, and are read back reactively from Dexie.
+ * Muted users and users that fail to hydrate (e.g. deleted) are dropped.
  */
 export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOptions = {}): UseSearchPeopleResult {
   // Clamp to the endpoint's hard 1-5 label bound regardless of stream config.
   const tagsKey = tags.slice(0, SEARCH_PEOPLE_MAX_TAGS).join(',');
 
   const [userIds, setUserIds] = useState<Pubky[]>([]);
-  // Bumped only when a REPLACED id list is committed (initial page for new
-  // tags), never on reset or when a loadMore page is appended — the hydration
-  // gate below keys on it. Bumping at commit (not at fetch start) matters: the
-  // live query re-runs for the emptied id list while the fetch is in flight,
-  // and that emission must not carry the epoch the gate is waiting for.
+  // Bumped only when a replaced id list is committed — never on reset or on a
+  // loadMore append. The hydration gate below waits for the emission carrying
+  // this epoch, so emissions for the emptied in-flight list never satisfy it.
   const [listEpoch, setListEpoch] = useState(0);
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -80,8 +79,8 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   const [hasMore, setHasMore] = useState(true);
 
   const userIdsRef = useRef<Pubky[]>([]);
-  // Bumped on every tags change (and unmount) so any in-flight fetch —
-  // initial or loadMore — is discarded instead of committing stale state.
+  // Bumped on every tags change and on unmount; in-flight fetches compare
+  // against it and drop stale results instead of committing them.
   const generationRef = useRef(0);
   // Keep the latest callback without retriggering the fetch effect.
   const onErrorRef = useRef(onError);
@@ -125,8 +124,8 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
 
         userIdsRef.current = ids;
         setUserIds(ids);
-        // Commit the new epoch with the ids so the gate below re-arms in the
-        // same batch — every emission before this one carries an older epoch.
+        // Bumped with the ids in the same render, so every earlier emission
+        // carries an older epoch and the gate below re-arms.
         setListEpoch((epoch) => epoch + 1);
         // Cursor advances by the raw response length, not the deduped one.
         setSkip(results.length);
@@ -192,11 +191,10 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     }
   };
 
-  // Reactive read-back from Dexie so follow/unfollow and late hydration
-  // propagate without refetching. One query over all three tables gives every
-  // emission a consistent snapshot — cards can never render details with
-  // zeroed counts or a missing relationship from a lagging sibling query.
-  // Each emission carries the list epoch it ran for (see `hydrated` below).
+  // Reactive read-back from Dexie so follow/unfollow and late hydration update
+  // without refetching. One query over all three tables keeps every emission a
+  // consistent snapshot (details, counts and relationship always from the same
+  // moment), and each emission records the list epoch it ran for.
   const hydration = useLiveQuery(
     async (): Promise<HydrationEmission> => {
       try {
@@ -213,7 +211,7 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
       }
     },
     [userIds, listEpoch],
-    emptyHydrationEmission(NO_HYDRATION_EMISSION),
+    INITIAL_HYDRATION_EMISSION,
   );
   const userDetailsMap = hydration.details;
   const userCountsMap = hydration.counts;
@@ -240,19 +238,13 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     })
     .filter((user): user is UserListItemData => user !== null);
 
-  // `useLiveQuery` returns its default synchronously and only fills it a tick
-  // later (Dexie defers emissions), so without this gate the section would flash
-  // empty — or unmount entirely — between fetch settle and the read-back
-  // emission. The gate keys on the list EPOCH, not the id array identity:
-  // a loadMore append keeps the epoch, so the previous emission stays valid and
-  // the section never flips back to loading mid-append (new cards pop in when
-  // their emission lands). A replaced list bumps the epoch when it is COMMITTED,
-  // so at commit time the retained emission still carries the previous epoch
-  // (the live query last ran for the emptied in-flight list) and the gate holds
-  // until the first read-back for the committed ids. The gate asks whether that
-  // emission arrived, NOT whether anything hydrated: a page where no id hydrates
-  // (stale search index, or a swallowed `by_ids` failure) is settled and empty,
-  // and must not pin the section on skeletons forever.
+  // The live query emits a tick after it runs, so between fetch settle and the
+  // first read-back the section would flash empty without this gate. It compares
+  // epochs, not id arrays: a loadMore append keeps the epoch, so the previous
+  // emission stays valid and the section never flips back to loading mid-append.
+  // A replaced list bumps the epoch at commit, holding the gate until the
+  // read-back for the new ids lands. Arrival is enough — an emission that
+  // hydrated nothing means settled-and-empty, not stuck on skeletons.
   const hydrated = hydration.epoch === listEpoch;
 
   return { users, loading: loading || !hydrated, loadingMore, hasMore, loadMore };

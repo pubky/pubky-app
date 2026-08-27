@@ -23,16 +23,14 @@ describe('useContentSearchTags', () => {
     const { result } = renderHook(() => useContentSearchTags(null));
 
     expect(result.current.tags).toEqual([]);
-    expect(result.current.isLoading).toBe(false);
     expect(mockFetchTagsByPrefix).not.toHaveBeenCalled();
   });
 
   it('fetches one prefix lookup per query term with the per-term limit', async () => {
-    const { result } = renderHook(() => useContentSearchTags('bitcoin design'));
+    renderHook(() => useContentSearchTags('bitcoin design'));
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(mockFetchTagsByPrefix).toHaveBeenCalledTimes(2));
 
-    expect(mockFetchTagsByPrefix).toHaveBeenCalledTimes(2);
     expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({
       prefix: 'bitcoin',
       limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
@@ -41,14 +39,14 @@ describe('useContentSearchTags', () => {
   });
 
   it('lowercases terms and dedupes repeated terms before fetching', async () => {
-    const { result } = renderHook(() => useContentSearchTags('Bitcoin bitcoin'));
+    renderHook(() => useContentSearchTags('Bitcoin bitcoin'));
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    expect(mockFetchTagsByPrefix).toHaveBeenCalledExactlyOnceWith({
-      prefix: 'bitcoin',
-      limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
-    });
+    await waitFor(() =>
+      expect(mockFetchTagsByPrefix).toHaveBeenCalledExactlyOnceWith({
+        prefix: 'bitcoin',
+        limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
+      }),
+    );
   });
 
   it('orders exact term matches before prefix extensions and dedupes across terms', async () => {
@@ -60,9 +58,7 @@ describe('useContentSearchTags', () => {
 
     const { result } = renderHook(() => useContentSearchTags('bitcoin design'));
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    expect(result.current.tags).toEqual(['bitcoin', 'design', 'bitcoin-maxi', 'designer']);
+    await waitFor(() => expect(result.current.tags).toEqual(['bitcoin', 'design', 'bitcoin-maxi', 'designer']));
   });
 
   it('caps the merged row at the total limit', async () => {
@@ -70,9 +66,7 @@ describe('useContentSearchTags', () => {
 
     const { result } = renderHook(() => useContentSearchTags('aa bb cc dd'));
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    expect(result.current.tags).toHaveLength(SEARCH_CONTENT_TAGS_MAX_TOTAL);
+    await waitFor(() => expect(result.current.tags).toHaveLength(SEARCH_CONTENT_TAGS_MAX_TOTAL));
     expect(result.current.tags.slice(0, 3)).toEqual(['aa1', 'aa2', 'aa3']);
   });
 
@@ -84,21 +78,19 @@ describe('useContentSearchTags', () => {
 
     const { result } = renderHook(() => useContentSearchTags('bitcoin design'));
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    expect(result.current.tags).toEqual(['design']);
+    await waitFor(() => expect(result.current.tags).toEqual(['design']));
   });
 
   it('skips terms longer than the tag length cap (they can never prefix-match)', async () => {
     const overlongTerm = 'a'.repeat(TAG_MAX_LENGTH + 1);
-    const { result } = renderHook(() => useContentSearchTags(`${overlongTerm} bitcoin`));
+    renderHook(() => useContentSearchTags(`${overlongTerm} bitcoin`));
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    expect(mockFetchTagsByPrefix).toHaveBeenCalledExactlyOnceWith({
-      prefix: 'bitcoin',
-      limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
-    });
+    await waitFor(() =>
+      expect(mockFetchTagsByPrefix).toHaveBeenCalledExactlyOnceWith({
+        prefix: 'bitcoin',
+        limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
+      }),
+    );
   });
 
   it('replaces results when the query changes and clears them when it becomes null', async () => {
@@ -114,6 +106,5 @@ describe('useContentSearchTags', () => {
 
     rerender({ query: null });
     await waitFor(() => expect(result.current.tags).toEqual([]));
-    expect(result.current.isLoading).toBe(false);
   });
 });

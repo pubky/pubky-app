@@ -8,7 +8,6 @@ import { SearchController } from '@/controllers/search/search';
 interface UseContentSearchTagsResult {
   /** Deduped tag names — exact term matches first, then prefix extensions. */
   tags: string[];
-  isLoading: boolean;
 }
 
 /**
@@ -24,16 +23,13 @@ interface UseContentSearchTagsResult {
  */
 export function useContentSearchTags(query: string | null): UseContentSearchTagsResult {
   const [tags, setTags] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(query !== null);
 
   useEffect(() => {
     if (query === null) {
       setTags([]);
-      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
     // Set by the cleanup when the query changes or the hook unmounts, so a
     // response that lost the race can never overwrite newer results.
     let cancelled = false;
@@ -73,7 +69,6 @@ export function useContentSearchTags(query: string | null): UseContentSearchTags
       );
 
       setTags(merged);
-      setIsLoading(false);
     })();
 
     return () => {
@@ -81,5 +76,5 @@ export function useContentSearchTags(query: string | null): UseContentSearchTags
     };
   }, [query]);
 
-  return { tags, isLoading };
+  return { tags };
 }

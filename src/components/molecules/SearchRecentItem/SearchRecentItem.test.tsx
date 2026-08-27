@@ -111,44 +111,8 @@ describe('SearchRecentItem', () => {
     expect(onQueryClick).toHaveBeenCalledWith(mockQuery.query);
   });
 
-  it('returns null when type is USER but user is not provided', () => {
-    const onUserClick = vi.fn();
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.USER} onUserClick={onUserClick} />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('returns null when type is TAG but tag is not provided', () => {
-    const onTagClick = vi.fn();
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.TAG} onTagClick={onTagClick} />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('returns null when type is USER but onUserClick is not provided', () => {
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.USER} user={mockUser} />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('returns null when type is TAG but onTagClick is not provided', () => {
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.TAG} tag={mockTag} />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('returns null when type is QUERY but query is not provided', () => {
-    const onQueryClick = vi.fn();
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.QUERY} onQueryClick={onQueryClick} />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('returns null when type is QUERY but onQueryClick is not provided', () => {
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.QUERY} query={mockQuery} />);
-
-    expect(container.firstChild).toBeNull();
-  });
+  // Invalid type/data combos (e.g. USER without user data) are compile errors
+  // now that the props are a discriminated union, so no runtime tests for them.
 
   describe('SearchRecentItem - Snapshots', () => {
     it('matches snapshot for user type', () => {

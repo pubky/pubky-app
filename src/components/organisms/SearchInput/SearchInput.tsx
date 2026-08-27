@@ -8,8 +8,8 @@ import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
-import { useSearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { validateContentSearchQuery } from '@/libs/search/contentSearch';
 import type { Pubky } from '@/models/models.types';
@@ -38,12 +38,11 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     }
 
     addQuery(validation.query);
-    // Tag chips are NOT cleared here: the bar already hides them on content
-    // results (see the render below), and the URL-sync effect empties the store
-    // once the params actually change — clearing eagerly would blank the chips
-    // while the old tag results are still on screen (or if navigation fails).
-    // The destination shows this query in the input; set it directly rather than
-    // clear-and-reseed — a same-query resubmit changes no URL and never re-seeds.
+    // Tag chips are not cleared here: the bar hides them on content results and
+    // the URL-sync effect empties the store once the params change. Clearing now
+    // would blank them while the old tag results are still on screen.
+    // The input keeps the query directly — resubmitting the same query changes
+    // no URL, so the sync effect would never put the text back after a clear.
     setInputValue(validation.query);
     router.push(getContentSearchUrl(validation.query));
     setFocus(false);
@@ -62,17 +61,14 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     setFocus,
   } = useSearchInput({ onEnter: submitContentSearch });
 
-  // Keep the store and the input in sync with the URL criteria: active tag chips
-  // exist only for tag searches, and an active (or invalid shared) full-text query
-  // is shown in the input so it can be refined without retyping. Only values this
-  // effect seeded are ever cleared — a draft the user is typing must survive
-  // unrelated navigations (chip removal, route changes re-create searchParams).
-  // Deps are primitives on purpose: the criteria object's identity is only stable
-  // where the React Compiler runs, and correctness must not depend on that.
+  // Sync tag chips and input text with the URL: chips exist only for tag
+  // searches; an active (or invalid shared) query is shown in the input for
+  // editing. Only values this effect seeded are ever cleared — a draft the
+  // user is typing must survive unrelated navigations. Keyed on primitives
+  // because the criteria object gets a new identity on every unmemoized render.
   const urlQuery = criteria.mode === 'content' || criteria.mode === 'invalid' ? criteria.query : null;
-  // Tags can never contain ',' (the URL parser splits on it), so the join is
-  // lossless — and the parser already trims + lowercases, so the split-back
-  // needs no re-normalization.
+  // Tags can never contain ',' (the URL parser splits on it) and arrive already
+  // trimmed + lowercased, so joining and splitting back is lossless.
   const urlTagsKey = criteria.mode === 'tags' ? criteria.tags.join(',') : null;
   const lastSeededQueryRef = useRef<string | null>(null);
   useEffect(() => {
@@ -115,10 +111,9 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   };
 
   const handleCloseSearch = () => {
-    // X deletes the whole search from the bar (design decision): the typed
-    // draft, the active query, and any tag chips — the URL sync clears the
-    // store once the params are gone. A draft outside an active search just
-    // clears and closes.
+    // The X clears the whole search: typed draft, active query, and tag chips
+    // (the URL sync empties the store once the params are gone). With no
+    // active search it just clears the draft and closes.
     setInputValue('');
     if (criteria.mode !== 'none') {
       router.push(APP_ROUTES.SEARCH);
@@ -126,14 +121,13 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     setFocus(false);
   };
 
-  // Show dropdown immediately when focused
-  // The dropdown will display hot tags, recent searches, or empty state
+  // Focus alone opens the dropdown; SearchSuggestions decides what to show
+  // (hot tags, recents, autocomplete).
   const hasSuggestions = isFocused;
   const suggestionsId = 'search-suggestions';
 
   return (
     <Container ref={containerRef} data-testid="search-input" className="relative min-w-0">
-      {/* Input bar with active tags */}
       <SearchInputBar
         activeTags={criteria.mode === 'content' ? [] : activeTags}
         inputValue={inputValue}
@@ -149,7 +143,6 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
         autoFocus={autoFocus}
       />
 
-      {/* Suggestions dropdown */}
       {hasSuggestions && (
         <SearchSuggestions
           id={suggestionsId}

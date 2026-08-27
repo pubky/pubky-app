@@ -10,6 +10,9 @@ import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStre
 // Dynamic Post Reply Stream ID Pattern: postReplies:compositePostId
 // - compositePostId format: author:postId (e.g., "did:key:abc123:post456")
 // - Example: "postReplies:did:key:abc123:post456"
+//
+// Full-text Content Search Stream ID Pattern: content_search:q~<encodedQuery>:kind
+// - Example: "content_search:q~bitcoin%20wallets:all" (see buildContentSearchStreamId)
 
 // Note: In some cases that we reference PostStreamTypes enum, we need to cast to PostStreamId to avoid type errors.
 // TypeScript's generic inference narrows PostStreamTypes enum to the enum type instead of widening to PostStreamId union.

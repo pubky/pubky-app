@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SearchCriteria } from '@/hooks/useSearchStreamId/useSearchStreamId';
+import type { SearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { CONTENT } from '@/stores/home/home.types';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { Search } from './Search';
@@ -16,7 +16,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => mockUseIsMobile(),
 }));
 
-vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
+vi.mock('@/hooks/useSearchCriteria/useSearchCriteria', () => ({
   useSearchCriteria: () => mockUseSearchCriteria(),
 }));
 
