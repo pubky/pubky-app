@@ -167,25 +167,26 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
               </div>
               <OgAvatar src={avatarSrc} size={80} />
             </div>
-            {description ? (
-              <div
-                style={{
-                  display: 'flex',
-                  fontSize: 60,
-                  fontWeight: 500,
-                  color: OG_TOKENS.secondaryForeground,
-                  lineHeight: `${DESCRIPTION_LINE_HEIGHT}px`,
-                  wordBreak: 'break-word',
-                  // Two 72px lines below the title row — an unclamped 3rd line
-                  // would run into the bottom padding (satori's line-clamp is
-                  // unreliable, so the height is capped directly).
-                  maxHeight: 2 * DESCRIPTION_LINE_HEIGHT,
-                  overflow: 'hidden',
-                }}
-              >
-                {description}
-              </div>
-            ) : null}
+            {/* Fixed two-line slot (not maxHeight, not conditional): reserving
+                the full description box keeps the title row anchored in the
+                same position whether the description has zero, one, or two
+                lines. Overflow hidden truncates anything beyond two lines
+                (satori's line-clamp is unreliable, so the box is capped
+                directly). */}
+            <div
+              style={{
+                display: 'flex',
+                height: 2 * DESCRIPTION_LINE_HEIGHT,
+                fontSize: 60,
+                fontWeight: 500,
+                color: OG_TOKENS.secondaryForeground,
+                lineHeight: `${DESCRIPTION_LINE_HEIGHT}px`,
+                wordBreak: 'break-word',
+                overflow: 'hidden',
+              }}
+            >
+              {description}
+            </div>
           </div>
         </div>
       </OgFrame>,
