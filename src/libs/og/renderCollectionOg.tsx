@@ -4,15 +4,13 @@ import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { FileVariant } from '@/services/nexus/file/file.types';
-import { OgAvatar, OgFrame, OgHeader } from './OgComponents';
+import { OG_HEADER_HEIGHT, OgAvatar, OgFrame, OgHeader } from './OgComponents';
 import { OG_SIZE, OG_TOKENS, OG_TRUNCATE } from './ogConstants';
 import { buildAvatarUrl, fetchImageAsDataUri, resolvePostAttachmentUrl } from './ogData';
 import { LibraryIcon, StickyNoteIcon } from './OgIcons';
 import { ogImageResponse } from './ogImageResponse';
 import { renderFallbackOg } from './renderFallbackOg';
 
-/** `OgHeader`'s fixed height: 64px top padding + the 80px avatar row. */
-const HEADER_HEIGHT = 144;
 const FRAME_GAP = 48;
 /**
  * The cover section fills the frame below the header edge-to-edge (the Figma
@@ -20,7 +18,7 @@ const FRAME_GAP = 48;
  * pixel dimensions — it cannot stretch them to a flex-sized parent — so the
  * section height is computed up front and shared with the cover layers.
  */
-const COVER_HEIGHT = OG_SIZE.height - HEADER_HEIGHT - FRAME_GAP;
+const COVER_HEIGHT = OG_SIZE.height - OG_HEADER_HEIGHT - FRAME_GAP;
 const CONTENT_PADDING = 64;
 const CONTENT_GAP = 32;
 /** Count pill and owner avatar are both 80px tall and set the title row height. */
@@ -64,10 +62,12 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
     // The cover resolver is the SSRF-hardened attachment path: only `pubky://`
     // file URIs (our own CDN) are ever fetched server-side. A legacy absolute
     // http(s) cover renders in-app but the OG section falls back to the muted,
-    // cover-less background. FEED variant for size parity with the app's card.
+    // cover-less background. MAIN variant because the cover paints a full-bleed
+    // 1200px-wide box — the FEED thumbnail would be upscaled soft; the embedded
+    // payload stays bounded by fetchImageAsDataUri's 1200px transcode cap.
     const [avatarSrc, coverSrc] = await Promise.all([
       fetchImageAsDataUri(buildAvatarUrl(user)),
-      fetchImageAsDataUri(resolvePostAttachmentUrl(collection.cover_image, FileVariant.FEED)),
+      fetchImageAsDataUri(resolvePostAttachmentUrl(collection.cover_image, FileVariant.MAIN)),
     ]);
 
     const name = resolveDisplayName(user);
@@ -79,11 +79,15 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
         <OgHeader avatarUrl={avatarSrc} name={name} />
         {/* Cover section shell: muted backing, then cover img + gradient like
             the app card (object-cover, behind the content). Each absolute
-            layer carries its own explicit pixel box (see COVER_HEIGHT). */}
+            layer carries its own explicit pixel box (see COVER_HEIGHT);
+            flexShrink 0 + overflow hidden keep the shell and those layers in
+            lockstep even if the header geometry ever drifts. */}
         <div
           style={{
             display: 'flex',
             position: 'relative',
+            flexShrink: 0,
+            overflow: 'hidden',
             width: '100%',
             height: COVER_HEIGHT,
             backgroundColor: OG_TOKENS.avatarMuted,
