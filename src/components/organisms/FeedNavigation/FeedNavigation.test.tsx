@@ -313,6 +313,31 @@ describe('FeedNavigation', () => {
     expect(label).not.toHaveClass('hidden');
   });
 
+  it('splits All and Create evenly on mobile when there are no custom feeds', () => {
+    mockUsePathname.mockReturnValue('/home');
+    render(<FeedNavigation />);
+
+    // Both tabs share the equal flex basis, so the row divides 50/50: the
+    // active All tab must not get the content-hugging width here.
+    const homeLink = getLink('/home');
+    expect(homeLink).toHaveClass('min-w-0', 'basis-1/2', 'lg:flex-auto');
+    expect(homeLink).not.toHaveClass('flex-none');
+    expect(homeLink).not.toHaveClass('max-w-[60%]');
+
+    const createButton = screen.getByLabelText('Create feed');
+    expect(createButton).toHaveClass('min-w-0', 'basis-1/2', 'lg:flex-auto');
+    expect(createButton).not.toHaveClass('flex-none');
+  });
+
+  it('keeps the active reach tab hugging its content on mobile when custom feeds are present', () => {
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
+    mockUsePathname.mockReturnValue('/home');
+
+    render(<FeedNavigation />);
+
+    expect(getLink('/home')).toHaveClass('max-w-[60%]', 'flex-none', 'lg:flex-auto');
+  });
+
   // ── Custom feeds rendering ──────────────────────────────────────────────
 
   it('renders custom feeds from useLiveQuery', () => {
@@ -601,7 +626,7 @@ describe('FeedNavigation', () => {
     expect(wrapper).toHaveClass('mobile-menu-gradient-fade', 'sticky', 'top-(--header-height-settings)');
     expect(wrapper).toHaveClass('bg-background', 'lg:static', 'lg:bg-transparent', 'lg:after:hidden');
     expect(wrapper).not.toHaveClass('overflow-x-auto');
-    expect(row).toHaveClass('flex-row');
+    expect(row).toHaveClass('flex', 'flex-row');
     expect(row).toHaveClass('overflow-x-auto');
   });
 
