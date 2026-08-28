@@ -42,9 +42,7 @@ vi.mock('next/navigation', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/toast', () => ({
-  toast: vi.fn(),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: createZustandLikeHook({

@@ -16,9 +16,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/molecules/Toaster/toast', () => ({
-  toast: vi.fn(),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock AuthController.logout
 const mockLogout = vi.fn();
@@ -46,7 +44,6 @@ describe('useProfileActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
-    vi.mocked(toast).mockImplementation(() => ({ dismiss: vi.fn() }));
     useAuthStore.setState({ currentUserPubky: null });
   });
 

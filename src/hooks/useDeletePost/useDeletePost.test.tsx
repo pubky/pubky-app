@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
 import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useDeletePost } from './useDeletePost';
 
@@ -17,12 +18,7 @@ vi.mock('@/controllers/post/post', () => ({
 }));
 
 // Mock molecules (toast)
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/toast', () => {
-  return {
-    toast: (...args: unknown[]) => mockToast(...args),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock useLocalFilesStore
 const mockSetPostAttachments = vi.fn();
@@ -184,7 +180,7 @@ describe('useDeletePost', () => {
       await result.current.deletePost(mockPostId);
     });
 
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post deleted',
       dismissButton: true,
     });
@@ -279,7 +275,7 @@ describe('useDeletePost', () => {
       await result.current.deletePost(mockPostId);
     });
 
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Could not delete post. Try again.',
     });
@@ -338,7 +334,7 @@ describe('useDeletePost', () => {
 
     expect(mockRemovePosts).not.toHaveBeenCalled();
     expect(mockPrependPosts).not.toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post deleted',
       dismissButton: true,
     });
@@ -360,7 +356,7 @@ describe('useDeletePost', () => {
         await result.current.deletePost(mockPostId);
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Collection deleted',
         dismissButton: true,
       });
@@ -381,7 +377,7 @@ describe('useDeletePost', () => {
         await result.current.deletePost(mockPostId);
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Failed to delete collection. Please try again.',
       });
@@ -400,7 +396,7 @@ describe('useDeletePost', () => {
         await result.current.deletePost(mockPostId);
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Collection deleted',
         dismissButton: true,
       });

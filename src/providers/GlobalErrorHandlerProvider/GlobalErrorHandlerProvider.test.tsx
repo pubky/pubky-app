@@ -24,11 +24,7 @@ vi.mock('@/libs/error/error.utils', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules/Toaster/toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 describe('GlobalErrorHandlerProvider', () => {
   beforeEach(() => {
