@@ -17,7 +17,9 @@ import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
+import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
 import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
 import { MentionPopover } from '@/molecules/MentionPopover/MentionPopover';
@@ -53,6 +55,7 @@ export function PostInput({
   expanded = false,
   onContentChange,
   onArticleModeChange,
+  onSubmittingChange,
   editContent,
   editIsArticle,
   editAttachments,
@@ -100,6 +103,8 @@ export function PostInput({
     handleDragOver,
     handleDrop,
     handlePaste,
+    inlineImages,
+    uploadingCount,
     // Mention autocomplete
     mentionUsers,
     mentionIsOpen,
@@ -113,6 +118,8 @@ export function PostInput({
     originalPostId,
     editPostId,
     editAttachmentUris: editAttachments,
+    editContent,
+    editIsArticle,
     onSuccess,
     placeholder,
     successToastTitle,
@@ -162,6 +169,7 @@ export function PostInput({
       isSubmitting,
       isArticle,
       articleTitle,
+      uploadingCount > 0,
     );
   };
 
@@ -197,7 +205,31 @@ export function PostInput({
         const parsed = parseArticleContent(editContent);
         if (parsed) {
           setArticleTitle(parsed.title);
-          setContent(parsed.body);
+          // Resolve published attachment:{n} image references back to their
+          // homeserver file URIs so the composer edits real destinations.
+          // Unresolvable references are removed (never a hard failure — the
+          // article must stay editable so the user can repair it).
+          let articleAuthorPubky = '';
+          try {
+            articleAuthorPubky = editPostId ? parseCompositeId(editPostId).pubky : '';
+          } catch {
+            // Malformed composite id — no reference can resolve to an author-owned file
+          }
+          const deserialized = deserializeArticleBody({
+            body: parsed.body,
+            attachments: editAttachments ?? [],
+            authorPubky: articleAuthorPubky,
+          });
+          setContent(deserialized.body);
+          if (deserialized.warnings.length > 0) {
+            toast({
+              variant: 'warning',
+              description:
+                deserialized.warnings.length === 1
+                  ? 'An image with a broken attachment reference was removed from the article.'
+                  : `${deserialized.warnings.length} images with broken attachment references were removed from the article.`,
+            });
+          }
         } else {
           toast({
             variant: 'error',
@@ -210,6 +242,11 @@ export function PostInput({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
   }, [variant, editContent, editIsArticle]);
+
+  // Notify the host (dialogs) so closing can be blocked mid-commit
+  React.useEffect(() => {
+    onSubmittingChange?.(isSubmitting);
+  }, [isSubmitting, onSubmittingChange]);
 
   // Pre-fill content from share target or other external sources
   React.useEffect(() => {
@@ -254,10 +291,12 @@ export function PostInput({
       onDragOver={(event) => handleDragEventWithAuth(event, handleDragOver)}
       onDrop={(event) => handleDragEventWithAuth(event, handleDrop)}
     >
-      {/* Drag overlay */}
+      {/* Drag overlay — visual only: it must not intercept the drop, or the
+          article body editors underneath never receive their inline-image
+          drops (the container's bubbled handler would treat them as covers) */}
       {isDragging && (
         <Container
-          className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
+          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
           overrideDefaults
         >
           <Typography className="text-brand">{'Drop files here'}</Typography>
@@ -425,6 +464,7 @@ export function PostInput({
                   markdown={sanitizeCodeBlockLanguages(content)}
                   onChange={handleArticleBodyChangeWithAuth}
                   readOnly={isSubmitting || !isAuthenticated}
+                  inlineImages={{ ...inlineImages, uploadingCount }}
                 />
               )}
 

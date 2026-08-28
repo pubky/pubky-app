@@ -8,6 +8,7 @@ import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirma
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { cn } from '@/libs/utils/utils';
+import { parseCompositeId } from '@/models/models.utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { PostText } from '@/molecules/PostText/PostText';
 import { FileVariant } from '@/services/nexus/file/file.types';
@@ -45,7 +46,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
     desktopTagsPanelRef.current?.focus();
   };
 
-  const { title, body, coverImage } = usePostArticle({
+  const { title, body, coverImage, hasCover } = usePostArticle({
     content,
     attachments,
     coverImageVariant: FileVariant.MAIN,
@@ -55,11 +56,22 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
 
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
 
-  const localCoverImage = localAttachments?.[0]?.type.startsWith('image')
-    ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
-    : null;
+  // Local entries are index-aligned with attachments; slot 0 is the cover
+  // only when the slot-0 rule says so (otherwise it's an inline image).
+  const localCoverImage =
+    hasCover && localAttachments?.[0]?.type.startsWith('image')
+      ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
+      : null;
 
   const finalCoverImage = localCoverImage || coverImage;
+
+  const articleAuthorId = (() => {
+    try {
+      return parseCompositeId(postId).pubky;
+    } catch {
+      return '';
+    }
+  })();
 
   const articleHeader = (
     <>
@@ -100,7 +112,12 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         />
       )}
 
-      <PostText content={body} isArticle onLinkClick={handleLinkClick} />
+      <PostText
+        content={body}
+        isArticle
+        articleImages={{ attachments: attachments ?? [], authorId: articleAuthorId, postId }}
+        onLinkClick={handleLinkClick}
+      />
     </>
   );
 

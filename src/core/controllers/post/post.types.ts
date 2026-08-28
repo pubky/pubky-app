@@ -9,6 +9,14 @@ export interface TCreatePostParams {
   isArticle?: boolean;
   tags?: string[];
   attachments?: File[];
+  /**
+   * Already-uploaded homeserver file URIs owned by the author (article inline
+   * images, uploaded at insert time). Appended after the `attachments` upload
+   * results in the post's attachment list, so an article's final order is
+   * `[cover?, ...inline]`. Not uploaded or rolled back here — the composer
+   * session that uploaded them owns their cleanup.
+   */
+  attachmentUris?: string[];
   parentPostId?: string;
   originalPostId?: string;
 }
@@ -78,11 +86,27 @@ export interface TEditPostAttachments {
   /**
    * Subset of `original` to keep, in display order (no duplicates). Attachments
    * in `original` but not in `kept` were removed by the user and are deleted
-   * from the homeserver (best-effort) after a successful edit.
+   * from the homeserver (best-effort) after a successful edit. When `nextOrder`
+   * is set, removal is diffed against `nextOrder` instead and `kept` only
+   * feeds the subset validation.
    */
   kept: string[];
-  /** New files to upload; appended after `kept` in display order. */
+  /** New files to upload; appended after `kept` in display order. Must be empty when `nextOrder` is set. */
   added: File[];
+  /**
+   * Article inline-image path: homeserver file URIs owned by the author that
+   * were already uploaded this composer session (insert-time uploads, plus a
+   * replacement cover uploaded before commit). Requires `nextOrder`.
+   */
+  addedUris?: string[];
+  /**
+   * Article inline-image path: the full attachment list to persist, in final
+   * slot order (`[cover?, ...inline first-appearance]`). Every entry must come
+   * from `kept` or `addedUris`. Duplicates are allowed — the same URI may
+   * legitimately occupy the cover slot and an inline slot. When set, `added`
+   * must be empty and the envelope attachments are exactly this list.
+   */
+  nextOrder?: string[];
 }
 
 export interface TEditPostParams {

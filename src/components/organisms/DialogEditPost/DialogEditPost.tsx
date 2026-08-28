@@ -1,6 +1,6 @@
 'use client';
 
-import { Dispatch, SetStateAction } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -16,10 +16,18 @@ interface DialogEditPostProps {
 }
 
 export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditPostProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
     useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
+
+  // Closing mid-commit could strand a save that references session uploads;
+  // the commit takes a moment and the submit button shows it
+  const handleOpenChangeGuarded = (nextOpen: boolean) => {
+    if (!nextOpen && isSubmitting) return;
+    handleOpenChange(nextOpen);
+  };
 
   const { postDetails } = usePostDetails(postId);
 
@@ -29,8 +37,9 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
   const title = isArticle ? 'Edit Article' : 'Edit Post';
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent avoidKeyboard className="w-3xl" hiddenTitle={title}>
+    <Dialog open={open} onOpenChange={handleOpenChangeGuarded}>
+      {/* Articles get a wider dialog so the editor toolbar fits on one row on large displays */}
+      <DialogContent avoidKeyboard className={isArticle ? 'w-4xl' : 'w-3xl'} hiddenTitle={title}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
 
@@ -45,6 +54,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           expanded={true}
           autoFocusTextarea={!isArticle}
           onContentChange={handleContentChange}
+          onSubmittingChange={setIsSubmitting}
           editPostId={postDetails.id}
           editContent={postDetails.content}
           editIsArticle={isArticle}
