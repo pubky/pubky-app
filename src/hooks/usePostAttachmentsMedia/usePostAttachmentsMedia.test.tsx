@@ -224,10 +224,12 @@ describe('article (kind long) attachments', () => {
 
     const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
 
+    // Wait on the end state, not the intermediate call — asserting mediaItems
+    // right after the call races the promise resolution + React flush
     await waitFor(() => {
-      expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [coverUri] });
+      expect(result.current.mediaItems).toHaveLength(1);
     });
-    expect(result.current.mediaItems).toHaveLength(1);
+    expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [coverUri] });
   });
 
   it('resolves no media for coverless (slot-0) articles', async () => {
