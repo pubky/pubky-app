@@ -29,7 +29,7 @@ function Stat({ icon, value }: { icon: ReactNode; value: number }) {
 export async function renderProfileOg({ pubky }: { pubky: string }): Promise<Response> {
   try {
     const result = await fetchProfileForMetadata(pubky);
-    if (!result) return renderFallbackOg();
+    if (!result) return await renderFallbackOg();
 
     const { user, counts } = result;
     const avatarSrc = await fetchImageAsDataUri(buildAvatarUrl(user));
@@ -95,6 +95,6 @@ export async function renderProfileOg({ pubky }: { pubky: string }): Promise<Res
     );
   } catch (error) {
     Logger.warn('[renderProfileOg] Failed to render profile OG image', { pubky, error });
-    return renderFallbackOg();
+    return await renderFallbackOg();
   }
 }

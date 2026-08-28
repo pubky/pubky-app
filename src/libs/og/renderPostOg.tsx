@@ -28,10 +28,10 @@ import { renderFallbackOg } from './renderFallbackOg';
 export async function renderPostOg({ userId, postId }: { userId: string; postId: string }): Promise<Response> {
   try {
     const result = await fetchUserAndPostForMetadata(userId, postId);
-    if (!result) return renderFallbackOg();
+    if (!result) return await renderFallbackOg();
 
     const { user, post } = result;
-    if (post.kind === 'collection') return renderCollectionOg({ userId, postId });
+    if (post.kind === 'collection') return await renderCollectionOg({ userId, postId });
 
     const avatarSrc = await fetchImageAsDataUri(buildAvatarUrl(user));
     const name = resolveDisplayName(user);
@@ -192,6 +192,6 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     );
   } catch (error) {
     Logger.warn('[renderPostOg] Failed to render post OG image', { userId, postId, error });
-    return renderFallbackOg();
+    return await renderFallbackOg();
   }
 }

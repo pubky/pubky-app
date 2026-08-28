@@ -111,17 +111,17 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
     const tagsPromise = fetchPostTags(userId, postId, MAX_COLLECTION_TAGS);
 
     const result = await fetchUserAndPostForMetadata(userId, postId);
-    if (!result) return renderFallbackOg();
+    if (!result) return await renderFallbackOg();
 
     const { user, post } = result;
     // Kind gate: without it, any post whose content happens to parse as a
     // collection envelope would render a fabricated collection card here
     // (mirrors the page's generateMetadata and renderPostOg's positive check).
-    if (post.kind !== 'collection') return renderFallbackOg();
-    if (isPostDeleted(post.content)) return renderFallbackOg();
+    if (post.kind !== 'collection') return await renderFallbackOg();
+    if (isPostDeleted(post.content)) return await renderFallbackOg();
 
     const collection = parseCollectionContent(post.content);
-    if (!collection) return renderFallbackOg();
+    if (!collection) return await renderFallbackOg();
 
     // The cover resolver is the SSRF-hardened attachment path: only `pubky://`
     // file URIs (our own CDN) are ever fetched server-side. A legacy absolute
@@ -326,6 +326,6 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
     );
   } catch (error) {
     Logger.warn('[renderCollectionOg] Failed to render collection OG image', { userId, postId, error });
-    return renderFallbackOg();
+    return await renderFallbackOg();
   }
 }

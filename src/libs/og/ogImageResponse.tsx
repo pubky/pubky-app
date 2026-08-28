@@ -8,13 +8,15 @@ import { getOgFonts } from './ogFonts';
  * shared cache headers applied. Central factory so every OG route emits an
  * identically-configured image.
  *
- * The `ImageResponse` body is buffered before returning: satori renders lazily
- * while the stream is consumed, and it performs its own network fetches during
- * render (emoji SVGs from the twemoji CDN, glyph subsets for scripts the
- * bundled fonts don't cover). A failure there would otherwise surface as an
- * un-catchable mid-stream 500. Awaiting the full body here keeps every render
- * failure inside the callers' try/catch, which degrades to `renderFallbackOg`.
- * Streaming buys nothing for this route — crawlers want the complete PNG.
+ * The `ImageResponse` body is buffered before returning: next/og starts the
+ * satori render eagerly in its constructor, but any failure — including
+ * satori's own network fetches during render (emoji SVGs from the twemoji
+ * CDN, glyph subsets for scripts the bundled fonts don't cover) — lands in
+ * the response stream, which would otherwise error mid-response after the
+ * caller has already returned. Awaiting the full body here surfaces those
+ * failures as a rejection the callers' try/catch converts into the fallback
+ * image. Streaming buys nothing for this route — crawlers want the complete
+ * PNG.
  */
 export async function ogImageResponse(element: ReactElement): Promise<Response> {
   const res = new ImageResponse(element, {

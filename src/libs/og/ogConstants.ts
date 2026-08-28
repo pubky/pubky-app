@@ -23,6 +23,23 @@ export const OG_CACHE_HEADERS = {
   'cache-control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
 } as const;
 
+/**
+ * Cache-Control for degraded fallback responses. Deliberately short: the OG
+ * routes are not ISR-prerendered (no `generateStaticParams`), so this header is
+ * the operative cache policy — carrying `OG_CACHE_HEADERS` here would pin the
+ * generic card into CDN/crawler caches for hours after a transient failure
+ * (e.g. a post shared seconds before Nexus indexed it).
+ */
+export const OG_FALLBACK_CACHE_HEADERS = { 'cache-control': 'public, max-age=60' } as const;
+
+/**
+ * Timeout for server-side OG image fetches (avatars, attachments, a configured
+ * remote preview). Bounds the render worst-case — the fallback path especially
+ * runs exactly when upstream is already degraded, so it must not hang on a
+ * black-holed host.
+ */
+export const OG_IMAGE_FETCH_TIMEOUT_MS = 5000;
+
 /** Literal hex design tokens (ImageResponse cannot use CSS variables). */
 export const OG_TOKENS = {
   // `--background` oklch(0.118 0.014 284.115) → hex (page background; the
