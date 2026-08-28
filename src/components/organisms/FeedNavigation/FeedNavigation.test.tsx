@@ -314,18 +314,18 @@ describe('FeedNavigation', () => {
   });
 
   it('splits All and Create evenly on mobile when there are no custom feeds', () => {
+    mockUsePathname.mockReturnValue('/home');
     render(<FeedNavigation />);
 
-    const [, row] = screen.getAllByTestId('container');
-    expect(row).toHaveClass('grid', 'grid-cols-2', 'lg:flex', 'lg:flex-row');
-
+    // Both tabs share the equal flex basis, so the row divides 50/50: the
+    // active All tab must not get the content-hugging width here.
     const homeLink = getLink('/home');
-    expect(homeLink).toHaveClass('min-w-0', 'w-full');
+    expect(homeLink).toHaveClass('min-w-0', 'basis-1/2', 'lg:flex-auto');
     expect(homeLink).not.toHaveClass('flex-none');
     expect(homeLink).not.toHaveClass('max-w-[60%]');
 
     const createButton = screen.getByLabelText('Create feed');
-    expect(createButton).toHaveClass('min-w-0', 'w-full', 'h-full');
+    expect(createButton).toHaveClass('min-w-0', 'basis-1/2', 'lg:flex-auto');
     expect(createButton).not.toHaveClass('flex-none');
   });
 
@@ -626,7 +626,7 @@ describe('FeedNavigation', () => {
     expect(wrapper).toHaveClass('mobile-menu-gradient-fade', 'sticky', 'top-(--header-height-settings)');
     expect(wrapper).toHaveClass('bg-background', 'lg:static', 'lg:bg-transparent', 'lg:after:hidden');
     expect(wrapper).not.toHaveClass('overflow-x-auto');
-    expect(row).toHaveClass('grid', 'grid-cols-2', 'lg:flex-row');
+    expect(row).toHaveClass('flex', 'flex-row');
     expect(row).toHaveClass('overflow-x-auto');
   });
 
@@ -638,10 +638,6 @@ describe('FeedNavigation', () => {
     expect(homeLink).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-auto');
     // The reach tab keeps the shared active padding.
     expect(homeLink).toHaveClass('px-8');
-
-    const [, row] = screen.getAllByTestId('container');
-    expect(row).toHaveClass('flex', 'flex-row');
-    expect(row).not.toHaveClass('grid-cols-2');
 
     const customLink = getLink('/feed/feed-1');
     expect(customLink).toHaveClass('h-full', 'w-full');

@@ -27,17 +27,15 @@ import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
 // At lg+ every tab is icon + label. Content-aware flex bases let a longer
 // title use space that a shorter sibling does not need before truncating.
 const FEED_TAB_CLASS = 'relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40';
-// Below lg the active custom-feed tab hugs its label, but a feed name has no
-// length limit (specs does not cap it), so cap the tab or one long name pushes
-// every other tab off-screen; the label's `truncate` then does its job.
+// Below lg the active tab hugs its label, but a feed name has no length limit
+// (specs does not cap it), so cap the tab or one long name pushes every other
+// tab off-screen; the label's `truncate` then does its job.
 const FEED_TAB_ACTIVE_WIDTH_CLASS = 'max-w-[60%] flex-none lg:max-w-none lg:flex-auto';
 const FEED_TAB_INACTIVE_WIDTH_CLASS = 'min-w-12 flex-1 lg:flex-auto';
-// All's label+padding is wider than the + icon, so flex-grow from content size
-// lands around 60/40. Equal grid columns (flex again at lg) keep a true split
-// when the strip is just All + Create.
-const FEED_TAB_EQUAL_CELL_CLASS = 'min-w-0 w-full lg:min-w-40 lg:w-auto lg:flex-auto';
-const FEED_NAV_TWO_TAB_ROW_CLASS = 'grid w-full grid-cols-2 overflow-x-auto lg:flex lg:flex-row';
-const FEED_NAV_MULTI_TAB_ROW_CLASS = 'flex w-full flex-row overflow-x-auto';
+// With no custom feeds the strip is just All + Create. An equal flex basis
+// splits it 50/50; `flex-1`'s zero basis would not, because border-box padding
+// (px-8 active vs px-2) floors each item before the free space is shared.
+const FEED_TAB_EQUAL_CELL_CLASS = 'min-w-0 basis-1/2 lg:flex-auto';
 // Symmetric horizontal padding keeps every label centered; the active padding
 // also reserves the zone the edit pencil overlays on custom feed tabs.
 const FEED_TAB_ACTIVE_PADDING_CLASS = 'px-8';
@@ -108,12 +106,18 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const { label: reachLabel, icon: ReachIcon } = REACH_FILTER_META[selectedReach] ?? REACH_FILTER_META[REACH.ALL];
   const isHomeActive = pathname === APP_ROUTES.HOME;
   const hasCustomFeeds = customFeeds.length > 0;
-  const reachTabWidthClass = hasCustomFeeds
-    ? isHomeActive
-      ? FEED_TAB_ACTIVE_WIDTH_CLASS
-      : FEED_TAB_INACTIVE_WIDTH_CLASS
-    : FEED_TAB_EQUAL_CELL_CLASS;
-  const createFeedWidthClass = hasCustomFeeds ? FEED_TAB_INACTIVE_WIDTH_CLASS : FEED_TAB_EQUAL_CELL_CLASS;
+  // The active content-hug exists so custom-feed tabs can use the freed space.
+  // With no custom feeds it would skew the two-tab strip toward All, so there
+  // both tabs keep the even split.
+  const tabWidthClass = hasCustomFeeds ? FEED_TAB_INACTIVE_WIDTH_CLASS : FEED_TAB_EQUAL_CELL_CLASS;
+  // One class list for the Create button in both auth branches, so the two
+  // renders cannot drift apart.
+  const createFeedButtonClass = cn(
+    FEED_TAB_CLASS,
+    tabWidthClass,
+    FEED_TAB_INACTIVE_PADDING_CLASS,
+    'cursor-pointer border-border text-muted-foreground hover:text-white',
+  );
 
   return (
     <Container
@@ -127,10 +131,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
         className,
       )}
     >
-      <Container
-        overrideDefaults
-        className={hasCustomFeeds ? FEED_NAV_MULTI_TAB_ROW_CLASS : FEED_NAV_TWO_TAB_ROW_CLASS}
-      >
+      <Container overrideDefaults className="flex w-full flex-row overflow-x-auto">
         <Link
           overrideDefaults
           href={APP_ROUTES.HOME}
@@ -144,7 +145,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           }
           className={cn(
             FEED_TAB_CLASS,
-            reachTabWidthClass,
+            hasCustomFeeds && isHomeActive ? FEED_TAB_ACTIVE_WIDTH_CLASS : tabWidthClass,
             isHomeActive ? FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
             isHomeActive ? 'border-white text-white' : 'border-border text-muted-foreground hover:text-white',
           )}
@@ -210,16 +211,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
 
         {isAuthenticated ? (
           <CustomFeedDialog mode="create">
-            <Button
-              overrideDefaults
-              aria-label="Create feed"
-              className={cn(
-                FEED_TAB_CLASS,
-                createFeedWidthClass,
-                FEED_TAB_INACTIVE_PADDING_CLASS,
-                'h-full cursor-pointer border-border text-muted-foreground hover:text-white',
-              )}
-            >
+            <Button overrideDefaults aria-label="Create feed" className={createFeedButtonClass}>
               <PlusCircle className="size-5 shrink-0" />
               <Typography overrideDefaults className={cn(FEED_TAB_LABEL_CLASS, 'hidden lg:inline')}>
                 {'Feed'}
@@ -230,12 +222,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           <Button
             overrideDefaults
             aria-label="Create feed"
-            className={cn(
-              FEED_TAB_CLASS,
-              createFeedWidthClass,
-              FEED_TAB_INACTIVE_PADDING_CLASS,
-              'h-full cursor-pointer border-border text-muted-foreground hover:text-white',
-            )}
+            className={createFeedButtonClass}
             onClick={() => requireAuth(() => undefined)}
           >
             <PlusCircle className="size-5 shrink-0" />
