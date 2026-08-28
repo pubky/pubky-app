@@ -617,6 +617,26 @@ describe('PostText', () => {
 
       expect(container.querySelector('li br')).not.toBeNull();
     });
+
+    it('neutralizes prose blockquote quotes and italics', () => {
+      render(<PostText content="> A quote" isArticle fullArticle />);
+
+      const blockquote = screen.getByText('A quote').closest('blockquote');
+      expect(blockquote).toHaveClass('not-italic', '[quotes:none]', 'text-secondary-foreground');
+    });
+
+    it('gives h5 and h6 headings block margins, which prose does not style', () => {
+      render(<PostText content={'##### Level five\n\n###### Level six'} isArticle fullArticle />);
+
+      expect(screen.getByRole('heading', { level: 5 })).toHaveClass('mt-[1.5em]', 'mb-[0.5em]');
+      expect(screen.getByRole('heading', { level: 6 })).toHaveClass('mt-[1.5em]', 'mb-[0.5em]');
+    });
+
+    it('leaves h5 and h6 margins off outside full article mode', () => {
+      render(<PostText content={'##### Level five'} isArticle />);
+
+      expect(screen.getByRole('heading', { level: 5 })).not.toHaveClass('mt-[1.5em]');
+    });
   });
 
   describe('Article mode (isArticle prop)', () => {

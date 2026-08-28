@@ -137,8 +137,18 @@ export const PostText = memo(function PostText({
           blockquote(props) {
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
+            // not-italic, [quotes:none] and the explicit color neutralize the prose
+            // blockquote decorations in full articles (injected curly quotes, italics,
+            // --tw-prose-quotes color) that the author never wrote and the editor never
+            // shows; they are no-ops in compact posts, which have no prose styling.
             return (
-              <blockquote {...rest} className={cn(className, 'border-l-4 border-foreground pl-4 whitespace-normal')}>
+              <blockquote
+                {...rest}
+                className={cn(
+                  className,
+                  'border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]',
+                )}
+              >
                 {children}
               </blockquote>
             );
@@ -223,7 +233,17 @@ export const PostText = memo(function PostText({
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h5 {...rest} className={cn(className, 'text-[16.5px] leading-6 font-light text-muted-foreground')}>
+              <h5
+                {...rest}
+                className={cn(
+                  className,
+                  'text-[16.5px] leading-6 font-light text-muted-foreground',
+                  // @tailwindcss/typography styles h1-h4 only, so give h5/h6 the same
+                  // margin scale as prose h4 in full articles; without it they would
+                  // sit flush between paragraphs now that pre-line no longer applies.
+                  fullArticle && 'mt-[1.5em] mb-[0.5em]',
+                )}
+              >
                 {children}
               </h5>
             );
@@ -232,7 +252,14 @@ export const PostText = memo(function PostText({
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h6 {...rest} className={cn(className, 'text-[16.25px] leading-6 font-light text-muted-foreground')}>
+              <h6
+                {...rest}
+                className={cn(
+                  className,
+                  'text-[16.25px] leading-6 font-light text-muted-foreground',
+                  fullArticle && 'mt-[1.5em] mb-[0.5em]',
+                )}
+              >
                 {children}
               </h6>
             );

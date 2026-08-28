@@ -185,7 +185,7 @@ exports[`PostText - Snapshots > matches snapshot for blockquote 1`] = `
   data-testid="container"
 >
   <blockquote
-    class="border-l-4 border-foreground pl-4 whitespace-normal"
+    class="border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]"
   >
     
 
@@ -307,7 +307,7 @@ exports[`PostText - Snapshots > matches snapshot for combined markdown elements 
   
 
   <blockquote
-    class="border-l-4 border-foreground pl-4 whitespace-normal"
+    class="border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]"
   >
     
 
@@ -823,7 +823,7 @@ exports[`PostText - Snapshots > matches snapshot for nested blockquote 1`] = `
   data-testid="container"
 >
   <blockquote
-    class="border-l-4 border-foreground pl-4 whitespace-normal"
+    class="border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]"
   >
     
 
@@ -833,7 +833,7 @@ exports[`PostText - Snapshots > matches snapshot for nested blockquote 1`] = `
     
 
     <blockquote
-      class="border-l-4 border-foreground pl-4 whitespace-normal"
+      class="border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]"
     >
       
 
