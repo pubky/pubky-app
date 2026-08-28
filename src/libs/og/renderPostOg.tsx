@@ -44,7 +44,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     const article = !isDeleted && post.kind === 'long' ? parseArticleContent(post.content) : null;
     if (article) {
       const body = truncateByGraphemes(markdownToText(article.body), OG_TRUNCATE.articleBody);
-      return ogImageResponse(
+      return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
           <div
@@ -113,7 +113,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
 
     if (imageSrc) {
       const text = truncateByGraphemes(preview, OG_TRUNCATE.postImageText);
-      return ogImageResponse(
+      return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
           <div
@@ -153,7 +153,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     }
 
     const text = truncateByGraphemes(preview, OG_TRUNCATE.postText);
-    return ogImageResponse(
+    return await ogImageResponse(
       <OgFrame style={{ gap: 48 }}>
         <OgHeader avatarUrl={avatarSrc} name={name} />
         <div

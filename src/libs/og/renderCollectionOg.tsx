@@ -161,7 +161,7 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
     const cardHeight =
       2 * CARD_PADDING + rowHeights.reduce((sum, h) => sum + h, 0) + CARD_ROW_GAP * (rowHeights.length - 1);
 
-    return ogImageResponse(
+    return await ogImageResponse(
       <OgFrame style={{ gap: 48 }}>
         <OgHeader avatarUrl={avatarSrc} name={name} />
         <div

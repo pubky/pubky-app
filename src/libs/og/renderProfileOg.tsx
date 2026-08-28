@@ -36,7 +36,7 @@ export async function renderProfileOg({ pubky }: { pubky: string }): Promise<Res
     const name = resolveDisplayName(user);
     const bio = truncateByGraphemes(user.bio ?? '', OG_TRUNCATE.bio);
 
-    return ogImageResponse(
+    return await ogImageResponse(
       <OgFrame
         style={{
           flexDirection: 'row',
