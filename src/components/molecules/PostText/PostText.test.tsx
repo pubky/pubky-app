@@ -579,7 +579,7 @@ describe('PostText', () => {
       render(<PostText content="Article body" isArticle fullArticle />);
 
       const container = screen.getByTestId('container');
-      expect(container).toHaveClass('prose', 'prose-invert', 'max-w-none');
+      expect(container).toHaveClass('prose', 'prose-invert', 'max-w-none', '[&_a]:no-underline');
       expect(container).not.toHaveClass('whitespace-pre-line');
     });
 

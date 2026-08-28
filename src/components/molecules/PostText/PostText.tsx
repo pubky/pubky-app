@@ -112,10 +112,11 @@ export const PostText = memo(function PostText({
         // published article matches what the editor shows (issue #1762): real block
         // margins and outside list markers instead of the pre-line whitespace hack.
         // The editor neutralizes prose's inline-code backticks; the pre overrides
-        // keep PostCodeBlock's own framing. Compact posts keep pre-line, where the
+        // keep PostCodeBlock's own framing; no-underline keeps links, hashtags and
+        // mentions on their brand styling. Compact posts keep pre-line, where the
         // stray newlines react-markdown emits between blocks provide the spacing.
         fullArticle
-          ? 'prose max-w-none prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0'
+          ? 'prose max-w-none prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0 [&_a]:no-underline'
           : 'whitespace-pre-line',
         className,
       )}
