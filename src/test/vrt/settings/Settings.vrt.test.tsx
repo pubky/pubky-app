@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook, mockSettingsStore } from '@/test-utils/stores';
 import { SETTINGS_ROUTES } from '@/app/routes';
@@ -317,13 +317,13 @@ describe('Settings — account — visual regression', () => {
   it('renders account at desktop viewport', async () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.ACCOUNT, <Account />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('Sign out from Pubky')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-account-desktop');
+    await matchVrtFrameScreenshot('settings-account-desktop');
   });
 
   it('renders account at mobile viewport', async () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.ACCOUNT, <Account />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Sign out from Pubky')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-account-mobile');
+    await matchVrtFrameScreenshot('settings-account-mobile');
   });
 });
 
@@ -340,13 +340,13 @@ describe('Settings — edit profile — visual regression', () => {
   }
 
   it('renders edit profile at desktop viewport', async () => {
-    const screen = await renderEditProfile(VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-edit-profile-desktop');
+    await renderEditProfile(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('settings-edit-profile-desktop');
   });
 
   it('renders edit profile at mobile viewport', async () => {
-    const screen = await renderEditProfile(VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-edit-profile-mobile');
+    await renderEditProfile(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('settings-edit-profile-mobile');
   });
 });
 
@@ -354,13 +354,13 @@ describe('Settings — notifications — visual regression', () => {
   it('renders notifications at desktop viewport', async () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.NOTIFICATIONS, <Notifications />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('Platform notifications')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-notifications-desktop');
+    await matchVrtFrameScreenshot('settings-notifications-desktop');
   });
 
   it('renders notifications at mobile viewport', async () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.NOTIFICATIONS, <Notifications />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Platform notifications')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-notifications-mobile');
+    await matchVrtFrameScreenshot('settings-notifications-mobile');
   });
 });
 
@@ -368,13 +368,13 @@ describe('Settings — privacy & safety — visual regression', () => {
   it('renders privacy and safety at desktop viewport', async () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.PRIVACY_SAFETY, <Privacy />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText(/Privacy is not a crime/)).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-privacy-safety-desktop');
+    await matchVrtFrameScreenshot('settings-privacy-safety-desktop');
   });
 
   it('renders privacy and safety at mobile viewport', async () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.PRIVACY_SAFETY, <Privacy />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText(/Privacy is not a crime/)).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-privacy-safety-mobile');
+    await matchVrtFrameScreenshot('settings-privacy-safety-mobile');
   });
 });
 
@@ -383,14 +383,14 @@ describe('Settings — muted users — visual regression', () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.MUTED_USERS, <MutedUsers />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
     await expect.element(screen.getByText('Unmute all users')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-muted-users-desktop');
+    await matchVrtFrameScreenshot('settings-muted-users-desktop');
   });
 
   it('renders muted users at mobile viewport', async () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.MUTED_USERS, <MutedUsers />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
     await expect.element(screen.getByText('Unmute all users')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-muted-users-mobile');
+    await matchVrtFrameScreenshot('settings-muted-users-mobile');
   });
 });
 
@@ -398,12 +398,12 @@ describe('Settings — help — visual regression', () => {
   it('renders help at desktop viewport', async () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.HELP, <Help />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('1. Getting Started & Onboarding')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-help-desktop');
+    await matchVrtFrameScreenshot('settings-help-desktop');
   });
 
   it('renders help at mobile viewport', async () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.HELP, <Help />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('1. Getting Started & Onboarding')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('settings-help-mobile');
+    await matchVrtFrameScreenshot('settings-help-mobile');
   });
 });

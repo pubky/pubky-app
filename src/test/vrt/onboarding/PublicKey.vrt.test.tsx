@@ -2,8 +2,8 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { describe, it, vi } from 'vitest';
+import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
@@ -85,12 +85,12 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 
 describe('PublicKey (onboarding) — visual regression', () => {
   it('renders the public-key page at desktop viewport', async () => {
-    const screen = await renderForVRT(<PublicKeyWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-pubky-desktop');
+    await renderForVRT(<PublicKeyWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await matchVrtFrameScreenshot('onboarding-pubky-desktop');
   });
 
   it('renders the public-key page at mobile viewport', async () => {
-    const screen = await renderForVRT(<PublicKeyWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-pubky-mobile');
+    await renderForVRT(<PublicKeyWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await matchVrtFrameScreenshot('onboarding-pubky-mobile');
   });
 });

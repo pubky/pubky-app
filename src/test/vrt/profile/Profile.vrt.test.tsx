@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -852,13 +852,13 @@ describe('Own profile — notifications — visual regression', () => {
     const screen = await renderOwnProfileTab('/profile', <ProfileNotificationsPage />, VRT_VIEWPORT_DESKTOP);
     // "Hana Voss" appears twice (Follow + PostEdited actor) — scope to the first match.
     await expect.element(screen.getByText('Hana Voss').first()).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-notifications-desktop');
+    await matchVrtFrameScreenshot('own-profile-notifications-desktop');
   });
 
   it('renders notifications at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile', <ProfileNotificationsPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Hana Voss').first()).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-notifications-mobile');
+    await matchVrtFrameScreenshot('own-profile-notifications-mobile');
   });
 });
 
@@ -868,7 +868,7 @@ describe('Own profile — posts — visual regression', () => {
     await expect.element(screen.getByRole('feed').first()).toBeVisible();
     await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
     await expect.element(screen.getByText('9 more replies')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-posts-desktop');
+    await matchVrtFrameScreenshot('own-profile-posts-desktop');
   });
 
   it('renders posts at mobile viewport', async () => {
@@ -876,7 +876,7 @@ describe('Own profile — posts — visual regression', () => {
     await expect.element(screen.getByRole('feed').first()).toBeVisible();
     await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
     await expect.element(screen.getByText('9 more replies')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-posts-mobile');
+    await matchVrtFrameScreenshot('own-profile-posts-mobile');
   });
 
   it('truncates a long profile name before the status emoji at desktop viewport', async () => {
@@ -911,13 +911,13 @@ describe('Own profile — replies — visual regression', () => {
   it('renders replies at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/replies', <ProfileRepliesPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByRole('feed')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-replies-desktop');
+    await matchVrtFrameScreenshot('own-profile-replies-desktop');
   });
 
   it('renders replies at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/replies', <ProfileRepliesPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByRole('feed')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-replies-mobile');
+    await matchVrtFrameScreenshot('own-profile-replies-mobile');
   });
 });
 
@@ -925,13 +925,13 @@ describe('Own profile — followers — visual regression', () => {
   it('renders followers at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/followers', <ProfileFollowersPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-followers-desktop');
+    await matchVrtFrameScreenshot('own-profile-followers-desktop');
   });
 
   it('renders followers at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/followers', <ProfileFollowersPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-followers-mobile');
+    await matchVrtFrameScreenshot('own-profile-followers-mobile');
   });
 });
 
@@ -939,13 +939,13 @@ describe('Own profile — following — visual regression', () => {
   it('renders following at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/following', <ProfileFollowingPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-following-desktop');
+    await matchVrtFrameScreenshot('own-profile-following-desktop');
   });
 
   it('renders following at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/following', <ProfileFollowingPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-following-mobile');
+    await matchVrtFrameScreenshot('own-profile-following-mobile');
   });
 });
 
@@ -953,13 +953,13 @@ describe('Own profile — friends — visual regression', () => {
   it('renders friends at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/friends', <ProfileFriendsPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-friends-desktop');
+    await matchVrtFrameScreenshot('own-profile-friends-desktop');
   });
 
   it('renders friends at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/friends', <ProfileFriendsPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-friends-mobile');
+    await matchVrtFrameScreenshot('own-profile-friends-mobile');
   });
 });
 
@@ -967,13 +967,13 @@ describe('Own profile — tagged — visual regression', () => {
   it('renders tagged at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/tagged', <ProfileTaggedPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('localfirst')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-tagged-desktop');
+    await matchVrtFrameScreenshot('own-profile-tagged-desktop');
   });
 
   it('renders tagged at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/tagged', <ProfileTaggedPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('localfirst')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-tagged-mobile');
+    await matchVrtFrameScreenshot('own-profile-tagged-mobile');
   });
 });
 
@@ -986,7 +986,7 @@ describe('Own profile — collections — visual regression', () => {
     await preloadImages(Object.values(f.profileCollectionCoverUrls));
     const screen = await renderOwnProfileTab('/profile/collections', <ProfileCollectionsPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByRole('feed')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-collections-desktop');
+    await matchVrtFrameScreenshot('own-profile-collections-desktop');
   });
 
   it('renders collections at mobile viewport', async () => {
@@ -994,7 +994,7 @@ describe('Own profile — collections — visual regression', () => {
     await preloadImages(Object.values(f.profileCollectionCoverUrls));
     const screen = await renderOwnProfileTab('/profile/collections', <ProfileCollectionsPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByRole('feed')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-collections-mobile');
+    await matchVrtFrameScreenshot('own-profile-collections-mobile');
   });
 });
 
@@ -1017,12 +1017,12 @@ describe('Other profile — posts — visual regression', () => {
   }
 
   it("renders another user's posts at desktop viewport", async () => {
-    const screen = await renderOtherProfilePosts(VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('other-profile-posts-desktop');
+    await renderOtherProfilePosts(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('other-profile-posts-desktop');
   });
 
   it("renders another user's posts at mobile viewport", async () => {
-    const screen = await renderOtherProfilePosts(VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('other-profile-posts-mobile');
+    await renderOtherProfilePosts(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('other-profile-posts-mobile');
   });
 });

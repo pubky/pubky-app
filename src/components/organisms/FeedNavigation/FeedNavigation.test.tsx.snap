@@ -705,7 +705,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
     <a
       aria-current="page"
       aria-label="All"
-      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 max-w-[60%] flex-none lg:max-w-none lg:flex-auto px-8 border-white text-white"
+      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-0 basis-1/2 lg:flex-auto px-8 border-white text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/home"
@@ -754,7 +754,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
     >
       <button
         aria-label="Create feed"
-        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto px-2 lg:px-8 cursor-pointer border-border text-muted-foreground hover:text-white"
+        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-0 basis-1/2 lg:flex-auto px-2 lg:px-8 cursor-pointer border-border text-muted-foreground hover:text-white"
         data-override-defaults="true"
         data-testid="button"
       >

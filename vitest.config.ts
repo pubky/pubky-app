@@ -68,6 +68,12 @@ export default defineConfig({
           name: 'vrt',
           globals: true,
           testTimeout: 30_000,
+          // Vitest's Playwright webkit provider can throw
+          // `route.fulfill: Target page, context or browser has been closed` when
+          // multiple test files run in parallel within a browser context. Running
+          // test files sequentially per browser avoids the race while still letting
+          // chromium, firefox, and webkit run concurrently.
+          fileParallelism: false,
           include: ['**/*.vrt.test.{ts,tsx}'],
           exclude: ['**/node_modules/**', '**/.claude/**'],
           setupFiles: ['./src/test-utils/vrt.setup.ts'],
