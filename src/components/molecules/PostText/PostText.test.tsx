@@ -508,6 +508,19 @@ describe('PostText', () => {
       const items = screen.getAllByRole('listitem');
       expect(items).toHaveLength(3);
     });
+
+    it('keeps inside markers on the same line as loose list items', () => {
+      // Blank lines between items make a "loose" list whose item text is wrapped
+      // in a block-level <p>; rendered inline it shares the marker's line.
+      render(<PostText content={'1. First\n\n2. Second'} />);
+
+      const list = screen.getByRole('list');
+      expect(list).toHaveClass('[&>li>p:first-child]:inline');
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+      expect(items[0].querySelector('p')).not.toBeNull();
+    });
   });
 
   describe('Blockquotes', () => {
@@ -554,6 +567,55 @@ describe('PostText', () => {
       expect(container).toHaveTextContent('| Item | Category | Price |');
       expect(container).toHaveTextContent('| :--- | :---: | ---: |');
       expect(container).toHaveTextContent('| Apple | Fruit | $1.00 |');
+    });
+  });
+
+  describe('Full article mode (fullArticle prop)', () => {
+    beforeEach(() => {
+      mockUsePathname.mockReturnValue('/post/user123/post456');
+    });
+
+    it('renders with the article prose typography instead of pre-line whitespace', () => {
+      render(<PostText content="Article body" isArticle fullArticle />);
+
+      const container = screen.getByTestId('container');
+      expect(container).toHaveClass('prose', 'prose-invert', 'max-w-none');
+      expect(container).not.toHaveClass('whitespace-pre-line');
+    });
+
+    it('keeps pre-line whitespace when fullArticle is off', () => {
+      render(<PostText content="Article preview copy" isArticle />);
+
+      expect(screen.getByTestId('container')).toHaveClass('whitespace-pre-line');
+      expect(screen.getByTestId('container')).not.toHaveClass('prose');
+    });
+
+    it('leaves list styling to prose instead of inside markers', () => {
+      render(<PostText content={'1. First\n2. Second'} isArticle fullArticle />);
+
+      const list = screen.getByRole('list');
+      expect(list.tagName).toBe('OL');
+      expect(list).not.toHaveClass('list-inside');
+    });
+
+    it('renders loose ordered list items with their block paragraphs', () => {
+      render(<PostText content={'1. First\n\n2. Second'} isArticle fullArticle />);
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+      expect(items[0].querySelector('p')).not.toBeNull();
+    });
+
+    it('renders single newlines as line breaks', () => {
+      const { container } = render(<PostText content={'First line\nSecond line'} isArticle fullArticle />);
+
+      expect(container.querySelector('p br')).not.toBeNull();
+    });
+
+    it('renders a newline inside a list item as a line break', () => {
+      const { container } = render(<PostText content={'- First line\nsecond line'} isArticle fullArticle />);
+
+      expect(container.querySelector('li br')).not.toBeNull();
     });
   });
 

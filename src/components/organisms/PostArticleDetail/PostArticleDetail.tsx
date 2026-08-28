@@ -100,7 +100,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
         />
       )}
 
-      <PostText content={body} isArticle onLinkClick={handleLinkClick} />
+      <PostText content={body} isArticle fullArticle onLinkClick={handleLinkClick} />
     </>
   );
 

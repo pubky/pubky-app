@@ -21,9 +21,18 @@ import {
   remarkMentions,
   remarkPlaintextCodeblock,
   remarkPlaintextTables,
+  remarkSoftBreaks,
   truncatePostPreviewText,
 } from './PostText.utils';
 import { PostTextLink } from './PostTextLink';
+
+// Compact posts put list markers inside the content box. A "loose" markdown list
+// (blank lines between items) wraps each item's text in a block-level <p>, which
+// would push the inline marker onto a line of its own — render the item's first
+// paragraph inline so the marker and its text share a line. Full articles rely on
+// prose styling instead (outside markers with padding), which handles loose items.
+const compactListClassName = (listStyle: 'list-decimal' | 'list-disc') =>
+  cn('list-inside whitespace-normal [&>li>p:first-child]:inline', listStyle);
 
 /**
  * Renders formatted text content with markdown, hashtags, mentions, and links.
@@ -48,6 +57,7 @@ import { PostTextLink } from './PostTextLink';
 export const PostText = memo(function PostText({
   content,
   isArticle,
+  fullArticle,
   compactUrls = true,
   onLinkClick,
   className,
@@ -67,6 +77,7 @@ export const PostText = memo(function PostText({
     remarkHashtags,
     remarkMentions,
     ...(showMoreButton ? [remarkInlineShowMore] : []),
+    ...(fullArticle ? [remarkSoftBreaks] : []),
   ];
 
   // Memoize allowed elements array to avoid recreation on every render
@@ -96,7 +107,16 @@ export const PostText = memo(function PostText({
       data-cy="post-text"
       overrideDefaults
       className={cn(
-        'text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground',
+        'text-base leading-6 font-medium wrap-anywhere text-secondary-foreground',
+        // Full articles use the same `prose` typography as the article editor so the
+        // published article matches what the editor shows (issue #1762): real block
+        // margins and outside list markers instead of the pre-line whitespace hack.
+        // The editor neutralizes prose's inline-code backticks; the pre overrides
+        // keep PostCodeBlock's own framing. Compact posts keep pre-line, where the
+        // stray newlines react-markdown emits between blocks provide the spacing.
+        fullArticle
+          ? 'prose max-w-none prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0'
+          : 'whitespace-pre-line',
         className,
       )}
     >
@@ -126,7 +146,7 @@ export const PostText = memo(function PostText({
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <ol {...rest} className={cn(className, 'list-inside list-decimal whitespace-normal')}>
+              <ol {...rest} className={cn(className, !fullArticle && compactListClassName('list-decimal'))}>
                 {children}
               </ol>
             );
@@ -135,7 +155,7 @@ export const PostText = memo(function PostText({
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <ul {...rest} className={cn(className, 'list-inside list-disc whitespace-normal')}>
+              <ul {...rest} className={cn(className, !fullArticle && compactListClassName('list-disc'))}>
                 {children}
               </ul>
             );
