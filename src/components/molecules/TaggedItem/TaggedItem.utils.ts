@@ -18,6 +18,11 @@ export function transformTagWithAvatars(tag: NexusTag): TagWithAvatars {
   };
 }
 
+export function transfromTaggersWithAvatars(taggersIds: Pubky[]): { id: Pubky; avatarUrl: string }[] {
+  const taggers = taggersIds.map((taggerId) => ({ id: taggerId, avatarUrl: FileController.getAvatarUrl(taggerId) }));
+  return taggers;
+}
+
 /**
  * Transform an array of NexusTags to TagWithAvatars, adding viewer relationship.
  * Filters out invalid tags (missing label) and resolves avatar URLs.

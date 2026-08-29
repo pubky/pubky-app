@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PostController } from '@/controllers/post/post';
+import { UserController } from '@/controllers/user/user';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
+import { transfromTaggersWithAvatars } from '@/molecules/TaggedItem/TaggedItem.utils';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { TAGGERS_PAGE_SIZE } from './usePostTaggers.constants';
 import type { TaggersStateMap, UsePostTaggersResult } from './usePostTaggers.types';
@@ -40,6 +43,38 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
    * @param initialIds - Initial tagger IDs already known from the tag response
    * @param totalCount - Expected total count of taggers (used for pagination control)
    */
+
+  const fetchTaggedList = async (label: string, userId: string, taggers: TaggerWithAvatar[]) => {
+    if (!label || !userId) return;
+    try {
+      const response = (await UserController.fetchTaggers({ label, user_id: userId })) as NexusTaggers;
+      const users = response.users;
+      if (users) {
+        const ids = new Set<Pubky>(users);
+        for (const tagger of taggers) {
+          if (ids.has(tagger.id)) {
+            ids.delete(tagger.id);
+          }
+        }
+        const allTaggerIds = Array.from(ids);
+        const taggersWithAvatars = transfromTaggersWithAvatars(allTaggerIds);
+        const taggersNames = await UserController.getManyDetails({ userIds: allTaggerIds });
+        const taggersDetails = taggersWithAvatars.map((tagger) => {
+          if (taggersNames.has(tagger.id)) {
+            const taggerName = taggersNames.get(tagger.id)?.name;
+            return { ...tagger, name: taggerName };
+          } else {
+            // sometimes userdetails aren't fetched so using a placeholder
+            return { ...tagger, name: 'Anon.' };
+          }
+        });
+        return { allTaggers: taggersDetails };
+      }
+    } catch (error) {
+      Logger.error('[usePostTaggers] Failed to fetch tagged list', { userId, label, error });
+    }
+  };
+
   const fetchAllTaggers = useCallback(
     async (label: string, initialIds: Pubky[], totalCount?: number) => {
       if (!postId) return;
@@ -140,5 +175,6 @@ export function usePostTaggers(postId?: string | null): UsePostTaggersResult {
     taggersByLabel,
     taggerStates,
     fetchAllTaggers,
+    fetchTaggedList,
   };
 }
