@@ -13,7 +13,7 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0"
     data-testid="container"
   >
     <div
@@ -81,7 +81,7 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
     right
   </button>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0"
     data-testid="container"
   >
     <div
@@ -141,7 +141,7 @@ exports[`ContentLayout - Mobile Snapshots > matches snapshot on mobile viewport 
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0"
     data-testid="container"
   >
     <div
@@ -192,7 +192,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with both sidebars hidden 
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0"
     data-testid="container"
   >
     <div
@@ -230,7 +230,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with complex children 1`] 
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0"
     data-testid="container"
   >
     <div
@@ -276,7 +276,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with custom className 1`] 
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0 custom-layout"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0 custom-layout"
     data-testid="container"
   >
     <div
@@ -314,7 +314,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0"
     data-testid="container"
   >
     <div
@@ -355,7 +355,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
 exports[`ContentLayout - Snapshots > matches snapshot with renderMobileHeader false 1`] = `
 <div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0"
     data-testid="container"
   >
     <div
@@ -393,7 +393,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with showLeftSidebar false
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0"
     data-testid="container"
   >
     <div
@@ -431,7 +431,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with showRightSidebar fals
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container max-w-(--container-max-width) m-auto w-full px-4 pb-12 lg:px-6 xl:px-0 pt-0"
     data-testid="container"
   >
     <div

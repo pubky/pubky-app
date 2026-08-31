@@ -192,6 +192,18 @@ describe('ContentLayout', () => {
     expect(screen.getByText('Test Content')).toBeInTheDocument();
   });
 
+  it('uses a 16px mobile gutter while preserving desktop shell spacing', () => {
+    const { container } = render(
+      <ContentLayout>
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    const outerContainer = container.querySelector('.container');
+    expect(outerContainer).toHaveClass('px-4', 'lg:px-6', 'xl:px-0');
+    expect(outerContainer).not.toHaveClass('px-6');
+  });
+
   it('shows left sidebar when showLeftSidebar is true and layout is not wide', () => {
     render(
       <ContentLayout

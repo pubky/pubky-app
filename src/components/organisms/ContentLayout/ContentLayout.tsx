@@ -129,7 +129,12 @@ export function ContentLayout({
       {/* Main content grid with responsive max-widths */}
       <Container
         overrideDefaults
-        className={cn('container max-w-(--container-max-width)', 'm-auto w-full px-6 pb-12 xl:px-0', 'pt-0', className)}
+        className={cn(
+          'container max-w-(--container-max-width)',
+          'm-auto w-full px-4 pb-12 lg:px-6 xl:px-0',
+          'pt-0',
+          className,
+        )}
       >
         <Container overrideDefaults className="flex gap-6">
           {/* Left sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
