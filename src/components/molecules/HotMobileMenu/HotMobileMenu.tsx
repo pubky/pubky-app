@@ -18,7 +18,7 @@ export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
  * Delegates rendering to the shared `MobileTabBar` molecule.
  *
  * Negative margin override (passed via className):
- * - `-mx-6` cancels the parent ContentLayout container's `px-6` padding
+ * - `-mx-4` cancels the parent ContentLayout container's mobile `px-4` padding
  *   so the menu stretches full-width edge-to-edge.
  */
 export function HotMobileMenu({ activeSection, onSectionChange }: HotMobileMenuProps) {
@@ -36,7 +36,7 @@ export function HotMobileMenu({ activeSection, onSectionChange }: HotMobileMenuP
       showLabels
       position="sticky"
       headerTop="compact"
-      className="-mx-6"
+      className="-mx-4"
       data-testid="hot-mobile-menu"
     />
   );

@@ -281,6 +281,22 @@ describe('TimelineFeedContent', () => {
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
     });
 
+    it('uses a 16px gap between the composer and timeline across breakpoints', () => {
+      render(
+        <TimelineFeedWithStream
+          streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+          variant={TIMELINE_FEED_VARIANT.HOME}
+          tagsLayout="inline"
+        >
+          <div data-testid="child">Post input</div>
+        </TimelineFeedWithStream>,
+      );
+
+      const feedContainer = screen.getByTestId('child').parentElement;
+      expect(feedContainer).toHaveClass('gap-4');
+      expect(feedContainer).not.toHaveClass('gap-6', 'lg:gap-6');
+    });
+
     it('renders ordinary children before the persistent header and post list', () => {
       render(
         <TimelineFeedWithStream

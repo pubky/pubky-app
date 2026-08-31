@@ -129,7 +129,7 @@ export function TimelineFeedWithStream({
  * The outermost Atoms.Container is the default pull-to-refresh touch scope.
  * Some pages can pass an external scope (for example, the collection page wraps
  * hero + items so pulling from the hero refreshes the collection feed too). Its
- * classes match ContentLayout's main content area (min-w-0 flex-1 gap-6
+ * classes match ContentLayout's main content area (min-w-0 flex-1 gap-4
  * lg:overflow-hidden) to preserve the same flex-col spacing that children
  * previously inherited as direct descendants of that container.
  */
@@ -276,7 +276,7 @@ function TimelineFeedContent({
   return (
     <TimelineFeedContext.Provider value={contextValue}>
       <PostMainLayoutProvider tagsLayout={tagsLayout}>
-        <Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
+        <Container ref={containerRef} className="min-w-0 flex-1 gap-4 lg:overflow-hidden">
           {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
           {shouldRenderChildren ? children : null}
           {persistentHeader}

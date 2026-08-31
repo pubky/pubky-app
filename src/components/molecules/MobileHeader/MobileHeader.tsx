@@ -51,7 +51,7 @@ export function MobileHeader({
     >
       <Container
         overrideDefaults
-        className={cn('relative flex min-h-12 w-full items-center justify-between p-6', containerClassName)}
+        className={cn('relative flex min-h-12 w-full items-center justify-between px-4 py-6', containerClassName)}
       >
         <SideSlot>
           {showLeftIcon ? (

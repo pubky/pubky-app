@@ -204,6 +204,19 @@ describe('ContentLayout', () => {
     expect(outerContainer).not.toHaveClass('px-6');
   });
 
+  it('uses a 16px feed gap across breakpoints', () => {
+    const { container } = render(
+      <ContentLayout>
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    const contentContainer = screen.getByText('Test Content').parentElement;
+    expect(contentContainer).toHaveClass('gap-4');
+    expect(contentContainer).not.toHaveClass('gap-6', 'lg:gap-6');
+    expect(container).toContainElement(contentContainer);
+  });
+
   it('shows left sidebar when showLeftSidebar is true and layout is not wide', () => {
     render(
       <ContentLayout

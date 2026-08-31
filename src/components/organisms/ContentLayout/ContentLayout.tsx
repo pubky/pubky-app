@@ -143,7 +143,7 @@ export function ContentLayout({
           )}
 
           {/* Main content area - grows to fill space, min-w-0 prevents flex overflow */}
-          <Container className={cn('w-full min-w-0 flex-1 gap-6 lg:overflow-hidden', classNameWrapperContent)}>
+          <Container className={cn('w-full min-w-0 flex-1 gap-4 lg:overflow-hidden', classNameWrapperContent)}>
             {children}
           </Container>
 
