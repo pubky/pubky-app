@@ -54,7 +54,7 @@ export function Search() {
 
       {hasTags ? (
         showSections ? (
-          <Container overrideDefaults className="flex w-full flex-col gap-6">
+          <Container overrideDefaults className="flex w-full flex-col gap-4">
             <SearchPeople />
             <SearchCollections />
             <Container overrideDefaults className="flex w-full flex-col gap-4">
