@@ -32,7 +32,7 @@ export function FilterPostsBar({ value, onValueChange }: FilterPostsBarProps) {
         aria-label={'Filter posts'}
         className="h-auto min-w-20 flex-1 border-none bg-transparent pr-0 pl-0 text-base font-medium text-foreground md:text-base"
       />
-      <span className="pointer-events-none flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
+      <span className="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
         <Search className="size-4 text-muted-foreground" />
       </span>
     </Container>

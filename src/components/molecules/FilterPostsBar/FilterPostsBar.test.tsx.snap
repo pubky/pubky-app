@@ -19,7 +19,7 @@ exports[`FilterPostsBar - Snapshots > matches snapshot 1`] = `
   />
   <span
     aria-hidden="true"
-    class="pointer-events-none flex size-8 shrink-0 items-center justify-center"
+    class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
   >
     <svg
       aria-hidden="true"
