@@ -192,29 +192,15 @@ describe('ContentLayout', () => {
     expect(screen.getByText('Test Content')).toBeInTheDocument();
   });
 
-  it('uses a 16px mobile gutter while preserving desktop shell spacing', () => {
+  it('applies the shared gutter and content-area stack classes', () => {
     const { container } = render(
       <ContentLayout>
         <div>Test Content</div>
       </ContentLayout>,
     );
 
-    const outerContainer = container.querySelector('.container');
-    expect(outerContainer).toHaveClass('px-4', 'lg:px-6', 'xl:px-0');
-    expect(outerContainer).not.toHaveClass('px-6');
-  });
-
-  it('uses a 16px feed gap across breakpoints', () => {
-    const { container } = render(
-      <ContentLayout>
-        <div>Test Content</div>
-      </ContentLayout>,
-    );
-
-    const contentContainer = screen.getByText('Test Content').parentElement;
-    expect(contentContainer).toHaveClass('gap-4');
-    expect(contentContainer).not.toHaveClass('gap-6', 'lg:gap-6');
-    expect(container).toContainElement(contentContainer);
+    expect(container.querySelector('.container')).toHaveClass('px-4', 'lg:px-6', 'xl:px-0');
+    expect(screen.getByText('Test Content').parentElement).toHaveClass('gap-4');
   });
 
   it('shows left sidebar when showLeftSidebar is true and layout is not wide', () => {

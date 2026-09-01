@@ -149,7 +149,7 @@ body {
 
   /**
    * Mobile header height (full chrome) — KNOWN STALE VALUE, do not trust without audit.
-   * - Actual full-chrome MobileHeader (p-6, side buttons) is 96px; this is still 80px.
+   * - Actual full-chrome MobileHeader (py-6, side buttons) is 96px; this is still 80px.
    * - MobileTabBar `headerTop="mobile"` default is unused: Hot, Profile, and Settings all
    *   pass `headerTop="compact"` (see --header-height-settings).
    * - ProfilePageLayout also reads this for min-height calc, but that page's header is 72px.
