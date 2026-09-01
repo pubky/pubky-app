@@ -7,11 +7,15 @@ export function OnboardingLayout({
   children,
   navigation,
   pinNavigationToBottom = true,
+  className,
 }: OnboardingLayoutProps) {
   return (
     <Container
       size="container"
-      className="h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
+      className={cn(
+        'h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6',
+        className,
+      )}
     >
       <div
         data-testid={testId}
