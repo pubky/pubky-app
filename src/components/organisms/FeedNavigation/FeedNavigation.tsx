@@ -27,7 +27,7 @@ import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
 // the selected tab shows icon + label, the rest collapse to icon-only cells.
 // At lg+ every tab is icon + label. Content-aware flex bases let a longer
 // title use space that a shorter sibling does not need before truncating.
-const FEED_TAB_CLASS = 'relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40';
+const FEED_TAB_CLASS = 'relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5';
 // Below lg the active tab hugs its label, but a feed name has no length limit
 // (specs does not cap it), so cap the tab or one long name pushes every other
 // tab off-screen; the label's `truncate` then does its job.
@@ -35,16 +35,10 @@ const FEED_TAB_ACTIVE_WIDTH_CLASS = 'max-w-[60%] flex-none lg:max-w-none lg:flex
 const FEED_TAB_INACTIVE_WIDTH_CLASS = 'min-w-12 flex-1 lg:flex-auto';
 // With no custom feeds the strip is just All + Create. An equal flex basis
 // splits it 50/50; `flex-1`'s zero basis would not, because border-box padding
-// (px-8 active vs px-2) floors each item before the free space is shared.
+// floors each item before the free space is shared.
 const FEED_TAB_EQUAL_CELL_CLASS = 'min-w-0 basis-1/2 lg:flex-auto';
-// Symmetric horizontal padding keeps every label centered; the active padding
-// also reserves the zone the edit pencil overlays on custom feed tabs.
-const FEED_TAB_ACTIVE_PADDING_CLASS = 'px-8';
-// The visible mobile pencil overlays the active custom feed tab. Slightly
-// wider symmetric padding preserves centering while separating it from the
-// feed name; desktop returns to the shared tab padding.
-const CUSTOM_FEED_TAB_ACTIVE_PADDING_CLASS = 'px-10 lg:px-8';
-const FEED_TAB_INACTIVE_PADDING_CLASS = 'px-2 lg:px-8';
+// Figma Text Wrapper: spacing/2-5 (10px) on every tab, active and inactive.
+const FEED_TAB_PADDING_CLASS = 'px-2.5';
 const FEED_TAB_LABEL_CLASS = 'truncate text-sm font-medium leading-5';
 // Hover-capable devices at lg+ park the pencil invisible AND non-interactive
 // until the tab is hovered or holds focus; hover-less devices (iPads, touch
@@ -116,7 +110,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const createFeedButtonClass = cn(
     FEED_TAB_CLASS,
     tabWidthClass,
-    FEED_TAB_INACTIVE_PADDING_CLASS,
+    FEED_TAB_PADDING_CLASS,
     'cursor-pointer border-border text-muted-foreground hover:text-white',
   );
 
@@ -151,7 +145,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           className={cn(
             FEED_TAB_CLASS,
             hasCustomFeeds && isHomeActive ? FEED_TAB_ACTIVE_WIDTH_CLASS : tabWidthClass,
-            isHomeActive ? FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
+            FEED_TAB_PADDING_CLASS,
             isHomeActive ? 'border-white text-white' : 'border-border text-muted-foreground hover:text-white',
           )}
         >
@@ -192,7 +186,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 }
                 className={cn(
                   'flex h-full w-full min-w-0 items-center justify-center gap-2',
-                  isActive ? CUSTOM_FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
+                  FEED_TAB_PADDING_CLASS,
                   isActive ? 'text-white' : 'text-muted-foreground group-hover:text-white',
                 )}
               >
