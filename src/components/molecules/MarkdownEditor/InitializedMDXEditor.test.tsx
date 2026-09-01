@@ -11,6 +11,7 @@ const MOCK_MAX_LENGTH = 1000;
 vi.mock('@/config/posts', () => ({
   ARTICLE_MAX_CHARACTER_LENGTH: 1000,
   ARTICLE_ATTACHMENT_ACCEPT_STRING: 'image/gif,image/jpeg,image/png,image/svg+xml,image/webp',
+  ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES: ['image/gif', 'image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'],
 }));
 
 // Mock the CDN resolver used by the image preview handler (avoids the controller chain)
@@ -1283,6 +1284,63 @@ describe('Upload-in-flight guards', () => {
 
     fireEvent.drop(screen.getByTestId('markdown-textarea'), {
       dataTransfer: { files: [new File(['x'], 'doc.pdf', { type: 'application/pdf' })] },
+    });
+
+    expect(upload).not.toHaveBeenCalled();
+    expect(screen.getByTestId('markdown-textarea')).toHaveValue('');
+  });
+});
+
+describe('Over-cap recovery in markdown mode', () => {
+  const setupOverCap = () => {
+    const overCapText = 'x'.repeat(1010); // MOCK_MAX_LENGTH is 1000
+    const editorRef = createRef<MDXEditorMethods>();
+    Object.defineProperty(editorRef, 'current', {
+      value: { getMarkdown: vi.fn(() => overCapText), setMarkdown: vi.fn(), focus: vi.fn(), insertMarkdown: vi.fn() },
+      writable: true,
+    });
+    render(<InitializedMDXEditor editorRef={editorRef} markdown="" />);
+    // Import the over-cap text by switching to markdown mode
+    fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+    return overCapText;
+  };
+
+  it('shows the reached warning for bodies over the cap, not only exactly at it', () => {
+    setupOverCap();
+
+    expect(screen.getByTestId('max-length-warning')).toHaveTextContent("You've reached the maximum character limit.");
+  });
+
+  it('accepts shrinking edits while over the cap so the user can recover', () => {
+    const overCapText = setupOverCap();
+    const textarea = screen.getByTestId('markdown-textarea');
+
+    // Deleting characters must work even though the result is still over cap
+    const shrunk = overCapText.slice(0, 1005);
+    fireEvent.change(textarea, { target: { value: shrunk } });
+    expect(textarea).toHaveValue(shrunk);
+
+    // Growing while over cap stays refused
+    fireEvent.change(textarea, { target: { value: shrunk + 'yy' } });
+    expect(textarea).toHaveValue(shrunk);
+  });
+});
+
+describe('Unsupported image types in markdown mode', () => {
+  it('ignores image types outside the supported whitelist (no placeholder, no upload)', () => {
+    const upload = vi.fn();
+    render(
+      <InitializedMDXEditor editorRef={null} markdown="" inlineImages={{ upload, getPreviewUrl: vi.fn(() => null) }} />,
+    );
+
+    // HEIC matches image/* but not the supported set
+    fireEvent.drop(screen.getByTestId('markdown-textarea'), {
+      dataTransfer: { files: [new File(['x'], 'photo.heic', { type: 'image/heic' })] },
+    });
+    fireEvent.paste(screen.getByTestId('markdown-textarea'), {
+      clipboardData: {
+        items: [{ kind: 'file', getAsFile: () => new File(['x'], 'photo.heic', { type: 'image/heic' }) }],
+      },
     });
 
     expect(upload).not.toHaveBeenCalled();

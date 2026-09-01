@@ -21,19 +21,11 @@ interface DialogNewPostProps {
 
 export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: DialogNewPostProps) {
   const [isArticle, setIsArticle] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const title = isArticle ? 'New Article' : 'New Post';
   const { showConfirmDialog, setShowConfirmDialog, resetKey, handleContentChange, handleOpenChange, handleDiscard } =
     useConfirmableDialog({
       onClose: () => onOpenChangeAction(false),
     });
-
-  // Closing mid-commit could strand a publish that references session
-  // uploads; the commit takes a moment and the submit button shows it
-  const handleOpenChangeGuarded = (nextOpen: boolean) => {
-    if (!nextOpen && isSubmitting) return;
-    handleOpenChange(nextOpen);
-  };
 
   const handlePostSuccess = (createdPostId: string) => {
     void onPostCreated?.(createdPostId);
@@ -41,7 +33,7 @@ export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: Dialo
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChangeGuarded}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {/* Articles get a wider dialog so the editor toolbar fits on one row on large displays */}
       <DialogContent avoidKeyboard className={isArticle ? 'w-4xl' : 'w-3xl'} hiddenTitle={title}>
         <DialogHeader>
@@ -57,7 +49,6 @@ export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: Dialo
             expanded={true}
             onContentChange={handleContentChange}
             onArticleModeChange={setIsArticle}
-            onSubmittingChange={setIsSubmitting}
             layoutOverride="inline"
           />
         </Container>

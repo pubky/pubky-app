@@ -48,6 +48,17 @@ export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMedia
     const mediaSlotCount = articleHasCover ? 1 : 0;
 
     const resolveMedia = async () => {
+      // Wait for the details row before resolving anything: right after a
+      // publish the store is already seeded while details are still loading,
+      // and treating not-yet-loaded as not-an-article would leak inline
+      // images into post-level media for that interim render
+      if (!postDetails) {
+        if (!cancelled) {
+          setMediaItems([]);
+        }
+        return;
+      }
+
       if (localAttachments) {
         const localMedia = isArticle ? localAttachments.slice(0, mediaSlotCount) : localAttachments;
         if (!cancelled) {
@@ -83,7 +94,7 @@ export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMedia
     return () => {
       cancelled = true;
     };
-  }, [localAttachments, postDetails?.attachments, postDetails?.kind, postDetails?.content]);
+  }, [localAttachments, postDetails]);
 
   return { mediaItems };
 }

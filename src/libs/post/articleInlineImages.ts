@@ -173,20 +173,25 @@ function imageMarkdown(alt: string | null | undefined, url: string, title: strin
 
 /**
  * Replaces an image node's destination inside `body`. When the destination
- * appears exactly once in the node's source span, only that substring is
- * replaced (preserving the author's alt/title formatting verbatim); otherwise
- * the whole span is rebuilt from the node.
+ * appears exactly once in the node's source span AND sits inside the
+ * destination region (after the label's `](`), only that substring is
+ * replaced, preserving the author's alt/title formatting verbatim. Otherwise
+ * — including when an entity-escaped destination differs from its decoded
+ * form while the decoded URL appears in the alt text — the whole span is
+ * rebuilt from the node so a raw URI can never survive in the alt.
  */
 function replaceImageDestination(body: string, node: Image, span: NodeSpan, newUrl: string): string {
   const source = body.slice(span.start, span.end);
 
-  let replacement: string;
+  let replacement: string | null = null;
   if (countOccurrences(source, node.url) === 1) {
     const index = source.indexOf(node.url);
-    replacement = source.slice(0, index) + newUrl + source.slice(index + node.url.length);
-  } else {
-    replacement = imageMarkdown(node.alt, newUrl, node.title);
+    const destinationStart = source.indexOf('](');
+    if (destinationStart !== -1 && index > destinationStart) {
+      replacement = source.slice(0, index) + newUrl + source.slice(index + node.url.length);
+    }
   }
+  replacement ??= imageMarkdown(node.alt, newUrl, node.title);
 
   return body.slice(0, span.start) + replacement + body.slice(span.end);
 }
@@ -361,8 +366,9 @@ export function countInlineImageUris(body: string, authorPubky: string): number 
 export function collectAttachmentRefIndexes(body: string): Set<number> {
   // Cheap pre-check: strict refs require the literal scheme, and callers run
   // this per render on up to 50k-char bodies — skip the full parse when no
-  // ref can possibly exist
-  if (!body.includes('attachment:')) return new Set();
+  // ref can possibly exist. Any entity reference ('&…;') can decode into the
+  // scheme, so the presence of '&' forfeits the shortcut.
+  if (!body.includes('attachment:') && !body.includes('&')) return new Set();
 
   const { images, definitions } = collectNodes(parseBody(body));
   const indexes = new Set<number>();
@@ -380,7 +386,8 @@ export function collectAttachmentRefIndexes(body: string): Set<number> {
  * slot 0 is an inline image and the article has no cover.
  */
 export function articleHasInlineSlotZero(body: string): boolean {
-  // Same pre-check, narrowed: a slot-0 ref requires this exact substring
-  if (!body.includes('attachment:0')) return false;
+  // Delegates so cover detection can never disagree with ref collection —
+  // an entity-escaped ref (e.g. `attachment:&#48;`) decodes to a valid slot-0
+  // reference that no literal substring check would catch
   return collectAttachmentRefIndexes(body).has(0);
 }

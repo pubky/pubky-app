@@ -51,9 +51,3 @@ export interface UseInlineImageUploadReturn {
    */
   buildLocalAttachmentEntries: (orderedUris: string[]) => (InlineImageLocalEntry | null)[];
 }
-
-/** The subset of the session API that `usePost` needs for create/edit orchestration */
-export type InlineImageSessionHandle = Pick<
-  UseInlineImageUploadReturn,
-  'registerSessionUpload' | 'finalizeSession' | 'discardSession' | 'buildLocalAttachmentEntries'
->;

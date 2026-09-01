@@ -1955,11 +1955,23 @@ describe('usePost — article inline images', () => {
     return result;
   };
 
+  // Inline images may only reference session uploads (or original attachments
+  // on edit), so tests route their URIs through the real session
+  const uploadViaSession = async (result: { current: ReturnType<typeof usePost> }, uri: string, name = 'img.png') => {
+    vi.mocked(FileController.commitCreate).mockResolvedValueOnce(uri);
+    await act(async () => {
+      await result.current.inlineImages.upload(new File(['x'], name, { type: 'image/png' }));
+    });
+  };
+
   describe('post()', () => {
     it('rewrites inline images to attachment slots and passes attachmentUris', async () => {
       mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
-      const body = `Intro\n\n![A](${fileUri('img1')})`;
-      const result = await setupArticle(body);
+      const result = await setupArticle('draft');
+      await uploadViaSession(result, fileUri('img1'));
+      act(() => {
+        result.current.setContent(`Intro\n\n![A](${fileUri('img1')})`);
+      });
 
       await act(async () => {
         await result.current.post({});
@@ -1977,7 +1989,11 @@ describe('usePost — article inline images', () => {
     it('offsets inline slots when a cover file is present', async () => {
       mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
       const cover = new File(['x'], 'cover.png', { type: 'image/png' });
-      const result = await setupArticle(`![A](${fileUri('img1')})`, { cover });
+      const result = await setupArticle('draft', { cover });
+      await uploadViaSession(result, fileUri('img1'));
+      act(() => {
+        result.current.setContent(`![A](${fileUri('img1')})`);
+      });
 
       await act(async () => {
         await result.current.post({});
@@ -2006,19 +2022,23 @@ describe('usePost — article inline images', () => {
       expect(result.current.isSubmitting).toBe(false);
     });
 
-    it('seeds the local files store index-aligned with [cover, ...inline]', async () => {
-      mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
-      const cover = new File(['x'], 'cover.png', { type: 'image/png' });
-      // The inline URI is not a session upload (hand-typed reuse), so the
-      // seed cannot be index-aligned and must clear the entry instead.
-      const result = await setupArticle(`![A](${fileUri('img1')})`, { cover });
+    it('blocks publishing images whose files were not uploaded this session (cross-post reuse)', async () => {
+      // A file URI hand-pasted from another post would attach a shared file
+      // record; deleting it from either post later would break the other
+      const result = await setupArticle(`![A](${fileUri('from-another-post')})`);
 
       await act(async () => {
         await result.current.post({});
       });
 
-      // An incomplete seed clears the entry (the store drops empty entries)
-      expect(useLocalFilesStore.getState().posts[`${AUTHOR}:post1`]).toBeUndefined();
+      expect(mockPostControllerCreate).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'error',
+          description: expect.stringContaining('outside this article'),
+        }),
+      );
+      expect(result.current.isSubmitting).toBe(false);
     });
   });
 
@@ -2027,9 +2047,12 @@ describe('usePost — article inline images', () => {
       mockPostControllerEdit.mockResolvedValue(undefined);
       const coverUri = fileUri('cover');
       const oldInline = fileUri('old');
-      const body = `![Old](${oldInline})\n\n![Reused](${fileUri('reused')})`;
-      const result = await setupArticle(body, {
+      const result = await setupArticle('draft', {
         existing: [mockExistingAttachment(coverUri)],
+      });
+      await uploadViaSession(result, fileUri('reused'));
+      act(() => {
+        result.current.setContent(`![Old](${oldInline})\n\n![Reused](${fileUri('reused')})`);
       });
 
       await act(async () => {
@@ -2202,6 +2225,45 @@ describe('usePost — article inline images', () => {
         content: JSON.stringify({ title: 'My Article', body: '![A](attachment:1)' }),
         attachments: undefined, // element-wise equal to original → content-only edit
       });
+    });
+
+    it('blocks edits whose body references files from another post', async () => {
+      const foreignUri = fileUri('from-another-post');
+      const cover = new File(['x'], 'new-cover.png', { type: 'image/png' });
+      const result = await setupArticle(`![F](${foreignUri})`, { cover });
+
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [] });
+      });
+
+      // Blocked before the replacement cover uploads, nothing committed
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
+      expect(mockPostControllerEdit).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error', description: expect.stringContaining('outside this article') }),
+      );
+    });
+
+    it('blocks edits whose attachment total (including the preserved tail) exceeds the cap', async () => {
+      const referenced = fileUri('referenced');
+      const preserved = Array.from({ length: 10 }, (_, index) => fileUri(`preserved-${index}`));
+      const result = await setupArticle(`![R](${referenced})`);
+
+      await act(async () => {
+        await result.current.edit({
+          editPostId: `${AUTHOR}:post1`,
+          originalAttachmentUris: [referenced, ...preserved],
+          preservedAttachmentUris: preserved,
+        });
+      });
+
+      expect(mockPostControllerEdit).not.toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'error',
+          description: expect.stringContaining('attachments kept from previous versions'),
+        }),
+      );
     });
 
     it('blocks the edit before uploading anything when the body is invalid', async () => {

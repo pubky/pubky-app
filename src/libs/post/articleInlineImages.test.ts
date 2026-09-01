@@ -139,6 +139,21 @@ describe('serializeArticleBody', () => {
     expect(result.body).toBe('![a](attachment:0)');
   });
 
+  it('rebuilds instead of rewriting the alt when the decoded destination appears only in the alt text', () => {
+    // Entity-escaped destination + the decoded URI pasted as alt: the only
+    // raw occurrence of the decoded URL sits in the alt, and rewriting it
+    // there would leak the raw file URI into the published body
+    const uri = fileUri('sneaky');
+    const body = `![${uri}](${fileUri('sneak')}&#121;)`;
+    const result = serialize(body);
+
+    expect(result.inlineUris).toEqual([uri]);
+    // The destination is the rewritten part; the raw URI never survives as one
+    expect(result.body).toContain('](attachment:0)');
+    const restored = deserializeArticleBody({ body: result.body, attachments: [uri], authorPubky: AUTHOR });
+    expect(serialize(restored.body).inlineUris).toEqual([uri]);
+  });
+
   it('rebuilds the image span when the destination also appears in the alt text', () => {
     const uri = fileUri('dup');
     const body = `![${uri}](${uri})`;
@@ -387,5 +402,13 @@ describe('collectAttachmentRefIndexes / articleHasInlineSlotZero', () => {
     expect(articleHasInlineSlotZero('![a](attachment:0)')).toBe(true);
     expect(articleHasInlineSlotZero('![a](attachment:1)')).toBe(false);
     expect(articleHasInlineSlotZero('plain text')).toBe(false);
+  });
+
+  it('detects entity-escaped references (the fast-path substring check must not hide them)', () => {
+    // `&#48;` decodes to '0' — a valid slot-0 ref without the literal substring
+    expect(articleHasInlineSlotZero('![a](attachment:&#48;)')).toBe(true);
+    expect(collectAttachmentRefIndexes('![a](attachment:&#49;)')).toEqual(new Set([1]));
+    // Ampersands in prose alone never fabricate a ref
+    expect(articleHasInlineSlotZero('R&D notes, no images')).toBe(false);
   });
 });

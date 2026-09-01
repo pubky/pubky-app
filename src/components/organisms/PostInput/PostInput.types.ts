@@ -42,8 +42,6 @@ interface PostInputBaseProps {
   ) => void;
   /** Callback when article mode changes */
   onArticleModeChange?: (isArticle: boolean) => void;
-  /** Callback when submission starts/finishes — dialogs use it to block closing mid-commit */
-  onSubmittingChange?: (isSubmitting: boolean) => void;
   /** Data Cy for the post input */
   dataCy?: string;
   /** ID to access the post input */

@@ -266,3 +266,18 @@ describe('article (kind long) attachments', () => {
     expect(result.current.mediaItems[0].name).toBe('cover.png');
   });
 });
+
+describe('interim renders before post details load', () => {
+  it('resolves no media while postDetails is undefined, even with seeded local entries', async () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: undefined, isLoading: true });
+    selectLocalFiles({
+      'pk:test:post': [{ type: 'image/png', name: 'maybe-inline.png', urls: { main: 'blob:x', feed: 'blob:x' } }],
+    });
+
+    const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
+
+    await waitFor(() => {
+      expect(result.current.mediaItems).toEqual([]);
+    });
+  });
+});

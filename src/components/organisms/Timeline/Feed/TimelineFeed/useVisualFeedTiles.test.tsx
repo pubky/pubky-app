@@ -631,4 +631,46 @@ describe('useVisualFeedTiles', () => {
       expect(mockGetMetadata).not.toHaveBeenCalled();
     });
   });
+  describe('article (kind long) tiles', () => {
+    beforeEach(() => {
+      mockUseLiveQuery.mockImplementation(useExecutedLiveQuery);
+    });
+
+    const articlePost = (id: string, body: string, attachments: string[]): PostDetailsModelSchema => ({
+      ...createPostDetails({ id, attachments }),
+      kind: 'long',
+      content: JSON.stringify({ title: 'T', body }),
+    });
+
+    it('renders only the cover tile for articles; inline body images are never tiles', async () => {
+      mockFindByIdsPreserveOrder.mockResolvedValue([
+        articlePost('author:article-covered', 'Text ![a](attachment:1) ![b](attachment:2)', [
+          'pubky://user-1/pub/pubky.app/files/cover-1',
+          'pubky://user-1/pub/pubky.app/files/inline-1',
+          'pubky://user-1/pub/pubky.app/files/inline-2',
+        ]),
+        // Slot-0 rule: body references attachment:0 → no cover, no tiles
+        articlePost('author:article-coverless', '![c](attachment:0)', ['pubky://user-1/pub/pubky.app/files/inline-3']),
+      ]);
+      mockGetMetadata.mockResolvedValue([
+        createFileDetails({ id: 'user-1:cover-1', contentType: 'image/jpeg', width: 1000, height: 800 }),
+      ]);
+
+      const { result } = renderHook(() =>
+        useVisualFeedTiles({ postIds: ['author:article-covered', 'author:article-coverless'], hasMore: false }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.tiles).toHaveLength(1);
+      });
+      expect(result.current.tiles[0].postId).toBe('author:article-covered');
+      expect(result.current.tiles[0].attachmentId).toBe('user-1:cover-1');
+      // The coverless article contributes no tiles and counts as hidden
+      expect(result.current.hiddenPostCount).toBe(1);
+      // Inline attachments are never fetched for tiles
+      expect(mockGetMetadata).toHaveBeenCalledWith({
+        fileAttachments: ['pubky://user-1/pub/pubky.app/files/cover-1'],
+      });
+    });
+  });
 });

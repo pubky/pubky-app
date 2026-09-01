@@ -586,10 +586,10 @@ export function usePostInput({
       // Drops landing on non-editable islands inside the rich-text editor
       // (an already-inserted image) are ignored by Lexical — no
       // preventDefault — so they'd fall through to the cover. The user aimed
-      // at the editor: insert inline instead. Non-image drops fall through to
-      // handleFilesAdded for its standard unsupported-type toast.
+      // at the editor: insert inline instead. Unsupported files fall through
+      // to handleFilesAdded for its standard unsupported-type toast.
       if (isArticle && e.target instanceof Element && e.target.closest('.mdxeditor')) {
-        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        const imageFiles = files.filter((file) => ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type));
         if (imageFiles.length > 0) {
           void insertInlineImagesAtCaret(imageFiles);
           return;

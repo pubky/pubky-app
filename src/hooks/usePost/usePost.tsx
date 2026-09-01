@@ -124,6 +124,28 @@ export function usePost(): UsePostReturn {
   };
 
   /**
+   * Blocks (with a toast) inline images whose files this article may not
+   * manage: every attachment slot is subject to hard deletion when a later
+   * edit drops it, so a file shared with another post would break that post
+   * permanently. Only files uploaded this composer session — or, for edits,
+   * the post's own original attachments — may become attachment slots.
+   */
+  const rejectForeignInlineUris = (inlineUris: string[], originalUris: readonly string[] = []): boolean => {
+    const originalSet = new Set(originalUris);
+    const hasForeign = inlineUris.some(
+      (uri) => inlineImageSession.getPreviewUrl(uri) === null && !originalSet.has(uri),
+    );
+    if (!hasForeign) return false;
+
+    toast({
+      variant: 'error',
+      description:
+        'Some images reference files from outside this article. Remove them, or insert the images again so they upload fresh.',
+    });
+    return true;
+  };
+
+  /**
    * Seeds the local files store with `[cover?, ...inline]` entries so the
    * creating session renders instantly (the CDN may not have generated
    * variants yet). Entries must be complete and index-aligned with the post's
@@ -226,6 +248,7 @@ export function usePost(): UsePostReturn {
       if (isArticle) {
         const serialized = serializeArticleForPublish(attachments.length > 0);
         if (!serialized) return;
+        if (rejectForeignInlineUris(serialized.inlineUris)) return;
         articleBody = serialized.body;
         inlineUris = serialized.inlineUris;
       }
@@ -360,6 +383,11 @@ export function usePost(): UsePostReturn {
         const serialized = serializeArticleForPublish(Boolean(newCoverFile ?? keptCover));
         if (!serialized) return;
 
+        // Removal is diffed against the seeded snapshot, never the live row.
+        const originalUris = originalAttachmentUris ?? existingAttachments.map((attachment) => attachment.uri);
+        const originalSet = new Set(originalUris);
+        if (rejectForeignInlineUris(serialized.inlineUris, originalUris)) return;
+
         let coverUri = keptCover?.uri;
         if (newCoverFile) {
           coverUri = await FileController.commitCreate({ file: newCoverFile, pubky: currentUserId });
@@ -367,10 +395,6 @@ export function usePost(): UsePostReturn {
           // the session's discard sweep.
           inlineImageSession.registerSessionUpload(coverUri, newCoverFile);
         }
-
-        // Removal is diffed against the seeded snapshot, never the live row.
-        const originalUris = originalAttachmentUris ?? existingAttachments.map((attachment) => attachment.uri);
-        const originalSet = new Set(originalUris);
         const referencedOrder = [...(coverUri ? [coverUri] : []), ...serialized.inlineUris];
         // Original attachments the user was never shown (not the cover, not
         // referenced by the body at open) ride at the tail so an unrelated
@@ -381,6 +405,17 @@ export function usePost(): UsePostReturn {
           ...referencedOrder,
           ...(preservedAttachmentUris ?? []).filter((uri) => originalSet.has(uri) && !referencedOrderSet.has(uri)),
         ];
+
+        // The serialize cap covers cover + inline only; the preserved tail
+        // can push the total past the spec limit, which would otherwise
+        // surface as an opaque spec error from `builder.editPost`
+        if (nextOrder.length > ARTICLE_ATTACHMENT_MAX_FILES) {
+          toast({
+            variant: 'error',
+            description: `Articles support up to ${ARTICLE_ATTACHMENT_MAX_FILES} attachments, including the cover and attachments kept from previous versions. Remove some images to save.`,
+          });
+          return;
+        }
         const kept = [...new Set(nextOrder.filter((uri) => originalSet.has(uri)))];
         const addedUris = [...new Set(nextOrder.filter((uri) => !originalSet.has(uri)))];
         const orderChanged =

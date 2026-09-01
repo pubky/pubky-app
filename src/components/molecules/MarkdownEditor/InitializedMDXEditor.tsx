@@ -41,7 +41,11 @@ import { Input } from '@/atoms/Input/Input';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
-import { ARTICLE_ATTACHMENT_ACCEPT_STRING, ARTICLE_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import {
+  ARTICLE_ATTACHMENT_ACCEPT_STRING,
+  ARTICLE_MAX_CHARACTER_LENGTH,
+  ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
+} from '@/config/posts';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { MarkdownMark } from '@/icons';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
@@ -128,6 +132,9 @@ export default function InitializedMDXEditor({
       const markdown = editorRef.current?.getMarkdown() ?? '';
       markdownTextRef.current = markdown;
       setMarkdownText(markdown);
+      // Serialized markdown can be longer than the rich-text character count
+      // (image URIs count ~0 there) — surface the cap state on import
+      updateMaxLengthWarning(markdown);
       setMode('markdown');
     }
   };
@@ -145,7 +152,9 @@ export default function InitializedMDXEditor({
   const updateMaxLengthWarning = (text: string) => {
     const remaining = ARTICLE_MAX_CHARACTER_LENGTH - text.length;
     switch (true) {
-      case remaining === 0:
+      // <= 0: a body can arrive over the cap (deserialized refs expand to
+      // longer URIs; rich-text counts Lexical text, markdown counts source)
+      case remaining <= 0:
         setMaxLengthWarning('reached');
         break;
       case remaining < 100:
@@ -156,7 +165,10 @@ export default function InitializedMDXEditor({
     }
   };
   const handleMarkdownTextChange = (newText: string) => {
-    if (newText.length > ARTICLE_MAX_CHARACTER_LENGTH) return;
+    // Refuse growth past the cap, but always accept edits that shrink the
+    // text — otherwise an over-cap body (see updateMaxLengthWarning) rejects
+    // every keystroke including the deletions needed to get back under
+    if (newText.length > ARTICLE_MAX_CHARACTER_LENGTH && newText.length >= markdownTextRef.current.length) return;
     markdownTextRef.current = newText;
     setMarkdownText(newText);
     updateMaxLengthWarning(newText);
@@ -293,7 +305,7 @@ export default function InitializedMDXEditor({
     const files = Array.from(event.clipboardData?.items ?? [])
       .filter((item) => item.kind === 'file')
       .map((item) => item.getAsFile())
-      .filter((file): file is File => file !== null && file.type.startsWith('image/'));
+      .filter((file): file is File => file !== null && ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type));
     if (files.length === 0) return;
 
     // preventDefault (without stopPropagation) also signals the composer
@@ -305,10 +317,12 @@ export default function InitializedMDXEditor({
   const handleMarkdownTextareaDrop = (event: React.DragEvent<HTMLTextAreaElement>) => {
     if (!inlineImages || readOnly) return;
 
-    // Image files only — anything else bubbles to the composer container,
-    // whose handler shows the standard unsupported-type toast (uploading
-    // placeholders must never appear for files the upload will reject)
-    const files = Array.from(event.dataTransfer?.files ?? []).filter((file) => file.type.startsWith('image/'));
+    // Supported image types only (not image/* — e.g. HEIC would flash a
+    // placeholder the upload then rejects); anything else bubbles to the
+    // composer container, whose handler shows the unsupported-type toast
+    const files = Array.from(event.dataTransfer?.files ?? []).filter((file) =>
+      ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type),
+    );
     if (files.length === 0) return;
 
     // preventDefault only: the event still bubbles so the composer container

@@ -55,7 +55,6 @@ export function PostInput({
   expanded = false,
   onContentChange,
   onArticleModeChange,
-  onSubmittingChange,
   editContent,
   editIsArticle,
   editAttachments,
@@ -242,11 +241,6 @@ export function PostInput({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
   }, [variant, editContent, editIsArticle]);
-
-  // Notify the host (dialogs) so closing can be blocked mid-commit
-  React.useEffect(() => {
-    onSubmittingChange?.(isSubmitting);
-  }, [isSubmitting, onSubmittingChange]);
 
   // Pre-fill content from share target or other external sources
   React.useEffect(() => {
