@@ -429,7 +429,7 @@ describe('FeedNavigation', () => {
 
     const activeLabel = getLink('/feed/feed-active')?.querySelector('[data-testid="typography"]');
     expect(activeLabel).not.toHaveClass('hidden');
-    expect(getLink('/feed/feed-active')).toHaveClass('px-2.5');
+    expect(getLink('/feed/feed-active')).toHaveClass('px-10', 'lg:px-2.5');
 
     const inactiveLabel = getLink('/feed/feed-other')?.querySelector('[data-testid="typography"]');
     expect(inactiveLabel).toHaveClass('hidden', 'lg:inline');
@@ -643,11 +643,11 @@ describe('FeedNavigation', () => {
 
     const homeLink = getLink('/home');
     expect(homeLink).toHaveClass('min-h-12', 'lg:flex-auto');
-    expect(homeLink).toHaveClass('px-2.5');
+    expect(homeLink).toHaveClass('px-8', 'lg:px-2.5');
 
     const customLink = getLink('/feed/feed-1');
     expect(customLink).toHaveClass('h-full', 'w-full');
-    expect(customLink).toHaveClass('px-2.5');
+    expect(customLink).toHaveClass('px-2', 'lg:px-2.5');
     expect(customLink?.parentElement).toHaveClass('min-h-12', 'flex-1');
 
     screen.getAllByTestId('typography').forEach((label) => {

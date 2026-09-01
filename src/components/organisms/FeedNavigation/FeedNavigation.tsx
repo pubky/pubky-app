@@ -35,10 +35,14 @@ const FEED_TAB_ACTIVE_WIDTH_CLASS = 'max-w-[60%] flex-none lg:max-w-none lg:flex
 const FEED_TAB_INACTIVE_WIDTH_CLASS = 'min-w-12 flex-1 lg:flex-auto';
 // With no custom feeds the strip is just All + Create. An equal flex basis
 // splits it 50/50; `flex-1`'s zero basis would not, because border-box padding
-// floors each item before the free space is shared.
+// (px-8 active vs px-2) floors each item before the free space is shared.
 const FEED_TAB_EQUAL_CELL_CLASS = 'min-w-0 basis-1/2 lg:flex-auto';
-// Figma Text Wrapper: spacing/2-5 (10px) on every tab, active and inactive.
-const FEED_TAB_PADDING_CLASS = 'px-2.5';
+// Below lg keep the previous padding: active Home is px-8, the visible mobile
+// pencil needs px-10 on an active custom feed, and icon-only cells stay px-2.
+// At lg+ every tab uses Figma Text Wrapper spacing/2-5 (10px).
+const FEED_TAB_ACTIVE_PADDING_CLASS = 'px-8 lg:px-2.5';
+const CUSTOM_FEED_TAB_ACTIVE_PADDING_CLASS = 'px-10 lg:px-2.5';
+const FEED_TAB_INACTIVE_PADDING_CLASS = 'px-2 lg:px-2.5';
 const FEED_TAB_LABEL_CLASS = 'truncate text-sm font-medium leading-5';
 // Hover-capable devices at lg+ park the pencil invisible AND non-interactive
 // until the tab is hovered or holds focus; hover-less devices (iPads, touch
@@ -110,7 +114,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const createFeedButtonClass = cn(
     FEED_TAB_CLASS,
     tabWidthClass,
-    FEED_TAB_PADDING_CLASS,
+    FEED_TAB_INACTIVE_PADDING_CLASS,
     'cursor-pointer border-border text-muted-foreground hover:text-white',
   );
 
@@ -145,7 +149,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
           className={cn(
             FEED_TAB_CLASS,
             hasCustomFeeds && isHomeActive ? FEED_TAB_ACTIVE_WIDTH_CLASS : tabWidthClass,
-            FEED_TAB_PADDING_CLASS,
+            isHomeActive ? FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
             isHomeActive ? 'border-white text-white' : 'border-border text-muted-foreground hover:text-white',
           )}
         >
@@ -186,7 +190,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 }
                 className={cn(
                   'flex h-full w-full min-w-0 items-center justify-center gap-2',
-                  FEED_TAB_PADDING_CLASS,
+                  isActive ? CUSTOM_FEED_TAB_ACTIVE_PADDING_CLASS : FEED_TAB_INACTIVE_PADDING_CLASS,
                   isActive ? 'text-white' : 'text-muted-foreground group-hover:text-white',
                 )}
               >
