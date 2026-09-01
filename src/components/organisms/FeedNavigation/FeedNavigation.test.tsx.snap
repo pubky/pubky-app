@@ -2,7 +2,7 @@
 
 exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (showing edit dialog) 1`] = `
 <div
-  class="w-full mobile-menu-gradient-fade sticky top-(--header-height-settings) z-(--z-mobile-menu) bg-background lg:static lg:top-auto lg:z-auto lg:bg-transparent lg:after:hidden"
+  class="-mx-4 lg:mx-0 w-auto lg:w-full mobile-menu-gradient-fade sticky top-(--header-height-settings) z-(--z-mobile-menu) bg-background lg:static lg:top-auto lg:z-auto lg:bg-transparent lg:after:hidden"
   data-testid="container"
 >
   <div
@@ -169,7 +169,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
 
 exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Home active 1`] = `
 <div
-  class="w-full mobile-menu-gradient-fade sticky top-(--header-height-settings) z-(--z-mobile-menu) bg-background lg:static lg:top-auto lg:z-auto lg:bg-transparent lg:after:hidden"
+  class="-mx-4 lg:mx-0 w-auto lg:w-full mobile-menu-gradient-fade sticky top-(--header-height-settings) z-(--z-mobile-menu) bg-background lg:static lg:top-auto lg:z-auto lg:bg-transparent lg:after:hidden"
   data-testid="container"
 >
   <div
@@ -400,7 +400,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
 
 exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feeds and one active 1`] = `
 <div
-  class="w-full mobile-menu-gradient-fade sticky top-(--header-height-settings) z-(--z-mobile-menu) bg-background lg:static lg:top-auto lg:z-auto lg:bg-transparent lg:after:hidden"
+  class="-mx-4 lg:mx-0 w-auto lg:w-full mobile-menu-gradient-fade sticky top-(--header-height-settings) z-(--z-mobile-menu) bg-background lg:static lg:top-auto lg:z-auto lg:bg-transparent lg:after:hidden"
   data-testid="container"
 >
   <div
@@ -695,7 +695,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
 
 exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and Home active 1`] = `
 <div
-  class="w-full mobile-menu-gradient-fade sticky top-(--header-height-settings) z-(--z-mobile-menu) bg-background lg:static lg:top-auto lg:z-auto lg:bg-transparent lg:after:hidden"
+  class="-mx-4 lg:mx-0 w-auto lg:w-full mobile-menu-gradient-fade sticky top-(--header-height-settings) z-(--z-mobile-menu) bg-background lg:static lg:top-auto lg:z-auto lg:bg-transparent lg:after:hidden"
   data-testid="container"
 >
   <div

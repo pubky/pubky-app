@@ -231,6 +231,13 @@ describe('FeedNavigation', () => {
     expect(screen.getByTestId('custom-feed-dialog-create')).toHaveTextContent('Feed');
   });
 
+  it('runs full-bleed below lg to cancel the shell gutter', () => {
+    render(<FeedNavigation />);
+
+    const [root] = screen.getAllByTestId('container');
+    expect(root).toHaveClass('-mx-4', 'w-auto', 'lg:mx-0', 'lg:w-full');
+  });
+
   // ── Reach tab (first tab, links to /home) ────────────────────────────────
 
   it('renders the reach tab as a link to /home', () => {

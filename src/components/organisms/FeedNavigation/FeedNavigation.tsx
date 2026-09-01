@@ -10,6 +10,7 @@ import { Container } from '@/atoms/Container/Container';
 import { DynamicLucideIcon } from '@/atoms/DynamicLucideIcon/DynamicLucideIcon';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
+import { FULL_BLEED_GUTTER_CLASS } from '@/config/layoutClasses';
 import { FeedController } from '@/controllers/feed/feed';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSelectedReachFilter } from '@/hooks/useSelectedReachFilter/useSelectedReachFilter';
@@ -122,7 +123,11 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   return (
     <Container
       className={cn(
-        'w-full',
+        // Full-bleed below lg: cancel ContentLayout's mobile gutter so the tab
+        // strip runs edge-to-edge; w-auto lets the negative margins widen the
+        // border-box (w-full would fight them).
+        FULL_BLEED_GUTTER_CLASS,
+        'w-auto lg:w-full',
         // The sticky chrome and gradient fade live on this non-scrolling
         // wrapper — on the scroll container itself the ::after fade would be
         // clipped into the scrollport and add phantom vertical scroll.
