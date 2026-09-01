@@ -1,8 +1,15 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { mockKeyboardEvent } from '@/test-utils/react-events';
 import { useSearchInput } from './useSearchInput';
 
 describe('useSearchInput', () => {
+  const createKeyboardEvent = (key: string, isComposing: boolean = false): React.KeyboardEvent<HTMLInputElement> =>
+    mockKeyboardEvent<HTMLInputElement>({
+      key,
+      nativeEvent: { isComposing } as KeyboardEvent,
+    });
+
   it('initializes with default values', () => {
     const { result } = renderHook(() => useSearchInput());
 
@@ -41,7 +48,7 @@ describe('useSearchInput', () => {
     });
 
     act(() => {
-      result.current.handleKeyDown({ key: 'Enter' } as React.KeyboardEvent<HTMLInputElement>);
+      result.current.handleKeyDown(createKeyboardEvent('Enter'));
     });
 
     expect(onEnter).toHaveBeenCalledWith('test query');
@@ -55,10 +62,48 @@ describe('useSearchInput', () => {
     const { result } = renderHook(() => useSearchInput({ onEnter }));
 
     act(() => {
-      result.current.handleKeyDown({ key: 'Enter' } as React.KeyboardEvent<HTMLInputElement>);
+      result.current.handleKeyDown(createKeyboardEvent('Enter'));
     });
 
     expect(onEnter).not.toHaveBeenCalled();
+  });
+
+  it('does not call onEnter on Enter during IME composition', () => {
+    const onEnter = vi.fn();
+    const { result } = renderHook(() => useSearchInput({ onEnter }));
+
+    act(() => {
+      result.current.handleInputChange({ target: { value: 'にほん' } } as React.ChangeEvent<HTMLInputElement>);
+    });
+
+    // Enter while composing commits the IME candidate — must not submit
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('Enter', true));
+    });
+
+    expect(onEnter).not.toHaveBeenCalled();
+
+    // A normal Enter after composition ends still submits
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('Enter'));
+    });
+
+    expect(onEnter).toHaveBeenCalledWith('にほん');
+  });
+
+  it('does not blur on Escape during IME composition', () => {
+    const { result } = renderHook(() => useSearchInput());
+
+    act(() => {
+      result.current.handleFocus();
+    });
+
+    // Escape while composing cancels the IME candidate — must not blur
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('Escape', true));
+    });
+
+    expect(result.current.isFocused).toBe(true);
   });
 
   it('closes on Escape key', () => {
@@ -70,7 +115,7 @@ describe('useSearchInput', () => {
     expect(result.current.isFocused).toBe(true);
 
     act(() => {
-      result.current.handleKeyDown({ key: 'Escape' } as React.KeyboardEvent<HTMLInputElement>);
+      result.current.handleKeyDown(createKeyboardEvent('Escape'));
     });
     expect(result.current.isFocused).toBe(false);
   });

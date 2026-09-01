@@ -38,6 +38,9 @@ export function useSearchInput({ onEnter }: UseSearchInputParams = {}): UseSearc
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Guard against IME composition (Enter commits the CJK candidate and Escape cancels it — neither should submit or blur)
+    if (e.nativeEvent.isComposing) return;
+
     if (e.key === 'Enter' && inputValue.trim()) {
       // The handler owns the input value after submit (clear, keep, or replace).
       onEnter?.(inputValue.trim());

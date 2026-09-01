@@ -93,6 +93,47 @@ describe('useContentSearchTags', () => {
     );
   });
 
+  it('strips tag-banned punctuation from terms before fetching', async () => {
+    renderHook(() => useContentSearchTags('bitcoin, wallets'));
+
+    await waitFor(() => expect(mockFetchTagsByPrefix).toHaveBeenCalledTimes(2));
+
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({
+      prefix: 'bitcoin',
+      limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
+    });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({
+      prefix: 'wallets',
+      limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
+    });
+  });
+
+  it('fetches once when stripping punctuation merges terms', async () => {
+    renderHook(() => useContentSearchTags('bitcoin bitcoin,'));
+
+    await waitFor(() =>
+      expect(mockFetchTagsByPrefix).toHaveBeenCalledExactlyOnceWith({
+        prefix: 'bitcoin',
+        limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
+      }),
+    );
+  });
+
+  it('clears stale tags as soon as the query changes, before the new lookup resolves', async () => {
+    mockFetchTagsByPrefix.mockResolvedValue(['bitcoin']);
+
+    const { result, rerender } = renderHook(({ query }: { query: string | null }) => useContentSearchTags(query), {
+      initialProps: { query: 'bitcoin' as string | null },
+    });
+    await waitFor(() => expect(result.current.tags).toEqual(['bitcoin']));
+
+    // The new query's lookup stays pending — the old chips must already be gone.
+    mockFetchTagsByPrefix.mockImplementation(() => new Promise(() => {}));
+    rerender({ query: 'design' });
+
+    expect(result.current.tags).toEqual([]);
+  });
+
   it('replaces results when the query changes and clears them when it becomes null', async () => {
     mockFetchTagsByPrefix.mockImplementation(async ({ prefix }) => [prefix]);
 

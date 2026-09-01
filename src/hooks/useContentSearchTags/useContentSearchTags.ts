@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { TAG_MAX_LENGTH } from '@/config/posts';
 import { SEARCH_CONTENT_TAGS_MAX_TOTAL, SEARCH_CONTENT_TAGS_PER_TERM_LIMIT } from '@/config/search';
 import { SearchController } from '@/controllers/search/search';
+import { getCharacterCount, sanitizeTagInput } from '@/libs/utils/utils';
 
 interface UseContentSearchTagsResult {
   /** Deduped tag names — exact term matches first, then prefix extensions. */
@@ -25,10 +26,12 @@ export function useContentSearchTags(query: string | null): UseContentSearchTags
   const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
-    if (query === null) {
-      setTags([]);
-      return;
-    }
+    // Cleared on every query change, not just on null — otherwise the previous
+    // query's chips stay rendered (and clickable) while the new lookup is in
+    // flight on a slow connection.
+    setTags([]);
+
+    if (query === null) return;
 
     // Set by the cleanup when the query changes or the hook unmounts, so a
     // response that lost the race can never overwrite newer results.
@@ -36,9 +39,15 @@ export function useContentSearchTags(query: string | null): UseContentSearchTags
 
     // The query arrives normalized (trimmed, whitespace collapsed) from
     // `validateContentSearchQuery`. Tags are lowercase everywhere (store
-    // writes, chip rendering), so terms are lowercased to match — and a term
-    // longer than the tag length cap can never prefix-match any tag.
-    const terms = Array.from(new Set(query.toLowerCase().split(' '))).filter((term) => term.length <= TAG_MAX_LENGTH);
+    // writes, chip rendering), so terms are lowercased to match. Tag-banned
+    // punctuation is stripped — tags can never contain it, so "bitcoin," would
+    // never match while its natural "bitcoin" chip does — with the dedupe
+    // after stripping because stripping can merge terms. A term longer than
+    // the tag length cap (in code points, like tag validation) can never
+    // prefix-match any tag.
+    const terms = Array.from(new Set(query.toLowerCase().split(' ').map(sanitizeTagInput))).filter(
+      (term) => term.length > 0 && getCharacterCount(term) <= TAG_MAX_LENGTH,
+    );
 
     void (async () => {
       const resultsPerTerm = await Promise.all(

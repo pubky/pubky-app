@@ -1,3 +1,6 @@
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { NexusPostsKeyStream, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
@@ -12,6 +15,8 @@ import {
   type TStreamPostRepliesParams,
   type TStreamPostsByIdsParams,
 } from '@/services/nexus/stream/posts/postStream.types';
+
+const CONTENT_SEARCH_QUERY_REQUIRED_MESSAGE = 'Search query is required for content_search stream';
 
 /**
  * Nexus Post Stream Service
@@ -72,7 +77,11 @@ export class NexusPostStreamService {
         break;
       case StreamSource.CONTENT_SEARCH: {
         if (!extraParams.q) {
-          throw new Error('Search query is required for content_search stream');
+          throw Err.validation(ValidationErrorCode.INVALID_INPUT, CONTENT_SEARCH_QUERY_REQUIRED_MESSAGE, {
+            service: ErrorService.Nexus,
+            operation: 'fetchPostStream',
+            context: { invokeEndpoint },
+          });
         }
         const url = searchApi.byContent({
           q: extraParams.q,

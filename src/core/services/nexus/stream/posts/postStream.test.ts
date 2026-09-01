@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, test, vi } from 'vitest';
+import { AppError } from '@/libs/error/error';
 import type { Pubky } from '@/models/models.types';
 import { buildContentSearchStreamId, type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { type NexusPost, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
@@ -1358,7 +1359,7 @@ describe('NexusPostStreamService', () => {
         invokeEndpoint: StreamSource.CONTENT_SEARCH,
         params: { limit: 10 },
         extraParams: {}, // Missing q
-        expectedError: 'Search query is required',
+        expectedError: 'Search query is required for content_search stream',
       },
     ])('$name', async ({ invokeEndpoint, params, extraParams, expectedError }) => {
       const fetchParams: TPostStreamFetchParams = {
@@ -1368,6 +1369,16 @@ describe('NexusPostStreamService', () => {
       };
 
       await expect(NexusPostStreamService.fetch(fetchParams)).rejects.toThrow(expectedError);
+    });
+
+    it('throws an AppError validation error when CONTENT_SEARCH is missing a query', async () => {
+      const fetchParams: TPostStreamFetchParams = {
+        params: { limit: 10 },
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        extraParams: {}, // Missing q
+      };
+
+      await expect(NexusPostStreamService.fetch(fetchParams)).rejects.toBeInstanceOf(AppError);
     });
 
     it('should throw error for invalid stream type', async () => {
