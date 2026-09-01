@@ -19,7 +19,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - defaul
   />
   <span
     aria-hidden="true"
-    class="pointer-events-none flex size-8 shrink-0 items-center justify-center"
+    class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
   >
     <svg
       aria-hidden="true"
@@ -66,7 +66,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - focuse
   />
   <button
     aria-label="Clear and close search"
-    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border hover:text-accent-foreground hover:bg-accent/50 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border hover:text-accent-foreground hover:bg-accent/50 -mr-2 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
     data-size="icon"
     data-slot="button"
     data-variant="ghost"
@@ -141,7 +141,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with a
   />
   <span
     aria-hidden="true"
-    class="pointer-events-none flex size-8 shrink-0 items-center justify-center"
+    class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
   >
     <svg
       aria-hidden="true"
@@ -188,7 +188,7 @@ exports[`SearchInputBar > SearchInputBar - Snapshots > matches snapshot - with i
   />
   <span
     aria-hidden="true"
-    class="pointer-events-none flex size-8 shrink-0 items-center justify-center"
+    class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
   >
     <svg
       aria-hidden="true"

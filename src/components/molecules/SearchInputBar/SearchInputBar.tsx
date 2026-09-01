@@ -103,13 +103,13 @@ export function SearchInputBar({
           variant={ButtonVariant.GHOST}
           size="icon"
           aria-label="Clear and close search"
-          className="size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
+          className="-mr-2 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
           onClick={onCloseSearch}
         >
           <X className="size-4" aria-hidden="true" />
         </Button>
       ) : (
-        <span className="pointer-events-none flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
+        <span className="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
           <Search className="size-4 text-muted-foreground" />
         </span>
       )}
