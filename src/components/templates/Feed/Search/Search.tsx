@@ -55,7 +55,7 @@ export function Search() {
     switch (criteria.mode) {
       case 'tags':
         return showTagSections ? (
-          <Container overrideDefaults className="flex w-full flex-col gap-6">
+          <Container overrideDefaults className="flex w-full flex-col gap-4">
             <SearchPeople />
             <SearchCollections />
             <Container overrideDefaults className="flex w-full flex-col gap-4">
@@ -70,7 +70,7 @@ export function Search() {
         );
       case 'content':
         return (
-          <Container overrideDefaults className="flex w-full flex-col gap-6">
+          <Container overrideDefaults className="flex w-full flex-col gap-4">
             <SearchContentTags />
             {feed}
           </Container>

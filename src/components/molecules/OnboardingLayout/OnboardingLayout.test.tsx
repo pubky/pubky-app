@@ -36,6 +36,18 @@ describe('OnboardingLayout', () => {
     expect(navContainer).not.toBeInTheDocument();
   });
 
+  it('merges a caller className into the root container', () => {
+    render(
+      <OnboardingLayout testId="custom-gutter" className="px-4 lg:px-6">
+        <div>Content</div>
+      </OnboardingLayout>,
+    );
+
+    const root = screen.getByTestId('custom-gutter').parentElement;
+    expect(root).toHaveClass('px-4', 'lg:px-6');
+    expect(root).not.toHaveClass('px-6');
+  });
+
   it('keeps navigation close to content when bottom pinning is disabled', () => {
     const { container } = render(
       <OnboardingLayout testId="unpinned-nav" navigation={<button>Next</button>} pinNavigationToBottom={false}>

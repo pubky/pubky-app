@@ -25,9 +25,8 @@ export const OG_CACHE_HEADERS = {
 
 /** Literal hex design tokens (ImageResponse cannot use CSS variables). */
 export const OG_TOKENS = {
-  // `--background` oklch(0.118 0.014 284.115) → hex (page background; the
-  // collection card's count pill on covered chrome — `CollectionCountBadge`'s
-  // `bg-background` tone — and the base of the opaque tag-chip blend).
+  // `--background` oklch(0.118 0.014 284.115) → hex (page background; also the
+  // collection card's count-pill background).
   background: '#05050a',
   cardBg: '#1d1d20',
   avatarMuted: '#303034',
@@ -49,9 +48,9 @@ export const OG_TRUNCATE = {
   // Tuned so the "…" from grapheme truncation lands within the 2 visible lines
   // (satori's line-clamp ellipsis is unreliable); maxHeight guards against bleed.
   articleBody: 78,
-  // Payload guard for the collection card's single-line description (the
-  // visual truncation is CSS nowrap + ellipsis).
-  collectionDescription: 110,
-  // Single tag-chip label on the collection card (chips don't wrap).
-  collectionTag: 20,
+  // Tuned so the "…" from grapheme truncation lands within the collection
+  // card's fixed two-line description slot (satori's line-clamp ellipsis is
+  // unreliable; the slot's fixed height + overflow hidden clip anything past
+  // the second line).
+  collectionDescription: 62,
 } as const;

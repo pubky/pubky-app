@@ -28,6 +28,16 @@ export function OgFrame({ children, style }: { children: ReactNode; style?: CSSP
   );
 }
 
+const HEADER_PADDING_TOP = 64;
+/** Height of the avatar / brand-mark row — the tallest header content. */
+const HEADER_ROW_HEIGHT = 80;
+/**
+ * `OgHeader`'s rendered height (no bottom padding). Exported so layouts that
+ * size the space below the header (e.g. the collection card's full-bleed cover
+ * section) stay in sync with the header's actual geometry.
+ */
+export const OG_HEADER_HEIGHT = HEADER_PADDING_TOP + HEADER_ROW_HEIGHT;
+
 /**
  * Circular avatar. Renders the image (object-cover, clipped to a circle over a
  * muted backing) when `src` is present, otherwise a solid brand-color circle.
@@ -62,13 +72,13 @@ export function OgHeader({ avatarUrl, name }: { avatarUrl: string | null; name: 
         display: 'flex',
         alignItems: 'center',
         gap: 24,
-        paddingTop: 64,
+        paddingTop: HEADER_PADDING_TOP,
         paddingLeft: 64,
         paddingRight: 64,
         width: '100%',
       }}
     >
-      <OgAvatar src={avatarUrl} size={80} />
+      <OgAvatar src={avatarUrl} size={HEADER_ROW_HEIGHT} />
       <div
         style={{
           display: 'flex',
@@ -84,7 +94,7 @@ export function OgHeader({ avatarUrl, name }: { avatarUrl: string | null; name: 
       >
         {name}
       </div>
-      <PubkyMark size={80} />
+      <PubkyMark size={HEADER_ROW_HEIGHT} />
     </div>
   );
 }
