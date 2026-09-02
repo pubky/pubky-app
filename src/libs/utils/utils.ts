@@ -1,5 +1,3 @@
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import type { SnapshotSerializer } from 'vitest';
 import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
@@ -14,9 +12,7 @@ import type {
   GetDisplayTagsOptions,
 } from './utils.types';
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export { cn } from 'cn';
 
 const PUBKY_PREFIX = 'pubky';
 const LEGACY_PUBKY_PREFIX = 'pk:';
