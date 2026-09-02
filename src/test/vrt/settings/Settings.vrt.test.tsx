@@ -68,10 +68,7 @@ vi.mock('next/navigation', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn(), dismiss: vi.fn(), toasts: [] }),
-  toast: vi.fn(),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/home/home.store', () => {
   return {

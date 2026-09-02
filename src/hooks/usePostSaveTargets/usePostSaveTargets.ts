@@ -9,7 +9,7 @@ import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export type PostSaveCollectionTarget = {
@@ -36,7 +36,6 @@ export function usePostSaveTargets(postId: string): UsePostSaveTargetsResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const bookmark = useBookmark(postId);
   const { collections, isLoading: isCollectionsLoading } = useAuthoredCollections(Boolean(currentUserPubky));
-  const { toast } = useToast();
   const [updatingCollectionIds, setUpdatingCollectionIds] = useState<Set<string>>(new Set());
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
 

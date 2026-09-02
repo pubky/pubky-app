@@ -116,6 +116,8 @@ Convert `AppError` to UI/API responses (status code, toast copy) using `ErrorMes
 ### UI Layer (`src/components/`, `src/hooks/`)
 
 ```typescript
+import { toast } from '@/molecules/Toaster/toast';
+
 try {
   await PostController.commitCreate({ authorId, content, isArticle, tags, attachments });
 } catch (error) {

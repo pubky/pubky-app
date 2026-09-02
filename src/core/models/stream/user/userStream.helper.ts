@@ -1,8 +1,19 @@
+import { STARTER_PACK_MAX_TAGS } from '@/config/nexus';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { canonicalizeTagLabel, isValidTagLabel } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamModelSchema } from './userStream.schema';
-import { UserStreamCompositeId, UserStreamId } from './userStream.types';
+import {
+  STARTER_PACK_STREAM_SOURCE,
+  type StarterPackStreamId,
+  UserStreamCompositeId,
+  UserStreamId,
+} from './userStream.types';
 
 export const USER_STREAM_ID_DELIMITER = ':' as const;
+export const USER_STREAM_TAG_DELIMITER = ',' as const;
 
 /**
  * Parts of a user stream composite ID
@@ -44,6 +55,50 @@ export function parseUserCompositeId(compositeId: string): UserStreamIdParts {
     userId: compositeId.substring(0, sep) as Pubky,
     reach: compositeId.substring(sep + 1),
   };
+}
+
+/**
+ * Build a starter pack stream ID from ordered interest tags.
+ *
+ * Labels are canonicalized (trimmed + lowercased) so 'Bitcoin' and 'bitcoin' resolve to the same
+ * Dexie row, then validated against the canonical tag contract (1-20 chars, no banned characters)
+ * and the Nexus starter pack limit (1-5 tags). Order is preserved: Nexus interleaves per-tag
+ * rankings in the order given, so ['travel','music'] and ['music','travel'] are different streams.
+ *
+ * @example
+ * buildStarterPackStreamId(['Bitcoin ', 'music'])
+ * // Returns: 'starter_pack:all:all:bitcoin,music'
+ */
+// Exported for the starter-pack onboarding consumer (#2388).
+export function buildStarterPackStreamId(tags: string[]): StarterPackStreamId {
+  const canonical = [...new Set(tags.map(canonicalizeTagLabel))];
+
+  if (canonical.length === 0 || canonical.length > STARTER_PACK_MAX_TAGS) {
+    throw Err.validation(
+      ValidationErrorCode.INVALID_INPUT,
+      `Starter pack streams require 1-${STARTER_PACK_MAX_TAGS} tags`,
+      {
+        service: ErrorService.Local,
+        operation: 'buildStarterPackStreamId',
+        context: { tagCount: canonical.length },
+      },
+    );
+  }
+
+  const invalidLabels = canonical.filter((tag) => !isValidTagLabel(tag));
+  if (invalidLabels.length > 0) {
+    throw Err.validation(
+      ValidationErrorCode.INVALID_INPUT,
+      'Starter pack tags must be 1-20 characters without banned characters',
+      {
+        service: ErrorService.Local,
+        operation: 'buildStarterPackStreamId',
+        context: { invalidLabels },
+      },
+    );
+  }
+
+  return `${STARTER_PACK_STREAM_SOURCE}:all:all:${canonical.join(USER_STREAM_TAG_DELIMITER)}`;
 }
 
 export const createDefaultUserStream = (id: UserStreamId, stream: Pubky[] = []): UserStreamModelSchema => {

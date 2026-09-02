@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { Logger } from '@/libs/logger/logger';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export interface UseBookmarkResult {
@@ -53,7 +53,6 @@ export interface UseBookmarkOptions {
  * ```
  */
 export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBookmarkResult {
-  const { toast } = useToast();
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   // Resolve toast copy once per render so the `useCallback` dep array can track
@@ -144,7 +143,7 @@ export function useBookmark(postId: string, options?: UseBookmarkOptions): UseBo
     } finally {
       setIsToggling(false);
     }
-  }, [postId, currentUserPubky, isBookmarked, isToggling, toast, addedTitle, removedTitle]);
+  }, [postId, currentUserPubky, isBookmarked, isToggling, addedTitle, removedTitle]);
 
   return {
     isBookmarked,

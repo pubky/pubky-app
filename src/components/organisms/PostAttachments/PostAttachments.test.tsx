@@ -1,13 +1,15 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
+import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { PostAttachments } from './PostAttachments';
 
-// Mock useToast
-const mockToast = vi.fn();
+// Mock toast
+vi.mock('@/molecules/Toaster/toast');
+
 vi.mock('@/molecules/PostAttachmentsAudios/PostAttachmentsAudios', () => {
   return {
     PostAttachmentsAudios: vi.fn(({ audios }) => (
@@ -41,12 +43,6 @@ vi.mock('@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVide
         ImagesAndVideos
       </div>
     )),
-  };
-});
-
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
   };
 });
 
@@ -391,7 +387,7 @@ describe('PostAttachments', () => {
       render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not load attachments',
         });
@@ -405,7 +401,7 @@ describe('PostAttachments', () => {
       const { container } = render(<PostAttachments attachments={attachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalled();
+        expect(vi.mocked(toast)).toHaveBeenCalled();
       });
 
       // Should not render anything after error
@@ -430,7 +426,7 @@ describe('PostAttachments', () => {
       rerender(<PostAttachments attachments={newAttachments} localAttachments={undefined} />);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not load attachments',
         });
@@ -461,7 +457,7 @@ describe('PostAttachments', () => {
         await Promise.resolve();
       });
 
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
       expect(container.firstChild).toBeNull();
     });
   });
