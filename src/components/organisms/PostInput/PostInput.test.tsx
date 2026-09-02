@@ -10,6 +10,7 @@ import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
+import { toast } from '@/molecules/Toaster/toast';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
@@ -18,7 +19,6 @@ import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostInput } from './PostInput';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 
-const mockToast = vi.fn();
 const mockEnterSubmitHandler = vi.fn();
 const mockHandleMentionKeyDown = vi.fn(() => false);
 const mockHandleFilesAdded = vi.fn();
@@ -422,11 +422,7 @@ vi.mock('@/molecules/TagInput/TagInput', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: vi.fn(() => ({ toast: mockToast })),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Shared refs so React populates them when mock components render
 const mockTextareaRef = createRef<HTMLTextAreaElement>();
@@ -585,7 +581,7 @@ describe('PostInput', () => {
     mockUsePostReturn.reply = mockReply;
     mockUsePostReturn.post = mockPost;
 
-    mockToast.mockReset();
+    vi.mocked(toast).mockReset();
     mockEnterSubmitHandler.mockReset();
     mockHandleMentionKeyDown.mockReset();
     mockHandleMentionKeyDown.mockReturnValue(false);
@@ -1066,8 +1062,8 @@ describe('PostInput', () => {
       />,
     );
 
-    expect(mockToast).toHaveBeenCalledTimes(1);
-    expect(mockToast).toHaveBeenCalledWith(
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(
       expect.objectContaining({
         variant: 'error',
         description: 'Could not parse article content',

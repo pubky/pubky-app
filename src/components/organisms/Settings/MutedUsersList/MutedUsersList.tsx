@@ -14,7 +14,7 @@ import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { isAppError } from '@/libs/error/error.utils';
 import { extractInitials, truncateMiddle } from '@/libs/utils/utils';
 import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';

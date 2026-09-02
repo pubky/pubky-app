@@ -4,6 +4,7 @@ import { SEARCH_PEOPLE_PREVIEW_COUNT } from '@/config/search';
 import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
 import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import type { Pubky } from '@/models/models.types';
+import { toast } from '@/molecules/Toaster/toast';
 import type { UserListItemData } from '@/organisms/UserListItem/UserListItem.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SearchPeople } from './SearchPeople';
@@ -20,10 +21,7 @@ vi.mock('@/hooks/useSearchPeople/useSearchPeople', () => ({
   useSearchPeople: vi.fn(),
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 const mockToggleFollow = vi.fn();
 vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
@@ -225,7 +223,7 @@ describe('SearchPeople', () => {
     const options = mockUseSearchPeople.mock.calls[0][1];
     options?.onError?.(new Error('boom'));
 
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
   it('collapses back to the preview when the tags change (remount)', () => {

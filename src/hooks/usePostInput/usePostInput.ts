@@ -27,7 +27,7 @@ import { usePost } from '@/hooks/usePost/usePost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { Logger } from '@/libs/logger/logger';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { postKindBelongsToStream } from '@/stores/home/home.utils';
@@ -95,7 +95,6 @@ export function usePostInput({
     isSubmitting,
   } = usePost();
   const timelineFeed = useTimelineFeedContext();
-  const { toast } = useToast();
   const { deletePost } = useDeletePost();
 
   // Seed and resolve the post's current attachments for the edit composer
@@ -454,7 +453,7 @@ export function usePostInput({
         setAttachments((prev) => [...prev, ...validFiles]);
       }
     },
-    [isArticle, isSubmitting, attachments.length, existingAttachments.length, setAttachments, toast],
+    [isArticle, isSubmitting, attachments.length, existingAttachments.length, setAttachments],
   );
 
   // Remove an existing attachment from the edit composer (removed from the post on submit)

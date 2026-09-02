@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { REPORT_ISSUE_TYPES, REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
 import { useReportPost } from './useReportPost';
 import { REPORT_API_ENDPOINT, REPORT_POST_STEPS } from './useReportPost.constants';
@@ -36,12 +37,7 @@ vi.mock('@/models/models.utils', () => ({
 }));
 
 // Mock toast helpers
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: (params: { title?: string; description: string; variant?: string }) => mockToast(params),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock Logger
 vi.mock('@/libs/logger/logger', async (importOriginal) => {
@@ -290,7 +286,7 @@ describe('useReportPost', () => {
         expect(result.current.isSuccess).toBe(false);
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({
           variant: 'error',
           description: 'Server error',
@@ -377,7 +373,7 @@ describe('useReportPost', () => {
 
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.isSuccess).toBe(false);
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({
           variant: 'error',
           description: 'Could not load profile',
@@ -411,7 +407,7 @@ describe('useReportPost', () => {
 
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.isSuccess).toBe(false);
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({
           variant: 'error',
           description: 'Could not load profile',
@@ -445,7 +441,7 @@ describe('useReportPost', () => {
         expect(result.current.isSuccess).toBe(false);
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({
           variant: 'error',
           description: 'Network error',

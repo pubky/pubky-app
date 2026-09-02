@@ -1,9 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory } from '@/libs/error/error.types';
+import type { Pubky } from '@/models/models.types';
 import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
-import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { type UserStreamId, UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import { asInvalid } from '@/test-utils/type-assertions';
+import { NexusUserStreamService } from './userStream';
 import { buildUserStreamBodyUrl, userStreamApi } from './userStream.api';
+
+vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/services/nexus/nexus.utils')>()),
+  queryNexus: vi.fn(),
+}));
 
 describe('Users Stream API - Error Control', () => {
   const mockUserId = 'erztyis9oiaho93ckucetcf5xnxacecqwhbst5hnd7mmkf69dhby';
@@ -290,9 +300,9 @@ describe('Users Stream API - Error Control', () => {
   });
 
   describe('UserStreamApiEndpoint type', () => {
-    it('should have exactly 10 endpoints', () => {
+    it('should have exactly 11 endpoints', () => {
       const endpointKeys = Object.keys(userStreamApi);
-      expect(endpointKeys).toHaveLength(10);
+      expect(endpointKeys).toHaveLength(11);
       expect(endpointKeys).toContain('followers');
       expect(endpointKeys).toContain('following');
       expect(endpointKeys).toContain('friends');
@@ -301,6 +311,7 @@ describe('Users Stream API - Error Control', () => {
       expect(endpointKeys).toContain('postReplies');
       expect(endpointKeys).toContain('friendsWithDepth');
       expect(endpointKeys).toContain('mostFollowed');
+      expect(endpointKeys).toContain('starterPack');
       expect(endpointKeys).toContain('username');
       expect(endpointKeys).toContain('usersByIds');
     });
@@ -395,6 +406,32 @@ describe('NexusUserStreamService.fetch', () => {
 
       expect(url).toContain('source=recommended');
     });
+
+    it('should generate correct starter pack URL with ordered comma-joined tags', () => {
+      const url = userStreamApi.starterPack({
+        tags: 'bitcoin,music',
+        viewer_id: mockUserId,
+        skip: 0,
+        limit: 10,
+      });
+
+      expect(url).toContain('v0/stream/users/ids?');
+      expect(url).toContain('source=starter_pack');
+      // URLSearchParams encodes the comma; order must be preserved
+      expect(url).toContain('tags=bitcoin%2Cmusic');
+      expect(url).toContain(`viewer_id=${mockUserId}`);
+      expect(url).toContain('skip=0');
+      expect(url).toContain('limit=10');
+    });
+
+    it('should generate distinct starter pack URLs for reversed tag orders', () => {
+      const forward = userStreamApi.starterPack({ tags: 'travel,music' });
+      const reversed = userStreamApi.starterPack({ tags: 'music,travel' });
+
+      expect(forward).toContain('tags=travel%2Cmusic');
+      expect(reversed).toContain('tags=music%2Ctravel');
+      expect(forward).not.toBe(reversed);
+    });
   });
 
   describe('Parameter handling', () => {
@@ -441,6 +478,40 @@ describe('NexusUserStreamService.fetch', () => {
       });
 
       expect(url).not.toContain('viewer_id=');
+    });
+  });
+
+  describe('starter pack dispatch', () => {
+    beforeEach(() => {
+      vi.mocked(queryNexus).mockReset();
+      vi.mocked(queryNexus).mockResolvedValue([]);
+    });
+
+    it('should dispatch starter pack IDs to source=starter_pack with ordered tags', async () => {
+      await NexusUserStreamService.fetch({
+        streamId: 'starter_pack:all:all:bitcoin,music' as UserStreamId,
+        params: { skip: 0, limit: 10, viewer_id: 'viewer-abc' as Pubky },
+      });
+
+      expect(queryNexus).toHaveBeenCalledTimes(1);
+      const { url } = vi.mocked(queryNexus).mock.calls[0][0];
+      expect(url).toContain('source=starter_pack');
+      expect(url).toContain('tags=bitcoin%2Cmusic');
+      expect(url).toContain('viewer_id=viewer-abc');
+    });
+
+    it('should reject unsupported runtime sources without querying Nexus', async () => {
+      await expect(
+        NexusUserStreamService.fetch({
+          streamId: 'unsupported:all:all' as UserStreamId,
+          params: { skip: 0, limit: 10 },
+        }),
+      ).rejects.toMatchObject({
+        category: ErrorCategory.Validation,
+        code: ValidationErrorCode.INVALID_INPUT,
+      });
+
+      expect(queryNexus).not.toHaveBeenCalled();
     });
   });
 

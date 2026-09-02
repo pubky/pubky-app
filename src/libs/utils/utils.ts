@@ -597,6 +597,16 @@ export function sanitizeTagInput(value: string): string {
 }
 
 /**
+ * Convert a tag label to the canonical form used by local storage and Nexus.
+ *
+ * @param value - The raw tag label
+ * @returns The trimmed, lowercase tag label
+ */
+export function canonicalizeTagLabel(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
  * Checks whether a string is a valid tag label (correct length, no banned characters).
  *
  * @param value - The candidate tag label (should already be trimmed/lowercased)

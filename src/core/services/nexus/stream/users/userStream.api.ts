@@ -4,6 +4,7 @@ import {
   type TUserStreamInfluencersParams,
   type TUserStreamPostRepliesParams,
   type TUserStreamQueryParams,
+  type TUserStreamStarterPackParams,
   type TUserStreamUsernameParams,
   type TUserStreamUsersByIdsParams,
   type TUserStreamWithDepthParams,
@@ -75,6 +76,10 @@ export const userStreamApi = {
 
   mostFollowed: (params: TUserStreamBase) =>
     buildUserStreamUrl(params, UserStreamSource.MOST_FOLLOWED, USER_STREAM_PREFIX.USER_IDS),
+
+  // Starter pack: ranked users for 1-5 ordered interest tags (pubky/pubky-nexus#1024)
+  starterPack: (params: TUserStreamStarterPackParams) =>
+    buildUserStreamUrl(params, UserStreamSource.STARTER_PACK, USER_STREAM_PREFIX.USER_IDS),
 
   // Username search
   username: (params: TUserStreamUsernameParams) => buildUserStreamUrl(params, null, USER_STREAM_PREFIX.USERNAME),

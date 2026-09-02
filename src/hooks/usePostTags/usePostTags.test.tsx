@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagController } from '@/controllers/tag/tag';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { mockAuthStore } from '@/test-utils/stores';
@@ -9,9 +10,8 @@ import { usePostTags } from './usePostTags';
 import { TAGS_PER_PAGE } from './usePostTags.constants';
 
 // Hoisted mock for fetchTags - must be defined before vi.mock
-const { mockFetchTags, mockToast, mockAuthStoreSelector } = vi.hoisted(() => ({
+const { mockFetchTags, mockAuthStoreSelector } = vi.hoisted(() => ({
   mockFetchTags: vi.fn().mockResolvedValue([]),
-  mockToast: vi.fn(),
   mockAuthStoreSelector: (currentUserPubky: string | null) => {
     return (selector: (state: AuthStore) => unknown) => selector(mockAuthStore({ currentUserPubky }));
   },
@@ -51,9 +51,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(() => undefined),
 }));
 // Mock toast
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mockToast,
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock tag transformation utilities
 vi.mock('@/molecules/TaggedItem/TaggedItem.utils', () => ({
@@ -174,7 +172,7 @@ describe('usePostTags', () => {
       });
 
       expect(response!).toEqual({ success: true });
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Tag added: test-tag',
       });
     });
@@ -190,7 +188,7 @@ describe('usePostTags', () => {
       });
 
       expect(response!).toEqual({ success: false, error: 'Failed to add tag' });
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not add tag: broken-tag',
       });
@@ -257,7 +255,7 @@ describe('usePostTags', () => {
         await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Tag removed: solo-tag',
       });
     });
@@ -278,7 +276,7 @@ describe('usePostTags', () => {
         await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not remove tag: solo-tag',
       });

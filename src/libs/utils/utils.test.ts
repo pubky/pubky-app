@@ -7,6 +7,7 @@ import {
 } from '@/test-utils/pubky';
 import { asInvalid } from '@/test-utils/type-assertions';
 import {
+  canonicalizeTagLabel,
   canSubmitPost,
   clearCookies,
   cn,
@@ -1255,6 +1256,16 @@ describe('Utils', () => {
 
     it('should reject a pk:-prefixed pubky string', () => {
       expect(isValidTagLabel('pk:abcdefghijklmnopqrstuvwxyz')).toBe(false);
+    });
+  });
+
+  describe('canonicalizeTagLabel', () => {
+    it('should trim surrounding whitespace and lowercase the label', () => {
+      expect(canonicalizeTagLabel('  BitCoin  ')).toBe('bitcoin');
+    });
+
+    it('should preserve valid non-Latin labels', () => {
+      expect(canonicalizeTagLabel(' 日本語 ')).toBe('日本語');
     });
   });
 
