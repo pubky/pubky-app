@@ -8,7 +8,7 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { APP_ROUTES } from '@/app/routes';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { FeedController } from '@/controllers/feed/feed';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import {
   CUSTOM_FEED_CONTENT_ALL,
   type CustomFeedFormData,
@@ -52,7 +52,6 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
   const inFlightRef = useRef(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { toast } = useToast();
 
   const form = useForm<CustomFeedFormData>({
     resolver: zodResolver(customFeedFormSchema),

@@ -10,15 +10,7 @@ const TEST_USER_PUBKY = 'test-user-123';
 const TEST_USER_NAME = 'Test User';
 
 // Mock molecules
-const mockToast = vi.hoisted(() => vi.fn());
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: mockToast,
-    useToast: vi.fn(() => ({
-      toast: mockToast,
-    })),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock useCurrentUserProfile hook
 const mockUseCurrentUserProfile = vi.fn();

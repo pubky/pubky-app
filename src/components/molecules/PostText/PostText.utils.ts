@@ -30,6 +30,26 @@ export const remarkPlaintextCodeblock = () => (tree: Root) => {
   });
 };
 
+// Removes inline images from article surfaces that don't render them (feed
+// previews, embedded article cards). Runs before the preview-truncation
+// plugins so image alt text never consumes preview character budget.
+// Paragraphs left empty by the removal are dropped so previews don't show
+// blank gaps.
+export const remarkStripImages = () => (tree: Root) => {
+  visit(tree, ['image', 'imageReference'], (_node, index, parent) => {
+    if (parent && typeof index === 'number') {
+      parent.children.splice(index, 1);
+      return index;
+    }
+  });
+  visit(tree, 'paragraph', (node, index, parent) => {
+    if (parent && typeof index === 'number' && node.children.length === 0) {
+      parent.children.splice(index, 1);
+      return index;
+    }
+  });
+};
+
 // Recursively extract text from a node and all its descendants.
 // Handles nested formatting like [**bold** and _italic_](url) -> "bold and italic"
 const extractText = (node: RootContent | PhrasingContent): string => {

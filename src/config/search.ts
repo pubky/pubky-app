@@ -15,12 +15,29 @@ export const SEARCH_PEOPLE_PAGE_SIZE = 20;
 export const SEARCH_PEOPLE_MAX_TAGS = 5;
 
 /**
- * Maximum height for search suggestions dropdown
- * - Prevents dropdown from taking up entire screen on mobile
- * - Enables scrolling when content exceeds this height
- * - Applied consistently across all device sizes
+ * Search suggestions dropdown viewport safety cap
+ * - The panel hugs its content (#1840 design: no internal scrolling); this cap only
+ *   stops it from overflowing short viewports, where overflow-y-auto kicks in as a
+ *   fallback. The offset covers the header and search input above the dropdown.
  */
-const SEARCH_SUGGESTIONS_MAX_HEIGHT = 300;
+const SEARCH_SUGGESTIONS_MAX_HEIGHT = 'calc(100dvh - 10rem)';
+
+/**
+ * Limits for the full-text `?q=` query, enforced by `validateContentSearchQuery`,
+ * which also interpolates them into its user-facing error messages.
+ */
+export const CONTENT_SEARCH_QUERY_MIN_LENGTH = 2;
+export const CONTENT_SEARCH_QUERY_MAX_LENGTH = 30;
+export const CONTENT_SEARCH_QUERY_MAX_TERMS = 4;
+
+/** Tag prefix matches fetched per query term for the `/search` full-text Tags row. */
+export const SEARCH_CONTENT_TAGS_PER_TERM_LIMIT = 3;
+
+/**
+ * Cap of the merged `/search` full-text Tags row — per-term results times
+ * `CONTENT_SEARCH_QUERY_MAX_TERMS` could otherwise reach 12 chips.
+ */
+export const SEARCH_CONTENT_TAGS_MAX_TOTAL = 8;
 
 /**
  * Search bar closed state style (pill shape)
@@ -50,5 +67,5 @@ export const SEARCH_EXPANDED_STYLE = {
   background: 'linear-gradient(180deg, var(--background) 0%, rgba(5, 5, 10, 0.50) 100%)',
   backdropFilter: 'blur(25px)',
   boxShadow: '0px 50px 100px rgba(0, 0, 0, 1)',
-  maxHeight: `${SEARCH_SUGGESTIONS_MAX_HEIGHT}px`,
+  maxHeight: SEARCH_SUGGESTIONS_MAX_HEIGHT,
 } as const;

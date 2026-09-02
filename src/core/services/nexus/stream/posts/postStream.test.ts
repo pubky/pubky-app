@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, test, vi } from 'vitest';
+import { AppError } from '@/libs/error/error';
 import type { Pubky } from '@/models/models.types';
-import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { buildContentSearchStreamId, type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { type NexusPost, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import {
@@ -663,6 +664,57 @@ describe('createPostStreamParams', () => {
         expect(result.extraParams.post_id).toBe('post-id-123');
       });
     });
+
+    describe('Content search stream - Uses offset-based pagination', () => {
+      const contentSearchStreamId = buildContentSearchStreamId('bitcoin wallet', StreamKind.COLLECTION);
+
+      it('should build the minimal by_content param surface (q, kind, skip, limit)', () => {
+        const result = createPostStreamParams({
+          streamId: contentSearchStreamId,
+          streamTail: 10,
+          streamHead: 0,
+          limit: 2,
+          viewerId: 'someviewer' as Pubky,
+        });
+
+        expect(result.params).toEqual({ kind: StreamKind.COLLECTION, limit: 2, skip: 10 });
+        expect(result.invokeEndpoint).toBe(StreamSource.CONTENT_SEARCH);
+        expect(result.extraParams).toEqual({ q: 'bitcoin wallet' });
+        // The by_content endpoint takes no viewer/sorting/order/tags/timestamp params.
+        expect(result.params.viewer_id).toBeUndefined();
+        expect(result.params.sorting).toBeUndefined();
+        expect(result.params.order).toBeUndefined();
+        expect(result.params.tags).toBeUndefined();
+        expect(result.params.start).toBeUndefined();
+        expect(result.params.end).toBeUndefined();
+      });
+
+      it('should omit the kind key entirely for kind "all"', () => {
+        const result = createPostStreamParams({
+          streamId: buildContentSearchStreamId('bitcoin wallet'),
+          streamTail: 0,
+          streamHead: 0,
+          limit: 2,
+          viewerId: mockViewerId,
+        });
+
+        expect(result.params).not.toHaveProperty('kind');
+      });
+
+      it('should NOT decrement streamTail (offset pagination, same as engagement sorting)', () => {
+        const streamTail = 10; // Number of results already loaded
+        const result = createPostStreamParams({
+          streamId: contentSearchStreamId,
+          streamTail,
+          streamHead: 0,
+          limit: 2,
+          viewerId: mockViewerId,
+        });
+
+        expect(result.params.skip).toBe(10); // NOT decremented
+        expect(result.params.start).toBeUndefined();
+      });
+    });
   });
 
   describe('Tags handling in stream IDs', () => {
@@ -1081,6 +1133,45 @@ describe('breakDownStreamId', () => {
       expect(result.tags).toBe('post1,post2,post3,post4,post5');
     });
   });
+
+  describe('Content search pattern', () => {
+    it('should parse a well-formed id with an explicit kind', () => {
+      const result = breakDownStreamId(buildContentSearchStreamId('bitcoin wallet', StreamKind.COLLECTION));
+      expect(result).toEqual({
+        sorting: 'content_search',
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        kind: 'collection',
+        searchQuery: 'bitcoin wallet',
+      });
+    });
+
+    it('should default to kind "all"', () => {
+      const result = breakDownStreamId(buildContentSearchStreamId('bitcoin wallet'));
+      expect(result.kind).toBe('all');
+      expect(result.searchQuery).toBe('bitcoin wallet');
+    });
+
+    it('should decode queries containing colons and spaces', () => {
+      const result = breakDownStreamId(buildContentSearchStreamId('note: bitcoin wallet'));
+      expect(result.invokeEndpoint).toBe(StreamSource.CONTENT_SEARCH);
+      expect(result.searchQuery).toBe('note: bitcoin wallet');
+    });
+
+    it('should route reserved-word queries to CONTENT_SEARCH, not the legacy classifiers', () => {
+      const result = breakDownStreamId(buildContentSearchStreamId('bookmarks'));
+      expect(result.invokeEndpoint).toBe(StreamSource.CONTENT_SEARCH);
+      expect(result.invokeEndpoint).not.toBe(StreamSource.BOOKMARKS);
+      expect(result.searchQuery).toBe('bookmarks');
+    });
+
+    it('should not throw for a malformed family id (missing q~ marker)', () => {
+      const result = breakDownStreamId('content_search:not-marked:all' as PostStreamId);
+      expect(result.sorting).toBe('content_search');
+      expect(result.invokeEndpoint).toBe(StreamSource.CONTENT_SEARCH);
+      expect(result.kind).toBeUndefined();
+      expect(result.searchQuery).toBeUndefined();
+    });
+  });
 });
 
 describe('NexusPostStreamService', () => {
@@ -1187,6 +1278,45 @@ describe('NexusPostStreamService', () => {
     });
   });
 
+  describe('fetch - Content search routing', () => {
+    it('routes CONTENT_SEARCH to by_content and normalizes results into a key stream', async () => {
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue([
+        { post_key: 'a:p2', score: 4.2 },
+        { post_key: 'a:p1', score: 3.1 },
+      ]);
+
+      const result = await NexusPostStreamService.fetch({
+        params: { kind: StreamKind.COLLECTION, skip: 10, limit: 2 },
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        extraParams: { q: 'bitcoin wallet' },
+      });
+
+      expect(queryNexusSpy).toHaveBeenCalledTimes(1);
+      const calledArgs = queryNexusSpy.mock.calls[0][0] as { url: string };
+      expect(calledArgs.url).toContain('search/posts/by_content');
+      // URLSearchParams encodes the space as '+'.
+      expect(calledArgs.url).toContain('q=bitcoin+wallet');
+      expect(calledArgs.url).toContain('kind=collection');
+      expect(calledArgs.url).toContain('skip=10');
+      expect(calledArgs.url).toContain('limit=2');
+      // Relevance order preserved; null score marks the chunk skip-paginated.
+      expect(result).toEqual({ post_keys: ['a:p2', 'a:p1'], last_post_score: null });
+    });
+
+    it('omits kind from the URL when params.kind is undefined', async () => {
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
+
+      await NexusPostStreamService.fetch({
+        params: { skip: 0, limit: 2 },
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        extraParams: { q: 'bitcoin wallet' },
+      });
+
+      const calledArgs = queryNexusSpy.mock.calls[0][0] as { url: string };
+      expect(calledArgs.url).not.toContain('kind=');
+    });
+  });
+
   describe('fetch - Required parameter validation (Comprehensive)', () => {
     test.each([
       {
@@ -1224,6 +1354,13 @@ describe('NexusPostStreamService', () => {
         extraParams: {},
         expectedError: 'Viewer ID is required',
       },
+      {
+        name: 'CONTENT_SEARCH requires a search query',
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        params: { limit: 10 },
+        extraParams: {}, // Missing q
+        expectedError: 'Search query is required for content_search stream',
+      },
     ])('$name', async ({ invokeEndpoint, params, extraParams, expectedError }) => {
       const fetchParams: TPostStreamFetchParams = {
         params,
@@ -1232,6 +1369,16 @@ describe('NexusPostStreamService', () => {
       };
 
       await expect(NexusPostStreamService.fetch(fetchParams)).rejects.toThrow(expectedError);
+    });
+
+    it('throws an AppError validation error when CONTENT_SEARCH is missing a query', async () => {
+      const fetchParams: TPostStreamFetchParams = {
+        params: { limit: 10 },
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        extraParams: {}, // Missing q
+      };
+
+      await expect(NexusPostStreamService.fetch(fetchParams)).rejects.toBeInstanceOf(AppError);
     });
 
     it('should throw error for invalid stream type', async () => {

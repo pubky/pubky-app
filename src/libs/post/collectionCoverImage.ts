@@ -1,7 +1,5 @@
-import { FileController } from '@/controllers/file/file';
+import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { Logger } from '@/libs/logger/logger';
-import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
 import { FileVariant } from '@/services/nexus/file/file.types';
 
 /**
@@ -22,12 +20,10 @@ import { FileVariant } from '@/services/nexus/file/file.types';
  * has no native handler for the `pubky` scheme.
  *
  * Lives in its own module (not `collectionContent.ts`) because it depends on
- * `FileController`: the pure envelope parser is consumed by the application
- * layer, which must stay free of Controller imports (see AGENTS.md layering).
- * UI layers importing this module keep their controller dependency legal. If
- * other surfaces (post attachments, profile heroes, etc.) start consuming
- * `pubky://` *file* URIs, consider extracting a generic
- * `pubkyUriToCdnUrl(uri, variant)` into `src/libs/file/`.
+ * the controller-backed `pubkyUriToCdnUrl` resolver: the pure envelope parser
+ * is consumed by the application layer, which must stay free of Controller
+ * imports (see AGENTS.md layering). UI layers importing this module keep
+ * their controller dependency legal.
  *
  * @param raw      Envelope `cover_image` value from Nexus (may be null /
  *                 undefined / non-URL string if the backend shape drifts).
@@ -65,15 +61,5 @@ export function resolveCollectionCoverImage(
     }
   }
 
-  try {
-    const compositeId = buildCompositeIdFromPubkyUri({
-      uri: trimmed as Pubky,
-      domain: CompositeIdDomain.FILES,
-    });
-    if (!compositeId) return null;
-    return FileController.getFileUrl({ fileId: compositeId, variant });
-  } catch (error) {
-    Logger.warn('[collectionCoverImage] Failed to resolve cover_image pubky URI', { uri: trimmed, error });
-    return null;
-  }
+  return pubkyUriToCdnUrl(trimmed, variant);
 }

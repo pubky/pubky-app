@@ -47,7 +47,7 @@ export function useTagSuggestions({
       setIsLoading(true);
 
       try {
-        const results = await SearchController.getTagsByPrefix({
+        const results = await SearchController.fetchTagsByPrefix({
           prefix: searchQuery,
           limit: searchLimit,
         });
