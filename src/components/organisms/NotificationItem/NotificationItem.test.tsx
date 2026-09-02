@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { USER_NAME_MAX_LENGTH } from '@/config/user';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { NotificationItem } from './NotificationItem';
 
@@ -92,8 +93,6 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
 });
 
 // Mock molecules
-// Hoisted so the module-level `toast` export can be mocked with it directly.
-const mockToast = vi.hoisted(() => vi.fn());
 /** The post the mocked live query currently reports; null models "not found". */
 const mockPostDetails = { value: null as { kind: string; content: string } | null };
 const mockUsePostDetails = vi.fn((compositeId: string | null) => ({
@@ -141,12 +140,7 @@ vi.mock('@/molecules/PostTag/PostTag', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: mockToast,
-    useToast: () => ({ toast: mockToast }),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
@@ -188,7 +182,7 @@ vi.mock('@/atoms/Typography/Typography', () => {
 describe('NotificationItem', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockToast.mockClear();
+    vi.mocked(toast).mockClear();
     mockUsePostDetails.mockClear();
     mockPostDetails.value = null;
     vi.mocked(useUserProfile).mockReturnValue({
@@ -463,7 +457,7 @@ describe('NotificationItem', () => {
     await vi.waitFor(() => {
       expect(screen.getByText(/not valid json/)).toBeInTheDocument();
     });
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('extracts name from collection post content in notifications', async () => {
@@ -512,7 +506,7 @@ describe('NotificationItem', () => {
     render(<NotificationItem notification={mentionNotification} isUnread={false} />);
 
     await vi.waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not parse collection content',
       });

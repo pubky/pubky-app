@@ -4,13 +4,13 @@ import { COLLECTION_LAYOUT } from '@/config/collections';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { usePostSaveTargets } from './usePostSaveTargets';
 
 const mocks = vi.hoisted(() => ({
   commitUpdateCollectionItem: vi.fn(),
   commitCreateCollection: vi.fn(),
   toggleBookmark: vi.fn(),
-  toast: vi.fn(),
 }));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -52,9 +52,7 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
   }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
@@ -88,7 +86,7 @@ describe('usePostSaveTargets', () => {
       shouldAdd: false,
     });
     expect(mocks.toggleBookmark).not.toHaveBeenCalled();
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post removed from collection.',
     });
   });
@@ -105,7 +103,7 @@ describe('usePostSaveTargets', () => {
       postId: 'author:post1',
       shouldAdd: true,
     });
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Post added to collection.',
     });
   });
@@ -126,7 +124,7 @@ describe('usePostSaveTargets', () => {
       await result.current.toggleCollection('author:collection2');
     });
 
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Collection has too many items',
     });

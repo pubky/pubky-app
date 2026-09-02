@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES } from '@/app/routes';
 import { DEFAULT_CUSTOM_FEED_ICON } from '@/config/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { toast } from '@/molecules/Toaster/toast';
 import { useCustomFeedForm } from './useCustomFeedForm';
 import { CUSTOM_FEED_CONTENT_ALL, CUSTOM_FEED_FORM_FIELDS, type CustomFeedFormData } from './useCustomFeedForm.types';
 
@@ -12,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   commitCreate: vi.fn(),
   commitUpdate: vi.fn(),
   commitDelete: vi.fn(),
-  toast: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
   pathname: '/home' as string,
@@ -26,9 +26,7 @@ vi.mock('@/controllers/feed/feed', () => ({
   },
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mocks.pathname,
@@ -159,7 +157,7 @@ describe('useCustomFeedForm', () => {
           content: null,
         }),
       );
-      expect(mocks.toast).toHaveBeenCalledWith({ title: 'Feed created: My Feed' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Feed created: My Feed' });
       expect(mocks.push).toHaveBeenCalledWith(`${APP_ROUTES.FEED}/new-feed`);
     });
 
@@ -216,7 +214,7 @@ describe('useCustomFeedForm', () => {
       });
 
       expect(saved).toBe(false);
-      expect(mocks.toast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not create feed. Try again.',
       });
@@ -284,7 +282,7 @@ describe('useCustomFeedForm', () => {
       });
 
       expect(mocks.replace).not.toHaveBeenCalled();
-      expect(mocks.toast).toHaveBeenCalledWith({ title: 'Feed updated: Renamed' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Feed updated: Renamed' });
     });
   });
 
@@ -315,7 +313,7 @@ describe('useCustomFeedForm', () => {
 
       expect(deleted).toBe(true);
       expect(mocks.commitDelete).toHaveBeenCalledWith({ feedId: 'feed-abc123' });
-      expect(mocks.toast).toHaveBeenCalledWith({ title: 'Feed deleted: Bitcoin News' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Feed deleted: Bitcoin News' });
       expect(mocks.replace).toHaveBeenCalledWith(APP_ROUTES.HOME);
     });
 
@@ -345,7 +343,7 @@ describe('useCustomFeedForm', () => {
       });
 
       expect(deleted).toBe(false);
-      expect(mocks.toast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not delete feed. Try again.',
       });

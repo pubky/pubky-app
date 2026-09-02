@@ -5,7 +5,7 @@ import { PostController } from '@/controllers/post/post';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UseDeletePostOptions, UseDeletePostResult } from './useDeletePost.types';
@@ -32,7 +32,6 @@ import type { UseDeletePostOptions, UseDeletePostResult } from './useDeletePost.
  */
 export function useDeletePost(options?: UseDeletePostOptions): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = useToast();
   const timelineFeed = useTimelineFeedContext();
 
   // Resolve toast copy with caller overrides so callers like CollectionCard /

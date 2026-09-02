@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { usePost } from './usePost';
 import type { ExistingAttachment } from './usePost.types';
 
@@ -14,30 +15,22 @@ const mockExistingAttachment = (uri: string): ExistingAttachment => ({
 });
 
 // Hoist mock data and functions
-const {
-  mockCurrentUserId,
-  setMockCurrentUserId,
-  mockPostControllerCreate,
-  mockPostControllerEdit,
-  mockToast,
-  mockLoggerError,
-} = vi.hoisted(() => {
-  const userId = { current: 'test-user-id' as string | null };
-  const postControllerCreate = vi.fn();
-  const postControllerEdit = vi.fn();
-  const toast = vi.fn();
-  const loggerError = vi.fn();
-  return {
-    mockCurrentUserId: userId,
-    setMockCurrentUserId: (value: string | null) => {
-      userId.current = value;
-    },
-    mockPostControllerCreate: postControllerCreate,
-    mockPostControllerEdit: postControllerEdit,
-    mockToast: toast,
-    mockLoggerError: loggerError,
-  };
-});
+const { mockCurrentUserId, setMockCurrentUserId, mockPostControllerCreate, mockPostControllerEdit, mockLoggerError } =
+  vi.hoisted(() => {
+    const userId = { current: 'test-user-id' as string | null };
+    const postControllerCreate = vi.fn();
+    const postControllerEdit = vi.fn();
+    const loggerError = vi.fn();
+    return {
+      mockCurrentUserId: userId,
+      setMockCurrentUserId: (value: string | null) => {
+        userId.current = value;
+      },
+      mockPostControllerCreate: postControllerCreate,
+      mockPostControllerEdit: postControllerEdit,
+      mockLoggerError: loggerError,
+    };
+  });
 
 // Mock dependencies
 vi.mock('@/controllers/post/post', () => ({
@@ -57,13 +50,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: vi.fn(() => ({
-      toast: mockToast,
-    })),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock Logger
 vi.mock('@/libs/logger/logger', async () => {
@@ -176,7 +163,7 @@ describe('usePost', () => {
       });
 
       expect(result.current.existingAttachments).toEqual([existing]);
-      mockToast.mockClear();
+      vi.mocked(toast).mockClear();
 
       act(() => {
         result.current.setIsArticle(true);
@@ -184,7 +171,7 @@ describe('usePost', () => {
 
       expect(result.current.isArticle).toBe(true);
       expect(result.current.existingAttachments).toEqual([existing]);
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('should clear only new attachments when switching to article mode with both kinds present', () => {
@@ -203,7 +190,7 @@ describe('usePost', () => {
 
       expect(result.current.attachments).toEqual([]);
       expect(result.current.existingAttachments).toEqual([existing]);
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'warning',
         title: 'Articles support one cover image',
       });
@@ -319,7 +306,7 @@ describe('usePost', () => {
       expect(result.current.content).toBe('');
       expect(result.current.tags).toEqual([]);
       expect(result.current.attachments).toEqual([]);
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Reply posted',
           dismissButton: true,
@@ -474,7 +461,7 @@ describe('usePost', () => {
       });
 
       // Toast should be called directly in catch block
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not post reply. Try again.',
       });
@@ -571,7 +558,7 @@ describe('usePost', () => {
       expect(result.current.attachments).toEqual([]);
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Post published',
       });
       expect(mockOnSuccess).toHaveBeenCalled();
@@ -717,7 +704,7 @@ describe('usePost', () => {
       });
 
       // Toast should be called directly in catch block
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not create post. Try again.',
       });
@@ -749,7 +736,7 @@ describe('usePost', () => {
         });
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
       });
@@ -837,7 +824,7 @@ describe('usePost', () => {
       expect(result.current.tags).toEqual([]);
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Post published',
       });
       expect(mockOnSuccess).toHaveBeenCalled();
@@ -1218,7 +1205,7 @@ describe('usePost', () => {
       });
 
       // Toast should be called directly in catch block
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not repost. Try again.',
       });
@@ -1294,7 +1281,7 @@ describe('usePost', () => {
         });
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({
           title: "Reposted John Doe's post",
         }),
@@ -1312,7 +1299,7 @@ describe('usePost', () => {
         });
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Reposted',
         }),
@@ -1332,14 +1319,14 @@ describe('usePost', () => {
         });
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({
           title: "You've shared the My Collection collection",
         }),
       );
     });
 
-    it('should include ToastAction with onUndo', async () => {
+    it('should include an Undo action descriptor that undoes the created repost', async () => {
       const { result } = renderHook(() => usePost());
       const mockOnUndo = vi.fn();
 
@@ -1351,11 +1338,15 @@ describe('usePost', () => {
         });
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: expect.anything(),
+          action: { label: 'Undo', altText: 'Undo', onClick: expect.any(Function) },
         }),
       );
+
+      const { action } = vi.mocked(toast).mock.calls[0][0];
+      action?.onClick();
+      expect(mockOnUndo).toHaveBeenCalledWith('created-post-id');
     });
 
     describe('edit method', () => {
@@ -1384,7 +1375,7 @@ describe('usePost', () => {
           content: 'Edited content',
         });
         expect(mockOnSuccess).toHaveBeenCalled();
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           title: 'Post updated',
         });
       });
@@ -1608,7 +1599,7 @@ describe('usePost', () => {
           });
         });
 
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
         });
@@ -1703,7 +1694,7 @@ describe('usePost', () => {
           });
         });
 
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not update post. Try again.',
         });
@@ -1784,7 +1775,7 @@ describe('usePost', () => {
           content: JSON.stringify({ title: 'Article Title', body: 'Article body content' }),
         });
         expect(mockOnSuccess).toHaveBeenCalled();
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           title: 'Post updated',
         });
       });

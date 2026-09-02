@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { DialogAddContent } from './DialogAddContent';
 
 const AUTHOR = 'a'.repeat(52);
@@ -19,7 +20,6 @@ const mocks = vi.hoisted(() => ({
   prependPosts: vi.fn(),
   prependOptimisticPosts: vi.fn(),
   routerPush: vi.fn(),
-  toast: vi.fn(),
 }));
 
 const COLLECTION_ID = `${VIEWER}:collection-1`;
@@ -70,10 +70,7 @@ vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
   useAvatarUrl: () => undefined,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mocks.toast,
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/organisms/DialogNewPost/DialogNewPost', () => ({
   DialogNewPost: ({
@@ -392,7 +389,7 @@ describe('DialogAddContent', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste' }));
 
     await waitFor(() =>
-      expect(mocks.toast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not read clipboard.',
       }),
@@ -475,7 +472,7 @@ describe('DialogAddContent', () => {
     );
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith('author:new-post');
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Success',
       description: 'Post added to collection.',
     });
@@ -493,7 +490,7 @@ describe('DialogAddContent', () => {
     );
     expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
     expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith('author:new-post');
-    expect(mocks.toast).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
   });
 });
 

@@ -4,6 +4,7 @@ import { AuthController } from '@/controllers/auth/auth';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { DialogRestoreRecoveryPhrase } from './DialogRestoreRecoveryPhrase';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -123,14 +124,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock Molecules module
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: vi.fn(() => ({
-      toast: mockToast,
-    })),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/molecules/WordSlot/WordSlot', () => {
   return {
@@ -525,7 +519,7 @@ describe('DialogRestoreRecoveryPhrase', () => {
       fireEvent.click(restoreButton!);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not sign in. Try again.',
         });
@@ -552,7 +546,7 @@ describe('DialogRestoreRecoveryPhrase', () => {
       fireEvent.click(restoreButton);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'This key is linked to a different homeserver. Use a staging account on this site.',
         });

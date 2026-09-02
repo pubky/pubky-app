@@ -19,7 +19,7 @@ import { parseCompositeId } from '@/models/models.utils';
 import { buildDiscoverCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { AvatarStack } from '@/molecules/AvatarStack/AvatarStack';
 import { AvatarStackSkeleton } from '@/molecules/AvatarStack/AvatarStack.skeleton';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { uniqueAuthors } from '@/organisms/Collections/collections.utils';
@@ -80,7 +80,6 @@ const EMPTY_CURSOR: DiscoverCursor = { lastPostId: undefined, streamTail: 0 };
  * click gets feedback instead of silently rendering nothing.
  */
 export function DiscoverCollections() {
-  const { toast } = useToast();
   // The stream layer filters own collections against the viewer read from the
   // auth store, so a viewer switch must reset and refetch (effect dep below).
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);

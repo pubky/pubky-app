@@ -10,7 +10,7 @@ import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
 import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './useProfileMenuActions.types';
 

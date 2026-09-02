@@ -15,7 +15,7 @@ import { validateContentSearchQuery } from '@/libs/search/contentSearch';
 import type { Pubky } from '@/models/models.types';
 import { SearchInputBar } from '@/molecules/SearchInputBar/SearchInputBar';
 import { SearchSuggestions } from '@/molecules/SearchSuggestions/SearchSuggestions';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { SearchInputProps } from './SearchInput.types';

@@ -6,7 +6,7 @@ import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { deriveTextPreview } from '@/libs/post/postPreview';
 import { isPostDeleted } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { resolvePubkyToNames } from '@/organisms/NotificationItem/NotificationItem.helpers';
 
 interface UseNotificationPostContentOptions {

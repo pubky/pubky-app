@@ -4,13 +4,13 @@ import { COLLECTION_LAYOUT } from '@/config/collections';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { useCreateCollection } from './useCreateCollection';
 import { CREATE_COLLECTION_FORM_FIELDS } from './useCreateCollection.types';
 
 const mocks = vi.hoisted(() => ({
   commitCreateCollection: vi.fn(),
   setCollectionCover: vi.fn(),
-  toast: vi.fn(),
   currentUserPubky: 'current-user' as string | null,
   cover: {
     file: null as File | null,
@@ -34,9 +34,7 @@ vi.mock('@/hooks/useCoverImagePicker/useCoverImagePicker', () => ({
   useCoverImagePicker: () => mocks.cover,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) =>
@@ -113,7 +111,7 @@ describe('useCreateCollection', () => {
       coverImage: file,
       layout: COLLECTION_LAYOUT.LIST,
     });
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Collection created',
     });
   });
@@ -183,7 +181,7 @@ describe('useCreateCollection', () => {
     });
 
     expect(saved).toBeNull();
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to create collection.',
     });
@@ -210,7 +208,7 @@ describe('useCreateCollection', () => {
       await result.current.submit();
     });
 
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
     });
