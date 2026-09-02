@@ -13,6 +13,8 @@ import type { SettingsState } from '@/stores/settings/settings.types';
  * Settings are stored at: pubky://{pubky}/pub/pubky.app/settings.json
  */
 export class SettingsApplication {
+  private static pendingCommits = new Map<Pubky, Promise<void>>();
+
   private constructor() {}
 
   /**
@@ -20,19 +22,37 @@ export class SettingsApplication {
    *
    * @param settings, The current settings state to persist
    * @param pubky, The user's public key
+   * @param signal, Optional cancellation signal checked when this queued write starts
    */
-  static async commitUpdate(settings: SettingsState, pubky: Pubky): Promise<void> {
-    const { settings: settingsJson, meta } = SettingsNormalizer.to(settings, pubky);
+  static async commitUpdate(settings: SettingsState, pubky: Pubky, signal?: AbortSignal): Promise<void> {
+    const previousCommit = this.pendingCommits.get(pubky) ?? Promise.resolve();
+    const pendingCommit = previousCommit
+      .catch(() => {})
+      .then(async () => {
+        if (signal?.aborted) return;
 
-    Logger.info('[Settings] Pushing to homeserver', { url: meta.url, settings: settingsJson });
+        const { settings: settingsJson, meta } = SettingsNormalizer.to(settings, pubky);
 
-    await HomeserverService.request({
-      method: HttpMethod.PUT,
-      url: meta.url,
-      bodyJson: settingsJson as unknown as Record<string, unknown>,
-    });
+        Logger.info('[Settings] Pushing to homeserver', { url: meta.url, settings: settingsJson });
 
-    Logger.info('[Settings] Push complete');
+        await HomeserverService.request({
+          method: HttpMethod.PUT,
+          url: meta.url,
+          bodyJson: settingsJson as unknown as Record<string, unknown>,
+        });
+
+        Logger.info('[Settings] Push complete');
+      });
+
+    this.pendingCommits.set(pubky, pendingCommit);
+
+    try {
+      await pendingCommit;
+    } finally {
+      if (this.pendingCommits.get(pubky) === pendingCommit) {
+        this.pendingCommits.delete(pubky);
+      }
+    }
   }
 
   /**

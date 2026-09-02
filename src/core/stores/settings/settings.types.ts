@@ -1,3 +1,5 @@
+import type { Pubky } from '@/models/models.types';
+
 export interface NotificationPreferences {
   follow: boolean;
   newFriend: boolean;
@@ -19,6 +21,12 @@ export interface PrivacyPreferences {
   hideActiveFriends: boolean;
   hideSearch: boolean;
   neverShowPosts: boolean;
+  /**
+   * Moderation-bot default-follow state. Missing means not processed, a Pubky means processed,
+   * and null is an explicit global opt-out. Preserve this field when settings move to
+   * priv/app.pubky/v1/settings.json in the pubky-social-specs M3 migration.
+   */
+  moderationBot?: Pubky | null;
 }
 
 export interface SettingsState {
@@ -42,6 +50,7 @@ export interface SettingsActions {
   setHideActiveFriends: (hideActiveFriends: boolean) => void;
   setHideSearch: (hideSearch: boolean) => void;
   setNeverShowPosts: (neverShowPosts: boolean) => void;
+  setModerationBot: (moderationBot: Pubky | null) => void;
   // Muted users actions
   addMutedUser: (userId: string) => void;
   removeMutedUser: (userId: string) => void;
@@ -97,6 +106,7 @@ export enum SettingsActionTypes {
   SET_HIDE_ACTIVE_FRIENDS = 'SET_HIDE_ACTIVE_FRIENDS',
   SET_HIDE_SEARCH = 'SET_HIDE_SEARCH',
   SET_NEVER_SHOW_POSTS = 'SET_NEVER_SHOW_POSTS',
+  SET_MODERATION_BOT = 'SET_MODERATION_BOT',
   ADD_MUTED_USER = 'ADD_MUTED_USER',
   REMOVE_MUTED_USER = 'REMOVE_MUTED_USER',
   SET_MUTED_USERS = 'SET_MUTED_USERS',
