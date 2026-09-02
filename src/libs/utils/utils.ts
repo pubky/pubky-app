@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { SnapshotSerializer } from 'vitest';
+import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
@@ -594,6 +595,22 @@ export function getCharacterCount(text: string): number {
  */
 export function sanitizeTagInput(value: string): string {
   return value.replace(TAG_BANNED_CHARS, '');
+}
+
+/**
+ * Convert a tag label to the canonical form used by local storage and Nexus.
+ *
+ * @param value - The raw tag label
+ * @returns The trimmed, lowercase tag label
+ */
+export function canonicalizeTagLabel(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/** Whether Nexus reserves this label from starter-pack interest streams. */
+export function isStarterPackReservedTag(value: string): boolean {
+  const canonical = canonicalizeTagLabel(value);
+  return STARTER_PACK_RESERVED_TAGS.some((label) => label === canonical);
 }
 
 /**

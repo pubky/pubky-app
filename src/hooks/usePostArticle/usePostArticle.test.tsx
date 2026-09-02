@@ -1,17 +1,13 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
+import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { usePostArticle } from './usePostArticle';
 
-// Mock useToast
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
-  };
-});
+// Mock toast
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock dependencies
 vi.mock('@/controllers/file/file', () => ({
@@ -342,7 +338,7 @@ describe('usePostArticle', () => {
         }),
       );
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not parse article content',
       });
@@ -365,10 +361,10 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalled();
+        expect(vi.mocked(toast)).toHaveBeenCalled();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not load cover image',
       });
@@ -401,7 +397,7 @@ describe('usePostArticle', () => {
       await waitFor(() => {
         expect(result.current.coverImage).toBeNull();
       });
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not load cover image',
       });

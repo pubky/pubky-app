@@ -1,3 +1,6 @@
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUser, NexusUserIdsStream } from '@/services/nexus/nexus.types';
@@ -7,6 +10,7 @@ import type {
   TFetchUserStreamParams,
   TUserStreamBase,
   TUserStreamInfluencersParams,
+  TUserStreamStarterPackParams,
   TUserStreamUsersByIdsParams,
   TUserStreamWithUserIdParams,
 } from '@/services/nexus/stream/users/userStream.types';
@@ -44,8 +48,21 @@ export class NexusUserStreamService {
       case 'most_followed':
         url = userStreamApi.mostFollowed(apiParams as TUserStreamBase);
         break;
-      default:
-        throw new Error(`Invalid reach type: ${reach}`);
+      case 'starter_pack':
+        url = userStreamApi.starterPack(apiParams as TUserStreamStarterPackParams);
+        break;
+      default: {
+        const exhaustiveCheck: never = reach;
+        throw Err.validation(
+          ValidationErrorCode.INVALID_INPUT,
+          `Unsupported user stream source: ${String(exhaustiveCheck)}`,
+          {
+            service: ErrorService.Nexus,
+            operation: 'fetch',
+            context: { streamId },
+          },
+        );
+      }
     }
 
     return await queryNexus<NexusUserIdsStream>({ url });

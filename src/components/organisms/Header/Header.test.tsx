@@ -85,6 +85,7 @@ vi.mock('@/app/routes', async (importOriginal) => {
       PUBKY: '/onboarding/pubky',
       BACKUP: '/onboarding/backup',
       PROFILE: '/onboarding/profile',
+      TAGS: '/onboarding/tags',
     },
   };
 });
@@ -282,7 +283,7 @@ describe('Header', () => {
     render(<Header />);
 
     const onboardingHeader = screen.getByTestId('onboarding-header');
-    expect(onboardingHeader).toHaveAttribute('data-step', '3');
+    expect(onboardingHeader).toHaveAttribute('data-step', '2');
     expect(screen.getByTestId('logo')).toBeInTheDocument();
   });
 
@@ -292,7 +293,7 @@ describe('Header', () => {
     render(<Header />);
 
     const onboardingHeader = screen.getByTestId('onboarding-header');
-    expect(onboardingHeader).toHaveAttribute('data-step', '3');
+    expect(onboardingHeader).toHaveAttribute('data-step', '2');
     expect(screen.getByTestId('logo')).toBeInTheDocument();
   });
 
@@ -302,7 +303,7 @@ describe('Header', () => {
     render(<Header />);
 
     const onboardingHeader = screen.getByTestId('onboarding-header');
-    expect(onboardingHeader).toHaveAttribute('data-step', '4');
+    expect(onboardingHeader).toHaveAttribute('data-step', '2');
     expect(screen.getByTestId('logo')).toBeInTheDocument();
   });
 
@@ -424,7 +425,7 @@ describe('Header', () => {
   });
 
   describe('Logo Configuration', () => {
-    it('renders logo with noLink=true when on profile step (step 5)', () => {
+    it('renders logo with noLink=true when on profile step', () => {
       mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
 
       render(<Header />);
@@ -433,7 +434,16 @@ describe('Header', () => {
       expect(logo).toHaveAttribute('data-no-link', 'true');
     });
 
-    it('renders logo with noLink=false when not on profile step', () => {
+    it('renders logo with noLink=true when on tags step', () => {
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.TAGS);
+
+      render(<Header />);
+
+      const logo = screen.getByTestId('logo');
+      expect(logo).toHaveAttribute('data-no-link', 'true');
+    });
+
+    it('renders logo with noLink=false when not on a post-auth onboarding step', () => {
       mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.INSTALL);
 
       render(<Header />);
@@ -482,7 +492,17 @@ describe('Header', () => {
       render(<Header />);
 
       const onboardingHeader = screen.getByTestId('onboarding-header');
-      expect(onboardingHeader).toHaveAttribute('data-step', '5');
+      expect(onboardingHeader).toHaveAttribute('data-step', '3');
+      expect(screen.getByTestId('logo')).toBeInTheDocument();
+    });
+
+    it('displays correct step for tags path', () => {
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.TAGS);
+
+      render(<Header />);
+
+      const onboardingHeader = screen.getByTestId('onboarding-header');
+      expect(onboardingHeader).toHaveAttribute('data-step', '4');
       expect(screen.getByTestId('logo')).toBeInTheDocument();
     });
   });
@@ -509,7 +529,7 @@ describe('Header', () => {
       expect(screen.getByTestId('header-title')).toHaveTextContent('Signed out');
     });
 
-    it('renders HeaderTitle when on step 5 (profile) even if signed in', () => {
+    it('renders HeaderTitle when on the profile step even if signed in', () => {
       mockCurrentUserPubky = 'test-pubky-123';
       mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
 
@@ -519,7 +539,17 @@ describe('Header', () => {
       expect(screen.getByTestId('header-title')).toHaveTextContent('Profile');
     });
 
-    it('does not render HeaderTitle when signed in and not on step 5', () => {
+    it('renders HeaderTitle when on the tags step even if signed in', () => {
+      mockCurrentUserPubky = 'test-pubky-123';
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.TAGS);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('header-title')).toBeInTheDocument();
+      expect(screen.getByTestId('header-title')).toHaveTextContent('Experience');
+    });
+
+    it('does not render HeaderTitle when signed in and not on a post-auth onboarding step', () => {
       mockCurrentUserPubky = 'test-pubky-123';
       mockUsePathname.mockReturnValue(ROOT_ROUTES);
 
@@ -536,6 +566,7 @@ describe('Header', () => {
         { path: ONBOARDING_ROUTES.PUBKY, expectedTitle: 'Your pubky' },
         { path: ONBOARDING_ROUTES.BACKUP, expectedTitle: 'Backup' },
         { path: ONBOARDING_ROUTES.PROFILE, expectedTitle: 'Profile' },
+        { path: ONBOARDING_ROUTES.TAGS, expectedTitle: 'Experience' },
         { path: AUTH_ROUTES.LOGOUT, expectedTitle: 'Signed out' },
       ];
 
@@ -552,18 +583,24 @@ describe('Header', () => {
     });
   });
 
-  describe('Step 5 (Profile) Specific Logic', () => {
-    it('renders logo with noLink=true only on step 5 (profile)', () => {
-      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
+  describe('Post-auth Onboarding Steps (Profile, Tags) Specific Logic', () => {
+    it('renders logo with noLink=true on the profile and tags steps', () => {
+      const postAuthPaths = [ONBOARDING_ROUTES.PROFILE, ONBOARDING_ROUTES.TAGS];
 
-      render(<Header />);
+      postAuthPaths.forEach((path) => {
+        mockUsePathname.mockReturnValue(path);
 
-      const logo = screen.getByTestId('logo');
-      expect(logo).toHaveAttribute('data-no-link', 'true');
+        const { rerender } = render(<Header />);
+
+        const logo = screen.getByTestId('logo');
+        expect(logo).toHaveAttribute('data-no-link', 'true');
+
+        rerender(<></>); // Clear for next iteration
+      });
     });
 
     it('renders logo with noLink=false on all other steps', () => {
-      const nonProfilePaths = [
+      const nonPostAuthPaths = [
         ONBOARDING_ROUTES.INSTALL,
         ONBOARDING_ROUTES.SCAN,
         ONBOARDING_ROUTES.PUBKY,
@@ -573,7 +610,7 @@ describe('Header', () => {
         AUTH_ROUTES.LOGOUT,
       ];
 
-      nonProfilePaths.forEach((path) => {
+      nonPostAuthPaths.forEach((path) => {
         mockUsePathname.mockReturnValue(path);
 
         const { rerender } = render(<Header />);
@@ -585,7 +622,7 @@ describe('Header', () => {
       });
     });
 
-    it('shows HeaderTitle on step 5 regardless of authentication state', () => {
+    it('shows HeaderTitle on the profile step regardless of authentication state', () => {
       // Test with authenticated user
       mockCurrentUserPubky = 'test-pubky-123';
       mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
@@ -777,11 +814,11 @@ describe('Header', () => {
       expect(onboardingHeader).toHaveAttribute('data-step', '2');
 
       // Change pathname
-      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.BACKUP);
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PROFILE);
       rerender(<Header />);
 
       onboardingHeader = screen.getByTestId('onboarding-header');
-      expect(onboardingHeader).toHaveAttribute('data-step', '4');
+      expect(onboardingHeader).toHaveAttribute('data-step', '3');
     });
 
     it('updates HeaderTitle visibility when authentication state changes on configured routes', () => {

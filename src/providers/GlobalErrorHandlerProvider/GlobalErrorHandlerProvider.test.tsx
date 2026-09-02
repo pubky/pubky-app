@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { GlobalErrorHandlerProvider } from './GlobalErrorHandlerProvider';
 
 vi.mock('@/libs/logger/logger', async (importOriginal) => {
@@ -25,11 +25,7 @@ vi.mock('@/libs/error/error.utils', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 describe('GlobalErrorHandlerProvider', () => {
   beforeEach(() => {

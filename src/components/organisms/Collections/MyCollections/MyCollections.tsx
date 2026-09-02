@@ -16,7 +16,7 @@ import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { AvatarStackSkeleton } from '@/molecules/AvatarStack/AvatarStack.skeleton';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
 import { CollectionBookmarkCard } from '@/organisms/Collections/CollectionBookmarkCard/CollectionBookmarkCard';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
@@ -105,7 +105,6 @@ interface MyCollectionsStreamProps {
  * so `useStreamPagination` always receives a real stream id.
  */
 function MyCollectionsStream({ currentUserPubky }: MyCollectionsStreamProps) {
-  const { toast } = useToast();
   const streamId = buildAuthorCollectionsStreamId(currentUserPubky);
 
   const { postIds, hasMore, loadMore, loading, loadingMore } = useStreamPagination({

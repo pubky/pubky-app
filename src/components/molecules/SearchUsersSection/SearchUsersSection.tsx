@@ -17,7 +17,7 @@ export function SearchUsersSection({ title, users, onUserClick }: SearchUsersSec
       <Typography size="xs" className="tracking-widest text-muted-foreground uppercase">
         {title}
       </Typography>
-      <Container data-cy="search-users-section" overrideDefaults className="flex flex-wrap gap-3">
+      <Container data-cy="search-users-section" overrideDefaults className="flex flex-wrap gap-x-6 gap-y-3">
         {users.map((user) => (
           <SearchUserSuggestion key={user.id} user={user} onClick={onUserClick} />
         ))}

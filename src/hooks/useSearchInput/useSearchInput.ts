@@ -1,5 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
-import type { UseSearchInputParams, UseSearchInputResult } from './useSearchInput.types';
+import { type Dispatch, type RefObject, type SetStateAction, useEffect, useRef, useState } from 'react';
+
+interface UseSearchInputParams {
+  /** Callback when Enter is pressed with the trimmed input value. The handler owns the input value after submit. */
+  onEnter?: (value: string) => void;
+}
+
+interface UseSearchInputResult {
+  inputValue: string;
+  isFocused: boolean;
+  containerRef: RefObject<HTMLDivElement | null>;
+  inputRef: RefObject<HTMLInputElement | null>;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  handleFocus: () => void;
+  /** Clears input value */
+  clearInputValue: () => void;
+  /** Sets the input value programmatically (e.g. seeding from the URL query); accepts functional updates */
+  setInputValue: Dispatch<SetStateAction<string>>;
+  /** Sets focus state (true = focused, false = blurred) */
+  setFocus: (focused: boolean) => void;
+}
 
 /**
  * useSearchInput
@@ -18,9 +38,12 @@ export function useSearchInput({ onEnter }: UseSearchInputParams = {}): UseSearc
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Guard against IME composition (Enter commits the CJK candidate and Escape cancels it — neither should submit or blur)
+    if (e.nativeEvent.isComposing) return;
+
     if (e.key === 'Enter' && inputValue.trim()) {
-      const accepted = onEnter?.(inputValue.trim());
-      if (accepted !== false) setInputValue('');
+      // The handler owns the input value after submit (clear, keep, or replace).
+      onEnter?.(inputValue.trim());
     } else if (e.key === 'Escape') {
       // Keep blur behavior consistent with `setFocus(false)`
       setFocus(false);
@@ -65,6 +88,7 @@ export function useSearchInput({ onEnter }: UseSearchInputParams = {}): UseSearc
     handleKeyDown,
     handleFocus,
     clearInputValue,
+    setInputValue,
     setFocus,
   };
 }

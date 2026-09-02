@@ -13,6 +13,7 @@ import { PostController } from '@/controllers/post/post';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { Logger } from '@/libs/logger/logger';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
@@ -142,15 +143,8 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(() => mockTimelineFeedContext),
 }));
 
-// Mock useToast
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: vi.fn(() => ({
-      toast: mockToast,
-    })),
-  };
-});
+// Mock toast
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock useLocalFilesStore
 const mockSetPostAttachments = vi.fn();
@@ -2214,7 +2208,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining('Unsupported file type for'),
       });
@@ -2236,7 +2230,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).toHaveBeenCalled();
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('rejects image files exceeding the raw image cap and shows toast', () => {
@@ -2256,7 +2250,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining(`exceeds the ${maxImageSizeLabel} limit`),
       });
@@ -2281,7 +2275,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining(`exceeds the ${maxOtherSizeLabel} limit`),
       });
@@ -2307,7 +2301,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: `Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`,
       });
@@ -2336,7 +2330,7 @@ describe('usePostInput', () => {
 
       // Should add only 1 file and show error for the rest
       expect(mockSetAttachments).toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining(`Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`),
       });
@@ -2366,7 +2360,7 @@ describe('usePostInput', () => {
       expect(mockSetAttachments).toHaveBeenCalledTimes(1);
       const updater = mockSetAttachments.mock.calls[0][0] as (prev: File[]) => File[];
       expect(updater([])).toEqual([files[0], files[1]]);
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining(`Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`),
       });
@@ -2393,7 +2387,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: `Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`,
       });
@@ -2414,7 +2408,7 @@ describe('usePostInput', () => {
         result.current.handleFilesAdded([invalidFile, largeFile]);
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.any(String),
       });
@@ -2782,7 +2776,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description:
           'Articles support one cover image. Remove it first, or drop the image in the editor to add it inline.',
@@ -2806,7 +2800,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description:
           'Articles support one cover image. Remove it first, or drop the image in the editor to add it inline.',
@@ -2830,7 +2824,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining('Unsupported file type for'),
       });

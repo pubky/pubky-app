@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ToastAction } from '@/atoms/Toast/Toast';
 import { ARTICLE_ATTACHMENT_MAX_FILES } from '@/config/posts';
 import { FileController } from '@/controllers/file/file';
 import { PostController } from '@/controllers/post/post';
@@ -15,7 +14,7 @@ import {
   serializeArticleBody,
   type SerializeArticleBodyError,
 } from '@/libs/post/articleInlineImages';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
@@ -86,7 +85,6 @@ export function usePost(): UsePostReturn {
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (post actions return early if null)
   const currentUserId = useAuthStore((state) => state.currentUserPubky);
-  const { toast } = useToast();
 
   // Article inline images: uploaded at insert time, tracked per composer
   // session for previews and best-effort orphan cleanup. The insert-time
@@ -316,20 +314,9 @@ export function usePost(): UsePostReturn {
       setTags([]);
       setAttachments([]);
 
-      const toastInstance = toast({
+      toast({
         title: successToastTitle ?? (originalAuthorName ? `Reposted ${originalAuthorName}'s post` : 'Reposted'),
-        action: (
-          <ToastAction
-            variant={'info'}
-            altText={'Undo'}
-            onClick={() => {
-              toastInstance.dismiss();
-              onUndo(createdPostId);
-            }}
-          >
-            {'Undo'}
-          </ToastAction>
-        ),
+        action: { label: 'Undo', altText: 'Undo', onClick: () => onUndo(createdPostId) },
       });
 
       onSuccess?.(createdPostId);

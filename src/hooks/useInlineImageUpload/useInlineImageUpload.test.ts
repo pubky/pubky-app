@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
 import type { Pubky } from '@/models/models.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { useInlineImageUpload } from './useInlineImageUpload';
 import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from './useInlineImageUpload.types';
 
@@ -12,10 +13,7 @@ vi.mock('@/controllers/file/file', () => ({
   },
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 const mockCreateObjectURL = vi.fn(() => `blob:mock-${mockCreateObjectURL.mock.calls.length}`);
 const mockRevokeObjectURL = vi.fn();
@@ -54,7 +52,7 @@ describe('useInlineImageUpload', () => {
       expect(uri).toBe(fileUri('a'));
       expect(FileController.commitCreate).toHaveBeenCalledWith({ file: expect.any(File), pubky: PUBKY });
       expect(result.current.getPreviewUrl(fileUri('a'))).toMatch(/^blob:mock-/);
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('rejects when disabled or unauthenticated', async () => {
@@ -72,7 +70,7 @@ describe('useInlineImageUpload', () => {
 
       await expect(result.current.uploadInlineImage(imageFile('a.mp4', 'video/mp4'))).rejects.toThrow();
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({ variant: 'error', description: expect.stringContaining('Unsupported file type') }),
       );
       expect(FileController.commitCreate).not.toHaveBeenCalled();
@@ -85,7 +83,7 @@ describe('useInlineImageUpload', () => {
         result.current.uploadInlineImage(imageFile('big.png', 'image/png', 21 * 1024 * 1024)),
       ).rejects.toThrow();
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({ variant: 'error', description: expect.stringContaining('exceeds') }),
       );
       expect(FileController.commitCreate).not.toHaveBeenCalled();
@@ -98,7 +96,7 @@ describe('useInlineImageUpload', () => {
         name: INLINE_IMAGE_UPLOAD_REJECTION_NAME,
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({ variant: 'error', description: expect.stringContaining('Articles support up to') }),
       );
       expect(FileController.commitCreate).not.toHaveBeenCalled();
@@ -124,8 +122,8 @@ describe('useInlineImageUpload', () => {
       expect(FileController.commitCreate).not.toHaveBeenCalled();
       expect(result.current.uploadingCount).toBe(0);
       // One toast for the whole batch
-      expect(mockToast).toHaveBeenCalledTimes(1);
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({ variant: 'error', description: expect.stringContaining('Articles support up to') }),
       );
     });
@@ -146,7 +144,7 @@ describe('useInlineImageUpload', () => {
         await expect(Promise.all(batch)).resolves.toEqual([fileUri('a'), fileUri('b')]);
       });
       expect(FileController.commitCreate).toHaveBeenCalledTimes(2);
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('counts in-flight uploads from earlier batches against the budget', async () => {
@@ -187,7 +185,7 @@ describe('useInlineImageUpload', () => {
         name: INLINE_IMAGE_UPLOAD_REJECTION_NAME,
       });
 
-      expect(mockToast).toHaveBeenCalledWith(
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({ variant: 'error', description: 'Could not upload image. Try again.' }),
       );
       expect(result.current.getPreviewUrl(fileUri('a'))).toBeNull();

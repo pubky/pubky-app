@@ -53,6 +53,71 @@ exports[`Search - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 </div>
 `;
 
+exports[`Search - Snapshots > matches snapshot with an invalid query 1`] = `
+<div>
+  <div
+    class="lg:hidden"
+    data-testid="container"
+  >
+    <div
+      data-auto-focus="false"
+      data-testid="search-input"
+    >
+      SearchInput
+    </div>
+  </div>
+  <p
+    class="text-base font-medium text-muted-foreground"
+    data-testid="search-invalid-query"
+    role="alert"
+  >
+    Search can contain up to 4 terms
+  </p>
+  <div
+    data-testid="search-empty-state"
+  >
+    SearchEmptyState
+  </div>
+</div>
+`;
+
+exports[`Search - Snapshots > matches snapshot with full-text results 1`] = `
+<div>
+  <div
+    class="lg:hidden"
+    data-testid="container"
+  >
+    <div
+      data-auto-focus="false"
+      data-testid="search-input"
+    >
+      SearchInput
+    </div>
+  </div>
+  <div
+    class="flex w-full flex-col gap-4"
+    data-testid="container"
+  >
+    <div
+      data-testid="search-content-tags"
+    >
+      SearchContentTags
+    </div>
+    <div
+      data-cy="post-search-results"
+      data-testid="container"
+    >
+      <div
+        data-testid="timeline-feed"
+        data-variant="search"
+      >
+        TimelineFeed
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`Search - Snapshots > matches snapshot with no tags 1`] = `
 <div>
   <div

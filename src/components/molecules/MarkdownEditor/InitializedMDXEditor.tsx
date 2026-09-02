@@ -50,7 +50,7 @@ import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { MarkdownMark } from '@/icons';
 import { pubkyUriToCdnUrl } from '@/libs/file/pubkyFileCdnUrl';
 import { cn } from '@/libs/utils/utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
 import { CODE_BLOCK_LANGUAGES } from './InitializedMDXEditor.constants';
@@ -121,7 +121,6 @@ export default function InitializedMDXEditor({
   const [markdownText, setMarkdownText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const markdownImageInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
   // Synchronous mirror of markdownText: the async image-upload flows read and
   // splice the freshest text through this ref, so back-to-back placeholder
   // swaps never operate on a stale value while a render is still pending.

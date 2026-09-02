@@ -386,7 +386,7 @@ describe('PostContentBase', () => {
 
 describe('PostContentBase - Snapshots', () => {
   // Use real PostText and PostLinkEmbeds for snapshot tests
-  // PostAttachments remains mocked to avoid useToast dependency chain
+  // PostAttachments remains mocked to avoid toast dependency chain
   beforeEach(async () => {
     vi.clearAllMocks();
     mockUseLocalFilesStore.mockReturnValue(undefined);

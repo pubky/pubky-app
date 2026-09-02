@@ -5,7 +5,7 @@ import { FileController } from '@/controllers/file/file';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';
 
 interface CoverImage {
@@ -53,7 +53,6 @@ export function usePostArticle({
   attachments,
   coverImageVariant,
 }: UsePostArticleParams): UsePostArticleResult {
-  const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [coverImage, setCoverImage] = useState<CoverImage | null>(null);
@@ -72,7 +71,6 @@ export function usePostArticle({
         description: 'Could not parse article content',
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
   }, [content]);
 
   // Slot-0 cover rule, computed synchronously from the published body so the
@@ -122,7 +120,6 @@ export function usePostArticle({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
   }, [attachments, coverImageVariant, hasInlineSlotZero]);
 
   return {

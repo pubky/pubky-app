@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 
 interface GlobalErrorHandlerProviderProps {
   children: ReactNode;

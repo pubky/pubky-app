@@ -11,7 +11,7 @@ import { FileController } from '@/controllers/file/file';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import {
   INLINE_IMAGE_UPLOAD_REJECTION_NAME,
   type InlineImageLocalEntry,
@@ -74,7 +74,6 @@ export function useInlineImageUpload({
   // Set when the session was discarded; an upload resolving afterwards must
   // clean itself up instead of registering into the dead session.
   const discardedRef = useRef(false);
-  const { toast } = useToast();
 
   const getSession = (): Map<string, SessionUpload> => {
     sessionRef.current ??= new Map();

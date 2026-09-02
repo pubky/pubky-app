@@ -12,6 +12,7 @@ import { DELETED } from '@/models/post/details/postDetails.constants';
 import { PostRelationshipsModel } from '@/models/post/relationships/postRelationships';
 import {
   buildAuthorCollectionsStreamId,
+  buildContentSearchStreamId,
   buildDiscoverCollectionsStreamId,
   type PostStreamId,
   PostStreamTypes,
@@ -37,6 +38,7 @@ import {
   StreamSorting,
 } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
+import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { MuteFilter } from './muting/mute-filter';
@@ -260,6 +262,49 @@ describe('PostStreamApplication', () => {
       expect(result).toEqual([collectionPostId]);
     });
 
+    it('keeps collections alongside other post kinds in all-kinds content search', async () => {
+      const shortPostId = `${DEFAULT_AUTHOR}:short-post`;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(shortPostId, 'short');
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: buildContentSearchStreamId('bitcoin'),
+        postIds: [shortPostId, collectionPostId],
+      });
+
+      expect(result).toEqual([shortPostId, collectionPostId]);
+    });
+
+    it('excludes collection-kind posts from narrower-kind content search streams', async () => {
+      // Only `kind=all` means "including collections" in content search; an
+      // explicit non-collection kind keeps the local backstop like every other
+      // stream family.
+      const imagePostId = `${DEFAULT_AUTHOR}:image-post`;
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(imagePostId, 'short');
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: buildContentSearchStreamId('bitcoin', StreamKind.IMAGE),
+        postIds: [imagePostId, collectionPostId],
+      });
+
+      expect(result).toEqual([imagePostId]);
+    });
+
+    it('keeps collection-kind posts in collection-kind content search streams', async () => {
+      const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+      await createPostDetailWithKind(collectionPostId, 'collection');
+
+      const result = await PostStreamApplication.filterStreamPosts({
+        streamId: buildContentSearchStreamId('bitcoin', StreamKind.COLLECTION),
+        postIds: [collectionPostId],
+      });
+
+      expect(result).toEqual([collectionPostId]);
+    });
+
     it('keeps collection-kind posts in wot_domain collection content streams', async () => {
       const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
       await createPostDetailWithKind(collectionPostId, 'collection');
@@ -383,6 +428,37 @@ describe('PostStreamApplication', () => {
   });
 
   describe('getOrFetchStreamSlice', () => {
+    it('fetches content-search pages in Nexus relevance order and advances their offset', async () => {
+      const contentStreamId = buildContentSearchStreamId('bitcoin wallet', StreamKind.COLLECTION);
+      // Relevance-ordered (post-2 before post-1); null score marks the chunk skip-paginated.
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: [`${DEFAULT_AUTHOR}:post-2`, `${DEFAULT_AUTHOR}:post-1`],
+        last_post_score: null,
+      });
+      const persistStreamSpy = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk');
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: contentStreamId,
+        limit: 2,
+        streamHead: 0,
+        streamTail: 10,
+        viewerId: null,
+      });
+
+      expect(nexusFetchSpy).toHaveBeenCalledTimes(1);
+      expect(nexusFetchSpy).toHaveBeenCalledWith({
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        extraParams: expect.objectContaining({ q: 'bitcoin wallet' }),
+        params: expect.objectContaining({ kind: StreamKind.COLLECTION, skip: 10, limit: 2 }),
+      });
+      expect(result.nextPageIds).toEqual([`${DEFAULT_AUTHOR}:post-2`, `${DEFAULT_AUTHOR}:post-1`]);
+      // Offset cursor advances by the raw page length (10 already loaded + 2 fetched).
+      expect(result.nextCursor).toBe(12);
+      expect(result.reachedEnd).toBe(false);
+      // Skip-paginated streams never write to the timestamp-keyed local stream cache.
+      expect(persistStreamSpy).not.toHaveBeenCalled();
+    });
+
     it('should return posts from cache when available (no cursor)', async () => {
       const postIds = Array.from({ length: 20 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);

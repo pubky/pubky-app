@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SignInContent, SignInFooter } from './SignIn';
 
@@ -124,11 +125,7 @@ vi.mock('@/molecules/Page/Page', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock copyToClipboard function - use vi.hoisted to ensure it's available before vi.mock runs
 const { mockCopyToClipboard } = vi.hoisted(() => ({
@@ -408,8 +405,6 @@ describe('SignInContent', () => {
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
-    const { toast } = await import('@/molecules/Toaster/use-toast');
-
     await act(async () => {
       render(<SignInContent />);
     });
@@ -421,7 +416,7 @@ describe('SignInContent', () => {
     });
 
     expect(mockCopyAuthUrl).toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'info',
       title: 'Authentication link copied',
     });
@@ -439,8 +434,6 @@ describe('SignInContent', () => {
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
-    const { toast } = await import('@/molecules/Toaster/use-toast');
-
     await act(async () => {
       render(<SignInContent />);
     });
@@ -451,7 +444,7 @@ describe('SignInContent', () => {
     });
 
     expect(mockCopyAuthUrl).toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Could not copy to clipboard',
     });

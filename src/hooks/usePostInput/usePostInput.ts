@@ -29,7 +29,7 @@ import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineImages';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { postKindBelongsToStream } from '@/stores/home/home.utils';
@@ -101,7 +101,6 @@ export function usePostInput({
     uploadingCount,
   } = usePost();
   const timelineFeed = useTimelineFeedContext();
-  const { toast } = useToast();
   const { deletePost } = useDeletePost();
 
   // Article edits show only the cover in the attachment strip — inline images
@@ -495,7 +494,7 @@ export function usePostInput({
         setAttachments((prev) => [...prev, ...validFiles]);
       }
     },
-    [isArticle, isSubmitting, attachments.length, existingAttachments.length, setAttachments, toast],
+    [isArticle, isSubmitting, attachments.length, existingAttachments.length, setAttachments],
   );
 
   // Remove an existing attachment from the edit composer (removed from the post on submit)
