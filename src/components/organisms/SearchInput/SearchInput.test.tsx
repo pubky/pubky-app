@@ -5,6 +5,7 @@ import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAu
 import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
+import { toast } from '@/molecules/Toaster/toast';
 import { useSearchStore } from '@/stores/search/search.store';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { SearchInput } from './SearchInput';
@@ -13,7 +14,6 @@ import { SearchInput } from './SearchInput';
 const mockPush = vi.fn();
 const mockPathname = vi.fn(() => '/home');
 const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
-const mockToast = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
@@ -73,9 +73,7 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: mockUseIsMobile,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mockToast,
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock dependencies
 const mockAddUser = vi.fn();
@@ -527,7 +525,7 @@ describe('SearchInput', () => {
       render(<SearchInput />);
       fireEvent.click(screen.getByRole('button', { name: 'Show all results' }));
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Search must be at least 2 characters',
       });
