@@ -3,7 +3,6 @@
 exports[`Custom - Snapshots > matches snapshot 1`] = `
 <div>
   <div
-    data-classname="-mx-6 w-auto lg:mx-0 lg:w-full"
     data-testid="feed-navigation"
   >
     FeedNavigation

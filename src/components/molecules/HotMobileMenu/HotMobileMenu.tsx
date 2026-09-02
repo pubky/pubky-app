@@ -1,6 +1,7 @@
 'use client';
 
 import { StickyNote, Tag, UsersRound } from 'lucide-react';
+import { FULL_BLEED_GUTTER_CLASS } from '@/config/layoutClasses';
 import { MobileTabBar } from '../MobileTabBar/MobileTabBar';
 import type { MobileTabBarItem } from '../MobileTabBar/MobileTabBar.types';
 import { type HotMobileMenuItem, type HotMobileMenuProps, HotSection } from './HotMobileMenu.types';
@@ -17,9 +18,9 @@ export const HOT_MOBILE_MENU_ITEMS: HotMobileMenuItem[] = [
  * Only visible on mobile (< lg breakpoint).
  * Delegates rendering to the shared `MobileTabBar` molecule.
  *
- * Negative margin override (passed via className):
- * - `-mx-6` cancels the parent ContentLayout container's `px-6` padding
- *   so the menu stretches full-width edge-to-edge.
+ * Full-bleed override (passed via className):
+ * - `FULL_BLEED_GUTTER_CLASS` cancels the parent ContentLayout container's
+ *   mobile gutter so the menu stretches full-width edge-to-edge.
  */
 export function HotMobileMenu({ activeSection, onSectionChange }: HotMobileMenuProps) {
   const items: MobileTabBarItem[] = HOT_MOBILE_MENU_ITEMS.map((item) => ({
@@ -36,7 +37,7 @@ export function HotMobileMenu({ activeSection, onSectionChange }: HotMobileMenuP
       showLabels
       position="sticky"
       headerTop="compact"
-      className="-mx-6"
+      className={FULL_BLEED_GUTTER_CLASS}
       data-testid="hot-mobile-menu"
     />
   );

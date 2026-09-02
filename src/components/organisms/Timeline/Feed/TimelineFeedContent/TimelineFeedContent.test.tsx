@@ -275,6 +275,7 @@ describe('TimelineFeedContent', () => {
       );
       expect(screen.getByTestId('child')).toBeInTheDocument();
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+      expect(screen.getByTestId('child').parentElement).toHaveClass('gap-4');
     });
 
     it('renders ordinary children before the persistent header and post list', () => {

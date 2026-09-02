@@ -98,7 +98,17 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
               </div>
             ) : null}
           </div>
-          <div style={{ display: 'flex', paddingLeft: 64, paddingRight: 64, paddingTop: 32, paddingBottom: 64 }}>
+          {/* Brand URL anchored bottom-right per the Figma frames. */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              paddingLeft: 64,
+              paddingRight: 64,
+              paddingTop: 32,
+              paddingBottom: 64,
+            }}
+          >
             <div style={{ display: 'flex', fontSize: 36, fontWeight: 700, color: OG_TOKENS.brand }}>pubky.app</div>
           </div>
         </OgFrame>,
@@ -185,7 +195,17 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
             {text}
           </div>
         </div>
-        <div style={{ display: 'flex', paddingLeft: 64, paddingRight: 64, paddingTop: 32, paddingBottom: 64 }}>
+        {/* Brand URL anchored bottom-right per the Figma frames. */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            paddingLeft: 64,
+            paddingRight: 64,
+            paddingTop: 32,
+            paddingBottom: 64,
+          }}
+        >
           <div style={{ display: 'flex', fontSize: 36, fontWeight: 700, color: OG_TOKENS.brand }}>pubky.app</div>
         </div>
       </OgFrame>,
