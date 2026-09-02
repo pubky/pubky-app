@@ -86,11 +86,11 @@ const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsSt
   ...overrides,
 });
 
-const createMutableSettingsStore = (moderationBot?: Pubky | null) => {
+const createMutableSettingsStore = (moderationBot?: Pubky) => {
   let state = createMockSettingsState({
     privacy: { ...defaultPrivacyPreferences, ...(moderationBot !== undefined ? { moderationBot } : {}) },
   });
-  const setModerationBot = vi.fn((value: Pubky | null) => {
+  const setModerationBot = vi.fn((value: Pubky) => {
     state = {
       ...state,
       privacy: { ...state.privacy, moderationBot: value },
@@ -434,7 +434,7 @@ describe('AuthController', () => {
       };
       const remoteSettings = createMockSettingsState({
         notifications: remoteNotificationPrefs,
-        privacy: { ...defaultPrivacyPreferences, moderationBot: null },
+        privacy: { ...defaultPrivacyPreferences, moderationBot: MODERATION_PUBKY },
       });
       const remoteAllowedTypes = [NotificationType.Reply, NotificationType.Mention];
 
@@ -466,8 +466,9 @@ describe('AuthController', () => {
       expect(initializeSpy.mock.calls[0][0]).toEqual(expect.objectContaining({ allowedTypes: remoteAllowedTypes }));
       // Remote settings should be applied to the store
       expect(settingsStore.loadFromHomeserver).toHaveBeenCalledWith(remoteSettings);
+      // Moderation follow reads the processed state from the freshly loaded remote settings
       expect(UserApplication.ensureModerationFollow).toHaveBeenCalledWith(
-        expect.objectContaining({ moderationBot: null }),
+        expect.objectContaining({ moderationBot: MODERATION_PUBKY }),
       );
     });
 
@@ -584,7 +585,7 @@ describe('AuthController', () => {
       );
     });
 
-    it('should not overwrite an opt-out selected while moderation follow is in flight', async () => {
+    it('should not record processed state when the signed-in account changed while the follow was in flight', async () => {
       let resolveFollow!: (moderationId: Pubky) => void;
       const followPending = new Promise<Pubky>((resolve) => {
         resolveFollow = resolve;
@@ -598,24 +599,25 @@ describe('AuthController', () => {
       });
       await spyOnSleep();
       vi.spyOn(useSettingsStore, 'getState').mockImplementation(settingsStore.getState);
-      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      const getAuthState = vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
       vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue({
         unread: 0,
         lastRead: 0,
         lastPolledTimestamp: undefined,
       });
       getModerationIdMock.mockReturnValue(MODERATION_PUBKY);
-      vi.spyOn(UserApplication, 'ensureModerationFollow').mockReturnValue(followPending);
+      const ensureModerationFollow = vi.spyOn(UserApplication, 'ensureModerationFollow').mockReturnValue(followPending);
       const commitUpdate = vi.spyOn(SettingsApplication, 'commitUpdate').mockResolvedValue(undefined);
 
       await AuthController.bootstrapWithDelay();
-      settingsStore.setModerationBot(null);
+      getAuthState.mockReturnValue(mockAuthStore({ ...authStore, currentUserPubky: MODERATION_PUBKY }));
       resolveFollow(MODERATION_PUBKY);
-      await Promise.resolve();
-      await Promise.resolve();
+      await vi.waitFor(() => expect(ensureModerationFollow).toHaveBeenCalledOnce());
+      // Let the detached continuation run past its guard before asserting nothing was written
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(settingsStore.getSnapshot().privacy.moderationBot).toBeNull();
-      expect(settingsStore.setModerationBot).toHaveBeenCalledOnce();
+      expect(settingsStore.setModerationBot).not.toHaveBeenCalled();
+      expect(settingsStore.getSnapshot().privacy.moderationBot).toBeUndefined();
       expect(commitUpdate).not.toHaveBeenCalled();
     });
 

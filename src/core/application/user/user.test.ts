@@ -199,16 +199,17 @@ describe('UserApplication.ensureModerationFollow', () => {
     expect(exists).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['an explicit opt-out', null],
-    ['the current moderation bot', moderationId],
-  ] as const)('skips all work for %s', async (_state, moderationBot) => {
+  it('skips all work when settings already record the current moderation bot', async () => {
     const normalize = vi.spyOn(FollowNormalizer, 'to');
     const exists = vi.spyOn(HomeserverService, 'exists');
     const request = vi.spyOn(HomeserverService, 'request');
     const localCreate = vi.spyOn(LocalFollowService, 'create');
 
-    const result = await UserApplication.ensureModerationFollow({ follower, moderationId, moderationBot });
+    const result = await UserApplication.ensureModerationFollow({
+      follower,
+      moderationId,
+      moderationBot: moderationId,
+    });
 
     expect(result).toBeUndefined();
     expect(exists).not.toHaveBeenCalled();

@@ -1,27 +1,13 @@
 import { FollowResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
-import { getModerationId } from '@/config/moderation';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
-import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import type { NexusTag, NexusTaggers, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
-import { useSettingsStore } from '@/stores/settings/settings.store';
-import {
-  defaultNotificationPreferences,
-  defaultPrivacyPreferences,
-  type SettingsState,
-} from '@/stores/settings/settings.types';
-import { mockSettingsStore } from '@/test-utils/stores';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { UserController } from './user';
-
-vi.mock('@/config/moderation', () => ({ getModerationId: vi.fn() }));
-
-const getModerationIdMock = vi.mocked(getModerationId);
 
 // Valid 52-character z-base32 encoded pubky IDs for testing
 const TEST_PUBKY = {
@@ -32,7 +18,6 @@ const TEST_PUBKY = {
 describe('UserController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getModerationIdMock.mockReset().mockReturnValue(undefined);
   });
 
   afterEach(() => {
@@ -427,132 +412,6 @@ describe('UserController', () => {
         follower,
         followee,
       });
-    });
-
-    it('should persist a moderation opt-out before deleting the follow', async () => {
-      const follower = TEST_PUBKY.USER_1;
-      const followee = TEST_PUBKY.USER_2;
-      const events: string[] = [];
-      const settingsState: SettingsState = {
-        notifications: defaultNotificationPreferences,
-        privacy: { ...defaultPrivacyPreferences, moderationBot: followee },
-        muted: [],
-        updatedAt: 1,
-        version: 1,
-      };
-      const setModerationBot = vi.fn((moderationBot: Pubky | null) => {
-        events.push(`settings-state:${String(moderationBot)}`);
-        settingsState.privacy = { ...settingsState.privacy, moderationBot };
-      });
-
-      getModerationIdMock.mockReturnValue(followee);
-      vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-        asOpaque<FollowResult>({ meta: { url: 'https://example.com/unfollow' }, follow: { toJson: () => ({}) } }),
-      );
-      vi.spyOn(useSettingsStore, 'getState').mockImplementation(() =>
-        mockSettingsStore({ ...settingsState, setModerationBot }),
-      );
-      vi.spyOn(SettingsNormalizer, 'extractState').mockImplementation(() => settingsState);
-      const settingsCommit = vi.spyOn(SettingsApplication, 'commitUpdate').mockImplementation(() => {
-        events.push('settings-commit');
-        return Promise.resolve();
-      });
-      const followCommit = vi.spyOn(UserApplication, 'commitFollow').mockImplementation(() => {
-        events.push('follow-delete');
-        return Promise.resolve();
-      });
-
-      await UserController.commitFollow(HttpMethod.DELETE, { follower, followee });
-
-      expect(events).toEqual(['settings-state:null', 'settings-commit', 'follow-delete']);
-      expect(settingsCommit).toHaveBeenCalledWith(settingsState, follower);
-      expect(followCommit).toHaveBeenCalledOnce();
-    });
-
-    it('should leave a moderation follow unchanged when opt-out persistence fails', async () => {
-      const follower = TEST_PUBKY.USER_1;
-      const followee = TEST_PUBKY.USER_2;
-      const failure = new Error('settings-fail');
-      const setModerationBot = vi.fn();
-      const settingsState: SettingsState = {
-        notifications: defaultNotificationPreferences,
-        privacy: { ...defaultPrivacyPreferences, moderationBot: null },
-        muted: [],
-        updatedAt: 2,
-        version: 1,
-      };
-
-      getModerationIdMock.mockReturnValue(followee);
-      vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-        asOpaque<FollowResult>({ meta: { url: 'https://example.com/unfollow' }, follow: { toJson: () => ({}) } }),
-      );
-      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore({ ...settingsState, setModerationBot }));
-      vi.spyOn(SettingsNormalizer, 'extractState').mockReturnValue(settingsState);
-      vi.spyOn(SettingsApplication, 'commitUpdate').mockRejectedValue(failure);
-      const followCommit = vi.spyOn(UserApplication, 'commitFollow');
-
-      await expect(UserController.commitFollow(HttpMethod.DELETE, { follower, followee })).rejects.toBe(failure);
-
-      expect(setModerationBot).toHaveBeenCalledWith(null);
-      expect(followCommit).not.toHaveBeenCalled();
-    });
-
-    it('should persist the moderation bot only after a manual follow succeeds', async () => {
-      const follower = TEST_PUBKY.USER_1;
-      const followee = TEST_PUBKY.USER_2;
-      const events: string[] = [];
-      const settingsState: SettingsState = {
-        notifications: defaultNotificationPreferences,
-        privacy: { ...defaultPrivacyPreferences, moderationBot: null },
-        muted: [],
-        updatedAt: 1,
-        version: 1,
-      };
-      const setModerationBot = vi.fn((moderationBot: Pubky | null) => {
-        events.push(`settings-state:${String(moderationBot)}`);
-        settingsState.privacy = { ...settingsState.privacy, moderationBot };
-      });
-
-      getModerationIdMock.mockReturnValue(followee);
-      vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-        asOpaque<FollowResult>({ meta: { url: 'https://example.com/follow' }, follow: { toJson: () => ({}) } }),
-      );
-      vi.spyOn(useSettingsStore, 'getState').mockImplementation(() =>
-        mockSettingsStore({ ...settingsState, setModerationBot }),
-      );
-      vi.spyOn(SettingsNormalizer, 'extractState').mockImplementation(() => settingsState);
-      vi.spyOn(UserApplication, 'commitFollow').mockImplementation(() => {
-        events.push('follow-create');
-        return Promise.resolve();
-      });
-      vi.spyOn(SettingsApplication, 'commitUpdate').mockImplementation(() => {
-        events.push('settings-commit');
-        return Promise.resolve();
-      });
-
-      await UserController.commitFollow(HttpMethod.PUT, { follower, followee });
-
-      expect(events).toEqual(['follow-create', `settings-state:${followee}`, 'settings-commit']);
-    });
-
-    it('should not persist moderation state when a manual follow fails', async () => {
-      const follower = TEST_PUBKY.USER_1;
-      const followee = TEST_PUBKY.USER_2;
-      const failure = new Error('follow-fail');
-      const setModerationBot = vi.fn();
-
-      getModerationIdMock.mockReturnValue(followee);
-      vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-        asOpaque<FollowResult>({ meta: { url: 'https://example.com/follow' }, follow: { toJson: () => ({}) } }),
-      );
-      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore({ setModerationBot }));
-      vi.spyOn(UserApplication, 'commitFollow').mockRejectedValue(failure);
-      const settingsCommit = vi.spyOn(SettingsApplication, 'commitUpdate');
-
-      await expect(UserController.commitFollow(HttpMethod.PUT, { follower, followee })).rejects.toBe(failure);
-
-      expect(setModerationBot).not.toHaveBeenCalled();
-      expect(settingsCommit).not.toHaveBeenCalled();
     });
 
     it('should bubble when FollowNormalizer.to fails and not delegate', async () => {

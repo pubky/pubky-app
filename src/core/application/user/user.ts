@@ -271,8 +271,10 @@ export class UserApplication {
   }
 
   /**
-   * Applies the moderation-bot default follow when settings have not recorded the current bot.
-   * The canonical follow resource makes retries idempotent.
+   * Applies the moderation-bot default follow once per account and bot: skipped when settings already
+   * record the configured bot, so a later manual unfollow is never undone. The canonical follow
+   * resource makes retries idempotent.
+   * @returns The processed bot Pubky when the caller should persist it, otherwise undefined
    */
   static async ensureModerationFollow({
     follower,
@@ -280,13 +282,7 @@ export class UserApplication {
     moderationBot,
     signal,
   }: TEnsureModerationFollowParams): Promise<Pubky | undefined> {
-    if (
-      !moderationId ||
-      follower === moderationId ||
-      signal?.aborted ||
-      moderationBot === null ||
-      moderationBot === moderationId
-    ) {
+    if (!moderationId || follower === moderationId || signal?.aborted || moderationBot === moderationId) {
       return undefined;
     }
 

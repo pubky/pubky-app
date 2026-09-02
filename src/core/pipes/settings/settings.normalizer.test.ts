@@ -240,10 +240,9 @@ describe('SettingsNormalizer', () => {
     it.each([
       ['missing', undefined],
       ['processed', TEST_PUBKY.USER_2],
-      ['opted out', null],
     ] as const)('should preserve %s moderation-bot state', (_state, moderationBot) => {
       const privacy = { ...defaultPrivacyPreferences } as typeof defaultPrivacyPreferences & {
-        moderationBot?: Pubky | null;
+        moderationBot?: Pubky;
       };
       if (moderationBot !== undefined) privacy.moderationBot = moderationBot;
       const original = createMockSettingsState({ privacy });

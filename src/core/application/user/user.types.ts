@@ -17,6 +17,7 @@ export type TUserApplicationFollowParams = TFollowParams & {
 export type TEnsureModerationFollowParams = {
   follower: Pubky;
   moderationId?: Pubky;
-  moderationBot?: Pubky | null;
+  /** Bot already processed for this account, from settings. */
+  moderationBot?: Pubky;
   signal?: AbortSignal;
 };

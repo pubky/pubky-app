@@ -121,9 +121,6 @@ describe('SettingsStore', () => {
 
       expect(useSettingsStore.getState().privacy).toEqual({ ...initialPrivacy, moderationBot });
       expect(useSettingsStore.getState().updatedAt).toBeGreaterThanOrEqual(initialTimestamp);
-
-      useSettingsStore.getState().setModerationBot(null);
-      expect(useSettingsStore.getState().privacy.moderationBot).toBeNull();
     });
 
     it('should retain moderation bot state loaded from the homeserver', () => {

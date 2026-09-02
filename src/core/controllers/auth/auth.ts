@@ -73,23 +73,17 @@ export class AuthController {
 
   private static async ensureModerationFollow(pubky: Pubky, controller: AbortController): Promise<void> {
     try {
-      const initialModerationBot = useSettingsStore.getState().privacy?.moderationBot;
       const moderationId = await UserApplication.ensureModerationFollow({
         follower: pubky,
         moderationId: getModerationId(),
-        moderationBot: initialModerationBot,
+        moderationBot: useSettingsStore.getState().privacy.moderationBot,
         signal: controller.signal,
       });
 
-      if (!moderationId || controller.signal.aborted) return;
+      // The settings store is account-local; never record processed state against a different session.
+      if (!moderationId || controller.signal.aborted || useAuthStore.getState().currentUserPubky !== pubky) return;
 
-      const authState = useAuthStore.getState();
-      const settingsState = useSettingsStore.getState();
-      if (authState.currentUserPubky !== pubky || settingsState.privacy.moderationBot !== initialModerationBot) {
-        return;
-      }
-
-      settingsState.setModerationBot(moderationId);
+      useSettingsStore.getState().setModerationBot(moderationId);
       const settings = SettingsNormalizer.extractState(useSettingsStore.getState());
       await SettingsApplication.commitUpdate(settings, pubky, controller.signal);
     } catch (error) {

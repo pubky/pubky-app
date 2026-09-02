@@ -1,7 +1,5 @@
-import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
 import type { TUserCountsOrFetchResult } from '@/application/user/user.types';
-import { getModerationId } from '@/config/moderation';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TFollowParams, TPubkyListParams } from '@/controllers/user/user.type';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -10,7 +8,6 @@ import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
-import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import type {
   NexusTag,
   NexusTaggers,
@@ -19,7 +16,6 @@ import type {
   NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
-import { useSettingsStore } from '@/stores/settings/settings.store';
 
 export class UserController {
   private constructor() {} // Prevent instantiation
@@ -175,14 +171,6 @@ export class UserController {
     // This strips any prefix (pubky or pk:) to get the raw 52-character key
     const normalizedFollowee = stripPubkyPrefix(followee) as Pubky;
     const { meta, follow } = FollowNormalizer.to({ follower, followee: normalizedFollowee });
-    const moderationId = getModerationId();
-    const isModerationBot = moderationId !== undefined && normalizedFollowee === moderationId;
-
-    if (isModerationBot && eventType === HttpMethod.DELETE) {
-      useSettingsStore.getState().setModerationBot(null);
-      const settings = SettingsNormalizer.extractState(useSettingsStore.getState());
-      await SettingsApplication.commitUpdate(settings, follower);
-    }
 
     await UserApplication.commitFollow({
       eventType,
@@ -191,11 +179,5 @@ export class UserController {
       follower,
       followee: normalizedFollowee,
     });
-
-    if (isModerationBot && eventType === HttpMethod.PUT) {
-      useSettingsStore.getState().setModerationBot(moderationId);
-      const settings = SettingsNormalizer.extractState(useSettingsStore.getState());
-      await SettingsApplication.commitUpdate(settings, follower);
-    }
   }
 }
