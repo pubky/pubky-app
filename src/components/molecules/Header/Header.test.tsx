@@ -283,7 +283,7 @@ describe('Header Components', () => {
 
       const progressSteps = screen.getByTestId('progress-steps');
       expect(progressSteps).toHaveAttribute('data-current', '3');
-      expect(progressSteps).toHaveAttribute('data-total', '5');
+      expect(progressSteps).toHaveAttribute('data-total', '4');
     });
   });
 

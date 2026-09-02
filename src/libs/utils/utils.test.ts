@@ -28,6 +28,7 @@ import {
   isPostDeleted,
   isPubkyIdentifier,
   isSameDomain,
+  isStarterPackReservedTag,
   isValidPostCompositeId,
   isValidTagLabel,
   minutesAgo,
@@ -1266,6 +1267,18 @@ describe('Utils', () => {
 
     it('should preserve valid non-Latin labels', () => {
       expect(canonicalizeTagLabel(' 日本語 ')).toBe('日本語');
+    });
+  });
+
+  describe('isStarterPackReservedTag', () => {
+    it('matches Nexus-reserved labels after canonicalization', () => {
+      expect(isStarterPackReservedTag(' HateSpeech ')).toBe(true);
+      expect(isStarterPackReservedTag('IL_ADULT_NU_SEX_ACT')).toBe(true);
+    });
+
+    it('keeps the starter-pack API contract separate from broader moderation labels', () => {
+      expect(isStarterPackReservedTag('nudity')).toBe(false);
+      expect(isStarterPackReservedTag('bitcoin')).toBe(false);
     });
   });
 

@@ -190,6 +190,14 @@ describe('HomeFeedSidebar', () => {
     expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
   });
 
+  it('can hide sort without hiding layout or content', () => {
+    render(<HomeFeedSidebar hideSortFilter />);
+
+    expect(screen.queryByTestId('filter-sort')).not.toBeInTheDocument();
+    expect(screen.getByTestId('filter-layout')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-content')).toBeInTheDocument();
+  });
+
   it('shows visual layout when enabled on desktop/tablet', () => {
     render(<HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
 
@@ -401,6 +409,18 @@ describe('HomeFeedSidebar - Snapshots', () => {
 
   it('matches snapshot', () => {
     const { container } = render(<HomeFeedSidebar allowVisualLayout={true} feedVariant={TIMELINE_FEED_VARIANT.HOME} />);
+    expect(container).toMatchSnapshot();
+  });
+
+  it('matches snapshot with Sort hidden', () => {
+    const { container } = render(
+      <HomeFeedSidebar
+        allowVisualLayout={true}
+        feedVariant={TIMELINE_FEED_VARIANT.SEARCH}
+        hideReachFilter
+        hideSortFilter
+      />,
+    );
     expect(container).toMatchSnapshot();
   });
 });

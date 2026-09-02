@@ -26,9 +26,11 @@ import type { PostRelationshipsModelSchema } from '@/models/post/relationships/p
 import {
   isAuthorStreamSkippingMuteFilter,
   isBookmarkStream,
+  isContentSearchStream,
   isDeletedRetainingStream,
   isDiscoverCollectionsStream,
   isSkipPaginatedStream,
+  parseContentSearchStreamId,
   type PostStreamId,
 } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
@@ -725,6 +727,13 @@ export class PostStreamApplication {
 
   /** Collections appear only on streams whose id encodes `kind=collection` (e.g. timeline:all:collection). */
   private static shouldExcludeCollectionsFromStream(streamId: PostStreamId): boolean {
+    // Content search is the one family where `kind=all` means "including
+    // collections". Narrower kinds (image, video, …) fall through and keep the
+    // local collection filter as defense-in-depth, like every other family.
+    if (isContentSearchStream(streamId) && parseContentSearchStreamId(streamId)?.kind === 'all') {
+      return false;
+    }
+
     const { kind } = breakDownStreamId(streamId);
     return kind !== StreamKind.COLLECTION;
   }

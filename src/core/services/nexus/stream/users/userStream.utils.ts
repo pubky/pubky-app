@@ -2,7 +2,7 @@ import { STARTER_PACK_MAX_TAGS } from '@/config/nexus';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { canonicalizeTagLabel, isValidTagLabel } from '@/libs/utils/utils';
+import { canonicalizeTagLabel, isStarterPackReservedTag, isValidTagLabel } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { USER_STREAM_TAG_DELIMITER } from '@/models/stream/user/userStream.helper';
 import { STARTER_PACK_STREAM_SOURCE, type UserStreamId } from '@/models/stream/user/userStream.types';
@@ -157,12 +157,14 @@ export function createUserStreamParams(
     }
 
     const tags = tagSegment.split(USER_STREAM_TAG_DELIMITER);
-    const hasInvalidLabel = tags.some((label) => label !== canonicalizeTagLabel(label) || !isValidTagLabel(label));
+    const hasInvalidLabel = tags.some(
+      (label) => label !== canonicalizeTagLabel(label) || !isValidTagLabel(label) || isStarterPackReservedTag(label),
+    );
     const hasDuplicateLabel = new Set(tags).size !== tags.length;
     if (tags.length > STARTER_PACK_MAX_TAGS || hasInvalidLabel || hasDuplicateLabel) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Starter pack stream IDs require 1-${STARTER_PACK_MAX_TAGS} unique canonical (trimmed, lowercase) tags`,
+        `Starter pack stream IDs require 1-${STARTER_PACK_MAX_TAGS} unique canonical (trimmed, lowercase) tags that are not reserved by Nexus`,
         {
           service: ErrorService.Nexus,
           operation: 'createUserStreamParams',

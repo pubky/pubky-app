@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SEARCH_PEOPLE_PREVIEW_COUNT } from '@/config/search';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
-import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import type { UserListItemData } from '@/organisms/UserListItem/UserListItem.types';
@@ -13,8 +13,8 @@ import { SearchPeople } from './SearchPeople';
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
-  useSearchTags: vi.fn(),
+vi.mock('@/hooks/useSearchCriteria/useSearchCriteria', () => ({
+  useSearchCriteria: vi.fn(),
 }));
 
 vi.mock('@/hooks/useSearchPeople/useSearchPeople', () => ({
@@ -67,7 +67,8 @@ vi.mock('@/organisms/SearchPeople/SearchPeople.skeleton', () => ({
 // Fixtures + helpers
 // ---------------------------------------------------------------------------
 
-const mockUseSearchTags = vi.mocked(useSearchTags);
+const mockUseSearchCriteria = vi.mocked(useSearchCriteria);
+const tagsCriteria = (tags: string[]) => ({ mode: 'tags' as const, tags });
 const mockUseSearchPeople = vi.mocked(useSearchPeople);
 
 function buildUsers(count: number): UserListItemData[] {
@@ -89,7 +90,7 @@ const defaultPeople = {
 };
 
 function setup({ people = {} }: { people?: Partial<typeof defaultPeople> } = {}) {
-  mockUseSearchTags.mockReturnValue(['synonym']);
+  mockUseSearchCriteria.mockReturnValue(tagsCriteria(['synonym']));
   mockUseSearchPeople.mockReturnValue({ ...defaultPeople, ...people });
 }
 
@@ -103,8 +104,17 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('SearchPeople', () => {
-  it('renders nothing without search tags', () => {
-    mockUseSearchTags.mockReturnValue([]);
+  it('renders nothing without a tag search', () => {
+    mockUseSearchCriteria.mockReturnValue({ mode: 'none' });
+
+    const { container } = render(<SearchPeople />);
+
+    expect(container.firstChild).toBeNull();
+    expect(mockUseSearchPeople).not.toHaveBeenCalled();
+  });
+
+  it('renders nothing for a full-text query, which has no tags to match', () => {
+    mockUseSearchCriteria.mockReturnValue({ mode: 'content', query: 'bitcoin wallet' });
 
     const { container } = render(<SearchPeople />);
 
@@ -233,7 +243,7 @@ describe('SearchPeople', () => {
     fireEvent.click(screen.getByRole('button', { name: 'See all' }));
     expect(screen.getAllByTestId('user-list-item')).toHaveLength(6);
 
-    mockUseSearchTags.mockReturnValue(['bitcoin']);
+    mockUseSearchCriteria.mockReturnValue(tagsCriteria(['bitcoin']));
     rerender(<SearchPeople />);
 
     expect(screen.getAllByTestId('user-list-item')).toHaveLength(SEARCH_PEOPLE_PREVIEW_COUNT);
