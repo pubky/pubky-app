@@ -2,12 +2,13 @@
 
 import { memo, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import Markdown from 'react-markdown';
+import Markdown, { defaultUrlTransform, type UrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { POST_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { cn } from '@/libs/utils/utils';
+import { ArticleInlineImage } from '@/molecules/ArticleInlineImage/ArticleInlineImage';
 import { PostMentions } from '@/organisms/PostMentions/PostMentions';
 import { PostCodeBlock } from '../PostCodeBlock/PostCodeBlock';
 import { PostHashtags } from '../PostHashtags/PostHashtags';
@@ -22,6 +23,7 @@ import {
   remarkPlaintextCodeblock,
   remarkPlaintextTables,
   remarkSoftBreaks,
+  remarkStripImages,
   truncatePostPreviewText,
 } from './PostText.utils';
 import { PostTextLink } from './PostTextLink';
@@ -33,6 +35,11 @@ import { PostTextLink } from './PostTextLink';
 // prose styling instead (outside markers with padding), which handles loose items.
 const compactListClassName = (listStyle: 'list-decimal' | 'list-disc') =>
   cn('list-inside whitespace-normal [&>li>p:first-child]:inline', listStyle);
+// Image `src` values pass through raw so ArticleInlineImage can resolve the
+// custom schemes (`attachment:{n}`, `pubky://`) itself — the default transform
+// would strip them. Everything else (hrefs, …) keeps the default policy.
+const articleImageUrlTransform: UrlTransform = (url, key, node) =>
+  key === 'src' && node.tagName === 'img' ? url : defaultUrlTransform(url);
 
 /**
  * Renders formatted text content with markdown, hashtags, mentions, and links.
@@ -58,6 +65,7 @@ export const PostText = memo(function PostText({
   content,
   isArticle,
   fullArticle,
+  articleImages,
   compactUrls = true,
   onLinkClick,
   className,
@@ -69,10 +77,17 @@ export const PostText = memo(function PostText({
   const contentTruncated = !isArticle && !onPostPage && !isExpanded ? truncatePostPreviewText(content) : null;
   const showMoreButton = Boolean(contentTruncated);
 
+  // Inline images render only on surfaces that explicitly pass articleImages
+  // (the article detail page) — never based on the current pathname, which
+  // would also full-render embedded article cards on post pages.
+  const renderArticleImages = Boolean(isArticle && articleImages);
+
   const remarkPlugins = [
     remarkGfm,
     remarkPlaintextTables,
-    ...(isArticle ? (!onPostPage ? [remarkExtractFirstParagraph] : []) : [remarkDisallowMarkdownLinks]),
+    ...(isArticle
+      ? [...(renderArticleImages ? [] : [remarkStripImages]), ...(!onPostPage ? [remarkExtractFirstParagraph] : [])]
+      : [remarkDisallowMarkdownLinks]),
     remarkPlaintextCodeblock,
     remarkHashtags,
     remarkMentions,
@@ -98,8 +113,9 @@ export const PostText = memo(function PostText({
       'hr',
       'button',
       ...(isArticle ? ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] : []),
+      ...(renderArticleImages ? ['img'] : []),
     ],
-    [isArticle],
+    [isArticle, renderArticleImages],
   );
 
   return (
@@ -125,7 +141,23 @@ export const PostText = memo(function PostText({
         allowedElements={allowedElements}
         unwrapDisallowed
         remarkPlugins={remarkPlugins}
+        urlTransform={renderArticleImages ? articleImageUrlTransform : undefined}
         components={{
+          ...(renderArticleImages && articleImages
+            ? {
+                img(props: { src?: string | Blob; alt?: string }) {
+                  return (
+                    <ArticleInlineImage
+                      src={typeof props.src === 'string' ? props.src : undefined}
+                      alt={props.alt}
+                      attachments={articleImages.attachments}
+                      authorId={articleImages.authorId}
+                      postId={articleImages.postId}
+                    />
+                  );
+                },
+              }
+            : {}),
           a(props: RemarkAnchorProps) {
             const { 'data-type': dataType } = props;
 

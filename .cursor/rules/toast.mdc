@@ -10,22 +10,23 @@ alwaysApply: false
 
 ## Variants
 
-Use `variant` on `toast()` — never  `className: 'destructive …'`, or `showErrorToast` / `showSuccessToast` helpers.
+Use `variant` on `toast()` — never `className: 'destructive …'` or `showErrorToast` / `showSuccessToast` helpers.
 
 | Variant | When |
 |---------|------|
 | `default` | Success, confirmation (omit `variant`) |
-| `error` | Failures; omit `title` for `toast.genericErrorTitle` |
+| `error` | Failures; omit `title` for the generic `Error` title |
 | `warning` | Caution, rate limits |
 | `info` | Neutral info (e.g. clipboard copy) |
 
 ## API
 
 ```tsx
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 
 toast({ variant: 'error', description: '...' });
 toast({ title: 'Saved', description: '...' }); // default
+toast({ title: 'Reposted', action: { label: 'Undo', altText: 'Undo', onClick: () => {} } });
 ```
 
-Styling: [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts) only. `ToastAction` needs `variant` when not rendered by `Toaster`.
+`toast()` is the only public producer API; `toast.store.ts`, `useToastState.ts`, and the `@/atoms/Toast/*` renderer atoms are Toaster-internal (ESLint-enforced). Custom actions are descriptors (`{ label, altText, onClick }`), never components — the Toaster renders and styles them. Styling: [`Toast.variants.ts`](src/components/atoms/Toast/Toast.variants.ts) only.

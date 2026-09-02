@@ -5,13 +5,13 @@ import { CREATE_COLLECTION_FORM_FIELDS } from '@/hooks/useCreateCollection/useCr
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { useEditCollection } from './useEditCollection';
 
 const mocks = vi.hoisted(() => ({
   commitEditCollection: vi.fn(),
   setCollectionCover: vi.fn(),
   useCoverImagePicker: vi.fn(),
-  toast: vi.fn(),
   postDetails: null as { content: string } | null,
   localCollections: {} as Record<string, string | undefined>,
   cover: {
@@ -43,9 +43,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: () => ({ postDetails: mocks.postDetails, isLoading: false }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: Object.assign(
@@ -143,7 +141,7 @@ describe('useEditCollection', () => {
     });
     // No new file picked → store should NOT be touched (CDN already has it).
     expect(mocks.setCollectionCover).not.toHaveBeenCalled();
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Collection updated',
     });
   });
@@ -198,7 +196,7 @@ describe('useEditCollection', () => {
     });
 
     expect(ok).toBe(false);
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to update collection.',
     });
@@ -225,7 +223,7 @@ describe('useEditCollection', () => {
       await result.current.submit();
     });
 
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'This GIF exceeds the 5MB upload limit and cannot be compressed. Please use a smaller GIF.',
     });

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { CONTENT_AREA_STACK_CLASS, CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { resolveFeedLayout } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -129,7 +130,7 @@ export function ContentLayout({
       {/* Main content grid with responsive max-widths */}
       <Container
         overrideDefaults
-        className={cn('container max-w-(--container-max-width)', 'm-auto w-full px-6 pb-12 xl:px-0', 'pt-0', className)}
+        className={cn('container m-auto w-full max-w-(--container-max-width) pb-12', CONTENT_GUTTER_CLASS, className)}
       >
         <Container overrideDefaults className="flex gap-6">
           {/* Left sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
@@ -138,9 +139,7 @@ export function ContentLayout({
           )}
 
           {/* Main content area - grows to fill space, min-w-0 prevents flex overflow */}
-          <Container className={cn('w-full min-w-0 flex-1 gap-6 lg:overflow-hidden', classNameWrapperContent)}>
-            {children}
-          </Container>
+          <Container className={cn('w-full', CONTENT_AREA_STACK_CLASS, classNameWrapperContent)}>{children}</Container>
 
           {/* Right sidebar - hidden on mobile (< lg) and in wide-shell layout mode */}
           {showRightSidebar && !usesWideShellLayout && rightSidebarContent && (

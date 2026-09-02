@@ -5,6 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { getLucideIconState, requestLucideIcon } from '@/libs/lucide/lucideIcons';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
+import { toast } from '@/molecules/Toaster/toast';
 import { CustomFeedDialog } from './CustomFeedDialog';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -73,7 +74,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock toast
-const mockToast = vi.fn();
+vi.mock('@/molecules/Toaster/toast');
+
 vi.mock('@/molecules/PostTag/PostTag', () => {
   return {
     PostTag: ({ label, showClose, onClose }: { label: string; showClose?: boolean; onClose?: () => void }) => (
@@ -135,12 +137,6 @@ vi.mock('@/molecules/TagInput/TagInput', () => {
         ))}
       </div>
     ),
-  };
-});
-
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
   };
 });
 
@@ -1219,7 +1215,7 @@ describe('CustomFeedDialog', () => {
     fireEvent.click(screen.getByTestId('save-feed-button'));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Feed created: My Feed',
       });
       expect(mockPush).toHaveBeenCalledWith('/feed/new-feed-123');
@@ -1242,7 +1238,7 @@ describe('CustomFeedDialog', () => {
     fireEvent.click(screen.getByTestId('save-feed-button'));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not create feed. Try again.',
       });
@@ -1392,7 +1388,7 @@ describe('CustomFeedDialog', () => {
     fireEvent.click(screen.getByTestId('save-feed-button'));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Feed updated: Bitcoin News',
       });
       expect(mockPush).not.toHaveBeenCalled();
@@ -1457,7 +1453,7 @@ describe('CustomFeedDialog', () => {
     fireEvent.click(screen.getByTestId('save-feed-button'));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not update feed. Try again.',
       });
@@ -1522,7 +1518,7 @@ describe('CustomFeedDialog', () => {
     fireEvent.click(screen.getByTestId('delete-feed-button'));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Feed deleted: Bitcoin News',
       });
       expect(mockReplace).toHaveBeenCalledWith('/home');
@@ -1562,7 +1558,7 @@ describe('CustomFeedDialog', () => {
     fireEvent.click(screen.getByTestId('delete-feed-button'));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not delete feed. Try again.',
       });

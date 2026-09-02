@@ -1,6 +1,12 @@
 import type { TFetchStreamParams } from '@/application/stream/posts/post.types';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
-import type { PostStreamId, WotDomainDepth } from '@/models/stream/post/postStream.types';
+import {
+  CONTENT_SEARCH_STREAM_PREFIX,
+  isContentSearchStream,
+  parseContentSearchStreamId,
+  type PostStreamId,
+  type WotDomainDepth,
+} from '@/models/stream/post/postStream.types';
 import type {
   THandleNotCommonStreamParamsParams,
   TSetStreamPaginationParams,
@@ -36,7 +42,21 @@ export function createPostStreamParams({
   viewerId,
   order,
 }: TFetchStreamParams): TPostStreamFetchParams {
-  const { sorting, invokeEndpoint, authorId, kind, tags, wotDepth, domainTags } = breakDownStreamId(streamId);
+  const { sorting, invokeEndpoint, authorId, kind, tags, wotDepth, domainTags, searchQuery } =
+    breakDownStreamId(streamId);
+
+  // Content search hits its own endpoint with a minimal param surface (q, kind, skip, limit):
+  // no viewer/sorting/order/tags, and no author_id fabrication via handleNotCommonStreamParams.
+  if (invokeEndpoint === StreamSource.CONTENT_SEARCH) {
+    const params: TStreamBase = {};
+    const parsedKind = kind ? parseContent(kind) : undefined;
+    if (parsedKind) {
+      params.kind = parsedKind;
+    }
+    params.limit = limit;
+    setStreamPagination({ params, streamTail, streamHead, invokeEndpoint });
+    return { params, invokeEndpoint, extraParams: { q: searchQuery } };
+  }
 
   const params: TStreamBase = {};
   params.viewer_id = viewerId ?? undefined;
@@ -97,9 +117,14 @@ function handleNotCommonStreamParams({
  * @param streamTail - The pagination tail value (timestamp of last post in current page)
  */
 function setStreamPagination({ params, streamTail, streamHead, invokeEndpoint }: TSetStreamPaginationParams) {
-  // Engagement and single-collection item streams paginate by offset (`skip`): Nexus returns
-  // no score/timestamp cursor for them, so `streamTail` carries the number of items already loaded.
-  if (params.sorting === StreamSorting.ENGAGEMENT || invokeEndpoint === StreamSource.COLLECTION) {
+  // Engagement, single-collection item, and content-search streams paginate by offset (`skip`):
+  // Nexus returns no score/timestamp cursor for them, so `streamTail` carries the number of items
+  // already loaded.
+  if (
+    params.sorting === StreamSorting.ENGAGEMENT ||
+    invokeEndpoint === StreamSource.COLLECTION ||
+    invokeEndpoint === StreamSource.CONTENT_SEARCH
+  ) {
     params.skip = streamTail; // post amount of the stream, page number * limit
   } else {
     // For ASCENDING order, streamTail is the timestamp of the newest post we have
@@ -148,6 +173,19 @@ function parseWotDomainDepth(depth: string | undefined): WotDomainDepth {
  * @param streamId - The stream ID to break down
  */
 export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
+  // Content-search family first: its second segment is a user query, so it must never reach the
+  // generic segment parsing below. Never throws — `searchQuery` is undefined for malformed ids
+  // and the fetch layer fails loudly instead.
+  if (isContentSearchStream(streamId)) {
+    const contentSearch = parseContentSearchStreamId(streamId);
+    return {
+      sorting: CONTENT_SEARCH_STREAM_PREFIX,
+      invokeEndpoint: StreamSource.CONTENT_SEARCH,
+      kind: contentSearch?.kind,
+      searchQuery: contentSearch?.query,
+    };
+  }
+
   const [sorting, invokeEndpoint, thirdSegment, fourthSegment, fifthSegment, sixthSegment] = streamId.split(':');
   // Tags are separated by ',' character. Only the first MAX_STREAM_TAGS are considered.
   const limitTags = (tags: string | undefined): string | undefined =>

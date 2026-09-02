@@ -6,7 +6,7 @@ import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { TAGS_PER_PAGE } from './usePostTags.constants';

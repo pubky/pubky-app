@@ -2,7 +2,7 @@
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { Logger } from '@/libs/logger/logger';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { FeedInsertTarget } from '@/stores/feedOptimistic/feedOptimistic.types';
 
@@ -14,7 +14,6 @@ type SaveCreatedPostToTargetParams = {
 
 export function useSaveCreatedPostToTarget() {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const { toast } = useToast();
   return async ({ target, createdPostId, onSaved }: SaveCreatedPostToTargetParams): Promise<void> => {
     try {
       if (target.type === 'collection') {

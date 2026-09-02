@@ -17,7 +17,7 @@ import { parseCompositeId } from '@/models/models.utils';
 import { buildFollowedCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { AvatarStack } from '@/molecules/AvatarStack/AvatarStack';
 import { AvatarStackSkeleton } from '@/molecules/AvatarStack/AvatarStack.skeleton';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { uniqueAuthors } from '@/organisms/Collections/collections.utils';
@@ -53,7 +53,6 @@ const EMPTY_IDS: string[] = [];
  * pushes a card into / out of this section without a reload.
  */
 export function FollowedCollections() {
-  const { toast } = useToast();
   // Gate the seed fetch on auth hydration. `StreamPostsController.getOrFetchStreamSlice`
   // reads `viewerId` from the auth store synchronously, and the bookmarks-collection
   // Nexus endpoint needs the viewer to resolve. If we fire pre-hydration the slice

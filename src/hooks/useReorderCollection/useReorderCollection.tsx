@@ -7,7 +7,7 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useCollectionReorderStore } from '@/stores/collectionReorder/collectionReorder.store';
 import type {
   ReorderDraftEntry,
@@ -38,7 +38,6 @@ export function useReorderCollection({
   // The (deduped) order as it was when reorder mode was entered — the baseline
   // for "did the user actually change anything" at save time.
   const enterSnapshotRef = useRef<string[]>([]);
-  const { toast } = useToast();
 
   const isReorderMode = draftItems !== null;
 

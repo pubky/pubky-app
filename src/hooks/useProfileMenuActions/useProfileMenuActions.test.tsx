@@ -1,13 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { isAppError } from '@/libs/error/error.utils';
+import { toast } from '@/molecules/Toaster/toast';
 import { useProfileMenuActions } from './useProfileMenuActions';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 
 // Hoist mocks
 const {
   mockIsAppError,
-  mockToast,
   mockUseTranslations,
   mockUseUserProfile,
   mockUseIsFollowing,
@@ -17,7 +17,6 @@ const {
   mockUseCopyToClipboard,
 } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
-  mockToast: vi.fn(),
   mockUseTranslations: vi.fn(),
   mockUseUserProfile: vi.fn(),
   mockUseIsFollowing: vi.fn(),
@@ -53,11 +52,7 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: (props: unknown) => mockToast(props),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/libs/error/error.utils', async () => {
   const actual = await vi.importActual<typeof import('@/libs/error/error.utils')>('@/libs/error/error.utils');
@@ -296,7 +291,7 @@ describe('useProfileMenuActions', () => {
       });
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, false);
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Test User muted',
       });
     });
@@ -313,7 +308,7 @@ describe('useProfileMenuActions', () => {
       });
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, true);
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Test User unmuted',
       });
     });
@@ -332,7 +327,7 @@ describe('useProfileMenuActions', () => {
       });
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not update mute status',
         });
@@ -395,7 +390,7 @@ describe('useProfileMenuActions', () => {
       });
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not copy to clipboard',
         });
@@ -416,7 +411,7 @@ describe('useProfileMenuActions', () => {
       });
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not copy to clipboard',
         });

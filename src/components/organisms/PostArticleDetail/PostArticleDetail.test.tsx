@@ -200,6 +200,7 @@ describe('PostArticleDetail', () => {
       title: 'Test Article Title',
       body: 'Test article body content',
       coverImage: null,
+      hasCover: true,
     });
     mockUseLocalFilesStore.mockImplementation((selector) => selector(createMockLocalFilesStore()));
   });
@@ -275,6 +276,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/image.jpg',
         alt: 'Cover image',
       },
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -291,6 +293,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/image.jpg',
         alt: 'Cover image',
       },
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -308,6 +311,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/image.jpg',
         alt: 'Cover image',
       },
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -320,6 +324,7 @@ describe('PostArticleDetail', () => {
       title: 'Test Title',
       body: 'Test body',
       coverImage: null,
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -335,6 +340,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/image.jpg',
         alt: 'Cover image',
       },
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} isBlurred />);
@@ -371,6 +377,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/remote-image.jpg',
         alt: 'Remote cover',
       },
+      hasCover: true,
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
@@ -420,6 +427,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/remote.jpg',
         alt: 'Remote fallback',
       },
+      hasCover: true,
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
@@ -527,6 +535,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/cover.jpg',
         alt: 'Article cover',
       },
+      hasCover: true,
     });
 
     const { container } = render(

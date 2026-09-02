@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { StreamSorting, TPaginationParams, TPaginationRangeParams } from '@/services/nexus/nexus.types';
+import type { StreamKind } from '@/services/nexus/stream/posts/postStream.types';
 
 export type TTagParams = TPaginationParams & {
   tag: string;
@@ -14,12 +15,26 @@ export type TPrefixSearchParams = TPaginationParams & {
   prefix: string;
 };
 
+export type TContentSearchParams = TPaginationParams & {
+  q: string;
+  kind?: StreamKind;
+};
+
+export type TContentSearchResult = Array<{
+  post_key: string;
+  score: number;
+}>;
+
 export type TUsersByTagsSearchParams = TPaginationParams & {
   // Comma-separated tag labels (1-5); users tagged with any of them match
   tags: string;
 };
 
-export type TSearchQueryParams = TTagSearchParams | TPrefixSearchParams | TUsersByTagsSearchParams;
+export type TSearchQueryParams =
+  | TTagSearchParams
+  | TPrefixSearchParams
+  | TContentSearchParams
+  | TUsersByTagsSearchParams;
 
 // Common return type for search results (array of IDs/labels)
 export type TSearchResult = string[];

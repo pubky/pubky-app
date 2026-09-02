@@ -1,9 +1,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { useFollowUser } from './useFollowUser';
 
-const { mockUseAuthStore, mockCommitFollow, mockGetDetails, mockLogger, mockToast } = vi.hoisted(() => ({
+const { mockUseAuthStore, mockCommitFollow, mockGetDetails, mockLogger } = vi.hoisted(() => ({
   mockUseAuthStore: vi.fn(),
   mockCommitFollow: vi.fn(),
   mockGetDetails: vi.fn(),
@@ -11,7 +12,6 @@ const { mockUseAuthStore, mockCommitFollow, mockGetDetails, mockLogger, mockToas
     debug: vi.fn(),
     error: vi.fn(),
   },
-  mockToast: vi.fn(),
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -29,9 +29,7 @@ vi.mock('@/libs/logger/logger', () => ({
   Logger: mockLogger,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: (props: unknown) => mockToast(props),
-}));
+vi.mock('@/molecules/Toaster/toast');
 describe('useFollowUser', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -51,7 +49,7 @@ describe('useFollowUser', () => {
 
     expect(result.current.error).toBe('User not authenticated');
     expect(mockCommitFollow).not.toHaveBeenCalled();
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('sets error when following self', async () => {
@@ -76,7 +74,7 @@ describe('useFollowUser', () => {
       follower: 'current-user',
       followee: 'user-1',
     });
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Following Alice',
     });
     expect(mockGetDetails).not.toHaveBeenCalled();
@@ -93,7 +91,7 @@ describe('useFollowUser', () => {
       follower: 'current-user',
       followee: 'user-1',
     });
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Unfollowed Alice',
     });
   });
@@ -108,7 +106,7 @@ describe('useFollowUser', () => {
     });
 
     expect(mockGetDetails).toHaveBeenCalledWith({ userId: 'user-1' });
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Following Bob',
     });
   });
@@ -129,7 +127,7 @@ describe('useFollowUser', () => {
     await waitFor(() => {
       expect(result.current.error).toBe('Failed to follow Alice');
     });
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to follow Alice',
     });
@@ -147,7 +145,7 @@ describe('useFollowUser', () => {
     });
 
     expect(returned).toBe(false);
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to unfollow Alice',
     });
