@@ -8,7 +8,7 @@ import { filesApi } from '@/services/nexus/file/file.api';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { userApi } from '@/services/nexus/user/user.api';
-import { OG_IMAGE_FETCH_TIMEOUT_MS, OG_REVALIDATE } from './ogConstants';
+import { OG_IMAGE_FETCH_TIMEOUT_MS, OG_IMAGE_MAX_BYTES, OG_REVALIDATE } from './ogConstants';
 
 /**
  * Server-only data helpers for dynamic OG image generation.
@@ -108,10 +108,10 @@ const OG_IMAGE_MAX_EDGE = 1200;
 
 /**
  * Fetches a remote image's raw bytes for OG rendering, or `null` on any
- * failure (network error, timeout, non-2xx, non-image content type). The
- * single fetch policy for OG image bytes — timeout, ISR caching, content-type
- * gate — shared by the card renderers and the fallback path so hardening lands
- * in one place.
+ * failure (network error, timeout, non-2xx, non-image content type, oversized
+ * body). The single fetch policy for OG image bytes — timeout, size cap, ISR
+ * caching, content-type gate — shared by the card renderers and the fallback
+ * path so hardening lands in one place.
  */
 export async function fetchOgImageBytes(url: string): Promise<Buffer | null> {
   try {
@@ -120,11 +120,12 @@ export async function fetchOgImageBytes(url: string): Promise<Buffer | null> {
       signal: AbortSignal.timeout(OG_IMAGE_FETCH_TIMEOUT_MS),
     });
     const contentType = res.headers.get('content-type') ?? '';
+    const contentLength = Number(res.headers.get('content-length') ?? 0);
     // Media types are case-insensitive per RFC 9110.
-    if (!res.ok || !contentType.toLowerCase().startsWith('image/')) {
+    if (!res.ok || !contentType.toLowerCase().startsWith('image/') || contentLength > OG_IMAGE_MAX_BYTES) {
       // Drop the unread body so undici returns the socket to its pool.
       await res.body?.cancel();
-      Logger.warn('[ogData] OG image fetch did not return an image', { url, status: res.status, contentType });
+      Logger.warn('[ogData] OG image fetch rejected', { url, status: res.status, contentType, contentLength });
       return null;
     }
     return Buffer.from(await res.arrayBuffer());

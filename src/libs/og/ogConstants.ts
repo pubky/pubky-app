@@ -36,9 +36,19 @@ export const OG_FALLBACK_CACHE_HEADERS = { 'cache-control': 'public, max-age=60'
  * Timeout for server-side OG image fetches (avatars, attachments, a configured
  * remote preview). Bounds the render worst-case — the fallback path especially
  * runs exactly when upstream is already degraded, so it must not hang on a
- * black-holed host.
+ * black-holed host. Matches `NEXUS_SERVER_FETCH_TIMEOUT_MS` so the two
+ * sequential stages of a render (Nexus, then images) stay within the few
+ * seconds a social crawler waits before caching a miss.
  */
-export const OG_IMAGE_FETCH_TIMEOUT_MS = 5000;
+export const OG_IMAGE_FETCH_TIMEOUT_MS = 3000;
+
+/**
+ * Largest remote image the OG renderer will download. Every render buffers and
+ * decodes the whole file, and Next's data cache refuses entries over 2 MB (so
+ * an oversized file is also re-downloaded on every render); anything larger
+ * degrades to the image-less card.
+ */
+export const OG_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
 
 /** Literal hex design tokens (ImageResponse cannot use CSS variables). */
 export const OG_TOKENS = {

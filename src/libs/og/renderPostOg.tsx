@@ -33,10 +33,20 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     const { user, post } = result;
     if (post.kind === 'collection') return await renderCollectionOg({ userId, postId });
 
-    const avatarSrc = await fetchImageAsDataUri(buildAvatarUrl(user));
     const name = resolveDisplayName(user);
     const isDeleted = isPostDeleted(post.content);
     const preview = deriveTextPreview({ content: post.content, kind: post.kind });
+
+    // Feed variant is sufficient — the image only ever renders in this small
+    // preview card, so the full-res MAIN variant would be wasted bytes. Fetched
+    // alongside the avatar: the two are independent CDN round-trips (plus a
+    // sharp transcode each) and would otherwise serialize on the cold path.
+    const imageUrl =
+      !isDeleted && post.kind === 'image' ? resolvePostAttachmentUrl(post.attachments?.[0], FileVariant.FEED) : null;
+    const [avatarSrc, imageSrc] = await Promise.all([
+      fetchImageAsDataUri(buildAvatarUrl(user)),
+      fetchImageAsDataUri(imageUrl),
+    ]);
 
     // Article variant: newspaper icon + title over a plain-text body excerpt.
     // Deleted posts skip this (their content isn't JSON) and fall through to the
@@ -114,12 +124,6 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
         </OgFrame>,
       );
     }
-
-    // Feed variant is sufficient — the image only ever renders in this small
-    // preview card, so the full-res MAIN variant would be wasted bytes.
-    const imageUrl =
-      !isDeleted && post.kind === 'image' ? resolvePostAttachmentUrl(post.attachments?.[0], FileVariant.FEED) : null;
-    const imageSrc = imageUrl ? await fetchImageAsDataUri(imageUrl) : null;
 
     if (imageSrc) {
       const text = truncateByGraphemes(preview, OG_TRUNCATE.postImageText);
