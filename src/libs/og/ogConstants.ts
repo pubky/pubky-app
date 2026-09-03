@@ -50,6 +50,18 @@ export const OG_IMAGE_FETCH_TIMEOUT_MS = 3000;
  */
 export const OG_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
 
+/**
+ * Upper bound on a whole OG image render, after which the route answers with
+ * the generic fallback card instead. Social crawlers abandon slow image
+ * fetches (reports place the practical budget in the low single-digit
+ * seconds) and cache the miss, so a slow render must still yield *a* card.
+ * Deliberately above one upstream timeout plus the fallback render (~3.6s) so
+ * an ordinary Nexus/CDN timeout still flows through the renderers' own
+ * fallback logic; the deadline only catches stalls those timeouts cannot
+ * bound (satori's own emoji/font fetches, a stalled process).
+ */
+export const OG_RENDER_DEADLINE_MS = 4500;
+
 /** Literal hex design tokens (ImageResponse cannot use CSS variables). */
 export const OG_TOKENS = {
   // `--background` oklch(0.118 0.014 284.115) → hex (page background; also the

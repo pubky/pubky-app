@@ -62,19 +62,17 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
     // The cover resolver is the SSRF-hardened attachment path: only `pubky://`
     // file URIs (our own CDN) are ever fetched server-side. A legacy absolute
     // http(s) cover renders in-app but the OG section falls back to the muted,
-    // cover-less background. FEED variant (720px WebP, ~8 KB) rather than MAIN:
-    // the full-resolution original can run to megabytes (over Next's 2 MB
-    // data-cache limit, so it would be re-downloaded and decoded on every
-    // render) and social crawlers only wait a few seconds for the card. The
-    // ~1.7x upscale into the cover box sits under the darkening gradient below,
-    // which masks the softness. MAIN is tried only when FEED yields nothing
-    // (Nexus fails to derive variants for some uploads, e.g. animated GIFs),
-    // bounded by the shared fetch timeout and byte cap.
+    // cover-less background. FEED variant (720px WebP, ~8 KB) rather than MAIN,
+    // like post attachments: the full-resolution original can run to megabytes
+    // (over Next's 2 MB data-cache limit, so it would be re-downloaded and
+    // decoded on every render) and social crawlers only wait a few seconds for
+    // the card. The ~1.7x upscale into the cover box sits under the darkening
+    // gradient below, which masks the softness. When Nexus has no usable FEED
+    // variant (e.g. animated GIF uploads) the card renders cover-less rather
+    // than falling back to the original.
     const [avatarSrc, coverSrc] = await Promise.all([
       fetchImageAsDataUri(buildAvatarUrl(user)),
-      fetchImageAsDataUri(resolvePostAttachmentUrl(collection.cover_image, FileVariant.FEED)).then(
-        (feed) => feed ?? fetchImageAsDataUri(resolvePostAttachmentUrl(collection.cover_image, FileVariant.MAIN)),
-      ),
+      fetchImageAsDataUri(resolvePostAttachmentUrl(collection.cover_image, FileVariant.FEED)),
     ]);
 
     const name = resolveDisplayName(user);
