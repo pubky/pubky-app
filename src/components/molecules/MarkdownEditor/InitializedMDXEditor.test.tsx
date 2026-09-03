@@ -1,14 +1,30 @@
 import React, { createRef } from 'react';
-import type { MDXEditorMethods } from '@mdxeditor/editor';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { imagePlugin, type MDXEditorMethods } from '@mdxeditor/editor';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { asOpaque } from '@/test-utils/type-assertions';
 import InitializedMDXEditor from './InitializedMDXEditor';
+import { MarkdownEditorImageDialog } from './MarkdownEditorImageDialog';
 
 // Mock config - use a smaller value for easier testing
 const MOCK_MAX_LENGTH = 1000;
 vi.mock('@/config/posts', () => ({
   ARTICLE_MAX_CHARACTER_LENGTH: 1000,
+  ARTICLE_ATTACHMENT_ACCEPT_STRING: 'image/gif,image/jpeg,image/png,image/svg+xml,image/webp',
+  ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES: ['image/gif', 'image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'],
+}));
+
+// Mock the CDN resolver used by the image preview handler (avoids the controller chain)
+vi.mock('@/libs/file/pubkyFileCdnUrl', () => ({
+  pubkyUriToCdnUrl: vi.fn(() => null),
+}));
+
+// Mock the realm hooks (the ImageDialogOpenReporter renders inside the mocked
+// toolbar, outside any real MDXEditor realm)
+const mockImageDialogState = { current: { type: 'inactive' } as { type: string } };
+vi.mock('@mdxeditor/gurx', () => ({
+  useCellValues: vi.fn(() => [mockImageDialogState.current]),
+  usePublisher: vi.fn(() => vi.fn()),
 }));
 
 // Store toolbar contents renderer to invoke it during tests
@@ -93,6 +109,9 @@ vi.mock('@mdxeditor/editor', () => {
       </button>
     ),
     CreateLink: () => <button data-testid="create-link">Create Link</button>,
+    imagePlugin: vi.fn((config: Record<string, unknown>) => ({ type: 'image', config })),
+    imageDialogState$: 'imageDialogState$',
+    InsertImage: () => <button data-testid="insert-image">Insert Image</button>,
     CodeToggle: () => <button data-testid="code-toggle">Code</button>,
     InsertCodeBlock: () => <button data-testid="insert-code-block">Insert Code Block</button>,
     InsertThematicBreak: () => <button data-testid="insert-thematic-break">Insert Break</button>,
@@ -989,5 +1008,342 @@ describe('InitializedMDXEditor - Snapshots', () => {
   it('matches snapshot with readOnly prop', () => {
     const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" readOnly />);
     expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+describe('Inline images', () => {
+  const FILE_URI = 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/files/img1';
+  const imageFile = (name = 'pic.png') => new File(['x'], name, { type: 'image/png' });
+
+  const setupInlineImages = (upload = vi.fn().mockResolvedValue(FILE_URI)) => {
+    const inlineImages = { upload, getPreviewUrl: vi.fn(() => null) };
+    const utils = render(<InitializedMDXEditor editorRef={null} markdown="" inlineImages={inlineImages} />);
+    return { ...utils, upload };
+  };
+
+  beforeEach(() => {
+    vi.mocked(imagePlugin).mockClear();
+  });
+
+  it('does not register the image plugin or buttons without the inlineImages prop', () => {
+    render(<InitializedMDXEditor editorRef={null} markdown="" />);
+
+    expect(imagePlugin).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('insert-image')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('markdown-image-button')).not.toBeInTheDocument();
+  });
+
+  it('registers the image plugin with resize disabled and the upload handler', () => {
+    const { upload } = setupInlineImages();
+
+    expect(imagePlugin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        imageUploadHandler: upload,
+        disableImageResize: true,
+        imagePreviewHandler: expect.any(Function),
+        ImageDialog: MarkdownEditorImageDialog,
+      }),
+    );
+    expect(screen.getByTestId('insert-image')).toBeInTheDocument();
+  });
+
+  it('prefers the session preview URL in the image preview handler', async () => {
+    const inlineImages = { upload: vi.fn(), getPreviewUrl: vi.fn((): string | null => 'blob:session-preview') };
+    render(<InitializedMDXEditor editorRef={null} markdown="" inlineImages={inlineImages} />);
+
+    const { imagePreviewHandler } = vi.mocked(imagePlugin).mock.calls[0][0] as {
+      imagePreviewHandler: (src: string) => Promise<string>;
+    };
+
+    await expect(imagePreviewHandler(FILE_URI)).resolves.toBe('blob:session-preview');
+
+    inlineImages.getPreviewUrl.mockReturnValue(null);
+    await expect(imagePreviewHandler('https://example.com/a.png')).resolves.toBe('https://example.com/a.png');
+  });
+
+  it('uploads and inserts markdown from the markdown-mode image button', async () => {
+    const { upload } = setupInlineImages();
+
+    fireEvent.change(screen.getByTestId('markdown-image-input'), { target: { files: [imageFile()] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue(`![](${FILE_URI})`);
+    });
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it('uploads and inserts markdown on a files-only paste into the textarea', async () => {
+    const { upload } = setupInlineImages();
+
+    fireEvent.paste(screen.getByTestId('markdown-textarea'), {
+      clipboardData: { items: [{ kind: 'file', getAsFile: () => imageFile() }] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue(`![](${FILE_URI})`);
+    });
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it('extracts image files from mixed clipboard payloads (file-first, like GitHub)', async () => {
+    const { upload } = setupInlineImages();
+
+    // Screenshots and copied images typically bundle a text/html flavor with the file
+    fireEvent.paste(screen.getByTestId('markdown-textarea'), {
+      clipboardData: {
+        items: [
+          { kind: 'string', getAsFile: () => null },
+          { kind: 'file', getAsFile: () => imageFile() },
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue(`![](${FILE_URI})`);
+    });
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves text-only clipboard payloads to the normal text paste', () => {
+    const { upload } = setupInlineImages();
+
+    fireEvent.paste(screen.getByTestId('markdown-textarea'), {
+      clipboardData: {
+        items: [{ kind: 'string', getAsFile: () => null }],
+      },
+    });
+
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it('shows an uploading placeholder until the upload resolves', async () => {
+    let resolveUpload!: (uri: string) => void;
+    const upload = vi.fn(() => new Promise<string>((resolve) => (resolveUpload = resolve)));
+    setupInlineImages(upload);
+
+    fireEvent.change(screen.getByTestId('markdown-image-input'), { target: { files: [imageFile()] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue('![Uploading pic.png…]()');
+    });
+
+    resolveUpload(FILE_URI);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue(`![](${FILE_URI})`);
+    });
+  });
+
+  it('cancels the insertion when the user deletes the placeholder mid-upload', async () => {
+    let resolveUpload!: (uri: string) => void;
+    const upload = vi.fn(() => new Promise<string>((resolve) => (resolveUpload = resolve)));
+    setupInlineImages(upload);
+
+    fireEvent.change(screen.getByTestId('markdown-image-input'), { target: { files: [imageFile()] } });
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue('![Uploading pic.png…]()');
+    });
+
+    fireEvent.change(screen.getByTestId('markdown-textarea'), { target: { value: 'kept text' } });
+    resolveUpload(FILE_URI);
+
+    // The finished upload must not resurface anywhere in the body
+    await waitFor(() => expect(upload).toHaveBeenCalled());
+    expect(screen.getByTestId('markdown-textarea')).toHaveValue('kept text');
+  });
+
+  it('uploads and inserts markdown on a file drop into the textarea', async () => {
+    const { upload } = setupInlineImages();
+
+    fireEvent.drop(screen.getByTestId('markdown-textarea'), {
+      dataTransfer: { files: [imageFile()] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue(`![](${FILE_URI})`);
+    });
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes the placeholder and inserts nothing when the upload fails', async () => {
+    const upload = vi.fn().mockRejectedValue(new Error('rejected'));
+    setupInlineImages(upload);
+
+    fireEvent.change(screen.getByTestId('markdown-image-input'), { target: { files: [imageFile()] } });
+
+    await waitFor(() => expect(upload).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue('');
+    });
+  });
+
+  it('inserts one image markdown per uploaded file', async () => {
+    const upload = vi.fn().mockResolvedValueOnce(`${FILE_URI}a`).mockResolvedValueOnce(`${FILE_URI}b`);
+    setupInlineImages(upload);
+
+    fireEvent.change(screen.getByTestId('markdown-image-input'), {
+      target: { files: [imageFile('a.png'), imageFile('b.png')] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('markdown-textarea')).toHaveValue(`![](${FILE_URI}a)\n![](${FILE_URI}b)`);
+    });
+  });
+});
+
+describe('Rich-text uploading indicator', () => {
+  const withUploads = (uploadingCount: number) => ({
+    upload: vi.fn(),
+    getPreviewUrl: vi.fn(() => null),
+    uploadingCount,
+  });
+
+  it('shows the pill while uploads are in flight in rich-text mode', () => {
+    render(<InitializedMDXEditor editorRef={null} markdown="" inlineImages={withUploads(1)} />);
+
+    expect(screen.getByTestId('richtext-uploading-indicator')).toHaveTextContent('Uploading image…');
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+  });
+
+  it('pluralizes for multiple in-flight uploads', () => {
+    render(<InitializedMDXEditor editorRef={null} markdown="" inlineImages={withUploads(3)} />);
+
+    expect(screen.getByTestId('richtext-uploading-indicator')).toHaveTextContent('Uploading 3 images…');
+  });
+
+  it('hides the pill when nothing is uploading or the count is absent', () => {
+    const { rerender } = render(<InitializedMDXEditor editorRef={null} markdown="" inlineImages={withUploads(0)} />);
+    expect(screen.queryByTestId('richtext-uploading-indicator')).not.toBeInTheDocument();
+
+    rerender(
+      <InitializedMDXEditor
+        editorRef={null}
+        markdown=""
+        inlineImages={{ upload: vi.fn(), getPreviewUrl: () => null }}
+      />,
+    );
+    expect(screen.queryByTestId('richtext-uploading-indicator')).not.toBeInTheDocument();
+  });
+
+  it('hides the pill while the image dialog is open (the dialog shows its own spinner)', () => {
+    mockImageDialogState.current = { type: 'new' };
+    try {
+      render(<InitializedMDXEditor editorRef={null} markdown="" inlineImages={withUploads(1)} />);
+
+      expect(screen.queryByTestId('richtext-uploading-indicator')).not.toBeInTheDocument();
+    } finally {
+      mockImageDialogState.current = { type: 'inactive' };
+    }
+  });
+
+  it('does not show the pill in markdown mode (placeholders cover it there)', () => {
+    const editorRef = createRef<MDXEditorMethods>();
+    Object.defineProperty(editorRef, 'current', {
+      value: { getMarkdown: vi.fn(() => ''), setMarkdown: vi.fn(), focus: vi.fn(), insertMarkdown: vi.fn() },
+      writable: true,
+    });
+    // Switch modes while idle (the toggle is disabled during uploads), then
+    // start an upload in markdown mode
+    const { rerender } = render(
+      <InitializedMDXEditor editorRef={editorRef} markdown="" inlineImages={withUploads(0)} />,
+    );
+
+    fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+    rerender(<InitializedMDXEditor editorRef={editorRef} markdown="" inlineImages={withUploads(1)} />);
+
+    expect(screen.queryByTestId('richtext-uploading-indicator')).not.toBeInTheDocument();
+  });
+});
+
+describe('Upload-in-flight guards', () => {
+  const withUploads = (uploadingCount: number) => ({
+    upload: vi.fn(),
+    getPreviewUrl: vi.fn(() => null),
+    uploadingCount,
+  });
+
+  it('disables both mode-toggle buttons while uploads are in flight', () => {
+    render(<InitializedMDXEditor editorRef={null} markdown="" inlineImages={withUploads(1)} />);
+
+    expect(screen.getByTestId('button-with-tooltip-markdown')).toBeDisabled();
+    expect(screen.getByTestId('markdown-richtext-button')).toBeDisabled();
+  });
+
+  it('keeps the mode-toggle buttons enabled when nothing is uploading', () => {
+    render(<InitializedMDXEditor editorRef={null} markdown="" inlineImages={withUploads(0)} />);
+
+    expect(screen.getByTestId('button-with-tooltip-markdown')).toBeEnabled();
+    expect(screen.getByTestId('markdown-richtext-button')).toBeEnabled();
+  });
+
+  it('ignores non-image files dropped on the markdown textarea (no placeholder, no upload)', () => {
+    const upload = vi.fn();
+    render(
+      <InitializedMDXEditor editorRef={null} markdown="" inlineImages={{ upload, getPreviewUrl: vi.fn(() => null) }} />,
+    );
+
+    fireEvent.drop(screen.getByTestId('markdown-textarea'), {
+      dataTransfer: { files: [new File(['x'], 'doc.pdf', { type: 'application/pdf' })] },
+    });
+
+    expect(upload).not.toHaveBeenCalled();
+    expect(screen.getByTestId('markdown-textarea')).toHaveValue('');
+  });
+});
+
+describe('Over-cap recovery in markdown mode', () => {
+  const setupOverCap = () => {
+    const overCapText = 'x'.repeat(1010); // MOCK_MAX_LENGTH is 1000
+    const editorRef = createRef<MDXEditorMethods>();
+    Object.defineProperty(editorRef, 'current', {
+      value: { getMarkdown: vi.fn(() => overCapText), setMarkdown: vi.fn(), focus: vi.fn(), insertMarkdown: vi.fn() },
+      writable: true,
+    });
+    render(<InitializedMDXEditor editorRef={editorRef} markdown="" />);
+    // Import the over-cap text by switching to markdown mode
+    fireEvent.click(screen.getByTestId('button-with-tooltip-markdown'));
+    return overCapText;
+  };
+
+  it('shows the reached warning for bodies over the cap, not only exactly at it', () => {
+    setupOverCap();
+
+    expect(screen.getByTestId('max-length-warning')).toHaveTextContent("You've reached the maximum character limit.");
+  });
+
+  it('accepts shrinking edits while over the cap so the user can recover', () => {
+    const overCapText = setupOverCap();
+    const textarea = screen.getByTestId('markdown-textarea');
+
+    // Deleting characters must work even though the result is still over cap
+    const shrunk = overCapText.slice(0, 1005);
+    fireEvent.change(textarea, { target: { value: shrunk } });
+    expect(textarea).toHaveValue(shrunk);
+
+    // Growing while over cap stays refused
+    fireEvent.change(textarea, { target: { value: shrunk + 'yy' } });
+    expect(textarea).toHaveValue(shrunk);
+  });
+});
+
+describe('Unsupported image types in markdown mode', () => {
+  it('ignores image types outside the supported whitelist (no placeholder, no upload)', () => {
+    const upload = vi.fn();
+    render(
+      <InitializedMDXEditor editorRef={null} markdown="" inlineImages={{ upload, getPreviewUrl: vi.fn(() => null) }} />,
+    );
+
+    // HEIC matches image/* but not the supported set
+    fireEvent.drop(screen.getByTestId('markdown-textarea'), {
+      dataTransfer: { files: [new File(['x'], 'photo.heic', { type: 'image/heic' })] },
+    });
+    fireEvent.paste(screen.getByTestId('markdown-textarea'), {
+      clipboardData: {
+        items: [{ kind: 'file', getAsFile: () => new File(['x'], 'photo.heic', { type: 'image/heic' }) }],
+      },
+    });
+
+    expect(upload).not.toHaveBeenCalled();
+    expect(screen.getByTestId('markdown-textarea')).toHaveValue('');
   });
 });

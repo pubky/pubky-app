@@ -74,7 +74,8 @@ describe('SearchUserSuggestion', () => {
 
     const avatar = screen.getByTestId('avatar');
     expect(avatar).toHaveAttribute('data-name', 'John Doe');
-    expect(avatar).toHaveAttribute('data-size', 'default');
+    // 32px avatars in search results per #1840
+    expect(avatar).toHaveAttribute('data-size', 'md');
   });
 
   it('calls onClick when clicked', () => {

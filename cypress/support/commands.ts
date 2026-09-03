@@ -85,6 +85,12 @@ Cypress.Commands.add(
 
     cy.get('#profile-finish-btn').click(extendedTimeout());
 
+    cy.location('pathname').should('eq', '/onboarding/tags');
+    cy.get('[data-testid="tags-of-interest-form"]').should('be.visible');
+    cy.get('[data-testid="tags-of-interest-form"]').within(() => {
+      cy.get('#profile-finish-btn').click();
+    });
+
     cy.location('pathname').should('eq', '/home');
 
     // confirm welcome message is shown and dismiss it

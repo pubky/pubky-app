@@ -56,3 +56,10 @@ export const TAG_INPUT_WIDTH_AT_LIMIT = 162;
 
 /** Number of hot tags to display as featured cards on the Hot page */
 export const HOT_TAGS_FEATURED_COUNT = 3;
+
+// =============================================================================
+// Onboarding Tags of Interest
+// =============================================================================
+
+/** Number of popular interest chips shown on the onboarding "Tags of interest" step (per design) */
+export const ONBOARDING_INTERESTS_SUGGESTED_COUNT = 21;

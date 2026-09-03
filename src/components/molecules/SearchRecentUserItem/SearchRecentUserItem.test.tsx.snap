@@ -3,20 +3,20 @@
 exports[`SearchRecentUserItem > SearchRecentUserItem - Snapshots > matches snapshot 1`] = `
 <div
   aria-label="View profile for Test User"
-  class="flex min-w-0 cursor-pointer items-center gap-2 rounded-md transition-colors hover:bg-secondary"
+  class="flex min-w-0 cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
   data-testid="recent-user-abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop"
   role="button"
 >
   <div
     data-avatar-url="https://example.com/avatar.jpg"
     data-name="Test User"
-    data-size="default"
+    data-size="md"
     data-testid="avatar"
   >
     Avatar
   </div>
   <div
-    class="min-w-0 flex-1 flex-col items-start"
+    class="flex min-w-0 flex-1 flex-col items-start"
   >
     <span
       class="block max-w-full truncate text-sm font-bold text-foreground"

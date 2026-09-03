@@ -46,7 +46,7 @@ exports[`SearchRecentSection > SearchRecentSection - Snapshots > matches snapsho
     </span>
   </div>
   <div
-    class="flex flex-wrap gap-2"
+    class="flex flex-wrap gap-x-6 gap-y-3"
   >
     <div
       data-testid="user-item-pk:user1"
@@ -77,8 +77,9 @@ exports[`SearchRecentSection > SearchRecentSection - Snapshots > matches snapsho
     </span>
     <button
       aria-label="Clear all recent searches"
-      class="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      class="flex cursor-pointer items-center rounded text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
       data-testid="clear-all-button"
+      type="button"
     >
       <svg
         aria-hidden="true"
@@ -103,7 +104,7 @@ exports[`SearchRecentSection > SearchRecentSection - Snapshots > matches snapsho
     </button>
   </div>
   <div
-    class="flex flex-wrap gap-2"
+    class="flex flex-wrap gap-x-6 gap-y-3"
   >
     <div
       data-testid="user-item-pk:user1"

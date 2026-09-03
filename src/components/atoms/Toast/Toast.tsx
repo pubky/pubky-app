@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { type VariantProps } from 'class-variance-authority';
-import { X } from 'lucide-react';
 import { Toast as ToastPrimitives } from 'radix-ui';
 import { cn } from '@/libs/utils/utils';
 import { toastActionVariants, toastVariants } from './Toast.variants';
@@ -41,28 +40,10 @@ Toast.displayName = ToastPrimitives.Root.displayName;
 const ToastAction = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Action>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Action> & VariantProps<typeof toastActionVariants>
->(({ className, variant = 'default', ...props }, ref) => (
+>(({ className, variant = 'muted', ...props }, ref) => (
   <ToastPrimitives.Action ref={ref} className={cn(toastActionVariants({ variant }), className)} {...props} />
 ));
 ToastAction.displayName = ToastPrimitives.Action.displayName;
-
-const ToastClose = React.forwardRef<
-  React.ComponentRef<typeof ToastPrimitives.Close>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Close>
->(({ className, ...props }, ref) => (
-  <ToastPrimitives.Close
-    ref={ref}
-    className={cn(
-      'absolute top-2 right-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity group-hover:opacity-100 group-data-[variant=error]:text-red-300 hover:text-foreground group-data-[variant=error]:hover:text-red-50 focus:opacity-100 focus:ring-2 focus:outline-none group-data-[variant=error]:focus:ring-red-400 group-data-[variant=error]:focus:ring-offset-red-600',
-      className,
-    )}
-    toast-close=""
-    {...props}
-  >
-    <X className="h-4 w-4" />
-  </ToastPrimitives.Close>
-));
-ToastClose.displayName = ToastPrimitives.Close.displayName;
 
 const ToastTitle = React.forwardRef<
   React.ComponentRef<typeof ToastPrimitives.Title>,
@@ -88,18 +69,4 @@ const ToastDescription = React.forwardRef<
 ));
 ToastDescription.displayName = ToastPrimitives.Description.displayName;
 
-export {
-  Toast,
-  ToastAction,
-  type ToastActionElement,
-  ToastClose,
-  ToastDescription,
-  type ToastProps,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-};
-export type { ToastVariant } from './Toast.variants';
-
-type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>;
-type ToastActionElement = React.ReactElement<typeof ToastAction>;
+export { Toast, ToastAction, ToastDescription, ToastProvider, ToastTitle, ToastViewport };

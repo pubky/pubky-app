@@ -2,115 +2,533 @@
 
 exports[`SearchInput > SearchInput - Snapshots > matches snapshot - default state 1`] = `
 <div
-  class="relative min-w-0"
+  class="mx-auto w-full flex-col flex relative min-w-0"
   data-testid="search-input"
 >
   <div
-    class="rounded-full"
+    class="relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3 rounded-full"
+    data-cy="header-search"
     data-testid="search-input-bar"
+    style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%); backdrop-filter: blur(20px);"
   >
     <input
       aria-autocomplete="list"
       aria-expanded="false"
       aria-label="Search input"
+      class="flex w-full rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base min-w-20 pl-0"
+      data-cy="header-search-input"
+      data-testid="input"
       placeholder="Search"
       type="text"
       value=""
     />
-    <svg
-      data-testid="search-icon"
-    />
+    <span
+      aria-hidden="true"
+      class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-search size-4 text-muted-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21 21-4.34-4.34"
+        />
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+        />
+      </svg>
+    </span>
   </div>
 </div>
 `;
 
 exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with suggestions 1`] = `
 <div
-  class="relative min-w-0"
+  class="mx-auto w-full flex-col flex relative min-w-0"
   data-testid="search-input"
 >
   <div
-    class="rounded-t-2xl"
+    class="relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3 rounded-t-2xl rounded-b-none border-b-transparent"
+    data-cy="header-search"
     data-testid="search-input-bar"
-    style="background: linear-gradient(180deg, rgb(5, 5, 10) 0%, rgba(5, 5, 10, 0.5) 100%);"
+    style="background: linear-gradient(180deg, var(--background) 0%, var(--background) 100%);"
   >
     <input
       aria-autocomplete="list"
       aria-controls="search-suggestions"
       aria-expanded="true"
+      aria-haspopup="dialog"
       aria-label="Search input"
+      class="flex w-full rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base min-w-20 pl-0"
+      data-cy="header-search-input"
+      data-testid="input"
       placeholder="Search"
       type="text"
       value=""
     />
-    <svg
-      data-testid="search-icon"
-    />
+    <button
+      aria-label="Clear and close search"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border hover:text-accent-foreground hover:bg-accent/50 -mr-2 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
+      data-size="icon"
+      data-slot="button"
+      data-variant="ghost"
+      type="button"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-x size-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+    </button>
   </div>
   <div
     aria-label="Search suggestions"
+    class="absolute top-full right-0 left-0 z-50 overflow-y-auto rounded-t-none rounded-b-2xl border-x border-b border-border"
     data-testid="search-suggestions"
     id="search-suggestions"
+    role="region"
+    style="background: linear-gradient(180deg, var(--background) 0%, rgba(5, 5, 10, 0.50) 100%); backdrop-filter: blur(25px); box-shadow: 0px 50px 100px rgba(0, 0, 0, 1); max-height: calc(100dvh - 10rem);"
   >
-    <button
-      data-testid="hot-tag-pubky"
+    <div
+      class="flex flex-col space-y-6 px-6 pt-3 pb-6"
+      data-testid="container"
     >
-      pubky
-    </button>
+      <div
+        class="flex flex-col gap-2"
+        data-testid="container"
+      >
+        <p
+          class="text-xs font-medium tracking-widest text-muted-foreground uppercase"
+          data-testid="typography"
+        >
+          Hot tags
+        </p>
+        <div
+          class="flex flex-wrap gap-2"
+          data-testid="container"
+        >
+          <button
+            aria-label="pubky tag"
+            aria-pressed="false"
+            class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+            data-cy="post-tag"
+            data-state="off"
+            data-tag-label="pubky"
+            style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(200, 255, 0) 0%, rgb(200, 255, 0) 100%);"
+            type="button"
+          >
+            <div
+              class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+              data-cy="tag"
+              data-testid="tag"
+              style="background-color: transparent; border: medium; box-shadow: none;"
+              title="pubky"
+            >
+              <p
+                class="text-sm text-foreground truncate font-bold"
+                data-cy="tag-name"
+                data-testid="tag-name"
+              >
+                pubky
+              </p>
+            </div>
+            <span
+              aria-hidden="true"
+              class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+              style="box-shadow: inset 0px 0px 8px 0px #C8FF00;"
+            />
+          </button>
+          <button
+            aria-label="bitcoin tag"
+            aria-pressed="false"
+            class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+            data-cy="post-tag"
+            data-state="off"
+            data-tag-label="bitcoin"
+            style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%);"
+            type="button"
+          >
+            <div
+              class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+              data-cy="tag"
+              data-testid="tag"
+              style="background-color: transparent; border: medium; box-shadow: none;"
+              title="bitcoin"
+            >
+              <p
+                class="text-sm text-foreground truncate font-bold"
+                data-cy="tag-name"
+                data-testid="tag-name"
+              >
+                bitcoin
+              </p>
+            </div>
+            <span
+              aria-hidden="true"
+              class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+              style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+            />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SearchInput > SearchInput - Snapshots > matches snapshot - focused with the full-text action 1`] = `
+<div
+  class="mx-auto w-full flex-col flex relative min-w-0"
+  data-testid="search-input"
+>
+  <div
+    class="relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3 rounded-t-2xl rounded-b-none border-b-transparent"
+    data-cy="header-search"
+    data-testid="search-input-bar"
+    style="background: linear-gradient(180deg, var(--background) 0%, var(--background) 100%);"
+  >
+    <input
+      aria-autocomplete="list"
+      aria-controls="search-suggestions"
+      aria-expanded="true"
+      aria-haspopup="dialog"
+      aria-label="Search input"
+      class="flex w-full rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base min-w-20 pl-0"
+      data-cy="header-search-input"
+      data-testid="input"
+      placeholder="Search"
+      type="text"
+      value="bitcoin"
+    />
     <button
-      data-testid="hot-tag-bitcoin"
+      aria-label="Clear and close search"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border hover:text-accent-foreground hover:bg-accent/50 -mr-2 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
+      data-size="icon"
+      data-slot="button"
+      data-variant="ghost"
+      type="button"
     >
-      bitcoin
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-x size-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
     </button>
+  </div>
+  <div
+    aria-label="Search suggestions"
+    class="absolute top-full right-0 left-0 z-50 overflow-y-auto rounded-t-none rounded-b-2xl border-x border-b border-border"
+    data-testid="search-suggestions"
+    id="search-suggestions"
+    role="region"
+    style="background: linear-gradient(180deg, var(--background) 0%, rgba(5, 5, 10, 0.50) 100%); backdrop-filter: blur(25px); box-shadow: 0px 50px 100px rgba(0, 0, 0, 1); max-height: calc(100dvh - 10rem);"
+  >
+    <div
+      class="flex flex-col space-y-6 px-6 pt-3 pb-6"
+      data-testid="container"
+    >
+      <button
+        class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5 self-start"
+        data-size="sm"
+        data-slot="button"
+        data-variant="secondary"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-search"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m21 21-4.34-4.34"
+          />
+          <circle
+            cx="11"
+            cy="11"
+            r="8"
+          />
+        </svg>
+        Show all results
+      </button>
+    </div>
   </div>
 </div>
 `;
 
 exports[`SearchInput > SearchInput - Snapshots > matches snapshot - with active tags 1`] = `
 <div
-  class="relative min-w-0"
+  class="mx-auto w-full flex-col flex relative min-w-0"
   data-testid="search-input"
 >
   <div
-    class="rounded-full"
+    class="relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3 rounded-full"
+    data-cy="header-search"
     data-testid="search-input-bar"
+    style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%); backdrop-filter: blur(20px);"
   >
     <div
       aria-label="Active search tags"
+      class="flex min-w-0 items-center gap-2 overflow-x-auto py-2"
+      data-testid="container"
       role="list"
     >
-      <span
-        data-testid="active-tag-bitcoin"
+      <button
+        aria-label="bitcoin tag"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white max-w-none shrink-0"
+        data-cy="post-tag"
+        data-state="off"
+        data-tag-label="bitcoin"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%);"
+        type="button"
       >
-        bitcoin
-        <button
-          data-testid="remove-tag-bitcoin"
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="bitcoin"
         >
-          x
-        </button>
-      </span>
-      <span
-        data-testid="active-tag-pubky"
+          <p
+            class="text-sm text-foreground truncate font-bold"
+            data-cy="tag-name"
+            data-testid="tag-name"
+          >
+            bitcoin
+          </p>
+        </div>
+        <span
+          aria-label="Remove bitcoin tag"
+          class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
+          data-cy="post-tag-remove-btn"
+          role="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-x size-3"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 6 6 18"
+            />
+            <path
+              d="m6 6 12 12"
+            />
+          </svg>
+        </span>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+        />
+      </button>
+      <button
+        aria-label="pubky tag"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white max-w-none shrink-0"
+        data-cy="post-tag"
+        data-state="off"
+        data-tag-label="pubky"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(200, 255, 0) 0%, rgb(200, 255, 0) 100%);"
+        type="button"
       >
-        pubky
-        <button
-          data-testid="remove-tag-pubky"
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="pubky"
         >
-          x
-        </button>
-      </span>
+          <p
+            class="text-sm text-foreground truncate font-bold"
+            data-cy="tag-name"
+            data-testid="tag-name"
+          >
+            pubky
+          </p>
+        </div>
+        <span
+          aria-label="Remove pubky tag"
+          class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-70 transition-opacity hover:opacity-100"
+          data-cy="post-tag-remove-btn"
+          role="button"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-x size-3"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M18 6 6 18"
+            />
+            <path
+              d="m6 6 12 12"
+            />
+          </svg>
+        </span>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #C8FF00;"
+        />
+      </button>
     </div>
     <input
       aria-autocomplete="list"
       aria-expanded="false"
       aria-label="Search input"
+      class="flex w-full rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base min-w-8 pl-2.5"
+      data-cy="header-search-input"
+      data-testid="input"
       placeholder=""
       type="text"
       value=""
     />
-    <svg
-      data-testid="search-icon"
+    <span
+      aria-hidden="true"
+      class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-search size-4 text-muted-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21 21-4.34-4.34"
+        />
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+        />
+      </svg>
+    </span>
+  </div>
+</div>
+`;
+
+exports[`SearchInput - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
+<div
+  class="mx-auto w-full flex-col flex relative min-w-0"
+  data-testid="search-input"
+>
+  <div
+    class="relative flex h-12 min-w-0 items-center gap-3 border border-border px-6 py-3 rounded-full"
+    data-cy="header-search"
+    data-testid="search-input-bar"
+    style="background: linear-gradient(180deg, rgb(7, 4, 10) 0%, rgb(27, 24, 32) 100%); backdrop-filter: blur(20px);"
+  >
+    <input
+      aria-autocomplete="list"
+      aria-expanded="false"
+      aria-label="Search input"
+      class="flex w-full rounded-md border border-input px-3 py-1 shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-input disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 hover:ring-0 hover:outline-none focus:ring-0 focus:ring-offset-0 focus:outline-none aria-invalid:border-destructive aria-invalid:ring-destructive/40 h-auto flex-1 border-none bg-transparent pr-0 text-base font-medium text-foreground md:text-base min-w-20 pl-0"
+      data-cy="header-search-input"
+      data-testid="input"
+      placeholder="Search"
+      type="text"
+      value=""
     />
+    <span
+      aria-hidden="true"
+      class="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-search size-4 text-muted-foreground"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m21 21-4.34-4.34"
+        />
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+        />
+      </svg>
+    </span>
   </div>
 </div>
 `;

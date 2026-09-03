@@ -38,11 +38,7 @@ vi.mock('@/molecules/FacehashAvatar/FacehashAvatar', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 describe('MutedUsersList', () => {
   beforeEach(() => {
