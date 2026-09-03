@@ -257,7 +257,6 @@ export class AuthController {
       // Update hasProfile after bootstrap completes - triggers redirect via useAuthStatus
       authStore.setHasProfile(isSignedUp);
     } catch (error) {
-      this.cancelModerationFollow();
       authStore.reset();
       signInStore.reset();
       throw error;
