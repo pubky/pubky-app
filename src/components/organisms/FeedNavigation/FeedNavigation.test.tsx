@@ -480,7 +480,7 @@ describe('FeedNavigation', () => {
         'lg:group-hover:pointer-events-auto',
         'lg:group-focus-within:opacity-100',
       );
-      expect(editButton.querySelector('svg')).toHaveClass('size-4');
+      expect(editButton.querySelector('svg')).toHaveClass('size-3');
     });
   });
 

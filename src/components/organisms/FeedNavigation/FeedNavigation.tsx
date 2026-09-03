@@ -206,7 +206,7 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
                 onClick={() => setEditingFeed(feed)}
                 className={cn(FEED_TAB_PENCIL_CLASS, !isActive && 'hidden lg:block')}
               >
-                <Pencil className="size-4" />
+                <Pencil className="size-3" />
               </Button>
             </Container>
           );

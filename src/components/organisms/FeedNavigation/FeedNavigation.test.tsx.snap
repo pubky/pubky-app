@@ -100,7 +100,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -267,7 +267,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -331,7 +331,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -497,7 +497,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -562,7 +562,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -626,7 +626,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
