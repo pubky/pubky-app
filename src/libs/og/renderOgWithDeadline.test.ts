@@ -20,7 +20,16 @@ describe('renderOgWithDeadline', () => {
     const res = await renderOgWithDeadline(async () => real, { route: 'post' });
 
     expect(res).toBe(real);
-    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it('prepares the fallback concurrently so it is ready the moment the deadline fires', async () => {
+    const promise = renderOgWithDeadline(() => new Promise<Response>(() => {}), { route: 'post' });
+
+    // Started alongside the render, not after the deadline.
+    expect(fallback).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(OG_RENDER_DEADLINE_MS);
+    expect(await (await promise).text()).toBe('fallback');
+    expect(fallback).toHaveBeenCalledTimes(1);
   });
 
   it('serves the fallback card once the deadline passes, leaving the render to finish on its own', async () => {
@@ -50,6 +59,5 @@ describe('renderOgWithDeadline', () => {
     await vi.advanceTimersByTimeAsync(OG_RENDER_DEADLINE_MS - 1);
 
     expect(await promise).toBe(real);
-    expect(fallback).not.toHaveBeenCalled();
   });
 });

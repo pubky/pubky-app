@@ -9,6 +9,13 @@ import { renderFallbackOg } from './renderFallbackOg';
  * CDN and satori asset caches are warm for the crawler's next attempt. The
  * short fallback cache policy makes that next attempt happen soon.
  *
+ * The fallback is prepared concurrently with the render rather than after the
+ * deadline fires: on a cold process its first transcode (or remote preview
+ * fetch) would otherwise be added on top of the deadline, past the crawler
+ * budget the deadline exists to protect. It is process-cached after the first
+ * success, so on a warm process this costs a cache lookup, and it never
+ * rejects.
+ *
  * Applied at the route boundary so it bounds every stage of a render in one
  * place, whatever renderer the route delegates to.
  */
@@ -20,6 +27,7 @@ export async function renderOgWithDeadline(
   const deadline = new Promise<'deadline'>((resolve) => {
     timer = setTimeout(() => resolve('deadline'), OG_RENDER_DEADLINE_MS);
   });
+  const fallback = renderFallbackOg();
   try {
     const result = await Promise.race([render(), deadline]);
     if (result !== 'deadline') return result;
@@ -27,7 +35,7 @@ export async function renderOgWithDeadline(
       ...context,
       deadlineMs: OG_RENDER_DEADLINE_MS,
     });
-    return await renderFallbackOg();
+    return await fallback;
   } finally {
     clearTimeout(timer);
   }
