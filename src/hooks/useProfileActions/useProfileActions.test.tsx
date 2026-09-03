@@ -1,10 +1,7 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProfileController } from '@/controllers/profile/profile';
-import { ErrorMessages } from '@/libs/error/error.messages';
-import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
-import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useProfileActions } from './useProfileActions';
 
@@ -15,8 +12,6 @@ vi.mock('next/navigation', () => ({
     push: mockPush,
   }),
 }));
-
-vi.mock('@/molecules/Toaster/toast');
 
 // Mock AuthController.logout
 const mockLogout = vi.fn();
@@ -43,7 +38,6 @@ describe('useProfileActions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(Logger, 'error').mockImplementation(() => {});
     useAuthStore.setState({ currentUserPubky: null });
   });
 
@@ -140,60 +134,17 @@ describe('useProfileActions', () => {
   });
 
   describe('onSignOut', () => {
-    it('calls logout and navigates to logout route', async () => {
-      mockLogout.mockResolvedValue(undefined);
+    it('navigates to the logout route without waiting for session cleanup', () => {
       const { result } = renderHook(() => useProfileActions(defaultProps));
 
-      await act(async () => {
-        await result.current.onSignOut();
+      act(() => {
+        result.current.onSignOut();
       });
 
-      expect(mockLogout).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith('/logout');
       expect(mockPush).toHaveBeenCalledTimes(1);
-    });
-
-    it('sets isLoggingOut to true during logout', async () => {
-      let resolveLogout: (value?: unknown) => void;
-      mockLogout.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            resolveLogout = resolve;
-          }),
-      );
-      const { result } = renderHook(() => useProfileActions(defaultProps));
-
-      expect(result.current.isLoggingOut).toBe(false);
-
-      // Start the logout process (don't await, we want to check loading state)
-      const signOutPromise = result.current.onSignOut();
-
-      // Verify isLoggingOut is true during the process
-      await waitFor(() => {
-        expect(result.current.isLoggingOut).toBe(true);
-      });
-
-      // Complete the logout and wait for the promise to finish
-      await act(async () => {
-        resolveLogout();
-        await signOutPromise;
-      });
-    });
-
-    it('handles logout error gracefully', async () => {
-      mockLogout.mockRejectedValue(new Error('Logout failed'));
-      const { result } = renderHook(() => useProfileActions(defaultProps));
-
-      await act(async () => {
-        await result.current.onSignOut();
-      });
-
-      expect(Logger.error).toHaveBeenCalledWith('Failed to logout:', expect.any(Error));
-      expect(toast).toHaveBeenCalledWith({
-        variant: 'error',
-        description: ErrorMessages.LOGOUT_FAILED,
-      });
-      expect(mockPush).not.toHaveBeenCalled();
+      expect(mockLogout).not.toHaveBeenCalled();
+      expect(result.current.isLoggingOut).toBe(true);
     });
   });
 
@@ -322,16 +273,15 @@ describe('useProfileActions', () => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith('https://example.com/profile/test-user-id');
     });
 
-    it('handles multiple onSignOut calls', async () => {
-      mockLogout.mockResolvedValue(undefined);
+    it('handles multiple onSignOut calls', () => {
       const { result } = renderHook(() => useProfileActions(defaultProps));
 
-      await act(async () => {
-        await result.current.onSignOut();
-        await result.current.onSignOut();
+      act(() => {
+        result.current.onSignOut();
+        result.current.onSignOut();
       });
 
-      expect(mockLogout).toHaveBeenCalledTimes(2);
+      expect(mockLogout).not.toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledTimes(2);
       expect(mockPush).toHaveBeenCalledWith('/logout');
     });

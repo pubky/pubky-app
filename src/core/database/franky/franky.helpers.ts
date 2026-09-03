@@ -6,7 +6,9 @@ export async function clearDatabase(): Promise<void> {
     await db.open();
   }
 
-  await Promise.all(db.tables.map((table) => table.clear()));
+  await db.transaction('rw', db.tables, async () => {
+    await Promise.all(db.tables.map((table) => table.clear()));
+  });
 }
 
 export async function resetDatabase(): Promise<void> {
