@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
@@ -377,6 +378,20 @@ describe('createUserStreamParams', () => {
       expectValidationError(() =>
         createUserStreamParams(`starter_pack:all:all:${'a'.repeat(21)}` as UserStreamId, baseParams),
       );
+    });
+
+    it('should reject every Nexus-reserved starter-pack label', () => {
+      STARTER_PACK_RESERVED_TAGS.forEach((label) => {
+        expectValidationError(() =>
+          createUserStreamParams(`starter_pack:all:all:${label}` as UserStreamId, baseParams),
+        );
+      });
+    });
+
+    it('should not reject ordinary moderation labels that Nexus accepts as tags', () => {
+      const result = createUserStreamParams('starter_pack:all:all:nudity' as UserStreamId, baseParams);
+
+      expect(result.apiParams).toMatchObject({ tags: 'nudity' });
     });
 
     it('should reject 4-part IDs whose source is not a starter pack variant', () => {

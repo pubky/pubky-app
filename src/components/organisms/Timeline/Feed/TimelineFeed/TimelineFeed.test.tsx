@@ -103,7 +103,6 @@ vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => ({
 // Mock useSearchStreamId hook
 vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
   useSearchStreamId: vi.fn(() => 'tags:test' as PostStreamId),
-  useSearchTags: vi.fn(() => []),
 }));
 
 // Mock the new hooks used in TimelineFeed

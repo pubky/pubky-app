@@ -27,6 +27,23 @@ interface UseSearchPeopleResult {
   loadMore: () => Promise<void>;
 }
 
+/** Sentinel epoch meaning "no read-back has emitted yet" — never matches a real list epoch. */
+const NO_HYDRATION_EMISSION = -1;
+
+interface HydrationEmission {
+  epoch: number;
+  details: Map<Pubky, NexusUserDetails>;
+  counts: Map<Pubky, NexusUserCounts>;
+  relationships: Map<Pubky, UserRelationshipsModelSchema>;
+}
+
+function emptyHydrationEmission(epoch: number): HydrationEmission {
+  return { epoch, details: new Map(), counts: new Map(), relationships: new Map() };
+}
+
+// Hoisted so the default passed to useLiveQuery is not re-allocated every render.
+const INITIAL_HYDRATION_EMISSION = emptyHydrationEmission(NO_HYDRATION_EMISSION);
+
 /** Response ids in order, with duplicates within the same page dropped. */
 function uniquePageIds(results: TUserTagSearchResult[]): Pubky[] {
   const seen = new Set<Pubky>();
@@ -41,27 +58,29 @@ function uniquePageIds(results: TUserTagSearchResult[]): Pubky[] {
 }
 
 /**
- * useSearchPeople
- *
  * Users whose profile is tagged with the searched tags, in backend score
  * order, for the `/search` People section. Ids come from
- * `search/users/by_tags` (skip-paginated), get hydrated in one round trip via
- * `stream/users/by_ids`, and are read back reactively from Dexie. Users that
- * fail to hydrate (e.g. deleted) and muted users are dropped from the result.
+ * `search/users/by_tags` (skip-paginated), are hydrated in one
+ * `stream/users/by_ids` round trip, and are read back reactively from Dexie.
+ * Muted users and users that fail to hydrate (e.g. deleted) are dropped.
  */
 export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOptions = {}): UseSearchPeopleResult {
   // Clamp to the endpoint's hard 1-5 label bound regardless of stream config.
   const tagsKey = tags.slice(0, SEARCH_PEOPLE_MAX_TAGS).join(',');
 
   const [userIds, setUserIds] = useState<Pubky[]>([]);
+  // Bumped only when a replaced id list is committed — never on reset or on a
+  // loadMore append. The hydration gate below waits for the emission carrying
+  // this epoch, so emissions for the emptied in-flight list never satisfy it.
+  const [listEpoch, setListEpoch] = useState(0);
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
   const userIdsRef = useRef<Pubky[]>([]);
-  // Bumped on every tags change (and unmount) so any in-flight fetch —
-  // initial or loadMore — is discarded instead of committing stale state.
+  // Bumped on every tags change and on unmount; in-flight fetches compare
+  // against it and drop stale results instead of committing them.
   const generationRef = useRef(0);
   // Keep the latest callback without retriggering the fetch effect.
   const onErrorRef = useRef(onError);
@@ -105,6 +124,9 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
 
         userIdsRef.current = ids;
         setUserIds(ids);
+        // Bumped with the ids in the same render, so every earlier emission
+        // carries an older epoch and the gate below re-arms.
+        setListEpoch((epoch) => epoch + 1);
         // Cursor advances by the raw response length, not the deduped one.
         setSkip(results.length);
         setHasMore(results.length >= SEARCH_PEOPLE_PAGE_SIZE);
@@ -169,49 +191,31 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     }
   };
 
-  // Reactive read-back from Dexie so follow/unfollow and late hydration
-  // propagate without refetching.
-  const userDetailsMap = useLiveQuery(
-    async () => {
+  // Reactive read-back from Dexie so follow/unfollow and late hydration update
+  // without refetching. One query over all three tables keeps every emission a
+  // consistent snapshot (details, counts and relationship always from the same
+  // moment), and each emission records the list epoch it ran for.
+  const hydration = useLiveQuery(
+    async (): Promise<HydrationEmission> => {
       try {
-        if (userIds.length === 0) return new Map<Pubky, NexusUserDetails>();
-        return await UserController.getManyDetails({ userIds });
+        if (userIds.length === 0) return emptyHydrationEmission(listEpoch);
+        const [details, counts, relationships] = await Promise.all([
+          UserController.getManyDetails({ userIds }),
+          UserController.getManyCounts({ userIds }),
+          UserController.getManyRelationships({ userIds }),
+        ]);
+        return { epoch: listEpoch, details, counts, relationships };
       } catch (err) {
-        Logger.error('[useSearchPeople] Failed to query user details:', err);
-        return new Map<Pubky, NexusUserDetails>();
+        Logger.error('[useSearchPeople] Failed to query user hydration:', err);
+        return emptyHydrationEmission(listEpoch);
       }
     },
-    [userIds],
-    new Map<Pubky, NexusUserDetails>(),
+    [userIds, listEpoch],
+    INITIAL_HYDRATION_EMISSION,
   );
-
-  const userCountsMap = useLiveQuery(
-    async () => {
-      try {
-        if (userIds.length === 0) return new Map<Pubky, NexusUserCounts>();
-        return await UserController.getManyCounts({ userIds });
-      } catch (err) {
-        Logger.error('[useSearchPeople] Failed to query user counts:', err);
-        return new Map<Pubky, NexusUserCounts>();
-      }
-    },
-    [userIds],
-    new Map<Pubky, NexusUserCounts>(),
-  );
-
-  const userRelationshipsMap = useLiveQuery(
-    async () => {
-      try {
-        if (userIds.length === 0) return new Map<Pubky, UserRelationshipsModelSchema>();
-        return await UserController.getManyRelationships({ userIds });
-      } catch (err) {
-        Logger.error('[useSearchPeople] Failed to query user relationships:', err);
-        return new Map<Pubky, UserRelationshipsModelSchema>();
-      }
-    },
-    [userIds],
-    new Map<Pubky, UserRelationshipsModelSchema>(),
-  );
+  const userDetailsMap = hydration.details;
+  const userCountsMap = hydration.counts;
+  const userRelationshipsMap = hydration.relationships;
 
   const users = userIds
     .filter((id) => !isMuted(id))
@@ -234,11 +238,14 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
     })
     .filter((user): user is UserListItemData => user !== null);
 
-  // `useLiveQuery` returns its default empty Map synchronously and only fills
-  // it a tick later (Dexie defers emissions), so without this gate the section
-  // would flash empty — or unmount entirely — between fetch settle and the
-  // read-back emission. Same guard as useUserStream's hydration flags.
-  const detailsHydrated = userIds.length === 0 || userIds.some((id) => userDetailsMap.has(id));
+  // The live query emits a tick after it runs, so between fetch settle and the
+  // first read-back the section would flash empty without this gate. It compares
+  // epochs, not id arrays: a loadMore append keeps the epoch, so the previous
+  // emission stays valid and the section never flips back to loading mid-append.
+  // A replaced list bumps the epoch at commit, holding the gate until the
+  // read-back for the new ids lands. Arrival is enough — an emission that
+  // hydrated nothing means settled-and-empty, not stuck on skeletons.
+  const hydrated = hydration.epoch === listEpoch;
 
-  return { users, loading: loading || !detailsHydrated, loadingMore, hasMore, loadMore };
+  return { users, loading: loading || !hydrated, loadingMore, hasMore, loadMore };
 }

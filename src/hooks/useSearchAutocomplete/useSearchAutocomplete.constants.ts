@@ -9,7 +9,7 @@
 export const AUTOCOMPLETE_DEBOUNCE_MS = 500;
 
 /** Maximum number of tag suggestions to return */
-export const AUTOCOMPLETE_TAG_LIMIT = 3;
+export const AUTOCOMPLETE_TAG_LIMIT = 10;
 
 /** Maximum number of user suggestions to return */
 export const AUTOCOMPLETE_USER_LIMIT = 10;

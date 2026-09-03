@@ -1,6 +1,11 @@
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { NexusPostsKeyStream, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
+import { searchApi } from '@/services/nexus/search/search.api';
+import type { TContentSearchResult } from '@/services/nexus/search/search.types';
 import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
 import {
   StreamSource,
@@ -10,6 +15,8 @@ import {
   type TStreamPostRepliesParams,
   type TStreamPostsByIdsParams,
 } from '@/services/nexus/stream/posts/postStream.types';
+
+const CONTENT_SEARCH_QUERY_REQUIRED_MESSAGE = 'Search query is required for content_search stream';
 
 /**
  * Nexus Post Stream Service
@@ -68,6 +75,25 @@ export class NexusPostStreamService {
       case StreamSource.COLLECTION:
         nexusEndpoint = postStreamApi.collection({ ...params, ...extraParams } as TStreamCollectionParams);
         break;
+      case StreamSource.CONTENT_SEARCH: {
+        if (!extraParams.q) {
+          throw Err.validation(ValidationErrorCode.INVALID_INPUT, CONTENT_SEARCH_QUERY_REQUIRED_MESSAGE, {
+            service: ErrorService.Nexus,
+            operation: 'fetchPostStream',
+            context: { invokeEndpoint },
+          });
+        }
+        const url = searchApi.byContent({
+          q: extraParams.q,
+          kind: params.kind,
+          skip: params.skip,
+          limit: params.limit,
+        });
+        // Relevance is carried by array order; scores have no downstream consumer.
+        // `last_post_score: null` marks the chunk skip-paginated (advanceCursor pages by raw length).
+        const results = await queryNexus<TContentSearchResult>({ url });
+        return { post_keys: results.map((result) => result.post_key), last_post_score: null };
+      }
       default:
         throw new Error(`Invalid stream type: ${invokeEndpoint}`);
     }

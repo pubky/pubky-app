@@ -2,9 +2,13 @@ import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 
-export function EditProfileFormSkeleton() {
+/**
+ * Loading placeholder for the profile form card (name/bio, links, avatar, bottom buttons).
+ * Shared by the Settings EditProfileForm and the onboarding CreateProfileForm revisit mode.
+ */
+export function ProfileFormSkeleton() {
   return (
-    <Container className="flex w-full flex-1 flex-col gap-6 lg:flex-none">
+    <Container className="flex w-full flex-1 flex-col gap-6 lg:flex-none" data-testid="profile-form-skeleton">
       <Card className="rounded-md bg-card p-6 md:p-12 lg:flex lg:flex-row lg:gap-12">
         {/* Profile fields */}
         <Container className="w-full gap-6">
