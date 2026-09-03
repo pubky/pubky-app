@@ -2,7 +2,7 @@ import { STARTER_PACK_MAX_TAGS } from '@/config/nexus';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { canonicalizeTagLabel, isValidTagLabel } from '@/libs/utils/utils';
+import { canonicalizeTagLabel, isStarterPackReservedTag, isValidTagLabel } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamModelSchema } from './userStream.schema';
 import {
@@ -61,8 +61,8 @@ export function parseUserCompositeId(compositeId: string): UserStreamIdParts {
  * Build a starter pack stream ID from ordered interest tags.
  *
  * Labels are canonicalized (trimmed + lowercased) so 'Bitcoin' and 'bitcoin' resolve to the same
- * Dexie row, then validated against the canonical tag contract (1-20 chars, no banned characters)
- * and the Nexus starter pack limit (1-5 tags). Order is preserved: Nexus interleaves per-tag
+ * Dexie row, then validated against the canonical tag contract (1-20 chars, no banned characters),
+ * the Nexus reserved-label list, and the Nexus starter pack limit (1-5 tags). Order is preserved: Nexus interleaves per-tag
  * rankings in the order given, so ['travel','music'] and ['music','travel'] are different streams.
  *
  * @example
@@ -85,11 +85,11 @@ export function buildStarterPackStreamId(tags: string[]): StarterPackStreamId {
     );
   }
 
-  const invalidLabels = canonical.filter((tag) => !isValidTagLabel(tag));
+  const invalidLabels = canonical.filter((tag) => !isValidTagLabel(tag) || isStarterPackReservedTag(tag));
   if (invalidLabels.length > 0) {
     throw Err.validation(
       ValidationErrorCode.INVALID_INPUT,
-      'Starter pack tags must be 1-20 characters without banned characters',
+      'Starter pack tags must be valid labels that are not reserved by Nexus',
       {
         service: ErrorService.Local,
         operation: 'buildStarterPackStreamId',

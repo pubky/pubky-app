@@ -475,3 +475,63 @@ describe('usePostArticle', () => {
     });
   });
 });
+
+describe('slot-0 cover rule (inline images)', () => {
+  const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+  const attachments = [`pubky://${AUTHOR}/pub/pubky.app/files/slot0`, `pubky://${AUTHOR}/pub/pubky.app/files/slot1`];
+
+  const articleContent = (body: string) => JSON.stringify({ title: 'T', body });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('treats attachments[0] as the cover when the body does not reference attachment:0', async () => {
+    mockGetMetadata.mockResolvedValue([createMockImageMetadata(`${AUTHOR}:slot0`)]);
+    mockGetFileUrl.mockReturnValue('https://cdn.example/slot0/main');
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('Text with ![img](attachment:1)'),
+        attachments,
+        coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(true);
+    await waitFor(() => {
+      expect(result.current.coverImage).not.toBeNull();
+    });
+    // Only the cover slot is resolved, never the inline attachments
+    expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [attachments[0]] });
+  });
+
+  it('reports no cover when the body references attachment:0', async () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('![inline slot zero](attachment:0)'),
+        attachments,
+        coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(false);
+    await waitFor(() => {
+      expect(result.current.body).toContain('attachment:0');
+    });
+    expect(result.current.coverImage).toBeNull();
+    expect(mockGetMetadata).not.toHaveBeenCalled();
+  });
+
+  it('reports no cover when there are no attachments', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('Plain body'),
+        attachments: null,
+        coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(false);
+  });
+});

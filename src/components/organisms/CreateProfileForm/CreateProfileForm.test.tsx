@@ -1,10 +1,11 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { HOME_ROUTES } from '@/app/routes';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
+import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -12,6 +13,7 @@ import { toast } from '@/molecules/Toaster/toast';
 import { UserValidator } from '@/pipes/user/user.validator';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { CreateProfileForm } from './CreateProfileForm';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -65,14 +67,21 @@ vi.mock('facehash', () => ({
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: vi.fn(),
 }));
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: vi.fn(),
+vi.mock('@/stores/auth/auth.store', () => {
+  const useAuthStore = Object.assign(vi.fn(), {
+    getState: vi.fn(() => ({ hasProfile: false })),
+  });
+  return { useAuthStore };
+});
+vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
+  useCurrentUserProfile: vi.fn(() => ({ userDetails: null, currentUserPubky: 'test-public-key' })),
 }));
 vi.mock('@/controllers/profile/profile', () => ({
   ProfileController: {
     upload: vi.fn(),
     create: vi.fn(),
     commitCreate: vi.fn(),
+    commitUpdate: vi.fn(),
   },
 }));
 vi.mock('@/controllers/file/file', () => ({
@@ -186,8 +195,14 @@ vi.mock('@/atoms/Card/Card', () => {
 
 vi.mock('@/atoms/Container/Container', () => {
   return {
-    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="container" className={className}>
+    // Forwards rest props so components that set their own data-testid (e.g. the
+    // profile form skeleton) keep it instead of the mock's fallback.
+    Container: ({
+      children,
+      className,
+      ...props
+    }: { children?: React.ReactNode; className?: string } & Record<string, unknown>) => (
+      <div data-testid="container" className={className} {...props}>
         {children}
       </div>
     ),
@@ -454,12 +469,16 @@ describe('CreateProfileForm', () => {
     vi.mocked(useAuthStore).mockReturnValue({
       selectCurrentUserPubky: vi.fn(() => mockPubky),
     });
+    vi.mocked(useAuthStore.getState).mockReturnValue(
+      asOpaque<ReturnType<typeof useAuthStore.getState>>({ hasProfile: false }),
+    );
 
     // Reset all mock functions
     mockPush.mockReset();
     vi.mocked(toast).mockReset();
     vi.mocked(FileController.commitCreate).mockReset();
     vi.mocked(ProfileController.commitCreate).mockReset();
+    vi.mocked(ProfileController.commitUpdate).mockReset();
     vi.mocked(UserValidator.check).mockReset();
     vi.mocked(AuthController.bootstrapWithDelay).mockReset();
   });
@@ -802,7 +821,7 @@ describe('CreateProfileForm', () => {
       render(<CreateProfileForm />);
       const continueButton = screen.getByTestId('continue-button');
       expect(continueButton).toBeInTheDocument();
-      expect(continueButton).toHaveTextContent('Finish');
+      expect(continueButton).toHaveTextContent('Continue');
     });
 
     it('should have form fields available', () => {
@@ -859,8 +878,8 @@ describe('CreateProfileForm', () => {
         // Button text should change to "Try again!"
         expect(continueButton).toHaveTextContent('Try again!');
 
-        // Should not navigate to feed page
-        expect(mockPush).not.toHaveBeenCalledWith(HOME_ROUTES.HOME);
+        // Should not navigate to the tags step
+        expect(mockPush).not.toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
       });
 
       // Verify the mocks were called in the correct order
@@ -909,8 +928,8 @@ describe('CreateProfileForm', () => {
 
       // Wait for the success handling to complete
       await waitFor(() => {
-        // Should navigate to feed page
-        expect(mockPush).toHaveBeenCalledWith(HOME_ROUTES.HOME);
+        // Should navigate to the onboarding tags step
+        expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
       });
 
       // Verify that setShowWelcomeDialog(true) was called
@@ -1039,6 +1058,119 @@ describe('CreateProfileForm', () => {
       // Verify that the component has access to the setShowWelcomeDialog function
       // This is implicitly tested by the component rendering without errors
       expect(screen.getByTestId('card')).toBeInTheDocument();
+    });
+  });
+
+  describe('Profile revisit (Back from tags step, hasProfile=true)', () => {
+    const revisitUserDetails = {
+      id: mockPubky,
+      name: 'Existing Name',
+      bio: 'Existing bio',
+      links: [],
+      status: null,
+      image: null,
+      indexed_at: 1,
+    };
+
+    beforeEach(() => {
+      vi.mocked(useAuthStore.getState).mockReturnValue(
+        asOpaque<ReturnType<typeof useAuthStore.getState>>({ hasProfile: true }),
+      );
+      vi.mocked(useCurrentUserProfile).mockReturnValue({
+        userDetails: revisitUserDetails,
+        currentUserPubky: mockPubky,
+      });
+    });
+
+    it('renders in edit mode prefilled from the current user details', async () => {
+      render(<CreateProfileForm />);
+
+      await waitFor(() => {
+        const nameInput = screen.getAllByTestId('molecules-input')[0];
+        expect(nameInput).toHaveValue('Existing Name');
+      });
+
+      const continueButton = screen.getByTestId('continue-button');
+      expect(continueButton).toHaveTextContent('Continue');
+    });
+
+    it('renders the loading skeleton instead of the interactive form until the profile arrives', () => {
+      // Local miss + pending/failed fetch: userDetails has not arrived. An interactive
+      // form here would let edits (text, avatar file) be overwritten or resurface once
+      // hydration lands, so nothing editable may render.
+      vi.mocked(useCurrentUserProfile).mockReturnValue({
+        userDetails: null,
+        currentUserPubky: mockPubky,
+      });
+
+      render(<CreateProfileForm />);
+
+      expect(screen.getByTestId('profile-form-skeleton')).toBeInTheDocument();
+      expect(screen.queryAllByTestId('molecules-input')).toHaveLength(0);
+      expect(screen.queryByTestId('continue-button')).not.toBeInTheDocument();
+      expect(ProfileController.commitUpdate).not.toHaveBeenCalled();
+    });
+
+    it('enables the back button and navigates to the tags step without saving', async () => {
+      render(<CreateProfileForm />);
+
+      const backButton = screen.getByTestId('back-button');
+      expect(backButton).not.toBeDisabled();
+
+      fireEvent.click(backButton);
+
+      expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
+      expect(ProfileController.commitUpdate).not.toHaveBeenCalled();
+      expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+    });
+
+    it('continues without saving or showing a toast when the profile is unchanged', async () => {
+      render(<CreateProfileForm />);
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('molecules-input')[0]).toHaveValue('Existing Name');
+      });
+
+      fireEvent.click(screen.getByTestId('continue-button'));
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
+      });
+
+      expect(ProfileController.commitUpdate).not.toHaveBeenCalled();
+      expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).not.toHaveBeenCalled();
+      expect(toast).not.toHaveBeenCalled();
+    });
+
+    it('submits a changed profile via commitUpdate and returns to the tags step', async () => {
+      vi.mocked(UserValidator.check).mockReturnValue({
+        data: {
+          name: 'Updated Name',
+          bio: 'Existing bio',
+          links: [],
+        },
+        error: [],
+      });
+      vi.mocked(ProfileController.commitUpdate).mockResolvedValue(undefined);
+
+      render(<CreateProfileForm />);
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('molecules-input')[0]).toHaveValue('Existing Name');
+      });
+
+      fireEvent.change(screen.getAllByTestId('molecules-input')[0], { target: { value: 'Updated Name' } });
+
+      fireEvent.click(screen.getByTestId('continue-button'));
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.TAGS);
+      });
+
+      expect(ProfileController.commitUpdate).toHaveBeenCalled();
+      expect(ProfileController.commitCreate).not.toHaveBeenCalled();
+      expect(AuthController.bootstrapWithDelay).not.toHaveBeenCalled();
     });
   });
 });

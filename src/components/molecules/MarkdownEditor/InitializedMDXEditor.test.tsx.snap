@@ -16,7 +16,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -58,7 +58,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -248,7 +248,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
         role="toolbar"
       >
         <button
-          class="size-7 cursor-default rounded"
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
           data-size="icon"
           data-testid="markdown-emoji-button"
           data-variant="ghost"
@@ -290,7 +290,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
           </svg>
         </button>
         <button
-          class="size-7 cursor-default rounded"
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
           data-size="icon"
           data-testid="markdown-richtext-button"
           data-variant="ghost"
@@ -514,7 +514,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -556,7 +556,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -745,7 +745,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -787,7 +787,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -976,7 +976,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -1018,7 +1018,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -1216,7 +1216,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -1258,7 +1258,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -1448,7 +1448,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
         role="toolbar"
       >
         <button
-          class="size-7 cursor-default rounded"
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
           data-size="icon"
           data-testid="markdown-emoji-button"
           data-variant="ghost"
@@ -1490,7 +1490,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
           </svg>
         </button>
         <button
-          class="size-7 cursor-default rounded"
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
           data-size="icon"
           data-testid="markdown-richtext-button"
           data-variant="ghost"
@@ -1714,7 +1714,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -1757,7 +1757,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"

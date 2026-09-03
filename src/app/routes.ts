@@ -9,6 +9,7 @@ export enum ONBOARDING_ROUTES {
   PUBKY = '/onboarding/pubky',
   SCAN = '/onboarding/scan',
   HUMAN = '/onboarding/human',
+  TAGS = '/onboarding/tags',
 }
 
 export enum AUTH_ROUTES {
@@ -26,6 +27,19 @@ export enum APP_ROUTES {
   PROFILE = '/profile',
   WHO_TO_FOLLOW = '/who-to-follow',
   SHARE = '/share',
+}
+
+/**
+ * Builds a full-text search URL (`/search?q=…`).
+ *
+ * All submit paths (Enter, "Show all results", recent-query chips) go through
+ * this one builder, so the same query always produces the same URL — results
+ * are cached per URL — and special characters in the query (spaces, `&`, `#`)
+ * are always encoded correctly.
+ */
+export function getContentSearchUrl(query: string): string {
+  const params = new URLSearchParams({ q: query });
+  return `${APP_ROUTES.SEARCH}?${params.toString()}`;
 }
 
 export enum COLLECTION_ROUTES {
@@ -89,6 +103,7 @@ export const PUBLIC_ROUTES: string[] = [
 
 export const ALLOWED_ROUTES = [
   ONBOARDING_ROUTES.PROFILE,
+  ONBOARDING_ROUTES.TAGS,
   APP_ROUTES.HOME,
   APP_ROUTES.FEED,
   APP_ROUTES.SEARCH,

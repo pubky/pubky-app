@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -93,6 +94,16 @@ describe('buildStarterPackStreamId', () => {
 
     it('should accept a label at exactly 20 chars', () => {
       expect(buildStarterPackStreamId(['a'.repeat(20)])).toBe(`starter_pack:all:all:${'a'.repeat(20)}`);
+    });
+
+    it('should reject every Nexus-reserved starter-pack label', () => {
+      STARTER_PACK_RESERVED_TAGS.forEach((label) => {
+        expectValidationError(() => buildStarterPackStreamId([label]));
+      });
+    });
+
+    it('should not conflate the Nexus reserved list with ordinary moderation labels', () => {
+      expect(buildStarterPackStreamId(['nudity'])).toBe('starter_pack:all:all:nudity');
     });
   });
 });

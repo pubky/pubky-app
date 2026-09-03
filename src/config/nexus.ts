@@ -15,3 +15,17 @@ export const NEXUS_USERS_PER_PAGE = 10; // Number of users to fetch per page in 
  * `getMaxStreamTags()`, which may be set higher and must never widen this bound.
  */
 export const STARTER_PACK_MAX_TAGS = 5;
+
+/**
+ * Labels rejected by Nexus for `source=starter_pack` (pubky/pubky-nexus#1024).
+ * This is intentionally separate from the app's runtime moderation configuration:
+ * Nexus reserves these labels regardless of which moderator the frontend follows.
+ */
+export const STARTER_PACK_RESERVED_TAGS = [
+  'hatespeech',
+  'harassement',
+  'terrorism',
+  'violence',
+  'illegal_activities',
+  'il_adult_nu_sex_act',
+] as const;
