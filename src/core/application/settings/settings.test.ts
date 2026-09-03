@@ -35,10 +35,14 @@ describe('SettingsApplication', () => {
   const testPubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
   const otherPubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
 
-  // Test data factory
+  const moderationBot = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro' as Pubky;
+  const settingsUrl = `pubky://${testPubky}/pub/pubky.app/settings.json`;
+
+  // Test data factory. Defaults to a client that already knows the moderation-bot field,
+  // so ordinary writes are a single PUT; stale-client cases override `privacy` explicitly.
   const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsState => ({
     notifications: defaultNotificationPreferences,
-    privacy: defaultPrivacyPreferences,
+    privacy: { ...defaultPrivacyPreferences, moderationBot },
     muted: [],
     updatedAt: 1700000000000,
     version: 1,
@@ -208,6 +212,90 @@ describe('SettingsApplication', () => {
       expect(requestSpy).toHaveBeenCalledOnce();
       expect(normalizerToSpy).toHaveBeenCalledOnce();
     });
+
+    describe('stale client without moderation-bot state', () => {
+      const staleSettings = () => createMockSettingsState({ privacy: defaultPrivacyPreferences });
+
+      it('should carry the remote moderation bot into the write instead of erasing it', async () => {
+        const settings = staleSettings();
+        const remote = createMockSettingsState();
+        const { requestSpy, normalizerToSpy, normalizerFromSpy, normalizerBuildUrlSpy } = setupMocks();
+        const order: string[] = [];
+
+        normalizerBuildUrlSpy.mockReturnValue(settingsUrl);
+        normalizerFromSpy.mockReturnValue(remote);
+        normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+        requestSpy.mockImplementation(({ method }) => {
+          order.push(method);
+          return Promise.resolve(method === HttpMethod.GET ? remote : undefined);
+        });
+
+        await SettingsApplication.commitUpdate(settings, testPubky);
+
+        expect(order).toEqual([HttpMethod.GET, HttpMethod.PUT]);
+        expect(normalizerToSpy).toHaveBeenCalledWith(
+          { ...settings, privacy: { ...settings.privacy, moderationBot } },
+          testPubky,
+        );
+      });
+
+      it('should write unchanged when the remote has no moderation bot either', async () => {
+        const settings = staleSettings();
+        const { requestSpy, normalizerToSpy, normalizerFromSpy, normalizerBuildUrlSpy } = setupMocks();
+
+        normalizerBuildUrlSpy.mockReturnValue(settingsUrl);
+        normalizerFromSpy.mockReturnValue(staleSettings());
+        normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+        requestSpy.mockImplementation(({ method }) =>
+          Promise.resolve(method === HttpMethod.GET ? staleSettings() : undefined),
+        );
+
+        await SettingsApplication.commitUpdate(settings, testPubky);
+
+        expect(requestSpy).toHaveBeenCalledTimes(2);
+        expect(normalizerToSpy).toHaveBeenCalledWith(settings, testPubky);
+      });
+
+      it('should still write when the remote read fails', async () => {
+        const settings = staleSettings();
+        const { requestSpy, normalizerToSpy, normalizerBuildUrlSpy } = setupMocks();
+        const loggerWarn = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+        const failure = new Error('read failed');
+
+        normalizerBuildUrlSpy.mockReturnValue(settingsUrl);
+        normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+        requestSpy.mockImplementation(({ method }) =>
+          method === HttpMethod.GET ? Promise.reject(failure) : Promise.resolve(undefined),
+        );
+
+        await expect(SettingsApplication.commitUpdate(settings, testPubky)).resolves.toBeUndefined();
+
+        expect(requestSpy).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT }));
+        expect(normalizerToSpy).toHaveBeenCalledWith(settings, testPubky);
+        expect(loggerWarn).toHaveBeenCalledWith('[Settings] Could not read remote moderation-bot state before write', {
+          error: failure,
+        });
+      });
+
+      it('should not write when aborted during the remote read', async () => {
+        const settings = staleSettings();
+        const controller = new AbortController();
+        const { requestSpy, normalizerToSpy, normalizerFromSpy, normalizerBuildUrlSpy } = setupMocks();
+
+        normalizerBuildUrlSpy.mockReturnValue(settingsUrl);
+        normalizerFromSpy.mockReturnValue(createMockSettingsState());
+        requestSpy.mockImplementation(() => {
+          controller.abort();
+          return Promise.resolve(createMockSettingsState());
+        });
+
+        await SettingsApplication.commitUpdate(settings, testPubky, controller.signal);
+
+        expect(requestSpy).toHaveBeenCalledOnce();
+        expect(requestSpy).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.GET }));
+        expect(normalizerToSpy).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('fetchFromHomeserver', () => {
@@ -347,6 +435,30 @@ describe('SettingsApplication', () => {
 
       expect(result).toBeNull();
       expect(normalizerToSpy).toHaveBeenCalledWith(localSettings, testPubky);
+    });
+
+    it('should carry remote moderation bot into newer local settings and return them for the store', async () => {
+      const localSettings = createMockSettingsState({
+        version: 2,
+        updatedAt: 1800000000000,
+        privacy: defaultPrivacyPreferences,
+      });
+      const remoteSettings = createMockSettingsState({ version: 1, updatedAt: 1700000000000 });
+      const { requestSpy, normalizerBuildUrlSpy, normalizerFromSpy, normalizerToSpy } = setupMocks();
+
+      normalizerBuildUrlSpy.mockReturnValue(settingsUrl);
+      requestSpy.mockResolvedValueOnce(remoteSettings); // fetchFromHomeserver
+      normalizerFromSpy.mockReturnValue(remoteSettings);
+      normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+      requestSpy.mockResolvedValueOnce(undefined); // push
+
+      const result = await SettingsApplication.initializeSettings(testPubky, localSettings);
+
+      const expected = { ...localSettings, privacy: { ...localSettings.privacy, moderationBot } };
+      expect(result).toEqual(expected);
+      expect(normalizerToSpy).toHaveBeenCalledWith(expected, testPubky);
+      // The remote document was already read; no second probe before the push
+      expect(requestSpy).toHaveBeenCalledTimes(2);
     });
 
     it('should throw on error', async () => {
