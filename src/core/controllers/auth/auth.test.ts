@@ -72,8 +72,7 @@ const spyOnClearAllQueryClients = async () =>
   vi
     .spyOn(await import('@/libs/query-client/query-client.factory'), 'clearAllQueryClients')
     .mockImplementation(() => {});
-const spyOnCancelModerationFollow = () =>
-  vi.spyOn(asOpaque<{ cancelModerationFollow: () => void }>(AuthController), 'cancelModerationFollow');
+const spyOnCancelModerationFollow = () => vi.spyOn(AuthController, 'cancelModerationFollow');
 
 const getLastReadUrl = (pubky: string) => `pubky://${pubky}/pub/pubky.app/last_read`;
 
@@ -341,7 +340,7 @@ vi.mock('@/libs/env/env', async (importOriginal) => {
 });
 
 afterEach(() => {
-  asOpaque<{ cancelModerationFollow: () => void }>(AuthController).cancelModerationFollow();
+  AuthController.cancelModerationFollow();
   vi.restoreAllMocks();
 });
 

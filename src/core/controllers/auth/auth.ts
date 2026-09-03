@@ -52,7 +52,7 @@ export class AuthController {
   }
 
   /** Cancel detached moderation-follow work before account-local state changes ownership. */
-  private static cancelModerationFollow(): void {
+  static cancelModerationFollow(): void {
     this.moderationFollowAbortController?.abort();
     this.moderationFollowAbortController = null;
   }
