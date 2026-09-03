@@ -13,7 +13,7 @@
  * Shared by ContentLayout, ProfilePageLayoutWrapper, and MobileHeader so
  * header chrome and page content keep one content edge.
  *
- * Overriding: the gutter spans three breakpoint groups, so tailwind-merge
+ * Overriding: the gutter spans three breakpoint groups, so cn
  * resolves caller overrides per group — a bare `px-0` only replaces the
  * sub-`lg` value; override each group you target (e.g. `px-0 lg:px-0`).
  */

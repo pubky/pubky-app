@@ -119,6 +119,12 @@ export default function InitializedMDXEditor({
   const [maxLengthWarning, setMaxLengthWarning] = useState<null | 'approaching' | 'reached'>(null);
   const [mode, setMode] = useState<EditorMode>('richtext');
   const [markdownText, setMarkdownText] = useState('');
+  // Host element for MDXEditor's popups (link dialog, tooltips). Without it, MDXEditor
+  // portals popups to document.body — outside the Radix Dialog hosting the article
+  // composer, whose focus trap then pulls focus straight back to the contentEditable,
+  // so the link dialog's URL input never receives the autofocus and typing overwrites
+  // the selected text. Mounting the popups in-tree keeps them inside the focus trap.
+  const [overlayContainer, setOverlayContainer] = useState<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const markdownImageInputRef = useRef<HTMLInputElement>(null);
   // Synchronous mirror of markdownText: the async image-upload flows read and
@@ -410,9 +416,13 @@ export default function InitializedMDXEditor({
         />
       </Container>
 
+      {/* Out-of-flow (absolute, zero-size) so it adds no flex gap; popup contents position themselves fixed */}
+      <div ref={setOverlayContainer} data-testid="mdx-editor-overlay-container" className="absolute" />
+
       {/* Rich text mode: MDXEditor (includes its own toolbar) — hidden via CSS in markdown mode */}
       <MDXEditor
         readOnly={readOnly}
+        overlayContainer={overlayContainer}
         placeholder={'Start writing your masterpiece'}
         className={cn('dark-theme cursor-auto', mode === 'markdown' && 'hidden')}
         contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"

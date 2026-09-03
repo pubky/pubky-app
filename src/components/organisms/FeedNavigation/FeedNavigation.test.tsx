@@ -429,7 +429,7 @@ describe('FeedNavigation', () => {
 
     const activeLabel = getLink('/feed/feed-active')?.querySelector('[data-testid="typography"]');
     expect(activeLabel).not.toHaveClass('hidden');
-    expect(getLink('/feed/feed-active')).toHaveClass('px-10', 'lg:px-8');
+    expect(getLink('/feed/feed-active')).toHaveClass('px-10', 'lg:px-2.5');
 
     const inactiveLabel = getLink('/feed/feed-other')?.querySelector('[data-testid="typography"]');
     expect(inactiveLabel).toHaveClass('hidden', 'lg:inline');
@@ -480,7 +480,7 @@ describe('FeedNavigation', () => {
         'lg:group-hover:pointer-events-auto',
         'lg:group-focus-within:opacity-100',
       );
-      expect(editButton.querySelector('svg')).toHaveClass('size-4');
+      expect(editButton.querySelector('svg')).toHaveClass('size-3');
     });
   });
 
@@ -642,14 +642,13 @@ describe('FeedNavigation', () => {
     render(<FeedNavigation />);
 
     const homeLink = getLink('/home');
-    expect(homeLink).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-auto');
-    // The reach tab keeps the shared active padding.
-    expect(homeLink).toHaveClass('px-8');
+    expect(homeLink).toHaveClass('min-h-12', 'lg:flex-auto');
+    expect(homeLink).toHaveClass('px-8', 'lg:px-2.5');
 
     const customLink = getLink('/feed/feed-1');
     expect(customLink).toHaveClass('h-full', 'w-full');
-    expect(customLink).toHaveClass('px-2', 'lg:px-8');
-    expect(customLink?.parentElement).toHaveClass('min-h-12', 'lg:min-w-40', 'flex-1');
+    expect(customLink).toHaveClass('px-2', 'lg:px-2.5');
+    expect(customLink?.parentElement).toHaveClass('min-h-12', 'flex-1');
 
     screen.getAllByTestId('typography').forEach((label) => {
       expect(label).toHaveClass('text-sm', 'leading-5');
