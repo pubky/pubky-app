@@ -10,6 +10,14 @@ export const NEXUS_STREAM_MAX_LIMIT = 50; // Hard cap Nexus enforces on a single
 export const NEXUS_USERS_PER_PAGE = 10; // Number of users to fetch per page in streams
 
 /**
+ * Timeout for server-side Nexus fetches made while rendering link-preview
+ * metadata and dynamic OG images. Social crawlers give up after a few seconds
+ * and cache the miss, so a slow Nexus must degrade to the generic fallback
+ * quickly instead of hanging the response.
+ */
+export const NEXUS_SERVER_FETCH_TIMEOUT_MS = 3000;
+
+/**
  * Nexus contract limit: `source=starter_pack` accepts 1-5 comma-separated interest tags
  * (pubky/pubky-nexus#1024). Fixed by the backend — independent of the runtime-configurable
  * `getMaxStreamTags()`, which may be set higher and must never widen this bound.
