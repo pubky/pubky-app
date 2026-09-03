@@ -310,7 +310,7 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
           </p>
         </div>
         <div
-          class="grid w-full grid-cols-1 gap-3 sm:grid-cols-2"
+          class="flex w-full flex-col gap-3"
           data-cy="add-content-options"
           data-testid="container"
         >
@@ -331,183 +331,195 @@ exports[`DialogAddContent - Snapshots > matches the opened desktop dialog snapsh
               </div>
             </div>
             <div
-              class="flex items-center [.border-t]:pt-6 justify-start px-6"
+              class="flex items-center [.border-t]:pt-6 px-6"
               data-slot="card-footer"
             >
               <div
-                class="flex w-full flex-wrap items-center justify-start gap-2"
+                class="flex w-full flex-wrap items-center justify-between gap-2"
                 data-testid="container"
               >
-                <button
-                  aria-label="Add from feed"
-                  class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
-                  data-cy="add-content-feed-reply-pill"
-                  data-slot="button"
-                  type="button"
+                <div
+                  class="flex items-center gap-2"
+                  data-cy="add-content-feed-pills"
+                  data-testid="container"
                 >
-                  <svg
-                    aria-hidden="true"
-                    class="lucide lucide-message-circle size-4 shrink-0"
-                    fill="none"
-                    height="24"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    viewBox="0 0 24 24"
-                    width="24"
-                    xmlns="http://www.w3.org/2000/svg"
+                  <button
+                    aria-label="Add from feed"
+                    class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 shadow-xs text-muted-foreground opacity-30"
+                    data-cy="add-content-feed-reply-pill"
+                    data-slot="button"
+                    type="button"
                   >
-                    <path
-                      d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"
-                    />
-                  </svg>
-                  <span
-                    class="text-xs leading-4 font-bold"
-                    data-testid="typography"
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-message-circle size-4 shrink-0"
+                      fill="none"
+                      height="24"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"
+                      />
+                    </svg>
+                    <span
+                      class="text-xs leading-4 font-bold"
+                      data-testid="typography"
+                    >
+                      7
+                    </span>
+                  </button>
+                  <button
+                    aria-label="Add from feed"
+                    class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 shadow-xs text-muted-foreground opacity-30"
+                    data-cy="add-content-feed-repost-pill"
+                    data-slot="button"
+                    type="button"
                   >
-                    7
-                  </span>
-                </button>
-                <button
-                  aria-label="Add from feed"
-                  class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs opacity-30"
-                  data-cy="add-content-feed-repost-pill"
-                  data-slot="button"
-                  type="button"
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-repeat size-4 shrink-0"
+                      fill="none"
+                      height="24"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="m17 2 4 4-4 4"
+                      />
+                      <path
+                        d="M3 11v-1a4 4 0 0 1 4-4h14"
+                      />
+                      <path
+                        d="m7 22-4-4 4-4"
+                      />
+                      <path
+                        d="M21 13v1a4 4 0 0 1-4 4H3"
+                      />
+                    </svg>
+                    <span
+                      class="text-xs leading-4 font-bold"
+                      data-testid="typography"
+                    >
+                      3
+                    </span>
+                  </button>
+                  <button
+                    aria-label="Add from feed"
+                    class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 shadow-xs text-muted-foreground drop-shadow-[0_0_8px_var(--brand)]"
+                    data-cy="add-content-feed-save-pill"
+                    data-slot="button"
+                    type="button"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-library size-4 shrink-0"
+                      fill="none"
+                      height="24"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="m16 6 4 14"
+                      />
+                      <path
+                        d="M12 6v14"
+                      />
+                      <path
+                        d="M8 8v12"
+                      />
+                      <path
+                        d="M4 4v16"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <div
+                  class="flex items-center gap-2"
+                  data-testid="container"
                 >
-                  <svg
-                    aria-hidden="true"
-                    class="lucide lucide-repeat size-4 shrink-0"
-                    fill="none"
-                    height="24"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    viewBox="0 0 24 24"
-                    width="24"
-                    xmlns="http://www.w3.org/2000/svg"
+                  <button
+                    class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 shadow-xs text-secondary-foreground"
+                    data-cy="add-content-feed-button"
+                    data-slot="button"
+                    type="button"
                   >
-                    <path
-                      d="m17 2 4 4-4 4"
-                    />
-                    <path
-                      d="M3 11v-1a4 4 0 0 1 4-4h14"
-                    />
-                    <path
-                      d="m7 22-4-4 4-4"
-                    />
-                    <path
-                      d="M21 13v1a4 4 0 0 1-4 4H3"
-                    />
-                  </svg>
-                  <span
-                    class="text-xs leading-4 font-bold"
-                    data-testid="typography"
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-activity size-4 shrink-0"
+                      fill="none"
+                      height="24"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+                      />
+                    </svg>
+                    <span
+                      class="text-xs leading-4 font-bold"
+                      data-testid="typography"
+                    >
+                      Feed
+                    </span>
+                  </button>
+                  <button
+                    class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 shadow-xs text-secondary-foreground"
+                    data-cy="add-content-my-posts-button"
+                    data-slot="button"
+                    type="button"
                   >
-                    3
-                  </span>
-                </button>
-                <button
-                  aria-label="Add from feed"
-                  class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs drop-shadow-[0_0_8px_var(--brand)]"
-                  data-cy="add-content-feed-save-pill"
-                  data-slot="button"
-                  type="button"
-                >
-                  <svg
-                    aria-hidden="true"
-                    class="lucide lucide-library size-4 shrink-0"
-                    fill="none"
-                    height="24"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    viewBox="0 0 24 24"
-                    width="24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="m16 6 4 14"
-                    />
-                    <path
-                      d="M12 6v14"
-                    />
-                    <path
-                      d="M8 8v12"
-                    />
-                    <path
-                      d="M4 4v16"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      aria-hidden="true"
+                      class="lucide lucide-user-round size-4 shrink-0"
+                      fill="none"
+                      height="24"
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                      width="24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        cx="12"
+                        cy="8"
+                        r="5"
+                      />
+                      <path
+                        d="M20 21a8 8 0 0 0-16 0"
+                      />
+                    </svg>
+                    <span
+                      class="text-xs leading-4 font-bold"
+                      data-testid="typography"
+                    >
+                      My posts
+                    </span>
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
-          <div
-            class="flex flex-col bg-card text-card-foreground min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm"
-            data-slot="card"
-            data-testid="card"
-          >
-            <div
-              class="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 px-6"
-              data-slot="card-header"
-            >
-              <div
-                class="text-base leading-none font-bold text-card-foreground"
-                data-slot="card-title"
-              >
-                Select from posts
-              </div>
-            </div>
-            <div
-              class="px-6"
-              data-slot="card-content"
-            >
-              <button
-                class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-8 gap-1.5 px-3 has-[>svg]:px-3.5"
-                data-cy="add-content-select-from-posts"
-                data-size="sm"
-                data-slot="button"
-                data-variant="secondary"
-                type="button"
-              >
-                <svg
-                  aria-hidden="true"
-                  class="lucide lucide-list size-4"
-                  fill="none"
-                  height="24"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M3 5h.01"
-                  />
-                  <path
-                    d="M3 12h.01"
-                  />
-                  <path
-                    d="M3 19h.01"
-                  />
-                  <path
-                    d="M8 5h13"
-                  />
-                  <path
-                    d="M8 12h13"
-                  />
-                  <path
-                    d="M8 19h13"
-                  />
-                </svg>
-                Select
-              </button>
             </div>
           </div>
           <div
