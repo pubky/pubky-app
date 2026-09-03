@@ -6,7 +6,7 @@ import { useDebounceCallback } from 'usehooks-ts';
 import { REPOST_OPTIMISTIC_PREPEND_VARIANTS } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
-  ARTICLE_ATTACHMENT_MAX_FILES,
+  ARTICLE_COVER_MAX_FILES,
   ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES,
   ARTICLE_SUPPORTED_FILE_TYPES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
@@ -26,6 +26,8 @@ import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMention
 import { usePost } from '@/hooks/usePost/usePost';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { Logger } from '@/libs/logger/logger';
+import { parseArticleContent } from '@/libs/post/articleContent';
+import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineImages';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -54,6 +56,8 @@ export function usePostInput({
   originalPostId,
   editPostId,
   editAttachmentUris,
+  editContent,
+  editIsArticle,
   onSuccess,
   placeholder,
   successToastTitle,
@@ -93,15 +97,37 @@ export function usePostInput({
     repost,
     edit,
     isSubmitting,
+    inlineImages,
+    uploadingCount,
   } = usePost();
   const timelineFeed = useTimelineFeedContext();
   const { deletePost } = useDeletePost();
+
+  // Article edits show only the cover in the attachment strip — inline images
+  // live in the body. The cover is attachments[0] unless the published body
+  // references attachment:0 (slot-0 rule: slot 0 is inline, no cover).
+  const articleEditBody =
+    variant === POST_INPUT_VARIANT.EDIT && editIsArticle ? parseArticleContent(editContent)?.body : undefined;
+  const editRefIndexes = articleEditBody === undefined ? undefined : collectAttachmentRefIndexes(articleEditBody);
+  const editDisplayUris =
+    editRefIndexes === undefined ? undefined : editRefIndexes.has(0) ? [] : (editAttachmentUris ?? []).slice(0, 1);
+  // Original attachments the user is never shown (not the cover, not
+  // referenced by the body at open) — carried through the edit untouched so
+  // saving cannot delete files the user did not see and remove
+  const editPreservedUris =
+    editRefIndexes === undefined
+      ? undefined
+      : (editAttachmentUris ?? []).filter((_uri, index) => {
+          const isCover = index === 0 && !editRefIndexes.has(0);
+          return !isCover && !editRefIndexes.has(index);
+        });
 
   // Seed and resolve the post's current attachments for the edit composer
   const { seededUris: seededAttachmentUris } = useEditAttachments({
     enabled: variant === POST_INPUT_VARIANT.EDIT,
     postId: editPostId,
     uris: editAttachmentUris,
+    displayUris: editDisplayUris,
     existingAttachments,
     setExistingAttachments,
   });
@@ -201,7 +227,7 @@ export function usePostInput({
 
   // Handle submit using reply, repost, post, or edit method from hook
   const handleSubmit = useCallback(async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || uploadingCount > 0) return;
 
     // For replies, posts, and edits, require content or attachments. For reposts, content is optional. Content and title is required for articles.
     const totalAttachments = attachments.length + existingAttachments.length;
@@ -218,32 +244,37 @@ export function usePostInput({
       return { type: file.type, name: file.name, urls: { main: url, feed: isImage ? url : undefined } };
     };
 
-    // Wrapper that prepends to timeline and calls original onSuccess
+    // Wrapper that prepends to timeline and calls original onSuccess.
+    // Article store seeding is owned by usePost: the entry must be
+    // index-aligned with the full `[cover?, ...inline]` attachment list,
+    // which only usePost knows. Seeding here would overwrite it.
     const handleSuccess = (createdPostId: string) => {
       if (variant === POST_INPUT_VARIANT.EDIT) {
-        // Replace the optimistic store entry with the resulting attachment set:
-        // kept attachments reuse their already-resolved URLs (the store's
-        // set-difference revoke keeps reused blob: URLs alive), new files get
-        // fresh object URLs. If a kept attachment never resolved, clear the
-        // entry instead and let the Dexie/CDN render path take over.
-        const allKeptResolved = existingAttachments.every((attachment) => attachment.urls !== null);
-        const merged = allKeptResolved
-          ? [
-              ...existingAttachments.map((attachment) => ({
-                type: attachment.type,
-                name: attachment.name,
-                urls: attachment.urls as { main: string; feed?: string },
-              })),
-              ...attachments.map(newFileToLocalAttachment),
-            ]
-          : [];
+        if (!isArticle) {
+          // Replace the optimistic store entry with the resulting attachment set:
+          // kept attachments reuse their already-resolved URLs (the store's
+          // set-difference revoke keeps reused blob: URLs alive), new files get
+          // fresh object URLs. If a kept attachment never resolved, clear the
+          // entry instead and let the Dexie/CDN render path take over.
+          const allKeptResolved = existingAttachments.every((attachment) => attachment.urls !== null);
+          const merged = allKeptResolved
+            ? [
+                ...existingAttachments.map((attachment) => ({
+                  type: attachment.type,
+                  name: attachment.name,
+                  urls: attachment.urls as { main: string; feed?: string },
+                })),
+                ...attachments.map(newFileToLocalAttachment),
+              ]
+            : [];
 
-        useLocalFilesStore.getState().setPostAttachments(createdPostId, merged);
+          useLocalFilesStore.getState().setPostAttachments(createdPostId, merged);
+        }
         onSuccess?.(createdPostId);
         return;
       }
 
-      if (attachments.length) {
+      if (!isArticle && attachments.length) {
         useLocalFilesStore.getState().setPostAttachments(createdPostId, attachments.map(newFileToLocalAttachment));
       }
 
@@ -315,7 +346,12 @@ export function usePostInput({
         });
         break;
       case POST_INPUT_VARIANT.EDIT:
-        await edit({ editPostId: editPostId!, originalAttachmentUris: seededAttachmentUris, onSuccess: handleSuccess });
+        await edit({
+          editPostId: editPostId!,
+          originalAttachmentUris: seededAttachmentUris,
+          preservedAttachmentUris: editPreservedUris,
+          onSuccess: handleSuccess,
+        });
         break;
       case POST_INPUT_VARIANT.POST:
       default:
@@ -339,7 +375,9 @@ export function usePostInput({
     edit,
     editPostId,
     seededAttachmentUris,
+    editPreservedUris,
     isSubmitting,
+    uploadingCount,
     onSuccess,
     timelineFeed,
     deletePost,
@@ -392,7 +430,8 @@ export function usePostInput({
     (files: File[]) => {
       if (isSubmitting || files.length === 0) return;
 
-      const ATTACHMENT_MAX_FILES = isArticle ? ARTICLE_ATTACHMENT_MAX_FILES : POST_ATTACHMENT_MAX_FILES;
+      // Articles cap the picker at the cover; inline body images are uploaded separately.
+      const ATTACHMENT_MAX_FILES = isArticle ? ARTICLE_COVER_MAX_FILES : POST_ATTACHMENT_MAX_FILES;
       const SUPPORTED_ATTACHMENT_MIME_TYPES = isArticle
         ? ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES
         : POST_SUPPORTED_ATTACHMENT_MIME_TYPES;
@@ -404,7 +443,9 @@ export function usePostInput({
       if (availableSlots <= 0) {
         toast({
           variant: 'error',
-          description: `Maximum ${ATTACHMENT_MAX_FILES} files allowed`,
+          description: isArticle
+            ? 'Articles support one cover image. Remove it first, or drop the image in the editor to add it inline.'
+            : `Maximum ${ATTACHMENT_MAX_FILES} files allowed`,
         });
         return;
       }
@@ -496,12 +537,34 @@ export function usePostInput({
     e.stopPropagation();
   }, []);
 
+  // Uploads image files and inserts their markdown at the rich-text editor's
+  // caret. Fallback for drops Lexical ignores (see handleDrop); the viewport
+  // uploading pill provides the in-flight feedback.
+  const insertInlineImagesAtCaret = async (files: File[]) => {
+    for (const file of files) {
+      try {
+        const uri = await inlineImages.upload(file);
+        markdownEditorRef.current?.focus();
+        markdownEditorRef.current?.insertMarkdown(`![](${uri})`);
+      } catch {
+        // The upload handler already surfaced the failure to the user
+      }
+    }
+  };
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
+      const alreadyHandled = e.defaultPrevented;
       e.preventDefault();
       e.stopPropagation();
       dragCounterRef.current = 0;
       setIsDragging(false);
+
+      // In article mode the body editors consume image drops themselves
+      // (Lexical's DROP_COMMAND / the markdown textarea handler) and call
+      // preventDefault before the event bubbles here. Drag state is still
+      // reset above; only the cover-attachment handling is skipped.
+      if (isArticle && alreadyHandled) return;
 
       const dataTransfer = e.dataTransfer;
       if (!dataTransfer) return;
@@ -519,9 +582,23 @@ export function usePostInput({
         }
       }
 
+      // Drops landing on non-editable islands inside the rich-text editor
+      // (an already-inserted image) are ignored by Lexical — no
+      // preventDefault — so they'd fall through to the cover. The user aimed
+      // at the editor: insert inline instead. Unsupported files fall through
+      // to handleFilesAdded for its standard unsupported-type toast.
+      if (isArticle && e.target instanceof Element && e.target.closest('.mdxeditor')) {
+        const imageFiles = files.filter((file) => ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type));
+        if (imageFiles.length > 0) {
+          void insertInlineImagesAtCaret(imageFiles);
+          return;
+        }
+      }
+
       handleFilesAdded(files);
     },
-    [handleFilesAdded],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- insertInlineImagesAtCaret only uses stable refs and the upload handle
+    [handleFilesAdded, isArticle, inlineImages],
   );
 
   // Trigger file input click
@@ -582,6 +659,8 @@ export function usePostInput({
     isSubmitting,
     showEmojiPicker,
     setShowEmojiPicker,
+    inlineImages,
+    uploadingCount,
 
     // Mention autocomplete state
     mentionUsers,

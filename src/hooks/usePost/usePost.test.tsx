@@ -1,9 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FileController } from '@/controllers/file/file';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
+import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { usePost } from './usePost';
 import type { ExistingAttachment } from './usePost.types';
 
@@ -37,6 +39,14 @@ vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitCreate: mockPostControllerCreate,
     commitEdit: mockPostControllerEdit,
+  },
+}));
+vi.mock('@/controllers/file/file', () => ({
+  FileController: {
+    commitCreate: vi.fn(),
+    commitDelete: vi.fn(),
+    getMetadata: vi.fn(() => Promise.resolve([])),
+    getFileUrl: vi.fn(({ fileId, variant }: { fileId: string; variant: string }) => `cdn://${fileId}?v=${variant}`),
   },
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -1902,6 +1912,362 @@ describe('usePost', () => {
 
         expect(mockOnSuccess).not.toHaveBeenCalled();
       });
+    });
+  });
+});
+
+describe('usePost — article inline images', () => {
+  const AUTHOR = 'test-user-id';
+  const fileUri = (id: string) => `pubky://${AUTHOR}/pub/pubky.app/files/${id}`;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setMockCurrentUserId(AUTHOR);
+    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+    global.URL.revokeObjectURL = vi.fn();
+    useLocalFilesStore.getState().reset();
+  });
+
+  const setupArticle = async (body: string, options?: { cover?: File; existing?: ExistingAttachment[] }) => {
+    const { result } = renderHook(() => usePost());
+    act(() => {
+      result.current.setIsArticle(true);
+      result.current.setArticleTitle('My Article');
+      result.current.setContent(body);
+      if (options?.existing) result.current.setExistingAttachments(options.existing);
+    });
+    // The cover joins after article mode is on, like the real composer — the
+    // article-mode effect clears attachments present when the mode flips.
+    if (options?.cover) {
+      act(() => {
+        result.current.setAttachments([options.cover!]);
+      });
+    }
+    return result;
+  };
+
+  // Inline images may only reference session uploads (or original attachments
+  // on edit), so tests route their URIs through the real session
+  const uploadViaSession = async (result: { current: ReturnType<typeof usePost> }, uri: string, name = 'img.png') => {
+    vi.mocked(FileController.commitCreate).mockResolvedValueOnce(uri);
+    await act(async () => {
+      await result.current.inlineImages.upload(new File(['x'], name, { type: 'image/png' }));
+    });
+  };
+
+  describe('post()', () => {
+    it('rewrites inline images to attachment slots and passes attachmentUris', async () => {
+      mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
+      const result = await setupArticle('draft');
+      await uploadViaSession(result, fileUri('img1'));
+      act(() => {
+        result.current.setContent(`Intro\n\n![A](${fileUri('img1')})`);
+      });
+
+      await act(async () => {
+        await result.current.post({});
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: JSON.stringify({ title: 'My Article', body: 'Intro\n\n![A](attachment:0)' }),
+          attachmentUris: [fileUri('img1')],
+          isArticle: true,
+        }),
+      );
+    });
+
+    it('offsets inline slots when a cover file is present', async () => {
+      mockPostControllerCreate.mockResolvedValue(`${AUTHOR}:post1`);
+      const cover = new File(['x'], 'cover.png', { type: 'image/png' });
+      const result = await setupArticle('draft', { cover });
+      await uploadViaSession(result, fileUri('img1'));
+      act(() => {
+        result.current.setContent(`![A](${fileUri('img1')})`);
+      });
+
+      await act(async () => {
+        await result.current.post({});
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: JSON.stringify({ title: 'My Article', body: '![A](attachment:1)' }),
+          attachments: [cover],
+          attachmentUris: [fileUri('img1')],
+        }),
+      );
+    });
+
+    it('blocks publishing when the body contains hand-typed attachment references', async () => {
+      const result = await setupArticle('![A](attachment:1)');
+
+      await act(async () => {
+        await result.current.post({});
+      });
+
+      expect(mockPostControllerCreate).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error', description: expect.stringContaining('attachment references') }),
+      );
+      expect(result.current.isSubmitting).toBe(false);
+    });
+
+    it('blocks publishing images whose files were not uploaded this session (cross-post reuse)', async () => {
+      // A file URI hand-pasted from another post would attach a shared file
+      // record; deleting it from either post later would break the other
+      const result = await setupArticle(`![A](${fileUri('from-another-post')})`);
+
+      await act(async () => {
+        await result.current.post({});
+      });
+
+      expect(mockPostControllerCreate).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'error',
+          description: expect.stringContaining('outside this article'),
+        }),
+      );
+      expect(result.current.isSubmitting).toBe(false);
+    });
+  });
+
+  describe('edit()', () => {
+    it('builds nextOrder from the kept cover and inline first-appearance order', async () => {
+      mockPostControllerEdit.mockResolvedValue(undefined);
+      const coverUri = fileUri('cover');
+      const oldInline = fileUri('old');
+      const result = await setupArticle('draft', {
+        existing: [mockExistingAttachment(coverUri)],
+      });
+      await uploadViaSession(result, fileUri('reused'));
+      act(() => {
+        result.current.setContent(`![Old](${oldInline})\n\n![Reused](${fileUri('reused')})`);
+      });
+
+      await act(async () => {
+        await result.current.edit({
+          editPostId: `${AUTHOR}:post1`,
+          originalAttachmentUris: [coverUri, oldInline],
+        });
+      });
+
+      expect(mockPostControllerEdit).toHaveBeenCalledWith({
+        compositePostId: `${AUTHOR}:post1`,
+        content: JSON.stringify({ title: 'My Article', body: '![Old](attachment:1)\n\n![Reused](attachment:2)' }),
+        attachments: {
+          original: [coverUri, oldInline],
+          kept: [coverUri, oldInline],
+          added: [],
+          addedUris: [fileUri('reused')],
+          nextOrder: [coverUri, oldInline, fileUri('reused')],
+        },
+      });
+    });
+
+    it('commits content-only when the attachment order is unchanged', async () => {
+      mockPostControllerEdit.mockResolvedValue(undefined);
+      const coverUri = fileUri('cover');
+      const inline = fileUri('inline');
+      const result = await setupArticle(`![A](${inline})`, {
+        existing: [mockExistingAttachment(coverUri)],
+      });
+
+      await act(async () => {
+        await result.current.edit({
+          editPostId: `${AUTHOR}:post1`,
+          originalAttachmentUris: [coverUri, inline],
+        });
+      });
+
+      expect(mockPostControllerEdit).toHaveBeenCalledWith({
+        compositePostId: `${AUTHOR}:post1`,
+        content: JSON.stringify({ title: 'My Article', body: '![A](attachment:1)' }),
+        attachments: undefined,
+      });
+    });
+
+    it('uploads a replacement cover before committing and places it at slot 0', async () => {
+      mockPostControllerEdit.mockResolvedValue(undefined);
+      const newCoverUri = fileUri('new-cover');
+      vi.mocked(FileController.commitCreate).mockResolvedValue(newCoverUri);
+      const oldCoverUri = fileUri('old-cover');
+      const cover = new File(['x'], 'new-cover.png', { type: 'image/png' });
+      const result = await setupArticle('No images here', { cover });
+
+      await act(async () => {
+        await result.current.edit({
+          editPostId: `${AUTHOR}:post1`,
+          originalAttachmentUris: [oldCoverUri],
+        });
+      });
+
+      expect(FileController.commitCreate).toHaveBeenCalledWith({ file: cover, pubky: AUTHOR });
+      expect(mockPostControllerEdit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attachments: {
+            original: [oldCoverUri],
+            kept: [],
+            added: [],
+            addedUris: [newCoverUri],
+            nextOrder: [newCoverUri],
+          },
+        }),
+      );
+    });
+
+    it('keeps the new cover object URL when kept inline images complete from local metadata', async () => {
+      // Regression: remove cover → save → add cover → save. The kept inline
+      // image is not a session upload; without metadata completion it voided
+      // the whole seed and the fresh cover fell to the not-yet-ready CDN.
+      mockPostControllerEdit.mockResolvedValue(undefined);
+      const newCoverUri = fileUri('new-cover');
+      vi.mocked(FileController.commitCreate).mockResolvedValue(newCoverUri);
+      const keptInline = fileUri('kept-inline');
+      vi.mocked(FileController.getMetadata).mockResolvedValue([
+        { uri: keptInline, id: `${AUTHOR}:kept-inline`, name: 'kept.png', content_type: 'image/png' },
+      ] as never);
+      const cover = new File(['x'], 'new-cover.png', { type: 'image/png' });
+      const result = await setupArticle(`![Kept](${keptInline})`, { cover });
+
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [keptInline] });
+      });
+
+      expect(useLocalFilesStore.getState().posts[`${AUTHOR}:post1`]).toEqual([
+        { type: 'image/png', name: 'new-cover.png', urls: { main: 'blob:mock-url', feed: 'blob:mock-url' } },
+        {
+          type: 'image/png',
+          name: 'kept.png',
+          urls: { main: `cdn://${AUTHOR}:kept-inline?v=main`, feed: `cdn://${AUTHOR}:kept-inline?v=feed` },
+        },
+      ]);
+    });
+
+    it('seeds a mix of kept, newly uploaded, and deleted inline images correctly', async () => {
+      mockPostControllerEdit.mockResolvedValue(undefined);
+      const oldA = fileUri('oldA');
+      const oldB = fileUri('oldB'); // deleted from the body this edit
+      const newC = fileUri('newC');
+      vi.mocked(FileController.getMetadata).mockResolvedValue([
+        { uri: oldA, id: `${AUTHOR}:oldA`, name: 'oldA.png', content_type: 'image/png' },
+      ] as never);
+      vi.mocked(FileController.commitCreate).mockResolvedValue(newC);
+
+      const result = await setupArticle('draft');
+
+      // newC is uploaded through this composer session
+      await act(async () => {
+        await result.current.inlineImages.upload(new File(['x'], 'newC.png', { type: 'image/png' }));
+      });
+      act(() => {
+        result.current.setContent(`![A](${oldA})\n\n![C](${newC})`);
+      });
+
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [oldA, oldB] });
+      });
+
+      expect(mockPostControllerEdit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attachments: expect.objectContaining({
+            original: [oldA, oldB],
+            kept: [oldA],
+            addedUris: [newC],
+            nextOrder: [oldA, newC],
+          }),
+        }),
+      );
+      // Store is index-aligned with the NEW attachments: kept → CDN URLs
+      // (long since generated), new → session object URL, deleted → gone
+      expect(useLocalFilesStore.getState().posts[`${AUTHOR}:post1`]).toEqual([
+        expect.objectContaining({
+          name: 'oldA.png',
+          urls: { main: `cdn://${AUTHOR}:oldA?v=main`, feed: `cdn://${AUTHOR}:oldA?v=feed` },
+        }),
+        expect.objectContaining({ name: 'newC.png', urls: { main: 'blob:mock-url', feed: 'blob:mock-url' } }),
+      ]);
+      // The session upload was referenced, so it must not be swept
+      expect(FileController.commitDelete).not.toHaveBeenCalled();
+    });
+
+    it('carries preserved (unseen) original attachments through the edit instead of deleting them', async () => {
+      mockPostControllerEdit.mockResolvedValue(undefined);
+      const coverUri = fileUri('cover');
+      const referencedUri = fileUri('referenced');
+      const unseenUri = fileUri('unseen'); // e.g. from another client; never shown to the user
+      const result = await setupArticle(`![A](${referencedUri})`, {
+        existing: [mockExistingAttachment(coverUri)],
+      });
+
+      await act(async () => {
+        await result.current.edit({
+          editPostId: `${AUTHOR}:post1`,
+          originalAttachmentUris: [coverUri, referencedUri, unseenUri],
+          preservedAttachmentUris: [unseenUri],
+        });
+      });
+
+      // The unseen file rides at the tail: same slots for referenced images,
+      // nothing diffed into removals (nextOrder equals the original set)
+      expect(mockPostControllerEdit).toHaveBeenCalledWith({
+        compositePostId: `${AUTHOR}:post1`,
+        content: JSON.stringify({ title: 'My Article', body: '![A](attachment:1)' }),
+        attachments: undefined, // element-wise equal to original → content-only edit
+      });
+    });
+
+    it('blocks edits whose body references files from another post', async () => {
+      const foreignUri = fileUri('from-another-post');
+      const cover = new File(['x'], 'new-cover.png', { type: 'image/png' });
+      const result = await setupArticle(`![F](${foreignUri})`, { cover });
+
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [] });
+      });
+
+      // Blocked before the replacement cover uploads, nothing committed
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
+      expect(mockPostControllerEdit).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error', description: expect.stringContaining('outside this article') }),
+      );
+    });
+
+    it('blocks edits whose attachment total (including the preserved tail) exceeds the cap', async () => {
+      const referenced = fileUri('referenced');
+      const preserved = Array.from({ length: 10 }, (_, index) => fileUri(`preserved-${index}`));
+      const result = await setupArticle(`![R](${referenced})`);
+
+      await act(async () => {
+        await result.current.edit({
+          editPostId: `${AUTHOR}:post1`,
+          originalAttachmentUris: [referenced, ...preserved],
+          preservedAttachmentUris: preserved,
+        });
+      });
+
+      expect(mockPostControllerEdit).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'error',
+          description: expect.stringContaining('attachments kept from previous versions'),
+        }),
+      );
+    });
+
+    it('blocks the edit before uploading anything when the body is invalid', async () => {
+      const cover = new File(['x'], 'new-cover.png', { type: 'image/png' });
+      const result = await setupArticle('![A](blob:evil)', { cover });
+
+      await act(async () => {
+        await result.current.edit({ editPostId: `${AUTHOR}:post1`, originalAttachmentUris: [] });
+      });
+
+      expect(FileController.commitCreate).not.toHaveBeenCalled();
+      expect(mockPostControllerEdit).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
     });
   });
 });

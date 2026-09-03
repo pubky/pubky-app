@@ -1292,6 +1292,19 @@ describe('Utils', () => {
       });
     });
 
+    describe('when inline image uploads are in flight', () => {
+      it('blocks an otherwise-valid post', () => {
+        expect(canSubmitPost('post', 'Hello', [], false, false, undefined, true)).toBe(false);
+        expect(canSubmitPost('post', 'Body', [], false, true, 'Title', true)).toBe(false);
+        expect(canSubmitPost('repost', '', [], false, false, undefined, true)).toBe(false);
+      });
+
+      it('preserves prior behavior when false or omitted', () => {
+        expect(canSubmitPost('post', 'Hello', [], false, false, undefined, false)).toBe(true);
+        expect(canSubmitPost('post', 'Body', [], false, true, 'Title')).toBe(true);
+      });
+    });
+
     describe('for post variant', () => {
       it('should return true when content is provided', () => {
         expect(canSubmitPost('post', 'Hello world', [], false)).toBe(true);
