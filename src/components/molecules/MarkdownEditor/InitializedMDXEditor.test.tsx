@@ -380,7 +380,7 @@ describe('InitializedMDXEditor', () => {
     it('renders smile icons in emoji buttons', () => {
       const { container } = render(<InitializedMDXEditor editorRef={null} markdown="" />);
 
-      const smileIcons = container.querySelectorAll('.lucide-smile');
+      const smileIcons = container.querySelectorAll('.lucide-face-slightly-smiling');
       // One in the markdown toolbar, one in the rich text toolbar
       expect(smileIcons).toHaveLength(2);
       smileIcons.forEach((icon) => {

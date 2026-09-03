@@ -2,7 +2,6 @@
 
 exports[`DialogAddContent - Snapshots > matches the closed grid trigger snapshot 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   aria-label="Add Post"
@@ -45,7 +44,6 @@ exports[`DialogAddContent - Snapshots > matches the closed grid trigger snapshot
 
 exports[`DialogAddContent - Snapshots > matches the closed list trigger snapshot 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   aria-label="Add Post"
@@ -88,7 +86,6 @@ exports[`DialogAddContent - Snapshots > matches the closed list trigger snapshot
 
 exports[`DialogAddContent - Snapshots > matches the closed trigger snapshot 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   aria-label="Add Post"
@@ -140,7 +137,6 @@ exports[`DialogAddContent - Snapshots > matches the closed trigger snapshot 1`] 
 
 exports[`DialogAddContent - Snapshots > matches the closed visual trigger snapshot 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   aria-label="Add Post"

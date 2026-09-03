@@ -3,6 +3,8 @@
 exports[`Tooltip - Snapshots > matches snapshot when open with trigger and content 1`] = `
 <button
   aria-describedby="radix-normalized"
+  data-radix-popper-align="center"
+  data-radix-popper-side="top"
   data-state="instant-open"
   type="button"
 >
@@ -11,11 +13,32 @@ exports[`Tooltip - Snapshots > matches snapshot when open with trigger and conte
 `;
 
 exports[`Tooltip - Snapshots > matches snapshot when open with trigger and content 2`] = `
-<span
+<div
+  class="z-50 max-w-sm rounded-md bg-primary px-3 py-1.5 text-xs leading-4 font-normal text-primary-foreground data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+  data-align="center"
+  data-side="top"
+  data-slot="tooltip-content"
+  data-state="instant-open"
   id="radix-normalized"
   role="tooltip"
-  style="position: absolute; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+  style="--radix-tooltip-content-transform-origin: var(--radix-popper-transform-origin); --radix-tooltip-content-available-width: var(--radix-popper-available-width); --radix-tooltip-content-available-height: var(--radix-popper-available-height); --radix-tooltip-trigger-width: var(--radix-popper-anchor-width); --radix-tooltip-trigger-height: var(--radix-popper-anchor-height); animation: none;"
 >
   Snapshot label
-</span>
+  <span
+    style="position: absolute; bottom: 0px; transform: translateY(100%); visibility: hidden;"
+  >
+    <svg
+      class="fill-primary"
+      height="6"
+      preserveAspectRatio="none"
+      style="display: block;"
+      viewBox="0 0 30 10"
+      width="12"
+    >
+      <polygon
+        points="0,0 30,0 15,10"
+      />
+    </svg>
+  </span>
+</div>
 `;

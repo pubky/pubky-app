@@ -7,7 +7,6 @@ exports[`Collapsible - Snapshots > matches snapshot when closed 1`] = `
   data-testid="collapsible"
 >
   <button
-    aria-controls="radix-normalized"
     aria-expanded="false"
     data-slot="collapsible-trigger"
     data-state="closed"

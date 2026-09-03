@@ -82,9 +82,13 @@ export function useSearchPeople(tags: string[], { onError }: UseSearchPeopleOpti
   // Bumped on every tags change and on unmount; in-flight fetches compare
   // against it and drop stale results instead of committing them.
   const generationRef = useRef(0);
-  // Keep the latest callback without retriggering the fetch effect.
+  // Keep the latest callback without retriggering the fetch effect. Written
+  // from an effect (not during render) so the React Compiler `refs` rule holds;
+  // readers only run after a commit, so they never observe a stale callback.
   const onErrorRef = useRef(onError);
-  onErrorRef.current = onError;
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   const { isMuted } = useMutedUsers();
 
