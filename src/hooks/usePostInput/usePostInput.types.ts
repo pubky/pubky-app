@@ -16,6 +16,10 @@ export interface UsePostInputOptions {
   editPostId?: string;
   /** The post's current attachment URIs (edit variant only) */
   editAttachmentUris?: string[];
+  /** The post's current content (edit variant only) — used to derive the article cover slot */
+  editContent?: string;
+  /** Whether the post being edited is an article (edit variant only) */
+  editIsArticle?: boolean;
   /** Callback after successful post, receives the created post ID */
   onSuccess?: (createdPostId: string) => void;
   /** Custom placeholder text */
@@ -67,6 +71,10 @@ export interface UsePostInputReturn {
   isSubmitting: boolean;
   showEmojiPicker: boolean;
   setShowEmojiPicker: (show: boolean) => void;
+  /** Article inline-image editor surface for the MarkdownEditor */
+  inlineImages: { upload: (file: File) => Promise<string>; getPreviewUrl: (src: string) => string | null };
+  /** Inline image uploads in flight; submit stays disabled while > 0 */
+  uploadingCount: number;
 
   // Mention autocomplete state
   mentionUsers: AutocompleteUserData[];

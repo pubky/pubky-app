@@ -6,6 +6,10 @@ export type TUploadFileParams = {
   pubky: Pubky;
 };
 
+export type TDeleteFilesParams = {
+  fileUris: string[];
+};
+
 export type TGetMetadataParams = {
   fileAttachments: string[];
 };

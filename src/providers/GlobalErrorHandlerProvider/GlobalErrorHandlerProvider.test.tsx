@@ -1,5 +1,6 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { toast } from '@/molecules/Toaster/toast';
@@ -77,6 +78,27 @@ describe('GlobalErrorHandlerProvider', () => {
     expect(getErrorMessage).toHaveBeenCalled();
     expect(Logger.error).toHaveBeenCalled();
     expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Something went wrong' });
+  });
+
+  it('silences expected inline-image upload rejections (already toasted at the source)', () => {
+    render(
+      <GlobalErrorHandlerProvider>
+        <div>child</div>
+      </GlobalErrorHandlerProvider>,
+    );
+
+    act(() => {
+      const event = new Event('unhandledrejection', { cancelable: true }) as PromiseRejectionEvent;
+      const rejection = new Error('Inline image upload rejected: over the cap');
+      rejection.name = INLINE_IMAGE_UPLOAD_REJECTION_NAME;
+      Object.defineProperty(event, 'reason', { value: rejection });
+      window.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    expect(Logger.error).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('throttles duplicate error toasts within the cooldown window', () => {

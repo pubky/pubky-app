@@ -11,7 +11,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
   >
     <a
       aria-label="All"
-      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto px-2 lg:px-8 border-border text-muted-foreground hover:text-white"
+      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-12 flex-1 lg:flex-auto px-2 lg:px-2.5 border-border text-muted-foreground hover:text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/home"
@@ -56,13 +56,13 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
       </span>
     </a>
     <div
-      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 max-w-[60%] flex-none lg:max-w-none lg:flex-auto border-white"
+      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 max-w-[60%] flex-none lg:max-w-none lg:flex-auto border-white"
       data-testid="container"
     >
       <a
         aria-current="page"
         aria-label="Active Feed"
-        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-10 lg:px-8 text-white"
+        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-10 lg:px-2.5 text-white"
         data-override-defaults="true"
         data-testid="link"
         href="/feed/feed-active"
@@ -100,7 +100,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -125,7 +125,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feed active (
     >
       <button
         aria-label="Create feed"
-        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto px-2 lg:px-8 cursor-pointer border-border text-muted-foreground hover:text-white"
+        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-12 flex-1 lg:flex-auto px-2 lg:px-2.5 cursor-pointer border-border text-muted-foreground hover:text-white"
         data-override-defaults="true"
         data-testid="button"
       >
@@ -179,7 +179,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     <a
       aria-current="page"
       aria-label="All"
-      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 max-w-[60%] flex-none lg:max-w-none lg:flex-auto px-8 border-white text-white"
+      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 max-w-[60%] flex-none lg:max-w-none lg:flex-auto px-8 lg:px-2.5 border-white text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/home"
@@ -224,12 +224,12 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       </span>
     </a>
     <div
-      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto border-border"
+      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-12 flex-1 lg:flex-auto border-border"
       data-testid="container"
     >
       <a
         aria-label="Bitcoin News"
-        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-2 lg:px-8 text-muted-foreground group-hover:text-white"
+        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-2 lg:px-2.5 text-muted-foreground group-hover:text-white"
         data-override-defaults="true"
         data-testid="link"
         href="/feed/feed-1"
@@ -267,7 +267,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -288,12 +288,12 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       </button>
     </div>
     <div
-      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto border-border"
+      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-12 flex-1 lg:flex-auto border-border"
       data-testid="container"
     >
       <a
         aria-label="Lightning Network"
-        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-2 lg:px-8 text-muted-foreground group-hover:text-white"
+        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-2 lg:px-2.5 text-muted-foreground group-hover:text-white"
         data-override-defaults="true"
         data-testid="link"
         href="/feed/feed-2"
@@ -331,7 +331,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -356,7 +356,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with custom feeds and Hom
     >
       <button
         aria-label="Create feed"
-        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto px-2 lg:px-8 cursor-pointer border-border text-muted-foreground hover:text-white"
+        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-12 flex-1 lg:flex-auto px-2 lg:px-2.5 cursor-pointer border-border text-muted-foreground hover:text-white"
         data-override-defaults="true"
         data-testid="button"
       >
@@ -409,7 +409,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
   >
     <a
       aria-label="All"
-      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto px-2 lg:px-8 border-border text-muted-foreground hover:text-white"
+      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-12 flex-1 lg:flex-auto px-2 lg:px-2.5 border-border text-muted-foreground hover:text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/home"
@@ -454,12 +454,12 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       </span>
     </a>
     <div
-      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto border-border"
+      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-12 flex-1 lg:flex-auto border-border"
       data-testid="container"
     >
       <a
         aria-label="Bitcoin"
-        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-2 lg:px-8 text-muted-foreground group-hover:text-white"
+        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-2 lg:px-2.5 text-muted-foreground group-hover:text-white"
         data-override-defaults="true"
         data-testid="link"
         href="/feed/feed-1"
@@ -497,7 +497,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -518,13 +518,13 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       </button>
     </div>
     <div
-      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 max-w-[60%] flex-none lg:max-w-none lg:flex-auto border-white"
+      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 max-w-[60%] flex-none lg:max-w-none lg:flex-auto border-white"
       data-testid="container"
     >
       <a
         aria-current="page"
         aria-label="Lightning"
-        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-10 lg:px-8 text-white"
+        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-10 lg:px-2.5 text-white"
         data-override-defaults="true"
         data-testid="link"
         href="/feed/feed-2"
@@ -562,7 +562,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -583,12 +583,12 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       </button>
     </div>
     <div
-      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto border-border"
+      class="group relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-12 flex-1 lg:flex-auto border-border"
       data-testid="container"
     >
       <a
         aria-label="Nostr"
-        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-2 lg:px-8 text-muted-foreground group-hover:text-white"
+        class="flex h-full w-full min-w-0 items-center justify-center gap-2 px-2 lg:px-2.5 text-muted-foreground group-hover:text-white"
         data-override-defaults="true"
         data-testid="link"
         href="/feed/feed-3"
@@ -626,7 +626,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-pencil size-4"
+          class="lucide lucide-pencil size-3"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -651,7 +651,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with multiple custom feed
     >
       <button
         aria-label="Create feed"
-        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-12 flex-1 lg:flex-auto px-2 lg:px-8 cursor-pointer border-border text-muted-foreground hover:text-white"
+        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-12 flex-1 lg:flex-auto px-2 lg:px-2.5 cursor-pointer border-border text-muted-foreground hover:text-white"
         data-override-defaults="true"
         data-testid="button"
       >
@@ -705,7 +705,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
     <a
       aria-current="page"
       aria-label="All"
-      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-0 basis-1/2 lg:flex-auto px-8 border-white text-white"
+      class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-0 basis-1/2 lg:flex-auto px-8 lg:px-2.5 border-white text-white"
       data-override-defaults="true"
       data-testid="link"
       href="/home"
@@ -754,7 +754,7 @@ exports[`FeedNavigation - Snapshots > matches snapshot with no custom feeds and 
     >
       <button
         aria-label="Create feed"
-        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 lg:min-w-40 min-w-0 basis-1/2 lg:flex-auto px-2 lg:px-8 cursor-pointer border-border text-muted-foreground hover:text-white"
+        class="relative flex min-h-12 items-center justify-center gap-2 border-b py-1.5 min-w-0 basis-1/2 lg:flex-auto px-2 lg:px-2.5 cursor-pointer border-border text-muted-foreground hover:text-white"
         data-override-defaults="true"
         data-testid="button"
       >

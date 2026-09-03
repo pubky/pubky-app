@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { FileController } from '@/controllers/file/file';
 import { parseArticleContent } from '@/libs/post/articleContent';
+import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { toast } from '@/molecules/Toaster/toast';
 import type { FileVariant } from '@/services/nexus/file/file.types';
@@ -22,6 +23,12 @@ interface UsePostArticleResult {
   title: string;
   body: string;
   coverImage: CoverImage | null;
+  /**
+   * Slot-0 cover rule: attachments[0] is the cover unless the body references
+   * `attachment:0` (then slot 0 is an inline image and the article has no
+   * cover). Callers must gate any locally sourced cover on this too.
+   */
+  hasCover: boolean;
 }
 
 /**
@@ -66,18 +73,25 @@ export function usePostArticle({
     }
   }, [content]);
 
+  // Slot-0 cover rule, computed synchronously from the published body so the
+  // cover never flashes for articles whose slot 0 is an inline image.
+  const hasInlineSlotZero = articleHasInlineSlotZero(parseArticleContent(content)?.body ?? '');
+  const hasCover = Boolean(attachments?.length) && !hasInlineSlotZero;
+
   useEffect(() => {
     let cancelled = false;
 
     const extractCoverImage = async () => {
-      // An edit can remove the cover — clear previously extracted state
-      if (!attachments?.length) {
+      // An edit can remove the cover — clear previously extracted state.
+      // Slot 0 referenced by the body means it is an inline image, not a cover.
+      if (!attachments?.length || hasInlineSlotZero) {
         setCoverImage(null);
         return;
       }
 
       try {
-        const attachment = (await FileController.getMetadata({ fileAttachments: attachments }))[0];
+        // Only the cover slot is relevant; never resolve inline attachments here
+        const attachment = (await FileController.getMetadata({ fileAttachments: [attachments[0]] }))[0];
 
         if (cancelled) return;
 
@@ -106,11 +120,12 @@ export function usePostArticle({
     return () => {
       cancelled = true;
     };
-  }, [attachments, coverImageVariant]);
+  }, [attachments, coverImageVariant, hasInlineSlotZero]);
 
   return {
     title,
     body,
     coverImage,
+    hasCover,
   };
 }

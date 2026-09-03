@@ -505,6 +505,8 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleDragOver: vi.fn(),
     handleDrop: vi.fn(),
     handlePaste: vi.fn(),
+    inlineImages: { upload: vi.fn(), getPreviewUrl: vi.fn(() => null) },
+    uploadingCount: 0,
     mentionUsers: [],
     mentionIsOpen: false,
     mentionSelectedIndex: 0,

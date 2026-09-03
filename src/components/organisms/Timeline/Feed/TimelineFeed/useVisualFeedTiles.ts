@@ -8,6 +8,8 @@ import { ModerationController } from '@/controllers/moderation/moderation';
 import { PostController } from '@/controllers/post/post';
 import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { Logger } from '@/libs/logger/logger';
+import { parseArticleContent } from '@/libs/post/articleContent';
+import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { FileDetailsModelSchema } from '@/models/file/fileDetails.schema';
 import { CompositeIdDomain } from '@/models/models.types';
@@ -68,6 +70,17 @@ const EMPTY_SNAPSHOT: VisualFeedSnapshot = {
  * smallest footprint preferred, any size allowed so the row packer can slot
  * them wherever they fit.
  */
+/**
+ * Articles carry inline body images in `attachments`, but only the cover
+ * (slot-0 rule) is tile-worthy media — inline images render inside the
+ * article body, never as standalone visual tiles. Non-articles pass through.
+ */
+function visualMediaAttachments<T>(post: EnrichedPostDetails, attachments: readonly T[]): readonly T[] {
+  if (post.kind !== 'long') return attachments;
+  const hasCover = attachments.length > 0 && !articleHasInlineSlotZero(parseArticleContent(post.content)?.body ?? '');
+  return attachments.slice(0, hasCover ? 1 : 0);
+}
+
 function buildPlaceholderTile(postId: string, placeholderKind: VisualPlaceholderKind, indexedAt = 0): VisualTile {
   return {
     id: `${postId}:placeholder:${placeholderKind}`,
@@ -302,7 +315,7 @@ export function useVisualFeedTiles({
               return [];
             }
 
-            return post.attachments ?? [];
+            return visualMediaAttachments(post, post.attachments ?? []);
           }),
         ),
       );
@@ -333,7 +346,7 @@ export function useVisualFeedTiles({
 
         const localAttachments = localPostAttachments[postId];
         if (localAttachments?.length) {
-          const postTiles = localAttachments.flatMap((attachment, index) => {
+          const postTiles = visualMediaAttachments(post, localAttachments).flatMap((attachment, index) => {
             const tile = buildLocalTile(post, attachment, index);
             return tile ? [tile] : [];
           });
@@ -343,7 +356,7 @@ export function useVisualFeedTiles({
           return postTiles;
         }
 
-        const attachmentUris = post.attachments ?? [];
+        const attachmentUris = visualMediaAttachments(post, post.attachments ?? []);
         if (attachmentUris.length === 0) {
           hiddenPostCount += 1;
           return [];
