@@ -94,11 +94,6 @@
     "zod": "4.5.4",
     "zustand": "5.0.15"
   },
-  "overrides": {
-    "intersection-observer": "npm:empty-module@*",
-    "source-map@0.8.0-beta.0": "0.7.4",
-    "glob": "13.0.1"
-  },
   "devDependencies": {
     "@eslint/compat": "2.1.0",
     "@fontsource-variable/inter-tight": "^5.3.0",
@@ -113,7 +108,7 @@
     "@types/linkify-it": "5.0.0",
     "@types/lodash-es": "4.17.12",
     "@types/mdast": "4.0.4",
-    "@types/node": "26.4.1",
+    "@types/node": "25.9.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@types/react-syntax-highlighter": "15.5.13",

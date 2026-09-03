@@ -43,15 +43,6 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'jsdom',
-          // Node 25+ defines lazy `localStorage` / `sessionStorage` getters on
-          // `globalThis` (Web Storage API). Vitest 4's jsdom environment only
-          // copies a key that already exists on the global when it is on its
-          // allowlist, and `localStorage` is not, so jsdom's Storage never
-          // reaches tests and `localStorage` resolves to `undefined` (zustand
-          // `persist` then throws on every `setState`). Turning the Node
-          // feature off restores the jsdom implementation. Fixed upstream in
-          // Vitest 5 (vitest-dev/vitest#10867); drop this flag after that upgrade.
-          execArgv: ['--no-experimental-webstorage'],
           setupFiles: ['./src/config/test.ts'],
           globals: true,
           include: ['**/*.test.{ts,tsx}'],
