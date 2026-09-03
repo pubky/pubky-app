@@ -86,7 +86,10 @@ export const PostText = memo(function PostText({
     remarkGfm,
     remarkPlaintextTables,
     ...(isArticle
-      ? [...(renderArticleImages ? [] : [remarkStripImages]), ...(!onPostPage ? [remarkExtractFirstParagraph] : [])]
+      ? [
+          ...(renderArticleImages ? [] : [remarkStripImages]),
+          ...(!onPostPage && !fullArticle ? [remarkExtractFirstParagraph] : []),
+        ]
       : [remarkDisallowMarkdownLinks]),
     remarkPlaintextCodeblock,
     remarkHashtags,
@@ -123,17 +126,20 @@ export const PostText = memo(function PostText({
       data-cy="post-text"
       overrideDefaults
       className={cn(
-        'text-base leading-6 font-medium wrap-anywhere text-secondary-foreground',
+        'text-base leading-6 font-medium wrap-anywhere',
         // Full articles use the same `prose` typography as the article editor so the
         // published article matches what the editor shows (issue #1762): real block
         // margins and outside list markers instead of the pre-line whitespace hack.
         // The editor neutralizes prose's inline-code backticks; the pre overrides
-        // keep PostCodeBlock's own framing; no-underline keeps links, hashtags and
-        // mentions on their brand styling. Compact posts keep pre-line, where the
-        // stray newlines react-markdown emits between blocks provide the spacing.
+        // strip prose's box and 14px typography from the <pre> wrapping PostCodeBlock
+        // so code blocks keep their compact-post look (prose still spaces them);
+        // no-underline keeps links, hashtags and mentions on their brand styling.
+        // Compact posts keep pre-line, where the stray newlines react-markdown emits
+        // between blocks provide the spacing.
         fullArticle
-          ? 'prose max-w-none prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0 [&_a]:no-underline'
+          ? 'prose max-w-none prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:text-base prose-pre:leading-6 prose-pre:font-medium [&_a]:no-underline'
           : 'whitespace-pre-line',
+        'text-secondary-foreground',
         className,
       )}
     >

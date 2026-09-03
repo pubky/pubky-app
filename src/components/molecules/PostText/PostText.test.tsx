@@ -632,6 +632,24 @@ describe('PostText', () => {
       expect(screen.getByRole('heading', { level: 6 })).toHaveClass('mt-[1.5em]', 'mb-[0.5em]');
     });
 
+    it('keeps a hashtag on the line after a newline linked and breaks before it', () => {
+      // Pins the plugin order: remarkHashtags must see the "\n" before remarkSoftBreaks
+      // splits it out, or `(^|\s)#tag` no longer matches.
+      const { container } = render(<PostText content={'first line\n#design'} isArticle fullArticle />);
+
+      expect(screen.getByTestId('post-hashtag')).toHaveTextContent('#design');
+      expect(container.querySelector('p br')).not.toBeNull();
+    });
+
+    it('never truncates a full article to its preview, even off the post page', () => {
+      mockUsePathname.mockReturnValue('/home');
+      const paragraphs = Array.from({ length: 8 }, (_, i) => `Paragraph number ${i + 1}.`);
+
+      render(<PostText content={paragraphs.join('\n\n')} isArticle fullArticle />);
+
+      expect(screen.getByText('Paragraph number 8.')).toBeInTheDocument();
+    });
+
     it('leaves h5 and h6 margins off outside full article mode', () => {
       render(<PostText content={'##### Level five'} isArticle />);
 
