@@ -31,6 +31,8 @@ vi.mock('@mdxeditor/gurx', () => ({
 let toolbarContentsRenderer: (() => React.ReactNode) | null = null;
 // Store onChange handler to invoke it during tests
 let capturedOnChange: ((markdown: string, initialMarkdownNormalize?: boolean) => void) | null = null;
+// Store overlayContainer prop to assert popups are hosted in-tree (inside dialog focus traps)
+let capturedOverlayContainer: HTMLElement | null | undefined;
 
 // Mock @mdxeditor/editor
 vi.mock('@mdxeditor/editor', () => {
@@ -42,11 +44,14 @@ vi.mock('@mdxeditor/editor', () => {
       plugins,
       onChange,
       readOnly,
+      overlayContainer,
       ref: _ref,
       ...props
     }: Record<string, unknown>) => {
       // Capture onChange handler for testing
       capturedOnChange = onChange as typeof capturedOnChange;
+      // Capture overlayContainer (an HTMLElement — must not be spread onto the DOM)
+      capturedOverlayContainer = overlayContainer as typeof capturedOverlayContainer;
 
       // Find and render toolbar contents if available
       const toolbarContent = toolbarContentsRenderer ? toolbarContentsRenderer() : null;
@@ -267,6 +272,7 @@ describe('InitializedMDXEditor', () => {
     toolbarContentsRenderer = null;
     capturedOnEmojiSelect = null;
     capturedOnChange = null;
+    capturedOverlayContainer = undefined;
     mockHandleMarkdownEmojiSelect.mockClear();
   });
 
@@ -315,6 +321,15 @@ describe('InitializedMDXEditor', () => {
       const editor = screen.getByTestId('mdx-editor');
       // The editor should have 10 plugins configured
       expect(editor).toHaveAttribute('data-plugins-count', '10');
+    });
+
+    it('hosts MDXEditor popups in-tree via overlayContainer so focus-trapping dialogs keep focus on popup inputs', () => {
+      render(<InitializedMDXEditor editorRef={null} markdown="" />);
+
+      // Without an overlayContainer, MDXEditor portals popups (e.g. the link dialog) to
+      // document.body, where the article dialog's focus trap reverts focus to the editor.
+      const host = screen.getByTestId('mdx-editor-overlay-container');
+      expect(capturedOverlayContainer).toBe(host);
     });
 
     it('passes additional props to MDXEditor', () => {
@@ -946,6 +961,7 @@ describe('InitializedMDXEditor - Snapshots', () => {
     toolbarContentsRenderer = null;
     capturedOnEmojiSelect = null;
     capturedOnChange = null;
+    capturedOverlayContainer = undefined;
     mockHandleMarkdownEmojiSelect.mockClear();
   });
 
