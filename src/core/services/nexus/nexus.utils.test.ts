@@ -196,7 +196,7 @@ describe('queryNexusDeduped', () => {
   beforeEach(async () => {
     clearInFlightQueriesForTest();
     vi.clearAllMocks();
-    global.fetch = mockFetch as unknown as typeof fetch;
+    global.fetch = asOpaque<typeof fetch>(mockFetch);
   });
 
   it('coalesces concurrent identical requests into one fetch and removes the entry on settle', async () => {
