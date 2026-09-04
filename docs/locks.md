@@ -255,7 +255,9 @@ screen does not re-read every marker.
 
 Locks has no local-first controller write, so its server actions do not use the `commit*`
 prefix: `hasPaykitReceiver` is a server query and `startPayment` is a server workflow action.
-This temporary naming exception will be resolved in #2296.
+The purchase bundle id file and the purchases listing are always read from the homeserver and
+never cached: they decide whether a payment is reused, so a stale copy could cost money. (#2296
+caches lock files and replicas, which do not change; it does not cover these.)
 
 Notes:
 
