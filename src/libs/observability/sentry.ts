@@ -111,6 +111,34 @@ export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions 
       // would report them as unhandled. Genuine upload failures are already
       // captured with full context through the Err.* factory pipeline.
       INLINE_IMAGE_UPLOAD_REJECTION_NAME,
+      // Serwist's sw-entry runs on page load; in environments where SW
+      // registration is blocked (embeddings, some webviews) its internal
+      // `_onStateChange` reads `registration.waiting` on a registration that
+      // never resolved and throws "Cannot read properties of undefined
+      // (reading 'waiting')" (PUBKY-APP-8K). Library-internal, no app data,
+      // page works fine without a SW.
+      /reading 'waiting'/,
+      // Native webview bridges (pubky-ring iOS/Android hosts) inject scripts
+      // that talk to `window.webkit.messageHandlers` / the Android
+      // JavascriptInterface. When the native side tears the bridge down
+      // (webview disposed mid-navigation), those injected scripts throw:
+      // "undefined is not an object (evaluating 'window.webkit.messageHandlers')"
+      // (PUBKY-APP-B6), "Error invoking postMessage: Java object is gone"
+      // (PUBKY-APP-B7), "Error invoking postMessage: Java exception was raised
+      // during method invocation" (PUBKY-APP-CJ). The frames are all in
+      // `app://navigation_performance_logger_android` / injected code — nothing
+      // in our bundle can catch or prevent them.
+      /window\.webkit\.messageHandlers/,
+      /Java object is gone/,
+      /Java exception was raised during method invocation/,
+      // MetaMask (and similar extensions) inject `inpage.js` into every page;
+      // "Failed to connect to MetaMask" surfaces from that injected script when
+      // the extension is disabled mid-session (PUBKY-APP-8G). Not our code.
+      /Failed to connect to MetaMask/,
+      // NotAllowedError: the user agent denied a permission-gated API call
+      // (clipboard, notification, capture). It is a user decision, already
+      // surfaced as UI feedback at the call site (PUBKY-APP-A3).
+      'NotAllowedError',
     ],
     beforeSend: scrubSensitiveData,
     beforeSendTransaction: scrubTransactionEvent,

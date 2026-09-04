@@ -62,6 +62,24 @@ export function GlobalErrorHandlerProvider({ children }: GlobalErrorHandlerProvi
         event.preventDefault();
         return;
       }
+      // Serwist's auto-injected `window.serwist.register()` (sw-entry) rejects
+      // when the browser or webview blocks service-worker registration
+      // (embeddings, private mode, Playwright). The app has no retry story
+      // here and the page works fine without a SW — preventing the rejection
+      // keeps it out of Sentry while the SW stays available in normal browsers
+      // (Sentry PUBKY-APP-21: "Error: Rejected", Serwist register frame).
+      if (
+        event.reason instanceof Error &&
+        event.reason.message === 'Rejected' &&
+        typeof event.reason.stack === 'string' &&
+        event.reason.stack.includes('@serwist/window')
+      ) {
+        event.preventDefault();
+        Logger.debug(
+          '[GlobalErrorHandlerProvider] Service worker registration blocked by the environment; continuing without SW',
+        );
+        return;
+      }
       notifyError(event.reason, 'window.unhandledrejection', {});
     };
 
