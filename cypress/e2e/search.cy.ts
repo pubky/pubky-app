@@ -163,6 +163,9 @@ describe('search', () => {
     addProfileTags([profileTag]);
     cy.get('[data-cy="profile-tab-content"]').contains(profileTag);
 
+    // wait for nexus to index the profile tag before searching
+    cy.wait(500);
+
     // open search results for the profile tag
     cy.visit(`/search?tags=${profileTag}`);
     cy.get('[data-cy="header-search"]').innerTextShouldContain(profileTag);
@@ -182,6 +185,9 @@ describe('search', () => {
     goToCollectionsPage();
     createCollection(collectionName, 'Created to be found by tag search.');
     addTagsToCollectionHero([collectionTag]);
+
+    // wait for nexus to index the collection tag before searching
+    cy.wait(500);
 
     // open search results for the collection tag
     cy.visit(`/search?tags=${collectionTag}`);

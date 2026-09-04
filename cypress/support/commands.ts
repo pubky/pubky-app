@@ -530,8 +530,11 @@ Cypress.Commands.add(
 // `filter` and `eq` are query commands, so the whole chain retries until a matching
 // card renders (a `.then` callback would capture a stale or still-loading result list)
 Cypress.Commands.add('findPostInSearchResults', (filterText?: string, postIdx = 0) => {
-  const postCards = cy.get('[data-cy="post-search-results"]').find('[data-cy="post-card"]');
-  return (filterText ? postCards.filter(`:contains("${filterText}")`) : postCards).eq(postIdx);
+  return cy
+    .get('[data-cy="post-search-results"]')
+    .find('[data-cy="post-card"]')
+    .filter((_idx, element) => (filterText ? element.innerText.includes(filterText) : true))
+    .eq(postIdx);
 });
 
 // To prevent Cypress from failing the test when running pubky-app with dev build:
