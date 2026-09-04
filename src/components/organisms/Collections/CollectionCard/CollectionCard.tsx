@@ -10,6 +10,8 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import type { UseTtlSubscriptionResult } from '@/hooks/useTtlSubscription/useTtlSubscription.types';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { resolveCollectionCoverImage } from '@/libs/post/collectionCoverImage';
@@ -63,6 +65,16 @@ interface CollectionCardProps {
  * state (title='', itemCount=0, etc.). Once details land we delegate to
  * `CollectionCardContent` with `postDetails` as a non-null prop. The
  * separation also keeps hook ordering clean for hooks that depend on the loaded envelope.
+ *
+ * Freshness: the envelope (name / description / cover / item count / layout)
+ * is a cached Dexie row that `usePostDetails` never re-fetches on a cache hit,
+ * so a `landing` card subscribes its composite id to the viewport TTL
+ * coordinator — the same path `PostMain` uses — and the live query picks up
+ * the refreshed row. `embed` cards do NOT subscribe: they are always nested
+ * inside a surface that already subscribes the same id (`PostPreviewCard`, or
+ * `PostMain` via `PostContentBase`), and post TTL subscriptions are not
+ * ref-counted, so a second subscriber on the same id would unsubscribe the
+ * first one when it left the viewport.
  */
 export function CollectionCard({
   authorPubky,
@@ -75,6 +87,13 @@ export function CollectionCard({
   const isMobile = useIsMobile();
   const isWideLayout = useEffectiveTagsLayout() === 'side';
   const { postDetails, isLoading } = usePostDetails(compositeId);
+  // One TTL subscriber per visible collection: standalone cards own it; embeds
+  // defer to the enclosing post surface (see the component doc above).
+  const { ref: ttlRef } = useTtlSubscription({
+    type: 'post',
+    id: compositeId,
+    enabled: presentation === 'landing',
+  });
 
   if (!postDetails) {
     // `undefined`/in-flight → skeleton; a settled `null` means the collection
@@ -110,6 +129,7 @@ export function CollectionCard({
       isMobile={isMobile}
       isWideLayout={isWideLayout}
       interactiveActions={interactiveActions}
+      ttlRef={ttlRef}
     />
   );
 }
@@ -124,6 +144,8 @@ interface CollectionCardContentProps {
   isMobile: boolean;
   isWideLayout: boolean;
   interactiveActions: boolean;
+  /** Viewport-observer ref from `useTtlSubscription`; attached to the card root. */
+  ttlRef: UseTtlSubscriptionResult['ref'];
 }
 
 function CollectionCardContent({
@@ -136,6 +158,7 @@ function CollectionCardContent({
   isMobile,
   isWideLayout,
   interactiveActions,
+  ttlRef,
 }: CollectionCardContentProps) {
   const isEmbed = presentation === 'embed';
   const showTagAddButton = interactiveActions && !isEmbed;
@@ -162,6 +185,7 @@ function CollectionCardContent({
 
   return (
     <Link
+      ref={ttlRef}
       overrideDefaults
       href={href}
       aria-label={title}

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { PostPreviewCard } from './PostPreviewCard';
 
 // Mock hooks
@@ -15,10 +16,10 @@ vi.mock('@/hooks/usePostNavigation/usePostNavigation', () => ({
 }));
 
 vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
-  useTtlSubscription: () => ({
+  useTtlSubscription: vi.fn(() => ({
     ref: mockTtlRef,
     isVisible: false,
-  }),
+  })),
 }));
 
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
@@ -123,6 +124,7 @@ vi.mock('@/atoms/Card/Card', () => {
 });
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
+const mockUseTtlSubscription = vi.mocked(useTtlSubscription);
 
 // Minimal resolved post — PostHeader / PostContentBase are mocked, so only the
 // non-null `postDetails` (and `isLoading: false`) matters for the missing check.
@@ -144,6 +146,8 @@ describe('PostPreviewCard', () => {
   beforeEach(() => {
     mockNavigateToPost.mockClear();
     mockNavigateToCollection.mockClear();
+    mockTtlRef.mockClear();
+    mockUseTtlSubscription.mockClear();
     mockUsePostDetails.mockReturnValue(resolvedPost);
   });
 
@@ -291,6 +295,19 @@ describe('PostPreviewCard', () => {
     render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} interactiveActions={false} />);
 
     expect(screen.getByTestId('collection-card')).toHaveAttribute('data-interactive-actions', 'false');
+  });
+
+  it('is the single TTL subscriber for a collection original (observes the embed wrapper)', () => {
+    // Post TTL subscriptions are not ref-counted, so the embed must have exactly
+    // one subscriber. This wrapper owns it; the nested `CollectionCard` skips its
+    // own subscription for `presentation="embed"` (covered in CollectionCard tests).
+    mockUsePostDetails.mockReturnValue(collectionPost);
+
+    const { container } = render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} />);
+
+    expect(mockUseTtlSubscription).toHaveBeenCalledWith({ type: 'post', id: COLLECTION_COMPOSITE_ID });
+    expect(mockTtlRef).toHaveBeenCalledWith(container.querySelector('[data-cy="post-preview-card"]'));
+    expect(screen.getByTestId('collection-card')).toHaveAttribute('data-presentation', 'embed');
   });
 });
 

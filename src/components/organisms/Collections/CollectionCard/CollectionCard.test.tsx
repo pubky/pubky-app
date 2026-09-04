@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import type { Pubky } from '@/models/models.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
@@ -22,8 +23,13 @@ const mockSetShowSignInDialog = vi.fn();
 const mockHandleTagToggle = vi.fn();
 const mockHandleTagAdd = vi.fn().mockResolvedValue({ success: true });
 const mockIsViewerTagger = vi.fn((tag: TagWithAvatars) => tag.relationship ?? false);
+const mockTtlRef = vi.fn();
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
+}));
+
+vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
+  useTtlSubscription: vi.fn(() => ({ ref: mockTtlRef, isVisible: false })),
 }));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
@@ -161,6 +167,7 @@ const COLLECTION_CONTENT_NO_COVER = JSON.stringify({
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
 const mockUseUserProfile = vi.mocked(useUserProfile);
+const mockUseTtlSubscription = vi.mocked(useTtlSubscription);
 
 function getTagsList(container: HTMLElement = document.body) {
   return container.querySelector('[data-cy="clickable-tags-list"]');
@@ -454,6 +461,40 @@ describe('CollectionCard', () => {
 
       expect(screen.getByTestId('collection-deleted')).toBeInTheDocument();
       expect(screen.queryByText('Collection content moderated.')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('TTL subscription', () => {
+    // The envelope (name / description / cover / item count) is a cached Dexie
+    // row that `usePostDetails` never re-fetches on a cache hit. Standalone
+    // cards therefore subscribe the collection to the viewport TTL coordinator
+    // (same path as `PostMain`) so another user's edits land without sign-out.
+    it('subscribes a landing card to post TTL for the composite id and observes the card root', () => {
+      const { container } = render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      expect(mockUseTtlSubscription).toHaveBeenCalledWith({ type: 'post', id: COMPOSITE_ID, enabled: true });
+      expect(mockTtlRef).toHaveBeenCalledWith(container.querySelector('a[data-cy="collection-card"]'));
+    });
+
+    it('does not subscribe embed cards — the enclosing PostPreviewCard / PostMain owns the subscription', () => {
+      // Post TTL subscriptions are not ref-counted: a second subscriber on the
+      // same id would unsubscribe the first one when it left the viewport.
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} presentation="embed" />);
+
+      expect(mockUseTtlSubscription).toHaveBeenCalledWith({ type: 'post', id: COMPOSITE_ID, enabled: false });
+    });
+
+    it.each([
+      ['skeleton', () => mockUsePostDetails.mockReturnValue({ postDetails: undefined, isLoading: true })],
+      ['missing', () => mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false })],
+      ['deleted', () => setPostDetails('[DELETED]')],
+      ['blurred', () => setPostDetails(COLLECTION_CONTENT, { isBlurred: true })],
+    ])('keeps the viewport observer detached in the %s state', (_state, arrange) => {
+      arrange();
+
+      render(<CollectionCard authorPubky={AUTHOR_PUBKY} postId={POST_ID} />);
+
+      expect(mockTtlRef).not.toHaveBeenCalledWith(expect.any(HTMLElement));
     });
   });
 

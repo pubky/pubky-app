@@ -131,6 +131,23 @@ ttlUserMs: 600_000,  // 10 minutes (users)
 ttlBatchIntervalMs: 5_000, // 5 seconds between batches
 ```
 
+### Viewport TTL subscriptions (UI)
+
+`useLocalFirstQuery` (and therefore `usePostDetails` / `useUserProfile`) never re-fetches a row that is already in IndexedDB. The only thing that refreshes a cached row while it is on screen is a viewport subscription to the `TtlCoordinator` (ADR-0012) via `useTtlSubscription`; the coordinator overwrites the row and bumps its TTL, and the live query re-renders every consumer.
+
+Post subscriptions are idempotent but **not ref-counted** (`subscribePost` skips duplicates, `unsubscribePost` removes the only slot), so each visible entity must have exactly one subscriber. The outermost surface owns it; nested embeds never subscribe:
+
+| Surface                             | Subscribes           | Notes                                                                              |
+| ----------------------------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| `PostMain`                          | its post id          | Feed / thread / single-post cards                                                  |
+| `PostPreviewCard`                   | the original post id | Repost + link embeds; the only subscriber for a nested collection embed            |
+| `CollectionCard` (`landing`)        | the collection id    | Profile Collections tab, `/collections` sections, search                           |
+| `CollectionCard` (`embed`)          | —                    | Always inside `PostPreviewCard` or `PostMain` → `PostContentBase`, which subscribe |
+| `CollectionHero`                    | the collection id    | The single-collection page's one subscriber for its envelope                       |
+| `ProfilePageHeader`, `UserListItem` | the user pubky       | User subscriptions are ref-counted, so multiple user subscribers are fine          |
+
+The collection envelope (`name`, `description`, `cover_image`, `items`, `layout`) is one cached post row, so a single refresh updates the title, cover, and item count everywhere at once.
+
 ## Pipes Normalization (ADR-0006)
 
 Pipes normalize external data to domain shapes.

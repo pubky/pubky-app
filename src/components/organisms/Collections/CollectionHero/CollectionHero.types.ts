@@ -1,5 +1,6 @@
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import type { CollectionLayout } from '@/config/collections';
+import type { UseTtlSubscriptionResult } from '@/hooks/useTtlSubscription/useTtlSubscription.types';
 import type { Pubky } from '@/models/models.types';
 
 export interface CollectionHeroReorderProps {
@@ -33,4 +34,6 @@ export interface CollectionHeroContentProps extends CollectionHeroProps {
   compositeId: string;
   /** Loaded post envelope — non-null by construction (shell renders the skeleton otherwise). */
   postDetails: EnrichedPostDetails;
+  /** Viewport-observer ref from `useTtlSubscription`; attached to the hero card root. */
+  ttlRef: UseTtlSubscriptionResult['ref'];
 }
