@@ -14,6 +14,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
+import { withPubkyPrefix } from '@/libs/utils/utils';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import type {
   TAccessCredential,
@@ -134,23 +135,47 @@ export class LocksService {
   }
 
   // Reader calls are public (no session) → `toAppError`, not `toLocksError` (a 401 isn't an expired session).
-  // TODO:[Locks] #2369 — password and `dev-static` all go away here.
-  static async submitProofBundle(bundle: TSubmittedProofBundle, _password: string): Promise<TVerificationTask> {
+  static async submitProof(bundle: TSubmittedProofBundle): Promise<TVerificationTask> {
     try {
       const viewer = await this.getViewer();
       return (await viewer.submitProofBundle(bundle)) as TVerificationTask;
     } catch (error) {
-      throw toAppError(error, ErrorService.Locks, 'LocksService.submitProofBundle');
+      throw toAppError(error, ErrorService.Locks, 'LocksService.submitProof');
     }
   }
 
-  static async lookupVerificationTask(creator: string, bundleId: string): Promise<TVerificationTask> {
+  // TODO:[Locks] #2369 — password and `dev-static` all go away here; delete this wrapper with them.
+  static async submitProofBundle(bundle: TSubmittedProofBundle, _password: string): Promise<TVerificationTask> {
+    return this.submitProof(bundle);
+  }
+
+  /**
+   * Whether the reader has published anything under their public Paykit namespace — the gate
+   * between the pay screen and the install-Bitkit screen. Presence only: it does not prove the
+   * receiver is valid or ready, so a submission can still fail after this returns true.
+   */
+  static async hasPaykitReceiver(readerPubky: string): Promise<boolean> {
+    try {
+      await ensureLocksSdkReady();
+      return await Locks.hasPaykitDataWithOptions(withPubkyPrefix(readerPubky), buildLocksOptions());
+    } catch (error) {
+      throw toAppError(error, ErrorService.Locks, 'LocksService.hasPaykitReceiver');
+    }
+  }
+
+  /**
+   * Null when the Lock Server has no task for this bundle id (the submission never landed). The SDK
+   * exposes no status field, so the 404 is read from the message, like `toLocksError` does for 401.
+   */
+  static async lookupVerificationTask(creator: string, bundleId: string): Promise<TVerificationTask | null> {
     try {
       const viewer = await this.getViewer();
       return (await viewer.lookupVerificationTask(
         new VerificationTaskHandleOptions(creator, bundleId),
       )) as TVerificationTask;
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('HTTP 404')) return null;
       throw toAppError(error, ErrorService.Locks, 'LocksService.lookupVerificationTask');
     }
   }

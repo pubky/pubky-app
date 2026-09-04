@@ -5,8 +5,9 @@ teaser advertising it. This doc starts with the mental model — what is differe
 rest of the app — and gets more detailed the further down you read. If you know pubky-app
 but not locks, read top to bottom.
 
-Phase 1 (epic **#1998**) ships **password locks only** — payment comes later. See
-[Phase 1 & release-gate markers](#phase-1--release-gate-markers) for what is deliberately
+Phase 2 (epic **#2364**) makes locks **payable**: a creator sets a price in sats and the
+reader pays it from Bitkit. The Phase 1 password lock still exists until **#2369** deletes
+it. See [Phase 1 & marker tracking](#phase-1--marker-tracking) for what is deliberately
 temporary.
 
 ## Table of contents
@@ -28,9 +29,9 @@ temporary.
 ## What a lock is
 
 To the user: a post in the feed that looks normal — a short teaser, maybe an image — with a
-lock card on top ("Secret essay · Unlock"). Entering the password (Phase 1) reveals the
-real content in place: a post, an article, images, files. Everything the user unlocked is
-listed on their own profile under **Unlocked**.
+lock card on top ("Secret essay · Unlock ₿1,000"). Paying the price from Bitkit (or, until
+#2369, entering the password) reveals the real content in place: a post, an article, images,
+files. Everything the user unlocked is listed on their own profile under **Unlocked**.
 
 Two roles: the **creator** publishes locked content behind a public announcement; the
 **reader** unlocks and reads it.
@@ -70,10 +71,11 @@ article button while the lock switch is on (`PostInputExpandableSection`), and
 (`core/pipes/post/post.kind.ts`), which throws on those two kinds. The guard is the
 backstop for the UI rule, so a UI change can't loosen it silently.
 
-**2. Unlock (reader).** The lock card opens a password dialog. The FE submits a **proof**
-(evidence the unlock criteria are met — in Phase 1, the password) to the Lock Server,
-polls until verified, gets a short-lived credential, proxy-reads the guarded bytes with
-it — and then **replicates** them into the reader's own `/priv`.
+**2. Unlock (reader).** The lock card opens the unlock dialog for the lock's kind — Pay to
+Unlock for a payment lock, a password prompt until #2369. Either way the FE submits a
+**proof** to the Lock Server, waits until it verifies (for a payment: until the reader has
+paid in Bitkit), gets a short-lived credential, proxy-reads the guarded bytes with it — and
+then **replicates** them into the reader's own `/priv`.
 Details: [Reading a lock post](#reading-a-lock-post).
 
 **3. Read again.** Every later view skips the Lock Server entirely: the post renders from
@@ -83,11 +85,12 @@ replica also survives the creator revoking the lock. Details:
 
 ## Where the data lives
 
-| Where                                         | What                                      | Who can read it                                              |
-| --------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------ |
-| creator's HS `/priv/locks.app/content/`       | the locked post + attachments (originals) | the creator; readers only via Lock Server proxy + credential |
-| creator's HS `/pub/locks.app/<lockId>.json`   | the public lock contract (`LockFile`)     | anyone                                                       |
-| reader's HS `/priv/social/unlocked/<lockId>/` | the reader's replica, written on unlock   | that reader only                                             |
+| Where                                              | What                                                                    | Who can read it                                              |
+| -------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
+| creator's HS `/priv/locks.app/content/`            | the locked post + attachments (originals)                               | the creator; readers only via Lock Server proxy + credential |
+| creator's HS `/pub/locks.app/<lockId>.json`        | the public lock contract (`LockFile`)                                   | anyone                                                       |
+| reader's HS `/priv/social/unlocked/<lockId>/`      | the reader's replica, written on unlock                                 | that reader only                                             |
+| reader's HS `/priv/social/purchases/<lockId>.json` | the purchase's bundle id, written BEFORE the proof is submitted (#2297) | that reader only                                             |
 
 ---
 
@@ -143,6 +146,10 @@ and swaps in the guarded post once it becomes readable.
 | `components/organisms/PostBody/PostBody.tsx`                       | shared text + link-embed + attachment renderer (feed post body **and** lock teaser) |
 | `components/molecules/LockedPostCard/LockedPostCard.tsx`           | lock card: title, shield graphic, Unlock control (also used by the composer)        |
 | `components/molecules/DialogUnlockContent/DialogUnlockContent.tsx` | password prompt                                                                     |
+| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx`     | Pay to Unlock modal (checking / pay / install / waiting / blocked)                  |
+| `hooks/usePayToUnlock/usePayToUnlock.ts`                           | the payment state machine: bundle-id routing, submit, polling, stall/resume         |
+| `hooks/usePurchasedLocks/usePurchasedLocks.ts`                     | one listing of the reader's purchases, shared by every lock post                    |
+| `hooks/usePurchaseResume/usePurchaseResume.ts`                     | finishes a paid purchase whose content never landed, without interaction            |
 
 ## Reading a lock post
 
@@ -154,18 +161,22 @@ LockedPostContent
   ├─ useLockFile(lock)                       → lock.json (LockFile | null)
   │    └─ LocksController.fetchLockFile      → LocksApplication → LocksService.readContentLock
   │
-  └─ useUnlockedContent(lock, lockFile, authorId)
-       ├─ 1) already unlocked as a reader → fetchReplicatedContent  (my HS /priv copy)
-       ├─ 2) my own post (a == b)         → fetchOwnContent         (my HS /priv original)
-       └─ 3) neither → lock card → DialogUnlockContent → unlock (below)
+  ├─ useUnlockedContent(lock, lockFile, authorId)
+  │    ├─ 1) already unlocked as a reader → fetchReplicatedContent  (my HS /priv copy)
+  │    ├─ 2) my own post (a == b)         → fetchOwnContent         (my HS /priv original)
+  │    └─ 3) neither → lock card → unlock (below)
+  │             ├─ password lock → DialogUnlockContent
+  │             └─ payment lock  → DialogPayToUnlock (sign-in required first)
+  └─ 4) saved purchase, no replica → usePurchaseResume → fetchPaidContentIfCompleted
 ```
 
 `a == b` is team shorthand: **a** = the announcement's author account, **b** = the account
 that owns the lock (Lock Server side). Phase 1 assumes they are the same person, and
 own-content reads rely on it.
 
-**Unlock** (`LocksApplication.unlockContent`) — steps 1–4 run against the Lock Server and
-need no pubky.app session; step 5 writes to the reader's homeserver with it:
+**Password unlock** (`LocksApplication.unlockContent`) — one blocking call; steps 1–4 run
+against the Lock Server and need no pubky.app session; step 5 writes to the reader's
+homeserver with it. Goes away with #2369:
 
 1. `submitProofBundle` — proof built from `lock.json` by `LockProofBundler`
 2. `lookupVerificationTask` — poll every 1.5s, max 40 attempts, until `completed`
@@ -174,6 +185,47 @@ need no pubky.app session; step 5 writes to the reader's homeserver with it:
 5. `replicateUnlockedContent` — copy into the reader's own `/priv/social/unlocked/<lockId>/`,
    **attachments first, `post.json` last** (the completion marker), so a partial copy is
    never mistaken for an unlocked post
+
+**Payment unlock** (#2368) is the same pipeline split into steps the modal drives, because a
+real payment takes minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the
+state machine:
+
+1. On open: `fetchPurchaseBundleId` — the reader's `/priv/social/purchases/<lockId>.json` holds
+   the bundle id of a purchase in flight (#2297). It is the ONLY handle to reach a purchase
+   again (the reader is anonymous to the Lock Server), so it is written **before** the proof
+   is submitted, kept after replication, and a failed read blocks paying (fail closed).
+2. Route by the server's answer (`fetchPaymentStatus`; SDK 404 maps to `null`): no task → the submission never landed,
+   Pay again with the SAME id; `pending`/`in_progress` → waiting + polling; `completed` →
+   credential; `failed`/`expired` → a fresh id (those cannot be retried).
+3. Pressing **Pay with Bitkit** (or **I completed the steps** on the no-wallet screen) is the
+   start of the payment: `startPayment` saves the id, then submits the proof (empty payload, reader pubky at
+   the bundle's top level), then wait. Paykit delivers the payment request to the reader's
+   wallet; the app never sees an address or invoice.
+4. Waiting polls every **3 seconds** and has **no server deadline** — polling stops on a wall clock (3 min) without failing
+   the purchase, re-checks when the tab becomes visible again (the reader was in Bitkit), and
+   offers a **Check again** button so a reader who never left the tab is not stuck on a spinner.
+5. Turning a completed payment into content (credential → read) parks the same way when it fails,
+   and **Check again** runs it again. Retrying is free — the entitlement is durable and the
+   credential is minted fresh each time, which is also why an expired credential needs no detection.
+   Once the content is ready, the modal shows the paid confirmation; **View Content** closes it and
+   reveals the guarded post.
+
+Closing during submission or waiting opens a confirmation dialog. Closing only stops this tab's
+polling; the server-side payment continues and reopening resumes it from the saved bundle id.
+
+Two tabs can still race between choosing and saving a bundle id; the post-write read-back that
+elects the stored winner is deferred to #2468.
+
+**Paid but never received.** The payment completes on the server whether or not the browser is
+watching, so a reader who closes the tab mid-wait would come back to a post still offering Unlock
+over content they own. `usePurchaseResume` closes that gap: it finishes the purchase in the
+background, with no interaction. What tells it a lock is already paid for is
+`usePurchasedLocks` — **one listing** of `/priv/social/purchases/` per reader per page load,
+shared by every lock post on screen, so the feed never asks per post.
+
+The wallet gate (`hasPaykitReceiver`) decides between the pay and install screens; it reports
+presence only, so a submission can still fail afterwards (one `502` covers both "wallet not
+ready" and "Paykit down" — a distinct code is a pending ask on the locks side).
 
 Replication is what makes path 1 work on later views: no Lock Server call, and the content
 survives the creator revoking access.
@@ -201,15 +253,21 @@ screen does not re-read every marker.
 | pipe        | `core/pipes/locks/locks.parser.ts`   | `LockContentParser`, `LockFileParser`, `GuardedContentParser`, `LockProofBundler` (pure) |
 | types       | `core/services/locks/locks.types.ts` | `LockFile`, `lockPostContentSchema`, `VerifierType`, guarded-post schemas                |
 
+Locks has no local-first controller write, so its server actions do not use the `commit*`
+prefix: `hasPaykitReceiver` is a server query and `startPayment` is a server workflow action.
+This temporary naming exception will be resolved in #2296.
+
 Notes:
 
 - **Own-lock reads require both checks.** `lock.json` is public, so anyone can point their
   own post at someone else's lock URL — `useUnlockedContent` treats a lock as mine only
   when the lock creator **and** the post author are the signed-in user.
 - **Reads wait for the restored session.** `currentUserPubky` is persisted and rehydrates
-  before the homeserver session exists; both `/priv` reads gate on the session.
-- **Single error origin.** Validation throws `Err.validation` in the application (the
-  factory logs + reports to Sentry once). Hooks catch and degrade to the lock card.
+  before the homeserver session exists; every reader-side `/priv` read gates on the session —
+  the replica, the own-content read, and the saved bundle id (without the gate a purchase in
+  flight would read back as "none" and offer to pay again).
+- **Single error origin.** Validation throws `Err.validation` in the application (the factory
+  logs + reports to Sentry once). Hooks catch and degrade to the lock card.
 - **Read path.** This is a read flow; there is no local-first `commit*` write.
 
 ## The Unlocked screen
@@ -247,9 +305,10 @@ Phase 1 (epic **#1998**) was password locks only: every criterion used a `dev-st
 placeholder that always passes. Phase 2 (**#2364**) adds the price: a payment lock writes a
 single `paykit-payment` criterion instead, holding the recipient (always the lock's creator),
 the amount in sats as a string, and `BTC` as the asset. The password path still writes
-`dev-static` until **#2369** removes it. Reader-side payment is **#2368**, so a payment lock
-cannot be unlocked from pubky-app yet. Creator-configurable credential TTLs and IndexedDB
-caching still come later.
+`dev-static` until **#2369** removes it. Reader-side payment (**#2368**) is in: a payment
+lock is unlocked by paying from Bitkit (see
+[Reading a lock post](#reading-a-lock-post)). Creator-configurable credential TTLs and
+IndexedDB caching still come later.
 
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
@@ -260,6 +319,9 @@ Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 **The Lock SDK is not on npm yet** (as of 2026-08). `@pubky/locks-sdk` is deliberately
 missing from `package.json` — you build it from the `pubky/locks` repo and copy it into
 `node_modules` by hand:
+
+Until `pubky/locks#42` lands, build the SDK from that PR branch; the payment wallet gate
+depends on its `Locks.hasPaykitDataWithOptions` API.
 
 ```bash
 cd <locks repo>/locks-sdk/bindings/js
@@ -280,4 +342,5 @@ the copy — if lock imports suddenly fail or behave stale, re-copy first.
 - Lock server FE integration: `pubky/locks` → `docs/_front_end_integration.md` — the
   `lock.json` shape and the submit-proof → credential → proxy-read access flow.
 - Creator side: [ADR 0019](adr/0019-locks-creator-publishing.md)
-- Issues: #2003 (reader), #1998 (locks epic / Phase 1), #2040 (release-gate audit).
+- Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2468 (multi-tab read-back),
+  #2369 (password-lock removal), #1998 (Phase 1 epic).

@@ -6,6 +6,7 @@ import type { TLockConfig } from '@/application/locks/locks.types';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
+import { formatSats } from '@/libs/utils/formatSats';
 import { cn } from '@/libs/utils/utils';
 
 interface LockedPostCardProps {
@@ -29,8 +30,6 @@ interface LockedPostCardProps {
 /** Stands in for an unlock requirement the reader can't be shown — a password, or an unresolved lock. */
 const HIDDEN_REQUIREMENT_MASK = '••••••';
 
-const satsFormatter = new Intl.NumberFormat('en-US');
-
 /** Slide-over duration — the single source for both the CSS transition and the deferred modal open.
  *  Exported for tests (they advance fake timers by exactly this). */
 export const SLIDE_MS = 200;
@@ -48,9 +47,7 @@ export function LockedPostCard({
   const isDisabled = disabled ?? !onUnlock;
   const UnlockInfoIcon = unlockInfo?.method === 'payment' ? Wallet : Shield;
   const unlockInfoLabel =
-    unlockInfo?.method === 'payment'
-      ? `₿${satsFormatter.format(Number(unlockInfo.amountSats))}`
-      : HIDDEN_REQUIREMENT_MASK;
+    unlockInfo?.method === 'payment' ? formatSats(unlockInfo.amountSats) : HIDDEN_REQUIREMENT_MASK;
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const lockInfoRef = useRef<HTMLDivElement>(null);

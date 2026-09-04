@@ -1,10 +1,15 @@
-import { isPositiveIntegerString, isPubkyIdentifier } from '@/libs/utils/utils';
+import type { ZodType } from 'zod';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { isPositiveIntegerString, isPubkyIdentifier, withPubkyPrefix } from '@/libs/utils/utils';
 import {
   type GuardedPost,
   guardedPostSchema,
   type LockFile,
   type LockPostContent,
   lockPostContentSchema,
+  purchaseFileSchema,
   type ReplicatedPost,
   replicatedPostSchema,
   type TProof,
@@ -15,6 +20,8 @@ import {
 const GUARDED_CONTENT_PREFIX = '/priv/locks.app/content/';
 /** Where a reader keeps its own copy of content it has unlocked. */
 const UNLOCKED_PREFIX = '/priv/social/unlocked/';
+/** Where a reader keeps each purchase's bundle id; without it the paid content cannot be fetched again. */
+const PURCHASES_PREFIX = '/priv/social/purchases/';
 /** Uploaded last, so its presence proves every attachment before it succeeded. */
 const UNLOCKED_POST_FILE = 'post.json';
 
@@ -99,8 +106,37 @@ export class LockFileParser {
 export class LockProofBundler {
   private constructor() {}
 
+  /**
+   * Payment bundle: exactly one proof with an empty payload, plus the reader's pubky at the top
+   * level — Paykit resolves the payment-request delivery address from it. Resubmitting the exact
+   * same bundle is a safe replay; any variation returns `409 task_state_conflict`, so it must be
+   * built deterministically from the same inputs every time.
+   */
+  static buildPayment(
+    lockFile: LockFile,
+    lockUrl: string,
+    bundleId: string,
+    readerPubky: string,
+  ): TSubmittedProofBundle {
+    const criterionId = lockFile.criteria[0]?.criterion_id;
+    if (!criterionId) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'payment lock file has no criterion', {
+        service: ErrorService.Locks,
+        operation: 'LockProofBundler.buildPayment',
+        context: { lockUrl },
+      });
+    }
+    return {
+      version: 1,
+      bundle_id: bundleId,
+      pubky_lock_resource: lockUrl.replace(/^pubky:\/\//, ''),
+      reader_public_key: withPubkyPrefix(readerPubky),
+      proofs: [{ criterion_id: criterionId, verifier_type: VerifierType.PAYMENT, payload: {} }],
+    };
+  }
+
+  // TODO:[Locks] #2369 — password and `dev-static` go away here.
   static build(lockFile: LockFile, lockUrl: string, bundleId: string): TSubmittedProofBundle {
-    // TODO:[Locks] #2369 — password and `dev-static` all go away here.
     const proofs: TProof[] = lockFile.criteria.map((criterion) => ({
       criterion_id: criterion.criterion_id,
       verifier_type: criterion.verifier_type,
@@ -141,6 +177,57 @@ export class GuardedContentParser {
   /** Reader's unlocked root: `pubky://<reader>/priv/social/unlocked/`. */
   static unlockedRootUrl(readerPubky: string): string {
     return `pubky://${readerPubky}${UNLOCKED_PREFIX}`;
+  }
+
+  /**
+   * Reader's bundle id file for one lock: `pubky://<reader>/priv/social/purchases/<lockId>.json`.
+   * Beside the replica, not inside it, so deleting the replica keeps the bundle id.
+   */
+  static purchaseUrl(readerPubky: string, lockId: string): string {
+    return `pubky://${readerPubky}${PURCHASES_PREFIX}${lockId}.json`;
+  }
+
+  /** Reader's purchases root: `pubky://<reader>/priv/social/purchases/`. */
+  static purchasesRootUrl(readerPubky: string): string {
+    return `pubky://${readerPubky}${PURCHASES_PREFIX}`;
+  }
+
+  /**
+   * Picks the `<lockId>` out of each purchases-root file URL:
+   * `pubky://<reader>/priv/social/purchases/<lockId>.json` → `<lockId>`.
+   * Anything else in the directory is ignored rather than guessed at.
+   */
+  static purchasedLockIds(fileUrls: string[]): string[] {
+    const ids: string[] = [];
+    for (const url of fileUrls) {
+      const start = url.indexOf(PURCHASES_PREFIX);
+      if (start === -1) continue;
+      if (url.slice(start + PURCHASES_PREFIX.length).includes('/')) continue;
+      const lockId = LockContentParser.lockIdFromUrl(url);
+      if (lockId) ids.push(lockId);
+    }
+    return ids;
+  }
+
+  /** Body of the purchase file (`{"bundle_id":…}`); `parsePurchaseFile` reads it back. */
+  static buildPurchaseFile(bundleId: string): string {
+    return JSON.stringify({ bundle_id: bundleId });
+  }
+
+  /** Bundle id inside the purchase file, or null when the bytes are unreadable. */
+  static parsePurchaseFile(bytes: Uint8Array): string | null {
+    return this.parseJsonBytes(bytes, purchaseFileSchema)?.bundle_id ?? null;
+  }
+
+  private static parseJsonBytes<T>(bytes: Uint8Array, schema: ZodType<T>): T | null {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(new TextDecoder().decode(bytes));
+    } catch {
+      return null;
+    }
+    const result = schema.safeParse(raw);
+    return result.success ? result.data : null;
   }
 
   /**
@@ -191,25 +278,11 @@ export class GuardedContentParser {
 
   /** Parses the reader's replicated `post.json` bytes. Returns null on bad JSON. */
   static parseReplicatedPost(bytes: Uint8Array): ReplicatedPost | null {
-    let raw: unknown;
-    try {
-      raw = JSON.parse(new TextDecoder().decode(bytes));
-    } catch {
-      return null;
-    }
-    const result = replicatedPostSchema.safeParse(raw);
-    return result.success ? result.data : null;
+    return this.parseJsonBytes(bytes, replicatedPostSchema);
   }
 
   /** Parses the guarded primary bytes (a `PubkyAppPost` JSON) into the reader post shape. */
   static parsePost(bytes: Uint8Array): GuardedPost | null {
-    let raw: unknown;
-    try {
-      raw = JSON.parse(new TextDecoder().decode(bytes));
-    } catch {
-      return null;
-    }
-    const result = guardedPostSchema.safeParse(raw);
-    return result.success ? result.data : null;
+    return this.parseJsonBytes(bytes, guardedPostSchema);
   }
 }

@@ -145,9 +145,71 @@ describe('LockProofBundler', () => {
     };
     expect(LockProofBundler.build(twoCriteria, LOCK_URL, 'b').proofs).toHaveLength(2);
   });
+
+  describe('buildPayment', () => {
+    it('builds one empty-payload proof with the reader pubky at the top level', () => {
+      const paymentLock = {
+        ...MOCK_LOCK_FILE,
+        criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
+      };
+      expect(LockProofBundler.buildPayment(paymentLock, LOCK_URL, 'bundle-1', 'reader123')).toEqual({
+        version: 1,
+        bundle_id: 'bundle-1',
+        pubky_lock_resource: `${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/lock1.json`,
+        reader_public_key: 'pubkyreader123',
+        proofs: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', payload: {} }],
+      });
+    });
+
+    it('throws when the lock file has no criterion', () => {
+      const empty = { ...MOCK_LOCK_FILE, criteria: [] };
+      expect(() => LockProofBundler.buildPayment(empty, LOCK_URL, 'b', 'r')).toThrow();
+    });
+  });
 });
 
 describe('GuardedContentParser', () => {
+  describe('purchase bundle id file', () => {
+    it('builds the purchase URL beside the replica, not inside it', () => {
+      expect(GuardedContentParser.purchaseUrl('reader123', 'lock1')).toBe(
+        'pubky://reader123/priv/social/purchases/lock1.json',
+      );
+    });
+
+    it('lists the purchased lock ids from the purchases root', () => {
+      expect(
+        GuardedContentParser.purchasedLockIds([
+          'pubky://reader1/priv/social/purchases/lock1.json',
+          'pubky://reader1/priv/social/purchases/lock2.json',
+        ]),
+      ).toEqual(['lock1', 'lock2']);
+    });
+
+    it.each([
+      ['a file outside the purchases root', 'pubky://reader1/priv/social/unlocked/lock1/post.json'],
+      ['a nested path', 'pubky://reader1/priv/social/purchases/lock1/extra.json'],
+      ['a non-json entry', 'pubky://reader1/priv/social/purchases/lock1'],
+      ['an empty id', 'pubky://reader1/priv/social/purchases/.json'],
+    ])('ignores %s', (_label, url) => {
+      expect(GuardedContentParser.purchasedLockIds([url])).toEqual([]);
+    });
+
+    it('round-trips a bundle id through build + parse', () => {
+      const bytes = new TextEncoder().encode(GuardedContentParser.buildPurchaseFile('bundle-1'));
+      expect(GuardedContentParser.parsePurchaseFile(bytes)).toBe('bundle-1');
+    });
+
+    it.each([
+      ['not JSON', 'garbage'],
+      ['not an object', '"bundle-1"'],
+      ['missing the field', '{}'],
+      ['an empty id', '{"bundle_id":""}'],
+      ['a non-string id', '{"bundle_id":7}'],
+    ])('parses %s to null', (_label, raw) => {
+      expect(GuardedContentParser.parsePurchaseFile(new TextEncoder().encode(raw))).toBeNull();
+    });
+  });
+
   describe('toReadPath', () => {
     it('strips the guarded content prefix to the relative read path', () => {
       expect(GuardedContentParser.toReadPath('/priv/locks.app/content/nested/a.txt')).toBe('nested/a.txt');
