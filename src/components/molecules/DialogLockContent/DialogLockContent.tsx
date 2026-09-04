@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/atoms/Tabs/Tabs';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
 import { calculatePasswordStrength } from '@/libs/password/password';
+import { formatSats } from '@/libs/utils/formatSats';
 import { cn } from '@/libs/utils/utils';
 import type { DialogLockContentProps, LockMethod } from './DialogLockContent.types';
 
@@ -25,7 +26,6 @@ const PASSWORD_RULE_LABELS: Record<string, string> = {
   special: 'At least 1 special character',
 };
 
-const satsFormatter = new Intl.NumberFormat('en-US');
 const usdFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 // Only the leading run of digits counts. Grouping separators go first so the formatted value the
@@ -205,7 +205,7 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
                     <Input
                       id="lock-amount"
                       inputMode="numeric"
-                      value={amount ? satsFormatter.format(amountSats) : ''}
+                      value={amount ? (formatSats(amountSats, { symbol: false }) ?? '') : ''}
                       onChange={(event) => setAmount(toSats(event.target.value))}
                       placeholder="0"
                       className="h-auto flex-1 border-0 bg-transparent p-0 text-base shadow-none"

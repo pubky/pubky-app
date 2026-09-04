@@ -46,7 +46,11 @@ export function DialogUnlockContent({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl">
+      <DialogContent
+        className="w-full max-w-md rounded-xl border-x-0 border-y border-brand bg-card sm:max-w-xl"
+        // Clicks bubble through the portal to the post card, which would navigate to the post.
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>{'Password to Unlock'}</DialogTitle>
         </DialogHeader>
@@ -76,7 +80,7 @@ export function DialogUnlockContent({
           />
           {error && (
             <Typography size="sm" className="text-destructive">
-              {'Couldn\'t unlock this content. Please try again.'}
+              {"Couldn't unlock this content. Please try again."}
             </Typography>
           )}
         </form>

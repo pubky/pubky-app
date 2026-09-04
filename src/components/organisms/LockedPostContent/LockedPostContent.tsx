@@ -6,14 +6,21 @@ import type { TLockConfig } from '@/application/locks/locks.types';
 import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
+import { usePayToUnlock } from '@/hooks/usePayToUnlock/usePayToUnlock';
+import { usePurchasedLocks } from '@/hooks/usePurchasedLocks/usePurchasedLocks';
+import { usePurchaseResume } from '@/hooks/usePurchaseResume/usePurchaseResume';
+import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUnlockedContent } from '@/hooks/useUnlockedContent/useUnlockedContent';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { cn } from '@/libs/utils/utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
 import { DialogUnlockContent } from '@/molecules/DialogUnlockContent/DialogUnlockContent';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { useToast } from '@/molecules/Toaster/use-toast';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
+import { LockContentParser } from '@/pipes/locks/locks.parser';
+import type { TUnlockedContent } from '@/services/locks/locks.types';
 import { PostArticle } from '../PostArticle/PostArticle';
 import { PostBody } from '../PostBody/PostBody';
 
@@ -44,6 +51,7 @@ export function LockedPostContent({
   textClassName,
 }: LockedPostContentProps) {
   const [isUnlockOpen, setIsUnlockOpen] = useState(false);
+  const [isPayOpen, setIsPayOpen] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState(false);
   const lockContent = LocksController.getLockContent(content);
@@ -54,27 +62,74 @@ export function LockedPostContent({
     : priceSats
       ? { method: 'payment', amountSats: priceSats }
       : { method: 'password' };
-  const { unlockedPost, applyUnlockedContent, media, isOwnLock } = useUnlockedContent({ lock, lockFile, authorId });
+  const { unlockedPost, applyUnlockedContent, media, isOwnLock, isResolvingReplica } = useUnlockedContent({
+    lock,
+    lockFile,
+    authorId,
+  });
   const { toast } = useToast();
+  const { requireAuth } = useRequireAuth();
+  const isPaymentLock = unlockInfo?.method === 'payment';
+
+  /** Renders unlocked content, closes whichever dialog produced it, and reports dropped media. */
+  const showUnlockedContent = (unlocked: TUnlockedContent) => {
+    setIsUnlockOpen(false);
+    setIsPayOpen(false);
+
+    applyUnlockedContent(unlocked); // renders + replicates into the reader's /priv
+    // A dropped attachment is a permanent data error already reported to Sentry. Warn the reader
+    // with a toast, but keep rendering the rest of the post — don't block the unlocked view.
+    if (unlocked.attachments.length < (unlocked.post.attachments?.length ?? 0)) {
+      toast({ variant: 'error', description: 'Could not load attachments' });
+    }
+  };
+
+  // Paid but never received: the payment completed while the reader was away, so nothing on screen
+  // would otherwise say so. Resolves itself, without the reader pressing anything.
+  const { hasPurchase, markPurchased } = usePurchasedLocks({ enabled: isPaymentLock });
+  const lockId = lock ? LockContentParser.lockIdFromUrl(lock) : null;
+  usePurchaseResume({
+    lock,
+    lockFile,
+    // The open modal owns status polling and completion. In particular, markPurchased must not
+    // start a competing background finish immediately after a new payment is submitted.
+    isPurchased: !isPayOpen && hasPurchase(lockId),
+    hasContent: Boolean(unlockedPost),
+    isResolvingContent: isResolvingReplica,
+    onResumed: showUnlockedContent,
+  });
+
+  const { stage, isStalled, isSubmitting, submit, recheck, viewContent } = usePayToUnlock({
+    open: isPayOpen,
+    lockUrl: lock ?? '',
+    lockFile,
+    onPurchased: markPurchased,
+    onCompleted: showUnlockedContent,
+  });
 
   if (!lockContent) return null;
 
+  // No lock file (still loading, or its fetch failed) → nothing to unlock against.
+  const handleUnlock = !lockFile
+    ? undefined
+    : isPaymentLock
+      ? // Paying needs the reader's pubky (it is the payment-request delivery address),
+        // so a signed-out reader gets the sign-in dialog instead.
+        () => requireAuth(() => setIsPayOpen(true))
+      : () => {
+          setUnlockError(false); // clear a prior failure so reopening starts clean
+          setIsUnlockOpen(true);
+        };
+
+  // TODO:[Locks] #2369 — the password path (this handler + DialogUnlockContent below) goes away.
   const handleViewContent = async (password: string) => {
     if (!lockFile || !lock) return;
     setIsUnlocking(true);
     setUnlockError(false);
     try {
       const { credential } = await LocksController.unlock({ lockFile, lockUrl: lock, password });
-      // Throws (caught below → error shown, dialog stays open) if the guarded post is unparseable.
-      const content = await LocksController.fetchUnlockedContent({ lockFile, credential });
-      setIsUnlockOpen(false);
-
-      applyUnlockedContent(content); // renders + replicates into the reader's /priv
-      // A dropped attachment is a permanent data error already reported to Sentry. Warn the reader
-      // with a toast, but keep rendering the rest of the post — don't block the unlocked view.
-      if (content.attachments.length < (content.post.attachments?.length ?? 0)) {
-        toast({ variant: 'error', description: 'Could not load attachments' });
-      }
+      // Throws if the guarded post is unparseable; the catch below keeps the dialog open.
+      showUnlockedContent(await LocksController.fetchUnlockedContent({ lockFile, credential }));
     } catch {
       setUnlockError(true); // already logged by the Err factory
     } finally {
@@ -120,19 +175,11 @@ export function LockedPostContent({
           </div>
         </>
       ) : (
-        // No lock file (still loading, or its fetch failed) → nothing to unlock against.
         <LockedPostCard
           title={lockContent.lock_title}
           unlockInfo={unlockInfo}
-          unlockOpen={isUnlockOpen}
-          onUnlock={
-            !lockFile
-              ? undefined
-              : () => {
-                  setUnlockError(false); // clear a prior failure so reopening starts clean
-                  setIsUnlockOpen(true);
-                }
-          }
+          unlockOpen={isUnlockOpen || isPayOpen}
+          onUnlock={handleUnlock}
         />
       )}
       <DialogUnlockContent
@@ -143,6 +190,21 @@ export function LockedPostContent({
         loading={isUnlocking}
         error={unlockError}
       />
+      {isPaymentLock && priceSats && (
+        <DialogPayToUnlock
+          open={isPayOpen}
+          onOpenChange={setIsPayOpen}
+          lockTitle={lockContent.lock_title}
+          authorId={authorId}
+          priceSats={priceSats}
+          stage={stage}
+          isStalled={isStalled}
+          isSubmitting={isSubmitting}
+          onSubmit={submit}
+          onRecheck={recheck}
+          onViewContent={viewContent}
+        />
+      )}
     </Container>
   );
 }

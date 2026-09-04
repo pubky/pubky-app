@@ -24,6 +24,9 @@ import type { UseUnlockedContentParams, UseUnlockedContentResult } from './useUn
 export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedContentParams): UseUnlockedContentResult {
   const [unlockedPost, setUnlockedPost] = useState<GuardedPost | null>(null);
   const [media, setMedia] = useState<AttachmentConstructed[]>([]);
+  // Until the replica read settles, "no content" means "not known yet". Callers that would act on
+  // its absence — re-downloading a purchase, say — have to be able to tell the two apart.
+  const [isResolvingReplica, setIsResolvingReplica] = useState(true);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   // Effects 1) and 2) below both read my own `/priv`, so they need the restored session.
   // `currentUserPubky` alone is persisted and rehydrates first, which would run them too early.
@@ -49,14 +52,21 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
     // My own post can't have a replicated copy (unlocking only happens on other people's posts).
     // Leans on the a == b policy: post author == lock creator. TODO:[Locks] #2283 — a != b breaks
     // that inference; decide by lock ownership (e.g. a local unlock index), not authorship.
-    if (authorId === currentUserPubky) return;
+    if (authorId === currentUserPubky) {
+      setIsResolvingReplica(false);
+      return;
+    }
 
     let cancelled = false;
+    setIsResolvingReplica(true);
     LocksController.fetchReplicatedContent({ lockUrl: lock, readerPubky: currentUserPubky })
       .then((result) => {
         if (!cancelled && result) applyContent(result);
       })
-      .catch(() => undefined); // already reported by the Err factory; fall back to the lock card
+      .catch(() => undefined) // already reported by the Err factory; fall back to the lock card
+      .finally(() => {
+        if (!cancelled) setIsResolvingReplica(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -109,5 +119,5 @@ export function useUnlockedContent({ lock, lockFile, authorId }: UseUnlockedCont
     }
   };
 
-  return { unlockedPost, applyUnlockedContent, media, isOwnLock };
+  return { unlockedPost, applyUnlockedContent, media, isOwnLock, isResolvingReplica };
 }

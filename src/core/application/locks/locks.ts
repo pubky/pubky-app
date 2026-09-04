@@ -33,7 +33,12 @@ import type {
   TFetchUnlockedContentParams,
   TFetchUnlockedListParams,
   TLockContentFile,
+  TPaymentBundleParams,
+  TPaymentLockParams,
+  TPurchaseBundleIdParams,
   TReplicateUnlockedContentParams,
+  TStartPaymentParams,
+  TStartPaymentResult,
   TUnlockContentParams,
 } from './locks.types';
 
@@ -80,8 +85,8 @@ export class LocksApplication {
   }
 
   /**
-   * Reader unlock: mint a bundle id, submit the proof, poll until the Lock Server finishes verifying,
-   * then request the access credential.
+   * Password unlock. TODO:[Locks] #2369 deletes this method and its poll constants with the password
+   * UI. Payment locks use `startPayment` → `fetchPaymentStatus` (polled by the modal) → `fetchPaidContent`.
    */
   static async unlockContent({ lockFile, lockUrl, password }: TUnlockContentParams): Promise<TUnlockResult> {
     const { creator } = lockFile;
@@ -93,7 +98,15 @@ export class LocksApplication {
     // Poll the task status until it's no longer verifying (or the attempt ceiling is hit).
     for (let attempt = 0; isVerifying(task.status) && attempt < MAX_POLL_ATTEMPTS; attempt++) {
       await this.wait(POLL_INTERVAL_MS);
-      task = await LocksService.lookupVerificationTask(creator, bundleId);
+      const next = await LocksService.lookupVerificationTask(creator, bundleId);
+      if (!next) {
+        throw Err.server(ServerErrorCode.INVALID_RESPONSE, 'verification task disappeared while polling', {
+          service: ErrorService.Locks,
+          operation: 'unlockContent',
+          context: { bundleId },
+        });
+      }
+      task = next;
     }
 
     if (task.status !== 'completed') {
@@ -115,6 +128,126 @@ export class LocksApplication {
 
     const credential = await LocksService.issueAccessCredential(creator, bundleId);
     return { bundleId, credential: credential.credential, expiresAt: credential.expires_at };
+  }
+
+  /**
+   * Reads `/priv/social/purchases/<lockId>.json` from the reader's own homeserver and returns the
+   * bundle id inside, or null when the file does not exist. A file that exists but cannot be parsed
+   * throws: a purchase was made and its id is lost, so the caller must show an error instead of
+   * offering to pay again with a fresh id, which could charge the reader twice.
+   */
+  static async fetchPurchaseBundleId({ lockUrl, readerPubky }: TPurchaseBundleIdParams): Promise<string | null> {
+    const lockId = this.requireLockId(lockUrl, 'fetchPurchaseBundleId');
+    const stored = await HomeserverService.getBytesIfExists(GuardedContentParser.purchaseUrl(readerPubky, lockId));
+    if (!stored) return null;
+
+    const bundleId = GuardedContentParser.parsePurchaseFile(stored.bytes);
+    if (!bundleId) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'purchase bundle id file is unreadable', {
+        service: ErrorService.Locks,
+        operation: 'fetchPurchaseBundleId',
+        context: { lockId },
+      });
+    }
+    return bundleId;
+  }
+
+  /** Whether the reader's wallet has published a Paykit receiver. */
+  static hasPaykitReceiver(readerPubky: string): Promise<boolean> {
+    return LocksService.hasPaykitReceiver(readerPubky);
+  }
+
+  /**
+   * Starts (or restarts) a payment: reuses the bundle id saved on the reader's homeserver, or mints
+   * and saves a fresh one when there is none or the saved one is `rejectBundleId`. Then submits the
+   * proof to the Lock Server, which creates the verification task (or returns the existing one on a
+   * replay of the same id) and has Paykit deliver the payment request to the reader's wallet.
+   */
+  static async startPayment({
+    lockFile,
+    lockUrl,
+    readerPubky,
+    rejectBundleId,
+  }: TStartPaymentParams): Promise<TStartPaymentResult> {
+    // TODO:[Locks] #2468 — the read → mint → write below is not atomic across tabs: two tabs can
+    // both read "no file" and submit different bundle ids (two tasks, possible double charge).
+    let bundleId = await this.fetchPurchaseBundleId({ lockUrl, readerPubky });
+    if (!bundleId || bundleId === rejectBundleId) {
+      bundleId = await LocksService.generateBundleId();
+      // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
+      // leaves a purchase nobody can reach.
+      await HomeserverService.putBlob({
+        url: GuardedContentParser.purchaseUrl(readerPubky, this.requireLockId(lockUrl, 'startPayment')),
+        blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
+      });
+    }
+    const bundle = LockProofBundler.buildPayment(lockFile, lockUrl, bundleId, readerPubky);
+    const task = await LocksService.submitProof(bundle);
+    return { bundleId, status: task.status };
+  }
+
+  /**
+   * One read of where the Lock Server's payment verification stands for a saved bundle id, or null
+   * when the submission never reached the server — the caller then offers Pay again with that id.
+   */
+  static async fetchPaymentStatus({ lockFile, bundleId }: TPaymentBundleParams): Promise<TVerificationStatus | null> {
+    const task = await LocksService.lookupVerificationTask(lockFile.creator, bundleId);
+    return task?.status ?? null;
+  }
+
+  /**
+   * Lock ids the reader has started a payment for, from `/priv/social/purchases/`. The bundle id
+   * file is written before the proof is submitted, so pending and failed purchases are included.
+   * One listing answers it for every lock post on screen, so the feed never asks per post.
+   */
+  static async fetchPurchasedLockIds({ readerPubky }: TFetchUnlockedListParams): Promise<string[]> {
+    const files = await HomeserverService.listAll({
+      baseDirectory: GuardedContentParser.purchasesRootUrl(readerPubky),
+    });
+    return GuardedContentParser.purchasedLockIds(files);
+  }
+
+  /**
+   * Gets an access credential for a paid bundle id from the Lock Server, then downloads the post
+   * and attachments with it. Replication stays with the caller, which owns the one path that
+   * writes it.
+   *
+   * The credential is short-lived and never stored, so an expired one is not a state to detect:
+   * this mints a new one on every call, and a mid-read expiry is answered by calling again.
+   */
+  static async fetchPaidContent({ lockFile, bundleId }: TPaymentBundleParams): Promise<TUnlockedContent> {
+    const { credential } = await LocksService.issueAccessCredential(lockFile.creator, bundleId);
+    return this.fetchUnlockedContent({ lockFile, credential });
+  }
+
+  /**
+   * `fetchPaidContent` for a caller that knows neither the bundle id nor whether the payment went
+   * through: looks up the saved id, checks the verification status, and downloads only when it is
+   * `completed`; null otherwise. Read-only; never mints an id or submits a proof.
+   */
+  static async fetchPaidContentIfCompleted({
+    lockFile,
+    lockUrl,
+    readerPubky,
+  }: TPaymentLockParams): Promise<TUnlockedContent | null> {
+    const bundleId = await this.fetchPurchaseBundleId({ lockUrl, readerPubky });
+    if (!bundleId) return null;
+    const status = await this.fetchPaymentStatus({ lockFile, bundleId });
+    if (status !== 'completed') return null;
+    return this.fetchPaidContent({ lockFile, bundleId });
+  }
+
+  /** `pubky://…/<lock_id>.json` → `<lock_id>`, or a typed error for a malformed lock URL. */
+  private static requireLockId(lockUrl: string, operation: string): string {
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    if (!lockId) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'lock URL has no lock id', {
+        service: ErrorService.Locks,
+        operation,
+        context: { lockUrl },
+      });
+    }
+    return lockId;
   }
 
   /** Reads the guarded post + its attachments with the access credential. Throws when the post is unparseable. */
@@ -220,14 +353,7 @@ export class LocksApplication {
     readerPubky,
     content,
   }: TReplicateUnlockedContentParams): Promise<void> {
-    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
-    if (!lockId) {
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'lock URL has no lock id to replicate under', {
-        service: ErrorService.Locks,
-        operation: 'replicateUnlockedContent',
-        context: { lockUrl },
-      });
-    }
+    const lockId = this.requireLockId(lockUrl, 'replicateUnlockedContent');
 
     for (const attachment of content.attachments) {
       await HomeserverService.putBlob({

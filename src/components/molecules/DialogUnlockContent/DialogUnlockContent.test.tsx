@@ -80,4 +80,18 @@ describe('DialogUnlockContent', () => {
     setup({ error: true });
     expect(screen.getByText(/Couldn't unlock/i)).toBeInTheDocument();
   });
+
+  // The dialog is portaled, but React still bubbles its clicks to the post card, which would navigate.
+  it('clicks inside the dialog do not reach the post card', () => {
+    const cardClick = vi.fn();
+    render(
+      <div onClick={cardClick}>
+        <DialogUnlockContent open onOpenChange={vi.fn()} lockTitle="Private Key Management" onSubmit={vi.fn()} />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByLabelText('Password', { selector: 'input' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(cardClick).not.toHaveBeenCalled();
+  });
 });
