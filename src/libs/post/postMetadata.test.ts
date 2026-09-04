@@ -66,7 +66,6 @@ describe('fetchUserAndPostForMetadata identifier normalization', () => {
     // Trailing dot on the user id, percent-encoded dot on the post id, as
     // crawlers mangle them (PUBKY-APP-1E/9Z/A0/BQ).
     const result = await fetchUserAndPostForMetadata('u1.', 'p1.');
-    
 
     expect(result).toEqual({ user: okUser, post: okPost });
     const calledUrls = fetchSpy.mock.calls.map((call) => String(call[0]));
