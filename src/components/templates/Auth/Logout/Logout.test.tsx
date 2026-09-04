@@ -180,6 +180,24 @@ describe('Logout', () => {
     });
   });
 
+  it('completes route-owned logout when the logging-out flag is already set', async () => {
+    mocks.authState.isLoggingOut = true;
+    mocks.mockLogout.mockImplementation(async () => {
+      mocks.authState.session = null;
+      mocks.authState.sessionExport = null;
+    });
+
+    render(<Logout />);
+
+    await waitFor(() => {
+      expect(mocks.mockLogout).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('logout-content')).toBeInTheDocument();
+    });
+  });
+
   it('does not show the success state before a persisted-session logout finishes', async () => {
     let resolveLogout: (() => void) | undefined;
     mocks.authState.session = null;

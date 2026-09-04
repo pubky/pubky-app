@@ -37,7 +37,6 @@ export function Logout() {
   const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const session = useAuthStore((state) => state.session);
   const sessionExport = useAuthStore((state) => state.sessionExport);
-  const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
   const [viewState, setViewState] = useState<LogoutViewState>('idle');
 
   const isHydrated = onboardingHasHydrated && authHasHydrated;
@@ -54,12 +53,8 @@ export function Logout() {
       return;
     }
 
-    if (isLoggingOut) {
-      return;
-    }
-
     void handleRouteLogout(setViewState);
-  }, [isHydrated, isLoggingOut, isSignedOut, viewState]);
+  }, [isHydrated, isSignedOut, viewState]);
 
   const onHandleHome = () => {
     router.push(ROOT_ROUTES);
