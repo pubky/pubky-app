@@ -44,7 +44,7 @@ jobs:
 
       - name: Set HEAD commit hash
         id: sha_tag
-        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
+        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           path: ${{ matrix.submodule_dir }}
 
@@ -54,13 +54,13 @@ jobs:
           echo ${{ matrix.image }}_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
 
       - name: Login to registry
-        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
 
       - name: Check if image needs to be rebuild
-        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
+        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         id: check_image
         with:
           image: ${{ env.registry }}/${{ matrix.image }}
@@ -68,7 +68,7 @@ jobs:
           arch: ${{ env.platforms }}
 
       - name: Rebuild the images if needed
-        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
+        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           registry: ${{ env.registry }}
           image: ${{ matrix.image }}
@@ -169,7 +169,7 @@ jobs:
         run: npm ci
 
       - name: Login to registry
-        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
