@@ -294,7 +294,7 @@ export class VerificationHandler {
       await this.abortInFlightAwait();
       await this.checkPaymentStatus();
     } finally {
-      this.visibilityRecoveryInProgress = false
+      this.visibilityRecoveryInProgress = false;
     }
   }
 
