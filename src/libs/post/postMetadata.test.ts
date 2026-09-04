@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchWithValidation } from './postMetadata';
+import { fetchUserAndPostForMetadata, fetchWithValidation } from './postMetadata';
 
 describe('fetchWithValidation', () => {
   afterEach(() => {
@@ -41,5 +41,65 @@ describe('fetchWithValidation', () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new DOMException('The operation was aborted', 'TimeoutError'));
 
     await expect(fetchWithValidation('https://nexus.test/v0/user/u1', 'fetchUserDetails')).rejects.toThrow();
+  });
+});
+
+describe('fetchUserAndPostForMetadata identifier normalization', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const jsonResponse = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+  const okUser = { id: 'u1', name: 'Alice' };
+  const okPost = { id: 'p1', author: 'u1' };
+
+  it('trims trailing dots and whitespace from crawl-mangled ids and decodes percent-encoding', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/post/')) return jsonResponse(okPost);
+      return jsonResponse(okUser);
+    });
+    const okPost = { id: 'p1', author: 'u1' };
+
+    // Trailing dot on the user id, percent-encoded dot on the post id, as
+    // crawlers mangle them (PUBKY-APP-1E/9Z/A0/BQ).
+    const result = await fetchUserAndPostForMetadata('u1.', 'p1.');
+    
+
+    expect(result).toEqual({ user: okUser, post: okPost });
+    const calledUrls = fetchSpy.mock.calls.map((call) => String(call[0]));
+    expect(calledUrls.some((u) => u.includes('/user/u1/details'))).toBe(true);
+    expect(calledUrls.some((u) => u.includes('/post/u1/p1/details'))).toBe(true);
+    expect(calledUrls.some((u) => /[.\s]\?|\.$/.test(u))).toBe(false);
+  });
+
+  it('decodes a fully percent-encoded identifier before trimming', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/post/')) return jsonResponse(okPost);
+      return jsonResponse(okUser);
+    });
+
+    // '%70%31%2E' === 'p1.' — bots sometimes percent-encode the whole id.
+    await fetchUserAndPostForMetadata('u1', '%70%31%2E');
+
+    const calledUrls = fetchSpy.mock.calls.map((call) => String(call[0]));
+    expect(calledUrls.some((u) => u.includes('/post/u1/p1/details'))).toBe(true);
+  });
+
+  it('leaves already-clean identifiers unchanged', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/post/')) return jsonResponse(okPost);
+      return jsonResponse(okUser);
+    });
+
+    await fetchUserAndPostForMetadata('u1', 'p1');
+
+    const calledUrls = fetchSpy.mock.calls.map((call) => String(call[0]));
+    expect(calledUrls.some((u) => u.includes('/user/u1'))).toBe(true);
+    expect(calledUrls.some((u) => u.includes('/post/u1/p1/details'))).toBe(true);
   });
 });
