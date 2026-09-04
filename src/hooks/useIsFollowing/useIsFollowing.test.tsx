@@ -16,6 +16,21 @@ vi.mock('@/controllers/user/user', () => ({
     fetch: (params: { userId: string }) => mockFetch(params),
   },
 }));
+const mockPathname = vi.hoisted(() => ({ value: '/profile/target-user' }));
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockPathname.value,
+}));
+
+const mockSubscribeUser = vi.fn();
+const mockUnsubscribeUser = vi.fn();
+vi.mock('@/coordinators/ttl/ttl', () => ({
+  TtlCoordinator: {
+    getInstance: () => ({
+      subscribeUser: mockSubscribeUser,
+      unsubscribeUser: mockUnsubscribeUser,
+    }),
+  },
+}));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector?: (state: { currentUserPubky: string | null }) => unknown) => {
     const state = { currentUserPubky: mockState.currentUserPubky };
@@ -169,6 +184,54 @@ describe('useIsFollowing', () => {
 
       // Phase 1 optimization: fetchFn is skipped when useLiveQuery returns non-null data
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('TTL subscription (#1803)', () => {
+    it('subscribes the target user so a cached relationship is refreshed once stale', () => {
+      mockGetRelationships.mockReturnValue({ following: false });
+
+      const { unmount } = renderHook(() => useIsFollowing('target-user'));
+
+      expect(mockSubscribeUser).toHaveBeenCalledWith({ pubky: 'target-user' });
+      expect(mockUnsubscribeUser).not.toHaveBeenCalled();
+
+      unmount();
+
+      expect(mockUnsubscribeUser).toHaveBeenCalledWith({ pubky: 'target-user' });
+    });
+
+    it('re-subscribes when the target user changes', () => {
+      const { rerender } = renderHook(({ id }) => useIsFollowing(id), { initialProps: { id: 'user-a' } });
+
+      rerender({ id: 'user-b' });
+
+      expect(mockUnsubscribeUser).toHaveBeenCalledWith({ pubky: 'user-a' });
+      expect(mockSubscribeUser).toHaveBeenLastCalledWith({ pubky: 'user-b' });
+    });
+
+    it('re-subscribes after a route change (the coordinator resets subscriptions per route)', () => {
+      mockPathname.value = '/profile/target-user';
+      const { rerender } = renderHook(() => useIsFollowing('target-user'));
+      expect(mockSubscribeUser).toHaveBeenCalledTimes(1);
+
+      mockPathname.value = '/profile/target-user/followers';
+      rerender();
+
+      expect(mockUnsubscribeUser).toHaveBeenCalledWith({ pubky: 'target-user' });
+      expect(mockSubscribeUser).toHaveBeenCalledTimes(2);
+      expect(mockSubscribeUser).toHaveBeenLastCalledWith({ pubky: 'target-user' });
+    });
+
+    it('does not subscribe when disabled (self, guest, or empty id)', () => {
+      mockState.currentUserPubky = null;
+      renderHook(() => useIsFollowing('target-user'));
+
+      mockState.currentUserPubky = 'same-user';
+      renderHook(() => useIsFollowing('same-user'));
+      renderHook(() => useIsFollowing(''));
+
+      expect(mockSubscribeUser).not.toHaveBeenCalled();
     });
   });
 });

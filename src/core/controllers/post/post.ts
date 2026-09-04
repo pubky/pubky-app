@@ -116,11 +116,11 @@ export class PostController {
    * Persists details, counts, relationships, tags, and author.
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @param params.viewerId - Optional viewer ID for relationship data
+   * @param params.viewerId - Viewer ID for relationship data; defaults to the signed-in user
    * @returns Post details or null if not found
    */
   static async getOrFetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
-    return await PostApplication.getOrFetch(params);
+    return await PostApplication.getOrFetch(this.withViewer(params));
   }
 
   /**
@@ -128,11 +128,19 @@ export class PostController {
    * Use instead of `getOrFetch` when the caller already knows the post is not cached.
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @param params.viewerId - Optional viewer ID for relationship data
+   * @param params.viewerId - Viewer ID for relationship data; defaults to the signed-in user
    * @returns Post details or null if not found
    */
   static async fetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
-    return await PostApplication.fetch(params);
+    return await PostApplication.fetch(this.withViewer(params));
+  }
+
+  /**
+   * Fills in the signed-in viewer when the caller did not supply one, so the post author and
+   * post relationships are persisted relative to the current user (#1803).
+   */
+  private static withViewer(params: TGetOrFetchPostParams): TGetOrFetchPostParams {
+    return { ...params, viewerId: params.viewerId ?? useAuthStore.getState().currentUserPubky };
   }
 
   static async getAuthoredCollections(params: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {

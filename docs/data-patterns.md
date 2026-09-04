@@ -225,7 +225,7 @@ All tables defined in `src/core/database/franky/franky.ts`.
 ```
 user_details       — Profile data (name, bio, image, links, status)
 user_counts        — Follower/following/post counts
-user_relationships — Follow/mute relationships
+user_relationships — Follow/mute relationships (viewer-relative: only written when the fetch carried a `viewerId`)
 user_connections   — User connection data
 user_tags          — Tag collections per user
 user_ttl           — Cache staleness (id, lastUpdatedAt)

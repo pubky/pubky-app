@@ -92,7 +92,7 @@ export class TtlApplication {
       viewer_id: params.viewerId,
     });
 
-    await LocalStreamUsersService.persistUsers(userBatch);
+    await LocalStreamUsersService.persistUsers(userBatch, params.viewerId);
   }
 
   /**
@@ -109,6 +109,6 @@ export class TtlApplication {
       user_ids: cacheMissUserIds,
       viewer_id: params.viewerId,
     });
-    await LocalStreamUsersService.persistUsers(userBatch);
+    await LocalStreamUsersService.persistUsers(userBatch, params.viewerId);
   }
 }

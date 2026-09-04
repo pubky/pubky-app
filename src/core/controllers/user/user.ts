@@ -16,6 +16,7 @@ import type {
   NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 export class UserController {
   private constructor() {} // Prevent instantiation
@@ -123,17 +124,21 @@ export class UserController {
    * Get full user entity from local database or fetch from Nexus batch API.
    * Persists details, counts, relationships, tags, TTL, and moderation.
    * Preferred over `getOrFetchDetails` when the caller needs the full entity cached.
+   * The signed-in viewer is injected from the auth store so the relationship row is viewer-relative.
    */
-  static async getOrFetch(params: TReadProfileParams): Promise<NexusUserDetails | null> {
-    return await UserApplication.getOrFetch(params);
+  static async getOrFetch({ userId }: TReadProfileParams): Promise<NexusUserDetails | null> {
+    const viewerId = useAuthStore.getState().currentUserPubky;
+    return await UserApplication.getOrFetch({ userId, viewerId });
   }
 
   /**
    * Fetch full user entity from Nexus batch API and persist locally (network-only, no local read).
    * Use instead of `getOrFetch` when the caller already knows the user is not cached.
+   * The signed-in viewer is injected from the auth store so the relationship row is viewer-relative.
    */
-  static async fetch(params: TReadProfileParams): Promise<NexusUserDetails | null> {
-    return await UserApplication.fetch(params);
+  static async fetch({ userId }: TReadProfileParams): Promise<NexusUserDetails | null> {
+    const viewerId = useAuthStore.getState().currentUserPubky;
+    return await UserApplication.fetch({ userId, viewerId });
   }
 
   /**

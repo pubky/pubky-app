@@ -1,6 +1,7 @@
 import { followUriBuilder } from 'pubky-app-specs';
 import type {
   TEnsureModerationFollowParams,
+  TUserApplicationFetchParams,
   TUserApplicationFollowParams,
   TUserCountsOrFetchResult,
 } from '@/application/user/user.types';
@@ -85,34 +86,18 @@ export class UserApplication {
    *
    * Preferred over `getOrFetchDetails` / `getOrFetchCounts` when the caller needs the full entity cached.
    *
-   * @param params - Parameters containing user ID
+   * @param params - Target user ID and the signed-in viewer for relative relationship data
    * @returns Promise resolving to user details or null if not found
    */
-  static async getOrFetch({ userId }: TReadProfileParams): Promise<NexusUserDetails | null> {
+  static async getOrFetch({ userId, viewerId }: TUserApplicationFetchParams): Promise<NexusUserDetails | null> {
     // 1. Check local cache first
     const localDetails = await LocalUserService.readDetails({ userId });
     if (localDetails) {
       return localDetails;
     }
 
-    // 2. Fetch full user from Nexus batch endpoint
-    try {
-      const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId] });
-
-      if (!users || users.length === 0) {
-        Logger.warn('User not found on Nexus', { userId });
-        return null;
-      }
-
-      // 3. Persist full user entity (details, counts, relationships, tags, TTL, moderation)
-      await LocalStreamUsersService.persistUsers(users);
-    } catch (error) {
-      Logger.warn('Failed to fetch user from Nexus', { userId, error });
-      return null;
-    }
-
-    // 4. Return from local cache (now populated)
-    return await LocalUserService.readDetails({ userId });
+    // 2. Fetch and persist the full user entity from the Nexus batch endpoint
+    return await this.fetch({ userId, viewerId });
   }
 
   /**
@@ -120,19 +105,23 @@ export class UserApplication {
    * Use instead of `getOrFetch` when the caller already knows the user is not cached
    * (e.g. `useLocalFirstQuery` hook where `useLiveQuery` handles the local read).
    *
-   * @param params - Parameters containing user ID
+   * @param params - Target user ID and the signed-in viewer for relative relationship data
    * @returns Promise resolving to user details or null if not found on Nexus
    */
-  static async fetch({ userId }: TReadProfileParams): Promise<NexusUserDetails | null> {
+  static async fetch({ userId, viewerId }: TUserApplicationFetchParams): Promise<NexusUserDetails | null> {
     try {
-      const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId] });
+      const users = await NexusUserStreamService.fetchByIds({
+        user_ids: [userId],
+        viewer_id: viewerId ?? undefined,
+      });
 
       if (!users || users.length === 0) {
         Logger.warn('User not found on Nexus', { userId });
         return null;
       }
 
-      await LocalStreamUsersService.persistUsers(users);
+      // Persist full user entity (details, counts, relationships, tags, TTL, moderation)
+      await LocalStreamUsersService.persistUsers(users, viewerId);
     } catch (error) {
       Logger.warn('Failed to fetch user from Nexus', { userId, error });
       return null;

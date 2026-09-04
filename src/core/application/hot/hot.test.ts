@@ -5,6 +5,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import type { HotTagsModel } from '@/models/hot/hot';
+import type { Pubky } from '@/models/models.types';
 import { LocalHotService } from '@/services/local/hot/hot';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { NexusHotService } from '@/services/nexus/hot/hot';
@@ -136,6 +137,25 @@ describe('HotApplication', () => {
       await HotApplication.getOrFetch(params);
 
       expect(loggerSpy).toHaveBeenCalledWith('Error in HotApplication.getOrFetch:', error);
+    });
+
+    it('should forward viewerId to the tagger fetch but not to the hot-tags endpoint (#1803)', async () => {
+      const viewerId = 'viewer-123' as Pubky;
+      const mockHotTags = [
+        { label: 'bitcoin', tagged_count: 100, taggers_count: 2, taggers_id: ['user1', 'user2'] },
+      ] as NexusHotTag[];
+      const params: TTagHotParams = { timeframe: UserStreamTimeframe.TODAY };
+
+      vi.spyOn(LocalHotService, 'findById').mockResolvedValue(null);
+      vi.spyOn(LocalHotService, 'upsert').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue(['user1' as Pubky]);
+      const fetchSpy = vi.spyOn(NexusHotService, 'fetch').mockResolvedValue(mockHotTags);
+      const fetchUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
+
+      await HotApplication.getOrFetch({ ...params, viewerId });
+
+      expect(fetchSpy).toHaveBeenCalledWith(params);
+      expect(fetchUsersSpy).toHaveBeenCalledWith({ cacheMissUserIds: ['user1'], viewerId });
     });
 
     it('should handle user_id parameter', async () => {

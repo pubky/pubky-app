@@ -102,7 +102,7 @@ export class UserStreamApplication {
         user_ids: cacheMissUserIds,
         viewer_id: viewerId,
       });
-      await LocalStreamUsersService.persistUsers(userBatch);
+      await LocalStreamUsersService.persistUsers(userBatch, viewerId);
     } catch (error) {
       Logger.warn('Failed to fetch missing users from Nexus:', { error });
     }

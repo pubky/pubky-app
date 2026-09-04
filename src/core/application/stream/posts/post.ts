@@ -699,7 +699,7 @@ export class PostStreamApplication {
         user_ids: cacheMissUserIds,
         viewer_id: viewerId ?? undefined,
       });
-      await LocalStreamUsersService.persistUsers(userBatch);
+      await LocalStreamUsersService.persistUsers(userBatch, viewerId);
     }
   }
 
