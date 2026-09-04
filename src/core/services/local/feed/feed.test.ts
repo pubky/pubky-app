@@ -114,15 +114,13 @@ describe('LocalFeedService', () => {
 
       const found = await LocalFeedService.read({ feedId: 'legacy-feed' });
 
-      expect(found.domain_tags).toEqual([]);
+      expect(found!.domain_tags).toEqual([]);
     });
 
-    it('should throw RECORD_NOT_FOUND error when not found', async () => {
-      await expect(LocalFeedService.read({ feedId: 'nonexistent' })).rejects.toMatchObject({
-        name: 'AppError',
-        code: 'RECORD_NOT_FOUND',
-        category: 'database',
-      });
+    it('returns null when the feed does not exist (stale-id lookups stay non-throwing)', async () => {
+      const missing = await LocalFeedService.read({ feedId: 'nonexistent' });
+
+      expect(missing).toBeNull();
     });
   });
 
@@ -189,7 +187,7 @@ describe('LocalFeedService', () => {
       ]);
 
       const upserted = await LocalFeedService.read({ feedId: 'feed-upsert' });
-      expect(upserted.name).toBe('Updated');
+      expect(upserted!.name).toBe('Updated');
 
       const all = await LocalFeedService.readAll();
       expect(all).toHaveLength(2);

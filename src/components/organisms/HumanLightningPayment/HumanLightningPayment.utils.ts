@@ -184,7 +184,14 @@ export class VerificationHandler {
   private async handleAwaitError(error: unknown): Promise<boolean> {
     if (this.aborted) return false;
 
-    if (isAppError(error) && error.code === TimeoutErrorCode.REQUEST_ABORTED && this.ignoreNextAbortError) {
+    // Intentional aborts are control flow, not failures: the flag is set by
+    // abortInFlightAwait() before canceling the long poll (visibility
+    // recovery / teardown). But `abort()` itself — user canceling the
+    // payment, component teardown, payment expiration — also aborts the
+    // in-flight poll, and that rejection was previously unhandled and hit
+    // Sentry as "Request was aborted" (PUBKY-APP-4F). Any REQUEST_ABORTED
+    // after a local abort() call is by definition ours.
+    if (isAppError(error) && error.code === TimeoutErrorCode.REQUEST_ABORTED) {
       this.ignoreNextAbortError = false;
       return true;
     }
