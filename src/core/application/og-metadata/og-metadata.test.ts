@@ -158,3 +158,71 @@ describe('OgMetadataApplication (integration)', () => {
     });
   });
 });
+
+describe('OgMetadataApplication coalescing', () => {
+  let OgMetadataApplication: typeof import('./og-metadata').OgMetadataApplication;
+  const mockFetch = vi.fn();
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    mockIsIP.mockImplementation((input) => {
+      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(input)) return 4;
+      if (input.includes(':')) return 6;
+      return 0;
+    });
+    mockResolve4.mockResolvedValue(['1.1.1.1']);
+    mockResolve6.mockResolvedValue([]);
+    mockIsIpSafe.mockReturnValue(true);
+    global.fetch = mockFetch;
+    ({ OgMetadataApplication } = await import('./og-metadata'));
+  });
+
+  it('shares one in-flight promise between concurrent calls and clears it on settle', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mockFetch.mockImplementationOnce(async () => {
+      await gate;
+      return createHtmlResponse(simpleHtml('Shared'));
+    });
+
+    const url = new URL('https://example.com/coalesce');
+    const p1 = OgMetadataApplication.fetch(url);
+    const p2 = OgMetadataApplication.fetch(url);
+
+    release();
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1.title).toBe('Shared');
+    expect(r2.title).toBe('Shared');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    // Cleared after settle: a new call performs a fresh fetch.
+    mockFetch.mockResolvedValueOnce(createHtmlResponse(simpleHtml('Fresh')));
+    const r3 = await OgMetadataApplication.fetch(url);
+    expect(r3.title).toBe('Fresh');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not coalesce after a settled failure (fallback metadata is not reused)', async () => {
+    // Expected enrichment failure (connection-time DNS miss) resolves to fallback
+    // metadata rather than rejecting; the in-flight entry must still be cleared
+    // so the next request re-fetches instead of replaying the settled promise.
+    // A non-OK HTTP response resolves to fallback metadata (expected enrichment outcome).
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+      headers: new Headers({ 'content-type': 'text/html' }),
+      body: { getReader: () => createMockReader([]), cancel: vi.fn().mockResolvedValue(undefined) },
+    });
+    const failed = await OgMetadataApplication.fetch(new URL('https://example.com/fail'));
+    expect(failed.title).toBeNull();
+
+    mockFetch.mockResolvedValueOnce(createHtmlResponse(simpleHtml('Recovered')));
+    const recovered = await OgMetadataApplication.fetch(new URL('https://example.com/fail'));
+    expect(recovered.title).toBe('Recovered');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+});
