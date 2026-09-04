@@ -2,7 +2,7 @@ import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { RUNTIME_CONFIG_WINDOW_KEY } from '@/libs/runtime-config/runtime-config';
@@ -283,6 +283,32 @@ describe('captureAppError filtering', () => {
       expect(shouldDropAppErrorFromSentry(error)).toBe(false);
       expect(captureException).toHaveBeenCalledWith(error);
     });
+  });
+
+  it('drops the mute-list SSE transport error via its dedicated operation', () => {
+    const error = new AppError({
+      category: ErrorCategory.Network,
+      code: NetworkErrorCode.CONNECTION_FAILED,
+      message: 'HTTP transport error: error sending request',
+      service: ErrorService.Homeserver,
+      operation: 'subscribeUserEventStreamForPath',
+      context: { pathPrefix: '/pub/pubky.app/mutes/' },
+    });
+
+    expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+  });
+
+  it('keeps Homeserver transport errors from other operations reportable', () => {
+    const error = new AppError({
+      category: ErrorCategory.Network,
+      code: NetworkErrorCode.CONNECTION_FAILED,
+      message: 'HTTP transport error: error sending request',
+      service: ErrorService.Homeserver,
+      operation: 'request',
+      context: { url: 'pubky://user/pub/data.json' },
+    });
+
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
   });
 
   it('does not drop non-Nexus post-tags 404 errors', () => {

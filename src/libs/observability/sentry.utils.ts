@@ -74,13 +74,15 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'homeserver-transport-error',
     reason:
-      'Homeserver SSE streams disconnect routinely (deploys, idle timeouts, mobile backgrounding) and every ' +
-      'consumer reconnects with backoff by design. Each drop used to surface as a captured AppError, which made ' +
-      'PUBKY-APP-11/1Y/6G/CX the second-largest issue family with zero affected users. Genuine failures still ' +
-      'surface via UI error states.',
+      'The mute-list SSE stream (the only Homeserver operation whose errors carry ' +
+      "operation='subscribeUserEventStreamForPath') disconnects routinely (deploys, idle timeouts, mobile " +
+      'backgrounding) and its consumer reconnects with backoff by design. Each drop used to surface as a ' +
+      'captured AppError, which made PUBKY-APP-11/1Y/6G/CX the second-largest issue family with zero affected ' +
+      'users. One-shot Homeserver writes/reads/uploads keep their own operations and remain fully reportable.',
     matches: (error) =>
       error.service === ErrorService.Homeserver &&
       error.category === ErrorCategory.Network &&
+      error.operation === 'subscribeUserEventStreamForPath' &&
       typeof error.message === 'string' &&
       error.message.includes('transport'),
   },
