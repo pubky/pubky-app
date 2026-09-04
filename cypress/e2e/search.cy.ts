@@ -1,7 +1,10 @@
 import { backupDownloadFilePath } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
+import { addTagsToCollectionHero, createCollection, findCollectionCardInSection } from '../support/collections';
+import { goToCollectionsPage, goToProfilePageFromHeader } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
+import { addProfileTags } from '../support/profile';
 import { BackupType, CheckForNewPosts } from '../support/types/enums';
 
 const username = 'Mr Search';
@@ -151,14 +154,40 @@ describe('search', () => {
     cy.get('[data-cy="post-search-results"]').innerTextShouldNotContain(postNoTags);
   });
 
-  // TODO: tag own profile (see `addProfileTags` in support/profile.ts) with a
-  // unique tag, then visit `/search?tags=<tag>` and assert the profile appears
-  // in `[data-cy="search-people-section"]`
-  it('can search people by tag');
+  it('can search people by tag', () => {
+    const profileTag = `person-${uniqueId}`;
 
-  // TODO: create a collection (see `createCollection` and
-  // `addTagsToCollectionHero` in support/collections.ts) with a unique tag, then
-  // visit `/search?tags=<tag>` and assert the collection appears in
-  // `[data-cy="search-collections-section"]`
-  it('can search collections by tag');
+    // tag own profile from the profile 'Tagged' tab
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-filter-item-tagged"]').click();
+    addProfileTags([profileTag]);
+    cy.get('[data-cy="profile-tab-content"]').contains(profileTag);
+
+    // open search results for the profile tag
+    cy.visit(`/search?tags=${profileTag}`);
+    cy.get('[data-cy="header-search"]').innerTextShouldContain(profileTag);
+
+    // confirm the tagged profile is listed in the People section
+    cy.get('[data-cy="search-people-section"]').should('be.visible').innerTextShouldContain(username);
+
+    // no posts carry this tag
+    cy.get('[data-cy="post-search-results"]').find('[data-cy="post-card"]').should('not.exist');
+  });
+
+  it('can search collections by tag', () => {
+    const collectionTag = `collection-${uniqueId}`;
+    const collectionName = `Searchable collection ${uniqueId}`;
+
+    // create a collection and tag it from its hero
+    goToCollectionsPage();
+    createCollection(collectionName, 'Created to be found by tag search.');
+    addTagsToCollectionHero([collectionTag]);
+
+    // open search results for the collection tag
+    cy.visit(`/search?tags=${collectionTag}`);
+    cy.get('[data-cy="header-search"]').innerTextShouldContain(collectionTag);
+
+    // confirm the tagged collection is listed in the Collections section
+    findCollectionCardInSection('[data-cy="search-collections-section"]', collectionName).should('be.visible');
+  });
 });
