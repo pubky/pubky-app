@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { isAppError } from '../error/error';
+import { getRetryAfter } from '../error/error.utils';
 import { HttpStatusCode } from '../http/http.types';
 import type { QueryClientConfig } from './query-client.types';
 
@@ -78,9 +79,14 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
 
       // 429: the server is telling us to slow down. Back off hard (start at 2s,
       // grow exponentially) and only retry once — retrying fast into the same
-      // burst amplifies the spike (Sentry PUBKY-APP-B3). If the server sent a
-      // Retry-After hint we could honor it, but AppError doesn't carry headers.
+      // burst amplifies the spike (Sentry PUBKY-APP-B3). Honor the server's
+      // Retry-After hint when present (the HTTP error factory parses it into
+      // context.retryAfter, in seconds); the configured backoff is the fallback.
       if (statusCode === HttpStatusCode.TOO_MANY_REQUESTS) {
+        const retryAfterSeconds = getRetryAfter(error);
+        if (retryAfterSeconds !== undefined) {
+          return Math.max(retryAfterSeconds * 1_000, 2_000);
+        }
         return Math.max(2_000, Math.min(delays.default.initial * 4 ** attemptIndex, delays.default.max));
       }
 
