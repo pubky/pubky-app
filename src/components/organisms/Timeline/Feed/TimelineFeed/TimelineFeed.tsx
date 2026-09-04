@@ -6,6 +6,7 @@ import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
 import { useHotStreamId } from '@/hooks/useHotStreamId/useHotStreamId';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useProfilePostsFilter } from '@/hooks/useProfilePostsFilter/useProfilePostsFilter';
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
@@ -16,8 +17,11 @@ import {
   type AuthorStreamCompositeId,
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
+  buildContentSearchStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
+import { FilterPostsBar } from '@/molecules/FilterPostsBar/FilterPostsBar';
+import { FilterPostsEmpty } from '@/molecules/FilterPostsEmpty/FilterPostsEmpty';
 import { PostsEmpty } from '@/molecules/PostsEmpty/PostsEmpty';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
@@ -156,7 +160,15 @@ function BookmarksTimelineFeed({
 
 function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
   const { pubky } = useProfileContext();
-  const streamId = pubky ? (`${StreamSource.AUTHOR}:${pubky}` as AuthorStreamCompositeId) : undefined;
+  const { inputValue, onInputChange, activeQuery, validationMessage } = useProfilePostsFilter();
+  // An active query swaps the stream to the author-scoped content search;
+  // the bar stays mounted across the swap (it renders as feed children), so
+  // input focus survives the results changing underneath it.
+  const streamId = !pubky
+    ? undefined
+    : activeQuery
+      ? buildContentSearchStreamId(activeQuery, 'all', pubky)
+      : (`${StreamSource.AUTHOR}:${pubky}` as AuthorStreamCompositeId);
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.PROFILE);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layoutResolution.effectiveLayout);
 
@@ -166,8 +178,9 @@ function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['child
       variant={TIMELINE_FEED_VARIANT.PROFILE}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
-      emptyState={<PostsEmpty />}
+      emptyState={activeQuery ? <FilterPostsEmpty /> : <PostsEmpty />}
     >
+      <FilterPostsBar value={inputValue} onValueChange={onInputChange} validationMessage={validationMessage} />
       {children}
     </TimelineFeedWithStream>
   );

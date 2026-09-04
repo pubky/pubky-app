@@ -4,6 +4,8 @@ import { BootstrapApplication, type BootstrapProgressCallback } from '@/applicat
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { TagApplication } from '@/application/tag/tag';
+import { UserApplication } from '@/application/user/user';
+import { getModerationId } from '@/config/moderation';
 import type {
   TLoginWithEncryptedFileParams,
   TLoginWithMnemonicParams,
@@ -14,7 +16,7 @@ import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { ErrorService } from '@/libs/error/error.types';
-import { isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
+import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearMuteSyncCursorSessionStorage } from '@/libs/mute-sync/clear-cursor-session-storage';
@@ -41,11 +43,57 @@ export class AuthController {
   private constructor() {} // Prevent instantiation
 
   private static activeAuthFlow: { token: symbol; cancel: (() => void) | null } | null = null;
+  private static moderationFollowAbortController: AbortController | null = null;
 
   static cancelActiveAuthFlow() {
     const cancel = this.activeAuthFlow?.cancel;
     this.activeAuthFlow = null;
     cancel?.();
+  }
+
+  /** Cancel detached moderation-follow work before account-local state changes ownership. */
+  static cancelModerationFollow(): void {
+    this.moderationFollowAbortController?.abort();
+    this.moderationFollowAbortController = null;
+  }
+
+  private static clearModerationFollowController(controller: AbortController): void {
+    if (this.moderationFollowAbortController === controller) {
+      this.moderationFollowAbortController = null;
+    }
+  }
+
+  /** Start settings-aware moderation follow work without extending the authentication critical path. */
+  private static startModerationFollow(pubky: Pubky): void {
+    this.cancelModerationFollow();
+    const controller = new AbortController();
+    this.moderationFollowAbortController = controller;
+    void this.ensureModerationFollow(pubky, controller);
+  }
+
+  private static async ensureModerationFollow(pubky: Pubky, controller: AbortController): Promise<void> {
+    try {
+      const moderationId = await UserApplication.ensureModerationFollow({
+        follower: pubky,
+        moderationId: getModerationId(),
+        moderationBot: useSettingsStore.getState().privacy.moderationBot,
+        signal: controller.signal,
+      });
+
+      // The settings store is account-local; never record processed state against a different session.
+      if (!moderationId || controller.signal.aborted || useAuthStore.getState().currentUserPubky !== pubky) return;
+
+      useSettingsStore.getState().setModerationBot(moderationId);
+      const settings = SettingsNormalizer.extractState(useSettingsStore.getState());
+      await SettingsApplication.commitUpdate(settings, pubky, controller.signal);
+    } catch (error) {
+      // AppError factories already report at their origin. Only unexpected raw failures need a warning.
+      if (!controller.signal.aborted && !isAppError(error)) {
+        Logger.warn('Unexpected moderation-follow authentication failure', { error });
+      }
+    } finally {
+      this.clearModerationFollowController(controller);
+    }
   }
 
   /**
@@ -54,6 +102,7 @@ export class AuthController {
    * @throws Wrong-environment homeserver errors after local cleanup so UI can show feedback
    */
   static async restorePersistedSession(): Promise<boolean> {
+    this.cancelModerationFollow();
     const authStore = useAuthStore.getState();
     try {
       const result = await AuthApplication.restorePersistedSession({ authStore });
@@ -86,7 +135,7 @@ export class AuthController {
    * @returns Configured homeserver service instance
    */
   private static async signIn({ keypair }: TKeypairParams): Promise<boolean> {
-    BootstrapApplication.cancelModerationFollow();
+    this.cancelModerationFollow();
     // Clear query clients to ensure no stale cache from previous session
     clearAllQueryClients();
     // Clear database before sign in to ensure clean state
@@ -133,8 +182,8 @@ export class AuthController {
 
     const localSettings = SettingsNormalizer.extractState(useSettingsStore.getState());
 
-    // Sync settings from homeserver before bootstrap; errors are logged and fall back to local settings.
-    const remoteSettings = await this.syncSettings(pubky, localSettings);
+    // Sync settings before bootstrap; failures fall back locally and suppress default-follow work for this session.
+    const { remoteSettings, succeeded: settingsSyncSucceeded } = await this.syncSettings(pubky, localSettings);
 
     // Resolve final preferences: remote settings win if available, otherwise use local
     const preferences = (remoteSettings ?? localSettings).notifications;
@@ -147,6 +196,10 @@ export class AuthController {
     if (remoteSettings) {
       useSettingsStore.getState().loadFromHomeserver(remoteSettings);
       Logger.info('Settings loaded from homeserver', { pubky });
+    }
+
+    if (settingsSyncSucceeded) {
+      this.startModerationFollow(pubky);
     }
   }
 
@@ -181,6 +234,7 @@ export class AuthController {
    * guard already passed for this session.
    */
   private static async completeAuthenticatedSession({ session }: THomeserverSessionResult) {
+    this.cancelModerationFollow();
     const signInStore = useSignInStore.getState();
     signInStore.reset(); // Reset for fresh sign-in
     signInStore.setAuthUrlResolved(true); // Step 1 complete (20%)
@@ -216,7 +270,7 @@ export class AuthController {
    * @param params.signupToken - Invitation code for user registration
    */
   static async signUp({ secretKey, signupToken }: TSignUpParams) {
-    BootstrapApplication.cancelModerationFollow();
+    this.cancelModerationFollow();
     // Clear query clients to ensure no stale cache from previous session
     clearAllQueryClients();
     // Clear database before sign up to ensure clean state
@@ -262,7 +316,7 @@ export class AuthController {
   private static async wrapAuthFlow(
     generateFn: () => Promise<TGenerateAuthUrlResult>,
   ): Promise<TGenerateAuthUrlResult> {
-    BootstrapApplication.cancelModerationFollow();
+    this.cancelModerationFollow();
     await clearDatabase();
     // Skip post-migration resync — full bootstrap below covers all data
     useMigrationStore.getState().reset();
@@ -295,7 +349,7 @@ export class AuthController {
    * Used by both logout() and restorePersistedSession() on failure.
    */
   private static async cleanupLocalState() {
-    BootstrapApplication.cancelModerationFollow();
+    this.cancelModerationFollow();
     // Capture pubky before resetting auth store; used to scope marker cleanup.
     const pubky = useAuthStore.getState().currentUserPubky;
     if (pubky) {
@@ -361,7 +415,7 @@ export class AuthController {
    * Logs out the current user from both the homeserver and local application state.
    */
   static async logout() {
-    BootstrapApplication.cancelModerationFollow();
+    this.cancelModerationFollow();
     let authStore = useAuthStore.getState();
 
     // Set logging out flag immediately to prevent flash of weird states in UI
@@ -414,15 +468,21 @@ export class AuthController {
 
   /**
    * Syncs user settings with the homeserver.
-   * Returns remote settings if newer, null otherwise.
-   * All failures are treated as non-blocking and fall back to local settings.
+   * Returns remote settings if newer, null otherwise, plus whether synchronization succeeded.
+   * Failures are non-blocking but suppress moderation follow for this session because opt-out state is unknown.
    */
-  private static async syncSettings(pubky: Pubky, localSettings: SettingsState): Promise<SettingsState | null> {
+  private static async syncSettings(
+    pubky: Pubky,
+    localSettings: SettingsState,
+  ): Promise<{ remoteSettings: SettingsState | null; succeeded: boolean }> {
     try {
-      return await SettingsApplication.initializeSettings(pubky, localSettings);
+      return {
+        remoteSettings: await SettingsApplication.initializeSettings(pubky, localSettings),
+        succeeded: true,
+      };
     } catch (error) {
       Logger.error('Failed to initialize settings during bootstrap', { error, pubky });
-      return null;
+      return { remoteSettings: null, succeeded: false };
     }
   }
 

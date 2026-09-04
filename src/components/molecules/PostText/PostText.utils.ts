@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import type {
   Blockquote,
+  Break,
   Heading,
   Link,
   List,
@@ -27,6 +28,26 @@ const TRUNCATION_ELLIPSIS = '...\u00A0';
 export const remarkPlaintextCodeblock = () => (tree: Root) => {
   visit(tree, 'code', (node) => {
     node.lang = node.lang ?? 'plaintext';
+  });
+};
+
+// Removes inline images from article surfaces that don't render them (feed
+// previews, embedded article cards). Runs before the preview-truncation
+// plugins so image alt text never consumes preview character budget.
+// Paragraphs left empty by the removal are dropped so previews don't show
+// blank gaps.
+export const remarkStripImages = () => (tree: Root) => {
+  visit(tree, ['image', 'imageReference'], (_node, index, parent) => {
+    if (parent && typeof index === 'number') {
+      parent.children.splice(index, 1);
+      return index;
+    }
+  });
+  visit(tree, 'paragraph', (node, index, parent) => {
+    if (parent && typeof index === 'number' && node.children.length === 0) {
+      parent.children.splice(index, 1);
+      return index;
+    }
   });
 };
 
@@ -90,6 +111,30 @@ export const remarkPlaintextTables = () => (tree: Root) => {
     };
 
     (parent.children as RootContent[]).splice(index, 1, replacement);
+  });
+};
+
+// Full article bodies render with normal whitespace (no pre-line), so a bare "\n"
+// inside markdown text — a soft break, or the editor's Shift+Enter line break,
+// which MDXEditor serializes as a literal "\n" text node — would collapse into a
+// space. Split those newlines into explicit break nodes so a line break in the
+// article editor stays a line break in the published article, including inside
+// list items and blockquotes where the pre-line approach never reached.
+export const remarkSoftBreaks = () => (tree: Root) => {
+  visit(tree, 'text', (node: Text, index: number | undefined, parent: Parent | undefined) => {
+    if (parent === undefined || index === undefined) return;
+    if (!node.value.includes('\n')) return;
+
+    const replacement: PhrasingContent[] = [];
+    node.value.split(/\r\n|\n/).forEach((segment, segmentIndex) => {
+      if (segmentIndex > 0) replacement.push({ type: 'break' } as Break);
+      if (segment.length > 0) replacement.push({ type: 'text', value: segment } as Text);
+    });
+
+    (parent.children as PhrasingContent[]).splice(index, 1, ...replacement);
+
+    // Resume after the inserted nodes; none of them contain newlines.
+    return index + replacement.length;
   });
 };
 

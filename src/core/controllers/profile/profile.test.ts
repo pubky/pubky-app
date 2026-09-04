@@ -18,10 +18,13 @@ const mockUserNormalizer = {
   ),
 };
 
+const mockClearExperienceCompleted = vi.fn();
+
 const mockOnboardingStore = {
   getState: vi.fn(() => ({
     setSecrets: vi.fn(),
     selectSecretKey: vi.fn(() => 'test-secret-key'),
+    clearExperienceCompleted: mockClearExperienceCompleted,
   })),
 };
 
@@ -80,9 +83,11 @@ describe('ProfileController', () => {
     mockIdentity.z32FromSecret.mockReset();
     mockIdentity.keypairFromSecretKey.mockReset();
     mockIdentity.createRecoveryFile.mockReset();
+    mockClearExperienceCompleted.mockReset();
     mockOnboardingStore.getState.mockReturnValue({
       setSecrets: vi.fn(),
       selectSecretKey: vi.fn(() => 'test-secret-key'),
+      clearExperienceCompleted: mockClearExperienceCompleted,
     });
     mockAuthStore.getState.mockReturnValue({
       setCurrentUserPubky: vi.fn(),
@@ -219,6 +224,7 @@ describe('ProfileController', () => {
       mockOnboardingStore.getState.mockReturnValue({
         setSecrets: mockSetSecrets,
         selectSecretKey: vi.fn(() => 'test-secret-key'),
+        clearExperienceCompleted: mockClearExperienceCompleted,
       });
       mockAuthStore.getState.mockReturnValue({
         setCurrentUserPubky: mockSetCurrentUserPubky,
@@ -247,6 +253,7 @@ describe('ProfileController', () => {
       mockOnboardingStore.getState.mockReturnValue({
         setSecrets: vi.fn(),
         selectSecretKey: mockSelectSecretKey,
+        clearExperienceCompleted: mockClearExperienceCompleted,
       });
       mockIdentity.keypairFromSecretKey.mockReturnValue({ keypair: 'test-keypair' });
 
@@ -267,6 +274,7 @@ describe('ProfileController', () => {
       mockOnboardingStore.getState.mockReturnValue({
         setSecrets: vi.fn(),
         selectSecretKey: mockSelectSecretKey,
+        clearExperienceCompleted: mockClearExperienceCompleted,
       });
 
       expect(() => ProfileController.createRecoveryFile('test-passphrase')).toThrow('Secret key is not available');
@@ -286,6 +294,7 @@ describe('ProfileController', () => {
         pubky: testPubky,
         setProgress,
       });
+      expect(mockClearExperienceCompleted).toHaveBeenCalledWith(testPubky);
     });
 
     it('propagates errors from ProfileApplication.commitDelete', async () => {
@@ -295,6 +304,7 @@ describe('ProfileController', () => {
       mockProfileApplication.commitDelete.mockRejectedValue(error);
 
       await expect(ProfileController.commitDelete({ pubky: testPubky, setProgress })).rejects.toThrow('delete failed');
+      expect(mockClearExperienceCompleted).not.toHaveBeenCalled();
     });
   });
 

@@ -46,7 +46,7 @@ export function useSearchAutocomplete({
         let userByIdPromise: Promise<string[]> | null = null;
 
         if (tagPrefix !== null) {
-          tagPromise = SearchController.getTagsByPrefix({
+          tagPromise = SearchController.fetchTagsByPrefix({
             prefix: tagPrefix,
             limit: AUTOCOMPLETE_TAG_LIMIT,
           }).catch((error) => {
@@ -125,6 +125,11 @@ export function useSearchAutocomplete({
       debouncedSearchRef.current.cancel();
       return;
     }
+
+    // Loading starts at the keystroke, not when the debounce fires — the
+    // dropdown skeleton must cover the debounce window too, or the first
+    // half-second of typing would show no feedback at all.
+    setIsSearching(true);
 
     // Trigger debounced search
     const debouncedFn = debouncedSearchRef.current;

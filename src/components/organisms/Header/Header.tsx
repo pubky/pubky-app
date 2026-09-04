@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import {
@@ -27,6 +28,9 @@ export function Header() {
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
   const currentTitle = stepConfig?.title;
+  // Onboarding steps reached after authentication (profile setup and tags of interest).
+  // Step numbers are not unique in the 4-step model, so match on the path instead.
+  const isPostAuthOnboardingStep = pathname === ONBOARDING_ROUTES.PROFILE || pathname === ONBOARDING_ROUTES.TAGS;
 
   // Hide header on mobile when:
   // - User is on a core explore route (/home, /hot, /search, /collections) — MobileHeader + MobileFooter
@@ -35,8 +39,8 @@ export function Header() {
   const shouldHideHeaderOnMobile =
     isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
   // Show title only for onboarding/logout pages (when stepConfig exists) and user is not authenticated,
-  // or during profile setup (step 5)
-  const shouldShowTitle = currentTitle && (!isAuthenticated || currentStep === 5);
+  // or during the post-auth onboarding steps (profile setup, tags of interest)
+  const shouldShowTitle = currentTitle && (!isAuthenticated || isPostAuthOnboardingStep);
 
   // App-shell layout: authenticated app pages and Explore mode (unauthenticated on a
   // public route, e.g. feed/post/profile) both render the feed + sidebars, so the header
@@ -85,7 +89,7 @@ export function Header() {
       classNameNav={classNameNav}
       className={cn(isLandingPage && 'p-0 sm:py-6', shouldHideHeaderOnMobile && 'hidden lg:block')}
     >
-      <Logo noLink={currentStep === 5} onClick={handleLandingLogoClick} />
+      <Logo noLink={isPostAuthOnboardingStep} onClick={handleLandingLogoClick} />
       {shouldShowTitle && <HeaderTitle currentTitle={currentTitle} />}
       {renderHeaderContent()}
     </HeaderContainer>

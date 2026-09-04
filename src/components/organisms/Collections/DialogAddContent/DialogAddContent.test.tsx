@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { DialogAddContent } from './DialogAddContent';
 
 const AUTHOR = 'a'.repeat(52);
@@ -19,7 +20,6 @@ const mocks = vi.hoisted(() => ({
   prependPosts: vi.fn(),
   prependOptimisticPosts: vi.fn(),
   routerPush: vi.fn(),
-  toast: vi.fn(),
 }));
 
 const COLLECTION_ID = `${VIEWER}:collection-1`;
@@ -70,10 +70,7 @@ vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
   useAvatarUrl: () => undefined,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mocks.toast,
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/organisms/DialogNewPost/DialogNewPost', () => ({
   DialogNewPost: ({
@@ -207,7 +204,7 @@ describe('DialogAddContent', () => {
     expect(trigger).not.toHaveClass('h-16');
   });
 
-  it('opens the dialog with the four add-post options in responsive grid order', () => {
+  it('opens the dialog with the three add-post options stacked in order', () => {
     render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
@@ -226,7 +223,9 @@ describe('DialogAddContent', () => {
       'sm:inline',
     );
     expect(screen.getByText('Add from feed')).toBeInTheDocument();
-    expect(screen.getByText('Select from posts')).toBeInTheDocument();
+    expect(screen.queryByText('Select from posts')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Feed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'My posts' })).toBeInTheDocument();
     expect(screen.getByText('Paste post url')).toBeInTheDocument();
     expect(screen.getByText('Create new post')).toBeInTheDocument();
     expect(screen.getByText('Start writing')).toBeInTheDocument();
@@ -234,25 +233,42 @@ describe('DialogAddContent', () => {
     expect(screen.getByRole('button', { name: 'Paste' })).toBeInTheDocument();
 
     const options = document.querySelector('[data-cy="add-content-options"]');
-    expect(options).toHaveClass('grid', 'grid-cols-1', 'gap-3', 'sm:grid-cols-2');
+    expect(options).toHaveClass('flex', 'flex-col', 'gap-3');
+    expect(options).not.toHaveClass('sm:grid-cols-2');
 
     const cards = options?.querySelectorAll('[data-slot="card"]');
     expect(Array.from(cards ?? []).map((card) => card.querySelector('[data-slot="card-title"]')?.textContent)).toEqual([
       'Add from feed',
-      'Select from posts',
       'Paste post url',
       'Create new post',
     ]);
   });
 
-  it('closes the dialog and navigates to profile posts without mutating content when Select is clicked', async () => {
+  it('renders the Feed and My posts pills beside the illustrative feed pills', () => {
+    render(<DialogAddContent />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+
+    const feedButton = screen.getByRole('button', { name: 'Feed' });
+    const myPostsButton = screen.getByRole('button', { name: 'My posts' });
+    expect(feedButton).toHaveAttribute('data-cy', 'add-content-feed-button');
+    expect(myPostsButton).toHaveAttribute('data-cy', 'add-content-my-posts-button');
+    expect(feedButton).toHaveClass('rounded-full', 'bg-secondary', 'text-secondary-foreground');
+    expect(feedButton).not.toHaveClass('opacity-30');
+    expect(myPostsButton).toHaveClass('rounded-full', 'bg-secondary', 'text-secondary-foreground');
+    expect(myPostsButton).not.toHaveClass('opacity-30');
+
+    const pillRow = feedButton.closest('[data-slot="card-footer"]')?.firstElementChild;
+    expect(pillRow).toHaveClass('flex', 'flex-wrap', 'justify-between');
+    expect(pillRow?.querySelector('[data-cy="add-content-feed-pills"]')).toBeInTheDocument();
+  });
+
+  it('closes the dialog and navigates to profile posts without mutating content when My posts is clicked', async () => {
     render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
 
-    const selectButton = screen.getByRole('button', { name: 'Select' });
-    expect(selectButton).toHaveAttribute('data-cy', 'add-content-select-from-posts');
-    fireEvent.click(selectButton);
+    fireEvent.click(screen.getByRole('button', { name: 'My posts' }));
 
     expect(mocks.routerPush).toHaveBeenCalledWith('/profile/posts');
     expect(mocks.getOrFetchPost).not.toHaveBeenCalled();
@@ -264,23 +280,25 @@ describe('DialogAddContent', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it.each(['add-content-feed-reply-pill', 'add-content-feed-repost-pill', 'add-content-feed-save-pill'])(
-    'closes the dialog and navigates home when clicking %s',
-    async (dataCy) => {
-      render(<DialogAddContent />);
+  it.each([
+    'add-content-feed-reply-pill',
+    'add-content-feed-repost-pill',
+    'add-content-feed-save-pill',
+    'add-content-feed-button',
+  ])('closes the dialog and navigates home when clicking %s', async (dataCy) => {
+    render(<DialogAddContent />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-      const feedPill = document.querySelector(`[data-cy="${dataCy}"]`);
-      if (!(feedPill instanceof HTMLElement)) {
-        throw new Error(`Expected ${dataCy} to render`);
-      }
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+    const feedPill = document.querySelector(`[data-cy="${dataCy}"]`);
+    if (!(feedPill instanceof HTMLElement)) {
+      throw new Error(`Expected ${dataCy} to render`);
+    }
 
-      fireEvent.click(feedPill);
+    fireEvent.click(feedPill);
 
-      expect(mocks.routerPush).toHaveBeenCalledWith('/home');
-      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    },
-  );
+    expect(mocks.routerPush).toHaveBeenCalledWith('/home');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
 
   it('stacks URL validation messages below the input', () => {
     render(<DialogAddContent />);
@@ -392,7 +410,7 @@ describe('DialogAddContent', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste' }));
 
     await waitFor(() =>
-      expect(mocks.toast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not read clipboard.',
       }),
@@ -475,7 +493,7 @@ describe('DialogAddContent', () => {
     );
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
     expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith('author:new-post');
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Success',
       description: 'Post added to collection.',
     });
@@ -493,7 +511,7 @@ describe('DialogAddContent', () => {
     );
     expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
     expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith('author:new-post');
-    expect(mocks.toast).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
   });
 });
 

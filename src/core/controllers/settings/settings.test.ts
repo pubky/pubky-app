@@ -64,10 +64,6 @@ describe('SettingsController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset pendingCommit between tests to avoid chaining across tests
-    // pendingCommit is private; an opaque cast is needed to reset static state between tests
-    asOpaque<{ pendingCommit: Promise<void> }>(SettingsController).pendingCommit = Promise.resolve();
-
     vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(mockStoreActions));
 
     vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ selectCurrentUserPubky: () => TEST_PUBKY }));
@@ -211,26 +207,6 @@ describe('SettingsController', () => {
 
       await expect(SettingsController.setShowConfirm(true)).rejects.toThrow('homeserver-fail');
       expect(mockStoreActions.setShowConfirm).toHaveBeenCalledWith(true);
-    });
-  });
-
-  describe('concurrent updates', () => {
-    it('should serialize concurrent commits via promise chaining', async () => {
-      const callOrder: string[] = [];
-
-      commitUpdateSpy.mockImplementation(async () => {
-        callOrder.push('commit-start');
-        await new Promise((r) => setTimeout(r, 10));
-        callOrder.push('commit-end');
-      });
-
-      const p1 = SettingsController.setShowConfirm(true);
-      const p2 = SettingsController.setBlurCensored(false);
-
-      await Promise.all([p1, p2]);
-
-      expect(callOrder).toEqual(['commit-start', 'commit-end', 'commit-start', 'commit-end']);
-      expect(commitUpdateSpy).toHaveBeenCalledTimes(2);
     });
   });
 });

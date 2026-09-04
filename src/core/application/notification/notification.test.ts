@@ -71,7 +71,7 @@ const mockFetchMissingEntities = () => {
   });
   vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
   vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
-  vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(undefined);
+  vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
   vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
 };
 
@@ -600,7 +600,7 @@ describe('NotificationApplication.fetchMissingEntities', () => {
     });
     vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
     vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([relatedUserId]);
-    vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(undefined);
+    vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
     const fetchUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
 
     await NotificationApplication.fetchMissingEntities({ notifications, viewerId });
@@ -622,7 +622,7 @@ describe('NotificationApplication.fetchMissingEntities', () => {
     });
     vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([relatedPostId]);
     vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
-    const fetchPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(undefined);
+    const fetchPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
     vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
 
     await NotificationApplication.fetchMissingEntities({ notifications, viewerId });
@@ -644,7 +644,7 @@ describe('NotificationApplication.fetchMissingEntities', () => {
     // All entities are already cached
     vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
     vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
-    const fetchPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(undefined);
+    const fetchPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
     const fetchUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
 
     await NotificationApplication.fetchMissingEntities({ notifications, viewerId });
@@ -674,7 +674,7 @@ describe('NotificationApplication.fetchMissingEntities', () => {
     // The edited post is already cached — nothing is "missing".
     vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
     vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
-    const fetchPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(undefined);
+    const fetchPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
     vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
 
     await NotificationApplication.fetchMissingEntities({ notifications, viewerId });

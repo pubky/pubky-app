@@ -10,7 +10,8 @@ import type {
 /**
  * Nexus Search Service
  *
- * Handles search operations against the Nexus API
+ * Handles search operations against the Nexus API.
+ * Full-text post content search lives in NexusPostStreamService.fetch (content_search streams).
  */
 export class NexusSearchService {
   private constructor() {}

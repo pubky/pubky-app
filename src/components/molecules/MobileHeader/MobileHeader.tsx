@@ -3,6 +3,7 @@ import { Lightbulb, SlidersHorizontal } from 'lucide-react';
 import type React from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { cn } from '@/libs/utils/utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -51,7 +52,11 @@ export function MobileHeader({
     >
       <Container
         overrideDefaults
-        className={cn('relative flex min-h-12 w-full items-center justify-between p-6', containerClassName)}
+        className={cn(
+          'relative flex min-h-12 w-full items-center justify-between py-6',
+          CONTENT_GUTTER_CLASS,
+          containerClassName,
+        )}
       >
         <SideSlot>
           {showLeftIcon ? (

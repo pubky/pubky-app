@@ -4,6 +4,7 @@ import { COLLECTIONS_SECTION_PAGE_SIZE, SEARCH_COLLECTIONS_PREVIEW_COUNT } from 
 import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SearchCollections } from './SearchCollections';
 
@@ -19,10 +20,7 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => ({
   CollectionCard: ({ authorPubky, postId }: { authorPubky: string; postId: string }) => (
@@ -204,7 +202,7 @@ describe('SearchCollections', () => {
     const { onError } = mockUseStreamPagination.mock.calls[0][0];
     onError?.(new Error('boom'));
 
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
   it('collapses back to the preview when the stream id changes (new tags or sort)', () => {

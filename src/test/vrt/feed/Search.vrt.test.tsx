@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -525,30 +525,50 @@ vi.mock('@/hooks/useHotTags/useHotTags', () => {
 // tagged cases leave `searchInputUi` cleared so suggestions stay closed.
 vi.mock('@/hooks/useSearchInput/useSearchInput', async () => {
   const React = await import('react');
+  // Stable function identities, matching the real hook's contract: `setInputValue`
+  // is a useState setter, and SearchInput's URL-sync effect lists it as a dep — a
+  // per-render vi.fn() here refires that effect every render and loops the store sync.
+  const handleInputChange = vi.fn();
+  const handleKeyDown = vi.fn();
+  const handleFocus = () => {
+    searchInputUi.isFocused = true;
+  };
+  const setFocus = (focused: boolean) => {
+    searchInputUi.isFocused = focused;
+  };
   return {
     useSearchInput: () => {
+      // Real state seeded from the per-case preset: `setInputValue` must be
+      // LIVE (not inert) so the full-text case exercises SearchInput's URL
+      // seeding for real — if `?q=` ever stops reaching the input, the
+      // content baselines show an empty bar and the diff fails.
+      const [inputValue, setInputValue] = React.useState(searchInputUi.inputValue);
       const containerRef = React.useRef<HTMLDivElement>(null);
       const inputRef = React.useRef<HTMLInputElement>(null);
       return {
-        inputValue: searchInputUi.inputValue,
+        inputValue,
         isFocused: searchInputUi.isFocused,
         containerRef,
         inputRef,
-        handleInputChange: vi.fn(),
-        handleKeyDown: vi.fn(),
-        handleFocus: () => {
-          searchInputUi.isFocused = true;
-        },
-        clearInputValue: () => {
-          searchInputUi.inputValue = '';
-        },
-        setFocus: (focused: boolean) => {
-          searchInputUi.isFocused = focused;
-        },
+        handleInputChange,
+        handleKeyDown,
+        handleFocus,
+        clearInputValue: () => setInputValue(''),
+        setInputValue,
+        setFocus,
       };
     },
   };
 });
+
+// Tags pivot row on the full-text results page — deterministic prefix matches
+// for the `bitcoin design` query (exact terms first, then extensions).
+vi.mock('@/hooks/useContentSearchTags/useContentSearchTags', () => ({
+  useContentSearchTags: (query: string | null) => ({
+    tags: query === null ? [] : ['bitcoin', 'design', 'bitcoiners', 'design-systems'],
+    isLoading: false,
+  }),
+}));
 
 // When the field is focused with a query, return fixture users (by_name / by_id path).
 vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', async () => {
@@ -601,6 +621,10 @@ function setSearchTags(tags: string[]) {
   navigation.searchParams = tags.length ? new URLSearchParams({ tags: tags.join(',') }) : new URLSearchParams();
 }
 
+function setContentSearchQuery(query: string) {
+  navigation.searchParams = new URLSearchParams({ q: query });
+}
+
 function resetSearchInputUi() {
   searchInputUi.inputValue = '';
   searchInputUi.isFocused = false;
@@ -613,13 +637,13 @@ beforeEach(() => {
 
 describe('Search (empty state) — visual regression', () => {
   it('renders the search empty state at desktop viewport', async () => {
-    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-empty-desktop');
+    await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await matchVrtFrameScreenshot('search-empty-desktop');
   });
 
   it('renders the search empty state at mobile viewport', async () => {
-    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-empty-mobile');
+    await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await matchVrtFrameScreenshot('search-empty-mobile');
   });
 });
 
@@ -648,13 +672,38 @@ describe('Search (tagged results) — visual regression', () => {
   });
 
   it('renders tagged search results at desktop viewport', async () => {
-    const screen = await renderTaggedSearch(VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-desktop');
+    await renderTaggedSearch(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('search-tagged-desktop');
   });
 
   it('renders tagged search results at mobile viewport', async () => {
-    const screen = await renderTaggedSearch(VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-tagged-mobile');
+    await renderTaggedSearch(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('search-tagged-mobile');
+  });
+});
+
+describe('Search (full-text results) — visual regression', () => {
+  // No input preset here on purpose: SearchInput's URL-sync effect must seed
+  // `?q=` into the bar itself (the mocked `setInputValue` is live), so these
+  // baselines show — and guard — the query text in the input.
+  beforeEach(() => {
+    setContentSearchQuery('bitcoin design');
+  });
+
+  it('renders relevance-ranked content results at desktop viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
+    // exact: the accessible-name match is a substring match, so plain 'Tags'
+    // also resolves the right sidebar's 'Hot tags' heading (strict-mode error).
+    await expect.element(screen.getByRole('heading', { name: 'Tags', exact: true })).toBeVisible();
+    await matchVrtFrameScreenshot('search-content-desktop');
+  });
+
+  it('renders relevance-ranked content results at mobile viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByPlaceholder('Search').first()).toHaveValue('bitcoin design');
+    await expect.element(screen.getByRole('heading', { name: 'Tags', exact: true })).toBeVisible();
+    await matchVrtFrameScreenshot('search-content-mobile');
   });
 });
 
@@ -668,11 +717,15 @@ describe('Search (profile results) — visual regression', () => {
 
   it('renders profile search suggestions at desktop viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-profiles-desktop');
+    await expect.element(screen.getByRole('button', { name: 'Clear and close search' })).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Show all results' })).toBeVisible();
+    await matchVrtFrameScreenshot('search-profiles-desktop');
   });
 
   it('renders profile search suggestions at mobile viewport', async () => {
     const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('search-profiles-mobile');
+    await expect.element(screen.getByRole('button', { name: 'Clear and close search' })).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Show all results' })).toBeVisible();
+    await matchVrtFrameScreenshot('search-profiles-mobile');
   });
 });
