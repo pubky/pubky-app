@@ -28,15 +28,25 @@ import { renderFallbackOg } from './renderFallbackOg';
 export async function renderPostOg({ userId, postId }: { userId: string; postId: string }): Promise<Response> {
   try {
     const result = await fetchUserAndPostForMetadata(userId, postId);
-    if (!result) return renderFallbackOg();
+    if (!result) return await renderFallbackOg();
 
     const { user, post } = result;
-    if (post.kind === 'collection') return renderCollectionOg({ userId, postId });
+    if (post.kind === 'collection') return await renderCollectionOg({ userId, postId });
 
-    const avatarSrc = await fetchImageAsDataUri(buildAvatarUrl(user));
     const name = resolveDisplayName(user);
     const isDeleted = isPostDeleted(post.content);
     const preview = deriveTextPreview({ content: post.content, kind: post.kind });
+
+    // Feed variant is sufficient — the image only ever renders in this small
+    // preview card, so the full-res MAIN variant would be wasted bytes. Fetched
+    // alongside the avatar: the two are independent CDN round-trips (plus a
+    // sharp transcode each) and would otherwise serialize on the cold path.
+    const imageUrl =
+      !isDeleted && post.kind === 'image' ? resolvePostAttachmentUrl(post.attachments?.[0], FileVariant.FEED) : null;
+    const [avatarSrc, imageSrc] = await Promise.all([
+      fetchImageAsDataUri(buildAvatarUrl(user)),
+      fetchImageAsDataUri(imageUrl),
+    ]);
 
     // Article variant: newspaper icon + title over a plain-text body excerpt.
     // Deleted posts skip this (their content isn't JSON) and fall through to the
@@ -44,7 +54,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     const article = !isDeleted && post.kind === 'long' ? parseArticleContent(post.content) : null;
     if (article) {
       const body = truncateByGraphemes(markdownToText(article.body), OG_TRUNCATE.articleBody);
-      return ogImageResponse(
+      return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
           <div
@@ -115,15 +125,9 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
       );
     }
 
-    // Feed variant is sufficient — the image only ever renders in this small
-    // preview card, so the full-res MAIN variant would be wasted bytes.
-    const imageUrl =
-      !isDeleted && post.kind === 'image' ? resolvePostAttachmentUrl(post.attachments?.[0], FileVariant.FEED) : null;
-    const imageSrc = imageUrl ? await fetchImageAsDataUri(imageUrl) : null;
-
     if (imageSrc) {
       const text = truncateByGraphemes(preview, OG_TRUNCATE.postImageText);
-      return ogImageResponse(
+      return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
           <div
@@ -163,7 +167,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     }
 
     const text = truncateByGraphemes(preview, OG_TRUNCATE.postText);
-    return ogImageResponse(
+    return await ogImageResponse(
       <OgFrame style={{ gap: 48 }}>
         <OgHeader avatarUrl={avatarSrc} name={name} />
         <div
@@ -212,6 +216,6 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     );
   } catch (error) {
     Logger.warn('[renderPostOg] Failed to render post OG image', { userId, postId, error });
-    return renderFallbackOg();
+    return await renderFallbackOg();
   }
 }

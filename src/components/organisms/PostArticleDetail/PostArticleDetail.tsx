@@ -115,6 +115,7 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
       <PostText
         content={body}
         isArticle
+        fullArticle
         articleImages={{ attachments: attachments ?? [], authorId: articleAuthorId, postId }}
         onLinkClick={handleLinkClick}
       />

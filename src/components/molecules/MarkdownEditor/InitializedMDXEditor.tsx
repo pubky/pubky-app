@@ -425,7 +425,9 @@ export default function InitializedMDXEditor({
         overlayContainer={overlayContainer}
         placeholder={'Start writing your masterpiece'}
         className={cn('dark-theme cursor-auto', mode === 'markdown' && 'hidden')}
-        contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+        // leading-6, font-medium and text-secondary-foreground mirror PostText's
+        // article body text so the editor previews the published spacing (WYSIWYG).
+        contentEditableClassName="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
         plugins={[
           toolbarPlugin({
             toolbarClassName: 'bg-background! border rounded-md! flex-wrap',

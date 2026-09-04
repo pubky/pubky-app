@@ -22,11 +22,19 @@ import {
   remarkMentions,
   remarkPlaintextCodeblock,
   remarkPlaintextTables,
+  remarkSoftBreaks,
   remarkStripImages,
   truncatePostPreviewText,
 } from './PostText.utils';
 import { PostTextLink } from './PostTextLink';
 
+// Compact posts put list markers inside the content box. A "loose" markdown list
+// (blank lines between items) wraps each item's text in a block-level <p>, which
+// would push the inline marker onto a line of its own — render the item's first
+// paragraph inline so the marker and its text share a line. Full articles rely on
+// prose styling instead (outside markers with padding), which handles loose items.
+const compactListClassName = (listStyle: 'list-decimal' | 'list-disc') =>
+  cn('list-inside whitespace-normal [&>li>p:first-child]:inline', listStyle);
 // Image `src` values pass through raw so ArticleInlineImage can resolve the
 // custom schemes (`attachment:{n}`, `pubky://`) itself — the default transform
 // would strip them. Everything else (hrefs, …) keeps the default policy.
@@ -56,6 +64,7 @@ const articleImageUrlTransform: UrlTransform = (url, key, node) =>
 export const PostText = memo(function PostText({
   content,
   isArticle,
+  fullArticle,
   articleImages,
   compactUrls = true,
   onLinkClick,
@@ -77,12 +86,16 @@ export const PostText = memo(function PostText({
     remarkGfm,
     remarkPlaintextTables,
     ...(isArticle
-      ? [...(renderArticleImages ? [] : [remarkStripImages]), ...(!onPostPage ? [remarkExtractFirstParagraph] : [])]
+      ? [
+          ...(renderArticleImages ? [] : [remarkStripImages]),
+          ...(!onPostPage && !fullArticle ? [remarkExtractFirstParagraph] : []),
+        ]
       : [remarkDisallowMarkdownLinks]),
     remarkPlaintextCodeblock,
     remarkHashtags,
     remarkMentions,
     ...(showMoreButton ? [remarkInlineShowMore] : []),
+    ...(fullArticle ? [remarkSoftBreaks] : []),
   ];
 
   // Memoize allowed elements array to avoid recreation on every render
@@ -113,7 +126,20 @@ export const PostText = memo(function PostText({
       data-cy="post-text"
       overrideDefaults
       className={cn(
-        'text-base leading-6 font-medium wrap-anywhere whitespace-pre-line text-secondary-foreground',
+        'text-base leading-6 font-medium wrap-anywhere',
+        // Full articles use the same `prose` typography as the article editor so the
+        // published article matches what the editor shows (issue #1762): real block
+        // margins and outside list markers instead of the pre-line whitespace hack.
+        // The editor neutralizes prose's inline-code backticks; the pre overrides
+        // strip prose's box and 14px typography from the <pre> wrapping PostCodeBlock
+        // so code blocks keep their compact-post look (prose still spaces them);
+        // no-underline keeps links, hashtags and mentions on their brand styling.
+        // Compact posts keep pre-line, where the stray newlines react-markdown emits
+        // between blocks provide the spacing.
+        fullArticle
+          ? 'prose max-w-none prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0 prose-pre:text-base prose-pre:leading-6 prose-pre:font-medium [&_a]:no-underline'
+          : 'whitespace-pre-line',
+        'text-secondary-foreground',
         className,
       )}
     >
@@ -149,8 +175,18 @@ export const PostText = memo(function PostText({
           blockquote(props) {
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
+            // not-italic, [quotes:none] and the explicit color neutralize the prose
+            // blockquote decorations in full articles (injected curly quotes, italics,
+            // --tw-prose-quotes color) that the author never wrote and the editor never
+            // shows; they are no-ops in compact posts, which have no prose styling.
             return (
-              <blockquote {...rest} className={cn(className, 'border-l-4 border-foreground pl-4 whitespace-normal')}>
+              <blockquote
+                {...rest}
+                className={cn(
+                  className,
+                  'border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]',
+                )}
+              >
                 {children}
               </blockquote>
             );
@@ -159,7 +195,7 @@ export const PostText = memo(function PostText({
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <ol {...rest} className={cn(className, 'list-inside list-decimal whitespace-normal')}>
+              <ol {...rest} className={cn(className, !fullArticle && compactListClassName('list-decimal'))}>
                 {children}
               </ol>
             );
@@ -168,7 +204,7 @@ export const PostText = memo(function PostText({
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <ul {...rest} className={cn(className, 'list-inside list-disc whitespace-normal')}>
+              <ul {...rest} className={cn(className, !fullArticle && compactListClassName('list-disc'))}>
                 {children}
               </ul>
             );
@@ -235,7 +271,17 @@ export const PostText = memo(function PostText({
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h5 {...rest} className={cn(className, 'text-[16.5px] leading-6 font-light text-muted-foreground')}>
+              <h5
+                {...rest}
+                className={cn(
+                  className,
+                  'text-[16.5px] leading-6 font-light text-muted-foreground',
+                  // @tailwindcss/typography styles h1-h4 only, so give h5/h6 the same
+                  // margin scale as prose h4 in full articles; without it they would
+                  // sit flush between paragraphs now that pre-line no longer applies.
+                  fullArticle && 'mt-[1.5em] mb-[0.5em]',
+                )}
+              >
                 {children}
               </h5>
             );
@@ -244,7 +290,14 @@ export const PostText = memo(function PostText({
             const { children, className, node: _node, ref: _ref, ...rest } = props;
 
             return (
-              <h6 {...rest} className={cn(className, 'text-[16.25px] leading-6 font-light text-muted-foreground')}>
+              <h6
+                {...rest}
+                className={cn(
+                  className,
+                  'text-[16.25px] leading-6 font-light text-muted-foreground',
+                  fullArticle && 'mt-[1.5em] mb-[0.5em]',
+                )}
+              >
                 {children}
               </h6>
             );

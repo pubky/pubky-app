@@ -6,6 +6,13 @@ export interface PostTextProps {
   content: string;
   isArticle?: boolean;
   /**
+   * Full article body on the article page: renders with the same `prose` typography
+   * as the article editor (paragraph/list/heading margins, outside list markers)
+   * instead of the compact pre-line post styling. Callers pass it together with
+   * `isArticle`; previews (feed cards) leave it off.
+   */
+  fullArticle?: boolean;
+  /**
    * Enables inline article images (article detail page only). Without it,
    * article image nodes are stripped before rendering — feed previews and
    * embedded article cards never show body images.

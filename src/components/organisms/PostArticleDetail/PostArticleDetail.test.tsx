@@ -56,8 +56,8 @@ vi.mock('@/atoms/Typography/Typography', () => ({
 }));
 
 vi.mock('@/molecules/PostText/PostText', () => ({
-  PostText: ({ content, isArticle }: { content: string; isArticle?: boolean }) => (
-    <div data-testid="post-text" data-is-article={isArticle}>
+  PostText: ({ content, isArticle, fullArticle }: { content: string; isArticle?: boolean; fullArticle?: boolean }) => (
+    <div data-testid="post-text" data-is-article={isArticle} data-full-article={fullArticle}>
       {content}
     </div>
   ),
@@ -252,11 +252,12 @@ describe('PostArticleDetail', () => {
     expect(screen.getByTestId('post-header')).toHaveAttribute('data-time-placement', 'bottom-left');
   });
 
-  it('passes body content and article mode to PostText', () => {
+  it('passes body content and full article mode to PostText', () => {
     render(<PostArticleDetail {...defaultProps} />);
 
     expect(screen.getByTestId('post-text')).toHaveTextContent('Test article body content');
     expect(screen.getByTestId('post-text')).toHaveAttribute('data-is-article', 'true');
+    expect(screen.getByTestId('post-text')).toHaveAttribute('data-full-article', 'true');
   });
 
   it('renders dialogs in closed state initially', () => {

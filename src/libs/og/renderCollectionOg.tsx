@@ -47,34 +47,39 @@ const compactNumber = new Intl.NumberFormat('en-US', { notation: 'compact' });
 export async function renderCollectionOg({ userId, postId }: { userId: string; postId: string }): Promise<Response> {
   try {
     const result = await fetchUserAndPostForMetadata(userId, postId);
-    if (!result) return renderFallbackOg();
+    if (!result) return await renderFallbackOg();
 
     const { user, post } = result;
     // Kind gate: without it, any post whose content happens to parse as a
     // collection envelope would render a fabricated collection card here
     // (mirrors the page's generateMetadata and renderPostOg's positive check).
-    if (post.kind !== 'collection') return renderFallbackOg();
-    if (isPostDeleted(post.content)) return renderFallbackOg();
+    if (post.kind !== 'collection') return await renderFallbackOg();
+    if (isPostDeleted(post.content)) return await renderFallbackOg();
 
     const collection = parseCollectionContent(post.content);
-    if (!collection) return renderFallbackOg();
+    if (!collection) return await renderFallbackOg();
 
     // The cover resolver is the SSRF-hardened attachment path: only `pubky://`
     // file URIs (our own CDN) are ever fetched server-side. A legacy absolute
     // http(s) cover renders in-app but the OG section falls back to the muted,
-    // cover-less background. MAIN variant because the cover paints a full-bleed
-    // 1200px-wide box — the FEED thumbnail would be upscaled soft; the embedded
-    // payload stays bounded by fetchImageAsDataUri's 1200px transcode cap.
+    // cover-less background. FEED variant (720px WebP, ~8 KB) rather than MAIN,
+    // like post attachments: the full-resolution original can run to megabytes
+    // (over Next's 2 MB data-cache limit, so it would be re-downloaded and
+    // decoded on every render) and social crawlers only wait a few seconds for
+    // the card. The ~1.7x upscale into the cover box sits under the darkening
+    // gradient below, which masks the softness. When Nexus has no usable FEED
+    // variant (e.g. animated GIF uploads) the card renders cover-less rather
+    // than falling back to the original.
     const [avatarSrc, coverSrc] = await Promise.all([
       fetchImageAsDataUri(buildAvatarUrl(user)),
-      fetchImageAsDataUri(resolvePostAttachmentUrl(collection.cover_image, FileVariant.MAIN)),
+      fetchImageAsDataUri(resolvePostAttachmentUrl(collection.cover_image, FileVariant.FEED)),
     ]);
 
     const name = resolveDisplayName(user);
     const itemCount = collection.items?.length ?? 0;
     const description = truncateByGraphemes(collection.description?.trim() ?? '', OG_TRUNCATE.collectionDescription);
 
-    return ogImageResponse(
+    return await ogImageResponse(
       <OgFrame style={{ gap: FRAME_GAP }}>
         <OgHeader avatarUrl={avatarSrc} name={name} />
         {/* Cover section shell: muted backing, then cover img + gradient like
@@ -197,6 +202,6 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
     );
   } catch (error) {
     Logger.warn('[renderCollectionOg] Failed to render collection OG image', { userId, postId, error });
-    return renderFallbackOg();
+    return await renderFallbackOg();
   }
 }

@@ -14,7 +14,7 @@ vi.mock('@/services/nexus/file/file.api', () => ({
   },
 }));
 
-const { buildAvatarUrl, fetchImageAsDataUri, fetchProfileForMetadata, resolvePostAttachmentUrl } =
+const { buildAvatarUrl, fetchImageAsDataUri, fetchOgImageBytes, fetchProfileForMetadata, resolvePostAttachmentUrl } =
   await import('./ogData');
 
 const jsonResponse = (body: unknown) =>
@@ -146,5 +146,53 @@ describe('fetchImageAsDataUri', () => {
     const result = await fetchImageAsDataUri('https://cdn.test/a.png');
 
     expect(result).toMatch(/^data:image\/png;base64,/);
+  });
+});
+
+describe('fetchOgImageBytes', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const pngResponse = (headers: Record<string, string>) =>
+    new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'Content-Type': 'image/png', ...headers } });
+
+  it('bounds the fetch with a timeout signal (a hung CDN must not stall the card past the crawler)', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(pngResponse({}));
+
+    await fetchOgImageBytes('https://cdn.test/a.png');
+
+    const init = fetchSpy.mock.calls[0][1];
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('returns the bytes for an image response, matching the content type case-insensitively', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'Content-Type': 'Image/PNG' } }),
+    );
+
+    const bytes = await fetchOgImageBytes('https://cdn.test/a.png');
+
+    expect(bytes && Array.from(bytes)).toEqual([1, 2, 3]);
+  });
+
+  it('rejects a body larger than OG_IMAGE_MAX_BYTES without downloading it', async () => {
+    const body = { cancel: vi.fn(async () => undefined) };
+    const res = pngResponse({ 'Content-Length': String(5 * 1024 * 1024) });
+    Object.defineProperty(res, 'body', { value: body });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(res);
+
+    expect(await fetchOgImageBytes('https://cdn.test/huge.png')).toBeNull();
+    expect(body.cancel).toHaveBeenCalled();
+  });
+
+  it('returns null (and drains the body) on a non-ok or non-image response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('nope', { status: 404 }));
+    expect(await fetchOgImageBytes('https://cdn.test/a.png')).toBeNull();
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html>', { status: 200, headers: { 'Content-Type': 'text/html' } }),
+    );
+    expect(await fetchOgImageBytes('https://cdn.test/a.png')).toBeNull();
   });
 });
