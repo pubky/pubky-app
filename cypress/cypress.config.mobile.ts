@@ -12,6 +12,9 @@ export default defineConfig({
     screenshotsFolder: 'screenshots/mobile',
     env: {
       ...baseConfig.e2e?.env,
+    },
+    expose: {
+      ...baseConfig.e2e?.expose,
       isMobile: true,
     },
   },

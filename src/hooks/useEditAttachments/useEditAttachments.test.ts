@@ -121,11 +121,17 @@ describe('useEditAttachments', () => {
       expect(result.current.existingAttachments).toEqual([PLACEHOLDER_1, PLACEHOLDER_2]);
 
       // Metadata resolution runs for the placeholders; with nothing resolvable
-      // (empty metadata everywhere) they stay placeholders
+      // (empty metadata everywhere) they stay placeholders, marked terminal once
+      // the resolve pass finishes so the UI swaps the skeleton for the file card
       await waitFor(() => {
         expect(FileController.getMetadata).toHaveBeenCalledWith({ fileAttachments: [URI_1, URI_2] });
       });
-      expect(result.current.existingAttachments).toEqual([PLACEHOLDER_1, PLACEHOLDER_2]);
+      await waitFor(() => {
+        expect(result.current.existingAttachments).toEqual([
+          { ...PLACEHOLDER_1, resolutionFailed: true },
+          { ...PLACEHOLDER_2, resolutionFailed: true },
+        ]);
+      });
     });
 
     it('does not seed when disabled', () => {

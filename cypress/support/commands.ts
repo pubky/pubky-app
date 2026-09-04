@@ -527,16 +527,14 @@ Cypress.Commands.add(
 );
 
 // useful for finding a specific post card by text in search results
+// `filter` and `eq` are query commands, so the whole chain retries until a matching
+// card renders (a `.then` callback would capture a stale or still-loading result list)
 Cypress.Commands.add('findPostInSearchResults', (filterText?: string, postIdx = 0) => {
   return cy
     .get('[data-cy="post-search-results"]')
     .find('[data-cy="post-card"]')
-    .then(($postCards) => {
-      const filtered = filterText
-        ? $postCards.filter((_idx, element) => element.innerText.includes(filterText))
-        : $postCards;
-      return cy.wrap(filtered).eq(postIdx);
-    });
+    .filter((_idx, element) => (filterText ? element.innerText.includes(filterText) : true))
+    .eq(postIdx);
 });
 
 // To prevent Cypress from failing the test when running pubky-app with dev build:

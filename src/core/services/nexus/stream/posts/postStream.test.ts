@@ -714,6 +714,21 @@ describe('createPostStreamParams', () => {
         expect(result.params.skip).toBe(10); // NOT decremented
         expect(result.params.start).toBeUndefined();
       });
+
+      it('should carry the author scope through extraParams (profile "Filter posts")', () => {
+        const authorPubky = 'profile-author-pubky' as Pubky;
+        const result = createPostStreamParams({
+          streamId: buildContentSearchStreamId('bitcoin wallet', 'all', authorPubky),
+          streamTail: 10,
+          streamHead: 0,
+          limit: 2,
+          viewerId: mockViewerId,
+        });
+
+        expect(result.invokeEndpoint).toBe(StreamSource.CONTENT_SEARCH);
+        expect(result.extraParams).toEqual({ q: 'bitcoin wallet', author_id: authorPubky });
+        expect(result.params).toEqual({ limit: 2, skip: 10 });
+      });
     });
   });
 
@@ -1171,6 +1186,14 @@ describe('breakDownStreamId', () => {
       expect(result.kind).toBeUndefined();
       expect(result.searchQuery).toBeUndefined();
     });
+
+    it('should surface the author scope for author-scoped ids (profile "Filter posts")', () => {
+      const authorPubky = 'profile-author-pubky' as Pubky;
+      const result = breakDownStreamId(buildContentSearchStreamId('bitcoin wallet', 'all', authorPubky));
+      expect(result.invokeEndpoint).toBe(StreamSource.CONTENT_SEARCH);
+      expect(result.searchQuery).toBe('bitcoin wallet');
+      expect(result.authorId).toBe(authorPubky);
+    });
   });
 });
 
@@ -1314,6 +1337,32 @@ describe('NexusPostStreamService', () => {
 
       const calledArgs = queryNexusSpy.mock.calls[0][0] as { url: string };
       expect(calledArgs.url).not.toContain('kind=');
+    });
+
+    it('forwards the author scope into the by_content URL (profile "Filter posts")', async () => {
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
+
+      await NexusPostStreamService.fetch({
+        params: { skip: 0, limit: 2 },
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        extraParams: { q: 'bitcoin wallet', author_id: mockAuthorId },
+      });
+
+      const calledArgs = queryNexusSpy.mock.calls[0][0] as { url: string };
+      expect(calledArgs.url).toContain(`author=${mockAuthorId}`);
+    });
+
+    it('omits author from the URL for the global (unscoped) search', async () => {
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
+
+      await NexusPostStreamService.fetch({
+        params: { skip: 0, limit: 2 },
+        invokeEndpoint: StreamSource.CONTENT_SEARCH,
+        extraParams: { q: 'bitcoin wallet' },
+      });
+
+      const calledArgs = queryNexusSpy.mock.calls[0][0] as { url: string };
+      expect(calledArgs.url).not.toContain('author=');
     });
   });
 

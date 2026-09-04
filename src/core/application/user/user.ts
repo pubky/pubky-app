@@ -1,10 +1,9 @@
-import { baseUriBuilder, followUriBuilder } from 'pubky-app-specs';
+import { followUriBuilder } from 'pubky-app-specs';
 import type {
   TEnsureModerationFollowParams,
   TUserApplicationFollowParams,
   TUserCountsOrFetchResult,
 } from '@/application/user/user.types';
-import { getModerationId } from '@/config/moderation';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
@@ -34,18 +33,6 @@ import { NexusUserService } from '@/services/nexus/user/user';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
 
 export class UserApplication {
-  private static moderationFollowMarkerUrl(follower: Pubky, moderationId: Pubky): string {
-    return `${baseUriBuilder(follower)}migrations/moderation-follow/v1/${moderationId}.json`;
-  }
-
-  private static async writeModerationFollowMarker(follower: Pubky, moderationId: Pubky): Promise<void> {
-    await HomeserverService.request({
-      method: HttpMethod.PUT,
-      url: this.moderationFollowMarkerUrl(follower, moderationId),
-      bodyJson: { moderationId, completedAt: Date.now() },
-    });
-  }
-
   /**
    * Get user details from local database
    * This is a read-only operation that queries the local cache
@@ -272,15 +259,6 @@ export class UserApplication {
   }: TUserApplicationFollowParams) {
     if (signal?.aborted) return;
 
-    const moderationId = eventType === HttpMethod.DELETE ? getModerationId() : undefined;
-    if (moderationId && followee === moderationId) {
-      // A durable opt-out must exist before removing the follow. If this network write fails,
-      // leave both local and remote follow state unchanged instead of risking a later re-follow.
-      await this.writeModerationFollowMarker(follower, moderationId);
-    }
-
-    if (signal?.aborted) return;
-
     if (eventType === HttpMethod.PUT) {
       await LocalFollowService.create({ follower, followee });
     } else if (eventType === HttpMethod.DELETE) {
@@ -293,20 +271,20 @@ export class UserApplication {
   }
 
   /**
-   * Applies the moderation-bot default follow once per account. The homeserver marker preserves
-   * explicit unfollows, while the canonical follow resource makes retries idempotent.
+   * Applies the moderation-bot default follow once per account and bot: skipped when settings already
+   * record the configured bot, so a later manual unfollow is never undone. The canonical follow
+   * resource makes retries idempotent.
+   * @returns The processed bot Pubky when the caller should persist it, otherwise undefined
    */
   static async ensureModerationFollow({
     follower,
     moderationId,
+    moderationBot,
     signal,
-  }: TEnsureModerationFollowParams): Promise<void> {
-    if (!moderationId || follower === moderationId || signal?.aborted) return;
-
-    const markerUrl = this.moderationFollowMarkerUrl(follower, moderationId);
-
-    const markerExists = await HomeserverService.exists(markerUrl);
-    if (signal?.aborted || markerExists) return;
+  }: TEnsureModerationFollowParams): Promise<Pubky | undefined> {
+    if (!moderationId || follower === moderationId || signal?.aborted || moderationBot === moderationId) {
+      return undefined;
+    }
 
     const { meta, follow } = FollowNormalizer.to({ follower, followee: moderationId });
     const expectedFollowUrl = followUriBuilder(follower, moderationId);
@@ -319,7 +297,7 @@ export class UserApplication {
     }
 
     const followExists = await HomeserverService.exists(meta.url);
-    if (signal?.aborted) return;
+    if (signal?.aborted) return undefined;
 
     if (!followExists) {
       await this.commitFollow({
@@ -332,8 +310,8 @@ export class UserApplication {
       });
     }
 
-    if (signal?.aborted) return;
-    await this.writeModerationFollowMarker(follower, moderationId);
+    if (signal?.aborted) return undefined;
+    return moderationId;
   }
 
   /**

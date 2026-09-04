@@ -425,6 +425,87 @@ describe('PostStreamApplication', () => {
 
       expect(result).toEqual([livePostId, deletedPostId]);
     });
+
+    describe('author-scoped content search (profile "Filter posts")', () => {
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+
+      const createPostRelationships = async (postId: string, replied: string | null = null) => {
+        await PostRelationshipsModel.create({ id: postId, replied, reposted: null, mentioned: [] });
+      };
+
+      it('excludes collection-kind posts (profile Posts tab contract)', async () => {
+        const shortPostId = `${DEFAULT_AUTHOR}:short-post`;
+        const collectionPostId = `${DEFAULT_AUTHOR}:collection-post`;
+        await createPostDetailWithKind(shortPostId, 'short');
+        await createPostDetailWithKind(collectionPostId, 'collection');
+        await createPostRelationships(shortPostId);
+        await createPostRelationships(collectionPostId);
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: scopedStreamId,
+          postIds: [shortPostId, collectionPostId],
+        });
+
+        expect(result).toEqual([shortPostId]);
+      });
+
+      it('drops replies classified via the local relationships row', async () => {
+        const rootPostId = `${DEFAULT_AUTHOR}:root-post`;
+        const replyPostId = `${DEFAULT_AUTHOR}:reply-post`;
+        await createPostDetailWithKind(rootPostId, 'short');
+        await createPostDetailWithKind(replyPostId, 'short');
+        await createPostRelationships(rootPostId, null);
+        await createPostRelationships(replyPostId, `pubky://${DEFAULT_AUTHOR}/pub/pubky.app/posts/parent-post`);
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: scopedStreamId,
+          postIds: [rootPostId, replyPostId],
+        });
+
+        expect(result).toEqual([rootPostId]);
+      });
+
+      it('keeps unclassifiable posts pre-hydration (fail-open first pass)', async () => {
+        const unclassifiedPostId = `${DEFAULT_AUTHOR}:no-relationships-post`;
+        await createPostDetailWithKind(unclassifiedPostId, 'short');
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: scopedStreamId,
+          postIds: [unclassifiedPostId],
+        });
+
+        expect(result).toEqual([unclassifiedPostId]);
+      });
+
+      it('drops still-unclassifiable posts in the strict post-hydration pass', async () => {
+        const classifiedPostId = `${DEFAULT_AUTHOR}:classified-post`;
+        const unclassifiedPostId = `${DEFAULT_AUTHOR}:no-relationships-post`;
+        await createPostDetailWithKind(classifiedPostId, 'short');
+        await createPostDetailWithKind(unclassifiedPostId, 'short');
+        await createPostRelationships(classifiedPostId, null);
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: scopedStreamId,
+          postIds: [classifiedPostId, unclassifiedPostId],
+          strictReplyClassification: true,
+        });
+
+        expect(result).toEqual([classifiedPostId]);
+      });
+
+      it('leaves the global (unscoped) content search untouched by the reply filter', async () => {
+        const replyPostId = `${DEFAULT_AUTHOR}:reply-post`;
+        await createPostDetailWithKind(replyPostId, 'short');
+        await createPostRelationships(replyPostId, `pubky://${DEFAULT_AUTHOR}/pub/pubky.app/posts/parent-post`);
+
+        const result = await PostStreamApplication.filterStreamPosts({
+          streamId: buildContentSearchStreamId('bitcoin'),
+          postIds: [replyPostId],
+        });
+
+        expect(result).toEqual([replyPostId]);
+      });
+    });
   });
 
   describe('getOrFetchStreamSlice', () => {
@@ -457,6 +538,147 @@ describe('PostStreamApplication', () => {
       expect(result.reachedEnd).toBe(false);
       // Skip-paginated streams never write to the timestamp-keyed local stream cache.
       expect(persistStreamSpy).not.toHaveBeenCalled();
+    });
+
+    describe('content-search skip bound (Nexus BoundedSkip, inclusive at 1000)', () => {
+      const contentStreamId = buildContentSearchStreamId('bitcoin');
+
+      it('still issues the request when the offset sits exactly on the bound', async () => {
+        const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+          post_keys: [`${DEFAULT_AUTHOR}:post-a`, `${DEFAULT_AUTHOR}:post-b`],
+          last_post_score: null,
+        });
+
+        const result = await PostStreamApplication.getOrFetchStreamSlice({
+          streamId: contentStreamId,
+          limit: 2,
+          streamHead: 0,
+          streamTail: 1000, // skip = 1000 is the last valid offset
+          viewerId: null,
+        });
+
+        expect(nexusFetchSpy).toHaveBeenCalledTimes(1);
+        expect(nexusFetchSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ params: expect.objectContaining({ skip: 1000 }) }),
+        );
+        // The page is consumed; only the follow-up (skip 1002 > 1000) is suppressed.
+        expect(result.nextPageIds).toEqual([`${DEFAULT_AUTHOR}:post-a`, `${DEFAULT_AUTHOR}:post-b`]);
+        expect(result.reachedEnd).toBe(true);
+      });
+
+      it('reports the end without calling Nexus when the incoming offset is already past the bound', async () => {
+        const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch');
+
+        const result = await PostStreamApplication.getOrFetchStreamSlice({
+          streamId: contentStreamId,
+          limit: 2,
+          streamHead: 0,
+          streamTail: 1001, // Nexus would reject this skip
+          viewerId: null,
+        });
+
+        expect(nexusFetchSpy).not.toHaveBeenCalled();
+        expect(result.nextPageIds).toEqual([]);
+        expect(result.reachedEnd).toBe(true);
+      });
+
+      it('marks a full page ended when the raw ids advance the offset past the bound', async () => {
+        vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+          post_keys: [`${DEFAULT_AUTHOR}:post-a`, `${DEFAULT_AUTHOR}:post-b`],
+          last_post_score: null,
+        });
+
+        const result = await PostStreamApplication.getOrFetchStreamSlice({
+          streamId: contentStreamId,
+          limit: 2,
+          streamHead: 0,
+          streamTail: 999, // valid request, but 999 + 2 = 1001 overflows the bound
+          viewerId: null,
+        });
+
+        expect(result.nextPageIds).toHaveLength(2);
+        expect(result.reachedEnd).toBe(true);
+      });
+
+      it('keeps paginating when the raw ids land the next offset exactly on the bound', async () => {
+        vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+          post_keys: [`${DEFAULT_AUTHOR}:post-a`, `${DEFAULT_AUTHOR}:post-b`],
+          last_post_score: null,
+        });
+
+        const result = await PostStreamApplication.getOrFetchStreamSlice({
+          streamId: contentStreamId,
+          limit: 2,
+          streamHead: 0,
+          streamTail: 998, // 998 + 2 = 1000: the next request is still valid
+          viewerId: null,
+        });
+
+        expect(result.nextPageIds).toHaveLength(2);
+        expect(result.nextCursor).toBe(1000);
+        expect(result.reachedEnd).toBe(false);
+      });
+    });
+
+    it('flags details-cached posts without a relationships row as cache misses on author-scoped search', async () => {
+      // Reply exclusion classifies via relationships.replied; a post whose details are cached
+      // but whose relationships row is missing must still be hydrated, or it would stay
+      // fail-open (then be dropped by the strict second pass) forever.
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const classifiedPostId = `${DEFAULT_AUTHOR}:classified-post`;
+      const unclassifiedPostId = `${DEFAULT_AUTHOR}:needs-hydration-post`;
+      await createPostDetailWithKind(classifiedPostId, 'short');
+      await createPostDetailWithKind(unclassifiedPostId, 'short');
+      await PostRelationshipsModel.create({ id: classifiedPostId, replied: null, reposted: null, mentioned: [] });
+
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: [classifiedPostId, unclassifiedPostId],
+        last_post_score: null,
+      });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: scopedStreamId,
+        limit: 2,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: null,
+      });
+
+      expect(result.cacheMissPostIds).toEqual([unclassifiedPostId]);
+      // Fail-open: the unclassified post stays visible until the controller's
+      // post-hydration second pass classifies (or strictly drops) it.
+      expect(result.nextPageIds).toEqual([classifiedPostId, unclassifiedPostId]);
+    });
+
+    it('does not flag locally tombstoned posts as relationships cache misses', async () => {
+      // A tombstoned post keeps its details row (content = DELETED) but its relationships
+      // row is deleted for good. Re-fetching can never classify it and the deleted filter
+      // drops it anyway — flagging it would issue a futile by_ids on every page load.
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const tombstonedPostId = `${DEFAULT_AUTHOR}:tombstoned-post`;
+      await PostDetailsModel.create({
+        id: tombstonedPostId,
+        content: DELETED,
+        kind: 'short',
+        indexed_at: BASE_TIMESTAMP,
+        uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${tombstonedPostId}`,
+        attachments: null,
+      });
+
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: [tombstonedPostId],
+        last_post_score: null,
+      });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: scopedStreamId,
+        limit: 1,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: null,
+      });
+
+      expect(result.cacheMissPostIds).toEqual([]);
     });
 
     it('should return posts from cache when available (no cursor)', async () => {
@@ -1271,14 +1493,14 @@ describe('PostStreamApplication', () => {
   describe('fetchMissingPostsFromNexus', () => {
     const viewerId = 'user-viewer' as Pubky;
 
-    it('should fetch and persist posts when postBatch exists', async () => {
+    it('should fetch and persist posts when postBatch exists, reporting success', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(2);
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue(mockAllUsersCached(2));
 
       const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
 
-      await PostStreamApplication.fetchMissingPostsFromNexus({
+      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -1289,6 +1511,23 @@ describe('PostStreamApplication', () => {
       });
       expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: mockNexusPosts });
       expect(mocks.persistFiles).toHaveBeenCalledWith([]);
+      expect(hydrated).toBe(true);
+    });
+
+    it('reports failure without throwing when the by_ids fetch rejects', async () => {
+      // Fail-open streams render what the cache has; callers with strict
+      // post-hydration filtering must be able to tell "hydration failed"
+      // apart from "hydrated, genuinely no results".
+      const { cacheMissPostIds } = createTestData(2);
+      setupDefaultMocks();
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockRejectedValue(new Error('network down'));
+
+      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds,
+        viewerId,
+      });
+
+      expect(hydrated).toBe(false);
     });
 
     it('should fetch and persist users when cacheMissUserIds exist', async () => {

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -6,12 +6,14 @@ import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { useCustomFeed } from '@/hooks/useCustomFeed/useCustomFeed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { PROFILE_POSTS_FILTER_DEBOUNCE_MS } from '@/hooks/useProfilePostsFilter/useProfilePostsFilter.constants';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import {
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
+  buildContentSearchStreamId,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
@@ -146,6 +148,16 @@ vi.mock('@/molecules/Timeline/TimelineLoading', () => {
   };
 });
 
+// Both profile empty states pull in heavy trees (dialogs, auth); stubs keep the
+// Profile variant's conditional empty-state assertions focused on the switch.
+vi.mock('@/molecules/PostsEmpty/PostsEmpty', () => ({
+  PostsEmpty: () => <div data-testid="posts-empty" />,
+}));
+
+vi.mock('@/molecules/FilterPostsEmpty/FilterPostsEmpty', () => ({
+  FilterPostsEmpty: () => <div data-testid="filter-posts-empty" />,
+}));
+
 vi.mock('@/organisms/Timeline/Posts/Posts', () => {
   return {
     TimelinePosts: ({
@@ -154,12 +166,14 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
       loadingMore,
       error,
       hasMore,
+      emptyState,
     }: {
       postIds: string[];
       loading: boolean;
       loadingMore: boolean;
       error: string | null;
       hasMore: boolean;
+      emptyState?: React.ReactNode;
     }) => (
       <div data-feed-renderer="columns" data-testid="timeline-posts" data-post-ids={postIds.join(',')}>
         <span data-testid="post-count">{postIds.length}</span>
@@ -167,6 +181,7 @@ vi.mock('@/organisms/Timeline/Posts/Posts', () => {
         <span data-testid="loading-more">{loadingMore.toString()}</span>
         <span data-testid="error">{error || 'none'}</span>
         <span data-testid="has-more">{hasMore.toString()}</span>
+        {postIds.length === 0 && !loading && !hasMore ? emptyState : null}
       </div>
     ),
   };
@@ -647,6 +662,23 @@ describe('TimelineFeed', () => {
   });
 
   describe('Profile Variant', () => {
+    const profilePubky = 'profile-user-pubky';
+
+    const renderProfileFeed = () =>
+      render(
+        <ProfileProvider pubky={profilePubky}>
+          <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE} />
+        </ProfileProvider>,
+      );
+
+    /** Types into the filter bar and settles its debounce (requires fake timers). */
+    const applyFilterQuery = (value: string) => {
+      fireEvent.change(screen.getByRole('textbox', { name: 'Filter posts' }), { target: { value } });
+      act(() => {
+        vi.advanceTimersByTime(PROFILE_POSTS_FILTER_DEBOUNCE_MS);
+      });
+    };
+
     it('should show loading when profile context has no pubky', () => {
       render(
         <ProfileProvider>
@@ -658,6 +690,69 @@ describe('TimelineFeed', () => {
       // TimelineFeed shows loading state and doesn't call useStreamPagination
       expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
       expect(mockUseStreamPagination).not.toHaveBeenCalled();
+    });
+
+    it('paginates the author stream and renders the filter bar when idle', () => {
+      renderProfileFeed();
+
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({ streamId: `author:${profilePubky}` });
+      expect(screen.getByTestId('filter-posts-bar')).toBeInTheDocument();
+    });
+
+    describe('with a settled filter query', () => {
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('swaps to the author-scoped content-search stream once a valid query settles', () => {
+        renderProfileFeed();
+
+        applyFilterQuery('bitcoin');
+
+        expect(mockUseStreamPagination).toHaveBeenLastCalledWith({
+          streamId: buildContentSearchStreamId('bitcoin', 'all', profilePubky),
+        });
+        // The bar survives the stream swap (focus preservation contract).
+        expect(screen.getByRole('textbox', { name: 'Filter posts' })).toHaveValue('bitcoin');
+      });
+
+      it('returns to the author stream immediately when the input is cleared', () => {
+        renderProfileFeed();
+
+        applyFilterQuery('bitcoin');
+        fireEvent.change(screen.getByRole('textbox', { name: 'Filter posts' }), { target: { value: '' } });
+
+        // No debounce advance: the clear applies synchronously.
+        expect(mockUseStreamPagination).toHaveBeenLastCalledWith({ streamId: `author:${profilePubky}` });
+      });
+
+      it('keeps the author stream for a query below the minimum length', () => {
+        renderProfileFeed();
+
+        applyFilterQuery('a');
+
+        expect(mockUseStreamPagination).toHaveBeenLastCalledWith({ streamId: `author:${profilePubky}` });
+      });
+
+      it('shows the search no-results state while filtering and the regular one when idle', () => {
+        mockUseStreamPagination.mockReturnValue({
+          ...defaultPaginationResult,
+          postIds: [],
+          hasMore: false,
+        });
+
+        renderProfileFeed();
+        expect(screen.getByTestId('posts-empty')).toBeInTheDocument();
+        expect(screen.queryByTestId('filter-posts-empty')).not.toBeInTheDocument();
+
+        applyFilterQuery('bitcoin');
+        expect(screen.getByTestId('filter-posts-empty')).toBeInTheDocument();
+        expect(screen.queryByTestId('posts-empty')).not.toBeInTheDocument();
+      });
     });
   });
 

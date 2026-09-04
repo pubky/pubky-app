@@ -97,9 +97,13 @@ export function DiscoverCollections() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   // Ref of currently-visible IDs, read inside the async fetch so appends can
-  // dedup without re-creating the function on every successful append.
+  // dedup without re-creating the function on every successful append. Written
+  // from an effect (not during render) for the React Compiler `refs` rule; the
+  // fetch reads it after an await, i.e. after the commit that updated it.
   const visibleIdsRef = useRef<string[]>([]);
-  visibleIdsRef.current = visibleIds;
+  useEffect(() => {
+    visibleIdsRef.current = visibleIds;
+  }, [visibleIds]);
 
   // Cancellation token for the in-flight initial fetch. When the effect
   // re-fires (StrictMode double-invoke, or genuine viewer switch), the old

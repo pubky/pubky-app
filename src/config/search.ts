@@ -40,6 +40,13 @@ export const SEARCH_CONTENT_TAGS_PER_TERM_LIMIT = 3;
 export const SEARCH_CONTENT_TAGS_MAX_TOTAL = 8;
 
 /**
+ * Nexus by_content pagination bound (`BoundedSkip<1000>` in pubky-nexus): a `skip` up to and
+ * INCLUDING this value is a valid request; anything above is rejected with a validation error.
+ * Content-search streams stop paginating once the next offset would exceed it.
+ */
+export const CONTENT_SEARCH_MAX_SKIP = 1000;
+
+/**
  * Search bar closed state style (pill shape)
  * - Gradient background matching Figma design
  * - Backdrop blur for glass effect

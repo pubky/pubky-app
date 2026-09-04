@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { DebouncedFunc } from 'lodash-es';
 import { debounce } from 'lodash-es';
 import { SearchController } from '@/controllers/search/search';
 import { useUserDetailsFromIds } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds';
@@ -18,6 +19,8 @@ import type {
 } from './useSearchAutocomplete.types';
 import { resolveSearchAutocompletePlan } from './useSearchAutocomplete.utils';
 
+type DebouncedAutocompleteSearch = DebouncedFunc<(searchQuery: string) => Promise<void>>;
+
 export function useSearchAutocomplete({
   query,
   enabled = true,
@@ -31,9 +34,14 @@ export function useSearchAutocomplete({
   // Get user details from IDs using shared hook
   const { users, isLoading: isLoadingUsers } = useUserDetailsFromIds({ userIds });
 
-  // Debounced search function
-  const debouncedSearchRef = useRef(
-    debounce(async (searchQuery: string) => {
+  // Debounced search worker. It only closes over refs and state setters, so it
+  // never goes stale; creating it inside an effect (rather than in render via
+  // `useRef(debounce(...))`) keeps ref reads out of render for the React
+  // Compiler `refs` rule and avoids building a throwaway debounce per render.
+  const debouncedSearchRef = useRef<DebouncedAutocompleteSearch | null>(null);
+
+  useEffect(() => {
+    const debouncedSearch = debounce(async (searchQuery: string) => {
       const requestId = ++requestIdRef.current;
       setIsSearching(true);
 
@@ -112,8 +120,14 @@ export function useSearchAutocomplete({
           setIsSearching(false);
         }
       }
-    }, AUTOCOMPLETE_DEBOUNCE_MS),
-  );
+    }, AUTOCOMPLETE_DEBOUNCE_MS);
+    debouncedSearchRef.current = debouncedSearch;
+
+    return () => {
+      debouncedSearch.cancel();
+      debouncedSearchRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     // Reset results if disabled or empty query
@@ -122,7 +136,7 @@ export function useSearchAutocomplete({
       setTags([]);
       setUserIds([]);
       setIsSearching(false);
-      debouncedSearchRef.current.cancel();
+      debouncedSearchRef.current?.cancel();
       return;
     }
 
@@ -133,11 +147,11 @@ export function useSearchAutocomplete({
 
     // Trigger debounced search
     const debouncedFn = debouncedSearchRef.current;
-    debouncedFn(query.trim());
+    debouncedFn?.(query.trim());
 
     // Cleanup: cancel pending debounced calls
     return () => {
-      debouncedFn.cancel();
+      debouncedFn?.cancel();
     };
   }, [query, enabled]);
 

@@ -23,6 +23,8 @@ exports[`CollectionLayoutPicker > matches the open desktop picker snapshot 1`] =
       aria-label="Layout: Grid"
       class="items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent size-9 hidden lg:inline-flex lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
       data-cy="collection-layout-menu"
+      data-radix-popper-align="end"
+      data-radix-popper-side="bottom"
       data-size="icon"
       data-slot="button"
       data-state="open"

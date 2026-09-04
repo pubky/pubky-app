@@ -18,6 +18,8 @@ export type TPrefixSearchParams = TPaginationParams & {
 export type TContentSearchParams = TPaginationParams & {
   q: string;
   kind?: StreamKind;
+  // Scopes the full-text search to one author's posts (profile "Filter posts").
+  author?: Pubky;
 };
 
 export type TContentSearchResult = Array<{

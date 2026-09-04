@@ -83,7 +83,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -137,7 +136,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -207,7 +205,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -261,7 +258,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -315,7 +311,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -369,7 +364,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -423,7 +417,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -477,7 +470,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -547,7 +539,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -601,7 +592,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -655,7 +645,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -725,7 +714,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -779,7 +767,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
                 data-state="closed"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   class="group flex w-full cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-white/5"
                   data-orientation="vertical"
@@ -1136,7 +1123,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
           data-testid="container"
         >
           <button
-            aria-controls="radix-normalized"
             aria-expanded="false"
             aria-haspopup="dialog"
             class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4"
@@ -1181,7 +1167,6 @@ exports[`Help - Snapshots > matches snapshot with default props 1`] = `
             Terms of service
           </button>
           <button
-            aria-controls="radix-normalized"
             aria-expanded="false"
             aria-haspopup="dialog"
             class="inline-flex items-center justify-center whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs bg-secondary text-secondary-foreground hover:bg-accent h-10 gap-1 px-4 py-2 has-[>svg]:px-4"

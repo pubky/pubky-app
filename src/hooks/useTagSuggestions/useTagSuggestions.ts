@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { DebouncedFunc } from 'lodash-es';
 import { debounce } from 'lodash-es';
 import { SearchController } from '@/controllers/search/search';
 import { Logger } from '@/libs/logger/logger';
@@ -10,6 +11,8 @@ import {
   TAG_SUGGESTIONS_MIN_QUERY_LENGTH,
 } from './useTagSuggestions.constants';
 import type { UseTagSuggestionsParams, UseTagSuggestionsResult } from './useTagSuggestions.types';
+
+type DebouncedTagSearch = DebouncedFunc<(searchQuery: string, searchLimit: number) => Promise<void>>;
 
 /**
  * Hook for fetching tag suggestions from the API
@@ -40,9 +43,14 @@ export function useTagSuggestions({
     [rawSuggestions, excludeTagsSet],
   );
 
-  // Debounced search function
-  const debouncedSearchRef = useRef(
-    debounce(async (searchQuery: string, searchLimit: number) => {
+  // Debounced search worker. It only closes over refs and state setters, so it
+  // never goes stale; creating it inside an effect (rather than in render via
+  // `useRef(debounce(...))`) keeps ref reads out of render for the React
+  // Compiler `refs` rule and avoids building a throwaway debounce per render.
+  const debouncedSearchRef = useRef<DebouncedTagSearch | null>(null);
+
+  useEffect(() => {
+    const debouncedSearch = debounce(async (searchQuery: string, searchLimit: number) => {
       const requestId = ++requestIdRef.current;
       setIsLoading(true);
 
@@ -68,14 +76,13 @@ export function useTagSuggestions({
           setIsLoading(false);
         }
       }
-    }, TAG_SUGGESTIONS_DEBOUNCE_MS),
-  );
+    }, TAG_SUGGESTIONS_DEBOUNCE_MS);
+    debouncedSearchRef.current = debouncedSearch;
 
-  // Cleanup debounced function on unmount to prevent memory leaks
-  useEffect(() => {
-    const debouncedFn = debouncedSearchRef.current;
+    // Cancel pending calls on unmount to prevent memory leaks.
     return () => {
-      debouncedFn.cancel();
+      debouncedSearch.cancel();
+      debouncedSearchRef.current = null;
     };
   }, []);
 
@@ -84,7 +91,7 @@ export function useTagSuggestions({
 
     // Reset if disabled, empty query, or below minimum length
     if (!enabled || !trimmedQuery || trimmedQuery.length < TAG_SUGGESTIONS_MIN_QUERY_LENGTH) {
-      debouncedSearchRef.current.cancel(); // Cancel first to prevent race conditions
+      debouncedSearchRef.current?.cancel(); // Cancel first to prevent race conditions
       requestIdRef.current += 1; // Then invalidate any in-flight request
       setRawSuggestions([]);
       setIsLoading(false);
@@ -93,11 +100,11 @@ export function useTagSuggestions({
 
     // Trigger debounced search
     const debouncedFn = debouncedSearchRef.current;
-    debouncedFn(trimmedQuery, limit);
+    debouncedFn?.(trimmedQuery, limit);
 
     // Cleanup: cancel pending debounced calls when deps change
     return () => {
-      debouncedFn.cancel();
+      debouncedFn?.cancel();
     };
   }, [query, enabled, limit]);
 
