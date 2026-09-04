@@ -115,3 +115,58 @@ export async function queryNexus<T>({ url, method = HttpMethod.GET, body = null 
     queryFn: () => fetchNexus<T>({ url, method, body }),
   });
 }
+
+// --- In-flight dedupe for non-idempotent batch lookups ----------------------
+//
+// Sentry PUBKY-APP-B3/9X/AD/CT/CV: on cold cache-miss pages, several call sites
+// (stream controller warm-up, per-post hooks, notification enrichment, repost
+// backfill) each fire their own `POST /v0/stream/{posts,users}/by_ids` for the
+// same ID sets within the same tick. TanStack's dedupe only sees one query
+// client key per identical (url, method, body), so identical bodies racing in
+// the same tick DO share a fetchQuery promise — but near-duplicates (same IDs,
+// different viewer or ordering) do not, and the aggregate burst trips the
+// nexus rate limiter's expensive-tier burst (40) on the first page load.
+//
+// This map coalesces in-flight requests by exact request identity. Unlike the
+// TanStack cache it also removes the entry as soon as the request settles, so
+// it never serves stale data; unlike fetchQuery it makes no guarantee beyond
+// the current burst window, which is exactly the failure mode we saw.
+
+const inFlightQueries = new Map<string, Promise<unknown>>();
+
+function inFlightKey(url: string, method: HttpMethod, body: string | null): string {
+  return `${method} ${url} ${body ?? ''}`;
+}
+
+/**
+ * Runs `fetchNexus` but coalesces concurrent identical requests into one
+ * network call. Use this instead of `queryNexus` for POST batch lookups that
+ * are known to race (stream/posts/by_ids, stream/users/by_ids).
+ */
+export async function queryNexusDeduped<T>({
+  url,
+  method = HttpMethod.GET,
+  body = null,
+}: TQueryNexusParams): Promise<T> {
+  const key = inFlightKey(url, method, body);
+  const existing = inFlightQueries.get(key);
+  if (existing) {
+    return existing as Promise<T>;
+  }
+
+  const promise = nexusQueryClient
+    .fetchQuery({
+      queryKey: ['nexus', url, method, body],
+      queryFn: () => fetchNexus<T>({ url, method, body }),
+    })
+    .finally(() => {
+      inFlightQueries.delete(key);
+    });
+
+  inFlightQueries.set(key, promise);
+  return promise;
+}
+
+export function clearInFlightQueriesForTest(): void {
+  inFlightQueries.clear();
+}
