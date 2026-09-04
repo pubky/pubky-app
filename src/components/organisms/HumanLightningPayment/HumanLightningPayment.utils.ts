@@ -25,7 +25,6 @@ export class VerificationHandler {
   private retryAttempt = 0;
   private sleepTimer: NodeJS.Timeout | null = null;
   private sleepResolve: (() => void) | null = null;
-  private ignoreNextAbortError = false;
   private visibilityRecoveryInProgress = false;
   private lastVisibilityRecoveryAt = 0;
 
@@ -162,13 +161,9 @@ export class VerificationHandler {
     return this.awaitLnVerificationPromise;
   }
 
-  private async abortInFlightAwait(forVisibilityRecovery: boolean): Promise<void> {
+  private async abortInFlightAwait(): Promise<void> {
     if (!this.awaitLnVerificationPromise || !this.awaitLnVerificationAbortController) {
       return;
-    }
-
-    if (forVisibilityRecovery) {
-      this.ignoreNextAbortError = true;
     }
 
     const inFlightPromise = this.awaitLnVerificationPromise;
@@ -184,15 +179,13 @@ export class VerificationHandler {
   private async handleAwaitError(error: unknown): Promise<boolean> {
     if (this.aborted) return false;
 
-    // Intentional aborts are control flow, not failures: the flag is set by
-    // abortInFlightAwait() before canceling the long poll (visibility
-    // recovery / teardown). But `abort()` itself — user canceling the
-    // payment, component teardown, payment expiration — also aborts the
-    // in-flight poll, and that rejection was previously unhandled and hit
-    // Sentry as "Request was aborted" (PUBKY-APP-4F). Any REQUEST_ABORTED
-    // after a local abort() call is by definition ours.
+    // Intentional aborts are control flow, not failures: user cancel,
+    // component teardown, payment expiration, and visibility-recovery all
+    // abort the in-flight long poll locally, and that rejection previously
+    // reached Sentry as "Request was aborted" (PUBKY-APP-4F). Any
+    // REQUEST_ABORTED observed by this handler is therefore ours by
+    // construction (every abort originates from this instance).
     if (isAppError(error) && error.code === TimeoutErrorCode.REQUEST_ABORTED) {
-      this.ignoreNextAbortError = false;
       return true;
     }
 
@@ -298,11 +291,10 @@ export class VerificationHandler {
 
     try {
       // Force-refresh status on foreground by canceling stale in-flight poll first.
-      await this.abortInFlightAwait(true);
+      await this.abortInFlightAwait();
       await this.checkPaymentStatus();
     } finally {
-      this.visibilityRecoveryInProgress = false;
-      this.ignoreNextAbortError = false; // Ensure flag never leaks across recovery cycles
+      this.visibilityRecoveryInProgress = false
     }
   }
 
