@@ -23,6 +23,7 @@ import { BookmarkModel } from '@/models/bookmark/bookmark';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import {
   isAuthorScopedContentSearchStream,
@@ -563,8 +564,11 @@ export class PostStreamApplication {
    * @param viewerId - ID of the viewer
    * @param streamHead - Detects if the call is coming from the streamCoordinator.
    * @param streamId - ID of the stream. If not provided, it means that it is a single post operation.
+   * @returns Whether hydration succeeded. Failure is non-fatal for fail-open streams
+   * (they render what the cache has), but callers with strict post-hydration
+   * filtering (author-scoped content search) must not mistake it for "no results".
    */
-  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId }: TMissingPostsParams) {
+  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId }: TMissingPostsParams): Promise<boolean> {
     try {
       const postBatch = await NexusPostStreamService.fetchByIds({
         post_ids: cacheMissPostIds,
@@ -580,8 +584,10 @@ export class PostStreamApplication {
         .map((post) => post.relationships.reposted)
         .filter((uri): uri is string => uri !== null);
       await this.fetchOriginalPostsByUris({ repostedUris, viewerId });
+      return true;
     } catch (error) {
       Logger.warn('Failed to fetch missing posts from Nexus', { cacheMissPostIds, viewerId, error });
+      return false;
     }
   }
 
@@ -775,8 +781,16 @@ export class PostStreamApplication {
       return missingDetailsIds;
     }
 
-    const relationships = await LocalPostService.readRelationshipsByIds(postIds);
-    const missingRelationshipsIds = postIds.filter((_postId, index) => !relationships[index]);
+    const [details, relationships] = await Promise.all([
+      LocalPostService.readDetailsByIds(postIds),
+      LocalPostService.readRelationshipsByIds(postIds),
+    ]);
+    // A locally tombstoned post keeps its details row but its relationships row is gone
+    // for good: re-fetching can never classify it, and the deleted filter drops it
+    // anyway, so flagging it would issue a futile by_ids request on every page load.
+    const missingRelationshipsIds = postIds.filter(
+      (_postId, index) => !relationships[index] && details[index]?.content !== DELETED,
+    );
     return Array.from(new Set([...missingDetailsIds, ...missingRelationshipsIds]));
   }
 

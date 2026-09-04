@@ -1014,9 +1014,7 @@ describe('Post Application', () => {
     it('should fetch post from Nexus using stream posts logic', async () => {
       const mockViewerId = 'test-viewer-id' as Pubky;
       const readSpyFirst = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(null);
-      const fetchMissingSpy = vi
-        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
-        .mockResolvedValue(undefined);
+      const fetchMissingSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
       const readSpySecond = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(mockPostDetails);
 
       const result = await PostApplication.getOrFetch({
@@ -1036,9 +1034,7 @@ describe('Post Application', () => {
     it('should return null when post not found in Nexus', async () => {
       const mockViewerId = 'test-viewer-id' as Pubky;
       const readSpyFirst = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(null);
-      const fetchMissingSpy = vi
-        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
-        .mockResolvedValue(undefined);
+      const fetchMissingSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
       const readSpySecond = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(null);
 
       const result = await PostApplication.getOrFetch({
@@ -1068,9 +1064,7 @@ describe('Post Application', () => {
 
     it('should fetch post from Nexus and return persisted data', async () => {
       const mockViewerId = 'test-viewer-id' as Pubky;
-      const fetchMissingSpy = vi
-        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
-        .mockResolvedValue(undefined);
+      const fetchMissingSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
       const readSpy = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(mockPostDetails);
 
       const result = await PostApplication.fetch({
@@ -1089,9 +1083,7 @@ describe('Post Application', () => {
 
     it('should return null when post not found on Nexus', async () => {
       const mockViewerId = 'test-viewer-id' as Pubky;
-      const fetchMissingSpy = vi
-        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
-        .mockResolvedValue(undefined);
+      const fetchMissingSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
       const readSpy = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(null);
 
       const result = await PostApplication.fetch({

@@ -650,6 +650,37 @@ describe('PostStreamApplication', () => {
       expect(result.nextPageIds).toEqual([classifiedPostId, unclassifiedPostId]);
     });
 
+    it('does not flag locally tombstoned posts as relationships cache misses', async () => {
+      // A tombstoned post keeps its details row (content = DELETED) but its relationships
+      // row is deleted for good. Re-fetching can never classify it and the deleted filter
+      // drops it anyway — flagging it would issue a futile by_ids on every page load.
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', DEFAULT_AUTHOR as Pubky);
+      const tombstonedPostId = `${DEFAULT_AUTHOR}:tombstoned-post`;
+      await PostDetailsModel.create({
+        id: tombstonedPostId,
+        content: DELETED,
+        kind: 'short',
+        indexed_at: BASE_TIMESTAMP,
+        uri: `https://pubky.app/${DEFAULT_AUTHOR}/pub/pubky.app/posts/${tombstonedPostId}`,
+        attachments: null,
+      });
+
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: [tombstonedPostId],
+        last_post_score: null,
+      });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: scopedStreamId,
+        limit: 1,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: null,
+      });
+
+      expect(result.cacheMissPostIds).toEqual([]);
+    });
+
     it('should return posts from cache when available (no cursor)', async () => {
       const postIds = Array.from({ length: 20 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
@@ -1462,14 +1493,14 @@ describe('PostStreamApplication', () => {
   describe('fetchMissingPostsFromNexus', () => {
     const viewerId = 'user-viewer' as Pubky;
 
-    it('should fetch and persist posts when postBatch exists', async () => {
+    it('should fetch and persist posts when postBatch exists, reporting success', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(2);
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue(mockAllUsersCached(2));
 
       const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
 
-      await PostStreamApplication.fetchMissingPostsFromNexus({
+      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
@@ -1480,6 +1511,23 @@ describe('PostStreamApplication', () => {
       });
       expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: mockNexusPosts });
       expect(mocks.persistFiles).toHaveBeenCalledWith([]);
+      expect(hydrated).toBe(true);
+    });
+
+    it('reports failure without throwing when the by_ids fetch rejects', async () => {
+      // Fail-open streams render what the cache has; callers with strict
+      // post-hydration filtering must be able to tell "hydration failed"
+      // apart from "hydrated, genuinely no results".
+      const { cacheMissPostIds } = createTestData(2);
+      setupDefaultMocks();
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockRejectedValue(new Error('network down'));
+
+      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds,
+        viewerId,
+      });
+
+      expect(hydrated).toBe(false);
     });
 
     it('should fetch and persist users when cacheMissUserIds exist', async () => {
