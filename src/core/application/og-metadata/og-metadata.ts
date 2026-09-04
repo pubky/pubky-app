@@ -12,6 +12,15 @@ export class OgMetadataApplication {
   private constructor() {}
 
   /**
+   * In-flight coalescing. The OG route is CDN-cached, but crawlers and
+   * multi-tab users still reach this handler with several concurrent
+   * requests for the same URL before any response is cacheable, and each
+   * did a full DNS check + remote fetch (PUBKY-APP-60 "Inefficient HTTP
+   * Requests"). Concurrent identical URLs now share one fetch.
+   */
+  private static readonly inFlight = new Map<string, Promise<TOgMetadataResult>>();
+
+  /**
    * Fetch and extract OG metadata from a validated URL.
    *
    * @param validatedUrl - Parsed and validated URL from the pipes layer
@@ -20,6 +29,16 @@ export class OgMetadataApplication {
    * (blocked private IP, non-HTTP redirect, oversized body, redirect loop, or unexpected server error).
    */
   static async fetch(validatedUrl: URL): Promise<TOgMetadataResult> {
-    return NextJsOgMetadataService.fetch(validatedUrl);
+    const key = validatedUrl.toString();
+    const existing = this.inFlight.get(key);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = NextJsOgMetadataService.fetch(validatedUrl).finally(() => {
+      this.inFlight.delete(key);
+    });
+    this.inFlight.set(key, promise);
+    return promise;
   }
 }

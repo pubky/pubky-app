@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TITLE_TRUNCATE_LENGTH, URL_TRUNCATE_LENGTH } from '@/config/urls';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 
@@ -200,8 +200,8 @@ describe('validateRedirectUrl', () => {
     const response = new Response(null, { status: 302, headers: { location: 'ftp://example.com/data' } });
     expect(() => validateRedirectUrl(response, 'https://example.com/')).toThrow(
       expect.objectContaining({
-        category: ErrorCategory.Auth,
-        code: AuthErrorCode.FORBIDDEN,
+        category: ErrorCategory.Validation,
+        code: ValidationErrorCode.INVALID_INPUT,
         context: { protocol: 'ftp:', statusCode: HttpStatusCode.FORBIDDEN },
       }),
     );

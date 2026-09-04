@@ -1,6 +1,6 @@
 import type { TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { TITLE_TRUNCATE_LENGTH, URL_TRUNCATE_LENGTH } from '@/config/urls';
-import { AuthErrorCode } from '@/libs/error/error.codes';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { extractFromHtml, OG_PATTERNS } from '@/libs/html/html';
@@ -88,7 +88,9 @@ export function validateRedirectUrl(response: Response, currentUrl: string): URL
   const redirectUrl = new URL(location, currentUrl);
   // 3. Must be HTTP or HTTPS to prevent SSRF via redirect to non-HTTP protocols.
   if (!isHttpProtocol(redirectUrl)) {
-    throw Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked redirect to non-HTTP protocol', {
+    // VALIDATION taxonomy (not AUTH): this is the SSRF guard rejecting
+    // caller-supplied input, same rationale as the private-IP block.
+    throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Blocked redirect to non-HTTP protocol', {
       service: ErrorService.NextJsServer,
       operation: 'fetchWithRedirects',
       context: { protocol: redirectUrl.protocol, statusCode: HttpStatusCode.FORBIDDEN },

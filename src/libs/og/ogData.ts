@@ -41,7 +41,7 @@ const EMPTY_COUNTS: NexusUserCounts = {
 export async function fetchProfileForMetadata(
   pubky: string,
 ): Promise<{ user: NexusUserDetails; counts: NexusUserCounts } | null> {
-  const userId = stripPubkyPrefix(decodeURIComponent(pubky));
+  const userId = stripPubkyPrefix(decodeURIComponent(pubky)).replace(/[.\s]+$/, '');
 
   const [user, counts] = await Promise.all([
     fetchWithValidation<NexusUserDetails>(userApi.details({ user_id: userId }), 'fetchUserDetails'),

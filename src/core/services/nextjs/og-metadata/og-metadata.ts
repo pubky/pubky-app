@@ -3,7 +3,7 @@ import type { Dispatcher } from 'undici';
 import { Agent } from 'undici';
 import type { TOgMetadataFallbackReason, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { NetworkErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -212,7 +212,13 @@ function throwBlockedIpError(hostname: string, operation: string): never {
 }
 
 function createBlockedIpError(hostname: string, operation: string): AppError {
-  return Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
+  // Classified as VALIDATION, not AUTH: the private-IP block is the SSRF guard
+  // working as designed on caller-supplied input (URLs typed/pasted by users,
+  // or link-preview crawls of private-network hostnames). As an auth error it
+  // read like a security incident and stayed top-of-feed in Sentry
+  // (PUBKY-APP-45). The OG route still answers 403 to the caller; only the
+  // error taxonomy changes.
+  return Err.validation(ValidationErrorCode.INVALID_INPUT, 'Blocked IP range. Cannot fetch from private networks.', {
     service: ErrorService.NextJsServer,
     operation,
     context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },

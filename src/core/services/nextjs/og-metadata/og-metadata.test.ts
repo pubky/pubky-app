@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { fetch as undiciFetch } from 'undici';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TITLE_TRUNCATE_LENGTH, URL_TRUNCATE_LENGTH } from '@/config/urls';
-import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { NetworkErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -509,8 +509,8 @@ describe('NextJsOgMetadataService', () => {
     );
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
       context: { protocol: 'ftp:', statusCode: HttpStatusCode.FORBIDDEN },
     });
   });
@@ -520,8 +520,8 @@ describe('NextJsOgMetadataService', () => {
     mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
       context: { hostname: '127.0.0.2', statusCode: HttpStatusCode.FORBIDDEN },
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -543,8 +543,8 @@ describe('NextJsOgMetadataService', () => {
     mockIsIpSafe.mockImplementation((ip) => ip !== 'fd00::1');
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
       context: { hostname: 'redirect-rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
     });
     expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -605,8 +605,8 @@ describe('NextJsOgMetadataService', () => {
       mockIsIpSafe.mockReturnValue(false);
 
       await expect(NextJsOgMetadataService.fetch(new URL(url))).rejects.toMatchObject({
-        category: ErrorCategory.Auth,
-        code: AuthErrorCode.FORBIDDEN,
+        category: ErrorCategory.Validation,
+        code: ValidationErrorCode.INVALID_INPUT,
         context: { statusCode: HttpStatusCode.FORBIDDEN },
       });
       expect(mockFetch).not.toHaveBeenCalled();
@@ -618,8 +618,8 @@ describe('NextJsOgMetadataService', () => {
     mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
       context: { hostname: 'example.com', statusCode: HttpStatusCode.FORBIDDEN },
     });
     expect(mockFetch).not.toHaveBeenCalled();
@@ -630,8 +630,8 @@ describe('NextJsOgMetadataService', () => {
     mockIsIpSafe.mockImplementation((ip) => ip !== 'fd00::1');
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
       context: { hostname: 'example.com', statusCode: HttpStatusCode.FORBIDDEN },
     });
     expect(mockFetch).not.toHaveBeenCalled();
@@ -644,8 +644,8 @@ describe('NextJsOgMetadataService', () => {
     mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
 
     await expect(NextJsOgMetadataService.fetch(new URL('http://rebind.example.test/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
+      category: ErrorCategory.Validation,
+      code: ValidationErrorCode.INVALID_INPUT,
       context: { hostname: 'rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
     });
     expect(loggerErrorSpy).toHaveBeenCalledWith(
