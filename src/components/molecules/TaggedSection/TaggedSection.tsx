@@ -7,6 +7,8 @@ import type { TaggedSectionProps } from './TaggedSection.types';
 
 export function TaggedSection({
   tags,
+  taggedId,
+  taggedKind,
   userName,
   handleTagAdd,
   handleTagToggle,
@@ -30,6 +32,8 @@ export function TaggedSection({
 
       <TaggedList
         tags={tags}
+        taggedId={taggedId}
+        taggedKind={taggedKind}
         hasMore={hasMore}
         isLoadingMore={isLoadingMore}
         onLoadMore={loadMore}

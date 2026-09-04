@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { WhoTaggedExpandedList } from './WhoTaggedExpandedList';
 
 // Mock next/navigation
@@ -97,6 +98,70 @@ describe('WhoTaggedExpandedList', () => {
     expect(screen.getByTestId('user-list-item-user1')).toBeInTheDocument();
     expect(screen.getByTestId('user-list-item-user2')).toBeInTheDocument();
     expect(screen.getByTestId('user-list-item-user3')).toBeInTheDocument();
+  });
+
+  it('keeps overflowing tagger rows in a constrained scroll container', () => {
+    const taggerIds = Array.from({ length: 6 }, (_, index) => `user${index + 1}`);
+    render(<WhoTaggedExpandedList taggerIds={taggerIds} />);
+
+    expect(screen.getByRole('list', { name: 'Who tagged expanded list' })).toHaveClass(
+      'max-h-(--who-tagged-expanded-list-max-height)',
+      'overflow-y-auto',
+    );
+  });
+
+  it('renders a load-more sentinel only when more taggers can be loaded', () => {
+    const { rerender } = render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} />);
+    expect(screen.queryByTestId('who-tagged-expanded-list-sentinel')).not.toBeInTheDocument();
+
+    rerender(<WhoTaggedExpandedList taggerIds={mockTaggerIds} hasMore onLoadMore={vi.fn()} />);
+    expect(screen.getByTestId('who-tagged-expanded-list-sentinel')).toBeInTheDocument();
+    expect(screen.getByTestId('who-tagged-expanded-list-sentinel')).toBeEmptyDOMElement();
+  });
+
+  it('shows a loading row while the next page loads and keeps the rows visible', () => {
+    render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} hasMore isLoadingMore onLoadMore={vi.fn()} />);
+
+    expect(screen.getByTestId('user-list-item-user1')).toBeInTheDocument();
+    expect(screen.getByTestId('who-tagged-expanded-list-sentinel')).not.toBeEmptyDOMElement();
+    expect(screen.queryByTestId('who-tagged-expanded-list-skeleton')).not.toBeInTheDocument();
+  });
+
+  it('loads more when the sentinel scrolls into view', () => {
+    vi.useFakeTimers();
+    const originalObserver = window.IntersectionObserver;
+    const observed: Array<{ callback: IntersectionObserverCallback; target: Element }> = [];
+    class ObservingIntersectionObserver {
+      constructor(private readonly callback: IntersectionObserverCallback) {}
+      observe(target: Element) {
+        observed.push({ callback: this.callback, target });
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    window.IntersectionObserver = asOpaque<typeof IntersectionObserver>(ObservingIntersectionObserver);
+
+    try {
+      const onLoadMore = vi.fn();
+      render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} hasMore onLoadMore={onLoadMore} />);
+
+      const sentinel = screen.getByTestId('who-tagged-expanded-list-sentinel');
+      const observer = observed.find((entry) => entry.target === sentinel);
+      expect(observer).toBeDefined();
+
+      act(() => {
+        observer?.callback(
+          [asOpaque<IntersectionObserverEntry>({ isIntersecting: true, target: sentinel })],
+          asOpaque<IntersectionObserver>({}),
+        );
+        vi.runAllTimers();
+      });
+
+      expect(onLoadMore).toHaveBeenCalledTimes(1);
+    } finally {
+      window.IntersectionObserver = originalObserver;
+      vi.useRealTimers();
+    }
   });
 
   it('returns null when taggers array is empty', () => {

@@ -365,13 +365,14 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
   };
 });
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => {
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', () => {
   const result = {
     taggersByLabel: new Map<string, string[]>(),
-    taggerStates: new Map<string, { isLoading: boolean; error: string | null }>(),
-    fetchAllTaggers: async () => {},
+    taggerStates: new Map<string, { isLoading: boolean; hasMore: boolean; hasFetched: boolean }>(),
+    loadTaggers: async () => {},
+    loadMoreTaggers: async () => {},
   };
-  return { usePostTaggers: () => result };
+  return { useEntityTaggers: () => result };
 });
 
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => {

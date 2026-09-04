@@ -458,7 +458,7 @@ describe('UserApplication.fetchTaggers', () => {
   });
 
   it('should delegate to NexusUserService with correct params', async () => {
-    const mockTaggers = [] as NexusTaggers[];
+    const mockTaggers: NexusTaggers = { users: [], relationship: false };
     const nexusSpy = vi.spyOn(NexusUserService, 'taggers').mockResolvedValue(mockTaggers);
 
     const result = await UserApplication.fetchTaggers({

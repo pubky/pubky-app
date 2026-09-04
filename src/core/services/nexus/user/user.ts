@@ -42,11 +42,11 @@ export class NexusUserService {
    * Retrieves taggers for a specific tag label on a user from Nexus API
    *
    * @param params - Parameters containing user ID, label, and pagination options
-   * @returns Array of users who tagged the user with the specified label
+   * @returns Users who tagged the user with the specified label (`{ users, relationship }`)
    */
-  static async taggers(params: TUserTaggersParams): Promise<NexusTaggers[]> {
+  static async taggers(params: TUserTaggersParams): Promise<NexusTaggers> {
     const url = userApi.taggers(params);
-    return await queryNexus<NexusTaggers[]>({ url });
+    return await queryNexus<NexusTaggers>({ url });
   }
 
   /**

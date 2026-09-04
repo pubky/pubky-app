@@ -184,7 +184,7 @@ describe('NexusUserService', () => {
 
   describe('taggers', () => {
     it('should construct correct URL with encoded label', async () => {
-      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue({ users: [], relationship: false });
 
       await NexusUserService.taggers({
         user_id: testUserId,

@@ -3,8 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { getUserProfileUrl } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
+import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -17,12 +19,16 @@ import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
  *
  * Displays an expandable list of users who tagged a post/content.
  * Shows each user with their avatar, name, pubky, and a follow/unfollow button.
- * Max height of 300px with scroll for overflow.
+ * Max height of 300px with scroll for overflow; scrolling to the bottom loads
+ * the next page when `hasMore` is set.
  */
 export function WhoTaggedExpandedList({
   taggerIds,
   fallbackTaggers,
   isLoadingTaggers,
+  isLoadingMore = false,
+  hasMore = false,
+  onLoadMore,
   'data-testid': dataTestId,
 }: WhoTaggedExpandedListProps) {
   const router = useRouter();
@@ -30,6 +36,13 @@ export function WhoTaggedExpandedList({
   const { requireAuth } = useRequireAuth();
   const { currentUserPubky } = useAuthStore();
   const { getUsersWithAvatars } = useBulkUserAvatars(taggerIds);
+  const { sentinelRef } = useInfiniteScroll({
+    onLoadMore: onLoadMore || (() => {}),
+    hasMore: hasMore && !!onLoadMore,
+    isLoading: isLoadingMore,
+    threshold: 100,
+    debounceMs: 300,
+  });
 
   // Build fallback map for user data not yet in IndexedDB
   const fallbackMap = new Map<string, TaggerWithAvatar>();
@@ -81,6 +94,25 @@ export function WhoTaggedExpandedList({
           onFollowClick={handleFollowClick}
         />
       ))}
+      {hasMore && (
+        <Container
+          overrideDefaults
+          ref={sentinelRef}
+          className="flex w-full items-center gap-3"
+          data-testid="who-tagged-expanded-list-sentinel"
+        >
+          {isLoadingMore && (
+            <>
+              <Skeleton className="size-10 shrink-0 rounded-full" />
+              <Container overrideDefaults className="flex min-w-0 flex-1 flex-col gap-2">
+                <Skeleton className="h-4 max-w-[150px] rounded-md" />
+                <Skeleton className="h-4 max-w-[130px] rounded-md" />
+              </Container>
+              <Skeleton className="size-8 shrink-0 rounded-full" />
+            </>
+          )}
+        </Container>
+      )}
     </Container>
   );
 }

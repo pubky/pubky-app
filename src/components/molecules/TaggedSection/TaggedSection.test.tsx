@@ -1,12 +1,21 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TagKind } from '@/application/tag/tag.types';
+import type { TaggedListProps } from '@/molecules/TaggedList/TaggedList.types';
 import { TaggedSection } from './TaggedSection';
 import type { TaggedSectionProps } from './TaggedSection.types';
+
+const { mockTaggedList } = vi.hoisted(() => ({
+  mockTaggedList: vi.fn(),
+}));
 
 // Mock TagInput and TaggedList
 vi.mock('@/molecules/TaggedList/TaggedList', () => {
   return {
-    TaggedList: ({ tags }: { tags: unknown[] }) => <div data-testid="tagged-list">{tags.length} tags</div>,
+    TaggedList: (props: TaggedListProps) => {
+      mockTaggedList(props);
+      return <div data-testid="tagged-list">{props.tags.length} tags</div>;
+    },
   };
 });
 
@@ -25,6 +34,8 @@ const defaultProps: TaggedSectionProps = {
       relationship: false,
     },
   ],
+  taggedId: 'profile-pubky',
+  taggedKind: TagKind.USER,
   userName: 'Satoshi',
   handleTagAdd: vi.fn().mockResolvedValue({ success: true }),
   handleTagToggle: vi.fn(),
@@ -34,6 +45,10 @@ const defaultProps: TaggedSectionProps = {
 };
 
 describe('TaggedSection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders user name in header', () => {
     render(<TaggedSection {...defaultProps} />);
     expect(screen.getByText('Satoshi was tagged as:')).toBeInTheDocument();
@@ -47,6 +62,17 @@ describe('TaggedSection', () => {
   it('renders TaggedList', () => {
     render(<TaggedSection {...defaultProps} />);
     expect(screen.getByTestId('tagged-list')).toBeInTheDocument();
+  });
+
+  it('forwards the tagged entity context to TaggedList', () => {
+    render(<TaggedSection {...defaultProps} />);
+
+    expect(mockTaggedList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taggedId: 'profile-pubky',
+        taggedKind: TagKind.USER,
+      }),
+    );
   });
 });
 
