@@ -160,7 +160,7 @@ function BookmarksTimelineFeed({
 
 function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['children'] }) {
   const { pubky } = useProfileContext();
-  const { inputValue, onInputChange, activeQuery } = useProfilePostsFilter();
+  const { inputValue, onInputChange, activeQuery, validationMessage } = useProfilePostsFilter();
   // An active query swaps the stream to the author-scoped content search;
   // the bar stays mounted across the swap (it renders as feed children), so
   // input focus survives the results changing underneath it.
@@ -180,7 +180,7 @@ function ProfileTimelineFeed({ children }: { children?: TimelineFeedProps['child
       layoutResolution={layoutResolution}
       emptyState={activeQuery ? <FilterPostsEmpty /> : <PostsEmpty />}
     >
-      <FilterPostsBar value={inputValue} onValueChange={onInputChange} />
+      <FilterPostsBar value={inputValue} onValueChange={onInputChange} validationMessage={validationMessage} />
       {children}
     </TimelineFeedWithStream>
   );

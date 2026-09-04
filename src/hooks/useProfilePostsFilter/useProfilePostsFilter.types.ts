@@ -9,4 +9,10 @@ export interface UseProfilePostsFilterResult {
    * terms) — the ordinary profile feed stays in that case.
    */
   activeQuery: string | null;
+  /**
+   * The validator's user-facing message when the settled (debounced) input is
+   * non-empty but invalid, `null` otherwise. Lets the bar explain why the feed
+   * is unfiltered instead of silently showing everything.
+   */
+  validationMessage: string | null;
 }

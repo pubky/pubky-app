@@ -91,6 +91,40 @@ describe('useProfilePostsFilter', () => {
     expect(result.current.activeQuery).toBeNull();
   });
 
+  it('exposes the validator message for a settled invalid query and clears it again', () => {
+    const { result } = renderHook(() => useProfilePostsFilter());
+
+    const applyInput = (value: string) => {
+      act(() => {
+        result.current.onInputChange(value);
+      });
+      act(() => {
+        vi.advanceTimersByTime(PROFILE_POSTS_FILTER_DEBOUNCE_MS);
+      });
+    };
+
+    expect(result.current.validationMessage).toBeNull();
+
+    applyInput('one two three four five');
+    expect(result.current.activeQuery).toBeNull();
+    expect(result.current.validationMessage).toMatch(/up to 4 terms/);
+
+    // A valid query replaces the message with an active filter.
+    applyInput('bitcoin');
+    expect(result.current.activeQuery).toBe('bitcoin');
+    expect(result.current.validationMessage).toBeNull();
+
+    // While typing (debounce pending) the previous message state holds; no flicker.
+    applyInput('a');
+    expect(result.current.validationMessage).toMatch(/at least 2 characters/);
+
+    // Clearing resets the message synchronously, like the active query.
+    act(() => {
+      result.current.onInputChange('');
+    });
+    expect(result.current.validationMessage).toBeNull();
+  });
+
   it('clears immediately: cancels the pending debounce and resets the active query', () => {
     const { result } = renderHook(() => useProfilePostsFilter());
 

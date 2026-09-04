@@ -31,6 +31,29 @@ describe('FilterPostsBar', () => {
     fireEvent.change(input, { target: { value: 'bitcoin wallet' } });
     expect(onValueChange).toHaveBeenCalledWith('bitcoin wallet');
   });
+
+  it('renders the validation message below the pill with alert semantics', () => {
+    render(
+      <FilterPostsBar
+        value="one two three four five"
+        onValueChange={vi.fn()}
+        validationMessage="Search can contain up to 4 terms"
+      />,
+    );
+
+    const message = screen.getByRole('alert');
+    expect(message).toHaveTextContent('Search can contain up to 4 terms');
+    const input = screen.getByRole('textbox', { name: 'Filter posts' });
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAttribute('aria-describedby', message.id);
+  });
+
+  it('omits the message and invalid state when the query is fine', () => {
+    render(<FilterPostsBar value="bitcoin" onValueChange={vi.fn()} />);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Filter posts' })).toHaveAttribute('aria-invalid', 'false');
+  });
 });
 
 describe('FilterPostsBar - Snapshots', () => {
