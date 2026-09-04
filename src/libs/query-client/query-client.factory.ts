@@ -76,6 +76,14 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
     if (isAppError(error)) {
       const statusCode = error.context?.statusCode as number | undefined;
 
+      // 429: the server is telling us to slow down. Back off hard (start at 2s,
+      // grow exponentially) and only retry once — retrying fast into the same
+      // burst amplifies the spike (Sentry PUBKY-APP-B3). If the server sent a
+      // Retry-After hint we could honor it, but AppError doesn't carry headers.
+      if (statusCode === HttpStatusCode.TOO_MANY_REQUESTS) {
+        return Math.max(2_000, Math.min(delays.default.initial * 4 ** attemptIndex, delays.default.max));
+      }
+
       // 404: Use notFound delays if configured
       if (statusCode === HttpStatusCode.NOT_FOUND && delays.notFound) {
         return Math.min(delays.notFound.initial * 2 ** attemptIndex, delays.notFound.max);
@@ -98,6 +106,10 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
         retryDelay: retryDelay,
         staleTime,
         gcTime,
+      },
+      mutations: {
+        // Mutations are user actions, not fetch bursts: never blind-retry them.
+        retry: false,
       },
     },
   });
