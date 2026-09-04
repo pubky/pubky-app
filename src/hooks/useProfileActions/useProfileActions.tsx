@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AUTH_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
+import { AuthController } from '@/controllers/auth/auth';
 import { ProfileController } from '@/controllers/profile/profile';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { Logger } from '@/libs/logger/logger';
@@ -50,11 +51,16 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
     void copyToClipboard(link);
   }, [link, copyToClipboard]);
 
-  const onSignOut = useCallback(() => {
-    // Let the logout route own cleanup so this page and its live queries unmount
-    // before IndexedDB is cleared.
+  const onSignOut = useCallback(async () => {
     setIsLoggingOut(true);
-    router.push(AUTH_ROUTES.LOGOUT);
+    try {
+      await AuthController.logout();
+      router.push(AUTH_ROUTES.LOGOUT);
+    } catch (error) {
+      Logger.error('Failed to logout:', error);
+      toast({ variant: 'error', description: 'Could not log out. Try again.' });
+      setIsLoggingOut(false);
+    }
   }, [router]);
 
   const onStatusChange = useCallback(

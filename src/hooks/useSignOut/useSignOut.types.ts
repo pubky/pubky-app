@@ -1,4 +1,4 @@
 export interface UseSignOutResult {
-  handleSignOut: () => void;
+  handleSignOut: () => Promise<void>;
   isLoading: boolean;
 }
