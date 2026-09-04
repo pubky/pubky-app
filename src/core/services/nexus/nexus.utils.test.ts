@@ -228,13 +228,21 @@ describe('queryNexusDeduped', () => {
     const body = JSON.stringify({ ids: ['x'] });
 
     // 400 is non-retryable in the nexus client config, so it rejects immediately
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 400, statusText: 'Bad Request', headers: { get: vi.fn() }, text: vi.fn().mockResolvedValue('') });
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      headers: { get: vi.fn() },
+      text: vi.fn().mockResolvedValue(''),
+    });
     await expect(queryNexusDeduped({ url, method: HttpMethod.POST, body })).rejects.toMatchObject({
       category: ErrorCategory.Client,
       code: ClientErrorCode.BAD_REQUEST,
     });
 
-    mockFetch.mockResolvedValueOnce(createMockResponse({ text: vi.fn().mockResolvedValue(JSON.stringify({ recovered: true })) }));
+    mockFetch.mockResolvedValueOnce(
+      createMockResponse({ text: vi.fn().mockResolvedValue(JSON.stringify({ recovered: true })) }),
+    );
     const r = await queryNexusDeduped({ url, method: HttpMethod.POST, body });
     expect(r).toEqual({ recovered: true });
     expect(mockFetch).toHaveBeenCalledTimes(2);
