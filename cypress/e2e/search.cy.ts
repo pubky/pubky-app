@@ -1,16 +1,42 @@
-import { backupDownloadFilePath } from '../support/auth';
+import { backupDownloadFilePath } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
-import { CheckForNewPosts } from '../support/types/enums';
+import { BackupType, CheckForNewPosts } from '../support/types/enums';
 
 const username = 'Mr Search';
+
+// unique suffix shared by all tags and posts created in the `before` hook so
+// that each test can rely on the same fixture data
+const uniqueId = Cypress._.uniqueId(Date.now().toString().slice(-2));
+const tag1 = `tag1-${uniqueId}`;
+const tag2 = `tag2-${uniqueId}`;
+const tag3 = `tag3-${uniqueId}`;
+// letters-only unique word so full-text search matches exactly one post even if
+// the index tokenizer splits terms on letter/digit boundaries
+// (content query limits: min 2 chars, max 30 chars, max 4 terms)
+const uniqueWord = `findme${Date.now()
+  .toString()
+  .replace(/\d/g, (digit) => 'abcdefghij'[Number(digit)])}`;
+const postTag1 = `Post with tag1 ${uniqueWord}`;
+const postTag2 = `Post with tag2 ${Date.now()}`;
+const postTags2and3 = `Post with tag2 and tag3 ${Date.now()}`;
+const postNoTags = `Post with no tags ${Date.now()}`;
 
 describe('search', () => {
   before(() => {
     slowCypressDown();
     cy.deleteDownloadsFolder();
-    cy.onboardAsNewUser(username, 'I like to search');
+    cy.onboardAsNewUser(username, 'I like to search', [BackupType.EncryptedFile]);
+
+    // create the posts searched for by the tests below
+    createQuickPost(postTag1, [tag1]);
+    createQuickPost(postTag2, [tag2]);
+    createQuickPost(postTags2and3, [tag2, tag3]);
+    createQuickPost(postNoTags);
+
+    // wait for posts to appear in feed so they are indexed before searching
+    cy.findFirstPostInFeed(CheckForNewPosts.Yes);
   });
 
   beforeEach(() => {
@@ -23,34 +49,7 @@ describe('search', () => {
     });
   });
 
-  it('can search posts by tag filters and by full-text query', () => {
-    const uniqueId = Cypress._.uniqueId(Date.now().toString().slice(-2));
-    const tag1 = `tag1-${uniqueId}`;
-    const tag2 = `tag2-${uniqueId}`;
-    const tag3 = `tag3-${uniqueId}`;
-    // letters-only unique word so full-text search matches exactly one post even if
-    // the index tokenizer splits terms on letter/digit boundaries
-    // (content query limits: min 2 chars, max 30 chars, max 4 terms)
-    const uniqueWord = `findme${Date.now()
-      .toString()
-      .replace(/\d/g, (digit) => 'abcdefghij'[Number(digit)])}`;
-    const postTag1 = `Post with tag1 ${uniqueWord}`;
-    const postTag2 = `Post with tag2 ${Date.now()}`;
-    const postTags2and3 = `Post with tag2 and tag3 ${Date.now()}`;
-    const postNoTags = `Post with no tags ${Date.now()}`;
-
-    // create a post with tag1
-    createQuickPost(postTag1, [tag1]);
-    // create a post with tag2
-    createQuickPost(postTag2, [tag2]);
-    // create a post with tag2 and tag3
-    createQuickPost(postTags2and3, [tag2, tag3]);
-    // create a post with no tags
-    createQuickPost(postNoTags);
-
-    // wait for posts to appear in feed before searching
-    cy.findFirstPostInFeed(CheckForNewPosts.Yes);
-
+  it('can search posts by tag filters', () => {
     // open search results for a single tag
     cy.visit(`/search?tags=${tag1}`);
 
@@ -126,7 +125,9 @@ describe('search', () => {
     cy.location('search').should('contain', `tags=${tag1}`).should('not.contain', tag2);
     cy.get('[data-cy="header-search"]').innerTextShouldContain(tag1).innerTextShouldNotContain(tag2);
     cy.get('[data-cy="post-search-results"]').find('[data-cy="post-card"]').should('have.length', 1);
+  });
 
+  it('can search posts by full-text query', () => {
     // full-text search for the unique word from the first post's text
     cy.get('[data-cy="header-search-input"]').filter(':visible').type(uniqueWord).type('{enter}');
 
@@ -145,5 +146,19 @@ describe('search', () => {
       .within(() => {
         cy.get('[data-cy="post-text"]').innerTextShouldContain(postTag1);
       });
+
+    // a post without the word is not in the results
+    cy.get('[data-cy="post-search-results"]').innerTextShouldNotContain(postNoTags);
   });
+
+  // TODO: tag own profile (see `addProfileTags` in support/profile.ts) with a
+  // unique tag, then visit `/search?tags=<tag>` and assert the profile appears
+  // in `[data-cy="search-people-section"]`
+  it('can search people by tag');
+
+  // TODO: create a collection (see `createCollection` and
+  // `addTagsToCollectionHero` in support/collections.ts) with a unique tag, then
+  // visit `/search?tags=<tag>` and assert the collection appears in
+  // `[data-cy="search-collections-section"]`
+  it('can search collections by tag');
 });
