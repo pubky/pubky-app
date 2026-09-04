@@ -40,9 +40,19 @@ export async function fetchUserAndPostForMetadata(
   userId: string,
   postId: string,
 ): Promise<{ user: NexusUserDetails; post: NexusPostDetails } | null> {
+  // Crawl-trim: bots and link previews frequently append a trailing dot to the
+  // last URL path segment (Sentence boundary / ellipsis). Nexus 400s on the
+  // malformed id and the OG route then reported the failure to Sentry
+  // (PUBKY-APP-1E/9Z/A0/BQ, URLs like `...m86y./opengraph-image`). Trailing
+  // dots are never valid in z-base-32 pubky ids or composite post ids.
+  const cleanUserId = decodeURIComponent(userId).replace(/[.\s]+$/, '');
+  const cleanPostId = decodeURIComponent(postId).replace(/[.\s]+$/, '');
   const [user, post] = await Promise.all([
-    fetchWithValidation<NexusUserDetails>(userApi.details({ user_id: userId }), 'fetchUserDetails'),
-    fetchWithValidation<NexusPostDetails>(postApi.details({ author_id: userId, post_id: postId }), 'fetchPostDetails'),
+    fetchWithValidation<NexusUserDetails>(userApi.details({ user_id: cleanUserId }), 'fetchUserDetails'),
+    fetchWithValidation<NexusPostDetails>(
+      postApi.details({ author_id: cleanUserId, post_id: cleanPostId }),
+      'fetchPostDetails',
+    ),
   ]);
 
   if (!user || !post) return null;
