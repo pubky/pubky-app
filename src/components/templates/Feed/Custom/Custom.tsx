@@ -9,7 +9,7 @@ import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFee
  * The `/feed/[id]` route's page body. Rendered as `{children}` inside the
  * shared `(feeds)/layout.tsx` `<ContentLayout>` — the sidebars, drawers, and
  * right-rail are now hoisted into that layout (see
- * `app/(feeds)/_shell/configs.tsx`'s `customFeed` entry), so this template
+ * `app/(main)/(feeds)/_shell/configs.tsx`'s `customFeed` entry), so this template
  * only renders the feed body.
  */
 export function Custom() {

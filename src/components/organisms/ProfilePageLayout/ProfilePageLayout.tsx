@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { PROFILE_PAGE_TYPES } from '@/app/(main)/profile/types';
 import { Container } from '@/atoms/Container/Container';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { AvatarZoomModal } from '@/molecules/AvatarZoomModal/AvatarZoomModal';

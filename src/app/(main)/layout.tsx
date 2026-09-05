@@ -1,4 +1,4 @@
-import './globals.css';
+import '../globals.css';
 import type { Viewport } from 'next';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';

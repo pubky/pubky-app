@@ -16,7 +16,7 @@ All build-time variables are validated in `src/libs/env/env.ts` using Zod schema
 
 The schema is intentionally small:
 
-- **Build-intrinsic public values** (baked into the artifact by design): `NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION`, `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`.
+- **Build-intrinsic public values** (baked into the artifact by design): `NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION`, `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS` (CSP `frame-ancestors` for `/session-bridge` is emitted from `next.config.ts` at build time).
 - **Server-only variables** (never exposed to the browser): `HOMESERVER_ADMIN_URL` / `HOMESERVER_ADMIN_PASSWORD` (dev/test signup tokens) and the Chatwoot support credentials (`BASE_URL_SUPPORT`, `SUPPORT_API_ACCESS_TOKEN`, `SUPPORT_ACCOUNT_ID`).
 - `NODE_ENV` / `VITEST`.
 
@@ -64,6 +64,7 @@ import { Env } from '@/libs/env/env';
 
 const dbVersion = Env.NEXT_PUBLIC_DB_VERSION; // number
 const debugMode = Env.NEXT_PUBLIC_DEBUG_MODE; // boolean
+const sessionBridgeOrigins = Env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS; // string[]
 ```
 
 ## Runtime configuration (`PUBKY_RUNTIME_*`)
@@ -153,3 +154,24 @@ If build-time environment validation fails, you'll see detailed error messages:
 ```
 
 If deployed runtime config is missing or invalid, the server exits at boot with the full list of required `PUBKY_RUNTIME_*` network variables.
+
+## Session bridge allowlist
+
+See [ADR 0020](adr/0020-session-bridge.md).
+
+`NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS` is a comma-separated list consumed by both the `/session-bridge` page (postMessage origin checks) and `next.config.ts` (`Content-Security-Policy: frame-ancestors` for that route only). Parsing lives in `src/libs/session-bridge/allowlist.ts` so those two readers stay aligned.
+
+Default when the variable is unset, empty, or whitespace-only:
+
+- Production (`NODE_ENV=production`): `https://vibes.pubky.app`, `https://*.vibes.pubky.app`, `https://shop.pubky.app`
+- Non-production: the production entries plus `https://vibes.staging.pubky.app`, `https://*.vibes.staging.pubky.app`, and `http://localhost:3000`
+
+First-party team-operated hosts (for example `https://shop.pubky.app`) are added to the default by exact origin via PR, never by a `*.pubky.app` wildcard.
+
+Staging deployments of pubky.app run with `NODE_ENV=production` builds, so they must set `NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS` explicitly to the staging board origins (`https://vibes.staging.pubky.app`, `https://*.vibes.staging.pubky.app`, and any other hosts that embedding should allow). The non-production default is only for local/test `NODE_ENV`.
+
+Loopback in production requires an explicit env value. Invalid entries (`*`, paths, wildcard+port, wildcard+userinfo, non-loopback `http`) fail the build in both Zod (`src/libs/env/env.ts`) and `next.config.ts` `headers()`.
+
+Wildcards match exactly one DNS label (`https://foo.vibes.pubky.app`, not nested hosts or the apex). `http://` is rejected except loopback origins (`localhost`, `127.0.0.1`, `[::1]`) that appear explicitly in the list.
+
+`/session-bridge` is a second App Router root layout (`src/app/(bridge)/`) so it does not mount the main app providers, fonts, or analytics. The rest of the app lives under `src/app/(main)/`. There is no global `X-Frame-Options` or `frame-ancestors`; only this route sets CSP framing.

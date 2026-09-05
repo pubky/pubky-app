@@ -1,4 +1,4 @@
-import type { PostPageProps } from '@/app/post/[userId]/[postId]/page';
+import type { PostPageProps } from '@/app/(main)/post/[userId]/[postId]/page';
 import { buildCompositeId } from '@/models/models.utils';
 import { SinglePost } from '@/templates/Post/SinglePost/SinglePost';
 

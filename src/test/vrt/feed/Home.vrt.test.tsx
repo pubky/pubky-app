@@ -11,7 +11,7 @@ import { createZustandLikeHook } from '@/test-utils/stores';
 import { COMPOSER_EXPAND_DURATION } from '@/libs/motion/composerMotion';
 import { Header } from '@/organisms/Header/Header';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
-import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
+import { tryResolveFeedsShellConfig } from '@/app/(main)/(feeds)/_shell/configs';
 import { Home } from '@/templates/Feed/Home/Home';
 import { Fab } from '@/molecules/Fab/Fab';
 

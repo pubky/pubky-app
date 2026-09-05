@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Bell, HeartHandshake, Library, MessageCircle, StickyNote, Tag, UsersRound } from 'lucide-react';
-import { type FilterBarPageType, PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { type FilterBarPageType, PROFILE_PAGE_TYPES } from '@/app/(main)/profile/types';
 import { Container } from '@/atoms/Container/Container';
 import { FilterItem, FilterItemIcon, FilterItemLabel } from '@/atoms/Filter/Filter';
 import { Spinner } from '@/atoms/Spinner/Spinner';

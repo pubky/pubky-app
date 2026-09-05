@@ -23,7 +23,7 @@ export function SinglePostPage({ postId }: SinglePostProps) {
   const { postMissing, postDetails, isLoading } = usePostMissing(postId);
 
   // Collection-kind posts canonically live at /collections. The server-side
-  // permanentRedirect in app/post/[userId]/[postId]/page.tsx only covers full
+  // permanentRedirect in app/(main)/post/[userId]/[postId]/page.tsx only covers full
   // document loads (and even there arrives as a streamed 200, not a real 308):
   // client-side navigations either skip it (intercepted `(.)post` route) or the
   // Next 16 router fails to act on the streamed redirect. This guard covers all

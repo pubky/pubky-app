@@ -9,7 +9,7 @@ import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.view
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
-import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
+import { tryResolveFeedsShellConfig } from '@/app/(main)/(feeds)/_shell/configs';
 import { Search } from '@/templates/Feed/Search/Search';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have

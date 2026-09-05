@@ -4,6 +4,7 @@ import 'fake-indexeddb/auto';
 import { cleanup } from '@testing-library/react';
 import { expect, vi } from 'vitest';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
+import { defaultSessionBridgeAllowedOrigins } from '@/libs/session-bridge/allowlist';
 
 // =============================================================================
 // IMPORTANT: Set environment variables BEFORE importing any app code
@@ -33,6 +34,7 @@ process.env.PUBKY_RUNTIME_EXCHANGE_RATE_API = 'https://api1.blocktank.to/api/fx/
 process.env.PUBKY_RUNTIME_HOMEGATE_URL = 'https://localhost:5000/';
 process.env.PUBKY_RUNTIME_DEFAULT_HTTP_RELAY = 'http://localhost:15412/inbox/';
 process.env.NEXT_PUBLIC_APP_VERSION = '0.0.0-test';
+process.env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS = defaultSessionBridgeAllowedOrigins();
 
 // Chatwoot configuration (required for feedback feature)
 process.env.BASE_URL_SUPPORT = 'https://chatwoot.example.com';
