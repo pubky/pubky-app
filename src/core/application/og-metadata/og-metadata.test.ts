@@ -225,4 +225,17 @@ describe('OgMetadataApplication coalescing', () => {
     expect(recovered.title).toBe('Recovered');
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
+
+  it('does not coalesce when the in-flight promise rejects (redirect validation throws)', async () => {
+    // A rejecting fetch (here: redirect to a non-HTTP protocol, which throws a
+    // validation AppError) must also clear the map entry: the next call must
+    // start a fresh fetch instead of awaiting the dead promise.
+    mockFetch.mockResolvedValueOnce(createRedirectResponse(302, 'ftp://example.com/evil'));
+    await expect(OgMetadataApplication.fetch(new URL('https://example.com/reject'))).rejects.toThrow();
+
+    mockFetch.mockResolvedValueOnce(createHtmlResponse(simpleHtml('After rejection')));
+    const recovered = await OgMetadataApplication.fetch(new URL('https://example.com/reject'));
+    expect(recovered.title).toBe('After rejection');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
 });
