@@ -13,6 +13,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { shouldAttemptSessionRestore } from '@/libs/vibe-session/should-restore';
 import { toast } from '@/molecules/Toaster/toast';
 import { ROUTE_ACCESS_MAP } from '@/providers/RouteGuardProvider/RouteGuardProvider.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -52,22 +53,34 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
 
   // Prevents running resync more than once at a time (ex: React Strict Mode and effect re-fires mid-resync)
   const isMigrationResyncRunningRef = useRef(false);
+  // Identity-change cleanup flips sessionExport while Controller finalization is
+  // still running; skip so a second restore cannot race the first init.
+  const isSessionRestoreInFlightRef = useRef(false);
 
   // Attempt to restore an existing session snapshot on fresh loads.
   useEffect(() => {
     if (!hasHydrated) return;
     if (session) return;
-    if (!sessionExport) return;
-    AuthController.restorePersistedSession().catch((error) => {
-      if (isWrongEnvironmentHomeserverError(error)) {
-        toast({
-          variant: 'error',
-          description: 'This key is linked to a different homeserver. Use a staging account on this site.',
-        });
-        return;
-      }
-      Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
-    });
+    if (isSessionRestoreInFlightRef.current) return;
+    // Shared with auth-store rehydrate so `isRestoringSession` is only set when
+    // this effect will actually run restore (persist, or consumer + not suppressed
+    // / pending `#s=`). After logout, suppression + empty persist skips both.
+    if (!shouldAttemptSessionRestore(sessionExport)) return;
+    isSessionRestoreInFlightRef.current = true;
+    AuthController.restorePersistedSession()
+      .catch((error) => {
+        if (isWrongEnvironmentHomeserverError(error)) {
+          toast({
+            variant: 'error',
+            description: 'This key is linked to a different homeserver. Use a staging account on this site.',
+          });
+          return;
+        }
+        Logger.error('[RouteGuardProvider] Failed to restore persisted session', { error });
+      })
+      .finally(() => {
+        isSessionRestoreInFlightRef.current = false;
+      });
   }, [hasHydrated, session, sessionExport]);
 
   // Post-migration re-sync: fetch critical homeserver data after DB recreation

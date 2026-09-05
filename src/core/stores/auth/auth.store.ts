@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
+import { shouldAttemptSessionRestore } from '@/libs/vibe-session/should-restore';
 import { AUTH_PERSIST_KEY } from '../persistedKeys';
 import { createAuthActions } from './auth.actions';
 import { createAuthSelectors } from './auth.selectors';
@@ -28,7 +29,7 @@ export const useAuthStore = create<AuthStore>()(
         onRehydrateStorage: (state) => (rehydratedState) => {
           const resolvedState = rehydratedState ?? state;
           resolvedState.setHasHydrated(true);
-          if (rehydratedState?.sessionExport) {
+          if (shouldAttemptSessionRestore(rehydratedState?.sessionExport)) {
             resolvedState.setIsRestoringSession(true);
           }
         },

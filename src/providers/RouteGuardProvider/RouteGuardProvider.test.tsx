@@ -5,6 +5,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
+import { resetFragmentSessionExportCache } from '@/libs/vibe-session/fragment';
 import { toast } from '@/molecules/Toaster/toast';
 import { RouteGuardProvider } from './RouteGuardProvider';
 
@@ -22,6 +23,8 @@ const mocks = vi.hoisted(() => {
     mockResync,
     resetMigrationStore,
     restorePersistedSession,
+    consumerEnabled: false,
+    autoRestoreSuppressed: false,
     // Auth store state defaults
     hasHydrated: true,
     session: {} as unknown,
@@ -108,6 +111,20 @@ vi.mock('@/stores/migration/migration.store', () => ({
     },
   ),
 }));
+vi.mock('@/libs/vibe-session/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/vibe-session/config')>();
+  return {
+    ...actual,
+    isVibeSessionConsumerEnabled: () => mocks.consumerEnabled,
+  };
+});
+vi.mock('@/libs/vibe-session/auto-restore', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/libs/vibe-session/auto-restore')>();
+  return {
+    ...actual,
+    isVibeSessionAutoRestoreSuppressed: () => mocks.autoRestoreSuppressed,
+  };
+});
 vi.mock('@/controllers/auth/auth', () => ({
   AuthController: {
     restorePersistedSession: mocks.restorePersistedSession,
@@ -123,6 +140,8 @@ describe('RouteGuardProvider — migration resync', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    window.history.replaceState(null, '', '/');
+    resetFragmentSessionExportCache();
 
     // Reset defaults
     mocks.hasHydrated = true;
@@ -138,7 +157,9 @@ describe('RouteGuardProvider — migration resync', () => {
     mocks.resetMigrationStore.mockReset();
     vi.mocked(toast).mockReset();
     mocks.restorePersistedSession.mockReset();
-    mocks.restorePersistedSession.mockResolvedValue(true);
+    mocks.restorePersistedSession.mockResolvedValue({ status: 'restored' });
+    mocks.consumerEnabled = false;
+    mocks.autoRestoreSuppressed = false;
   });
 
   afterEach(() => {
@@ -478,6 +499,8 @@ describe('RouteGuardProvider — migration resync', () => {
 describe('RouteGuardProvider — session restore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState(null, '', '/');
+    resetFragmentSessionExportCache();
     mocks.hasHydrated = true;
     mocks.session = null;
     mocks.sessionExport = 'session-export';
@@ -488,7 +511,43 @@ describe('RouteGuardProvider — session restore', () => {
     mocks.pathname = '/home';
     vi.mocked(toast).mockReset();
     mocks.restorePersistedSession.mockReset();
-    mocks.restorePersistedSession.mockResolvedValue(true);
+    mocks.restorePersistedSession.mockResolvedValue({ status: 'restored' });
+    mocks.consumerEnabled = false;
+    mocks.autoRestoreSuppressed = false;
+  });
+
+  it('restores when consumer mode is on even without a persisted sessionExport', async () => {
+    mocks.sessionExport = null;
+    mocks.consumerEnabled = true;
+
+    render(
+      <RouteGuardProvider>
+        <div>Protected Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.restorePersistedSession).toHaveBeenCalledOnce();
+  });
+
+  it('does not restore when consumer mode is off and sessionExport is missing', async () => {
+    mocks.sessionExport = null;
+    mocks.consumerEnabled = false;
+
+    render(
+      <RouteGuardProvider>
+        <div>Protected Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.restorePersistedSession).not.toHaveBeenCalled();
   });
 
   it('toasts when persisted session restore fails for wrong-environment homeserver', async () => {
@@ -514,5 +573,146 @@ describe('RouteGuardProvider — session restore', () => {
       description: 'This key is linked to a different homeserver. Use a staging account on this site.',
     });
     expect(Logger.error).not.toHaveBeenCalled();
+  });
+
+  it('does not start a second restore when sessionExport flips during an in-flight restore', async () => {
+    let resolveRestore: ((value: { status: 'restored' }) => void) | undefined;
+    mocks.restorePersistedSession.mockReturnValue(
+      new Promise<{ status: 'restored' }>((resolve) => {
+        resolveRestore = resolve;
+      }),
+    );
+    mocks.sessionExport = 'session-export';
+    mocks.consumerEnabled = true;
+
+    const { rerender } = render(
+      <RouteGuardProvider>
+        <div>Explore Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.restorePersistedSession).toHaveBeenCalledOnce();
+
+    mocks.sessionExport = null;
+    rerender(
+      <RouteGuardProvider>
+        <div>Explore Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.restorePersistedSession).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      resolveRestore?.({ status: 'restored' });
+    });
+  });
+
+  it('does not restore after logout when consumer auto-restore is suppressed and nothing is persisted', async () => {
+    mocks.sessionExport = null;
+    mocks.consumerEnabled = true;
+    mocks.autoRestoreSuppressed = true;
+
+    render(
+      <RouteGuardProvider>
+        <div>Explore Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.restorePersistedSession).not.toHaveBeenCalled();
+    expect(screen.getByText('Explore Content')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('restores a pending fragment hand-off after logout even when auto-restore is suppressed', async () => {
+    mocks.sessionExport = null;
+    mocks.consumerEnabled = true;
+    mocks.autoRestoreSuppressed = true;
+    window.history.replaceState(null, '', '/#s=pending-session-export');
+
+    render(
+      <RouteGuardProvider>
+        <div>Explore Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.restorePersistedSession).toHaveBeenCalledOnce();
+  });
+
+  it('reaches terminal unauthenticated UI after a deferred persist restore without looping', async () => {
+    mocks.session = null;
+    mocks.sessionExport = 'session-export';
+    mocks.consumerEnabled = true;
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.pathname = '/home';
+    mocks.restorePersistedSession.mockResolvedValue({ status: 'deferred' });
+
+    const { rerender } = render(
+      <RouteGuardProvider>
+        <div>Explore Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.restorePersistedSession).toHaveBeenCalledOnce();
+    expect(screen.getByText('Explore Content')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).not.toHaveBeenCalled();
+
+    rerender(
+      <RouteGuardProvider>
+        <div>Explore Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.restorePersistedSession).toHaveBeenCalledOnce();
+    expect(screen.getByText('Explore Content')).toBeInTheDocument();
+  });
+
+  it('redirects a deferred unauthenticated user off a protected route without a restore loop', async () => {
+    mocks.session = null;
+    mocks.sessionExport = 'session-export';
+    mocks.consumerEnabled = true;
+    mocks.status = 'UNAUTHENTICATED';
+    mocks.isLoading = false;
+    mocks.pathname = '/feed';
+    mocks.restorePersistedSession.mockResolvedValue({ status: 'deferred' });
+
+    render(
+      <RouteGuardProvider>
+        <div>Protected Content</div>
+      </RouteGuardProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.restorePersistedSession).toHaveBeenCalledOnce();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).toHaveBeenCalledWith('/login');
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
   });
 });

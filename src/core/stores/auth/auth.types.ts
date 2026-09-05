@@ -16,6 +16,11 @@ export interface AuthState extends AuthInitParams {
   showSignInDialog: boolean;
   /** Whether a logout is in progress (prevents flash of weird states during logout) */
   isLoggingOut: boolean;
+  /**
+   * Transient persist restore failed and the export was kept. Not persisted.
+   * useAuthStatus treats this as terminal unauthenticated (not loading).
+   */
+  sessionRestoreDeferred: boolean;
 }
 
 export interface AuthActions {
@@ -30,6 +35,8 @@ export interface AuthActions {
   setShowSignInDialog: (show: boolean) => void;
   /** Set whether a logout is in progress */
   setIsLoggingOut: (isLoggingOut: boolean) => void;
+  /** Mark persist restore as deferred (terminal unauthenticated, export kept) */
+  setSessionRestoreDeferred: (sessionRestoreDeferred: boolean) => void;
 }
 
 export interface AuthSelectors {
@@ -49,6 +56,7 @@ export const authInitialState: AuthState = {
   isRestoringSession: false,
   showSignInDialog: false,
   isLoggingOut: false,
+  sessionRestoreDeferred: false,
 };
 
 export enum AuthActionTypes {
@@ -62,4 +70,5 @@ export enum AuthActionTypes {
   SET_HAS_HYDRATED = 'SET_HAS_HYDRATED',
   SET_SHOW_SIGN_IN_DIALOG = 'SET_SHOW_SIGN_IN_DIALOG',
   SET_IS_LOGGING_OUT = 'SET_IS_LOGGING_OUT',
+  SET_SESSION_RESTORE_DEFERRED = 'SET_SESSION_RESTORE_DEFERRED',
 }

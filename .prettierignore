@@ -20,6 +20,8 @@ coverage/
 
 # OS files
 .DS_Store
+._*
+**/._*
 
 # IDE
 .vscode/
