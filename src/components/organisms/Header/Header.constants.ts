@@ -8,5 +8,6 @@ export const pathToStepConfig: Record<string, { step: number; title: string }> =
   '/onboarding/backup': { step: 2, title: 'Backup' },
   '/onboarding/profile': { step: 3, title: 'Profile' },
   '/onboarding/tags': { step: 4, title: 'Experience' },
+  '/onboarding/follow': { step: 4, title: 'Experience' },
   '/logout': { step: 1, title: 'Signed out' },
 };

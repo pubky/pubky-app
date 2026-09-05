@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { APP_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { STARTER_PACK_MAX_TAGS, STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -195,7 +195,7 @@ describe('TagsOfInterestForm', () => {
     expect(state.experienceCompletedByPubky[ACTIVE_PUBKY]).toBeUndefined();
   });
 
-  it('marks completion and navigates home on Continue', () => {
+  it('navigates to the follow step on Continue without writing completion', () => {
     render(<TagsOfInterestForm />);
 
     fireEvent.click(screen.getByTestId('popular-tag-bitcoin'));
@@ -203,8 +203,8 @@ describe('TagsOfInterestForm', () => {
 
     const state = useOnboardingStore.getState();
     expect(state.interestTags).toEqual(['bitcoin']);
-    expect(state.experienceCompletedByPubky[ACTIVE_PUBKY]).toBe(true);
-    expect(mockReplace).toHaveBeenCalledWith(APP_ROUTES.HOME);
-    expect(mockPush).not.toHaveBeenCalledWith(APP_ROUTES.HOME);
+    expect(state.experienceCompletedByPubky[ACTIVE_PUBKY]).toBeUndefined();
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.FOLLOW);
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

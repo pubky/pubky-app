@@ -1,6 +1,6 @@
 import { slowCypressDown } from 'cypress-slow-down';
-import { BackupType, HasBackedUp } from '../support/types/enums';
-import { backupDownloadFilePath } from '../support/common';
+import { BackupType, HasBackedUp, OnboardingExperience } from '../support/types/enums';
+import { backupDownloadFilePath, extendedTimeout } from '../support/common';
 import { waitForFeedToLoad } from '../support/posts';
 
 describe('Onboarding', () => {
@@ -69,6 +69,57 @@ describe('Onboarding', () => {
 
     // sign up as second user
     cy.onboardAsNewUser(secondProfileName);
+  });
+
+  it('suggests people for a chosen interest, follows them all, and lands on the My network feed', () => {
+    cy.onboardAsNewUser('Interested User', '', undefined, undefined, OnboardingExperience.StopAtTags);
+
+    // Pick the first popular interest chip and continue to the follow step
+    cy.get('[data-testid="tags-of-interest-form"]').within(() => {
+      cy.get('[data-testid^="popular-tag-"]', extendedTimeout()).first().click();
+      cy.get('[data-testid^="popular-tag-"][aria-pressed="true"]').should('have.length', 1);
+      cy.get('#profile-finish-btn').click();
+    });
+
+    cy.location('pathname').should('eq', '/onboarding/follow');
+    cy.get('[data-cy="follow-best-matches-form"]').should('be.visible');
+    cy.get('[data-cy="suggested-user-card"]', extendedTimeout()).should('have.length.greaterThan', 0);
+
+    // Follow all: every card flips to following and the button disappears once nothing is left to follow
+    cy.get('[data-cy="follow-all-btn"]').should('contain.text', 'Follow all (').click();
+    cy.get('[data-cy="follow-all-btn"]', extendedTimeout()).should('not.exist');
+    cy.get('[data-cy="suggested-user-card"]').each(($card) => {
+      cy.wrap($card)
+        .find('[data-cy="user-list-item-follow-toggle-btn"]')
+        .invoke('attr', 'aria-label')
+        .should('match', /^Unfollow /);
+    });
+
+    cy.finishFollowBestMatchesStep();
+
+    // With at least one follow the landing feed is My network
+    cy.get('[data-cy="filter-reach-radiogroup"]')
+      .find('[data-cy="network-reach-toggle"]')
+      .should('have.attr', 'data-selected', 'true');
+  });
+
+  it('shows most active people without interests and lands on the All feed after finishing', () => {
+    cy.onboardAsNewUser('Undecided User', '', undefined, undefined, OnboardingExperience.StopAtTags);
+
+    // Continue with zero tags
+    cy.get('[data-testid="tags-of-interest-form"]').within(() => {
+      cy.get('#profile-finish-btn').click();
+    });
+
+    cy.location('pathname').should('eq', '/onboarding/follow');
+    cy.get('[data-cy="suggested-user-card"]', extendedTimeout()).should('have.length.greaterThan', 0);
+
+    cy.finishFollowBestMatchesStep();
+
+    // With zero follows the landing feed stays on All
+    cy.get('[data-cy="filter-reach-radiogroup"]')
+      .find('[data-cy="all-reach-toggle"]')
+      .should('have.attr', 'data-selected', 'true');
   });
 
   it('can use Explore mode without signing in and shows Join Pubky dialog when clicking new post button', () => {

@@ -10,6 +10,9 @@ type UseWhoToFollowFollowPreservationParams = {
 
 export function useWhoToFollowFollowPreservation({ resetKey }: UseWhoToFollowFollowPreservationParams = {}) {
   const [preservedFollowedUserIds, setPreservedFollowedUserIds] = useState<Pubky[]>([]);
+  // Counted here rather than reusing `useFollowUser().isLoading`: that flag is a single boolean
+  // shared by concurrent toggles, so the first completion would clear it while another is in flight.
+  const [pendingFollowCount, setPendingFollowCount] = useState(0);
   const { toggleFollow, isUserLoading } = useFollowUser();
 
   useEffect(() => {
@@ -36,10 +39,15 @@ export function useWhoToFollowFollowPreservation({ resetKey }: UseWhoToFollowFol
 
   const handleFollowClick = async (userId: Pubky, isCurrentlyFollowing: boolean, displayName: string) => {
     updatePreservedUserIds(userId, isCurrentlyFollowing);
+    setPendingFollowCount((count) => count + 1);
 
-    const ok = await toggleFollow(userId, isCurrentlyFollowing, displayName);
-    if (!ok) {
-      rollbackPreservedUserIds(userId, isCurrentlyFollowing);
+    try {
+      const ok = await toggleFollow(userId, isCurrentlyFollowing, displayName);
+      if (!ok) {
+        rollbackPreservedUserIds(userId, isCurrentlyFollowing);
+      }
+    } finally {
+      setPendingFollowCount((count) => count - 1);
     }
   };
 
@@ -47,5 +55,13 @@ export function useWhoToFollowFollowPreservation({ resetKey }: UseWhoToFollowFol
     preservedFollowedUserIds,
     handleFollowClick,
     isUserLoading,
+    /**
+     * True while any `handleFollowClick` is still committing (concurrent clicks included).
+     * Relationship-derived state (e.g. `isFollowing`, followed counts) lags behind the click
+     * until the local write lands, so callers that act on that state should wait for this to clear.
+     */
+    isFollowPending: pendingFollowCount > 0,
+    /** Keep a user visible after a follow committed outside `handleFollowClick` (e.g. Follow All). */
+    preserveFollowedUser: (userId: Pubky) => updatePreservedUserIds(userId, false),
   };
 }

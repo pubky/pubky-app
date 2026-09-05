@@ -86,6 +86,7 @@ vi.mock('@/app/routes', async (importOriginal) => {
       BACKUP: '/onboarding/backup',
       PROFILE: '/onboarding/profile',
       TAGS: '/onboarding/tags',
+      FOLLOW: '/onboarding/follow',
     },
   };
 });
@@ -505,6 +506,16 @@ describe('Header', () => {
       expect(onboardingHeader).toHaveAttribute('data-step', '4');
       expect(screen.getByTestId('logo')).toBeInTheDocument();
     });
+
+    it('keeps the follow path on the Experience step', () => {
+      mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.FOLLOW);
+
+      render(<Header />);
+
+      const onboardingHeader = screen.getByTestId('onboarding-header');
+      expect(onboardingHeader).toHaveAttribute('data-step', '4');
+      expect(screen.getByTestId('logo')).toBeInTheDocument();
+    });
   });
 
   describe('HeaderTitle Display Logic', () => {
@@ -567,6 +578,7 @@ describe('Header', () => {
         { path: ONBOARDING_ROUTES.BACKUP, expectedTitle: 'Backup' },
         { path: ONBOARDING_ROUTES.PROFILE, expectedTitle: 'Profile' },
         { path: ONBOARDING_ROUTES.TAGS, expectedTitle: 'Experience' },
+        { path: ONBOARDING_ROUTES.FOLLOW, expectedTitle: 'Experience' },
         { path: AUTH_ROUTES.LOGOUT, expectedTitle: 'Signed out' },
       ];
 
@@ -584,8 +596,8 @@ describe('Header', () => {
   });
 
   describe('Post-auth Onboarding Steps (Profile, Tags) Specific Logic', () => {
-    it('renders logo with noLink=true on the profile and tags steps', () => {
-      const postAuthPaths = [ONBOARDING_ROUTES.PROFILE, ONBOARDING_ROUTES.TAGS];
+    it('renders logo with noLink=true on the profile, tags and follow steps', () => {
+      const postAuthPaths = [ONBOARDING_ROUTES.PROFILE, ONBOARDING_ROUTES.TAGS, ONBOARDING_ROUTES.FOLLOW];
 
       postAuthPaths.forEach((path) => {
         mockUsePathname.mockReturnValue(path);
