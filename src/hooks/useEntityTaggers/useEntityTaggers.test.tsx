@@ -19,10 +19,6 @@ vi.mock('@/controllers/user/user', () => ({
   },
 }));
 
-vi.mock('@/libs/logger/logger', () => ({
-  Logger: { error: vi.fn() },
-}));
-
 const page = (users: string[]): NexusTaggers => ({ users, relationship: false });
 const fullPage = (prefix: string) => Array.from({ length: TAGGERS_PAGE_SIZE }, (_, index) => `${prefix}-${index}`);
 
@@ -39,7 +35,7 @@ describe('useEntityTaggers', () => {
       await result.current.loadMoreTaggers('bitcoin');
     });
 
-    expect(result.current.taggersByLabel.size).toBe(0);
+    expect(result.current.taggerStates.size).toBe(0);
     expect(PostController.fetchTaggers).not.toHaveBeenCalled();
     expect(UserController.fetchTaggers).not.toHaveBeenCalled();
   });
@@ -59,7 +55,7 @@ describe('useEntityTaggers', () => {
       limit: TAGGERS_PAGE_SIZE,
     });
     expect(UserController.fetchTaggers).not.toHaveBeenCalled();
-    expect(result.current.taggersByLabel.get('bitcoin')).toEqual(['tagger-1', 'tagger-2']);
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(['tagger-1', 'tagger-2']);
     expect(result.current.taggerStates.get('bitcoin')).toMatchObject({
       skip: 2,
       isLoading: false,
@@ -99,7 +95,7 @@ describe('useEntityTaggers', () => {
       limit: TAGGERS_PAGE_SIZE,
     });
     expect(PostController.fetchTaggers).not.toHaveBeenCalled();
-    expect(result.current.taggersByLabel.get('synonym')).toEqual([...firstPage, 'last-1', 'last-2']);
+    expect(result.current.taggerStates.get('synonym')?.ids).toEqual([...firstPage, 'last-1', 'last-2']);
     expect(result.current.taggerStates.get('synonym')).toMatchObject({ hasMore: false, hasFetched: true });
   });
 
@@ -118,14 +114,14 @@ describe('useEntityTaggers', () => {
     expect(result.current.taggerStates.get('bitcoin')?.hasMore).toBe(false);
   });
 
-  it('stops paging before the Nexus skip limit', async () => {
+  it('loads the last allowed offset and stops before exceeding the Nexus skip limit', async () => {
     vi.mocked(UserController.fetchTaggers).mockResolvedValue(page(fullPage('any')));
     const { result } = renderHook(() => useEntityTaggers('profile-pubky', TagKind.USER));
 
     await act(async () => {
       await result.current.loadTaggers('bitcoin');
     });
-    const pagesUntilLimit = TAGGERS_MAX_SKIP / TAGGERS_PAGE_SIZE;
+    const pagesUntilLimit = TAGGERS_MAX_SKIP / TAGGERS_PAGE_SIZE + 1;
     for (let index = 1; index < pagesUntilLimit + 3; index += 1) {
       await act(async () => {
         await result.current.loadMoreTaggers('bitcoin');
@@ -133,7 +129,10 @@ describe('useEntityTaggers', () => {
     }
 
     expect(UserController.fetchTaggers).toHaveBeenCalledTimes(pagesUntilLimit);
-    expect(result.current.taggerStates.get('bitcoin')).toMatchObject({ hasMore: false, skip: TAGGERS_MAX_SKIP });
+    expect(result.current.taggerStates.get('bitcoin')).toMatchObject({
+      hasMore: false,
+      skip: TAGGERS_MAX_SKIP + TAGGERS_PAGE_SIZE,
+    });
   });
 
   it('deduplicates taggers across pages', async () => {
@@ -149,7 +148,7 @@ describe('useEntityTaggers', () => {
       await result.current.loadMoreTaggers('bitcoin');
     });
 
-    expect(result.current.taggersByLabel.get('bitcoin')).toEqual([...fullPage('dup'), 'fresh']);
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual([...fullPage('dup'), 'fresh']);
   });
 
   it('reuses a fetched page for the same total count', async () => {
@@ -166,22 +165,23 @@ describe('useEntityTaggers', () => {
     expect(UserController.fetchTaggers).toHaveBeenCalledTimes(1);
   });
 
-  it('re-syncs from the first page when the total count changes', async () => {
+  it('retains loaded pages when the local tagger count changes', async () => {
+    const firstPage = fullPage('kept');
     vi.mocked(UserController.fetchTaggers)
-      .mockResolvedValueOnce(page(['tagger-1']))
-      .mockResolvedValueOnce(page(['tagger-1', 'tagger-2']));
+      .mockResolvedValueOnce(page(firstPage))
+      .mockResolvedValueOnce(page(['last']));
     const { result } = renderHook(() => useEntityTaggers('profile-pubky', TagKind.USER));
-
     await act(async () => {
-      await result.current.loadTaggers('bitcoin', 1);
+      await result.current.loadTaggers('bitcoin', 51);
     });
     await act(async () => {
-      await result.current.loadTaggers('bitcoin', 2);
+      await result.current.loadMoreTaggers('bitcoin');
     });
-
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 52);
+    });
     expect(UserController.fetchTaggers).toHaveBeenCalledTimes(2);
-    expect(UserController.fetchTaggers).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 0 }));
-    expect(result.current.taggersByLabel.get('bitcoin')).toEqual(['tagger-1', 'tagger-2']);
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual([...firstPage, 'last']);
   });
 
   it('keeps already fetched pages and stays retryable when a page fails', async () => {
@@ -199,7 +199,7 @@ describe('useEntityTaggers', () => {
       await result.current.loadMoreTaggers('bitcoin');
     });
 
-    expect(result.current.taggersByLabel.get('bitcoin')).toEqual(firstPage);
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(firstPage);
     expect(result.current.taggerStates.get('bitcoin')).toMatchObject({
       isLoading: false,
       hasMore: true,
@@ -211,7 +211,7 @@ describe('useEntityTaggers', () => {
     });
 
     expect(UserController.fetchTaggers).toHaveBeenLastCalledWith(expect.objectContaining({ skip: TAGGERS_PAGE_SIZE }));
-    expect(result.current.taggersByLabel.get('bitcoin')).toEqual([...firstPage, 'after-retry']);
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual([...firstPage, 'after-retry']);
   });
 
   it('ignores concurrent calls for a label that is already loading', async () => {
@@ -263,7 +263,7 @@ describe('useEntityTaggers', () => {
     });
 
     rerender({ taggedId: 'second-profile' });
-    expect(result.current.taggersByLabel.size).toBe(0);
+    expect(result.current.taggerStates.size).toBe(0);
 
     await act(async () => {
       await result.current.loadTaggers('bitcoin', 1);
@@ -273,7 +273,35 @@ describe('useEntityTaggers', () => {
       await staleRequest;
     });
 
-    expect(result.current.taggersByLabel.get('bitcoin')).toEqual(['fresh-tagger']);
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(['fresh-tagger']);
     expect(result.current.taggerStates.get('bitcoin')?.isLoading).toBe(false);
+  });
+
+  it('starts a fresh request when returning to a profile before its old request resolves', async () => {
+    let resolveStale: (value: NexusTaggers) => void = () => {};
+    vi.mocked(UserController.fetchTaggers)
+      .mockReturnValueOnce(
+        new Promise<NexusTaggers>((resolve) => {
+          resolveStale = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(page(['fresh']));
+    const { result, rerender } = renderHook(({ id }) => useEntityTaggers(id, TagKind.USER), {
+      initialProps: { id: 'first' },
+    });
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current.loadTaggers('bitcoin');
+    });
+    rerender({ id: 'second' });
+    rerender({ id: 'first' });
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin');
+    });
+    await act(async () => {
+      resolveStale(page(['stale']));
+      await pending;
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(['fresh']);
   });
 });

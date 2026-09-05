@@ -356,7 +356,6 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
 
 vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', () => {
   const result = {
-    taggersByLabel: new Map<string, string[]>(),
     taggerStates: new Map<string, { isLoading: boolean; hasMore: boolean; hasFetched: boolean }>(),
     loadTaggers: async () => {},
     loadMoreTaggers: async () => {},

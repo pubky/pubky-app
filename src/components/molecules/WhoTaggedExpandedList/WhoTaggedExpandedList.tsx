@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { getUserProfileUrl } from '@/app/routes';
+import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { useBulkUserAvatars } from '@/hooks/useBulkUserAvatars/useBulkUserAvatars';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
@@ -11,7 +11,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { TaggerUserRow } from '../TaggerUserRow/TaggerUserRow';
-import { WhoTaggedExpandedListSkeleton } from './WhoTaggedExpandedList.skeleton';
+import { TaggerRowSkeleton, WhoTaggedExpandedListSkeleton } from './WhoTaggedExpandedList.skeleton';
 import type { WhoTaggedExpandedListProps } from './WhoTaggedExpandedList.types';
 
 /**
@@ -28,6 +28,7 @@ export function WhoTaggedExpandedList({
   isLoadingTaggers,
   isLoadingMore = false,
   hasMore = false,
+  hasError = false,
   onLoadMore,
   'data-testid': dataTestId,
 }: WhoTaggedExpandedListProps) {
@@ -38,7 +39,7 @@ export function WhoTaggedExpandedList({
   const { getUsersWithAvatars } = useBulkUserAvatars(taggerIds);
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: onLoadMore || (() => {}),
-    hasMore: hasMore && !!onLoadMore,
+    hasMore: hasMore && !hasError && !!onLoadMore,
     isLoading: isLoadingMore,
     threshold: 100,
     debounceMs: 300,
@@ -68,7 +69,7 @@ export function WhoTaggedExpandedList({
     router.push(getUserProfileUrl(userId, currentUserPubky));
   };
 
-  if (taggerIds.length === 0) {
+  if (taggerIds.length === 0 && !isLoadingTaggers && !hasError) {
     return null;
   }
 
@@ -94,23 +95,19 @@ export function WhoTaggedExpandedList({
           onFollowClick={handleFollowClick}
         />
       ))}
-      {hasMore && (
+      {hasError && onLoadMore && (
+        <Button variant="secondary" onClick={onLoadMore}>
+          Retry loading taggers
+        </Button>
+      )}
+      {hasMore && !hasError && (
         <Container
           overrideDefaults
           ref={sentinelRef}
-          className="flex w-full items-center gap-3"
+          className="min-h-px w-full shrink-0"
           data-testid="who-tagged-expanded-list-sentinel"
         >
-          {isLoadingMore && (
-            <>
-              <Skeleton className="size-10 shrink-0 rounded-full" />
-              <Container overrideDefaults className="flex min-w-0 flex-1 flex-col gap-2">
-                <Skeleton className="h-4 max-w-[150px] rounded-md" />
-                <Skeleton className="h-4 max-w-[130px] rounded-md" />
-              </Container>
-              <Skeleton className="size-8 shrink-0 rounded-full" />
-            </>
-          )}
+          {isLoadingMore && <TaggerRowSkeleton />}
         </Container>
       )}
     </Container>

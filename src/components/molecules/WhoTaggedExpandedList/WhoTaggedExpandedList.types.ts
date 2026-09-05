@@ -12,6 +12,8 @@ export interface WhoTaggedExpandedListProps {
   isLoadingMore?: boolean;
   /** Whether more taggers can be loaded by scrolling to the bottom */
   hasMore?: boolean;
+  /** Pauses automatic loading and offers a manual retry. */
+  hasError?: boolean;
   /** Called when the bottom sentinel scrolls into view */
   onLoadMore?: () => void;
   /** Test ID */

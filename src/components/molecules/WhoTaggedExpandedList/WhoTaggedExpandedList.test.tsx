@@ -127,6 +127,17 @@ describe('WhoTaggedExpandedList', () => {
     expect(screen.queryByTestId('who-tagged-expanded-list-skeleton')).not.toBeInTheDocument();
   });
 
+  it('keeps loaded rows and replaces automatic pagination with a manual retry after an error', () => {
+    const onLoadMore = vi.fn();
+    render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} hasMore hasError onLoadMore={onLoadMore} />);
+
+    expect(screen.getByTestId('user-list-item-user1')).toBeInTheDocument();
+    expect(screen.queryByTestId('who-tagged-expanded-list-sentinel')).not.toBeInTheDocument();
+    expect(onLoadMore).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading taggers' }));
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
   it('loads more when the sentinel scrolls into view', () => {
     vi.useFakeTimers();
     const originalObserver = window.IntersectionObserver;
@@ -174,6 +185,14 @@ describe('WhoTaggedExpandedList', () => {
     expect(screen.getByTestId('who-tagged-expanded-list-skeleton')).toBeInTheDocument();
     expect(screen.queryByTestId('who-tagged-expanded-list')).not.toBeInTheDocument();
     expect(screen.queryByTestId('user-list-item-user1')).not.toBeInTheDocument();
+  });
+
+  it('shows initial loading and retry states even without preview taggers', () => {
+    const { rerender } = render(<WhoTaggedExpandedList taggerIds={[]} isLoadingTaggers />);
+    expect(screen.getByTestId('who-tagged-expanded-list-skeleton')).toBeInTheDocument();
+
+    rerender(<WhoTaggedExpandedList taggerIds={[]} hasError onLoadMore={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Retry loading taggers' })).toBeInTheDocument();
   });
 
   it('navigates to user profile when user is clicked', () => {

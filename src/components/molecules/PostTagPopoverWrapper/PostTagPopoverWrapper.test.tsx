@@ -27,7 +27,6 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
 
 vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', () => ({
   useEntityTaggers: () => ({
-    taggersByLabel: new Map(),
     taggerStates: mockTaggerStates,
     loadTaggers: mockLoadTaggers,
     loadMoreTaggers: mockLoadMoreTaggers,

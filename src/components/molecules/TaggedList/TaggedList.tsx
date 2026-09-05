@@ -38,7 +38,7 @@ export function TaggedList({
     setExpandedTagLabel((prev) => (prev === tagLabel ? null : tagLabel));
   };
 
-  // Re-sync the expanded tag's taggers when its count changes (e.g. the viewer toggled it)
+  // The hook retains fetched pages; local viewer toggles are merged below.
   const expandedTagCount = tags.find((tag) => tag.label === expandedTagLabel)?.taggers_count;
 
   useEffect(() => {
@@ -72,6 +72,7 @@ export function TaggedList({
             isLoadingTaggers={isFetching && !taggerState?.hasFetched}
             isLoadingMoreTaggers={isFetching && taggerState?.hasFetched}
             hasMoreTaggers={taggerState?.hasMore}
+            hasTaggersError={taggerState?.hasError}
             onLoadMoreTaggers={() => void loadMoreTaggers(tag.label)}
           />
         );

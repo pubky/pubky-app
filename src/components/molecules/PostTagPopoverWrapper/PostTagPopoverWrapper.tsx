@@ -106,6 +106,7 @@ export function PostTagPopoverWrapper({
                     isLoadingTaggers={isFetching && !taggerState?.hasFetched}
                     isLoadingMore={isFetching && taggerState?.hasFetched}
                     hasMore={taggerState?.hasMore}
+                    hasError={taggerState?.hasError}
                     onLoadMore={() => void loadMoreTaggers(tagLabel ?? '')}
                   />
                 )}

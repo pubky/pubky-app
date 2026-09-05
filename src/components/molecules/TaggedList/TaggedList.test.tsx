@@ -16,7 +16,6 @@ const { mockLoadTaggers, mockLoadMoreTaggers, mockUseEntityTaggers, mockTaggerSt
     mockLoadMoreTaggers: loadMoreTaggers,
     mockTaggerStates: taggerStates,
     mockUseEntityTaggers: vi.fn(() => ({
-      taggersByLabel: new Map<string, string[]>(),
       taggerStates,
       loadTaggers,
       loadMoreTaggers,

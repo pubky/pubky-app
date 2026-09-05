@@ -24,6 +24,7 @@ export function TaggedItem({
   isLoadingTaggers,
   isLoadingMoreTaggers,
   hasMoreTaggers,
+  hasTaggersError,
   onLoadMoreTaggers,
 }: TaggedItemProps) {
   const router = useRouter();
@@ -115,6 +116,7 @@ export function TaggedItem({
           isLoadingTaggers={isLoadingTaggers}
           isLoadingMore={isLoadingMoreTaggers}
           hasMore={hasMoreTaggers}
+          hasError={hasTaggersError}
           onLoadMore={onLoadMoreTaggers}
         />
       )}

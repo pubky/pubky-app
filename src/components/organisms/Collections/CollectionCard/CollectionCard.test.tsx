@@ -69,7 +69,6 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', () => ({
   useEntityTaggers: () => ({
-    taggersByLabel: new Map(),
     taggerStates: new Map(),
     loadTaggers: vi.fn(),
     loadMoreTaggers: vi.fn(),

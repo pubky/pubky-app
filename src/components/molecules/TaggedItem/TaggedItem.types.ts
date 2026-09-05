@@ -34,6 +34,7 @@ export interface TaggedItemProps {
   isLoadingMoreTaggers?: boolean;
   /** Whether more taggers can be loaded for the expanded list */
   hasMoreTaggers?: boolean;
+  hasTaggersError?: boolean;
   /** Callback to load the next page of taggers */
   onLoadMoreTaggers?: () => void;
 }

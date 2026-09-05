@@ -7,21 +7,21 @@ export type TaggersState = {
   /** Server offset of the next page */
   skip: number;
   isLoading: boolean;
+  /** Automatic loading pauses after an error until the viewer retries. */
+  hasError: boolean;
   /** Whether Nexus may still have more taggers past `skip` */
   hasMore: boolean;
   /** Whether the first page has been fetched at least once */
   hasFetched: boolean;
-  /** Tagger count the last fetch was started for; a different count triggers a re-sync */
+  /** Tagger count when the first page was requested */
   totalCount?: number;
 };
 
 export type TaggersStateMap = Map<string, TaggersState>;
 
 export interface UseEntityTaggersResult {
-  /** Fetched tagger IDs keyed by lowercase label */
-  taggersByLabel: Map<string, Pubky[]>;
   taggerStates: TaggersStateMap;
-  /** Fetch the first page for a label. No-op while loading or when already fetched for the same `totalCount`. */
+  /** Fetch the first page for a label. No-op after the first attempt; retry failed requests with `loadMoreTaggers`. */
   loadTaggers: (label: string, totalCount?: number) => Promise<void>;
   /** Fetch the next page for a label that still has more taggers. */
   loadMoreTaggers: (label: string) => Promise<void>;

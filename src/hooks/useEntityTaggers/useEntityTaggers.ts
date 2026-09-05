@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
 import { UserController } from '@/controllers/user/user';
-import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { TAGGERS_MAX_SKIP, TAGGERS_PAGE_SIZE } from './useEntityTaggers.constants';
 import type {
@@ -33,22 +32,26 @@ async function fetchTaggerPage({ taggedId, taggedKind, label, skip }: FetchTagge
 /**
  * Fetches and caches paginated tagger lists for user or post tags on demand.
  *
- * `loadTaggers` fetches the first page when a tag is expanded and re-syncs when the
- * tag's count changes (for example after the viewer toggles it). `loadMoreTaggers`
+ * `loadTaggers` fetches the first page when a tag is expanded and retains loaded pages
+ * while local tag changes are reconciled by the caller. `loadMoreTaggers`
  * fetches the next page, typically from an infinite-scroll sentinel.
  */
 export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind | null): UseEntityTaggersResult {
   const entityKey = taggedId && taggedKind ? `${taggedKind}:${taggedId}` : null;
-  // Cache is keyed by entity so a change of entity reads as empty without a reset effect
+  // Hide the previous entity immediately, before the reset effect runs.
   const [cache, setCache] = useState<{ entityKey: string | null; states: TaggersStateMap }>({
     entityKey,
     states: EMPTY_STATES,
   });
   const cacheRef = useRef(cache);
-  const activeKeyRef = useRef(entityKey);
+  const requestVersionRef = useRef(0);
 
   useEffect(() => {
-    activeKeyRef.current = entityKey;
+    cacheRef.current = { entityKey, states: EMPTY_STATES };
+    setCache(cacheRef.current);
+    return () => {
+      requestVersionRef.current += 1;
+    };
   }, [entityKey]);
 
   const taggerStates = cache.entityKey === entityKey ? cache.states : EMPTY_STATES;
@@ -65,24 +68,32 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
 
   const fetchPage = async (key: string, label: string, base: TaggersState) => {
     if (!taggedId || !taggedKind) return;
+    const requestVersion = requestVersionRef.current;
     const labelKey = label.toLowerCase();
-    commit(key, labelKey, { ...base, isLoading: true });
+    commit(key, labelKey, { ...base, isLoading: true, hasError: false });
 
     try {
       const pageIds = await fetchTaggerPage({ taggedId, taggedKind, label, skip: base.skip });
-      if (activeKeyRef.current !== key) return;
+      if (requestVersionRef.current !== requestVersion) return;
 
       const ids = Array.from(new Set(base.skip === 0 ? pageIds : [...base.ids, ...pageIds]));
       const skip = base.skip + pageIds.length;
       const reachedTotal = base.totalCount !== undefined && ids.length >= base.totalCount;
-      const hasMore = pageIds.length >= TAGGERS_PAGE_SIZE && !reachedTotal && skip < TAGGERS_MAX_SKIP;
+      const hasMore = pageIds.length >= TAGGERS_PAGE_SIZE && !reachedTotal && skip <= TAGGERS_MAX_SKIP;
 
-      commit(key, labelKey, { ids, skip, isLoading: false, hasMore, hasFetched: true, totalCount: base.totalCount });
-    } catch (error) {
-      if (activeKeyRef.current !== key) return;
-      Logger.error('[useEntityTaggers] Failed to fetch taggers', { taggedId, taggedKind, label, error });
+      commit(key, labelKey, {
+        ids,
+        skip,
+        isLoading: false,
+        hasMore,
+        hasFetched: true,
+        hasError: false,
+        totalCount: base.totalCount,
+      });
+    } catch {
+      if (requestVersionRef.current !== requestVersion) return;
       // Keep what was already fetched and stay retryable from the same offset
-      commit(key, labelKey, { ...base, isLoading: false, hasMore: true });
+      commit(key, labelKey, { ...base, isLoading: false, hasError: true });
     }
   };
 
@@ -90,14 +101,15 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
     if (!entityKey) return;
     const existing = statesFor(entityKey).get(label.toLowerCase());
     if (existing?.isLoading) return;
-    if (existing?.hasFetched && existing.totalCount === totalCount) return;
+    if (existing?.hasFetched || existing?.hasError) return;
 
     await fetchPage(entityKey, label, {
       ids: existing?.ids ?? [],
       skip: 0,
       isLoading: false,
       hasMore: true,
-      hasFetched: existing?.hasFetched ?? false,
+      hasFetched: false,
+      hasError: false,
       totalCount,
     });
   };
@@ -105,15 +117,10 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
   const loadMoreTaggers = async (label: string) => {
     if (!entityKey) return;
     const existing = statesFor(entityKey).get(label.toLowerCase());
-    if (!existing || existing.isLoading || !existing.hasFetched || !existing.hasMore) return;
+    if (!existing || existing.isLoading || !existing.hasMore) return;
 
     await fetchPage(entityKey, label, existing);
   };
 
-  const taggersByLabel = new Map<string, Pubky[]>();
-  taggerStates.forEach((value, key) => {
-    taggersByLabel.set(key, value.ids);
-  });
-
-  return { taggersByLabel, taggerStates, loadTaggers, loadMoreTaggers };
+  return { taggerStates, loadTaggers, loadMoreTaggers };
 }
