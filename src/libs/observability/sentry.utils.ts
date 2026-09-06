@@ -1,8 +1,8 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import type * as Sentry from '@sentry/nextjs';
 import { AppError } from '@/libs/error/error';
-import { ClientErrorCode } from '@/libs/error/error.codes';
-import { ErrorService } from '@/libs/error/error.types';
+import { ClientErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import {
   EMAIL_PATTERN,
@@ -70,6 +70,29 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       error.code === ClientErrorCode.NOT_FOUND &&
       error.context?.statusCode === HttpStatusCode.NOT_FOUND &&
       matchesEndpointPath(error, NEXUS_POST_TAGS_PATH_PATTERN),
+  },
+  {
+    name: 'homeserver-transport-error',
+    reason:
+      'The mute-list SSE stream (the only Homeserver operation whose errors carry ' +
+      "operation='subscribeUserEventStreamForPath') disconnects routinely (deploys, idle timeouts, mobile " +
+      'backgrounding) and its consumer reconnects with backoff by design. Each drop used to surface as a ' +
+      'captured AppError, which made PUBKY-APP-11/1Y/6G/CX the second-largest issue family with zero affected ' +
+      'users. One-shot Homeserver writes/reads/uploads keep their own operations and remain fully reportable.',
+    matches: (error) =>
+      error.service === ErrorService.Homeserver &&
+      error.category === ErrorCategory.Network &&
+      error.operation === 'subscribeUserEventStreamForPath' &&
+      typeof error.message === 'string' &&
+      error.message.includes('transport'),
+  },
+  {
+    name: 'aborted-requests',
+    reason:
+      'AbortSignal cancellation is control flow, not a failure: navigation, component teardown, and deliberate ' +
+      'long-poll resets all abort in-flight fetches, and every caller already handles the rejection. Capturing ' +
+      'each one as an error produced PUBKY-APP-3N/4F with zero affected users.',
+    matches: (error) => error.code === TimeoutErrorCode.REQUEST_ABORTED,
   },
 ];
 

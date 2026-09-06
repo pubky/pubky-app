@@ -7,6 +7,8 @@ import {
 import { MuteController } from '@/controllers/mute/mute';
 import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
+import { AppError } from '@/libs/error/error';
+import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import { getNotificationRespectPageVisibility } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
@@ -232,7 +234,20 @@ export class MuteListSyncCoordinator {
           }
         }
       } catch (error) {
-        Logger.error('Mute list homeserver event stream failed', { error });
+        // The homeserver event stream is a long-lived SSE connection; the SDK
+        // surfaces every server-side drop / idle timeout as "HTTP transport
+        // error: error sending request" and this loop immediately reconnects
+        // with backoff. That cycle is expected operation, not a failure, so it
+        // is logged at debug level — Sentry volume for PUBKY-APP-11/1Y/6G/CX
+        // was dominated by one of these lines per reconnect attempt.
+        if (error instanceof AppError && error.service === ErrorService.Homeserver) {
+          Logger.debug('Mute list homeserver event stream disconnected; reconnecting', {
+            code: error.code,
+            message: error.message,
+          });
+        } else {
+          Logger.error('Mute list homeserver event stream failed', { error });
+        }
       } finally {
         if (reader) {
           await reader.cancel().catch(() => {});

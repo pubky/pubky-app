@@ -721,7 +721,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { pathPrefix: params.pathPrefix },
+        additionalContext: { pathPrefix: params.pathPrefix, operation: 'subscribeUserEventStreamForPath' },
       });
     }
   }
