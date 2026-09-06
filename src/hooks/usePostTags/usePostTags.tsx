@@ -13,11 +13,13 @@ import { TAGS_PER_PAGE } from './usePostTags.constants';
 import type { UsePostTagsOptions, UsePostTagsResult } from './usePostTags.types';
 
 /**
- * Hook for fetching and managing post tags with pagination.
+ * Hook for managing post tags with pagination.
  * Uses useLiveQuery with PostController for automatic reactivity.
  *
- * On mount, fetches the first page of tags from Nexus and merges into IndexedDB
- * so that tags from other users are visible (not just locally-created ones).
+ * Local-first: tags are read from IndexedDB (hydrated by stream fetches and the
+ * TTL coordinator's batch refresh, which both persist `post.tags`). No network
+ * fetch on mount — the first page of tags from Nexus is assumed to be in cache.
+ * Explicit "load more" pagination fetches from Nexus on demand.
  *
  * The TagController.commitCreate/commitDelete methods use local-first writes with
  * compensation rollback, so useLiveQuery reacts immediately and failed homeserver
@@ -35,7 +37,6 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   const [paginationExhausted, setPaginationExhausted] = useState(false);
   const loadedCountRef = useRef(0);
   const prevPostIdRef = useRef<string | null | undefined>(null);
-  const [hasFetched, setHasFetched] = useState(false);
 
   // Track zero-tagger tags with their original index for order preservation
   const [zeroTaggerTags, setZeroTaggerTags] = useState<Map<string, { tag: NexusTag; index: number }>>(new Map());
@@ -57,7 +58,6 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
       setTagOrder(new Map());
       setRecentlyAddedLabels(new Map());
       addCounterRef.current = 0;
-      setHasFetched(false);
     }
   }, [postId]);
 
@@ -81,46 +81,6 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
     [postId],
     undefined,
   );
-
-  // Fetch first page of tags from Nexus on mount to ensure tags from other users are visible.
-  // PostApplication.fetchTags merges results into IndexedDB, so useLiveQuery reacts automatically.
-  useEffect(() => {
-    if (!postId || hasFetched) return;
-    let stale = false;
-
-    const fetchInitialTags = async () => {
-      try {
-        const fetchedTags = await PostController.fetchTags({
-          compositeId: postId,
-          skip: 0,
-          limit: TAGS_PER_PAGE,
-          viewerId: viewerId ?? undefined,
-        });
-
-        if (stale) return;
-        loadedCountRef.current = Math.max(loadedCountRef.current, fetchedTags.length);
-
-        if (fetchedTags.length < TAGS_PER_PAGE) {
-          setPaginationExhausted(true);
-        }
-      } catch {
-        // Silently fail — local tags (if any) are still shown via useLiveQuery
-      } finally {
-        if (!stale) setHasFetched(true);
-      }
-    };
-
-    fetchInitialTags();
-    return () => {
-      stale = true;
-    };
-    // `viewerId` is listed for parity with the user-tags hook (`useTagged`),
-    // but the `hasFetched` guard above means a mid-mount viewer change
-    // (e.g. user logs in on the same page) will not trigger a re-fetch.
-    // This matches existing behaviour and is out of scope for #1721.
-    // To support that case in the future, reset `hasFetched` when viewerId
-    // changes — see the `prevPostIdRef` pattern below for the shape.
-  }, [postId, hasFetched, viewerId]);
 
   const isLoading = tagsCollection === undefined;
 
