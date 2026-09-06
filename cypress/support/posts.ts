@@ -1,6 +1,6 @@
 // import { CheckIndexed } from '../support/types/enums';
 
-import { CheckForNewPosts } from './types/enums';
+import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
 
 export const MAX_POST_LENGTH = 2000;
 
@@ -126,6 +126,149 @@ export const createPostFromDialog = (postContent: string, expectedPostLength?: n
     });
   // verify dialog is closed
   cy.get('[data-cy="dialog-content"]').should('not.exist');
+};
+
+const ARTICLE_TITLE_INPUT = 'input[placeholder="Article Title"]';
+const ARTICLE_MARKDOWN_TEXTAREA = '[data-testid="markdown-textarea"]';
+const ARTICLE_MARKDOWN_MODE_BUTTON = 'button[aria-label="Markdown"]';
+const ARTICLE_PUBLISH_BUTTON = '[data-cy="post-input-action-bar-publish"]';
+const ARTICLE_EDIT_BUTTON = '[data-cy="post-input-action-bar-edit"]';
+const ARTICLE_ADD_BUTTON = '[data-cy="post-input-action-bar-add-article"]';
+const ARTICLE_FIELD_DEBOUNCE_MS = 600;
+
+const switchToArticleMode = () => {
+  cy.get(ARTICLE_ADD_BUTTON).should('be.visible').click();
+  cy.get(ARTICLE_TITLE_INPUT).should('be.visible');
+  cy.get('.mdxeditor-root-contenteditable').should('exist');
+};
+
+const setArticleBody = (body: string) => {
+  cy.get(ARTICLE_MARKDOWN_MODE_BUTTON).should('be.visible').click();
+  cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('be.visible').clear().type(body, { delay: 0 });
+  cy.get(ARTICLE_MARKDOWN_TEXTAREA).filter(':visible').should('have.value', body);
+};
+
+const fillArticleFields = ({
+  title,
+  body,
+  imageAction,
+}: {
+  title?: string;
+  body?: string;
+  imageAction?: { action: 'add' } | { action: 'replace' } | { action: 'remove' };
+}) => {
+  if (title !== undefined) {
+    cy.get(ARTICLE_TITLE_INPUT).clear().type(title, { delay: 0 });
+  }
+
+  if (body !== undefined) {
+    // Markdown mode uses a real textarea. delay: 0 types the full body before the
+    // 500ms onChange debounce; we then wait so React state has the complete text.
+    setArticleBody(body);
+  }
+
+  if (title !== undefined || body !== undefined) {
+    // usePostInput debounces article title and body changes by 500ms
+    cy.wait(ARTICLE_FIELD_DEBOUNCE_MS);
+  }
+
+  if (imageAction?.action === 'add') {
+    addImage();
+    cy.get('img[alt="Image preview"]').should('be.visible');
+  }
+
+  if (imageAction?.action === 'replace' || imageAction?.action === 'remove') {
+    cy.get('[data-cy="post-input-attachment-remove"]').should('be.visible').click();
+    cy.get('img[alt="Image preview"]').should('not.exist');
+    if (imageAction.action === 'replace') {
+      addImage('mustache-edit.png');
+      cy.get('img[alt="Image preview"]').should('be.visible');
+    }
+  }
+};
+
+export const createQuickArticle = (title: string, body: string, withImage = false) => {
+  cy.get('[data-cy="home-post-input"]')
+    .should('be.visible')
+    .within(() => {
+      cy.get('textarea').click();
+      switchToArticleMode();
+      fillArticleFields({ title, body, imageAction: withImage ? { action: 'add' } : undefined });
+      cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('articleCreated');
+      cy.get(ARTICLE_PUBLISH_BUTTON).should('not.be.disabled').click();
+      cy.wait('@articleCreated').its('response.statusCode').should('eq', 201);
+    });
+};
+
+export const createArticleFromDialog = (title: string, body: string) => {
+  cy.get('[data-cy="new-post-btn"]').click();
+
+  cy.get('[data-cy="dialog-content"]').should('be.visible').find('h2').should('contain.text', 'New Post');
+
+  cy.get('[data-cy="new-post-input"]').within(() => {
+    switchToArticleMode();
+    fillArticleFields({ title, body });
+    cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('articleCreated');
+    cy.get(ARTICLE_PUBLISH_BUTTON).should('not.be.disabled').click();
+    cy.wait('@articleCreated').its('response.statusCode').should('eq', 201);
+  });
+
+  cy.get('[data-cy="dialog-content"]').should('not.exist');
+};
+
+export const articleInFeedEq = (
+  title: string,
+  body: string,
+  checkForNewPosts = CheckForNewPosts.No,
+  waitForNewPosts = WaitForNewPosts.No,
+) => {
+  cy.findFirstPostInFeedFiltered(title, checkForNewPosts, waitForNewPosts).within(() => {
+    cy.contains(title).should('be.visible');
+    cy.get('[data-cy="post-text"]').should('contain.text', body);
+  });
+};
+
+export const editArticle = ({
+  newTitle,
+  newBody,
+  filterText,
+  postIdx = 0,
+  imageAction,
+}: {
+  newTitle?: string;
+  newBody?: string;
+  filterText?: string;
+  postIdx?: number;
+  imageAction?: { action: 'replace' } | { action: 'remove' };
+}) => {
+  cy.findPostInFeed(postIdx, filterText, CheckForNewPosts.Yes).within(() => {
+    cy.get('[data-cy="post-more-btn"]').should('be.visible').click();
+  });
+
+  cy.get('[data-cy="post-menu-action-edit"]').should('be.visible').click();
+
+  cy.get('[data-cy="dialog-content"]').should('be.visible').and('contain.text', 'Edit Article');
+
+  cy.get('[data-cy="edit-post-input"]')
+    .should('be.visible')
+    .within(() => {
+      cy.get(ARTICLE_TITLE_INPUT).should('be.visible');
+      cy.get('.mdxeditor-root-contenteditable').should('exist');
+
+      fillArticleFields({ title: newTitle, body: newBody, imageAction });
+
+      if (imageAction) {
+        cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('articleEdited');
+      }
+
+      cy.get(ARTICLE_EDIT_BUTTON).should('not.be.disabled').click();
+    });
+
+  if (imageAction) {
+    cy.wait('@articleEdited').its('response.statusCode').should('be.oneOf', [200, 201, 204]);
+  }
+
+  cy.get('[data-cy="edit-post-input"]').should('not.exist');
 };
 
 // reply to any post in the feed that contains the filterText by index
