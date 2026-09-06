@@ -92,6 +92,23 @@ describe('fetchProfileForMetadata', () => {
     expect(await fetchProfileForMetadata('somepubky')).toBeNull();
   });
 
+  it('normalizes crawl-mangled profile ids before building Nexus request URLs', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice', bio: 'hi' }))
+      .mockResolvedValueOnce(jsonResponse({ posts: 1, followers: 2 }));
+
+    // A percent-encoded trailing dot, as crawlers mangle ids
+    // (PUBKY-APP-1E/9Z/A0/BQ). It must not reach the Nexus URL.
+    const result = await fetchProfileForMetadata('u1%2E');
+    expect(result?.user.name).toBe('Alice');
+    expect(result?.counts.posts).toBe(1);
+
+    const calledUrls = fetchSpy.mock.calls.map((call) => String(call[0]));
+    expect(calledUrls.every((u) => u.includes('/user/u1/'))).toBe(true);
+    expect(calledUrls.every((u) => !/[.%](\?|$)/.test(u))).toBe(true);
+  });
+
   it('defaults counts to zeros when the counts request 404s but the user resolves', async () => {
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice', bio: 'hi' }))
