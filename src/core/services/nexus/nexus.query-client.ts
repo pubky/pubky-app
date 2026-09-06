@@ -14,6 +14,9 @@ export const nexusQueryClient = createQueryClient({
       // so content that returns 404 may become available shortly after.
       notFound: 5,
       serverError: 3,
+      // Rate limits: a single retry after the hard 429 backoff. Retrying 3x
+      // into a closed window amplified the burst (Sentry PUBKY-APP-B3).
+      rateLimited: 1,
       default: 3,
     },
     delays: {
