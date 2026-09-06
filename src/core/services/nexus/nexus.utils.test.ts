@@ -50,18 +50,19 @@ describe('nexus.utils', () => {
   });
 
   describe('createFetchOptions', () => {
-    it('should create GET options with default headers', () => {
+    it('should create GET options without Content-Type (no CORS preflight)', () => {
       const result = createFetchOptions({ method: HttpMethod.GET });
       expect(result.method).toBe('GET');
-      expect(result.headers).toEqual({ 'Content-Type': 'application/json' });
+      expect(result.headers).toBeUndefined();
       expect(result.body).toBeUndefined();
     });
 
-    it('should create POST options with body', () => {
+    it('should create POST options with body and JSON headers', () => {
       const body = JSON.stringify({ key: 'value' });
       const result = createFetchOptions({ method: HttpMethod.POST, body });
       expect(result.method).toBe('POST');
       expect(result.body).toBe(body);
+      expect(result.headers).toEqual({ 'Content-Type': 'application/json' });
     });
   });
 

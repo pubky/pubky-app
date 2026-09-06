@@ -125,19 +125,13 @@ describe('useTagged', () => {
     expect(typeof result.current.loadMore).toBe('function');
   });
 
-  it('calls UserController.fetchTags with correct params', async () => {
+  it('does not fetch tags from Nexus on mount (local-first: render from IndexedDB)', async () => {
     renderHook(() => useTagged(mockUserId));
 
-    await waitFor(() => {
-      expect(mockMocks.mockFetchTags).toHaveBeenCalled();
-    });
+    // Give any (removed) mount effect a chance to fire
+    await act(async () => {});
 
-    expect(mockMocks.mockFetchTags).toHaveBeenCalledWith({
-      user_id: mockUserId,
-      viewer_id: 'mock-current-user',
-      limit_tags: 20,
-      skip_tags: 0,
-    });
+    expect(mockMocks.mockFetchTags).not.toHaveBeenCalled();
   });
 
   it('handleTagAdd returns error when tag label is empty', async () => {

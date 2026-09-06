@@ -95,17 +95,13 @@ describe('usePostTags', () => {
   });
 
   describe('initialization', () => {
-    it('should fetch initial tags from Nexus on mount', async () => {
+    it('should not fetch tags from Nexus on mount (local-first: render from IndexedDB)', async () => {
       renderHook(() => usePostTags('author:post123'));
 
-      await waitFor(() => {
-        expect(mockFetchTags).toHaveBeenCalledWith({
-          compositeId: 'author:post123',
-          skip: 0,
-          limit: TAGS_PER_PAGE,
-          viewerId: 'mock-user-id',
-        });
-      });
+      // Give any (removed) mount effect a chance to fire
+      await act(async () => {});
+
+      expect(mockFetchTags).not.toHaveBeenCalled();
     });
 
     it('should return loading state initially', () => {
@@ -538,16 +534,7 @@ describe('usePostTags', () => {
       // unique_tags > localTags.length so hasMore starts as true
       setupLiveQueryMock([{ tags: initialTags }], { unique_tags: 20 });
 
-      // Initial fetch on mount should return a full page so hasMore remains true.
-      mockFetchTags.mockResolvedValueOnce(
-        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
-          label: `initial-tag-${i}`,
-          taggers_count: 1,
-          taggers: ['user-1'],
-        })),
-      );
-
-      // Then loadMore returns fewer than 10 tags (end of list)
+      // loadMore returns fewer than TAGS_PER_PAGE tags (end of list)
       mockFetchTags.mockResolvedValueOnce([
         { label: 'last-tag-1', taggers_count: 1, taggers: ['user-1'] },
         { label: 'last-tag-2', taggers_count: 1, taggers: ['user-1'] },
@@ -563,7 +550,7 @@ describe('usePostTags', () => {
 
       await result.current.loadMore();
 
-      // hasMore should now be false since we got < 10 tags
+      // hasMore should now be false since we got < TAGS_PER_PAGE tags
       await waitFor(() => {
         expect(result.current.hasMore).toBe(false);
       });

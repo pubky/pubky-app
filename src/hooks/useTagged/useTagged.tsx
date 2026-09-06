@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TagKind } from '@/application/tag/tag.types';
 import { TagController } from '@/controllers/tag/tag';
@@ -16,8 +16,13 @@ import { TAGS_PER_PAGE } from './useTagged.constants';
 import type { UseTaggedOptions, UseTaggedResult } from './useTagged.types';
 
 /**
- * Unified hook for fetching and managing user tags.
+ * Unified hook for managing user tags.
  * Uses useLiveQuery on IndexedDB for automatic reactivity across all instances.
+ *
+ * Local-first: user tags are read from IndexedDB (hydrated by user stream fetches,
+ * profile fetches and the TTL coordinator's batch refresh, which all persist
+ * `user.tags`). No network fetch on mount; explicit "load more" pagination
+ * fetches from Nexus on demand.
  *
  * The TagController.commitCreate/commitDelete methods use local-first writes with
  * compensation rollback, so useLiveQuery reacts immediately and failed homeserver
@@ -71,44 +76,6 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
       return hasChanges ? newOrder : prevOrder;
     });
   }, [localTags]);
-
-  // Track if we've already fetched from server for this user
-  const [hasFetched, setHasFetched] = useState(false);
-  const prevUserIdRef = useRef<string | null | undefined>(null);
-
-  // Reset hasFetched when userId changes
-  useEffect(() => {
-    if (prevUserIdRef.current !== userId) {
-      setHasFetched(false);
-      prevUserIdRef.current = userId;
-    }
-  }, [userId]);
-
-  // Initial fetch from server (always fetch to ensure we have all tags)
-  useEffect(() => {
-    if (!userId || hasFetched) return;
-
-    const fetchTags = async () => {
-      try {
-        // Fetch from server
-        const fetchedTags = await UserController.fetchTags({
-          user_id: userId,
-          viewer_id: viewerId ?? undefined,
-          ...(enablePagination && { limit_tags: TAGS_PER_PAGE, skip_tags: 0 }),
-        });
-
-        // Save to IndexedDB so useLiveQuery reacts
-        await UserController.upsertTags(userId, fetchedTags);
-
-        setHasFetched(true);
-      } catch {
-        // Ignore fetch errors - we'll show empty state
-        setHasFetched(true);
-      }
-    };
-
-    fetchTags();
-  }, [userId, viewerId, enablePagination, hasFetched]);
 
   // Combine local tags with zero-tagger tags, preserving order
   const allTags = useMemo(() => {
