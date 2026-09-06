@@ -23,7 +23,7 @@ export class FeedController {
    * @returns The feed or undefined if not found
    */
   static async get(params: TFeedIdParam): Promise<FeedModelSchema | undefined> {
-    return FeedApplication.get(params);
+    return (await FeedApplication.get(params)) ?? undefined;
   }
 
   /**

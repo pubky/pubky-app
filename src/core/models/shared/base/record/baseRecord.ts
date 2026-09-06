@@ -11,6 +11,11 @@ export abstract class RecordModelBase<Id, Schema extends { id: Id }> extends Mod
   /**
    * Bulk upsert many full records at once.
    * Delegates to Dexie `bulkPut`.
+   *
+   * Failures are always wrapped with `Err.database(WRITE_FAILED, …)`, keeping
+   * the original IndexedDB error on `cause` so `isTransientIndexedDbError`
+   * (used by the database init retry path in `franky.ts`) can still classify
+   * them through the cause chain if they ever escape this layer.
    */
   static async bulkSave<TId, TSchema extends { id: TId }>(this: { table: Table<TSchema> }, records: TSchema[]) {
     try {
