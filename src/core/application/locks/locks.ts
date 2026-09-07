@@ -251,9 +251,6 @@ export class LocksApplication {
       uris.map(async (uri) => {
         try {
           const path = GuardedContentParser.attachmentUriToPath(uri);
-          // TODO:[Locks] locks#10 — bytes come from the homeserver but the type comes from
-          // the public `lock.json`, so the two can disagree. Both reads return bytes only today; take
-          // the type from the response header once the SDK exposes it.
           const contentType = lockFile.secondary_resources?.[path]?.content_type;
           // No descriptor = a permanent data-integrity error (the bytes live on a HS with no content
           // type, so they can never render). Report to Sentry, then drop this one attachment.
