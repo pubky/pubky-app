@@ -165,6 +165,7 @@ export function ClickableTagsList({
             taggersCount={tag.taggers_count}
             postId={taggedKind === TagKind.POST ? taggedId : null}
             tagLabel={tag.label}
+            relationship={tag.relationship}
           >
             <PostTag
               label={tag.label}

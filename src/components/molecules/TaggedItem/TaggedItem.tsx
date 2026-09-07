@@ -22,6 +22,10 @@ export function TaggedItem({
   onExpandToggle,
   expandedTaggerIds,
   isLoadingTaggers,
+  isLoadingMoreTaggers,
+  hasMoreTaggers,
+  hasTaggersError,
+  onLoadMoreTaggers,
 }: TaggedItemProps) {
   const router = useRouter();
   const { requireAuth } = useRequireAuth();
@@ -110,6 +114,10 @@ export function TaggedItem({
           taggerIds={expandedTaggerIds ?? tag.taggers.map((tagger) => tagger.id)}
           fallbackTaggers={tag.taggers}
           isLoadingTaggers={isLoadingTaggers}
+          isLoadingMore={isLoadingMoreTaggers}
+          hasMore={hasMoreTaggers}
+          hasError={hasTaggersError}
+          onLoadMore={onLoadMoreTaggers}
         />
       )}
     </Container>

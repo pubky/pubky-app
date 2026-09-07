@@ -6,11 +6,11 @@ import { PostTagPopoverWrapper } from './PostTagPopoverWrapper';
 import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
 
 const mockRouterPush = vi.fn();
-const mockFetchAllTaggers = vi.fn();
-let mockTaggersByLabel = new Map<string, string[]>();
+const mockLoadTaggers = vi.fn();
+const mockLoadMoreTaggers = vi.fn();
 let mockTaggerStates = new Map<
   string,
-  { ids: string[]; skip: number; isLoading: boolean; hasMore: boolean; totalCount?: number }
+  { ids: string[]; skip: number; isLoading: boolean; hasMore: boolean; hasFetched: boolean; totalCount?: number }
 >();
 
 vi.mock('next/navigation', () => ({
@@ -25,13 +25,21 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => false,
 }));
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
-  usePostTaggers: () => ({
-    taggersByLabel: mockTaggersByLabel,
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', () => ({
+  useEntityTaggers: () => ({
     taggerStates: mockTaggerStates,
-    fetchAllTaggers: mockFetchAllTaggers,
+    loadTaggers: mockLoadTaggers,
+    loadMoreTaggers: mockLoadMoreTaggers,
   }),
 }));
+
+vi.mock('@/stores/auth/auth.store', () => {
+  const state = { currentUserPubky: 'viewer', selectIsAuthenticated: () => true };
+  const useAuthStore = (selector?: (authState: typeof state) => unknown) => (selector ? selector(state) : state);
+  useAuthStore.subscribe = () => () => {};
+  useAuthStore.getState = () => state;
+  return { useAuthStore };
+});
 
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
   return {
@@ -55,7 +63,6 @@ describe('PostTagPopoverWrapper', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    mockTaggersByLabel = new Map();
     mockTaggerStates = new Map();
   });
 
@@ -145,7 +152,7 @@ describe('PostTagPopoverWrapper', () => {
       await Promise.resolve();
     });
 
-    expect(mockFetchAllTaggers).toHaveBeenCalledWith('bitcoin', ['user1', 'user2', 'user3'], 10);
+    expect(mockLoadTaggers).toHaveBeenCalledWith('bitcoin', 10);
   });
 });
 

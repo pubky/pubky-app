@@ -317,9 +317,9 @@ export class UserApplication {
   /**
    * Retrieves taggers for a specific tag label on a user from the nexus service.
    * @param params - Parameters containing user ID, label, and pagination options
-   * @returns Promise resolving to an array of users who tagged the user with the specified label
+   * @returns Promise resolving to the users who tagged the user with the specified label
    */
-  static async fetchTaggers(params: TUserTaggersParams): Promise<NexusTaggers[]> {
+  static async fetchTaggers(params: TUserTaggersParams): Promise<NexusTaggers> {
     return await NexusUserService.taggers(params);
   }
 

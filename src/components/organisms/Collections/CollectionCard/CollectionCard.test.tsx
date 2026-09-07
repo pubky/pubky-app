@@ -67,11 +67,11 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
-  usePostTaggers: () => ({
-    taggersByLabel: new Map(),
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', () => ({
+  useEntityTaggers: () => ({
     taggerStates: new Map(),
-    fetchAllTaggers: vi.fn(),
+    loadTaggers: vi.fn(),
+    loadMoreTaggers: vi.fn(),
   }),
 }));
 

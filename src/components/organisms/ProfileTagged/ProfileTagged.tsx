@@ -1,5 +1,6 @@
 'use client';
 
+import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
@@ -36,7 +37,7 @@ export function ProfileTagged() {
 
   const userName = profile?.name || '';
 
-  if (isLoading) {
+  if (!pubky || isLoading) {
     return <ProfileTaggedSkeleton />;
   }
 
@@ -52,6 +53,8 @@ export function ProfileTagged() {
       </Heading>
       <TaggedSection
         tags={enrichedTags}
+        taggedId={pubky}
+        taggedKind={TagKind.USER}
         userName={userName}
         handleTagAdd={handleTagAdd}
         handleTagToggle={handleTagToggle}

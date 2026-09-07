@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
+import { useEntityTaggers } from '@/hooks/useEntityTaggers/useEntityTaggers';
+import { mergeTaggerIds } from '@/hooks/useEntityTaggers/useEntityTaggers.utils';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
-import { usePostTaggers } from '@/hooks/usePostTaggers/usePostTaggers';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { WhoTaggedExpandedList } from '../WhoTaggedExpandedList/WhoTaggedExpandedList';
 import { MAX_VISIBLE_AVATARS, POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
 import type { PostTagPopoverWrapperProps } from './PostTagPopoverWrapper.types';
@@ -26,17 +29,17 @@ export function PostTagPopoverWrapper({
   taggersCount,
   postId,
   tagLabel,
+  relationship,
   children,
 }: PostTagPopoverWrapperProps) {
   const [open, setOpen] = useState(false);
   const [showAllTaggers, setShowAllTaggers] = useState(false);
   const isMobile = useIsMobile();
-  const shouldFetchTaggers = Boolean(postId && tagLabel);
-  const { taggersByLabel, taggerStates, fetchAllTaggers } = usePostTaggers(shouldFetchTaggers ? postId : null);
-  const initialTaggerIds = useMemo(() => taggers.map((tagger) => tagger.id), [taggers]);
-  const labelKey = tagLabel?.toLowerCase();
-  const expandedTaggerIds = labelKey ? taggersByLabel.get(labelKey) : undefined;
-  const isLoadingTaggers = labelKey ? (taggerStates.get(labelKey)?.isLoading ?? false) : false;
+  const viewerId = useAuthStore((state) => state.currentUserPubky);
+  const { taggerStates, loadTaggers, loadMoreTaggers } = useEntityTaggers(tagLabel ? postId : null, TagKind.POST);
+  const previewTaggerIds = taggers.map((tagger) => tagger.id);
+  const taggerState = tagLabel ? taggerStates.get(tagLabel.toLowerCase()) : undefined;
+  const isFetching = taggerState?.isLoading ?? false;
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -47,9 +50,9 @@ export function PostTagPopoverWrapper({
   };
 
   useEffect(() => {
-    if (!showAllTaggers || !shouldFetchTaggers || !tagLabel) return;
-    void fetchAllTaggers(tagLabel, initialTaggerIds, taggersCount);
-  }, [showAllTaggers, shouldFetchTaggers, tagLabel, initialTaggerIds, taggersCount, fetchAllTaggers]);
+    if (!showAllTaggers || !postId || !tagLabel) return;
+    void loadTaggers(tagLabel, taggersCount);
+  }, [showAllTaggers, postId, tagLabel, taggersCount, loadTaggers]);
 
   // On mobile or when no taggers, just render children without popover
   if (isMobile || (taggers.length === 0 && taggersCount === 0)) {
@@ -93,9 +96,18 @@ export function PostTagPopoverWrapper({
               >
                 {showAllTaggers && (
                   <WhoTaggedExpandedList
-                    taggerIds={expandedTaggerIds ?? initialTaggerIds}
+                    taggerIds={mergeTaggerIds({
+                      fetchedIds: taggerState?.ids,
+                      previewIds: previewTaggerIds,
+                      viewerId,
+                      isViewerTagger: relationship,
+                    })}
                     fallbackTaggers={taggers}
-                    isLoadingTaggers={isLoadingTaggers}
+                    isLoadingTaggers={isFetching && !taggerState?.hasFetched}
+                    isLoadingMore={isFetching && taggerState?.hasFetched}
+                    hasMore={taggerState?.hasMore}
+                    hasError={taggerState?.hasError}
+                    onLoadMore={() => void loadMoreTaggers(tagLabel ?? '')}
                   />
                 )}
               </PopoverContent>
