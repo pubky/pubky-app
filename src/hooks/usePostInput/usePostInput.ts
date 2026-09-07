@@ -24,7 +24,6 @@ import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
 import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
 import { usePost } from '@/hooks/usePost/usePost';
-import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineImages';
@@ -50,6 +49,40 @@ import type { UsePostInputOptions, UsePostInputReturn } from './usePostInput.typ
  * - Mention autocomplete (@username and pubky ID patterns)
  * - Clipboard paste handling for file attachments
  */
+type AttachmentRejectionReason = 'maxFiles' | 'unsupportedType' | 'imageTooLarge' | 'fileTooLarge';
+
+const MAX_IMAGE_SIZE_LABEL = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
+const MAX_OTHER_SIZE_LABEL = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
+
+interface AttachmentLimits {
+  maxFiles: number;
+  supportedFileTypes: string;
+}
+
+/** One toast line per rejection reason; counts stand in for the file names toasts never show. */
+function formatAttachmentRejection(
+  reason: AttachmentRejectionReason,
+  count: number,
+  { maxFiles, supportedFileTypes }: AttachmentLimits,
+): string {
+  switch (reason) {
+    case 'maxFiles':
+      return `Maximum ${maxFiles} files allowed. Some files were not added.`;
+    case 'unsupportedType':
+      return count === 1
+        ? `Unsupported file type. Supported: ${supportedFileTypes}.`
+        : `${count} files have an unsupported type. Supported: ${supportedFileTypes}.`;
+    case 'imageTooLarge':
+      return count === 1
+        ? `Image exceeds the ${MAX_IMAGE_SIZE_LABEL} limit.`
+        : `${count} images exceed the ${MAX_IMAGE_SIZE_LABEL} limit.`;
+    case 'fileTooLarge':
+      return count === 1
+        ? `File exceeds the ${MAX_OTHER_SIZE_LABEL} limit.`
+        : `${count} files exceed the ${MAX_OTHER_SIZE_LABEL} limit.`;
+  }
+}
+
 export function usePostInput({
   variant,
   postId,
@@ -131,10 +164,6 @@ export function usePostInput({
     existingAttachments,
     setExistingAttachments,
   });
-
-  // Get original post author's name for repost toast message
-  const originalPostAuthorId = originalPostId ? originalPostId.split(':')[0] : null;
-  const { userDetails: originalPostAuthor } = useUserDetails(originalPostAuthorId);
 
   // Handle mention selection - inserts pubky{userId} into content
   const handleMentionSelect = useCallback(
@@ -339,7 +368,6 @@ export function usePostInput({
       case POST_INPUT_VARIANT.REPOST:
         await repost({
           originalPostId: originalPostId!,
-          originalAuthorName: originalPostAuthor?.name,
           successToastTitle,
           onSuccess: handleSuccess,
           onUndo: deletePost,
@@ -367,7 +395,6 @@ export function usePostInput({
     variant,
     postId,
     originalPostId,
-    originalPostAuthor,
     successToastTitle,
     reply,
     post,
@@ -451,42 +478,50 @@ export function usePostInput({
       }
 
       const validFiles: File[] = [];
-      const errors: string[] = [];
+      // Toasts never name files, so rejections are tallied per reason and the
+      // count tells the user how many files were refused.
+      const rejections = new Map<AttachmentRejectionReason, number>();
+      const reject = (reason: AttachmentRejectionReason) => rejections.set(reason, (rejections.get(reason) ?? 0) + 1);
 
       for (const file of files) {
         if (validFiles.length >= availableSlots) {
-          errors.push(`Maximum ${ATTACHMENT_MAX_FILES} files allowed. Some files were not added.`);
+          reject('maxFiles');
           break;
         }
 
         // Check against specific supported MIME types from pubky-app-specs
         const isAcceptedType = SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type);
         if (!isAcceptedType) {
-          errors.push(`Unsupported file type for ${file.name}. Supported: ${SUPPORTED_FILE_TYPES}.`);
+          reject('unsupportedType');
           continue;
         }
 
         const isImage = file.type.startsWith('image/');
-        const maxImageSizeLabel = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
-        const maxOtherSizeLabel = `${Math.round(ATTACHMENT_MAX_OTHER_SIZE / (1024 * 1024))}MB`;
 
         if (isImage && file.size > IMAGE_MAX_RAW_SIZE) {
-          errors.push(`${file.name} exceeds the ${maxImageSizeLabel} limit.`);
+          reject('imageTooLarge');
           continue;
         }
 
         if (!isImage && file.size > ATTACHMENT_MAX_OTHER_SIZE) {
-          errors.push(`${file.name} exceeds the ${maxOtherSizeLabel} limit.`);
+          reject('fileTooLarge');
           continue;
         }
 
         validFiles.push(file);
       }
 
-      if (errors.length > 0) {
+      if (rejections.size > 0) {
         toast({
           variant: 'error',
-          description: errors.join('\n'),
+          description: [...rejections]
+            .map(([reason, count]) =>
+              formatAttachmentRejection(reason, count, {
+                maxFiles: ATTACHMENT_MAX_FILES,
+                supportedFileTypes: SUPPORTED_FILE_TYPES,
+              }),
+            )
+            .join('\n'),
         });
       }
 

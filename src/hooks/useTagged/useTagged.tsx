@@ -175,13 +175,13 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         });
 
         toast({
-          title: `Tag added: ${label}`,
+          title: 'Tag added',
         });
         return { success: true };
       } catch {
         toast({
           variant: 'error',
-          description: `Could not add tag: ${label}`,
+          description: 'Could not add tag',
         });
         return { success: false, error: 'Failed to add tag' };
       }
@@ -229,7 +229,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           await TagController.commitDelete(params);
 
           toast({
-            title: `Tag removed: ${tag.label}`,
+            title: 'Tag removed',
           });
         } else {
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
@@ -243,7 +243,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
 
           toast({
-            title: `Tag added: ${tag.label}`,
+            title: 'Tag added',
           });
         }
       } catch {
@@ -257,7 +257,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         }
         toast({
           variant: 'error',
-          description: userIsTagger ? `Could not remove tag: ${tag.label}` : `Could not add tag: ${tag.label}`,
+          description: userIsTagger ? 'Could not remove tag' : 'Could not add tag',
         });
       }
     },

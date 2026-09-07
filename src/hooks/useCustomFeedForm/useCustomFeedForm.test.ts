@@ -157,7 +157,7 @@ describe('useCustomFeedForm', () => {
           content: null,
         }),
       );
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Feed created: My Feed' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Feed created' });
       expect(mocks.push).toHaveBeenCalledWith(`${APP_ROUTES.FEED}/new-feed`);
     });
 
@@ -282,7 +282,7 @@ describe('useCustomFeedForm', () => {
       });
 
       expect(mocks.replace).not.toHaveBeenCalled();
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Feed updated: Renamed' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Feed updated' });
     });
   });
 
@@ -313,7 +313,7 @@ describe('useCustomFeedForm', () => {
 
       expect(deleted).toBe(true);
       expect(mocks.commitDelete).toHaveBeenCalledWith({ feedId: 'feed-abc123' });
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Feed deleted: Bitcoin News' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Feed deleted' });
       expect(mocks.replace).toHaveBeenCalledWith(APP_ROUTES.HOME);
     });
 

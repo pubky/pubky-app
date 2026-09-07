@@ -1216,7 +1216,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Feed created: My Feed',
+        title: 'Feed created',
       });
       expect(mockPush).toHaveBeenCalledWith('/feed/new-feed-123');
     });
@@ -1389,7 +1389,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Feed updated: Bitcoin News',
+        title: 'Feed updated',
       });
       expect(mockPush).not.toHaveBeenCalled();
       expect(mockReplace).not.toHaveBeenCalled();
@@ -1519,7 +1519,7 @@ describe('CustomFeedDialog', () => {
 
     await waitFor(() => {
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Feed deleted: Bitcoin News',
+        title: 'Feed deleted',
       });
       expect(mockReplace).toHaveBeenCalledWith('/home');
     });

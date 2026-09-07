@@ -198,7 +198,7 @@ describe('useProfileMenuActions', () => {
       expect(followItem?.disabled).toBe(true);
     });
 
-    it('calls toggleFollow with full profile name on follow action click', async () => {
+    it('calls toggleFollow with the user id on follow action click', async () => {
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
 
       const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
@@ -208,10 +208,10 @@ describe('useProfileMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false, 'Test User');
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false);
     });
 
-    it('calls toggleFollow with full profile name on unfollow action click', async () => {
+    it('calls toggleFollow with the user id on unfollow action click', async () => {
       mockUseIsFollowing.mockReturnValue({
         isFollowing: true,
         isLoading: false,
@@ -226,7 +226,7 @@ describe('useProfileMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true, 'Test User');
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true);
     });
 
     it('does not throw when the follow fails (useFollowUser handles feedback)', async () => {
@@ -292,7 +292,7 @@ describe('useProfileMenuActions', () => {
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, false);
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Test User muted',
+        title: 'User muted',
       });
     });
 
@@ -309,7 +309,7 @@ describe('useProfileMenuActions', () => {
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, true);
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Test User unmuted',
+        title: 'User unmuted',
       });
     });
 

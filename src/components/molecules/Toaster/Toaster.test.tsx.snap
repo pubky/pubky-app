@@ -63,12 +63,12 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with single toast 1`
         class="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain"
       >
         <div
-          class="min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground"
+          class="min-w-0 text-sm leading-normal font-bold wrap-anywhere text-popover-foreground"
         >
           Test Toast
         </div>
         <div
-          class="min-w-0 text-sm wrap-anywhere text-muted-foreground"
+          class="min-w-0 text-sm wrap-anywhere whitespace-pre-line text-muted-foreground"
         >
           This is a test toast message
         </div>
@@ -148,7 +148,7 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with title-only toas
         class="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain"
       >
         <div
-          class="min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground"
+          class="min-w-0 text-sm leading-normal font-bold wrap-anywhere text-popover-foreground"
         >
           Simple Toast
         </div>
@@ -228,12 +228,12 @@ exports[`Toaster - Snapshots > matches snapshot for Toaster with toast with acti
         class="flex max-h-32 min-w-0 flex-1 flex-col items-start justify-center gap-0.5 overflow-y-auto overscroll-y-contain"
       >
         <div
-          class="min-w-0 text-sm leading-normal font-bold break-words text-popover-foreground"
+          class="min-w-0 text-sm leading-normal font-bold wrap-anywhere text-popover-foreground"
         >
           Toast with Action
         </div>
         <div
-          class="min-w-0 text-sm wrap-anywhere text-muted-foreground"
+          class="min-w-0 text-sm wrap-anywhere whitespace-pre-line text-muted-foreground"
         >
           This toast has an action button
         </div>

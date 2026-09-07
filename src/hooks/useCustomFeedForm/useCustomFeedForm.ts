@@ -96,7 +96,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
             const createdFeed = await FeedController.commitCreate(changes);
 
             toast({
-              title: `Feed created: ${createdFeed.name}`,
+              title: 'Feed created',
             });
             router.push(`${APP_ROUTES.FEED}/${createdFeed.id}`);
             saved = true;
@@ -111,7 +111,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
           });
 
           toast({
-            title: `Feed updated: ${updatedFeed.name}`,
+            title: 'Feed updated',
           });
 
           // Config edits rehash the id, which moves the feed's route. Only a
@@ -149,7 +149,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
         feedId: feed.id,
       });
       toast({
-        title: `Feed deleted: ${feed.name}`,
+        title: 'Feed deleted',
       });
 
       if (pathname === currentFeedHref) {

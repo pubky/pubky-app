@@ -275,13 +275,13 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         setRecentlyAddedLabels((prev) => new Map(prev).set(labelLower, counter));
 
         toast({
-          title: `Tag added: ${label}`,
+          title: 'Tag added',
         });
         return { success: true };
       } catch {
         toast({
           variant: 'error',
-          description: `Could not add tag: ${label}`,
+          description: 'Could not add tag',
         });
         return { success: false, error: 'Failed to add tag' };
       }
@@ -327,7 +327,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           });
 
           toast({
-            title: `Tag removed: ${tag.label}`,
+            title: 'Tag removed',
           });
           // Removing the tag clears its "recently added" pinning so the natural
           // ordering takes over again if it ever resurfaces.
@@ -352,7 +352,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
           });
 
           toast({
-            title: `Tag added: ${tag.label}`,
+            title: 'Tag added',
           });
         }
       } catch {
@@ -366,7 +366,7 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         }
         toast({
           variant: 'error',
-          description: userIsTagger ? `Could not remove tag: ${tag.label}` : `Could not add tag: ${tag.label}`,
+          description: userIsTagger ? 'Could not remove tag' : 'Could not add tag',
         });
       }
     },

@@ -291,13 +291,7 @@ export function usePost(): UsePostReturn {
     }
   };
 
-  const repost = async ({
-    originalPostId,
-    originalAuthorName,
-    successToastTitle,
-    onSuccess,
-    onUndo,
-  }: UsePostRepostOptions) => {
+  const repost = async ({ originalPostId, successToastTitle, onSuccess, onUndo }: UsePostRepostOptions) => {
     if (!originalPostId || !currentUserId) return;
 
     setIsSubmitting(true);
@@ -315,7 +309,7 @@ export function usePost(): UsePostReturn {
       setAttachments([]);
 
       toast({
-        title: successToastTitle ?? (originalAuthorName ? `Reposted ${originalAuthorName}'s post` : 'Reposted'),
+        title: successToastTitle ?? 'Reposted',
         action: { label: 'Undo', altText: 'Undo', onClick: () => onUndo(createdPostId) },
       });
 

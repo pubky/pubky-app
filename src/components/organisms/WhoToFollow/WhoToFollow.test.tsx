@@ -114,14 +114,14 @@ vi.mock('@/organisms/UserListItem/UserListItem', () => {
     }: {
       user: { id: string; name?: string; isFollowing?: boolean };
       followButtonVariant?: string;
-      onFollowClick?: (userId: string, isFollowing: boolean, displayName: string) => void;
+      onFollowClick?: (userId: string, isFollowing: boolean) => void;
     }) => (
       <button
         data-testid="user-list-item"
         data-user-id={user.id}
         data-follow-button-variant={followButtonVariant}
         type="button"
-        onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false, user.name ?? user.id)}
+        onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false)}
       >
         User item
       </button>
@@ -242,7 +242,7 @@ describe('WhoToFollow', () => {
     render(<WhoToFollow />);
     fireEvent.click(screen.getAllByTestId('user-list-item')[0]);
 
-    expect(mockToggleFollow).toHaveBeenCalledWith('user-1', false, 'John Doe');
+    expect(mockToggleFollow).toHaveBeenCalledWith('user-1', false);
     await waitFor(() => {
       expect(useUserStream).toHaveBeenLastCalledWith(
         expect.objectContaining({

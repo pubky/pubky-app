@@ -214,7 +214,7 @@ describe('UserListItem - card variant', () => {
     // fireEvent.click returns false when preventDefault was called — the
     // follow click must not bubble into the card link's navigation.
     expect(fireEvent.click(followButton)).toBe(false);
-    expect(onFollowClick).toHaveBeenCalledWith(mockUser.id, false, 'Test User');
+    expect(onFollowClick).toHaveBeenCalledWith(mockUser.id, false);
   });
 
   it('renders the Me button for the current user', () => {

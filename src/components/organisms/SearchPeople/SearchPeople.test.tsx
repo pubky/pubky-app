@@ -47,14 +47,14 @@ vi.mock('@/organisms/UserListItem/UserListItem', () => ({
     user: UserListItemData;
     variant: string;
     isCurrentUser?: boolean;
-    onFollowClick?: (id: Pubky, isFollowing: boolean, name: string) => void;
+    onFollowClick?: (id: Pubky, isFollowing: boolean) => void;
   }) => (
     <div
       data-testid="user-list-item"
       data-user-id={user.id}
       data-variant={variant}
       data-is-current-user={String(isCurrentUser ?? false)}
-      onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false, user.name ?? '')}
+      onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false)}
     />
   ),
 }));
@@ -222,7 +222,7 @@ describe('SearchPeople', () => {
     render(<SearchPeople />);
     fireEvent.click(screen.getByTestId('user-list-item'));
 
-    expect(mockToggleFollow).toHaveBeenCalledWith(users[0].id, false, 'User 0');
+    expect(mockToggleFollow).toHaveBeenCalledWith(users[0].id, false);
   });
 
   it('fires the error toast through the onError wiring', () => {

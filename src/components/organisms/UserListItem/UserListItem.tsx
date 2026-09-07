@@ -8,7 +8,6 @@ import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { USER_LIST_TAG_MAX_LENGTH, USER_LIST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
-import { resolveFollowDisplayName } from '@/hooks/useFollowUser/useFollowUser.utils';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
@@ -516,7 +515,7 @@ export function UserListItem({
   const handleFollowClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    requireAuth(() => onFollowClick?.(user.id, isFollowing, resolveFollowDisplayName(user.id, user.name)));
+    requireAuth(() => onFollowClick?.(user.id, isFollowing));
   };
   const commonProps: VariantProps = {
     user,

@@ -36,9 +36,6 @@ export function ActiveUsers() {
   const handleUserClick = (pubky: Pubky) => {
     router.push(getUserProfileUrl(pubky, currentUserPubky));
   };
-  const handleFollowClick = async (userId: Pubky, isFollowing: boolean, displayName: string) => {
-    await toggleFollow(userId, isFollowing, displayName);
-  };
   const handleSeeAll = () => {
     router.push(`${APP_ROUTES.HOT}`);
   };
@@ -67,7 +64,7 @@ export function ActiveUsers() {
             isStatusLoading={isStreamLoading}
             isCurrentUser={currentUserPubky === user.id}
             onUserClick={handleUserClick}
-            onFollowClick={handleFollowClick}
+            onFollowClick={toggleFollow}
           />
         ))
       )}
