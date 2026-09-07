@@ -22,6 +22,11 @@ interface PostPreviewCardProps {
    * CTAs are hidden (share/repost dialog). Feed repost previews default to `true`.
    */
   interactiveActions?: boolean;
+  /**
+   * Collection embed only: squares the top corners so the card sits flush
+   * under the RepostHeader bar in full-bleed contentless collection shares.
+   */
+  flush?: boolean;
 }
 
 /**
@@ -53,7 +58,7 @@ interface PostPreviewCardProps {
  * - Share dialog: original post in `PostInput` repost variant
  * - Reply previews: post being replied to in `DialogReply` (non-collection posts only)
  */
-export function PostPreviewCard({ postId, className, interactiveActions = true }: PostPreviewCardProps) {
+export function PostPreviewCard({ postId, className, interactiveActions = true, flush = false }: PostPreviewCardProps) {
   const { navigateToPost } = usePostNavigation();
   const { postDetails, isLoading } = usePostDetails(postId);
   const { ref: ttlRef } = useTtlSubscription({
@@ -93,7 +98,7 @@ export function PostPreviewCard({ postId, className, interactiveActions = true }
             postId={id}
             presentation="embed"
             interactiveActions={interactiveActions}
-            className="w-full"
+            className={cn('w-full', flush && 'rounded-t-none rounded-b-md')}
           />
         </Container>
       </PostPreviewNestingProvider>

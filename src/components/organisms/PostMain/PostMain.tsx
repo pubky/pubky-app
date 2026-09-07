@@ -5,15 +5,19 @@ import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
+import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
@@ -51,6 +55,36 @@ function RemovablePostUnavailable({
   );
 }
 
+// Wires the contentless-repost header: deletes the repost itself on Undo and
+// formats the share time. Mounted only when `showRepostHeader` is true so the
+// extra hooks don't run for every card in the feed.
+function UndoableRepostHeader({
+  postId,
+  isCollectionShare,
+  indexedAt,
+}: {
+  postId: string;
+  isCollectionShare: boolean;
+  indexedAt: Date | null;
+}) {
+  const { formatRelativeTime } = useRelativeTime();
+  const { deletePost, isDeleting } = useDeletePost({
+    toastMessages: isCollectionShare
+      ? { deleted: 'Share removed', deleteFailed: 'Could not remove share. Try again.' }
+      : { deleted: 'Repost removed', deleteFailed: 'Could not remove repost. Try again.' },
+  });
+
+  return (
+    <RepostHeader
+      isCollectionShare={isCollectionShare}
+      onUndo={() => void deletePost(postId)}
+      isUndoing={isDeleting}
+      timeAgo={indexedAt ? formatRelativeTime(indexedAt) : null}
+      indexedAt={indexedAt}
+    />
+  );
+}
+
 export function PostMain({
   postId,
   className,
@@ -73,6 +107,13 @@ export function PostMain({
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
   const { showRepostHeader, shouldShowPostHeader } = usePostHeaderVisibility(postId);
+  // Contentless collection shares get a distinct full-bleed treatment (#2121):
+  // repost header + flush CollectionCard, no post chrome (header, actions, tags).
+  // The original's details query stays disabled unless the header is showing.
+  const { originalPostId } = useRepostInfo(postId);
+  const { postDetails: originalPostDetails } = usePostDetails(showRepostHeader ? originalPostId : null);
+  const collectionShareOriginalId =
+    showRepostHeader && originalPostDetails?.kind === 'collection' ? originalPostId : null;
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
 
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
@@ -119,74 +160,88 @@ export function PostMain({
             />
           ) : (
             <>
-              {showRepostHeader && <RepostHeader />}
-              <CardContent
-                className={cn(
-                  'flex min-w-0 flex-col @max-xl/grid:flex-1',
-                  isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6',
-                )}
-              >
-                {isListLayout ? (
-                  <PostMainListRow
-                    postId={postId}
-                    showFullContent={!isReply && showFullContentInListLayout}
-                    shouldShowPostHeader={shouldShowPostHeader}
-                    onReplyClick={openReplyDialog}
-                    onRepostClick={openRepostDialog}
-                  />
-                ) : isWideLayout ? (
-                  <Container className="flex min-w-0 flex-col lg:flex-row">
-                    <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
-                      {shouldShowPostHeader && (
-                        <PostHeader postId={postId} size="extraLarge" timeAgoPlacement="bottom-left" />
-                      )}
-                      <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
-                      {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
+              {showRepostHeader && (
+                <UndoableRepostHeader
+                  postId={postId}
+                  isCollectionShare={collectionShareOriginalId !== null}
+                  indexedAt={postDetails ? new Date(postDetails.indexed_at) : null}
+                />
+              )}
+              {collectionShareOriginalId !== null ? (
+                // Full-bleed collection share: the CollectionCard is the whole
+                // body — flush under the header, no padding, no actions/tags.
+                <CardContent className="flex min-w-0 flex-col p-0 @max-xl/grid:flex-1">
+                  <PostPreviewCard postId={collectionShareOriginalId} flush />
+                </CardContent>
+              ) : (
+                <CardContent
+                  className={cn(
+                    'flex min-w-0 flex-col @max-xl/grid:flex-1',
+                    isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6',
+                  )}
+                >
+                  {isListLayout ? (
+                    <PostMainListRow
+                      postId={postId}
+                      showFullContent={!isReply && showFullContentInListLayout}
+                      shouldShowPostHeader={shouldShowPostHeader}
+                      onReplyClick={openReplyDialog}
+                      onRepostClick={openRepostDialog}
+                    />
+                  ) : isWideLayout ? (
+                    <Container className="flex min-w-0 flex-col lg:flex-row">
+                      <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
+                        {shouldShowPostHeader && (
+                          <PostHeader postId={postId} size="extraLarge" timeAgoPlacement="bottom-left" />
+                        )}
+                        <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
+                        {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
+                        <Container
+                          overrideDefaults
+                          onClick={stopCardPropagation}
+                          onAuxClick={stopCardPropagation}
+                          className="flex flex-col gap-4"
+                        >
+                          <PostTagsPanel
+                            ref={mobileTagsPanelRef}
+                            postId={postId}
+                            widthMode="full"
+                            className="lg:hidden"
+                          />
+                          <PostActionsBar
+                            postId={postId}
+                            onTagClick={() => {
+                              mobileTagsPanelRef.current?.focus();
+                              desktopTagsPanelRef.current?.focus();
+                            }}
+                            onReplyClick={openReplyDialog}
+                            onRepostClick={openRepostDialog}
+                          />
+                        </Container>
+                      </Container>
                       <Container
                         overrideDefaults
                         onClick={stopCardPropagation}
                         onAuxClick={stopCardPropagation}
-                        className="flex flex-col gap-4"
+                        className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
                       >
-                        <PostTagsPanel
-                          ref={mobileTagsPanelRef}
-                          postId={postId}
-                          widthMode="full"
-                          className="lg:hidden"
-                        />
-                        <PostActionsBar
-                          postId={postId}
-                          onTagClick={() => {
-                            mobileTagsPanelRef.current?.focus();
-                            desktopTagsPanelRef.current?.focus();
-                          }}
-                          onReplyClick={openReplyDialog}
-                          onRepostClick={openRepostDialog}
-                        />
+                        <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
                       </Container>
                     </Container>
-                    <Container
-                      overrideDefaults
-                      onClick={stopCardPropagation}
-                      onAuxClick={stopCardPropagation}
-                      className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
-                    >
-                      <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
-                    </Container>
-                  </Container>
-                ) : (
-                  <>
-                    {shouldShowPostHeader && <PostHeader postId={postId} />}
-                    <PostContent postId={postId} />
-                    <PostInlineTagsActions
-                      postId={postId}
-                      onReplyClick={openReplyDialog}
-                      onRepostClick={openRepostDialog}
-                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
-                    />
-                  </>
-                )}
-              </CardContent>
+                  ) : (
+                    <>
+                      {shouldShowPostHeader && <PostHeader postId={postId} />}
+                      <PostContent postId={postId} />
+                      <PostInlineTagsActions
+                        postId={postId}
+                        onReplyClick={openReplyDialog}
+                        onRepostClick={openRepostDialog}
+                        actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
+                      />
+                    </>
+                  )}
+                </CardContent>
+              )}
             </>
           )}
         </Card>

@@ -2,16 +2,19 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayoutContext';
 
 // Use vi.hoisted to define mock functions before vi.mock calls (which are hoisted)
+const { mockDeletePost } = vi.hoisted(() => ({ mockDeletePost: vi.fn() }));
 const { mockPostHeader } = vi.hoisted(() => ({
   mockPostHeader: vi.fn(
     ({
@@ -245,9 +248,45 @@ vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => {
 
 vi.mock('@/molecules/RepostHeader/RepostHeader', () => {
   return {
-    RepostHeader: () => <div data-testid="repost-header">You reposted</div>,
+    RepostHeader: ({
+      isCollectionShare,
+      onUndo,
+      isUndoing,
+      timeAgo,
+    }: {
+      isCollectionShare?: boolean;
+      onUndo: () => void;
+      isUndoing?: boolean;
+      timeAgo?: string | null;
+      indexedAt?: Date | null;
+    }) => (
+      <div
+        data-testid="repost-header"
+        data-collection-share={String(!!isCollectionShare)}
+        data-undoing={String(!!isUndoing)}
+        data-time-ago={timeAgo ?? ''}
+      >
+        {isCollectionShare ? 'You shared this' : 'You reposted'}
+        <button onClick={onUndo}>Undo</button>
+      </div>
+    ),
   };
 });
+
+vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
+  return {
+    PostPreviewCard: ({ postId, flush }: { postId: string; flush?: boolean }) => (
+      <div data-testid="post-preview-card" data-post-id={postId} data-flush={String(!!flush)}>
+        PostPreviewCard {postId}
+      </div>
+    ),
+  };
+});
+
+// Stable relative-time formatting so header snapshots don't rot as real time passes.
+vi.mock('@/hooks/useRelativeTime/useRelativeTime', () => ({
+  useRelativeTime: () => ({ formatRelativeTime: () => '12m' }),
+}));
 
 // Mock hooks
 vi.mock('@/hooks/useElementHeight/useElementHeight', () => ({
@@ -284,6 +323,13 @@ vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
     originalPostId: null,
     isLoading: false,
     hasError: false,
+  })),
+}));
+
+vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
+  useDeletePost: vi.fn(() => ({
+    isDeleting: false,
+    deletePost: mockDeletePost,
   })),
 }));
 
@@ -348,6 +394,22 @@ describe('PostMain', () => {
         is_blurred: false,
       },
       isLoading: false,
+    });
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: false,
+      shouldShowPostHeader: true,
+    });
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: false,
+      repostAuthorId: null,
+      isCurrentUserRepost: false,
+      originalPostId: null,
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(useDeletePost).mockReturnValue({
+      isDeleting: false,
+      deletePost: mockDeletePost,
     });
   });
 
@@ -694,6 +756,193 @@ describe('PostMain', () => {
     expect(screen.getByTestId('post-content')).toBeInTheDocument();
   });
 
+  it('deletes the repost itself when undo is clicked', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: true,
+      shouldShowPostHeader: false,
+    });
+
+    render(<PostMain postId="me:simple-repost-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+
+    expect(mockDeletePost).toHaveBeenCalledTimes(1);
+    expect(mockDeletePost).toHaveBeenCalledWith('me:simple-repost-1');
+  });
+
+  it('uses repost toast copy for regular reposts', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: true,
+      shouldShowPostHeader: false,
+    });
+
+    render(<PostMain postId="me:simple-repost-1" />);
+
+    expect(screen.getByTestId('repost-header')).toHaveAttribute('data-collection-share', 'false');
+    expect(useDeletePost).toHaveBeenCalledWith({
+      toastMessages: { deleted: 'Repost removed', deleteFailed: 'Could not remove repost. Try again.' },
+    });
+  });
+
+  // Seeds useRepostInfo + usePostDetails so `me:share-1` reads as a contentless
+  // share whose original `author:collection-post-1` is a collection.
+  const mockCollectionShare = () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: true,
+      shouldShowPostHeader: false,
+    });
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'me',
+      isCurrentUserRepost: true,
+      originalPostId: 'author:collection-post-1',
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(usePostDetails).mockImplementation((compositeId) => ({
+      postDetails: {
+        id: compositeId ?? 'unknown',
+        indexed_at: 0,
+        kind: compositeId === 'author:collection-post-1' ? 'collection' : 'short',
+        uri: `pubky://test-user/pub/pubky.app/posts/${compositeId}`,
+        content: compositeId === 'author:collection-post-1' ? '{"name":"My collection"}' : '',
+        attachments: [],
+        is_moderated: false,
+        is_blurred: false,
+      },
+      isLoading: false,
+    }));
+  };
+
+  it('passes isCollectionShare and share toast copy when the reposted original is a collection', () => {
+    mockCollectionShare();
+
+    render(<PostMain postId="me:share-1" />);
+
+    expect(screen.getByTestId('repost-header')).toHaveAttribute('data-collection-share', 'true');
+    expect(screen.getByText('You shared this')).toBeInTheDocument();
+    expect(useDeletePost).toHaveBeenCalledWith({
+      toastMessages: { deleted: 'Share removed', deleteFailed: 'Could not remove share. Try again.' },
+    });
+  });
+
+  it('defaults to repost wording while the original post details load', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: true,
+      shouldShowPostHeader: false,
+    });
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'me',
+      isCurrentUserRepost: true,
+      originalPostId: 'author:collection-post-1',
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(usePostDetails).mockImplementation((compositeId) =>
+      compositeId === 'author:collection-post-1'
+        ? { postDetails: undefined, isLoading: true }
+        : {
+            postDetails: {
+              id: compositeId ?? 'unknown',
+              indexed_at: 0,
+              kind: 'short',
+              uri: `pubky://test-user/pub/pubky.app/posts/${compositeId}`,
+              content: '',
+              attachments: [],
+              is_moderated: false,
+              is_blurred: false,
+            },
+            isLoading: false,
+          },
+    );
+
+    render(<PostMain postId="me:share-1" />);
+
+    expect(screen.getByTestId('repost-header')).toHaveAttribute('data-collection-share', 'false');
+    expect(screen.getByText('You reposted')).toBeInTheDocument();
+  });
+
+  it('passes isUndoing while the repost deletion is pending', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: true,
+      shouldShowPostHeader: false,
+    });
+    vi.mocked(useDeletePost).mockReturnValue({
+      isDeleting: true,
+      deletePost: mockDeletePost,
+    });
+
+    render(<PostMain postId="me:simple-repost-1" />);
+
+    expect(screen.getByTestId('repost-header')).toHaveAttribute('data-undoing', 'true');
+  });
+
+  it('passes the share time to the repost header', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: true,
+      shouldShowPostHeader: false,
+    });
+
+    render(<PostMain postId="me:simple-repost-1" />);
+
+    expect(screen.getByTestId('repost-header')).toHaveAttribute('data-time-ago', '12m');
+  });
+
+  it('renders a contentless collection share full-bleed without post chrome', () => {
+    mockCollectionShare();
+
+    render(<PostMain postId="me:share-1" />);
+
+    const preview = screen.getByTestId('post-preview-card');
+    expect(preview).toHaveAttribute('data-post-id', 'author:collection-post-1');
+    expect(preview).toHaveAttribute('data-flush', 'true');
+    expect(screen.getByTestId('card-content')).toHaveAttribute('data-class-name', expect.stringContaining('p-0'));
+    expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-actions')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+  });
+
+  it('applies the full-bleed collection share treatment in list layout', () => {
+    mockCollectionShare();
+
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="me:share-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-preview-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-main-list-row')).not.toBeInTheDocument();
+  });
+
+  it('applies the full-bleed collection share treatment in side layout', () => {
+    mockCollectionShare();
+
+    render(
+      <PostMainLayoutProvider tagsLayout="side">
+        <PostMain postId="me:share-1" />
+      </PostMainLayoutProvider>,
+    );
+
+    expect(screen.getByTestId('post-preview-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('post-actions')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
+  });
+
+  it('keeps the regular repost preview inside post chrome for non-collection reposts', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: true,
+      shouldShowPostHeader: false,
+    });
+
+    render(<PostMain postId="me:simple-repost-1" />);
+
+    expect(screen.queryByTestId('post-preview-card')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-content')).toBeInTheDocument();
+    expect(screen.getByTestId('post-actions')).toBeInTheDocument();
+  });
+
   it('passes extraLarge size and bottom-left timestamp placement for side tags layout', () => {
     render(
       <PostMainLayoutProvider tagsLayout="side">
@@ -961,6 +1210,18 @@ describe('PostMain - Snapshots', () => {
       },
       isLoading: false,
     });
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: false,
+      repostAuthorId: null,
+      isCurrentUserRepost: false,
+      originalPostId: null,
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(useDeletePost).mockReturnValue({
+      isDeleting: false,
+      deletePost: mockDeletePost,
+    });
   });
 
   it('matches snapshot with default state', () => {
@@ -1093,6 +1354,18 @@ describe('PostMain - Mobile Snapshots', () => {
         is_blurred: false,
       },
       isLoading: false,
+    });
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: false,
+      repostAuthorId: null,
+      isCurrentUserRepost: false,
+      originalPostId: null,
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(useDeletePost).mockReturnValue({
+      isDeleting: false,
+      deletePost: mockDeletePost,
     });
     vi.mocked(useIsMobile).mockReturnValue(true);
     setMobileViewport();
