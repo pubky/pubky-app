@@ -5,8 +5,7 @@ import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
-import { useEntityTaggers } from '@/hooks/useEntityTaggers/useEntityTaggers';
-import { mergeTaggerIds } from '@/hooks/useEntityTaggers/useEntityTaggers.utils';
+import { mergeTaggerIds, useEntityTaggers } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { WhoTaggedExpandedList } from '../WhoTaggedExpandedList/WhoTaggedExpandedList';
@@ -29,7 +28,6 @@ export function PostTagPopoverWrapper({
   taggersCount,
   postId,
   tagLabel,
-  relationship,
   children,
 }: PostTagPopoverWrapperProps) {
   const [open, setOpen] = useState(false);
@@ -52,7 +50,7 @@ export function PostTagPopoverWrapper({
   useEffect(() => {
     if (!showAllTaggers || !postId || !tagLabel) return;
     void loadTaggers(tagLabel, taggersCount);
-  }, [showAllTaggers, postId, tagLabel, taggersCount, relationship, loadTaggers]);
+  }, [showAllTaggers, postId, tagLabel, taggersCount, loadTaggers]);
 
   // On mobile or when no taggers, just render children without popover
   if (isMobile || (taggers.length === 0 && taggersCount === 0)) {

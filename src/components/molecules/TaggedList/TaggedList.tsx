@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-import { useEntityTaggers } from '@/hooks/useEntityTaggers/useEntityTaggers';
-import { mergeTaggerIds } from '@/hooks/useEntityTaggers/useEntityTaggers.utils';
+import { mergeTaggerIds, useEntityTaggers } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { TaggedItem } from '../TaggedItem/TaggedItem';
@@ -38,15 +37,12 @@ export function TaggedList({
     setExpandedTagLabel((prev) => (prev === tagLabel ? null : tagLabel));
   };
 
-  // The hook retains fetched pages; local viewer toggles are merged below.
-  const expandedTag = tags.find((tag) => tag.label === expandedTagLabel);
-  const expandedTagCount = expandedTag?.taggers_count;
-  const expandedRelationship = expandedTag?.relationship;
+  const expandedTagCount = tags.find((tag) => tag.label === expandedTagLabel)?.taggers_count;
 
   useEffect(() => {
     if (!expandedTagLabel || !taggedId || !taggedKind) return;
     void loadTaggers(expandedTagLabel, expandedTagCount);
-  }, [expandedTagLabel, expandedTagCount, expandedRelationship, taggedId, taggedKind, loadTaggers]);
+  }, [expandedTagLabel, expandedTagCount, taggedId, taggedKind, loadTaggers]);
 
   return (
     <Container className="gap-2">

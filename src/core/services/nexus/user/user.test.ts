@@ -196,6 +196,7 @@ describe('NexusUserService', () => {
       // Verify label is URL-encoded (& becomes %26)
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringMatching(/\/taggers\/rust%20%26%20wasm\?skip=10&limit=5$/),
+        staleTime: 0,
       });
     });
   });

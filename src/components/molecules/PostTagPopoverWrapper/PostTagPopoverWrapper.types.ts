@@ -14,8 +14,6 @@ export interface PostTagPopoverWrapperProps {
   postId?: string | null;
   /** Tag label used to fetch full tagger list when available */
   tagLabel?: string;
-  /** Whether the viewer currently tags the post with this label; keeps the full list in sync with their toggles */
-  relationship?: boolean;
   /** The tag element to wrap */
   children: React.ReactNode;
 }

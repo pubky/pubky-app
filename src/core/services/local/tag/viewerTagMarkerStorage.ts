@@ -1,6 +1,9 @@
 import { MARKER_TTL_MS, VIEWER_TAG_MARKER_STORAGE_PREFIX } from '@/config/viewerTagMarker';
+import { isAppError } from '@/libs/error/error';
 import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import type { TLocalTagMutation } from '@/services/local/tag/tag.types';
 
 /** PUT = viewer created the tag, DELETE = viewer removed it. */
 type ViewerTagMarkerOp = HttpMethod.PUT | HttpMethod.DELETE;
@@ -10,8 +13,6 @@ interface ViewerTagMarker {
   ts: number;
   expiresAt: number;
 }
-
-type ViewerTagMutation = { pubky: Pubky; taggedId: string; label: string };
 
 function buildKey(pubky: Pubky, taggedId: string, label: string): string {
   return `${VIEWER_TAG_MARKER_STORAGE_PREFIX}${pubky}:${taggedId}:${label.toLowerCase()}`;
@@ -70,10 +71,10 @@ function removeKeysMatching(predicate: (key: string) => boolean): void {
 }
 
 export class ViewerTagMarkerStorage {
-  private static listeners = new Set<(mutation: ViewerTagMutation) => void>();
+  private static listeners = new Set<(mutation: TLocalTagMutation) => void>();
   private constructor() {}
 
-  static subscribe(listener: (mutation: ViewerTagMutation) => void): () => void {
+  static subscribe(listener: (mutation: TLocalTagMutation) => void): () => void {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -85,11 +86,13 @@ export class ViewerTagMarkerStorage {
     taggedId,
     label,
     op,
+    taggersCount,
   }: {
     pubky: Pubky;
     taggedId: string;
     label: string;
     op: ViewerTagMarkerOp;
+    taggersCount?: number;
   }): void {
     const ts = Date.now();
     const marker: ViewerTagMarker = { op, ts, expiresAt: ts + MARKER_TTL_MS };
@@ -99,7 +102,15 @@ export class ViewerTagMarkerStorage {
     } catch {
       // setItem can throw QuotaExceededError; markers are best-effort, so swallow.
     }
-    this.listeners.forEach((listener) => listener({ pubky, taggedId, label }));
+    this.listeners.forEach((listener) => {
+      try {
+        listener({ taggerId: pubky, taggedId, label, ...(taggersCount !== undefined && { taggersCount }) });
+      } catch (error) {
+        // A view update must not interrupt homeserver sync after the local write.
+        // AppError factories have already logged their errors.
+        if (!isAppError(error)) Logger.warn('[ViewerTagMarkerStorage] Subscriber failed', error);
+      }
+    });
   }
 
   static get({ pubky, taggedId, label }: { pubky: Pubky; taggedId: string; label: string }): ViewerTagMarker | null {

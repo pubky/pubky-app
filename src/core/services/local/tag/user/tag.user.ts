@@ -15,6 +15,7 @@ export class LocalUserTagService {
   private static readonly TAG_TABLES = [UserTagsModel.table, UserCountsModel.table] as const;
 
   static async create({ taggerId, taggedId, label }: TLocalTagParams): Promise<boolean> {
+    let taggersCount = 0;
     try {
       const didCreate = await db.transaction('rw', this.TAG_TABLES, async () => {
         const userTagsModel = await UserTagsModel.getOrCreate<Pubky, UserTagsModelSchema>(taggedId);
@@ -24,6 +25,7 @@ export class LocalUserTagService {
         if (tagExists === null) {
           return false;
         }
+        taggersCount = userTagsModel.findByLabel(label)?.taggers_count ?? 0;
         await Promise.all([
           this.saveUserTagsModel(taggedId, userTagsModel),
           UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
@@ -36,7 +38,7 @@ export class LocalUserTagService {
       });
 
       if (didCreate) {
-        ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId, label, op: HttpMethod.PUT });
+        ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId, label, op: HttpMethod.PUT, taggersCount });
         // Profile tags define wot_domain (Tagged as) membership. Defer cache
         // invalidation to each domain stream's next initial load (#2302).
         postStreamDirtyRegistry.markDirty('profile_tag');
@@ -88,7 +90,13 @@ export class LocalUserTagService {
       // Profile tags define wot_domain (Tagged as) membership. Defer cache
       // invalidation to each domain stream's next initial load (#2302).
       postStreamDirtyRegistry.markDirty('profile_tag');
-      ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId, label, op: HttpMethod.DELETE });
+      ViewerTagMarkerStorage.set({
+        pubky: taggerId,
+        taggedId,
+        label,
+        op: HttpMethod.DELETE,
+        taggersCount: userTagsModel.findByLabel(label)?.taggers_count ?? 0,
+      });
       return true;
     } catch (error) {
       throw Err.database(DatabaseErrorCode.WRITE_FAILED, 'Failed to delete user tag', {

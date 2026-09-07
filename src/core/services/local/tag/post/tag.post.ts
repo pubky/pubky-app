@@ -42,6 +42,7 @@ export class LocalPostTagService {
     // this tag), there's no local state to protect from stale Nexus responses,
     // so we skip the marker.
     let mutated = false;
+    let taggersCount = 0;
     try {
       mutated = await db.transaction('rw', this.TAG_TABLES, async () => {
         const postTagsModel = await PostTagsModel.getOrCreate<string, PostTagsModelSchema>(postId);
@@ -50,6 +51,7 @@ export class LocalPostTagService {
         if (status === null) {
           return false;
         }
+        taggersCount = postTagsModel.findByLabel(label)?.taggers_count ?? 0;
         await Promise.all([
           this.savePostTagsModel(postId, postTagsModel),
           this.updatePostCounts(postId, postTagsModel),
@@ -70,7 +72,7 @@ export class LocalPostTagService {
     if (mutated) {
       // Record this viewer change so mergeTags ignores stale Nexus responses
       // for the next ~5 minutes (until Nexus catches up).
-      ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId: postId, label, op: HttpMethod.PUT });
+      ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId: postId, label, op: HttpMethod.PUT, taggersCount });
     }
 
     return mutated;
@@ -123,7 +125,13 @@ export class LocalPostTagService {
 
     // Record this viewer change so mergeTags ignores stale Nexus responses
     // for the next ~5 minutes (until Nexus catches up).
-    ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId: postId, label, op: HttpMethod.DELETE });
+    ViewerTagMarkerStorage.set({
+      pubky: taggerId,
+      taggedId: postId,
+      label,
+      op: HttpMethod.DELETE,
+      taggersCount: postTagsModel.findByLabel(label)?.taggers_count ?? 0,
+    });
     return true;
   }
 

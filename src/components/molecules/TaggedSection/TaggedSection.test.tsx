@@ -35,7 +35,6 @@ const defaultProps: TaggedSectionProps = {
     },
   ],
   taggedId: 'profile-pubky',
-  taggedKind: TagKind.USER,
   userName: 'Satoshi',
   handleTagAdd: vi.fn().mockResolvedValue({ success: true }),
   handleTagToggle: vi.fn(),

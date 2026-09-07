@@ -46,7 +46,8 @@ export class NexusUserService {
    */
   static async taggers(params: TUserTaggersParams): Promise<NexusTaggers> {
     const url = userApi.taggers(params);
-    return await queryNexus<NexusTaggers>({ url });
+    // Tagger lists revalidate after local mutations or count changes.
+    return await queryNexus<NexusTaggers>({ url, staleTime: 0 });
   }
 
   /**

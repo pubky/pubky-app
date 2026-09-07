@@ -6,7 +6,7 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
-import type { TLocalTagParams } from '@/services/local/tag/tag.types';
+import type { TLocalTagMutation, TLocalTagParams } from '@/services/local/tag/tag.types';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
 import { ViewerTagMarkerStorage } from '@/services/local/tag/viewerTagMarkerStorage';
 
@@ -29,10 +29,8 @@ export class TagApplication {
     return ViewerTagMarkerStorage.get({ pubky: taggerId, taggedId, label });
   }
 
-  static subscribeViewerMutations(listener: (params: TLocalTagParams) => void) {
-    return ViewerTagMarkerStorage.subscribe(({ pubky, taggedId, label }) =>
-      listener({ taggerId: pubky, taggedId, label }),
-    );
+  static subscribeViewerMutations(listener: (params: TLocalTagMutation) => void) {
+    return ViewerTagMarkerStorage.subscribe(listener);
   }
 
   private static ownsMutation(params: TLocalTagParams, expected: ReturnType<typeof ViewerTagMarkerStorage.get>) {

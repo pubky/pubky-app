@@ -39,6 +39,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 const ids = Array.from({ length: 51 }, (_, index) => `tagger-${index}`);
+ids[10] = 'viewer';
 const preview = ids.slice(0, 5).map((id) => ({ id, name: id }));
 const tag = { label: 'bitcoin', taggers: preview, taggers_count: 50, relationship: false };
 const list = () => page.getByRole('list', { name: 'Who tagged expanded list' });
@@ -50,7 +51,7 @@ const scrollToEnd = () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  const fetchPage = async ({ skip = 0, limit = 50 }) => ({ users: ids.slice(skip, skip + limit), relationship: false });
+  const fetchPage = async ({ skip = 0, limit = 50 }) => ({ users: ids.slice(skip, skip + limit), relationship: true });
   vi.mocked(UserController.fetchTaggers).mockImplementation(fetchPage);
   vi.mocked(PostController.fetchTaggers).mockImplementation(fetchPage);
 });
@@ -61,7 +62,7 @@ describe.each([
 ] as const)('profile taggers in a real browser (%s)', (_name, viewport) => {
   it('scrolls beyond five preview rows and a stale count, retaining rows after a retryable page failure', async () => {
     vi.mocked(UserController.fetchTaggers)
-      .mockResolvedValueOnce({ users: ids.slice(0, 50), relationship: false })
+      .mockResolvedValueOnce({ users: ids.slice(0, 50), relationship: true })
       .mockRejectedValueOnce(new Error('offline'));
     await renderForVRT(
       <div className="p-6">
@@ -72,6 +73,8 @@ describe.each([
     expect(UserController.fetchTaggers).not.toHaveBeenCalled();
     await page.getByRole('button', { name: 'Show 50 users who tagged' }).click();
     await expect.poll(rowCount).toBe(50);
+    // Cached profile membership is false, but the fresh response includes us.
+    await expect.element(page.getByRole('button', { name: 'This is you' })).toBeInTheDocument();
     expect(list().element().scrollHeight).toBeGreaterThan(list().element().clientHeight);
     scrollToEnd();
     await expect.element(page.getByRole('button', { name: 'Retry loading taggers' })).toBeVisible();
@@ -83,8 +86,10 @@ describe.each([
     await expect.element(page.getByTestId('who-tagged-expanded-list-sentinel')).not.toBeInTheDocument();
   });
 
-  it('keeps a complete preview readable while the initial request is pending', async () => {
-    vi.mocked(UserController.fetchTaggers).mockImplementation(() => new Promise(() => {}));
+  it('keeps a complete preview readable through an initial failure and pending retry', async () => {
+    vi.mocked(UserController.fetchTaggers)
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockImplementation(() => new Promise(() => {}));
     await renderForVRT(
       <div className="p-6">
         <TaggedList
@@ -97,6 +102,11 @@ describe.each([
       { viewport },
     );
     await page.getByRole('button', { name: 'Show 2 users who tagged' }).click();
+    await expect.element(page.getByRole('button', { name: 'Retry loading taggers' })).toBeVisible();
+    expect(rowCount()).toBe(2);
+    expect(UserController.fetchTaggers).toHaveBeenCalledTimes(1);
+    await expect.element(page.getByTestId('who-tagged-expanded-list-sentinel')).not.toBeInTheDocument();
+    await page.getByRole('button', { name: 'Retry loading taggers' }).click();
     await expect.element(list()).toHaveAttribute('aria-busy', 'true');
     expect(rowCount()).toBe(2);
     await expect.element(page.getByRole('button', { name: "View tagger-0's profile" })).toBeVisible();
@@ -106,13 +116,7 @@ describe.each([
 it('loads the next page inside the home-post nested taggers popover', async () => {
   await renderForVRT(
     <div className="p-20">
-      <PostTagPopoverWrapper
-        taggers={preview}
-        taggersCount={51}
-        postId="author:post"
-        tagLabel="bitcoin"
-        relationship={false}
-      >
+      <PostTagPopoverWrapper taggers={preview} taggersCount={51} postId="author:post" tagLabel="bitcoin">
         <button>bitcoin</button>
       </PostTagPopoverWrapper>
     </div>,
@@ -121,6 +125,7 @@ it('loads the next page inside the home-post nested taggers popover', async () =
   await page.getByRole('button', { name: 'bitcoin', exact: true }).hover();
   await page.getByRole('button', { name: 'Show all 51 taggers' }).click();
   await expect.poll(rowCount).toBe(50);
+  await expect.element(page.getByRole('button', { name: 'This is you' })).toBeInTheDocument();
   scrollToEnd();
   await expect.poll(rowCount).toBe(51);
   expect(PostController.fetchTaggers).toHaveBeenCalledTimes(2);

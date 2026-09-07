@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_HOVER_CLOSE_DELAY } from '@/atoms/Popover/Popover.constants';
+import type { TaggersState, UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import type { TaggerWithAvatar } from '@/molecules/TaggedItem/TaggedItem.types';
 import { PostTagPopoverWrapper } from './PostTagPopoverWrapper';
 import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
@@ -8,10 +9,7 @@ import { POPOVER_HOVER_DELAY } from './PostTagPopoverWrapper.constants';
 const mockRouterPush = vi.fn();
 const mockLoadTaggers = vi.fn();
 const mockLoadMoreTaggers = vi.fn();
-let mockTaggerStates = new Map<
-  string,
-  { ids: string[]; skip: number; isLoading: boolean; hasMore: boolean; hasFetched: boolean; totalCount?: number }
->();
+let mockTaggerStates = new Map<string, TaggersState>();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
@@ -25,13 +23,17 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
   useIsMobile: () => false,
 }));
 
-vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', () => ({
-  useEntityTaggers: () => ({
-    taggerStates: mockTaggerStates,
-    loadTaggers: mockLoadTaggers,
-    loadMoreTaggers: mockLoadMoreTaggers,
-  }),
-}));
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  return {
+    ...actual,
+    useEntityTaggers: (): UseEntityTaggersResult => ({
+      taggerStates: mockTaggerStates,
+      loadTaggers: mockLoadTaggers,
+      loadMoreTaggers: mockLoadMoreTaggers,
+    }),
+  };
+});
 
 vi.mock('@/stores/auth/auth.store', () => {
   const state = { currentUserPubky: 'viewer', selectIsAuthenticated: () => true };

@@ -6,9 +6,9 @@ export interface WhoTaggedExpandedListProps {
   taggerIds: Pubky[];
   /** Fallback tagger data when user details are missing */
   fallbackTaggers?: TaggerWithAvatar[];
-  /** Whether the first page of taggers is loading (renders the skeleton) */
+  /** Initial loading preserves available previews; otherwise shows a skeleton. */
   isLoadingTaggers?: boolean;
-  /** Whether a further page is loading (renders a loading row below the list) */
+  /** Loading another page or refreshing existing rows. */
   isLoadingMore?: boolean;
   /** Whether more taggers can be loaded by scrolling to the bottom */
   hasMore?: boolean;

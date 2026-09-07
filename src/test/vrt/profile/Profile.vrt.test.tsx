@@ -2,6 +2,7 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
+import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
@@ -511,13 +512,14 @@ vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
   useEnrichedTags: (tags: unknown[]) => ({ enrichedTags: tags, isLoading: false }),
 }));
 
-vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', () => {
-  const result = {
-    taggerStates: new Map<string, { isLoading: boolean; hasMore: boolean; hasFetched: boolean }>(),
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  const result: UseEntityTaggersResult = {
+    taggerStates: new Map(),
     loadTaggers: async () => {},
     loadMoreTaggers: async () => {},
   };
-  return { useEntityTaggers: () => result };
+  return { ...actual, useEntityTaggers: () => result };
 });
 
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', async () => {

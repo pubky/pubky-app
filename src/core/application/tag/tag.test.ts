@@ -5,6 +5,8 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
+import { PostTagsModel } from '@/models/post/tags/postTags';
+import { UserTagsModel } from '@/models/user/tags/userTags';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
@@ -74,6 +76,50 @@ describe('Tag Application', () => {
 
   describe.each([TagKind.POST, TagKind.USER])('mutation compensation for %s', (kind) => {
     it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)(
+      'still syncs %s to the homeserver when a mutation subscriber throws',
+      async (op) => {
+        const data = createMockTagData(kind);
+        // Use the real local service and database, including its marker write.
+        vi.restoreAllMocks();
+        const service = kind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
+        if (op === HttpMethod.DELETE) await service.create(data);
+        vi.mocked(HomeserverService.request).mockResolvedValue(undefined);
+        const unsubscribe = ViewerTagMarkerStorage.subscribe(() => {
+          throw new Error('subscriber failed');
+        });
+        const listener = vi.fn();
+        const unsubscribeListener = ViewerTagMarkerStorage.subscribe(listener);
+        try {
+          await expect(
+            op === HttpMethod.PUT
+              ? TagApplication.commitCreate({ tagList: [data] })
+              : TagApplication.commitDelete(data),
+          ).resolves.toBeUndefined();
+          expect(HomeserverService.request).toHaveBeenCalledWith(
+            expect.objectContaining({ method: op, url: data.tagUrl }),
+          );
+          const saved =
+            kind === TagKind.POST
+              ? await PostTagsModel.findById(data.taggedId)
+              : await UserTagsModel.findById(data.taggedId);
+          expect(
+            saved?.tags.some((tag) => tag.label === data.label && tag.taggers.includes(data.taggerId)) ?? false,
+          ).toBe(op === HttpMethod.PUT);
+          expect(TagApplication.getViewerMutation(data)?.op).toBe(op);
+          expect(listener).toHaveBeenCalledExactlyOnceWith({
+            taggerId: data.taggerId,
+            taggedId: data.taggedId,
+            label: data.label,
+            taggersCount: op === HttpMethod.PUT ? 1 : 0,
+          });
+        } finally {
+          unsubscribe();
+          unsubscribeListener();
+        }
+      },
+    );
+
+    it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)(
       'restores a failed %s marker even if background data made rollback a no-op',
       async (op) => {
         const data = createMockTagData(kind);
@@ -97,30 +143,39 @@ describe('Tag Application', () => {
       },
     );
 
-    it('does not undo a newer viewer intent when an older create fails', async () => {
-      const data = createMockTagData(kind);
-      const { createSpy, deleteSpy, requestSpy } = setupMocks(kind);
-      const markerParams = { pubky: data.taggerId, taggedId: data.taggedId, label: data.label };
-      createSpy.mockImplementation(async () => {
-        ViewerTagMarkerStorage.set({ ...markerParams, op: HttpMethod.PUT });
-        return true;
-      });
-      deleteSpy.mockResolvedValue(false);
-      const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
-      requestSpy.mockImplementation(async () => {
-        now.mockReturnValue(1001);
-        ViewerTagMarkerStorage.set({ ...markerParams, op: HttpMethod.PUT });
-        throw httpError(ClientErrorCode.BAD_REQUEST, 'tag-test');
-      });
-      try {
-        await expect(TagApplication.commitCreate({ tagList: [data] })).rejects.toThrow();
-        expect(TagApplication.getViewerMutation(data)?.op).toBe(HttpMethod.PUT);
-        expect(TagApplication.getViewerMutation(data)?.ts).toBe(1001);
-        expect(deleteSpy).not.toHaveBeenCalled();
-      } finally {
-        now.mockRestore();
-      }
-    });
+    it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)(
+      'does not undo a newer viewer intent when an older %s fails',
+      async (op) => {
+        const data = createMockTagData(kind);
+        const { createSpy, deleteSpy, requestSpy } = setupMocks(kind);
+        const markerParams = { pubky: data.taggerId, taggedId: data.taggedId, label: data.label };
+        const write = op === HttpMethod.PUT ? createSpy : deleteSpy;
+        const undo = op === HttpMethod.PUT ? deleteSpy : createSpy;
+        write.mockImplementation(async () => {
+          ViewerTagMarkerStorage.set({ ...markerParams, op });
+          return true;
+        });
+        undo.mockResolvedValue(false);
+        const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+        requestSpy.mockImplementation(async () => {
+          now.mockReturnValue(1001);
+          ViewerTagMarkerStorage.set({ ...markerParams, op });
+          throw httpError(ClientErrorCode.BAD_REQUEST, 'tag-test');
+        });
+        try {
+          await expect(
+            op === HttpMethod.PUT
+              ? TagApplication.commitCreate({ tagList: [data] })
+              : TagApplication.commitDelete(data),
+          ).rejects.toThrow();
+          expect(TagApplication.getViewerMutation(data)?.op).toBe(op);
+          expect(TagApplication.getViewerMutation(data)?.ts).toBe(1001);
+          expect(undo).not.toHaveBeenCalled();
+        } finally {
+          now.mockRestore();
+        }
+      },
+    );
   });
 
   describe('commitCreate', () => {

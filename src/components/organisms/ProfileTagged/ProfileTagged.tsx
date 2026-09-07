@@ -1,6 +1,5 @@
 'use client';
 
-import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
@@ -54,7 +53,6 @@ export function ProfileTagged() {
       <TaggedSection
         tags={enrichedTags}
         taggedId={pubky}
-        taggedKind={TagKind.USER}
         userName={userName}
         handleTagAdd={handleTagAdd}
         handleTagToggle={handleTagToggle}

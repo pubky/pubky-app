@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TagKind } from '@/application/tag/tag.types';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
 import { useTagged } from '@/hooks/useTagged/useTagged';
@@ -158,7 +157,6 @@ describe('ProfileTagged', () => {
     expect(mockTaggedSection).toHaveBeenCalledWith(
       expect.objectContaining({
         taggedId: 'test-user-pubky',
-        taggedKind: TagKind.USER,
       }),
     );
   });

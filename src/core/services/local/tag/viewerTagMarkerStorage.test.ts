@@ -79,6 +79,27 @@ describe('ViewerTagMarkerStorage', () => {
     });
   });
 
+  it('keeps the marker and notifies other subscribers when one subscriber throws', () => {
+    const params = { pubky: VIEWER_A, taggedId: POST_ID, label: 'abc', op: HttpMethod.PUT } as const;
+    const unsubscribeFailing = ViewerTagMarkerStorage.subscribe(() => {
+      throw new Error('subscriber failed');
+    });
+    const listener = vi.fn(() => {
+      expect(ViewerTagMarkerStorage.get(params)?.op).toBe(HttpMethod.PUT);
+    });
+    const unsubscribe = ViewerTagMarkerStorage.subscribe(listener);
+    try {
+      expect(() => ViewerTagMarkerStorage.set(params)).not.toThrow();
+      expect(listener).toHaveBeenCalledExactlyOnceWith({ taggerId: VIEWER_A, taggedId: POST_ID, label: 'abc' });
+      unsubscribe();
+      expect(() => ViewerTagMarkerStorage.set(params)).not.toThrow();
+      expect(listener).toHaveBeenCalledTimes(1);
+    } finally {
+      unsubscribeFailing();
+      unsubscribe();
+    }
+  });
+
   describe('defensive handling', () => {
     it('returns null and removes the entry when stored JSON is corrupted', () => {
       const key = buildKey(VIEWER_A, POST_ID, 'abc');

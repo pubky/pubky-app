@@ -1,31 +1,35 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import type { TaggersState, UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import type { TaggedItemProps, TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import { TaggedList } from './TaggedList';
 
 const { mockLoadTaggers, mockLoadMoreTaggers, mockUseEntityTaggers, mockTaggerStates } = vi.hoisted(() => {
   const loadTaggers = vi.fn();
   const loadMoreTaggers = vi.fn();
-  const taggerStates = new Map<
-    string,
-    { ids: string[]; skip: number; isLoading: boolean; hasMore: boolean; hasFetched: boolean; isViewerTagger?: boolean }
-  >();
+  const taggerStates = new Map<string, TaggersState>();
   return {
     mockLoadTaggers: loadTaggers,
     mockLoadMoreTaggers: loadMoreTaggers,
     mockTaggerStates: taggerStates,
-    mockUseEntityTaggers: vi.fn(() => ({
-      taggerStates,
-      loadTaggers,
-      loadMoreTaggers,
-    })),
+    mockUseEntityTaggers: vi.fn(
+      (): UseEntityTaggersResult => ({
+        taggerStates,
+        loadTaggers,
+        loadMoreTaggers,
+      }),
+    ),
   };
 });
 
-vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', () => ({
-  useEntityTaggers: mockUseEntityTaggers,
-}));
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  return {
+    ...actual,
+    useEntityTaggers: mockUseEntityTaggers,
+  };
+});
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
@@ -153,7 +157,7 @@ describe('TaggedList', () => {
   it('uses the hook membership instead of a stale preview relationship', () => {
     mockTaggerStates.set('bitcoin', {
       ids: ['user1', 'user2', 'user9', 'viewer'],
-      skip: 4,
+      hasError: false,
       isLoading: false,
       hasMore: true,
       hasFetched: true,
@@ -178,8 +182,14 @@ describe('TaggedList', () => {
   });
 
   it('distinguishes the initial load from loading more', () => {
-    mockTaggerStates.set('bitcoin', { ids: [], skip: 0, isLoading: true, hasMore: true, hasFetched: false });
-    mockTaggerStates.set('satoshi', { ids: ['user3'], skip: 1, isLoading: true, hasMore: true, hasFetched: true });
+    mockTaggerStates.set('bitcoin', { ids: [], hasError: false, isLoading: true, hasMore: true, hasFetched: false });
+    mockTaggerStates.set('satoshi', {
+      ids: ['user3'],
+      hasError: false,
+      isLoading: true,
+      hasMore: true,
+      hasFetched: true,
+    });
 
     render(
       <TaggedList tags={mockTags} taggedId="profile-pubky" taggedKind={TagKind.USER} onTagToggle={mockOnTagToggle} />,
