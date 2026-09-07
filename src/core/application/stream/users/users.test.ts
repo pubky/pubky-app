@@ -465,7 +465,7 @@ describe('UserStreamApplication', () => {
         user_ids: cacheMissUserIds,
         viewer_id: DEFAULT_VIEWER_ID,
       });
-      expect(persistSpy).toHaveBeenCalledWith(mockUsers);
+      expect(persistSpy).toHaveBeenCalledWith(mockUsers, DEFAULT_VIEWER_ID);
     });
 
     it('should not fetch when cacheMissUserIds is empty', async () => {
@@ -574,7 +574,7 @@ describe('UserStreamApplication', () => {
         user_ids: cacheMissUserIds,
         viewer_id: DEFAULT_VIEWER_ID,
       });
-      expect(persistSpy).toHaveBeenCalledWith(mockUsers);
+      expect(persistSpy).toHaveBeenCalledWith(mockUsers, DEFAULT_VIEWER_ID);
     });
 
     it('should pass viewerId through to fetchMissingUsersFromNexus', async () => {

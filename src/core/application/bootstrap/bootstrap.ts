@@ -78,7 +78,7 @@ export class BootstrapApplication {
         lastRead: userLastRead,
         allowedTypes: params.allowedTypes,
       }),
-      LocalStreamUsersService.persistUsers(bootstrapData.users),
+      LocalStreamUsersService.persistUsers(bootstrapData.users, pubky),
       LocalStreamPostsService.persistPosts({ posts: bootstrapData.posts }),
       LocalStreamPostsService.upsert({
         streamId: PostStreamTypes.TIMELINE_ALL_ALL,

@@ -86,10 +86,16 @@ export class LocalStreamUsersService {
    * Separates user details, counts, tags, relationships, and TTL records
    * Also detects and persists moderation status for flagged profiles
    *
+   * Relationship rows (`following` / `followed_by`) are only meaningful relative to a viewer.
+   * When the batch was fetched without a `viewerId`, Nexus returns a viewer-agnostic
+   * relationship, so the row is skipped instead of caching "unknown" as "not following".
+   * A missing row reads as a cache miss and triggers a viewer-aware fetch (#1803).
+   *
    * @param users - Array of users from Nexus API
+   * @param viewerId - The signed-in user the batch was fetched for, when available
    * @returns Array of user IDs (Pubky)
    */
-  static async persistUsers(users: NexusUser[]): Promise<Pubky[]> {
+  static async persistUsers(users: NexusUser[], viewerId?: Pubky | null): Promise<Pubky[]> {
     const userCounts: NexusModelTuple<NexusUserCounts>[] = [];
     const userRelationships: NexusModelTuple<NexusUserRelationship>[] = [];
     const userTags: NexusModelTuple<NexusTag[]>[] = [];
@@ -126,7 +132,7 @@ export class LocalStreamUsersService {
       UserDetailsModel.bulkSave(userDetails),
       UserCountsModel.bulkSave(userCounts),
       UserTagsModel.bulkSave(userTags),
-      UserRelationshipsModel.bulkSave(userRelationships),
+      viewerId ? UserRelationshipsModel.bulkSave(userRelationships) : Promise.resolve(),
       UserTtlModel.bulkSave(userTtl),
       // Persist moderation records for flagged profiles
       userModerations.length > 0 ? ModerationModel.bulkSave(userModerations) : Promise.resolve(),

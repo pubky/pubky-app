@@ -1550,7 +1550,7 @@ describe('PostStreamApplication', () => {
         user_ids: [DEFAULT_AUTHOR],
         viewer_id: viewerId,
       });
-      expect(persistUsersSpy).toHaveBeenCalledWith(mockNexusUsers);
+      expect(persistUsersSpy).toHaveBeenCalledWith(mockNexusUsers, viewerId);
     });
 
     it('should handle when userBatch is null/undefined', async () => {
@@ -1568,7 +1568,7 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(persistUsersSpy).toHaveBeenCalledWith(undefined);
+      expect(persistUsersSpy).toHaveBeenCalledWith(undefined, viewerId);
     });
 
     it('should not fetch users when all users are already cached', async () => {
@@ -1634,7 +1634,7 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(persistUsersSpy).toHaveBeenCalledWith([]);
+      expect(persistUsersSpy).toHaveBeenCalledWith([], viewerId);
     });
 
     it('should handle error gracefully when NexusPostStreamService.fetchByIds fails', async () => {
@@ -1794,7 +1794,7 @@ describe('PostStreamApplication', () => {
       });
 
       expect(fetchUsersByIdsSpy).toHaveBeenCalled();
-      expect(persistUsersSpy).toHaveBeenCalledWith(mockNexusUsers);
+      expect(persistUsersSpy).toHaveBeenCalledWith(mockNexusUsers, viewerId);
     });
 
     it('should handle when getNotPersistedUsersInCache returns partial users', async () => {
@@ -1821,7 +1821,7 @@ describe('PostStreamApplication', () => {
         user_ids: ['author-2'],
         viewer_id: viewerId,
       });
-      expect(persistUsersSpy).toHaveBeenCalledWith(mockNexusUsers);
+      expect(persistUsersSpy).toHaveBeenCalledWith(mockNexusUsers, viewerId);
     });
 
     it('should handle error gracefully when getNotPersistedUsersInCache fails', async () => {
