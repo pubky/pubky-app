@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import { PostController } from '@/controllers/post/post';
 import { UserController } from '@/controllers/user/user';
 import { TAGGERS_PAGE_SIZE } from '@/hooks/useEntityTaggers/useEntityTaggers.constants';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -96,6 +97,25 @@ const renderList = () =>
 describe('Profile tagger expansion integration', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it.each([TagKind.USER, TagKind.POST])(
+    'keeps a fresh server tagger despite stale local membership (%s)',
+    async (kind) => {
+      const response = { users: ['peer', 'current-user-pubky'], relationship: true };
+      vi.mocked(UserController.fetchTaggers).mockResolvedValue(response);
+      vi.mocked(PostController.fetchTaggers).mockResolvedValue(response);
+      render(
+        <TaggedList
+          tags={[{ label: 'bitcoin', taggers: [{ id: 'peer' }], taggers_count: 2, relationship: false }]}
+          taggedId={kind === TagKind.USER ? 'profile' : 'author:post'}
+          taggedKind={kind}
+          onTagToggle={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Show 2 users who tagged' }));
+      await waitFor(() => expect(screen.getByTestId('user-list-item-current-user-pubky')).toBeInTheDocument());
+    },
+  );
+
   it('expands a five-person preview and loads the next page when scrolling to the end', async () => {
     const observed: Array<{ callback: IntersectionObserverCallback; target: Element }> = [];
     const originalObserver = window.IntersectionObserver;
@@ -127,6 +147,7 @@ describe('Profile tagger expansion integration', () => {
       await waitFor(() => expect(screen.getByTestId('user-list-item-last-user')).toBeInTheDocument());
       expect(UserController.fetchTaggers).toHaveBeenLastCalledWith({
         user_id: 'profile',
+        viewer_id: 'current-user-pubky',
         label: 'bitcoin',
         skip: 50,
         limit: 50,

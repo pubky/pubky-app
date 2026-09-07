@@ -52,7 +52,7 @@ export function PostTagPopoverWrapper({
   useEffect(() => {
     if (!showAllTaggers || !postId || !tagLabel) return;
     void loadTaggers(tagLabel, taggersCount);
-  }, [showAllTaggers, postId, tagLabel, taggersCount, loadTaggers]);
+  }, [showAllTaggers, postId, tagLabel, taggersCount, relationship, loadTaggers]);
 
   // On mobile or when no taggers, just render children without popover
   if (isMobile || (taggers.length === 0 && taggersCount === 0)) {
@@ -97,10 +97,10 @@ export function PostTagPopoverWrapper({
                 {showAllTaggers && (
                   <WhoTaggedExpandedList
                     taggerIds={mergeTaggerIds({
-                      fetchedIds: taggerState?.ids,
+                      fetchedIds: taggerState?.hasFetched ? taggerState.ids : undefined,
                       previewIds: previewTaggerIds,
                       viewerId,
-                      isViewerTagger: relationship,
+                      isViewerTagger: taggerState?.isViewerTagger,
                     })}
                     fallbackTaggers={taggers}
                     isLoadingTaggers={isFetching && !taggerState?.hasFetched}

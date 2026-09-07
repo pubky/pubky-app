@@ -9,7 +9,7 @@ const { mockLoadTaggers, mockLoadMoreTaggers, mockUseEntityTaggers, mockTaggerSt
   const loadMoreTaggers = vi.fn();
   const taggerStates = new Map<
     string,
-    { ids: string[]; skip: number; isLoading: boolean; hasMore: boolean; hasFetched: boolean }
+    { ids: string[]; skip: number; isLoading: boolean; hasMore: boolean; hasFetched: boolean; isViewerTagger?: boolean }
   >();
   return {
     mockLoadTaggers: loadTaggers,
@@ -150,13 +150,14 @@ describe('TaggedList', () => {
     await waitFor(() => expect(mockLoadTaggers).toHaveBeenCalledWith('bitcoin', 3));
   });
 
-  it('merges fetched taggers with the preview and the viewer relationship', () => {
+  it('uses the hook membership instead of a stale preview relationship', () => {
     mockTaggerStates.set('bitcoin', {
       ids: ['user1', 'user2', 'user9', 'viewer'],
       skip: 4,
       isLoading: false,
       hasMore: true,
       hasFetched: true,
+      isViewerTagger: true,
     });
     const toggledTags = [{ ...mockTags[0], taggers: mockTags[0].taggers, relationship: false }, mockTags[1]];
 
@@ -171,7 +172,7 @@ describe('TaggedList', () => {
     fireEvent.click(screen.getByText('bitcoin'));
 
     const item = screen.getByText('bitcoin');
-    expect(item).toHaveAttribute('data-expanded-ids', 'user1,user2,user9');
+    expect(item).toHaveAttribute('data-expanded-ids', 'user1,user2,user9,viewer');
     expect(item).toHaveAttribute('data-has-more', 'true');
     expect(screen.getByText('satoshi')).not.toHaveAttribute('data-expanded-ids');
   });

@@ -177,11 +177,11 @@ describe('WhoTaggedExpandedList', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders skeleton when isLoadingTaggers is true', () => {
+  it('keeps known people visible during the initial refresh', () => {
     render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} isLoadingTaggers />);
-    expect(screen.getByTestId('who-tagged-expanded-list-skeleton')).toBeInTheDocument();
-    expect(screen.queryByTestId('who-tagged-expanded-list')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('user-list-item-user1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('who-tagged-expanded-list-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('who-tagged-expanded-list')).toBeInTheDocument();
+    expect(screen.getByTestId('user-list-item-user1')).toBeInTheDocument();
   });
 
   it('shows initial loading and retry states even without preview taggers', () => {

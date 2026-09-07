@@ -3,9 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
 import { UserController } from '@/controllers/user/user';
+import { HttpMethod } from '@/libs/http/http.types';
+import { ViewerTagMarkerStorage } from '@/services/local/tag/viewerTagMarkerStorage';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useEntityTaggers } from './useEntityTaggers';
 import { TAGGERS_MAX_SKIP, TAGGERS_PAGE_SIZE } from './useEntityTaggers.constants';
+import { mergeTaggerIds } from './useEntityTaggers.utils';
 
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
@@ -25,6 +29,8 @@ const fullPage = (prefix: string) => Array.from({ length: TAGGERS_PAGE_SIZE }, (
 describe('useEntityTaggers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ currentUserPubky: null });
+    window.sessionStorage.clear();
   });
 
   it('stays disabled without complete entity context', async () => {
@@ -99,8 +105,10 @@ describe('useEntityTaggers', () => {
     expect(result.current.taggerStates.get('synonym')).toMatchObject({ hasMore: false, hasFetched: true });
   });
 
-  it('stops paging once the known total count is reached', async () => {
-    vi.mocked(UserController.fetchTaggers).mockResolvedValue(page(fullPage('only')));
+  it('checks the endpoint for exhaustion even when a full page matches the cached count', async () => {
+    vi.mocked(UserController.fetchTaggers)
+      .mockResolvedValueOnce(page(fullPage('only')))
+      .mockResolvedValueOnce(page([]));
     const { result } = renderHook(() => useEntityTaggers('profile-pubky', TagKind.USER));
 
     await act(async () => {
@@ -110,8 +118,58 @@ describe('useEntityTaggers', () => {
       await result.current.loadMoreTaggers('bitcoin');
     });
 
-    expect(UserController.fetchTaggers).toHaveBeenCalledTimes(1);
+    expect(UserController.fetchTaggers).toHaveBeenCalledTimes(2);
     expect(result.current.taggerStates.get('bitcoin')?.hasMore).toBe(false);
+  });
+
+  it('loads beyond an outdated count instead of hiding the remaining taggers', async () => {
+    const users = [...fullPage('user'), 'last-user'];
+    vi.mocked(UserController.fetchTaggers).mockImplementation(async ({ skip = 0, limit = 50 }) =>
+      page(users.slice(skip, skip + limit)),
+    );
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 50);
+    });
+    await act(async () => {
+      await result.current.loadMoreTaggers('bitcoin');
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(users);
+  });
+
+  it('refreshes an exhausted list when its count changes', async () => {
+    let users = ['first'];
+    vi.mocked(UserController.fetchTaggers).mockImplementation(async ({ skip = 0, limit = 50 }) =>
+      page(users.slice(skip, skip + limit)),
+    );
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 1);
+    });
+    users = ['first', 'second'];
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 2);
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(users);
+  });
+
+  it('does not skip a boundary tagger when membership shrinks between pages', async () => {
+    let users = [...fullPage('user'), 'last-user'];
+    vi.mocked(UserController.fetchTaggers).mockImplementation(async ({ skip = 0, limit = 50 }) =>
+      page(users.slice(skip, skip + limit)),
+    );
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 51);
+    });
+    users = users.filter((id) => id !== 'user-10');
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 50);
+    });
+    await act(async () => {
+      await result.current.loadMoreTaggers('bitcoin');
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(users);
   });
 
   it('loads the last allowed offset and stops before exceeding the Nexus skip limit', async () => {
@@ -165,23 +223,179 @@ describe('useEntityTaggers', () => {
     expect(UserController.fetchTaggers).toHaveBeenCalledTimes(1);
   });
 
-  it('retains loaded pages when the local tagger count changes', async () => {
+  it('retains all loaded rows while refreshing a changed count', async () => {
     const firstPage = fullPage('kept');
+    let resolveRefresh: (value: NexusTaggers) => void = () => {};
     vi.mocked(UserController.fetchTaggers)
       .mockResolvedValueOnce(page(firstPage))
-      .mockResolvedValueOnce(page(['last']));
-    const { result } = renderHook(() => useEntityTaggers('profile-pubky', TagKind.USER));
+      .mockResolvedValueOnce(page(['last']))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveRefresh = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(page(['last', 'new']));
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
     await act(async () => {
       await result.current.loadTaggers('bitcoin', 51);
     });
     await act(async () => {
       await result.current.loadMoreTaggers('bitcoin');
     });
+    let pending = Promise.resolve();
+    act(() => {
+      pending = result.current.loadTaggers('bitcoin', 52);
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual([...firstPage, 'last']);
+    await act(async () => {
+      resolveRefresh(page(firstPage));
+      await pending;
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual([...firstPage, 'last', 'new']);
+  });
+
+  it('retries a failed refresh from zero without automatically looping', async () => {
+    const firstPage = fullPage('kept');
+    vi.mocked(UserController.fetchTaggers)
+      .mockResolvedValueOnce(page(firstPage))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(page(firstPage));
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 51);
+    });
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 52);
+    });
     await act(async () => {
       await result.current.loadTaggers('bitcoin', 52);
     });
     expect(UserController.fetchTaggers).toHaveBeenCalledTimes(2);
-    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual([...firstPage, 'last']);
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(firstPage);
+    await act(async () => {
+      await result.current.loadMoreTaggers('bitcoin');
+    });
+    expect(UserController.fetchTaggers).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 0 }));
+    expect(result.current.taggerStates.get('bitcoin')?.hasError).toBe(false);
+  });
+
+  it('covers deletion indexed after the refreshed prefix without dropping the boundary user', async () => {
+    const viewerId = 'user-10';
+    useAuthStore.setState({ currentUserPubky: viewerId });
+    let users = [...fullPage('user'), 'last'];
+    let indexAfterThisRequest = false;
+    vi.mocked(UserController.fetchTaggers).mockImplementation(async ({ skip = 0, limit = 50 }) => {
+      const response = { users: users.slice(skip, skip + limit), relationship: users.includes(viewerId) };
+      if (indexAfterThisRequest) {
+        users = users.filter((id) => id !== viewerId);
+        indexAfterThisRequest = false;
+      }
+      return response;
+    });
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 51);
+    });
+    indexAfterThisRequest = true;
+    await act(async () => {
+      ViewerTagMarkerStorage.set({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.DELETE });
+    });
+    // The marker-triggered refresh saw the old prefix; indexing removed the
+    // viewer before the next request. Its boundary must overlap by one.
+    await act(async () => {
+      await result.current.loadMoreTaggers('bitcoin');
+    });
+    const state = result.current.taggerStates.get('bitcoin');
+    const visible = mergeTaggerIds({
+      fetchedIds: state?.ids,
+      previewIds: [],
+      viewerId,
+      isViewerTagger: state?.isViewerTagger,
+    });
+    expect(visible).toEqual(users);
+    expect(visible).toHaveLength(50);
+    expect(UserController.fetchTaggers).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 49 }));
+  });
+
+  it('downloads each next page only once while indexing a local deletion is delayed', async () => {
+    const viewerId = 'user-10';
+    useAuthStore.setState({ currentUserPubky: viewerId });
+    const users = Array.from({ length: 1000 }, (_, i) => `user-${i}`);
+    vi.mocked(UserController.fetchTaggers).mockImplementation(async ({ skip = 0, limit = 50 }) => ({
+      users: users.slice(skip, skip + limit),
+      relationship: true,
+    }));
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 1000);
+    });
+    await act(async () => {
+      ViewerTagMarkerStorage.set({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.DELETE });
+    });
+    vi.mocked(UserController.fetchTaggers).mockClear();
+    for (let i = 0; i < 30 && result.current.taggerStates.get('bitcoin')?.hasMore; i++) {
+      await act(async () => {
+        await result.current.loadMoreTaggers('bitcoin');
+      });
+    }
+    const state = result.current.taggerStates.get('bitcoin');
+    expect(state?.hasMore).toBe(false);
+    expect(
+      mergeTaggerIds({ fetchedIds: state?.ids, previewIds: [], viewerId, isViewerTagger: state?.isViewerTagger }),
+    ).toEqual(users.filter((id) => id !== viewerId));
+    expect(UserController.fetchTaggers).toHaveBeenCalledTimes(20);
+    expect(vi.mocked(UserController.fetchTaggers).mock.calls.every(([params]) => params.skip! > 0)).toBe(true);
+  });
+
+  it('observes rollback markers even when a background refresh already restored the count', async () => {
+    const viewerId = 'viewer';
+    useAuthStore.setState({ currentUserPubky: viewerId });
+    vi.mocked(UserController.fetchTaggers).mockResolvedValue(page(['peer']));
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 1);
+    });
+    await act(async () => {
+      ViewerTagMarkerStorage.set({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.PUT });
+    });
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 2);
+    });
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 1);
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.isViewerTagger).toBe(true);
+    await act(async () => {
+      ViewerTagMarkerStorage.set({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.DELETE });
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.isViewerTagger).toBe(false);
+    expect(result.current.taggerStates.get('bitcoin')?.hasMore).toBe(false);
+  });
+
+  it('ignores an older request after a same-label count refresh', async () => {
+    let resolveOld: (value: NexusTaggers) => void = () => {};
+    vi.mocked(UserController.fetchTaggers)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOld = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(page(['fresh', 'new']));
+    const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
+    let old = Promise.resolve();
+    act(() => {
+      old = result.current.loadTaggers('bitcoin', 1);
+    });
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 2);
+    });
+    await act(async () => {
+      resolveOld(page(['stale']));
+      await old;
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(['fresh', 'new']);
   });
 
   it('keeps already fetched pages and stays retryable when a page fails', async () => {

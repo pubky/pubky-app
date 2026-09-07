@@ -7,8 +7,8 @@ import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
-import { ViewerTagMarkerStorage } from '@/services/local/tag/post/viewerTagMarkerStorage';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
+import { ViewerTagMarkerStorage } from '@/services/local/tag/viewerTagMarkerStorage';
 import { TagApplication } from './tag';
 import type { TCreateTagInput, TDeleteTagInput } from './tag.types';
 
@@ -69,6 +69,58 @@ describe('Tag Application', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
+  });
+
+  describe.each([TagKind.POST, TagKind.USER])('mutation compensation for %s', (kind) => {
+    it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)(
+      'restores a failed %s marker even if background data made rollback a no-op',
+      async (op) => {
+        const data = createMockTagData(kind);
+        const { createSpy, deleteSpy, requestSpy } = setupMocks(kind);
+        const write = op === HttpMethod.PUT ? createSpy : deleteSpy;
+        const undo = op === HttpMethod.PUT ? deleteSpy : createSpy;
+        write.mockImplementation(async () => {
+          ViewerTagMarkerStorage.set({ pubky: data.taggerId, taggedId: data.taggedId, label: data.label, op });
+          return true;
+        });
+        undo.mockResolvedValue(false);
+        requestSpy.mockRejectedValue(httpError(ClientErrorCode.BAD_REQUEST, 'tag-test'));
+
+        await expect(
+          op === HttpMethod.PUT ? TagApplication.commitCreate({ tagList: [data] }) : TagApplication.commitDelete(data),
+        ).rejects.toThrow();
+
+        expect(TagApplication.getViewerMutation(data)?.op).toBe(
+          op === HttpMethod.PUT ? HttpMethod.DELETE : HttpMethod.PUT,
+        );
+      },
+    );
+
+    it('does not undo a newer viewer intent when an older create fails', async () => {
+      const data = createMockTagData(kind);
+      const { createSpy, deleteSpy, requestSpy } = setupMocks(kind);
+      const markerParams = { pubky: data.taggerId, taggedId: data.taggedId, label: data.label };
+      createSpy.mockImplementation(async () => {
+        ViewerTagMarkerStorage.set({ ...markerParams, op: HttpMethod.PUT });
+        return true;
+      });
+      deleteSpy.mockResolvedValue(false);
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+      requestSpy.mockImplementation(async () => {
+        now.mockReturnValue(1001);
+        ViewerTagMarkerStorage.set({ ...markerParams, op: HttpMethod.PUT });
+        throw httpError(ClientErrorCode.BAD_REQUEST, 'tag-test');
+      });
+      try {
+        await expect(TagApplication.commitCreate({ tagList: [data] })).rejects.toThrow();
+        expect(TagApplication.getViewerMutation(data)?.op).toBe(HttpMethod.PUT);
+        expect(TagApplication.getViewerMutation(data)?.ts).toBe(1001);
+        expect(deleteSpy).not.toHaveBeenCalled();
+      } finally {
+        now.mockRestore();
+      }
+    });
   });
 
   describe('commitCreate', () => {

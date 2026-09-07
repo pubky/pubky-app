@@ -11,8 +11,10 @@ interface ViewerTagMarker {
   expiresAt: number;
 }
 
-function buildKey(pubky: Pubky, postId: string, label: string): string {
-  return `${VIEWER_TAG_MARKER_STORAGE_PREFIX}${pubky}:${postId}:${label.toLowerCase()}`;
+type ViewerTagMutation = { pubky: Pubky; taggedId: string; label: string };
+
+function buildKey(pubky: Pubky, taggedId: string, label: string): string {
+  return `${VIEWER_TAG_MARKER_STORAGE_PREFIX}${pubky}:${taggedId}:${label.toLowerCase()}`;
 }
 
 function userPrefix(pubky: Pubky): string {
@@ -68,16 +70,24 @@ function removeKeysMatching(predicate: (key: string) => boolean): void {
 }
 
 export class ViewerTagMarkerStorage {
+  private static listeners = new Set<(mutation: ViewerTagMutation) => void>();
   private constructor() {}
+
+  static subscribe(listener: (mutation: ViewerTagMutation) => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
 
   static set({
     pubky,
-    postId,
+    taggedId,
     label,
     op,
   }: {
     pubky: Pubky;
-    postId: string;
+    taggedId: string;
     label: string;
     op: ViewerTagMarkerOp;
   }): void {
@@ -85,14 +95,20 @@ export class ViewerTagMarkerStorage {
     const marker: ViewerTagMarker = { op, ts, expiresAt: ts + MARKER_TTL_MS };
 
     try {
-      window.sessionStorage.setItem(buildKey(pubky, postId, label), JSON.stringify(marker));
+      window.sessionStorage.setItem(buildKey(pubky, taggedId, label), JSON.stringify(marker));
     } catch {
       // setItem can throw QuotaExceededError; markers are best-effort, so swallow.
     }
+    this.listeners.forEach((listener) => listener({ pubky, taggedId, label }));
   }
 
-  static get({ pubky, postId, label }: { pubky: Pubky; postId: string; label: string }): ViewerTagMarker | null {
-    return readMarkerOrNull(buildKey(pubky, postId, label), Date.now());
+  static get({ pubky, taggedId, label }: { pubky: Pubky; taggedId: string; label: string }): ViewerTagMarker | null {
+    try {
+      return readMarkerOrNull(buildKey(pubky, taggedId, label), Date.now());
+    } catch {
+      // Storage may be unavailable during SSR or disabled in the browser.
+      return null;
+    }
   }
 
   /**

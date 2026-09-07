@@ -39,12 +39,14 @@ export function TaggedList({
   };
 
   // The hook retains fetched pages; local viewer toggles are merged below.
-  const expandedTagCount = tags.find((tag) => tag.label === expandedTagLabel)?.taggers_count;
+  const expandedTag = tags.find((tag) => tag.label === expandedTagLabel);
+  const expandedTagCount = expandedTag?.taggers_count;
+  const expandedRelationship = expandedTag?.relationship;
 
   useEffect(() => {
     if (!expandedTagLabel || !taggedId || !taggedKind) return;
     void loadTaggers(expandedTagLabel, expandedTagCount);
-  }, [expandedTagLabel, expandedTagCount, taggedId, taggedKind, loadTaggers]);
+  }, [expandedTagLabel, expandedTagCount, expandedRelationship, taggedId, taggedKind, loadTaggers]);
 
   return (
     <Container className="gap-2">
@@ -53,10 +55,10 @@ export function TaggedList({
         const taggerState = taggerStates.get(tag.label.toLowerCase());
         const expandedTaggerIds = isExpanded
           ? mergeTaggerIds({
-              fetchedIds: taggerState?.ids,
+              fetchedIds: taggerState?.hasFetched ? taggerState.ids : undefined,
               previewIds: tag.taggers.map((tagger) => tagger.id),
               viewerId,
-              isViewerTagger: tag.relationship,
+              isViewerTagger: taggerState?.isViewerTagger,
             })
           : undefined;
         const isFetching = taggerState?.isLoading ?? false;

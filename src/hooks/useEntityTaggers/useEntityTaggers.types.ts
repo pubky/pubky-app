@@ -13,15 +13,23 @@ export type TaggersState = {
   hasMore: boolean;
   /** Whether the first page has been fetched at least once */
   hasFetched: boolean;
-  /** Tagger count when the first page was requested */
+  /** Last observed metadata count, used for refreshes rather than exhaustion. */
   totalCount?: number;
+  requestId?: number;
+  mutationKey?: string;
+  viewerOverride?: boolean;
+  serverRelationship?: boolean;
+  /** Fresh server membership, overridden only by an explicit local mutation. */
+  isViewerTagger?: boolean;
+  /** Retained after a failed refresh so retry repeats the same window. */
+  refreshTarget?: number;
 };
 
 export type TaggersStateMap = Map<string, TaggersState>;
 
 export interface UseEntityTaggersResult {
   taggerStates: TaggersStateMap;
-  /** Fetch the first page for a label. No-op after the first attempt; retry failed requests with `loadMoreTaggers`. */
+  /** Fetch initially or revalidate loaded rows when metadata/local mutations change. */
   loadTaggers: (label: string, totalCount?: number) => Promise<void>;
   /** Fetch the next page for a label that still has more taggers. */
   loadMoreTaggers: (label: string) => Promise<void>;
@@ -32,6 +40,7 @@ export interface FetchTaggerPageParams {
   taggedKind: TagKind;
   label: string;
   skip: number;
+  viewerId?: Pubky | null;
 }
 
 export interface MergeTaggerIdsParams {
@@ -41,6 +50,6 @@ export interface MergeTaggerIdsParams {
   previewIds: Pubky[];
   /** Current viewer, reconciled against `isViewerTagger` when provided */
   viewerId?: Pubky | null;
-  /** Whether the viewer currently tags the entity with this label (local-first truth) */
+  /** Server membership or an explicit local mutation; never raw cached metadata. */
   isViewerTagger?: boolean;
 }

@@ -40,7 +40,7 @@ export function WhoTaggedExpandedList({
   const { sentinelRef } = useInfiniteScroll({
     onLoadMore: onLoadMore || (() => {}),
     hasMore: hasMore && !hasError && !!onLoadMore,
-    isLoading: isLoadingMore,
+    isLoading: isLoadingMore || !!isLoadingTaggers,
     threshold: 100,
     debounceMs: 300,
   });
@@ -73,7 +73,7 @@ export function WhoTaggedExpandedList({
     return null;
   }
 
-  if (isLoadingTaggers) {
+  if (isLoadingTaggers && taggerIds.length === 0) {
     return <WhoTaggedExpandedListSkeleton />;
   }
 
@@ -81,6 +81,7 @@ export function WhoTaggedExpandedList({
     <Container
       aria-label="Who tagged expanded list"
       role="list"
+      aria-busy={!!isLoadingTaggers || isLoadingMore}
       overrideDefaults
       className="flex max-h-(--who-tagged-expanded-list-max-height) w-full max-w-(--who-tagged-expanded-list-width) flex-col gap-2 overflow-y-auto rounded-md border border-border bg-popover p-4 shadow-2xl"
       data-testid={dataTestId || 'who-tagged-expanded-list'}

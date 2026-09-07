@@ -6,8 +6,8 @@ describe('mergeTaggerIds', () => {
     expect(mergeTaggerIds({ previewIds: ['a', 'b'] })).toEqual(['a', 'b']);
   });
 
-  it('puts fetched ids first and appends preview ids Nexus has not returned yet', () => {
-    expect(mergeTaggerIds({ fetchedIds: ['a', 'b', 'c'], previewIds: ['b', 'new'] })).toEqual(['a', 'b', 'c', 'new']);
+  it('uses fresh server rows instead of resurrecting stale preview members', () => {
+    expect(mergeTaggerIds({ fetchedIds: ['a', 'b', 'c'], previewIds: ['b', 'new'] })).toEqual(['a', 'b', 'c']);
   });
 
   it('adds the viewer when they tag the entity but are missing from both lists', () => {
