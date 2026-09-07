@@ -47,8 +47,8 @@ export function WhoTaggedExpandedList({
     };
   });
 
-  const handleFollowClick = (userId: string, isFollowing: boolean, displayName: string) => {
-    requireAuth(() => toggleFollow(userId, isFollowing, displayName));
+  const handleFollowClick = (userId: string, isFollowing: boolean) => {
+    requireAuth(() => toggleFollow(userId, isFollowing));
   };
 
   const handleUserClick = (userId: string) => {

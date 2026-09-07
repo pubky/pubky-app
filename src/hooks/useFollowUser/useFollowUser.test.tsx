@@ -4,10 +4,9 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useFollowUser } from './useFollowUser';
 
-const { mockUseAuthStore, mockCommitFollow, mockGetDetails, mockLogger } = vi.hoisted(() => ({
+const { mockUseAuthStore, mockCommitFollow, mockLogger } = vi.hoisted(() => ({
   mockUseAuthStore: vi.fn(),
   mockCommitFollow: vi.fn(),
-  mockGetDetails: vi.fn(),
   mockLogger: {
     debug: vi.fn(),
     error: vi.fn(),
@@ -21,7 +20,6 @@ vi.mock('@/stores/auth/auth.store', () => ({
 vi.mock('@/controllers/user/user', () => ({
   UserController: {
     commitFollow: (...args: unknown[]) => mockCommitFollow(...args),
-    getDetails: (...args: unknown[]) => mockGetDetails(...args),
   },
 }));
 
@@ -35,7 +33,6 @@ describe('useFollowUser', () => {
     vi.clearAllMocks();
     mockUseAuthStore.mockReturnValue({ currentUserPubky: 'current-user' });
     mockCommitFollow.mockResolvedValue(undefined);
-    mockGetDetails.mockResolvedValue(null);
   });
 
   it('sets error when user not authenticated', async () => {
@@ -63,11 +60,11 @@ describe('useFollowUser', () => {
     expect(mockCommitFollow).not.toHaveBeenCalled();
   });
 
-  it('shows success toast with provided display name on follow', async () => {
+  it('shows a generic success toast on follow', async () => {
     const { result } = renderHook(() => useFollowUser());
 
     await act(async () => {
-      await result.current.toggleFollow('user-1', false, 'Alice');
+      await result.current.toggleFollow('user-1', false);
     });
 
     expect(mockCommitFollow).toHaveBeenCalledWith(HttpMethod.PUT, {
@@ -75,16 +72,15 @@ describe('useFollowUser', () => {
       followee: 'user-1',
     });
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      title: 'Following Alice',
+      title: 'User followed',
     });
-    expect(mockGetDetails).not.toHaveBeenCalled();
   });
 
-  it('shows success toast with provided display name on unfollow', async () => {
+  it('shows a generic success toast on unfollow', async () => {
     const { result } = renderHook(() => useFollowUser());
 
     await act(async () => {
-      await result.current.toggleFollow('user-1', true, 'Alice');
+      await result.current.toggleFollow('user-1', true);
     });
 
     expect(mockCommitFollow).toHaveBeenCalledWith(HttpMethod.DELETE, {
@@ -92,26 +88,11 @@ describe('useFollowUser', () => {
       followee: 'user-1',
     });
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      title: 'Unfollowed Alice',
+      title: 'User unfollowed',
     });
   });
 
-  it('resolves display name from profile when not provided', async () => {
-    mockGetDetails.mockResolvedValue({ name: 'Bob' });
-
-    const { result } = renderHook(() => useFollowUser());
-
-    await act(async () => {
-      await result.current.toggleFollow('user-1', false);
-    });
-
-    expect(mockGetDetails).toHaveBeenCalledWith({ userId: 'user-1' });
-    expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      title: 'Following Bob',
-    });
-  });
-
-  it('shows a friendly named error toast and resolves false when following fails', async () => {
+  it('shows a friendly generic error toast and resolves false when following fails', async () => {
     // A raw transport error must never reach the user.
     const error = new Error('Request failed: HTTP transport error: error sending request');
     mockCommitFollow.mockRejectedValue(error);
@@ -120,16 +101,16 @@ describe('useFollowUser', () => {
 
     let returned: boolean | undefined;
     await act(async () => {
-      returned = await result.current.toggleFollow('user-1', false, 'Alice');
+      returned = await result.current.toggleFollow('user-1', false);
     });
 
     expect(returned).toBe(false);
     await waitFor(() => {
-      expect(result.current.error).toBe('Failed to follow Alice');
+      expect(result.current.error).toBe('Could not follow user. Try again.');
     });
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Failed to follow Alice',
+      description: 'Could not follow user. Try again.',
     });
     expect(mockLogger.error).toHaveBeenCalledWith('[useFollowUser] Failed to toggle follow:', error);
   });
@@ -141,13 +122,13 @@ describe('useFollowUser', () => {
 
     let returned: boolean | undefined;
     await act(async () => {
-      returned = await result.current.toggleFollow('user-1', true, 'Alice');
+      returned = await result.current.toggleFollow('user-1', true);
     });
 
     expect(returned).toBe(false);
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Failed to unfollow Alice',
+      description: 'Could not unfollow user. Try again.',
     });
   });
 });

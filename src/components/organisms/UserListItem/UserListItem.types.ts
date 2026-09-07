@@ -51,7 +51,7 @@ export interface UserListItemProps {
   /** Callback when user area is clicked */
   onUserClick?: (id: Pubky) => void;
   /** Callback when follow button is clicked */
-  onFollowClick?: (id: Pubky, isCurrentlyFollowing: boolean, displayName: string) => void;
+  onFollowClick?: (id: Pubky, isCurrentlyFollowing: boolean) => void;
   /** Custom className */
   className?: string;
   /** Test ID */

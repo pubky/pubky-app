@@ -146,12 +146,12 @@ export function useInlineImageUpload({
     discardedRef.current = false;
 
     if (!ARTICLE_SUPPORTED_ATTACHMENT_MIME_TYPES.includes(file.type)) {
-      return rejectWithToast(`Unsupported file type for ${file.name}. Supported: ${ARTICLE_SUPPORTED_FILE_TYPES}.`);
+      return rejectWithToast(`Unsupported file type. Supported: ${ARTICLE_SUPPORTED_FILE_TYPES}.`);
     }
 
     if (file.size > IMAGE_MAX_RAW_SIZE) {
       const maxSizeLabel = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
-      return rejectWithToast(`${file.name} exceeds the ${maxSizeLabel} limit.`);
+      return rejectWithToast(`Image exceeds the ${maxSizeLabel} limit.`);
     }
 
     // Batch admission: MDXEditor's paste/drop handling calls this once per

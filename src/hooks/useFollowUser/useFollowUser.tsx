@@ -8,7 +8,6 @@ import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { UseFollowUserResult } from './useFollowUser.types';
-import { resolveFollowToastDisplayName } from './useFollowUser.utils';
 
 /**
  * useFollowUser
@@ -23,8 +22,8 @@ import { resolveFollowToastDisplayName } from './useFollowUser.utils';
  * ```tsx
  * const { toggleFollow, isLoading, isUserLoading, error } = useFollowUser();
  *
- * const handleFollow = async (userId: Pubky, isFollowing: boolean, displayName: string) => {
- *   await toggleFollow(userId, isFollowing, displayName);
+ * const handleFollow = async (userId: Pubky, isFollowing: boolean) => {
+ *   await toggleFollow(userId, isFollowing);
  * };
  *
  * // Check if a specific user is loading
@@ -39,7 +38,7 @@ export function useFollowUser(): UseFollowUserResult {
   const [error, setError] = useState<string | null>(null);
 
   const toggleFollow = useCallback(
-    async (userId: Pubky, isCurrentlyFollowing: boolean, displayName?: string) => {
+    async (userId: Pubky, isCurrentlyFollowing: boolean) => {
       if (!currentUserPubky) {
         setError('User not authenticated');
         return false;
@@ -55,9 +54,6 @@ export function useFollowUser(): UseFollowUserResult {
       setLoadingUserId(userId);
       setError(null);
 
-      // Resolved up front so the failure toast can name the user too.
-      const username = await resolveFollowToastDisplayName(userId, displayName);
-
       try {
         const action = isCurrentlyFollowing ? HttpMethod.DELETE : HttpMethod.PUT;
 
@@ -67,7 +63,7 @@ export function useFollowUser(): UseFollowUserResult {
         });
 
         toast({
-          title: isCurrentlyFollowing ? `Unfollowed ${username}` : `Following ${username}`,
+          title: isCurrentlyFollowing ? 'User unfollowed' : 'User followed',
         });
 
         Logger.debug(`[useFollowUser] Successfully ${isCurrentlyFollowing ? 'unfollowed' : 'followed'} user`, {
@@ -76,8 +72,10 @@ export function useFollowUser(): UseFollowUserResult {
 
         return true;
       } catch (err) {
-        // Always a friendly, named message — raw transport/server text never reaches the user.
-        const message = isCurrentlyFollowing ? `Failed to unfollow ${username}` : `Failed to follow ${username}`;
+        // Always a friendly, static message — raw transport/server text never reaches the user.
+        const message = isCurrentlyFollowing
+          ? 'Could not unfollow user. Try again.'
+          : 'Could not follow user. Try again.';
         setError(message);
         toast({
           variant: 'error',
