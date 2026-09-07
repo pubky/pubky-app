@@ -572,7 +572,7 @@ export function PostInput({
                       lockCard={
                         isLockConfigured ? (
                           <LockedPostCard
-                            unlockInfo={lockConfig}
+                            priceSats={lockConfig?.amountSats}
                             editableTitle={{
                               value: lockTitle,
                               onChange: setLockTitle,

@@ -144,11 +144,6 @@ export class LocksService {
     }
   }
 
-  // TODO:[Locks] #2369 — password and `dev-static` all go away here; delete this wrapper with them.
-  static async submitProofBundle(bundle: TSubmittedProofBundle, _password: string): Promise<TVerificationTask> {
-    return this.submitProof(bundle);
-  }
-
   /**
    * Whether the reader has published anything under their public Paykit namespace — the gate
    * between the pay screen and the install-Bitkit screen. Presence only: it does not prove the

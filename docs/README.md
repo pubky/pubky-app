@@ -29,7 +29,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `commit-message.md`        | Conventional commit format                                                                            |
 | `environment.md`           | Environment variable configuration                                                                    |
 | `adr-guidelines.md`        | When and how to write ADRs                                                                            |
-| `locks.md`                 | Frontend reader for lock posts — password-gated content (creator side: ADR 0019)                      |
+| `locks.md`                 | Frontend reader for lock posts — payment-gated content (creator side: ADR 0019)                       |
 
 ### Migrations
 

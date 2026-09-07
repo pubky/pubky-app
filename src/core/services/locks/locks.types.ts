@@ -123,11 +123,9 @@ export type TCreateContentLockResult = {
 // ── Reader: the public lock file (`lock.json`) ──────────────────────────────
 
 /**
- * How a lock's content is gated. Derived from a criterion's `verifier_type`
- * (see `LockFileParser.resolveVerifierType`).
+ * Supported verifier types used when creating locks and proof bundles.
  */
 export enum VerifierType {
-  PASSWORD = 'password',
   PAYMENT = 'paykit-payment',
 }
 
@@ -149,7 +147,7 @@ interface LockAttachmentResource {
 /** A single unlock requirement. `verifier_type` decides how it is satisfied. */
 interface LockCriterion {
   criterion_id: string;
-  /** Raw verifier kind (e.g. "password", "paykit-payment"); map via `LockFileParser`. */
+  /** Raw verifier kind (currently "paykit-payment"); map via `LockFileParser`. */
   verifier_type: string;
   params: Record<string, unknown>;
 }
@@ -175,7 +173,7 @@ interface LockServer {
  * by the creator at `/pub/locks.app/<lock_id>.json` and read directly by the reader.
  * The Lock server is a standalone service (not pubky.app-specific), so this type
  * belongs to the Lock SDK — hand-mirrored here until that ships a typed reader API.
- * The password/payment distinction is read from each criterion's `verifier_type`.
+ * Payment support is read from each criterion's `verifier_type`.
  * TODO:[Locks] locks#22 — replace with the SDK's own type once it exports one.
  */
 export interface LockFile {
@@ -262,15 +260,14 @@ export interface TFetchLockFileParams {
   lockUrl: string;
 }
 
-/** A fetched lock file plus how its content is gated (null while missing / unsupported). */
+/** A fetched lock file and its validated payment price. */
 export interface TFetchLockFileResult {
   lockFile: LockFile | null;
-  verifierType: VerifierType | null;
   priceSats: string | null;
 }
 
-/** One proof for a lock criterion. `payload` is verifier-specific (dev-static: `{ satisfied: true }`). */
-export interface TProof {
+/** One payment proof for a lock criterion. Its verifier payload is currently empty. */
+interface TProof {
   criterion_id: string;
   verifier_type: string;
   payload: Record<string, unknown>;
@@ -304,10 +301,4 @@ export interface TVerificationTask {
 export interface TAccessCredential {
   credential: string;
   expires_at: string;
-}
-
-export interface TUnlockResult {
-  bundleId: string;
-  credential: string;
-  expiresAt: string;
 }

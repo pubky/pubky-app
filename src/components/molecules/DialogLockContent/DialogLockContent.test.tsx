@@ -27,10 +27,8 @@ const setup = (override?: Partial<React.ComponentProps<typeof DialogLockContent>
   return { onOpenChange, onApplied };
 };
 
-/** Moves to the Payment tab and types `sats` into the price field. */
+/** Types `sats` into the price field. */
 const enterPrice = (sats: string) => {
-  // Radix activates a trigger on mouseDown, not on the synthetic click.
-  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Payment' }));
   fireEvent.change(screen.getByLabelText('Bitcoin Amount', { selector: 'input' }), { target: { value: sats } });
 };
 
@@ -41,64 +39,15 @@ beforeEach(() => {
 });
 
 describe('DialogLockContent', () => {
-  it('renders Password and Payment tabs, Password active by default', () => {
+  it('renders a single payment form without unlock-method tabs', () => {
     setup();
-    expect(screen.getByRole('tab', { name: 'Password' })).toHaveAttribute('data-state', 'active');
-    expect(screen.getByRole('tab', { name: 'Payment' })).toHaveAttribute('data-state', 'inactive');
-    expect(screen.getByLabelText('Password', { selector: 'input' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Bitcoin Amount', { selector: 'input' })).toBeInTheDocument();
   });
 
   it('does not render when closed', () => {
     setup({ open: false });
     expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
-  });
-
-  it('keeps Apply Lock disabled until the password meets the policy and matches', () => {
-    setup();
-    const apply = screen.getByRole('button', { name: 'Apply Lock' });
-    const password = screen.getByLabelText('Password', { selector: 'input' });
-    const repeat = screen.getByLabelText('Repeat Password', { selector: 'input' });
-
-    fireEvent.change(password, { target: { value: 'abcd1234' } }); // no special char
-    fireEvent.change(repeat, { target: { value: 'abcd1234' } });
-    expect(apply).toBeDisabled();
-
-    fireEvent.change(password, { target: { value: 'Secret12!' } });
-    fireEvent.change(repeat, { target: { value: 'Secret12!' } });
-    expect(apply).toBeEnabled();
-  });
-
-  it('shows a mismatch message when passwords differ', () => {
-    setup();
-    fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'Secret12!' } });
-    fireEvent.change(screen.getByLabelText('Repeat Password', { selector: 'input' }), {
-      target: { value: 'Other99#' },
-    });
-    expect(screen.getByText('Passwords do not match.')).toBeInTheDocument();
-  });
-
-  it('hides password rules by default and shows only the unmet ones while typing', () => {
-    setup();
-    expect(screen.queryByText('At least 1 number')).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'abcdefgh' } });
-    expect(screen.getByText('At least 1 number')).toBeInTheDocument();
-    expect(screen.getByText('At least 1 special character')).toBeInTheDocument();
-    expect(screen.queryByText('At least 8 characters')).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'Secret12!' } });
-    expect(screen.queryByText('At least 1 number')).not.toBeInTheDocument();
-  });
-
-  it('passes the password to onApplied on Apply Lock', () => {
-    const { onApplied } = setup();
-    fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'Secret12!' } });
-    fireEvent.change(screen.getByLabelText('Repeat Password', { selector: 'input' }), {
-      target: { value: 'Secret12!' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
-
-    expect(onApplied).toHaveBeenCalledWith({ method: 'password' });
   });
 
   it.each([
@@ -117,7 +66,7 @@ describe('DialogLockContent', () => {
     enterPrice('07');
     fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
 
-    expect(onApplied).toHaveBeenCalledWith({ method: 'payment', amountSats: '7' });
+    expect(onApplied).toHaveBeenCalledWith({ amountSats: '7' });
   });
 
   it('keeps Apply Lock disabled until the price is a positive amount', () => {
@@ -139,7 +88,7 @@ describe('DialogLockContent', () => {
     enterPrice('1000');
     fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
 
-    expect(onApplied).toHaveBeenCalledWith({ method: 'payment', amountSats: '1000' });
+    expect(onApplied).toHaveBeenCalledWith({ amountSats: '1000' });
   });
 
   it('shows the USD value of the price when a rate is available', () => {

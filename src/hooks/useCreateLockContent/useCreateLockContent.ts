@@ -25,7 +25,6 @@ import type {
 // `octet-stream`. pubky-app still knows the primary is a `PubkyAppPost` — by convention, it always is.
 const POST_CONTENT_TYPE = 'application/octet-stream';
 
-
 /**
  * Publishes a locked post: the attachments become guarded resources, the post referencing them becomes
  * the lock's entry point, the two are bundled into one content lock, and a public announcement carrying
@@ -60,7 +59,7 @@ export function useCreateLockContent({
         });
 
       // The price and teaser checks run before the lock is created, so a rejected input cannot orphan one.
-      if (lockConfig.method === 'payment' && !isPositiveIntegerString(lockConfig.amountSats)) {
+      if (!isPositiveIntegerString(lockConfig.amountSats)) {
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Lock price is not a positive whole number of sats', {
           service: ErrorService.Local,
           operation: 'useCreateLockContent.publish',

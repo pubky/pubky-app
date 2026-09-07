@@ -4,7 +4,6 @@ import { LocksApplication } from '@/application/locks/locks';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { VerifierType } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
@@ -27,8 +26,6 @@ const mocks = vi.hoisted(() => ({
   fetchPaidContentIfCompleted: vi.fn(),
   fetchPurchasedLockIds: vi.fn(),
   fetchPaymentStatus: vi.fn(),
-  unlockContent: vi.fn(),
-  fetchUnlockedContent: vi.fn(),
   replicateUnlockedContent: vi.fn(),
   fetchReplicatedContent: vi.fn(),
   fetchUnlockedList: vi.fn(),
@@ -52,8 +49,6 @@ vi.mock('@/application/locks/locks', () => ({
     fetchPaidContentIfCompleted: mocks.fetchPaidContentIfCompleted,
     fetchPurchasedLockIds: mocks.fetchPurchasedLockIds,
     fetchPaymentStatus: mocks.fetchPaymentStatus,
-    unlockContent: mocks.unlockContent,
-    fetchUnlockedContent: mocks.fetchUnlockedContent,
     replicateUnlockedContent: mocks.replicateUnlockedContent,
     fetchReplicatedContent: mocks.fetchReplicatedContent,
     fetchUnlockedList: mocks.fetchUnlockedList,
@@ -264,7 +259,7 @@ describe('LocksController (content)', () => {
     const params = {
       attachments: [],
       buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
-      lockConfig: { method: 'password' } as const,
+      lockConfig: { amountSats: '1000' },
     };
 
     await expect(LocksController.createLockContent(params)).resolves.toBe(lock);
@@ -281,34 +276,19 @@ describe('LocksController.fetchLockFile', () => {
     vi.mocked(LocksApplication.fetchLockFile).mockResolvedValue(MOCK_LOCK_FILE);
   });
 
-  it('delegates to the application and resolves the verifier type', async () => {
+  it('delegates to the application and resolves the price', async () => {
     await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
       lockFile: MOCK_LOCK_FILE,
-      verifierType: VerifierType.PASSWORD,
-      priceSats: null,
+      priceSats: '1000',
     });
     expect(LocksApplication.fetchLockFile).toHaveBeenCalledWith({ lockUrl: VALID_LOCK_URL });
   });
 
-  it('resolves the price of a payment lock', async () => {
-    const paymentLock = mockLockFile({
-      criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
-    });
-    vi.mocked(LocksApplication.fetchLockFile).mockResolvedValue(paymentLock);
-
-    await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
-      lockFile: paymentLock,
-      verifierType: VerifierType.PAYMENT,
-      priceSats: '1000',
-    });
-  });
-
-  it('resolves a null verifier type without a lock file', async () => {
+  it('resolves a null price without a lock file', async () => {
     vi.mocked(LocksApplication.fetchLockFile).mockResolvedValue(null);
 
     await expect(LocksController.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual({
       lockFile: null,
-      verifierType: null,
       priceSats: null,
     });
   });
@@ -322,31 +302,6 @@ describe('LocksController.getLockContent', () => {
 
   it('returns null for non-lock content', () => {
     expect(LocksController.getLockContent('not json')).toBeNull();
-  });
-});
-
-describe('LocksController.unlock', () => {
-  it('delegates the reader unlock to the application', async () => {
-    const params = { lockFile: MOCK_LOCK_FILE, lockUrl: VALID_LOCK_URL, password: 'hunter2' };
-    mocks.unlockContent.mockResolvedValue({ bundleId: 'b1', credential: 'cred', expiresAt: '2026-01-01' });
-
-    await expect(LocksController.unlock(params)).resolves.toEqual({
-      bundleId: 'b1',
-      credential: 'cred',
-      expiresAt: '2026-01-01',
-    });
-    expect(mocks.unlockContent).toHaveBeenCalledWith(params);
-  });
-});
-
-describe('LocksController.fetchUnlockedContent', () => {
-  it('delegates reading the guarded content to the application', async () => {
-    const params = { lockFile: MOCK_LOCK_FILE, credential: 'cred-abc' };
-    const content = { post: { content: 'secret', kind: 'short', attachments: null }, attachments: [] };
-    mocks.fetchUnlockedContent.mockResolvedValue(content);
-
-    await expect(LocksController.fetchUnlockedContent(params)).resolves.toEqual(content);
-    expect(mocks.fetchUnlockedContent).toHaveBeenCalledWith(params);
   });
 });
 

@@ -18,20 +18,15 @@ describe('LockedPostCard', () => {
     expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('My most famous quote');
   });
 
-  it('shows the masked password beside Unlock for a password lock', () => {
-    render(<LockedPostCard title="" unlockInfo={{ method: 'password' }} />);
-    expect(screen.getByText('••••••')).toBeInTheDocument();
-  });
-
-  it('shows the grouped price beside Unlock for a payment lock', () => {
-    render(<LockedPostCard title="" unlockInfo={{ method: 'payment', amountSats: '1000' }} />);
+  it('shows the grouped price beside Unlock', () => {
+    render(<LockedPostCard title="" priceSats="1000" />);
     expect(screen.getByText('₿1,000')).toBeInTheDocument();
     expect(screen.queryByText('••••••')).not.toBeInTheDocument();
   });
 
   // The reader's lock file arrives after the first paint, and can fail to arrive at all. The mask
   // fills the slot until then so the pill is never half-empty.
-  it('falls back to the mask while the unlock method is unknown', () => {
+  it('falls back to the mask while the price is unknown', () => {
     render(<LockedPostCard title="" />);
     expect(screen.getByText('••••••')).toBeInTheDocument();
   });

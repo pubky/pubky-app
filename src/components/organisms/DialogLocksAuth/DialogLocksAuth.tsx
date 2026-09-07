@@ -118,7 +118,7 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
   const bold = (chunks: ReactNode) => <strong className="font-bold text-foreground">{chunks}</strong>;
 
   let title = 'Lock Content';
-  let description: ReactNode = 'Pubky Locks allows you to lock content with payments or passwords.';
+  let description: ReactNode = 'Pubky Locks allows you to lock content with payments.';
   if (isSuccess) {
     title = 'Locks Enabled';
     description = 'You authorized the Locks server to manage your Locks data.';

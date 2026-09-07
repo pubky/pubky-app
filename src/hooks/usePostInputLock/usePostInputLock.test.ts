@@ -76,10 +76,10 @@ const setup = (isEnabled = true, canEnable = true, draftOverride: TLockDraft = d
   return { ...view, captureComposer, restoreComposer, clearComposer, clearTags, onPublished, onNormalSubmit };
 };
 
-/** Switch on, sign-in skipped (already authenticated), unlock method applied. */
+/** Switch on, sign-in skipped (already authenticated), lock price applied. */
 const configureLock = (result: { current: ReturnType<typeof usePostInputLock> }) => {
   act(() => result.current.lockSwitch?.onCheckedChange(true));
-  act(() => result.current.handleLockApplied({ method: 'password' }));
+  act(() => result.current.handleLockApplied({ amountSats: '1000' }));
 };
 
 /** Locks fully set up: signed into the Lock Server with a connected Bitkit payout account. */
@@ -167,12 +167,12 @@ describe('usePostInputLock', () => {
 
       act(() => result.current.lockSwitch?.onCheckedChange(true));
 
-      // Draft snapshotted, but the locked content stays on screen behind the unlock-method dialog.
+      // Draft snapshotted, but the locked content stays on screen behind the lock dialog.
       expect(captureComposer).toHaveBeenCalledTimes(1);
       expect(clearComposer).not.toHaveBeenCalled();
       expect(result.current.isLockDialogOpen).toBe(true);
 
-      act(() => result.current.handleLockApplied({ method: 'password' }));
+      act(() => result.current.handleLockApplied({ amountSats: '1000' }));
 
       // Applying the lock swaps the draft for the empty announcement composer.
       expect(clearComposer).toHaveBeenCalledTimes(1);
@@ -198,7 +198,7 @@ describe('usePostInputLock', () => {
       expect(result.current.isLockDialogOpen).toBe(false);
     });
 
-    it('goes straight to the unlock-method dialog once Bitkit is connected', () => {
+    it('goes straight to the lock dialog once Bitkit is connected', () => {
       mocks.isAuthed = true;
       mocks.isPaykitConnected = true;
       const { result } = setup();
@@ -209,7 +209,7 @@ describe('usePostInputLock', () => {
       expect(result.current.isAuthDialogOpen).toBe(false);
     });
 
-    it('advances from sign-in to the unlock-method dialog, keeping the switch on', () => {
+    it('advances from sign-in to the lock dialog, keeping the switch on', () => {
       const { result, restoreComposer } = setup();
 
       act(() => result.current.lockSwitch?.onCheckedChange(true));
@@ -225,7 +225,7 @@ describe('usePostInputLock', () => {
   describe('abandoning the lock restores the composer', () => {
     it.each([
       ['the switch is turned off', (r: ReturnType<typeof usePostInputLock>) => r.lockSwitch?.onCheckedChange(false)],
-      ['the unlock-method dialog is dismissed', (r: ReturnType<typeof usePostInputLock>) => r.closeLockDialog()],
+      ['the lock dialog is dismissed', (r: ReturnType<typeof usePostInputLock>) => r.closeLockDialog()],
     ])('when %s', (_name, abandon) => {
       setUpLocks();
       const { result, restoreComposer } = setup();
@@ -291,10 +291,10 @@ describe('usePostInputLock', () => {
       const { result } = setup();
 
       act(() => result.current.lockSwitch?.onCheckedChange(true));
-      act(() => result.current.handleLockApplied({ method: 'payment', amountSats: '1234' }));
+      act(() => result.current.handleLockApplied({ amountSats: '1234' }));
 
-      expect(mocks.lockContentOptions?.lockConfig).toEqual({ method: 'payment', amountSats: '1234' });
-      expect(result.current.lockConfig).toEqual({ method: 'payment', amountSats: '1234' }); // and to the card
+      expect(mocks.lockContentOptions?.lockConfig).toEqual({ amountSats: '1234' });
+      expect(result.current.lockConfig).toEqual({ amountSats: '1234' }); // and to the card
     });
 
     it('discards the price when the lock is abandoned', () => {
@@ -320,7 +320,7 @@ describe('usePostInputLock', () => {
       expect(mocks.publish).not.toHaveBeenCalled();
     });
 
-    it('publishes nothing while the switch is on but the unlock method is not applied', async () => {
+    it('publishes nothing while the switch is on but the price is not applied', async () => {
       setUpLocks();
       const { result, onNormalSubmit } = setup();
 

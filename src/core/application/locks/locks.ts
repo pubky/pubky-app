@@ -1,5 +1,5 @@
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
-import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isNotFound, isValidationError } from '@/libs/error/error.utils';
@@ -21,7 +21,6 @@ import type {
   TUnlockedAttachment,
   TUnlockedContent,
   TUnlockedListItem,
-  TUnlockResult,
   TVerificationStatus,
 } from '@/services/locks/locks.types';
 import { VerifierType } from '@/services/locks/locks.types';
@@ -39,20 +38,10 @@ import type {
   TReplicateUnlockedContentParams,
   TStartPaymentParams,
   TStartPaymentResult,
-  TUnlockContentParams,
 } from './locks.types';
-
-// Verification polling: check status every interval, up to a bounded number of attempts.
-const POLL_INTERVAL_MS = 1500;
-const MAX_POLL_ATTEMPTS = 40;
-
-const isVerifying = (status: TVerificationStatus) => status === 'pending' || status === 'in_progress';
 
 // v1 payment locks must hold exactly one criterion, referenced once by the lock logic.
 const CRITERION_ID = 'criterion-1';
-// TODO:[Locks] #2369 — password and `dev-static` all go away here.
-const PLACEHOLDER_VERIFIER_TYPE = 'dev-static';
-const PLACEHOLDER_VERIFIER_PARAMS = { satisfied: true };
 // Only asset the Lock Server's v1 payment verifier takes.
 const PAYMENT_ASSET = 'BTC';
 const CREDENTIAL_TTL_SECONDS = 900;
@@ -78,56 +67,6 @@ export class LocksApplication {
   /** Whether the Lock Server at `origin` is ready to serve — gates the auth flow before the iframe. */
   static isServerReady(origin: string): Promise<boolean> {
     return LocksService.isServerReady(origin);
-  }
-
-  private static wait(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Password unlock. TODO:[Locks] #2369 deletes this method and its poll constants with the password
-   * UI. Payment locks use `startPayment` → `fetchPaymentStatus` (polled by the modal) → `fetchPaidContent`.
-   */
-  static async unlockContent({ lockFile, lockUrl, password }: TUnlockContentParams): Promise<TUnlockResult> {
-    const { creator } = lockFile;
-    const bundleId = await LocksService.generateBundleId();
-    const bundle = LockProofBundler.build(lockFile, lockUrl, bundleId);
-
-    // Submit the proof; the server verifies asynchronously and returns a pending task.
-    let task = await LocksService.submitProofBundle(bundle, password);
-    // Poll the task status until it's no longer verifying (or the attempt ceiling is hit).
-    for (let attempt = 0; isVerifying(task.status) && attempt < MAX_POLL_ATTEMPTS; attempt++) {
-      await this.wait(POLL_INTERVAL_MS);
-      const next = await LocksService.lookupVerificationTask(creator, bundleId);
-      if (!next) {
-        throw Err.server(ServerErrorCode.INVALID_RESPONSE, 'verification task disappeared while polling', {
-          service: ErrorService.Locks,
-          operation: 'unlockContent',
-          context: { bundleId },
-        });
-      }
-      task = next;
-    }
-
-    if (task.status !== 'completed') {
-      const failure = {
-        service: ErrorService.Locks,
-        operation: 'unlockContent',
-        context: { status: task.status, failureMessage: task.failure_message },
-      };
-      if (task.status === 'failed' || task.status === 'expired') {
-        throw Err.validation(ValidationErrorCode.INVALID_INPUT, `Unlock verification ${task.status}`, failure);
-      }
-      // Still `pending`/`in_progress` after the last poll — the server may finish it later.
-      throw Err.server(
-        ServerErrorCode.SERVICE_UNAVAILABLE,
-        `Unlock verification did not complete (${task.status})`,
-        failure,
-      );
-    }
-
-    const credential = await LocksService.issueAccessCredential(creator, bundleId);
-    return { bundleId, credential: credential.credential, expiresAt: credential.expires_at };
   }
 
   /**
@@ -558,14 +497,11 @@ export class LocksApplication {
 
     // The payout recipient has to equal the lock's creator, and the upload response names that
     // account — so the criterion can only be built here, once the primary resource is up.
-    const criterion =
-      lockConfig.method === 'payment'
-        ? {
-            criterion_id: CRITERION_ID,
-            verifier_type: VerifierType.PAYMENT,
-            params: { recipient_pubky: post.creator, amount: lockConfig.amountSats, asset: PAYMENT_ASSET },
-          }
-        : { criterion_id: CRITERION_ID, verifier_type: PLACEHOLDER_VERIFIER_TYPE, params: PLACEHOLDER_VERIFIER_PARAMS };
+    const criterion = {
+      criterion_id: CRITERION_ID,
+      verifier_type: VerifierType.PAYMENT,
+      params: { recipient_pubky: post.creator, amount: lockConfig.amountSats, asset: PAYMENT_ASSET },
+    };
 
     return LocksService.createContentLock({
       primaryResource: post.resource,
