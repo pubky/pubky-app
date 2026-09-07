@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import LinkifyIt from 'linkify-it';
+import { LinkifyIt } from 'linkify-it';
 import { Container } from '@/atoms/Container/Container';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
@@ -58,7 +58,8 @@ const stripMarkdownLinks = (content: string): string => {
  * Returns the first URL
  */
 const parseContentForUrl = (content: string) => {
-  const linkify = new LinkifyIt();
+  // linkify-it v6 defaults fuzzyLink to false; keep matching protocol-less URLs.
+  const linkify = new LinkifyIt({ fuzzyLink: true });
 
   // Disable unwanted protocol types
   IGNORED_PROTOCOLS.forEach((protocol) => linkify.add(protocol, null));

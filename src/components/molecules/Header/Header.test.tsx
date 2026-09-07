@@ -169,6 +169,7 @@ describe('Header Components', () => {
     refresh: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn(),
+    bfcacheId: '',
   };
 
   beforeEach(() => {
@@ -643,6 +644,7 @@ describe('Header Components - Snapshots', () => {
     refresh: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn(),
+    bfcacheId: '',
   };
 
   beforeEach(() => {

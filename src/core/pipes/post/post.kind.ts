@@ -1,4 +1,4 @@
-import LinkifyIt from 'linkify-it';
+import { LinkifyIt } from 'linkify-it';
 import { PubkyAppPostKind } from 'pubky-app-specs';
 
 type TInferPostKindParams = {
@@ -24,6 +24,7 @@ type TResolveTagTargetCompositeIdParams = {
 };
 
 // Keep these aligned with PostLinkEmbeds so we treat links consistently.
+// linkify-it v6 defaults fuzzyLink to false; keep matching protocol-less URLs.
 const IGNORED_PROTOCOLS = ['ftp:', 'mailto:'];
 
 const stripMarkdownLinks = (content: string): string => {
@@ -31,7 +32,7 @@ const stripMarkdownLinks = (content: string): string => {
 };
 
 const hasSupportedUrl = (content: string): boolean => {
-  const linkify = new LinkifyIt();
+  const linkify = new LinkifyIt({ fuzzyLink: true });
   IGNORED_PROTOCOLS.forEach((protocol) => linkify.add(protocol, null));
 
   const strippedContent = stripMarkdownLinks(content);

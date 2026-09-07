@@ -6,9 +6,7 @@ import { usePostAncestors } from './usePostAncestors';
 const { mockQueryResult, setMockQueryResult } = vi.hoisted(() => {
   const queryResultData = {
     current: undefined as
-      | { ancestors: { postId: string; userId: string }[]; nextMissingPostId: string | null }
-      | null
-      | undefined,
+      { ancestors: { postId: string; userId: string }[]; nextMissingPostId: string | null } | null | undefined,
   };
   return {
     mockQueryResult: queryResultData,

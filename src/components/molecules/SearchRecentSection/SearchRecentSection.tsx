@@ -55,17 +55,18 @@ export function SearchRecentSection({
   onClearAll,
 }: SearchRecentSectionProps) {
   const searchChips: RecentSearchChip[] = [
-    ...tags.map(
-      (tag): RecentSearchChip => ({ kind: 'tag', key: `tag-${tag.tag}`, searchedAt: tag.searchedAt, item: tag }),
-    ),
-    ...queries.map(
-      (query): RecentSearchChip => ({
-        kind: 'query',
-        key: `query-${query.query}`,
-        searchedAt: query.searchedAt,
-        item: query,
-      }),
-    ),
+    ...tags.map((tag): RecentSearchChip => ({
+      kind: 'tag',
+      key: `tag-${tag.tag}`,
+      searchedAt: tag.searchedAt,
+      item: tag,
+    })),
+    ...queries.map((query): RecentSearchChip => ({
+      kind: 'query',
+      key: `query-${query.query}`,
+      searchedAt: query.searchedAt,
+      item: query,
+    })),
   ]
     .sort((a, b) => b.searchedAt - a.searchedAt)
     // Cap the MERGED row: each source list is already capped, but together they

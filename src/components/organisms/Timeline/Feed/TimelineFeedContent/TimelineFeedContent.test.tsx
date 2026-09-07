@@ -20,12 +20,10 @@ import { useTimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
-  vi.fn(
-    (): UsePullToRefreshResult => ({
-      state: 'idle',
-      pullDistance: 0,
-    }),
-  ),
+  vi.fn((): UsePullToRefreshResult => ({
+    state: 'idle',
+    pullDistance: 0,
+  })),
 );
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
