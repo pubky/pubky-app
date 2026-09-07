@@ -1,7 +1,7 @@
 import { UserApplication } from '@/application/user/user';
-import type { TUserCountsOrFetchResult } from '@/application/user/user.types';
+import type { TUserCountsOrFetchResult, TUserSocialGraphStatusResult } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
-import type { TFollowParams, TPubkyListParams } from '@/controllers/user/user.type';
+import type { TFetchUserParams, TFollowParams, TPubkyListParams } from '@/controllers/user/user.type';
 import { HttpMethod } from '@/libs/http/http.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
@@ -16,6 +16,7 @@ import type {
   NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 export class UserController {
   private constructor() {} // Prevent instantiation
@@ -34,6 +35,15 @@ export class UserController {
    */
   static async getManyDetails(params: TPubkyListParams): Promise<Map<Pubky, NexusUserDetails>> {
     return await UserApplication.getManyDetails(params);
+  }
+
+  /**
+   * Get a user's social graph badge tier from local database.
+   * This is a read-only operation that queries the local cache.
+   * Returns null while the tier is unknown (no full user view cached yet).
+   */
+  static async getSocialGraphStatus(params: TReadProfileParams): Promise<TUserSocialGraphStatusResult | null> {
+    return await UserApplication.getSocialGraphStatus(params);
   }
 
   /**
@@ -120,20 +130,32 @@ export class UserController {
   }
 
   /**
+   * Scopes a full user fetch to a viewer. Defaults to the signed-in user so the persisted
+   * relationship row reflects them; `currentUserPubky` is read directly (not via
+   * `selectCurrentUserPubky`, which throws) because guests can open profiles too.
+   */
+  private static withViewer({ userId, viewerId }: TFetchUserParams): TFetchUserParams {
+    return { userId, viewerId: viewerId ?? useAuthStore.getState().currentUserPubky ?? undefined };
+  }
+
+  /**
    * Get full user entity from local database or fetch from Nexus batch API.
    * Persists details, counts, relationships, tags, TTL, and moderation.
    * Preferred over `getOrFetchDetails` when the caller needs the full entity cached.
+   * The fetch is scoped to `viewerId`, defaulting to the signed-in user.
    */
-  static async getOrFetch(params: TReadProfileParams): Promise<NexusUserDetails | null> {
-    return await UserApplication.getOrFetch(params);
+  static async getOrFetch(params: TFetchUserParams): Promise<NexusUserDetails | null> {
+    return await UserApplication.getOrFetch(this.withViewer(params));
   }
 
   /**
    * Fetch full user entity from Nexus batch API and persist locally (network-only, no local read).
    * Use instead of `getOrFetch` when the caller already knows the user is not cached.
+   * The fetch is scoped to `viewerId`, defaulting to the signed-in user, so the persisted
+   * relationship row never reads as "not following" for a user the viewer follows.
    */
-  static async fetch(params: TReadProfileParams): Promise<NexusUserDetails | null> {
-    return await UserApplication.fetch(params);
+  static async fetch(params: TFetchUserParams): Promise<NexusUserDetails | null> {
+    return await UserApplication.fetch(this.withViewer(params));
   }
 
   /**

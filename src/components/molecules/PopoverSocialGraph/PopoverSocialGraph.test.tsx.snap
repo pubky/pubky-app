@@ -1,0 +1,115 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PopoverSocialGraph - Snapshots > matches snapshot when closed 1`] = `
+<button
+  aria-expanded="false"
+  aria-haspopup="dialog"
+  aria-label="About social graph status"
+  class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground border-none size-8 hover:bg-white/10"
+  data-as-child="true"
+  data-cy="social-graph-help-btn"
+  data-size="icon"
+  data-slot="popover-trigger"
+  data-state="closed"
+  data-testid="popover-trigger"
+  data-variant="ghost"
+  type="button"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-circle-question-mark size-4 text-white"
+    data-testid="circle-help-icon"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle
+      cx="12"
+      cy="12"
+      r="10"
+    />
+    <path
+      d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+    />
+    <path
+      d="M12 17h.01"
+    />
+  </svg>
+</button>
+`;
+
+exports[`PopoverSocialGraph - Snapshots > matches snapshot when open 1`] = `
+<div
+  class="z-50 mx-8 origin-(--radix-popover-content-transform-origin) rounded-md border bg-popover text-popover-foreground shadow-[0px_10px_15px_0px_rgba(5,5,10,0.50)] outline-hidden data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:mx-0 w-[327px] p-6"
+  data-align="center"
+  data-side="bottom"
+  data-slot="popover-content"
+  data-state="open"
+  data-testid="popover-content"
+  id="radix-normalized"
+  role="dialog"
+  style="--radix-popover-content-transform-origin: var(--radix-popper-transform-origin); --radix-popover-content-available-width: var(--radix-popper-available-width); --radix-popover-content-available-height: var(--radix-popper-available-height); --radix-popover-trigger-width: var(--radix-popper-anchor-width); --radix-popover-trigger-height: var(--radix-popper-anchor-height); animation: none;"
+  tabindex="-1"
+>
+  <div
+    class="mx-auto w-full flex-col flex gap-4"
+    data-testid="container"
+  >
+    <h4
+      class="text-lg font-semibold text-popover-foreground"
+      data-testid="heading-4"
+    >
+      Social Graph Status
+    </h4>
+    <p
+      class="text-sm font-medium text-muted-foreground"
+      data-testid="typography"
+    >
+      Shows how established an account is in Pubky's follow graph. It is based on network relationships and updated daily.
+    </p>
+    <ul
+      class="list-inside list-disc text-sm font-medium text-muted-foreground"
+    >
+      <li>
+        <strong
+          class="text-sm font-semibold text-secondary-foreground"
+          data-testid="typography"
+        >
+          New
+        </strong>
+        : little or no network presence
+      </li>
+      <li>
+        <strong
+          class="text-sm font-semibold text-secondary-foreground"
+          data-testid="typography"
+        >
+          Networked
+        </strong>
+        : part of the broader network
+      </li>
+      <li>
+        <strong
+          class="text-sm font-semibold text-secondary-foreground"
+          data-testid="typography"
+        >
+          Established
+        </strong>
+        : central to the network
+      </li>
+    </ul>
+    <em
+      class="text-sm font-medium text-muted-foreground italic"
+      data-testid="typography"
+    >
+      This is not an endorsement or guarantee that an account is trustworthy.
+    </em>
+  </div>
+</div>
+`;

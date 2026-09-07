@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES } from '@/app/routes';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { NexusSocialGraphStatus } from '@/services/nexus/nexus.types';
 import { PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { ProfileProfile } from './ProfileProfile';
 
@@ -98,6 +99,14 @@ vi.mock('@/hooks/useTagged/useTagged', () => ({
   })),
 }));
 
+const mockUseSocialGraphStatus = vi.fn((_pubky?: string | null) => ({
+  status: null as NexusSocialGraphStatus | null,
+  isLoading: false,
+}));
+vi.mock('@/hooks/useSocialGraphStatus/useSocialGraphStatus', () => ({
+  useSocialGraphStatus: (pubky: string | null) => mockUseSocialGraphStatus(pubky),
+}));
+
 // Mock molecules
 vi.mock('@/molecules/ProfilePageLinks/ProfilePageLinks', () => {
   return {
@@ -108,6 +117,16 @@ vi.mock('@/molecules/ProfilePageLinks/ProfilePageLinks', () => {
 vi.mock('@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs', () => {
   return {
     ProfilePageTaggedAs: () => <div data-testid="profile-page-tagged-as">Tagged as section</div>,
+  };
+});
+
+vi.mock('@/molecules/ProfilePageSocialGraph/ProfilePageSocialGraph', () => {
+  return {
+    ProfilePageSocialGraph: ({ status }: { status: string }) => (
+      <div data-testid="profile-page-social-graph" data-status={status}>
+        Social graph section
+      </div>
+    ),
   };
 });
 
@@ -158,11 +177,29 @@ describe('ProfileProfile', () => {
       isOwnProfile: true,
       isLoading: false,
     });
+    mockUseSocialGraphStatus.mockReturnValue({ status: null, isLoading: false });
   });
 
   it('renders without errors', () => {
     render(<ProfileProfile />);
     expect(screen.getByTestId('profile-page-header')).toBeInTheDocument();
+  });
+
+  it('hides the social graph section when no tier is known', () => {
+    render(<ProfileProfile />);
+    expect(screen.queryByTestId('profile-page-social-graph')).not.toBeInTheDocument();
+  });
+
+  it('renders the social graph section between the header and tags when a tier is known', () => {
+    mockUseSocialGraphStatus.mockReturnValue({ status: NexusSocialGraphStatus.NEW, isLoading: false });
+    const { container } = render(<ProfileProfile />);
+
+    expect(mockUseSocialGraphStatus).toHaveBeenCalledWith(mockProfilePubky);
+    const section = screen.getByTestId('profile-page-social-graph');
+    expect(section).toHaveAttribute('data-status', 'new');
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.children[1]).toBe(section);
+    expect(wrapper.children[2]).toBe(screen.getByTestId('profile-page-tagged-as'));
   });
 
   it('shows ProfilePageHeader when profile is ready even if stats are still loading', () => {

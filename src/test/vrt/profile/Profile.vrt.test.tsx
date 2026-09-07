@@ -340,6 +340,13 @@ vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => {
   return { useIsFollowing: () => result };
 });
 
+// No social graph tier: the real hook would fetch the full user view from Nexus on the
+// fixture's cache miss, and the sidebar section stays hidden while no tier is known.
+vi.mock('@/hooks/useSocialGraphStatus/useSocialGraphStatus', () => {
+  const result = { status: null, isLoading: false };
+  return { useSocialGraphStatus: () => result };
+});
+
 vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => {
   const result = { unreadPostIds: [] as string[], unreadCount: 0 };
   return { useUnreadPosts: () => result };

@@ -3,7 +3,7 @@ import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalUserService } from '@/services/local/user/user';
-import type { NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import { NexusSocialGraphStatus, type NexusUserCounts, type NexusUserDetails } from '@/services/nexus/nexus.types';
 import { LocalProfileService } from './profile';
 
 describe('LocalProfileService', () => {
@@ -63,6 +63,42 @@ describe('LocalProfileService', () => {
       const result = await LocalUserService.readDetails({ userId });
       expect(result!.name).toBe('Updated Name');
       expect(result!.bio).toBe('Updated bio');
+    });
+
+    const baseDetails: NexusUserDetails = {
+      id: userId,
+      name: 'Test User',
+      bio: '',
+      image: null,
+      status: null,
+      links: null,
+      indexed_at: 1,
+    };
+
+    it('should keep a social graph tier persisted by a full user view', async () => {
+      await UserDetailsModel.upsert({ ...baseDetails, social_graph_status: NexusSocialGraphStatus.NETWORKED });
+
+      await LocalProfileService.upsertDetails({ ...baseDetails, name: 'Renamed' });
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.name).toBe('Renamed');
+      expect(result!.social_graph_status).toBe(NexusSocialGraphStatus.NETWORKED);
+    });
+
+    it('should keep a cached "no ranking" tier', async () => {
+      await UserDetailsModel.upsert({ ...baseDetails, social_graph_status: null });
+
+      await LocalProfileService.upsertDetails(baseDetails);
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.social_graph_status).toBeNull();
+    });
+
+    it('should leave the tier unknown for a user never persisted from a full view', async () => {
+      await LocalProfileService.upsertDetails(baseDetails);
+
+      const result = await UserDetailsModel.findById(userId);
+      expect(result!.social_graph_status).toBeUndefined();
     });
   });
 

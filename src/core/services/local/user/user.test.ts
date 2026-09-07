@@ -6,7 +6,7 @@ import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
-import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { NexusSocialGraphStatus, type NexusUserDetails } from '@/services/nexus/nexus.types';
 import { LocalUserService } from './user';
 
 describe('LocalUserService', () => {
@@ -73,6 +73,58 @@ describe('LocalUserService', () => {
       expect(result!.image).toBeNull();
       expect(result!.status).toBeNull();
       expect(result!.links).toBeNull();
+    });
+  });
+
+  describe('readSocialGraphStatus', () => {
+    const userId = 'test-user-id' as Pubky;
+    const baseDetails: NexusUserDetails = {
+      id: userId,
+      name: 'Test User',
+      bio: '',
+      image: null,
+      status: null,
+      links: null,
+      indexed_at: Date.now(),
+    };
+
+    it('should return null when the user is not in the local database', async () => {
+      const result = await LocalUserService.readSocialGraphStatus({ userId });
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when the details row never carried a tier (details-only fetch)', async () => {
+      await UserDetailsModel.create(baseDetails);
+
+      const result = await LocalUserService.readSocialGraphStatus({ userId });
+
+      expect(result).toBeNull();
+    });
+
+    it('should report "no ranking" for a tier-less row the TTL coordinator already tracks', async () => {
+      await UserDetailsModel.create(baseDetails);
+      await UserTtlModel.create({ id: userId, lastUpdatedAt: Date.now() });
+
+      const result = await LocalUserService.readSocialGraphStatus({ userId });
+
+      expect(result).toEqual({ status: null });
+    });
+
+    it('should return a null status when Nexus has no ranking for the user', async () => {
+      await UserDetailsModel.create({ ...baseDetails, social_graph_status: null });
+
+      const result = await LocalUserService.readSocialGraphStatus({ userId });
+
+      expect(result).toEqual({ status: null });
+    });
+
+    it('should return the persisted tier', async () => {
+      await UserDetailsModel.create({ ...baseDetails, social_graph_status: NexusSocialGraphStatus.NETWORKED });
+
+      const result = await LocalUserService.readSocialGraphStatus({ userId });
+
+      expect(result).toEqual({ status: NexusSocialGraphStatus.NETWORKED });
     });
   });
 
