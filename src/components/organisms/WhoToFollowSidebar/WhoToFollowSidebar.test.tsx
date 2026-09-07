@@ -40,13 +40,13 @@ vi.mock('@/organisms/UserListItem/UserListItem', () => ({
     onFollowClick,
   }: {
     user: { id: string; name: string; isFollowing?: boolean };
-    onFollowClick?: (userId: string, isFollowing: boolean, displayName: string) => void;
+    onFollowClick?: (userId: string, isFollowing: boolean) => void;
   }) => (
     <button
       data-testid="user-list-item"
       data-user-id={user.id}
       type="button"
-      onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false, user.name)}
+      onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false)}
     >
       {user.name}
     </button>
@@ -118,7 +118,7 @@ describe('WhoToFollowSidebar', () => {
     render(<WhoToFollowSidebar />);
     fireEvent.click(screen.getByText('User One'));
 
-    expect(hooksMocks.toggleFollow).toHaveBeenCalledWith('user-1', false, 'User One');
+    expect(hooksMocks.toggleFollow).toHaveBeenCalledWith('user-1', false);
     await waitFor(() => {
       expect(hooksMocks.useUserStream).toHaveBeenLastCalledWith(
         expect.objectContaining({

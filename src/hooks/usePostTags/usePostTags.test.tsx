@@ -173,7 +173,7 @@ describe('usePostTags', () => {
 
       expect(response!).toEqual({ success: true });
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Tag added: test-tag',
+        title: 'Tag added',
       });
     });
 
@@ -190,7 +190,7 @@ describe('usePostTags', () => {
       expect(response!).toEqual({ success: false, error: 'Failed to add tag' });
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'Could not add tag: broken-tag',
+        description: 'Could not add tag',
       });
     });
   });
@@ -256,7 +256,7 @@ describe('usePostTags', () => {
       });
 
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Tag removed: solo-tag',
+        title: 'Tag removed',
       });
     });
 
@@ -278,7 +278,7 @@ describe('usePostTags', () => {
 
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'Could not remove tag: solo-tag',
+        description: 'Could not remove tag',
       });
     });
   });

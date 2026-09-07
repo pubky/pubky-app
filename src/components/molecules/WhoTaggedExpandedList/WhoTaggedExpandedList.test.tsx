@@ -55,7 +55,7 @@ vi.mock('@/molecules/TaggerUserRow/TaggerUserRow', () => {
     }: {
       tagger: { id: string; name?: string };
       onUserClick?: (id: string) => void;
-      onFollowClick?: (id: string, isFollowing: boolean, displayName: string) => void;
+      onFollowClick?: (id: string, isFollowing: boolean) => void;
       isLoading?: boolean;
       isCurrentUser?: boolean;
     }) => (
@@ -64,10 +64,7 @@ vi.mock('@/molecules/TaggerUserRow/TaggerUserRow', () => {
         <button data-testid={`user-click-${tagger.id}`} onClick={() => onUserClick?.(tagger.id)}>
           View Profile
         </button>
-        <button
-          data-testid={`follow-click-${tagger.id}`}
-          onClick={() => onFollowClick?.(tagger.id, false, tagger.name ?? tagger.id)}
-        >
+        <button data-testid={`follow-click-${tagger.id}`} onClick={() => onFollowClick?.(tagger.id, false)}>
           Follow
         </button>
       </div>
@@ -204,7 +201,7 @@ describe('WhoTaggedExpandedList', () => {
   it('calls toggleFollow when follow button is clicked', () => {
     render(<WhoTaggedExpandedList taggerIds={mockTaggerIds} fallbackTaggers={mockTaggers} />);
     fireEvent.click(screen.getByTestId('follow-click-user1'));
-    expect(mockToggleFollow).toHaveBeenCalledWith('user1', false, 'Alice');
+    expect(mockToggleFollow).toHaveBeenCalledWith('user1', false);
   });
 
   it('applies custom data-testid', () => {

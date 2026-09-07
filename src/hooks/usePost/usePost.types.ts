@@ -11,12 +11,10 @@ export interface UsePostPostOptions {
 
 export interface UsePostRepostOptions {
   originalPostId: string;
-  /** Original post author's name for the toast message */
-  originalAuthorName?: string;
   /**
    * Overrides the success toast title (e.g. "Share Collection" reuses the
-   * repost flow but reads as a collection action). Falls back to the standard
-   * "Reposted {author}'s post" copy when omitted.
+   * repost flow but reads as a collection action). Falls back to 'Reposted'
+   * when omitted.
    */
   successToastTitle?: string;
   onSuccess?: (createdPostId: string) => void;
