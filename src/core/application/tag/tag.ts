@@ -33,20 +33,20 @@ export class TagApplication {
     return ViewerTagMarkerStorage.subscribe(listener);
   }
 
-  private static ownsMutation(params: TLocalTagParams, expected: ReturnType<typeof ViewerTagMarkerStorage.get>) {
-    const current = this.getViewerMutation(params);
-    return !expected || !current || (current.ts === expected.ts && current.op === expected.op);
-  }
-
-  private static restoreMutationIfUnchanged(
-    params: TLocalTagParams,
-    expected: ReturnType<typeof ViewerTagMarkerStorage.get>,
-    op: HttpMethod.PUT | HttpMethod.DELETE,
-  ) {
-    const current = this.getViewerMutation(params);
-    if (expected && current?.ts === expected.ts && current.op === expected.op) {
-      ViewerTagMarkerStorage.set({ pubky: params.taggerId, taggedId: params.taggedId, label: params.label, op });
-    }
+  private static watchForNewerMutation({ taggerId, taggedId, label }: TLocalTagParams) {
+    let isCurrent = true;
+    // Local writes notify even when sessionStorage is unavailable. Keep this
+    // guard until the request settles; marker expiry must not authorize rollback.
+    const unsubscribe = ViewerTagMarkerStorage.subscribe((mutation) => {
+      if (
+        mutation.taggerId === taggerId &&
+        mutation.taggedId === taggedId &&
+        mutation.label.toLowerCase() === label.toLowerCase()
+      ) {
+        isCurrent = false;
+      }
+    });
+    return { isCurrent: () => isCurrent, unsubscribe };
   }
 
   /**
@@ -65,20 +65,20 @@ export class TagApplication {
         didCreateLocally = await LocalUserTagService.create({ taggerId, taggedId, label });
       }
 
-      const mutation = this.getViewerMutation({ taggerId, taggedId, label });
+      const mutation = this.watchForNewerMutation({ taggerId, taggedId, label });
       try {
         await HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson: tagJson });
       } catch (error) {
-        if (didCreateLocally && this.ownsMutation({ taggerId, taggedId, label }, mutation)) {
+        if (didCreateLocally && mutation.isCurrent()) {
           try {
             const restored =
               taggedKind === TagKind.POST
                 ? await LocalPostTagService.delete({ taggerId, taggedId, label })
                 : await LocalUserTagService.delete({ taggerId, taggedId, label });
-            if (!restored) {
+            if (!restored && mutation.isCurrent()) {
               // A background refresh may already have restored the local row.
               // Still compensate our marker, without overwriting a newer toggle.
-              this.restoreMutationIfUnchanged({ taggerId, taggedId, label }, mutation, HttpMethod.DELETE);
+              ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId, label, op: HttpMethod.DELETE });
             }
           } catch (rollbackError) {
             Logger.error('[TagApplication.commitCreate] Failed to rollback local tag create', {
@@ -92,6 +92,8 @@ export class TagApplication {
         }
 
         throw error;
+      } finally {
+        mutation.unsubscribe();
       }
     }
   }
@@ -116,7 +118,7 @@ export class TagApplication {
 
     // Only send to homeserver if something was actually deleted locally
     if (wasDeleted) {
-      const mutation = this.getViewerMutation({ taggerId, taggedId, label });
+      const mutation = this.watchForNewerMutation({ taggerId, taggedId, label });
       try {
         await HomeserverService.request({ method: HttpMethod.DELETE, url: tagUrl });
       } catch (error) {
@@ -136,15 +138,15 @@ export class TagApplication {
 
         // A newer toggle owns both the local row and marker; an older failed
         // request must not undo either of them.
-        if (!this.ownsMutation({ taggerId, taggedId, label }, mutation)) throw error;
+        if (!mutation.isCurrent()) throw error;
 
         try {
           const restored =
             taggedKind === TagKind.POST
               ? await LocalPostTagService.create({ taggerId, taggedId, label })
               : await LocalUserTagService.create({ taggerId, taggedId, label });
-          if (!restored) {
-            this.restoreMutationIfUnchanged({ taggerId, taggedId, label }, mutation, HttpMethod.PUT);
+          if (!restored && mutation.isCurrent()) {
+            ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId, label, op: HttpMethod.PUT });
           }
         } catch (rollbackError) {
           Logger.error('[TagApplication.commitDelete] Failed to rollback local tag delete', {
@@ -157,6 +159,8 @@ export class TagApplication {
         }
 
         throw error;
+      } finally {
+        mutation.unsubscribe();
       }
     }
   }

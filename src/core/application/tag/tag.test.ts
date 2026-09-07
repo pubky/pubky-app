@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
+import { MARKER_TTL_MS } from '@/config/viewerTagMarker';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -75,6 +76,182 @@ describe('Tag Application', () => {
   });
 
   describe.each([TagKind.POST, TagKind.USER])('mutation compensation for %s', (kind) => {
+    describe.each(['expired', 'cleared', 'unreadable', 'unavailable from the start', 'same timestamp'])(
+      'with mutation markers %s',
+      (storageState) => {
+        it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)(
+          'preserves a newer toggle when an older %s fails',
+          async (op) => {
+            vi.restoreAllMocks();
+            const data = createMockTagData(kind);
+            const service = kind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
+            const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+            if (storageState === 'unavailable from the start') {
+              vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+                throw new DOMException('Storage unavailable', 'QuotaExceededError');
+              });
+            }
+            if (op === HttpMethod.DELETE) await service.create(data);
+
+            let rejectFirst!: (error: unknown) => void;
+            const firstRequest = new Promise<void>((_resolve, reject) => {
+              rejectFirst = reject;
+            });
+            const request = vi
+              .mocked(HomeserverService.request)
+              .mockReturnValueOnce(firstRequest)
+              .mockResolvedValue(undefined);
+            const commit = (method: HttpMethod.PUT | HttpMethod.DELETE) =>
+              method === HttpMethod.PUT
+                ? TagApplication.commitCreate({ tagList: [data] })
+                : TagApplication.commitDelete(data);
+            const failure = httpError(ClientErrorCode.BAD_REQUEST, 'delayed-tag-write');
+            const firstResult = commit(op).catch((error: unknown) => error);
+            try {
+              await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
+              if (storageState !== 'same timestamp') now.mockReturnValue(1001);
+              await commit(op === HttpMethod.PUT ? HttpMethod.DELETE : HttpMethod.PUT);
+              await commit(op);
+
+              if (storageState === 'expired') now.mockReturnValue(1001 + MARKER_TTL_MS);
+              if (storageState === 'cleared') sessionStorage.clear();
+              if (storageState === 'unreadable') {
+                vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+                  throw new DOMException('Storage unavailable', 'SecurityError');
+                });
+              }
+              if (storageState !== 'same timestamp') expect(TagApplication.getViewerMutation(data)).toBeNull();
+
+              rejectFirst(failure);
+              expect(await firstResult).toBe(failure);
+              const saved =
+                kind === TagKind.POST
+                  ? await PostTagsModel.findById(data.taggedId)
+                  : await UserTagsModel.findById(data.taggedId);
+              const tag = saved?.tags.find((tag) => tag.label === data.label);
+              expect(tag?.taggers.includes(data.taggerId) ?? false).toBe(op === HttpMethod.PUT);
+              expect(tag?.taggers_count ?? 0).toBe(op === HttpMethod.PUT ? 1 : 0);
+              expect(request).toHaveBeenCalledTimes(3);
+            } finally {
+              rejectFirst(failure);
+              await firstResult;
+              vi.restoreAllMocks();
+            }
+          },
+        );
+      },
+    );
+
+    describe.each(['expired', 'unavailable'])('with markers %s and no newer toggle', (storageState) => {
+      it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)('still rolls back a failed %s', async (op) => {
+        vi.restoreAllMocks();
+        const data = createMockTagData(kind);
+        const service = kind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
+        const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+        if (storageState === 'unavailable') {
+          vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new DOMException('Storage unavailable', 'QuotaExceededError');
+          });
+        }
+        try {
+          if (op === HttpMethod.DELETE) await service.create(data);
+          const failure = httpError(ClientErrorCode.BAD_REQUEST, 'tag-write');
+          vi.mocked(HomeserverService.request).mockImplementation(async () => {
+            now.mockReturnValue(1000 + MARKER_TTL_MS);
+            expect(TagApplication.getViewerMutation(data)).toBeNull();
+            throw failure;
+          });
+
+          await expect(
+            op === HttpMethod.PUT
+              ? TagApplication.commitCreate({ tagList: [data] })
+              : TagApplication.commitDelete(data),
+          ).rejects.toBe(failure);
+          const saved =
+            kind === TagKind.POST
+              ? await PostTagsModel.findById(data.taggedId)
+              : await UserTagsModel.findById(data.taggedId);
+          const tag = saved?.tags.find((tag) => tag.label === data.label);
+          expect(tag?.taggers.includes(data.taggerId) ?? false).toBe(op === HttpMethod.DELETE);
+          expect(tag?.taggers_count ?? 0).toBe(op === HttpMethod.DELETE ? 1 : 0);
+        } finally {
+          vi.restoreAllMocks();
+        }
+      });
+    });
+
+    it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)(
+      'still rolls back a failed %s when unrelated tags change',
+      async (op) => {
+        vi.restoreAllMocks();
+        const data = createMockTagData(kind);
+        const service = kind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
+        if (op === HttpMethod.DELETE) await service.create(data);
+        const failure = httpError(ClientErrorCode.BAD_REQUEST, 'tag-write');
+        vi.mocked(HomeserverService.request).mockImplementation(async () => {
+          // Each event differs in exactly one part of the mutation identity.
+          ViewerTagMarkerStorage.set({
+            pubky: 'other-viewer' as Pubky,
+            taggedId: data.taggedId,
+            label: data.label,
+            op,
+          });
+          await service.create({ ...data, taggedId: `${data.taggedId}-other` });
+          await service.create({ ...data, label: 'other-tag' });
+          throw failure;
+        });
+
+        await expect(
+          op === HttpMethod.PUT ? TagApplication.commitCreate({ tagList: [data] }) : TagApplication.commitDelete(data),
+        ).rejects.toBe(failure);
+        const saved =
+          kind === TagKind.POST
+            ? await PostTagsModel.findById(data.taggedId)
+            : await UserTagsModel.findById(data.taggedId);
+        const tag = saved?.tags.find((tag) => tag.label === data.label);
+        expect(tag?.taggers.includes(data.taggerId) ?? false).toBe(op === HttpMethod.DELETE);
+        expect(tag?.taggers_count ?? 0).toBe(op === HttpMethod.DELETE ? 1 : 0);
+        expect(saved?.tags.find((tag) => tag.label === 'other-tag')?.taggers).toContain(data.taggerId);
+      },
+    );
+
+    it.each([
+      { op: HttpMethod.PUT, status: 'success' },
+      { op: HttpMethod.PUT, status: 'failure' },
+      { op: HttpMethod.DELETE, status: 'success' },
+      { op: HttpMethod.DELETE, status: 'failure' },
+      { op: HttpMethod.DELETE, status: 'not found' },
+    ] as const)('stops watching mutations after $op $status', async ({ op, status }) => {
+      vi.restoreAllMocks();
+      const data = createMockTagData(kind);
+      const service = kind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
+      if (op === HttpMethod.DELETE) await service.create(data);
+      const subscribe = ViewerTagMarkerStorage.subscribe.bind(ViewerTagMarkerStorage);
+      const unsubscribe = vi.fn<() => void>();
+      vi.spyOn(ViewerTagMarkerStorage, 'subscribe').mockImplementation((listener) => {
+        unsubscribe.mockImplementation(subscribe(listener));
+        return unsubscribe;
+      });
+      const failure = httpError(
+        status === 'not found' ? ClientErrorCode.NOT_FOUND : ClientErrorCode.BAD_REQUEST,
+        'tag-write',
+      );
+      vi.mocked(HomeserverService.request).mockImplementation(async () => {
+        expect(unsubscribe).not.toHaveBeenCalled();
+        if (status !== 'success') throw failure;
+      });
+      try {
+        const result =
+          op === HttpMethod.PUT ? TagApplication.commitCreate({ tagList: [data] }) : TagApplication.commitDelete(data);
+        if (status === 'failure') await expect(result).rejects.toBe(failure);
+        else await expect(result).resolves.toBeUndefined();
+        expect(unsubscribe).toHaveBeenCalledOnce();
+      } finally {
+        unsubscribe();
+        vi.restoreAllMocks();
+      }
+    });
+
     it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)(
       'still syncs %s to the homeserver when a mutation subscriber throws',
       async (op) => {
