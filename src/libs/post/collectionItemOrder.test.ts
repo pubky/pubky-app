@@ -16,8 +16,11 @@ describe('sortPostIdsByMembership', () => {
     expect(sortPostIdsByMembership([idA, idB, idC], [idC, idA, idB])).toEqual([idC, idA, idB]);
   });
 
-  it('appends ids not present in the membership in their original stream order', () => {
-    expect(sortPostIdsByMembership([idB, idA, idC], [idC])).toEqual([idC, idB, idA]);
+  it('keeps ids not present in the membership at their original stream position', () => {
+    // Only idC is a member: it stays in its slot; idB and idA are untouched.
+    expect(sortPostIdsByMembership([idB, idA, idC], [idC])).toEqual([idB, idA, idC]);
+    // A post the owner just unlisted (idB) stays put while the others reorder around it.
+    expect(sortPostIdsByMembership([idA, idB, idC], [idC, idA])).toEqual([idC, idB, idA]);
   });
 
   it('ignores membership ids with no matching stream id', () => {

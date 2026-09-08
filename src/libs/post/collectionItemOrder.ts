@@ -11,9 +11,11 @@ import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
  * Sorting the stream's ids by the membership closes that gap.
  *
  * Semantics:
- *   - ids present in the membership come first, in membership order
- *     (first occurrence wins for duplicates);
- *   - ids NOT in the membership keep their original stream order, appended;
+ *   - ids present in the membership take the slots those ids occupy in the
+ *     stream, in membership order (first occurrence wins for duplicates);
+ *   - ids NOT in the membership keep their original stream position, so a
+ *     post the owner just unlisted (the save picker keeps its card mounted
+ *     until the menu closes) stays put instead of jumping to the end;
  *   - membership ids with no matching stream id are ignored.
  *
  * Pure function — safe to call from any layer.
@@ -26,15 +28,12 @@ export function sortPostIdsByMembership(postIds: string[], membershipPostIds: st
     if (!orderByPostId.has(postId)) orderByPostId.set(postId, index);
   });
 
-  const inMembership: string[] = [];
-  const rest: string[] = [];
-  for (const postId of postIds) {
-    (orderByPostId.has(postId) ? inMembership : rest).push(postId);
-  }
+  const members = postIds.filter((postId) => orderByPostId.has(postId));
+  if (members.length < 2) return postIds;
+  members.sort((a, b) => (orderByPostId.get(a) ?? 0) - (orderByPostId.get(b) ?? 0));
 
-  inMembership.sort((a, b) => (orderByPostId.get(a) ?? 0) - (orderByPostId.get(b) ?? 0));
-
-  return [...inMembership, ...rest];
+  let nextMember = 0;
+  return postIds.map((postId) => (orderByPostId.has(postId) ? members[nextMember++] : postId));
 }
 
 /**
