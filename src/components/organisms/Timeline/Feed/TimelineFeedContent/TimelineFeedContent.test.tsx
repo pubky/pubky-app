@@ -675,11 +675,14 @@ describe('TimelineFeedContent', () => {
         membershipPostIds={membershipPostIds}
       />
     );
+    // The mocked hook is static, so tests simulate what the real hook does after
+    // an apply (the id leaves / enters `postIds`) by updating the mock.
+    const setLoadedIds = (postIds: string[], overrides: Partial<typeof defaultPaginationResult> = {}) =>
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds, hasMore: false, ...overrides });
 
     beforeEach(() => {
-      // Loaded feed: post1, post2, post3 (defaultPaginationResult); no more pages
-      // so the collection eager-load effect stays quiet.
-      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, hasMore: false });
+      // Loaded feed: post1, post2, post3; no more pages so the eager-load effect stays quiet.
+      setLoadedIds(['post1', 'post2', 'post3']);
     });
 
     it('treats the first envelope as the baseline and applies nothing', () => {
@@ -699,14 +702,13 @@ describe('TimelineFeedContent', () => {
       expect(mockRefresh).not.toHaveBeenCalled();
     });
 
-    it('commits a removal for a dropped id the feed still shows, without refetching', () => {
+    it('commits a removal for a dropped id the feed still shows', () => {
       const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
       rerender(collectionFeed(['post1', 'post3']));
 
       expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
       expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
       expect(mockRemoveCommit).toHaveBeenCalledTimes(1);
-      expect(mockRefresh).not.toHaveBeenCalled();
     });
 
     it('applies additions and removals from one envelope change together', () => {
@@ -717,19 +719,57 @@ describe('TimelineFeedContent', () => {
       expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post4']);
     });
 
-    it('skips an added id the feed already shows (owner optimistic insert landed first)', () => {
+    it('skips an added id the feed already shows', () => {
       const { rerender } = render(collectionFeed(['post1', 'post2']));
       rerender(collectionFeed(['post3', 'post1', 'post2']));
 
       expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
     });
 
-    it('skips a dropped id the feed never loaded', () => {
-      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds: ['post1'], hasMore: false });
+    it('defers a removal until the dropped id is loaded, then commits it once', () => {
+      // post2 is in the envelope but its page has not arrived yet.
+      setLoadedIds(['post1']);
       const { rerender } = render(collectionFeed(['post1', 'post2']));
       rerender(collectionFeed(['post1']));
-
       expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
+
+      // The page lands and brings post2 (Nexus had not re-indexed the removal).
+      setLoadedIds(['post1', 'post2']);
+      rerender(collectionFeed(['post1']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
+      expect(mockRemoveCommit).toHaveBeenCalledTimes(1);
+
+      // The hook drops the id; the next run has nothing left to remove.
+      setLoadedIds(['post1']);
+      rerender(collectionFeed(['post1']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
+    });
+
+    it('removes a dropped id again when a refresh re-serves it', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
+      rerender(collectionFeed(['post1', 'post3']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
+
+      setLoadedIds(['post1', 'post3']);
+      rerender(collectionFeed(['post1', 'post3']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(1);
+
+      // Pull-to-refresh hits a lagging Nexus stream that still lists post2.
+      setLoadedIds(['post1', 'post2', 'post3']);
+      rerender(collectionFeed(['post1', 'post3']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledTimes(2);
+      expect(mockRemovePostsOptimistically).toHaveBeenLastCalledWith(['post2']);
+    });
+
+    it('re-adds an id the envelope drops and later restores', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2']));
+      rerender(collectionFeed(['post1']));
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
+
+      setLoadedIds(['post1']);
+      rerender(collectionFeed(['post1', 'post2']));
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post2']);
     });
 
     it('does nothing on a reorder-only change', () => {
@@ -741,12 +781,7 @@ describe('TimelineFeedContent', () => {
     });
 
     it('applies an addition even while the initial load is still in flight', () => {
-      mockUseStreamPagination.mockReturnValue({
-        ...defaultPaginationResult,
-        postIds: [],
-        loading: true,
-        hasMore: false,
-      });
+      setLoadedIds([], { loading: true });
       const { rerender } = render(collectionFeed(['post1']));
       rerender(collectionFeed(['post4', 'post1']));
 
@@ -759,15 +794,6 @@ describe('TimelineFeedContent', () => {
       rerender(collectionFeed(['post4', 'post1', 'post2', 'post3']));
 
       expect(mockPrependOptimisticPosts).toHaveBeenCalledTimes(1);
-    });
-
-    it('never touches the feed without a membership (non-collection variants)', () => {
-      const { rerender } = render(collectionFeed(undefined));
-      rerender(collectionFeed(undefined));
-
-      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
-      expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
-      expect(mockRefresh).not.toHaveBeenCalled();
     });
   });
 

@@ -719,6 +719,19 @@ describe('TtlCoordinator', () => {
       }).not.toThrow();
     });
 
+    it('runs the subscribe-time staleness check once per tracked user', async () => {
+      setupAuthenticatedUser();
+
+      const coordinator = TtlCoordinator.getInstance();
+      const userId = 'user1' as Pubky;
+
+      coordinator.subscribeUser({ pubky: userId });
+      coordinator.subscribeUser({ pubky: userId });
+      await flushPromises();
+
+      expect(findStaleUsersSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('stale user is queued for refresh on subscribe', async () => {
       setupAuthenticatedUser();
 

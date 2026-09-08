@@ -150,48 +150,14 @@ export class TtlCoordinator {
    * Subscribe to a post's TTL tracking
    */
   public subscribePost({ compositePostId }: TtlSubscribePostParams): void {
-    // Ref-counted: a second subscriber to the same post only bumps the count,
-    // so the staleness check below runs once per tracked post.
-    if (!this.addPostSubscription(compositePostId)) {
-      Logger.debug('TtlCoordinator: Post already subscribed (ref +1)', {
-        compositePostId,
-        refCount: this.state.postRefCount.get(compositePostId),
-      });
-      return;
-    }
-
-    Logger.debug('TtlCoordinator: Post subscribed', {
-      compositePostId,
-      totalSubscribedPosts: this.state.subscribedPosts.size,
-    });
-
-    // Check if post is stale and queue for refresh
-    void this.checkAndQueueEntity(compositePostId, this.getPostOps());
-    this.ensureTicking();
+    this.subscribe(compositePostId, this.getPostOps());
   }
 
   /**
    * Unsubscribe from a post's TTL tracking
    */
   public unsubscribePost({ compositePostId }: TtlUnsubscribePostParams): void {
-    // Safe if called multiple times or for unknown IDs
-    if (!this.state.postRefCount.has(compositePostId)) {
-      Logger.debug('TtlCoordinator: Post not subscribed (skip unsubscribe)', { compositePostId });
-      return;
-    }
-
-    if (!this.removePostSubscription(compositePostId)) {
-      Logger.debug('TtlCoordinator: Post still subscribed (ref -1)', {
-        compositePostId,
-        refCount: this.state.postRefCount.get(compositePostId),
-      });
-      return;
-    }
-
-    Logger.debug('TtlCoordinator: Post unsubscribed', {
-      compositePostId,
-      totalSubscribedPosts: this.state.subscribedPosts.size,
-    });
+    this.unsubscribe(compositePostId, this.getPostOps());
   }
 
   /**
@@ -199,24 +165,14 @@ export class TtlCoordinator {
    * Use this for user profiles not associated with posts
    */
   public subscribeUser({ pubky }: TtlSubscribeUserParams): void {
-    this.addUserSubscription(pubky);
-    Logger.debug('TtlCoordinator: User subscribed', {
-      pubky,
-      totalSubscribedUsers: this.state.subscribedUsers.size,
-    });
-    void this.checkAndQueueEntity(pubky, this.getUserOps());
-    this.ensureTicking();
+    this.subscribe(pubky, this.getUserOps());
   }
 
   /**
    * Unsubscribe from a user's TTL tracking directly
    */
   public unsubscribeUser({ pubky }: TtlUnsubscribeUserParams): void {
-    this.removeUserSubscription(pubky);
-    Logger.debug('TtlCoordinator: User unsubscribed', {
-      pubky,
-      totalSubscribedUsers: this.state.subscribedUsers.size,
-    });
+    this.unsubscribe(pubky, this.getUserOps());
   }
 
   /**
@@ -251,14 +207,9 @@ export class TtlCoordinator {
    * Setup event listeners for auth state and page visibility
    */
   private setupListeners(): void {
-    // Listen to auth store changes. Compare the snapshots with the pure
-    // `isAuthenticatedState` helper: the store selectors read the live store
-    // through `get()`, so `prevState.selectIsAuthenticated()` never differs from
-    // `state.selectIsAuthenticated()`. That left the loop dead after any reload
-    // on a public route (single collection, post, profile), where `start()` runs
-    // before the persisted session is restored and nothing re-evaluated
-    // `shouldTick`. `hasProfile` is part of `shouldTick()`, so profile
-    // resolution counts as a change too.
+    // Listen to auth store changes. Pure snapshot compare — the store selectors
+    // read the live store, so `prevState.selectIsAuthenticated()` would never
+    // differ (see auth.selectors). `hasProfile` is part of `shouldTick()`.
     this.authStoreUnsubscribe = useAuthStore.subscribe((state, prevState) => {
       const isAuthenticated = isAuthenticatedState(state);
       const wasAuthenticated = isAuthenticatedState(prevState);
@@ -438,71 +389,87 @@ export class TtlCoordinator {
   }
 
   // ============================================================================
-  // Private: State Transitions - Subscriptions
+  // Private: Subscriptions (ref-counted, shared by posts and users)
   // ============================================================================
 
   /**
-   * Add a post subscription with reference counting
-   * Increments ref count; adds to subscribed set on first reference
-   * @returns true when this was the first reference (post newly tracked)
+   * Subscribe an entity with reference counting. Nested surfaces that track
+   * the same entity (a share dialog over a hero, a repost preview in a feed, a
+   * profile header beside a user list) each hold a reference; the entity stays
+   * tracked until the last one unsubscribes. The subscribe-time staleness
+   * check runs once, on the first reference.
    */
-  private addPostSubscription(compositePostId: string): boolean {
-    const currentCount = this.state.postRefCount.get(compositePostId) ?? 0;
-    this.state.postRefCount.set(compositePostId, currentCount + 1);
+  private subscribe<T extends string>(id: T, ops: EntityOps<T>): void {
+    // Any subscription is a reason to make sure the loop is alive (safety net).
+    this.ensureTicking();
+
+    if (!this.addSubscription(id, ops)) {
+      Logger.debug(`TtlCoordinator: ${ops.entityName} already subscribed (ref +1)`, {
+        id,
+        refCount: ops.refCount.get(id),
+      });
+      return;
+    }
+
+    Logger.debug(`TtlCoordinator: ${ops.entityName} subscribed`, { id, totalSubscribed: ops.subscribed.size });
+
+    // Check if the entity is stale and queue for refresh
+    void this.checkAndQueueEntity(id, ops);
+  }
+
+  /**
+   * Unsubscribe an entity. Safe if called multiple times or for unknown IDs.
+   */
+  private unsubscribe<T extends string>(id: T, ops: EntityOps<T>): void {
+    if (!ops.refCount.has(id)) {
+      Logger.debug(`TtlCoordinator: ${ops.entityName} not subscribed (skip unsubscribe)`, { id });
+      return;
+    }
+
+    if (!this.removeSubscription(id, ops)) {
+      Logger.debug(`TtlCoordinator: ${ops.entityName} still subscribed (ref -1)`, {
+        id,
+        refCount: ops.refCount.get(id),
+      });
+      return;
+    }
+
+    Logger.debug(`TtlCoordinator: ${ops.entityName} unsubscribed`, { id, totalSubscribed: ops.subscribed.size });
+  }
+
+  /**
+   * Add a subscription with reference counting
+   * Increments the ref count; adds to the subscribed set on the first reference
+   * @returns true when this was the first reference (entity newly tracked)
+   */
+  private addSubscription<T extends string>(id: T, ops: EntityOps<T>): boolean {
+    const currentCount = ops.refCount.get(id) ?? 0;
+    ops.refCount.set(id, currentCount + 1);
 
     if (currentCount === 0) {
-      this.state.subscribedPosts.add(compositePostId);
+      ops.subscribed.add(id);
       return true;
     }
     return false;
   }
 
   /**
-   * Remove a post subscription with reference counting
-   * Decrements ref count; removes from subscribed set and any pending refresh
-   * queue when the count reaches 0
-   * @returns true when the last reference was released (post no longer tracked)
+   * Remove a subscription with reference counting
+   * Decrements the ref count; removes from the subscribed set and any pending
+   * refresh queue when the count reaches 0
+   * @returns true when the last reference was released (entity no longer tracked)
    */
-  private removePostSubscription(compositePostId: string): boolean {
-    const currentCount = this.state.postRefCount.get(compositePostId) ?? 0;
+  private removeSubscription<T extends string>(id: T, ops: EntityOps<T>): boolean {
+    const currentCount = ops.refCount.get(id) ?? 0;
 
     if (currentCount <= 1) {
-      this.state.postRefCount.delete(compositePostId);
-      this.state.subscribedPosts.delete(compositePostId);
-      this.state.postBatchQueue.delete(compositePostId);
+      ops.refCount.delete(id);
+      ops.subscribed.delete(id);
+      ops.batchQueue.delete(id);
       return true;
     }
-    this.state.postRefCount.set(compositePostId, currentCount - 1);
+    ops.refCount.set(id, currentCount - 1);
     return false;
-  }
-
-  /**
-   * Add a user subscription with reference counting
-   * Increments ref count; adds to subscribed set on first reference
-   */
-  private addUserSubscription(userId: Pubky): void {
-    const currentCount = this.state.userRefCount.get(userId) ?? 0;
-    this.state.userRefCount.set(userId, currentCount + 1);
-
-    if (currentCount === 0) {
-      this.state.subscribedUsers.add(userId);
-    }
-  }
-
-  /**
-   * Remove a user subscription with reference counting
-   * Decrements ref count; removes from subscribed set when count reaches 0
-   */
-  private removeUserSubscription(userId: Pubky): void {
-    const currentCount = this.state.userRefCount.get(userId) ?? 0;
-
-    if (currentCount <= 1) {
-      this.state.userRefCount.delete(userId);
-      this.state.subscribedUsers.delete(userId);
-      this.state.userBatchQueue.delete(userId);
-    } else {
-      this.state.userRefCount.set(userId, currentCount - 1);
-    }
   }
 
   // ============================================================================
@@ -543,6 +510,7 @@ export class TtlCoordinator {
     return {
       entityName: 'post',
       subscribed: this.state.subscribedPosts,
+      refCount: this.state.postRefCount,
       batchQueue: this.state.postBatchQueue,
       ttlMs: this.config.postTtlMs,
       maxBatchSize: this.config.postMaxBatchSize,
@@ -559,6 +527,7 @@ export class TtlCoordinator {
     return {
       entityName: 'user',
       subscribed: this.state.subscribedUsers,
+      refCount: this.state.userRefCount,
       batchQueue: this.state.userBatchQueue,
       ttlMs: this.config.userTtlMs,
       maxBatchSize: this.config.userMaxBatchSize,

@@ -174,6 +174,8 @@ export interface EntityOps<T extends string> {
   entityName: 'post' | 'user';
   /** Set of currently subscribed entity IDs */
   subscribed: Set<T>;
+  /** Live subscriber count per entity ID (entity stays subscribed until it reaches 0) */
+  refCount: Map<T, number>;
   /** Queue of entity IDs pending refresh */
   batchQueue: Set<T>;
   /** TTL in milliseconds for this entity type */

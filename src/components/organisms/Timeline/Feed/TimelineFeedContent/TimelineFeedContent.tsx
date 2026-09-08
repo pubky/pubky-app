@@ -63,11 +63,12 @@ interface TimelineFeedContentProps {
   transformPostIds?: (postIds: string[]) => string[];
   /**
    * Optional local-first membership (composite post ids) the feed mirrors.
-   * When it changes, the delta is applied to the loaded feed in place: added
-   * ids that are not loaded are prepended as optimistic posts, removed ids
-   * that are still loaded are committed out. Used by the COLLECTION variant,
-   * whose envelope `items` refresh through the TTL coordinator (and are
-   * written locally by the owner's own commits) while the skip-paginated
+   * Added ids that are not loaded are prepended as optimistic posts; loaded
+   * ids the membership once contained but no longer does are committed out,
+   * re-evaluated whenever the loaded ids change so a removal whose post only
+   * arrives later (an in-flight page, a refresh that re-serves it) still
+   * applies. Used by the COLLECTION variant for viewers, whose envelope
+   * `items` refresh through the TTL coordinator while the skip-paginated
    * items stream is fetched once and never polled. Reorders are handled by
    * `transformPostIds`. The first non-undefined value is the baseline — the
    * initial load already fetches that membership.
@@ -216,32 +217,29 @@ function TimelineFeedContent({
   const dedupedPostIds = [...new Set(rawPostIds)];
   const postIds = transformPostIds ? transformPostIds(dedupedPostIds) : dedupedPostIds;
 
-  // Membership sync. The single-collection grid is a skip-paginated Nexus
-  // stream fetched once on mount and never polled (the StreamCoordinator only
-  // watches /home, /post and /feed), while the envelope's `items` keep
-  // changing: the TTL coordinator refreshes it for viewers and the owner's own
-  // commits write it locally. Apply the membership delta to the loaded feed
-  // directly instead of refetching — Nexus re-indexes the items stream
-  // asynchronously, so a refetch can return the old membership, and the
-  // envelope is the same array the count badge renders, so mirroring it keeps
-  // grid and badge in step by construction. Additions are prepended as
-  // optimistic ids (`PostMain` hydrates a missing row itself, `transformPostIds`
-  // places them in envelope order, and they collapse into the stream rows once
-  // Nexus catches up); removals go through the optimistic-removal path so the
-  // skip cursor stays in step. Ids the feed already reflects — an owner's
-  // optimistic insert, a fresh initial load — are skipped, so the effect is
-  // idempotent and re-runs are free.
+  // Membership sync (see the `membershipPostIds` prop doc). The items stream is
+  // fetched once and never polled while the envelope keeps refreshing, and
+  // Nexus re-indexes that stream asynchronously — a refetch could return the
+  // old membership — so the envelope is mirrored in place. `PostMain` hydrates
+  // a missing row itself, `transformPostIds` puts prepended ids in envelope
+  // order, and they collapse into the stream rows once Nexus catches up.
+  // Additions diff against the previous membership; removals are derived from
+  // the loaded ids on every run (an id is removed if the membership ever held
+  // it and no longer does), so the effect is idempotent and re-runs are free.
   const previousMembershipRef = useRef<Set<string> | null>(null);
+  const seenMembershipRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!membershipPostIds) return;
     const previous = previousMembershipRef.current;
     const current = new Set(membershipPostIds);
     previousMembershipRef.current = current;
+    const seen = seenMembershipRef.current;
+    current.forEach((id) => seen.add(id));
     // Baseline — the initial load fetches this membership.
     if (previous === null) return;
     const loaded = new Set(rawPostIds);
     const added = [...current].filter((id) => !previous.has(id) && !loaded.has(id));
-    const removed = [...previous].filter((id) => !current.has(id) && loaded.has(id));
+    const removed = rawPostIds.filter((id) => seen.has(id) && !current.has(id));
     if (removed.length > 0) removePostsOptimistically(removed).commit();
     if (added.length > 0) prependOptimisticPosts(added);
   }, [membershipPostIds, rawPostIds, prependOptimisticPosts, removePostsOptimistically]);

@@ -162,12 +162,9 @@ export abstract class Coordinator<Config extends PollingServiceConfig, State ext
    * Subclasses can override to add additional listeners
    */
   protected setupListeners() {
-    // Listen to auth store changes. Compare the snapshots with the pure
-    // `isAuthenticatedState` helper: the store selectors read the live store
-    // through `get()`, so `prevState.selectIsAuthenticated()` never differs from
-    // `state.selectIsAuthenticated()` and a session restore that lands after
-    // `start()` (a reload on a public route) would never re-evaluate polling.
-    // `hasProfile` is part of `shouldPoll()`, so profile resolution counts too.
+    // Listen to auth store changes. Pure snapshot compare — the store selectors
+    // read the live store, so `prevState.selectIsAuthenticated()` would never
+    // differ (see auth.selectors). `hasProfile` is part of `shouldPoll()`.
     this.authStoreUnsubscribe = useAuthStore.subscribe((state, prevState) => {
       const isAuthenticated = isAuthenticatedState(state);
       const wasAuthenticated = isAuthenticatedState(prevState);
