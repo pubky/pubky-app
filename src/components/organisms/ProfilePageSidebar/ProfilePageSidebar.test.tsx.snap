@@ -190,6 +190,11 @@ exports[`ProfilePageSidebar - Snapshots > matches snapshot with a social graph t
     </div>
   </div>
   <div
+    data-testid="vibes-card"
+  >
+    VibesCard
+  </div>
+  <div
     class="flex w-full max-w-(--filter-bar-width) flex-col gap-2"
     data-testid="feedback-card"
   >
