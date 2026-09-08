@@ -223,7 +223,7 @@ All tables defined in `src/core/database/franky/franky.ts`.
 ### User Tables
 
 ```
-user_details       — Profile data (name, bio, image, links, status)
+user_details       — Profile data (name, bio, image, links, status) + social_graph_status folded in from the Nexus user view
 user_counts        — Follower/following/post counts
 user_relationships — Follow/mute relationships
 user_connections   — User connection data
