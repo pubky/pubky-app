@@ -1,9 +1,14 @@
 import { useEffect } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
+import { TagController } from '@/controllers/tag/tag';
 import { UserController } from '@/controllers/user/user';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { ViewerTagMutation } from '@/services/local/tag/tag.types';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
@@ -22,15 +27,17 @@ vi.mock('@/controllers/user/user', () => ({
   },
 }));
 
-const observed = vi.hoisted(() => ({
-  entries: new Map<string, ViewerTagMutation>(),
-  loading: false,
-  listeners: new Set<() => void>(),
-}));
+const observed = vi.hoisted(
+  (): { entries: Map<string, ViewerTagMutation> | null; loading: boolean; listeners: Set<() => void> } => ({
+    entries: new Map(),
+    loading: false,
+    listeners: new Set(),
+  }),
+);
 vi.mock('dexie-react-hooks', async () => {
   const { useSyncExternalStore } = await import('react');
   return {
-    useLiveQuery: (_query: unknown, [id, kind, viewer]: string[]) => {
+    useLiveQuery: vi.fn(function useLiveQuery(_query: unknown, [id, kind, viewer]: string[]) {
       const entries = useSyncExternalStore(
         (listener) => {
           observed.listeners.add(listener);
@@ -41,7 +48,7 @@ vi.mock('dexie-react-hooks', async () => {
         () => observed.entries,
       );
       return observed.loading ? undefined : { key: `${kind}:${id}:${viewer}`, entries };
-    },
+    }),
   };
 });
 vi.mock('@/controllers/tag/tag', () => ({ TagController: { getViewerMutations: vi.fn() } }));
@@ -108,6 +115,47 @@ describe('useEntityTaggers', () => {
     await waitFor(() => expect(result.current.taggerStates.get('bitcoin')?.hasFetched).toBe(true));
     expect(result.current.taggerStates.get('bitcoin')?.isViewerTagger).toBe(true);
     expect(PostController.fetchTaggers).toHaveBeenCalledOnce();
+  });
+
+  it('opens the server fallback when the initial local mutation read fails', async () => {
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
+    observed.loading = true;
+    vi.mocked(TagController.getViewerMutations).mockRejectedValueOnce(
+      Err.database(DatabaseErrorCode.QUERY_FAILED, 'Local mutations unavailable', {
+        service: ErrorService.Local,
+        operation: 'getViewerMutations',
+      }),
+    );
+    vi.mocked(PostController.fetchTaggers).mockResolvedValue({ users: ['viewer'], relationship: true });
+    const { result, rerender } = renderHook(() => {
+      const hook = useEntityTaggers('author:post', TagKind.POST);
+      const { loadTaggers } = hook;
+      useEffect(() => {
+        void loadTaggers('bitcoin', 1);
+      }, [loadTaggers]);
+      return hook;
+    });
+    expect(PostController.fetchTaggers).not.toHaveBeenCalled();
+
+    const query = vi.mocked(useLiveQuery).mock.calls[0][0];
+    await expect(query()).resolves.toEqual({ key: 'post:author:post:viewer', entries: null });
+    expect(TagController.getViewerMutations).toHaveBeenCalledWith({
+      taggedId: 'author:post',
+      taggedKind: TagKind.POST,
+      taggerId: 'viewer',
+    });
+    observed.loading = false;
+    observed.entries = null;
+    rerender();
+
+    await waitFor(() => expect(result.current.taggerStates.get('bitcoin')?.hasFetched).toBe(true));
+    expect(PostController.fetchTaggers).toHaveBeenCalledOnce();
+    expect(result.current.taggerStates.get('bitcoin')).toMatchObject({
+      ids: ['viewer'],
+      isViewerTagger: true,
+      isLoading: false,
+      hasError: false,
+    });
   });
 
   it('stays disabled without complete entity context', async () => {

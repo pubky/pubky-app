@@ -247,7 +247,7 @@ Post and profile writes persist temporary mutation intent in the same IndexedDB 
 
 Tag notifications invalidate affected collections before fetching their entity batch. Invalidation creates an uninitialized revision even for a missing collection, so an older response cannot populate it first. A successfully accepted, complete batch preview needs no additional tag GET; incomplete or omitted targets refresh their loaded window. Forced refresh waits for any identical in-flight transport request to settle before starting a fresh request, and bypasses the short transport cache. They do not depend on remounting a card.
 
-TTL post refresh persists valid attachment metadata before publishing post details and their TTL. Failed storage leaves the batch stale for retry; malformed metadata entries are skipped so valid peers still refresh.
+Stream hydration and TTL post refresh persist valid attachment metadata before publishing post details and their TTL. Failed storage leaves the batch stale for retry; malformed metadata entries are skipped so valid peers still refresh.
 
 TTL refresh covers visible Visual feed tiles, profile headers, and the Tagged panel (including its mobile/empty state). Public data can refresh without authentication; unrelated authenticated coordinators keep their existing rules. Both post and user subscriptions are reference counted and remain registered across route changes while their owning components remain visible. The manager retains ownership of the TTL instance across logout; its auth listener clears session work while mounted viewport consumers retain their references. See [ADR 0019](adr/0019-local-first-tag-cache.md), which supersedes those lifecycle decisions from ADR 0012.
 

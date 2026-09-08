@@ -207,9 +207,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
       .mockImplementation(persistUsersError ? () => Promise.reject(persistUsersError) : () => Promise.resolve([])),
     persistPosts: vi
       .spyOn(LocalStreamPostsService, 'persistPosts')
-      .mockImplementation(
-        persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve({ attachmentMetadata: [] }),
-      ),
+      .mockImplementation(persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve()),
     persistFiles: vi
       .spyOn(FileApplication, 'persistFiles')
       .mockImplementation(

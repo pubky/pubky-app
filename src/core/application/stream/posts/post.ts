@@ -587,11 +587,14 @@ export class PostStreamApplication {
         // Only pass viewer_id if it's a valid string (not null/undefined)
         ...(viewerId ? { viewer_id: viewerId } : {}),
       });
-      const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({
+      if (isCurrent && !isCurrent()) return false;
+      // Keep missing posts retryable until their attachment metadata is durable.
+      await FileApplication.persistFiles(postBatch.flatMap((post) => post.attachments_metadata ?? []));
+      if (isCurrent && !isCurrent()) return false;
+      await LocalStreamPostsService.persistPosts({
         posts: postBatch,
         tagGuard: { revisions, isCurrent, viewerId },
       });
-      await FileApplication.persistFiles(attachmentMetadata);
       // Persist the missing authors of the posts
       await this.fetchMissingPostAuthors({ posts: postBatch, viewerId, isCurrent });
       // Fetch original posts for any reposts (to display embedded repost content)
@@ -659,11 +662,14 @@ export class PostStreamApplication {
         post_ids: missingOriginalPostIds,
         viewer_id: viewerId ?? undefined,
       });
-      const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({
+      if (isCurrent && !isCurrent()) return;
+      // Do not cache an original post as hydrated before its attachments are stored.
+      await FileApplication.persistFiles(originalPosts.flatMap((post) => post.attachments_metadata ?? []));
+      if (isCurrent && !isCurrent()) return;
+      await LocalStreamPostsService.persistPosts({
         posts: originalPosts,
         tagGuard: { revisions, isCurrent, viewerId },
       });
-      await FileApplication.persistFiles(attachmentMetadata);
       await this.fetchMissingPostAuthors({ posts: originalPosts, viewerId, isCurrent });
     } catch (error) {
       Logger.warn('Failed to fetch original posts for reposts', { missingOriginalPostIds, error });

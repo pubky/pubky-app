@@ -99,9 +99,7 @@ describe('TtlApplication', () => {
         }),
       ];
       vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(batch);
-      const persisted = vi
-        .spyOn(LocalStreamPostsService, 'persistPosts')
-        .mockResolvedValue({ attachmentMetadata: [metadata] });
+      const persisted = vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       const failure = new Error('file table unavailable');
       const files = vi
         .spyOn(FileApplication, 'persistFiles')
@@ -169,11 +167,7 @@ describe('TtlApplication', () => {
       ];
 
       const queryNexusSpy = mockQueryNexus.mockResolvedValue(nexusPosts);
-      const persistPostsSpy = vi
-        .spyOn(LocalStreamPostsService, 'persistPosts')
-        .mockResolvedValue(
-          asOpaque<Awaited<ReturnType<typeof LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
-        );
+      const persistPostsSpy = vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       const persistFilesSpy = vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
@@ -201,9 +195,7 @@ describe('TtlApplication', () => {
       } as ReturnType<typeof postStreamApi.postsByIds>);
 
       mockQueryNexus.mockRejectedValue(new Error('Network down'));
-      const persistPostsSpy = vi
-        .spyOn(LocalStreamPostsService, 'persistPosts')
-        .mockResolvedValue({ attachmentMetadata: [] });
+      const persistPostsSpy = vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
 
       await expect(TtlApplication.forceRefreshPostsByIds({ postIds: ['alice:1'], viewerId })).rejects.toThrow(
         'Network down',
@@ -240,9 +232,7 @@ describe('TtlApplication', () => {
       } as ReturnType<typeof postStreamApi.postsByIds>);
 
       mockQueryNexus.mockResolvedValue([repostNexusPost]);
-      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(
-        asOpaque<Awaited<ReturnType<typeof LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
-      );
+      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 
@@ -285,9 +275,7 @@ describe('TtlApplication', () => {
       } as ReturnType<typeof postStreamApi.postsByIds>);
 
       mockQueryNexus.mockResolvedValue([regularPost]);
-      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(
-        asOpaque<Awaited<ReturnType<typeof LocalStreamPostsService.persistPosts>>>({ attachmentMetadata: [] }),
-      );
+      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
       vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
 

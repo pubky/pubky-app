@@ -4,6 +4,9 @@ import { PostStreamApplication } from '@/application/stream/posts/post';
 import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -30,11 +33,13 @@ import { UserTagsModel } from '@/models/user/tags/userTags';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import {
   type NexusFileDetails,
   type NexusFileUrls,
   type NexusPost,
   type NexusPostsKeyStream,
+  type NexusPostWithAttachmentMetadata,
   type NexusUser,
   StreamSorting,
 } from '@/services/nexus/nexus.types';
@@ -59,7 +64,7 @@ describe('PostStreamApplication', () => {
     author: string = DEFAULT_AUTHOR,
     timestamp: number = BASE_TIMESTAMP,
     overrides?: Partial<NexusPost>,
-  ): NexusPost => ({
+  ): NexusPostWithAttachmentMetadata => ({
     details: {
       id: postId,
       content: `Post ${postId} content`,
@@ -93,7 +98,7 @@ describe('PostStreamApplication', () => {
     startIndex: number = 1,
     author: string = DEFAULT_AUTHOR,
     startTimestamp: number = BASE_TIMESTAMP,
-  ): NexusPost[] => {
+  ): NexusPostWithAttachmentMetadata[] => {
     return Array.from({ length: count }, (_, i) => {
       const postId = `post-${startIndex + i}`;
       return createMockNexusPost(postId, author, startTimestamp + i);
@@ -199,7 +204,7 @@ describe('PostStreamApplication', () => {
   });
 
   const setupDefaultMocks = () => ({
-    persistPosts: vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue({ attachmentMetadata: [] }),
+    persistPosts: vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined),
     persistFiles: vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined),
     getUserDetails: vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder'),
   });
@@ -1491,6 +1496,93 @@ describe('PostStreamApplication', () => {
     });
   });
 
+  describe.each(['missing', 'original'] as const)('%s post attachment hydration', (source) => {
+    const postId = 'user-1:post-1';
+    const hydrate = (isCurrent?: () => boolean) =>
+      source === 'missing'
+        ? PostStreamApplication.fetchMissingPostsFromNexus({ cacheMissPostIds: [postId], isCurrent })
+        : PostStreamApplication.fetchOriginalPostsByUris({
+            repostedUris: ['pubky://user-1/pub/pubky.app/posts/post-1'],
+            isCurrent,
+          });
+
+    beforeEach(() => {
+      vi.spyOn(LocalTagCacheService, 'captureRevisions').mockResolvedValue(new Map([[postId, null]]));
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([postId]);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(createMockNexusPosts(1));
+      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
+      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(PostStreamApplication, 'fetchMissingPostAuthors').mockResolvedValue(undefined);
+    });
+
+    it('passes all inline attachment metadata to file persistence, including mixed batches', async () => {
+      const file = (id: string): NexusFileDetails => ({
+        id,
+        name: id,
+        src: '',
+        content_type: 'image/png',
+        size: 100,
+        created_at: 0,
+        indexed_at: 0,
+        metadata: {},
+        owner_id: 'user-1',
+        uri: `pubky://user-1/pub/pubky.app/files/${id}`,
+        urls: { main: '', feed: '', small: '' },
+      });
+      const attachments = [file('first'), file('second'), file('third')];
+      const posts = createMockNexusPosts(3);
+      posts[0].attachments_metadata = attachments.slice(0, 2);
+      posts[2].attachments_metadata = attachments.slice(2);
+      vi.mocked(NexusPostStreamService.fetchByIds).mockResolvedValue(posts);
+
+      await hydrate();
+
+      expect(FileApplication.persistFiles).toHaveBeenCalledWith(attachments);
+      expect(LocalStreamPostsService.persistPosts).toHaveBeenCalledWith({
+        posts,
+        tagGuard: expect.objectContaining({ revisions: new Map([[postId, null]]) }),
+      });
+    });
+
+    it('leaves post details and TTL unpublished after a file write failure, allowing retry', async () => {
+      vi.mocked(FileApplication.persistFiles).mockRejectedValueOnce(
+        Err.database(DatabaseErrorCode.WRITE_FAILED, 'File storage unavailable', {
+          service: ErrorService.Local,
+          operation: 'createMany',
+        }),
+      );
+
+      const result = await hydrate();
+
+      if (source === 'missing') expect(result).toBe(false);
+      expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
+      expect(PostStreamApplication.fetchMissingPostAuthors).not.toHaveBeenCalled();
+
+      await hydrate();
+
+      expect(FileApplication.persistFiles).toHaveBeenCalledTimes(2);
+      expect(LocalStreamPostsService.persistPosts).toHaveBeenCalledOnce();
+      expect(PostStreamApplication.fetchMissingPostAuthors).toHaveBeenCalledOnce();
+    });
+
+    it('does not publish posts while attachment persistence is pending or after the session changes', async () => {
+      const files = Promise.withResolvers<void>();
+      vi.mocked(FileApplication.persistFiles).mockReturnValueOnce(files.promise);
+      let current = true;
+      const hydration = hydrate(() => current);
+      await vi.waitFor(() => expect(FileApplication.persistFiles).toHaveBeenCalledOnce());
+      expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
+
+      current = false;
+      files.resolve();
+      const result = await hydration;
+
+      if (source === 'missing') expect(result).toBe(false);
+      expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
+      expect(PostStreamApplication.fetchMissingPostAuthors).not.toHaveBeenCalled();
+    });
+  });
+
   describe('fetchMissingPostsFromNexus', () => {
     const viewerId = 'user-viewer' as Pubky;
 
@@ -1708,10 +1800,9 @@ describe('PostStreamApplication', () => {
         },
       ];
 
+      mockNexusPosts[0].attachments_metadata = mockAttachments;
       const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        attachmentMetadata: mockAttachments,
-      });
+      const persistPostsSpy = vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       const persistFilesSpy = vi
         .spyOn(FileApplication, 'persistFiles')
         .mockRejectedValue(new Error('Failed to persist files'));
@@ -1725,6 +1816,7 @@ describe('PostStreamApplication', () => {
       });
 
       expect(persistFilesSpy).toHaveBeenCalledWith(mockAttachments);
+      expect(persistPostsSpy).not.toHaveBeenCalled();
       expect(fetchPostsByIdsSpy).toHaveBeenCalledTimes(1);
       expect(getUserDetailsSpy).not.toHaveBeenCalled();
       expect(persistUsersSpy).not.toHaveBeenCalled();
