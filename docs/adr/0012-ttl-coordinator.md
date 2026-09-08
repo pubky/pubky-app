@@ -162,6 +162,7 @@ onBatchTick()
     │
     ├──► If postBatchQueue.size > 0
     │    └──► Take up to config.POST_MAX_BATCH_SIZE posts
+    │         ├──► Re-check post_ttl for the batch; drop ids written locally since they were queued
     │         └──► Fetch posts from Nexus (batch request; post view)
     │              - Use `postStreamApi.postsByIds` (POST) → returns `NexusPost[]`
     │              └──► Persist to IndexedDB

@@ -604,7 +604,20 @@ export class TtlCoordinator {
     }
 
     // Take up to maxBatchSize entities
-    const ids = Array.from(ops.batchQueue).slice(0, ops.maxBatchSize);
+    const queuedIds = Array.from(ops.batchQueue).slice(0, ops.maxBatchSize);
+
+    // Re-check right before the network call. An entity can sit in the queue
+    // for up to a tick, and a local-first write in that window (an owner's
+    // edit bumps its TTL row) makes the local row newer than anything Nexus
+    // could return yet; refreshing it now would overwrite that write with
+    // Nexus's not-yet-indexed copy. Drop anything no longer stale. The
+    // application-level guard covers writes that land while the fetch itself
+    // is in flight.
+    const ids = await this.filterStillStale(queuedIds, ops);
+    for (const id of queuedIds) {
+      if (!ids.includes(id)) ops.batchQueue.delete(id);
+    }
+    if (ids.length === 0) return;
 
     try {
       Logger.debug(`TtlCoordinator: Refreshing stale ${ops.entityName}s`, {
@@ -624,6 +637,28 @@ export class TtlCoordinator {
     } catch (error) {
       // FAILURE: Leave in queue for retry on next tick
       Logger.warn(`TtlCoordinator: Error refreshing stale ${ops.entityName}s`, { ids, error });
+    }
+  }
+
+  /**
+   * Narrow a queued batch to the entities that are still stale. On a lookup
+   * error assume everything is still stale (mirrors `checkAndQueueEntity`).
+   */
+  private async filterStillStale<T extends string>(ids: T[], ops: EntityOps<T>): Promise<T[]> {
+    if (ids.length === 0) return ids;
+    try {
+      const staleIds = await ops.findStaleByIds(ids);
+      const fresh = ids.filter((id) => !staleIds.includes(id));
+      if (fresh.length > 0) {
+        Logger.debug(`TtlCoordinator: Skipping ${ops.entityName}s written locally since they were queued`, {
+          ids: fresh.slice(0, 5),
+          count: fresh.length,
+        });
+      }
+      return ids.filter((id) => staleIds.includes(id));
+    } catch (error) {
+      Logger.warn(`TtlCoordinator: Error re-checking ${ops.entityName} TTL before refresh`, { error });
+      return ids;
     }
   }
 

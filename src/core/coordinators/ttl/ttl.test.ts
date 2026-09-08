@@ -1380,6 +1380,55 @@ describe('TtlCoordinator', () => {
       );
     });
 
+    it('does not refresh an entity written locally between being queued and the batch firing', async () => {
+      setupAuthenticatedUser();
+
+      const coordinator = TtlCoordinator.getInstance();
+      coordinator.configure({ batchIntervalMs: 1_000 });
+
+      const postId = createCompositePostId('author1', 'post1');
+
+      // Stale at subscribe time → queued.
+      findStalePostsSpy.mockResolvedValue([postId]);
+      coordinator.subscribePost({ compositePostId: postId });
+      await flushPromises();
+
+      // The owner edits the post locally before the tick fires: the local
+      // write bumped its TTL row, so it is no longer stale.
+      findStalePostsSpy.mockResolvedValue([]);
+
+      coordinator.start();
+      await waitForTick();
+
+      expect(forceRefreshPostsSpy).not.toHaveBeenCalled();
+
+      // It was dropped from the queue rather than left for a retry: a later
+      // tick with nothing stale still refreshes nothing.
+      await advanceAndFlush(2_000);
+      expect(forceRefreshPostsSpy).not.toHaveBeenCalled();
+    });
+
+    it('still refreshes the batch when the pre-fetch staleness re-check fails', async () => {
+      setupAuthenticatedUser();
+
+      const coordinator = TtlCoordinator.getInstance();
+      coordinator.configure({ batchIntervalMs: 1_000 });
+
+      const postId = createCompositePostId('author1', 'post1');
+      findStalePostsSpy.mockResolvedValue([postId]);
+      coordinator.subscribePost({ compositePostId: postId });
+      await flushPromises();
+
+      // The tick's own check succeeds and queues; the re-check right before
+      // the fetch throws → assume still stale (same policy as subscribe time).
+      findStalePostsSpy.mockResolvedValueOnce([postId]).mockRejectedValueOnce(new Error('db'));
+
+      coordinator.start();
+      await waitForTick();
+
+      expect(forceRefreshPostsSpy).toHaveBeenCalledWith(expect.objectContaining({ postIds: [postId] }));
+    });
+
     it('successful refresh removes entities from queue', async () => {
       setupAuthenticatedUser();
 
@@ -1388,10 +1437,8 @@ describe('TtlCoordinator', () => {
 
       const postId = createCompositePostId('author1', 'post1');
 
-      // First tick: post is stale
-      findStalePostsSpy.mockResolvedValueOnce([postId]);
-      // Second tick: post is no longer stale (was refreshed)
-      findStalePostsSpy.mockResolvedValueOnce([]);
+      // Stale at subscribe time, on the tick's check, and on the pre-fetch re-check.
+      findStalePostsSpy.mockResolvedValue([postId]);
 
       coordinator.subscribePost({ compositePostId: postId });
       coordinator.start();
@@ -1401,7 +1448,8 @@ describe('TtlCoordinator', () => {
       await waitForTick();
       expect(forceRefreshPostsSpy).toHaveBeenCalledTimes(1);
 
-      // Second tick - should NOT refresh (removed from queue)
+      // The refresh made it fresh: second tick should NOT refresh (removed from queue)
+      findStalePostsSpy.mockResolvedValue([]);
       forceRefreshPostsSpy.mockClear();
       await waitForTick();
       expect(forceRefreshPostsSpy).not.toHaveBeenCalled();
@@ -1729,10 +1777,9 @@ describe('TtlCoordinator', () => {
 
       const postId = createCompositePostId('author1', 'post1');
 
-      // Make findStalePostsByIds throw on subscribe check
-      findStalePostsSpy.mockRejectedValueOnce(new Error('DB error'));
-      // Then return empty on tick (but entity should be in queue)
-      findStalePostsSpy.mockResolvedValue([]);
+      // Every TTL lookup fails (subscribe check, tick check, pre-fetch re-check):
+      // the coordinator assumes stale throughout and still refreshes.
+      findStalePostsSpy.mockRejectedValue(new Error('DB error'));
 
       coordinator.subscribePost({ compositePostId: postId });
       await flushPromises();
