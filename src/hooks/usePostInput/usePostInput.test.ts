@@ -8,6 +8,7 @@ import {
   ATTACHMENT_MAX_OTHER_SIZE,
   POST_ATTACHMENT_MAX_FILES,
   POST_MAX_CHARACTER_LENGTH,
+  POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
@@ -99,13 +100,6 @@ vi.mock('@/hooks/useEditAttachments/useEditAttachments', () => ({
 
 vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
-}));
-
-vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
-  useUserDetails: vi.fn(() => ({
-    userDetails: { name: 'Test Author' },
-    isLoading: false,
-  })),
 }));
 
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
@@ -471,7 +465,6 @@ describe('usePostInput', () => {
 
       expect(mockRepost).toHaveBeenCalledWith({
         originalPostId: 'original-post-id',
-        originalAuthorName: 'Test Author',
         onSuccess: expect.any(Function),
         onUndo: expect.any(Function),
       });
@@ -656,7 +649,6 @@ describe('usePostInput', () => {
 
       expect(mockRepost).toHaveBeenCalledWith({
         originalPostId: 'original-post-id',
-        originalAuthorName: 'Test Author',
         onSuccess: expect.any(Function),
         onUndo: expect.any(Function),
       });
@@ -2210,7 +2202,7 @@ describe('usePostInput', () => {
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: expect.stringContaining('Unsupported file type for'),
+        description: expect.stringContaining('Unsupported file type'),
       });
     });
 
@@ -2393,25 +2385,37 @@ describe('usePostInput', () => {
       });
     });
 
-    it('shows multiple errors with "Errors" title', () => {
+    it('tallies rejected files per reason in one toast, without naming them', () => {
       const { result } = renderHook(() =>
         usePostInput({
           variant: 'post',
         }),
       );
 
-      const invalidFile = new File(['test'], 'test.exe', { type: 'application/x-msdownload' });
-      const largeFile = new File(['test'], 'large.png', { type: 'image/png' });
-      Object.defineProperty(largeFile, 'size', { value: 6 * 1024 * 1024 });
+      const invalidFile = new File(['test'], 'secret-report.exe', { type: 'application/x-msdownload' });
+      const largeFiles = ['big-one.png', 'big-two.png'].map((name) => {
+        const file = new File(['test'], name, { type: 'image/png' });
+        Object.defineProperty(file, 'size', { value: IMAGE_MAX_RAW_SIZE + 1 });
+        return file;
+      });
+      const maxImageSizeLabel = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
 
       act(() => {
-        result.current.handleFilesAdded([invalidFile, largeFile]);
+        result.current.handleFilesAdded([invalidFile, ...largeFiles]);
       });
 
+      expect(mockSetAttachments).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: expect.any(String),
+        description: [
+          `Unsupported file type. Supported: ${POST_SUPPORTED_FILE_TYPES}.`,
+          `2 images exceed the ${maxImageSizeLabel} limit.`,
+        ].join('\n'),
       });
+      const { description } = vi.mocked(toast).mock.calls[0][0];
+      expect(description).not.toContain('secret-report');
+      expect(description).not.toContain('big-one');
     });
   });
 
@@ -2826,7 +2830,7 @@ describe('usePostInput', () => {
       expect(mockSetAttachments).not.toHaveBeenCalled();
       expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: expect.stringContaining('Unsupported file type for'),
+        description: expect.stringContaining('Unsupported file type'),
       });
     });
 

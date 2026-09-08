@@ -148,6 +148,28 @@ describe('nexus.utils', () => {
       expect(mockFetch).toHaveBeenCalledWith(url, expect.objectContaining({ method: 'POST', body }));
     });
 
+    it('keeps the default cache policy for callers that do not override it', async () => {
+      mockFetch.mockResolvedValue(createMockResponse({ text: vi.fn().mockResolvedValue('{"version":1}') }));
+      const params = { url: 'https://example.com/api/cached' };
+
+      await queryNexus(params);
+      await queryNexus(params);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('revalidates stale pages while sharing concurrent requests', async () => {
+      mockFetch.mockResolvedValueOnce(createMockResponse({ text: vi.fn().mockResolvedValue('{"version":1}') }));
+      const params = { url: 'https://example.com/api/revalidate', staleTime: 0 };
+      expect(await queryNexus(params)).toEqual({ version: 1 });
+      mockFetch.mockResolvedValueOnce(createMockResponse({ text: vi.fn().mockResolvedValue('{"version":2}') }));
+
+      const results = await Promise.all([queryNexus(params), queryNexus(params)]);
+
+      expect(results).toEqual([{ version: 2 }, { version: 2 }]);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
     it('should throw server error for empty response', async () => {
       const url = 'https://example.com/api/test3';
       mockFetch.mockResolvedValueOnce(createMockResponse({ status: 204, text: vi.fn().mockResolvedValue('') }));

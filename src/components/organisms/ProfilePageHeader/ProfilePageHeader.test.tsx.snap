@@ -266,7 +266,6 @@ exports[`ProfilePageHeader - Mobile Snapshots > matches snapshot on mobile viewp
         data-testid="container"
       >
         <button
-          aria-controls="radix-normalized"
           aria-expanded="false"
           aria-haspopup="dialog"
           class="flex h-8 cursor-pointer items-center gap-1 p-0 focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none"
@@ -575,7 +574,6 @@ exports[`ProfilePageHeader - Snapshots > matches snapshot 1`] = `
         data-testid="container"
       >
         <button
-          aria-controls="radix-normalized"
           aria-expanded="false"
           aria-haspopup="dialog"
           class="flex h-8 cursor-pointer items-center gap-1 p-0 focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none"

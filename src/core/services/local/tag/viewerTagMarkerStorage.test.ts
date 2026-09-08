@@ -10,8 +10,8 @@ const POST_ID = 'author:post123';
 
 // Build the raw sessionStorage key the same way the helper does internally — used
 // for direct sessionStorage assertions.
-const buildKey = (viewer: Pubky, postId: string, label: string) =>
-  `${VIEWER_TAG_MARKER_STORAGE_PREFIX}${viewer}:${postId}:${label.toLowerCase()}`;
+const buildKey = (viewer: Pubky, taggedId: string, label: string) =>
+  `${VIEWER_TAG_MARKER_STORAGE_PREFIX}${viewer}:${taggedId}:${label.toLowerCase()}`;
 
 describe('ViewerTagMarkerStorage', () => {
   beforeEach(() => {
@@ -25,21 +25,21 @@ describe('ViewerTagMarkerStorage', () => {
 
   describe('set + get', () => {
     it('round-trips a PUT (viewer added) marker', () => {
-      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, postId: POST_ID, label: 'abc', op: HttpMethod.PUT });
+      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc', op: HttpMethod.PUT });
 
-      const marker = ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'abc' });
+      const marker = ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc' });
       expect(marker?.op).toBe(HttpMethod.PUT);
     });
 
     it('round-trips a DELETE (viewer removed) marker', () => {
-      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, postId: POST_ID, label: 'abc', op: HttpMethod.DELETE });
+      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc', op: HttpMethod.DELETE });
 
-      const marker = ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'abc' });
+      const marker = ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc' });
       expect(marker?.op).toBe(HttpMethod.DELETE);
     });
 
     it('returns null when no marker exists', () => {
-      const marker = ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'abc' });
+      const marker = ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc' });
       expect(marker).toBeNull();
     });
 
@@ -47,7 +47,7 @@ describe('ViewerTagMarkerStorage', () => {
     // responses can use any case. Storage normalizes at the boundary so reads
     // match writes regardless.
     it('normalizes the label so set and get match regardless of case', () => {
-      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, postId: POST_ID, label: 'ABC', op: HttpMethod.PUT });
+      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, taggedId: POST_ID, label: 'ABC', op: HttpMethod.PUT });
 
       // Direct check: the raw sessionStorage key uses the lowercased label,
       // and the uppercase variant is never stored.
@@ -57,8 +57,8 @@ describe('ViewerTagMarkerStorage', () => {
       expect(window.sessionStorage.getItem(uppercaseKey)).toBeNull();
 
       // And `get` finds the same marker whether the caller passes 'abc' or 'ABC'.
-      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'abc' })?.op).toBe(HttpMethod.PUT);
-      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'ABC' })?.op).toBe(HttpMethod.PUT);
+      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc' })?.op).toBe(HttpMethod.PUT);
+      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'ABC' })?.op).toBe(HttpMethod.PUT);
     });
   });
 
@@ -68,15 +68,36 @@ describe('ViewerTagMarkerStorage', () => {
       vi.useFakeTimers();
       vi.setSystemTime(start);
 
-      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, postId: POST_ID, label: 'abc', op: HttpMethod.PUT });
+      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc', op: HttpMethod.PUT });
 
       // Step past the TTL window — Nexus is assumed to have caught up by now.
       vi.setSystemTime(start + MARKER_TTL_MS + 1);
 
-      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'abc' })).toBeNull();
+      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc' })).toBeNull();
       // The expired key should be cleaned out of sessionStorage as a side effect (lazy GC).
       expect(window.sessionStorage.getItem(buildKey(VIEWER_A, POST_ID, 'abc'))).toBeNull();
     });
+  });
+
+  it('keeps the marker and notifies other subscribers when one subscriber throws', () => {
+    const params = { pubky: VIEWER_A, taggedId: POST_ID, label: 'abc', op: HttpMethod.PUT } as const;
+    const unsubscribeFailing = ViewerTagMarkerStorage.subscribe(() => {
+      throw new Error('subscriber failed');
+    });
+    const listener = vi.fn(() => {
+      expect(ViewerTagMarkerStorage.get(params)?.op).toBe(HttpMethod.PUT);
+    });
+    const unsubscribe = ViewerTagMarkerStorage.subscribe(listener);
+    try {
+      expect(() => ViewerTagMarkerStorage.set(params)).not.toThrow();
+      expect(listener).toHaveBeenCalledExactlyOnceWith({ taggerId: VIEWER_A, taggedId: POST_ID, label: 'abc' });
+      unsubscribe();
+      expect(() => ViewerTagMarkerStorage.set(params)).not.toThrow();
+      expect(listener).toHaveBeenCalledTimes(1);
+    } finally {
+      unsubscribeFailing();
+      unsubscribe();
+    }
   });
 
   describe('defensive handling', () => {
@@ -85,7 +106,7 @@ describe('ViewerTagMarkerStorage', () => {
       // Plant invalid JSON to simulate a corrupted entry.
       window.sessionStorage.setItem(key, '{not valid json');
 
-      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'abc' })).toBeNull();
+      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc' })).toBeNull();
       expect(window.sessionStorage.getItem(key)).toBeNull();
     });
 
@@ -99,7 +120,7 @@ describe('ViewerTagMarkerStorage', () => {
         JSON.stringify({ op: 'NOT_A_METHOD', ts: Date.now(), expiresAt: Date.now() + 60_000 }),
       );
 
-      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'abc' })).toBeNull();
+      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc' })).toBeNull();
       expect(window.sessionStorage.getItem(key)).toBeNull();
     });
 
@@ -111,7 +132,7 @@ describe('ViewerTagMarkerStorage', () => {
         JSON.stringify({ op: HttpMethod.PUT, expiresAt: '2099-01-01' }),
       );
 
-      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'abc' })).toBeNull();
+      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'abc' })).toBeNull();
       expect(window.sessionStorage.getItem(key)).toBeNull();
     });
   });
@@ -123,11 +144,11 @@ describe('ViewerTagMarkerStorage', () => {
       vi.setSystemTime(start);
 
       // Marker that will be stale by the time we sweep.
-      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, postId: POST_ID, label: 'stale', op: HttpMethod.PUT });
+      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, taggedId: POST_ID, label: 'stale', op: HttpMethod.PUT });
 
       // Jump close to (but not past) TTL, then write a "fresh" marker.
       vi.setSystemTime(start + MARKER_TTL_MS - 1000);
-      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, postId: POST_ID, label: 'fresh', op: HttpMethod.PUT });
+      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, taggedId: POST_ID, label: 'fresh', op: HttpMethod.PUT });
 
       // Jump past the first marker's expiry but not the second's.
       vi.setSystemTime(start + MARKER_TTL_MS + 1);
@@ -172,14 +193,14 @@ describe('ViewerTagMarkerStorage', () => {
 
   describe('clearForUser', () => {
     it('removes only markers belonging to the given user', () => {
-      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, postId: POST_ID, label: 'a', op: HttpMethod.PUT });
-      ViewerTagMarkerStorage.set({ pubky: VIEWER_B, postId: POST_ID, label: 'a', op: HttpMethod.PUT });
+      ViewerTagMarkerStorage.set({ pubky: VIEWER_A, taggedId: POST_ID, label: 'a', op: HttpMethod.PUT });
+      ViewerTagMarkerStorage.set({ pubky: VIEWER_B, taggedId: POST_ID, label: 'a', op: HttpMethod.PUT });
 
       ViewerTagMarkerStorage.clearForUser(VIEWER_A);
 
-      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, postId: POST_ID, label: 'a' })).toBeNull();
+      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_A, taggedId: POST_ID, label: 'a' })).toBeNull();
       // Other user's marker is preserved.
-      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_B, postId: POST_ID, label: 'a' })?.op).toBe(HttpMethod.PUT);
+      expect(ViewerTagMarkerStorage.get({ pubky: VIEWER_B, taggedId: POST_ID, label: 'a' })?.op).toBe(HttpMethod.PUT);
     });
 
     it('does not touch sessionStorage keys outside our prefix', () => {

@@ -85,6 +85,8 @@ export class NexusPostStreamService {
         }
         const url = searchApi.byContent({
           q: extraParams.q,
+          // Present only for author-scoped searches (profile "Filter posts").
+          author: extraParams.author_id,
           kind: params.kind,
           skip: params.skip,
           limit: params.limit,

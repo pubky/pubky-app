@@ -45,8 +45,9 @@ export function createPostStreamParams({
   const { sorting, invokeEndpoint, authorId, kind, tags, wotDepth, domainTags, searchQuery } =
     breakDownStreamId(streamId);
 
-  // Content search hits its own endpoint with a minimal param surface (q, kind, skip, limit):
-  // no viewer/sorting/order/tags, and no author_id fabrication via handleNotCommonStreamParams.
+  // Content search hits its own endpoint with a minimal param surface (q, author, kind, skip,
+  // limit): no viewer/sorting/order/tags, and no author_id fabrication via
+  // handleNotCommonStreamParams. `author_id` is set only for author-scoped searches.
   if (invokeEndpoint === StreamSource.CONTENT_SEARCH) {
     const params: TStreamBase = {};
     const parsedKind = kind ? parseContent(kind) : undefined;
@@ -55,7 +56,7 @@ export function createPostStreamParams({
     }
     params.limit = limit;
     setStreamPagination({ params, streamTail, streamHead, invokeEndpoint });
-    return { params, invokeEndpoint, extraParams: { q: searchQuery } };
+    return { params, invokeEndpoint, extraParams: { q: searchQuery, author_id: authorId } };
   }
 
   const params: TStreamBase = {};
@@ -183,6 +184,8 @@ export function breakDownStreamId(streamId: PostStreamId): TStreamIdBreakdown {
       invokeEndpoint: StreamSource.CONTENT_SEARCH,
       kind: contentSearch?.kind,
       searchQuery: contentSearch?.query,
+      // Author-scoped searches (profile "Filter posts") carry the profile pubky.
+      authorId: contentSearch?.author,
     };
   }
 

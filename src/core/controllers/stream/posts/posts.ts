@@ -6,6 +6,10 @@ import type {
   TReadPostStreamChunkResponse,
   TStreamIdParams,
 } from '@/controllers/stream/posts/posts.types';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { isAuthorScopedContentSearchStream } from '@/models/stream/post/postStream.types';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -73,17 +77,40 @@ export class StreamPostsController {
         order,
       });
     let visibleIds = nextPageIds;
+    const isAuthorScopedSearch = isAuthorScopedContentSearchStream(streamId);
     // Query nexus to get the cacheMissPostIds
     if (cacheMissPostIds.length > 0) {
       // TODO: When TTL is implemented, we can return to void
-      await PostStreamApplication.fetchMissingPostsFromNexus({
+      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
       });
-      // Second-pass: cache-miss details are now resolved,
-      // re-filter to catch posts that were fail-open in the first pass.
-      // Only the visible page shrinks here — the raw anchor passes through untouched.
-      visibleIds = await PostStreamApplication.filterStreamPosts({ streamId, postIds: nextPageIds });
+      // Author-scoped search must not degrade a hydration failure into a false
+      // "no results": on a cold cache every id is a miss, and the strict pass below
+      // would drop them all. Fail the page instead — the feed shows its error state
+      // and the cursor is not consumed, so a retry re-fetches this slice.
+      if (isAuthorScopedSearch && !hydrated) {
+        throw Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Could not load search results', {
+          service: ErrorService.Nexus,
+          operation: 'StreamPostsController.getOrFetchStreamSlice',
+          context: { streamId, cacheMissCount: cacheMissPostIds.length },
+        });
+      }
+    }
+    // Second-pass: cache-miss details are now resolved,
+    // re-filter to catch posts that were fail-open in the first pass.
+    // Only the visible page shrinks here — the raw anchor passes through untouched.
+    // Strict reply classification: after hydration, an author-scoped content-search
+    // result that still cannot be classified is hidden, never risked as a reply.
+    // For author-scoped search the pass runs even with zero cache misses: pages served
+    // from the overflow buffer report no misses, but may hold ids that were kept
+    // fail-open before their relationships rows had been hydrated.
+    if (cacheMissPostIds.length > 0 || (isAuthorScopedSearch && nextPageIds.length > 0)) {
+      visibleIds = await PostStreamApplication.filterStreamPosts({
+        streamId,
+        postIds: nextPageIds,
+        strictReplyClassification: true,
+      });
     }
     return { nextPageIds: visibleIds, nextCursor, reachedEnd, lastRawPostId };
   }

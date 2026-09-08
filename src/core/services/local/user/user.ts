@@ -1,3 +1,4 @@
+import type { TUserSocialGraphStatusResult } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
 import { getTtlUserMs } from '@/libs/runtime-config/runtime-config';
@@ -41,6 +42,31 @@ export class LocalUserService {
     }
 
     return map;
+  }
+
+  /**
+   * Reads a user's social graph badge tier from local database.
+   *
+   * The tier is only known once a full Nexus user view has been persisted; a details
+   * row written from a details-only fetch has no `social_graph_status` yet.
+   *
+   * @param userId - User ID to read the tier for
+   * @returns `{ status }` once known (`status: null` when Nexus has no ranking or the TTL
+   *   coordinator will supply it), or `null` when the user is missing locally or was only
+   *   ever cached from a details-only fetch (a full fetch is needed)
+   */
+  static async readSocialGraphStatus({ userId }: TReadProfileParams): Promise<TUserSocialGraphStatusResult | null> {
+    const details = await UserDetailsModel.findById(userId);
+    if (!details) return null;
+    if (details.social_graph_status !== undefined) return { status: details.social_graph_status };
+
+    // A row without the tier came from a details-only write. When a TTL record exists the
+    // user is already on the refresh path (a full view persisted before this field existed,
+    // or a not-yet-indexed user scheduled for retry), so report "no ranking" and let the TTL
+    // coordinator fill the tier in rather than forcing a full fetch that would overwrite
+    // fresher local relationship and count rows.
+    const ttl = await UserTtlModel.findById(userId);
+    return ttl ? { status: null } : null;
   }
 
   /**

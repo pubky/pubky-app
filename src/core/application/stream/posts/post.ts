@@ -10,6 +10,7 @@ import type {
 } from '@/application/stream/posts/post.types';
 import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
+import { CONTENT_SEARCH_MAX_SKIP } from '@/config/search';
 import {
   FORCE_FETCH_NEW_POSTS,
   NOT_FOUND_CACHED_STREAM,
@@ -22,8 +23,10 @@ import { BookmarkModel } from '@/models/bookmark/bookmark';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
 import { buildCompositeId, buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
+import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import {
+  isAuthorScopedContentSearchStream,
   isAuthorStreamSkippingMuteFilter,
   isBookmarkStream,
   isContentSearchStream,
@@ -128,9 +131,11 @@ export class PostStreamApplication {
   static async filterStreamPosts({
     streamId,
     postIds,
+    strictReplyClassification = false,
   }: {
     streamId: PostStreamId;
     postIds: string[];
+    strictReplyClassification?: boolean;
   }): Promise<string[]> {
     // Bookmark and single-collection item feeds keep deleted posts so the post
     // component can render its deleted-state placeholder; all other streams drop them.
@@ -138,9 +143,45 @@ export class PostStreamApplication {
       ? postIds
       : await LocalPostService.filterDeletedPosts(postIds);
     const afterCollections = await this.filterCollectionsFromStream({ streamId, postIds: visiblePostIds });
+    const afterReplies = await this.filterRepliesFromAuthorScopedSearch({
+      streamId,
+      postIds: afterCollections,
+      strict: strictReplyClassification,
+    });
     // Discover drops empty collections (nothing to discover). Lives here so it is re-applied by
     // the controller's post-hydration second pass, catching ids that were fail-open on details.
-    return isDiscoverCollectionsStream(streamId) ? this.filterEmptyCollections(afterCollections) : afterCollections;
+    return isDiscoverCollectionsStream(streamId) ? this.filterEmptyCollections(afterReplies) : afterReplies;
+  }
+
+  /**
+   * Profile "Filter posts" (author-scoped content search) excludes replies, but the by_content
+   * endpoint cannot exclude them server-side. Classify via the local relationships row: a post
+   * with `replied !== null` is a reply. Pre-hydration (`strict = false`) posts without a
+   * relationships row are kept so the cache-miss hydration can classify them; post-hydration
+   * (`strict = true`) unclassifiable posts are dropped — degraded mode hides a result rather
+   * than ever rendering a possible reply on the Posts tab.
+   */
+  private static async filterRepliesFromAuthorScopedSearch({
+    streamId,
+    postIds,
+    strict,
+  }: {
+    streamId: PostStreamId;
+    postIds: string[];
+    strict: boolean;
+  }): Promise<string[]> {
+    if (postIds.length === 0 || !isAuthorScopedContentSearchStream(streamId)) {
+      return postIds;
+    }
+
+    const relationships = await LocalPostService.readRelationshipsByIds(postIds);
+    return postIds.filter((_postId, index) => {
+      const relationship = relationships[index];
+      if (!relationship) {
+        return !strict;
+      }
+      return relationship.replied === null;
+    });
   }
 
   /** Drop collections with zero items. Fail-open when local details are missing. */
@@ -523,8 +564,11 @@ export class PostStreamApplication {
    * @param viewerId - ID of the viewer
    * @param streamHead - Detects if the call is coming from the streamCoordinator.
    * @param streamId - ID of the stream. If not provided, it means that it is a single post operation.
+   * @returns Whether hydration succeeded. Failure is non-fatal for fail-open streams
+   * (they render what the cache has), but callers with strict post-hydration
+   * filtering (author-scoped content search) must not mistake it for "no results".
    */
-  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId }: TMissingPostsParams) {
+  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId }: TMissingPostsParams): Promise<boolean> {
     try {
       const postBatch = await NexusPostStreamService.fetchByIds({
         post_ids: cacheMissPostIds,
@@ -540,8 +584,10 @@ export class PostStreamApplication {
         .map((post) => post.relationships.reposted)
         .filter((uri): uri is string => uri !== null);
       await this.fetchOriginalPostsByUris({ repostedUris, viewerId });
+      return true;
     } catch (error) {
       Logger.warn('Failed to fetch missing posts from Nexus', { cacheMissPostIds, viewerId, error });
+      return false;
     }
   }
 
@@ -665,6 +711,13 @@ export class PostStreamApplication {
     viewerId,
     order,
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
+    // Nexus bounds the by_content offset (skip ≤ CONTENT_SEARCH_MAX_SKIP, inclusive). A cursor
+    // already past the bound could only produce a request Nexus rejects — report the end
+    // defensively instead of issuing it.
+    if (isContentSearchStream(streamId) && streamTail > CONTENT_SEARCH_MAX_SKIP) {
+      return { nextPageIds: [], cacheMissPostIds: [], nextCursor: undefined, reachedEnd: true };
+    }
+
     const { params, invokeEndpoint, extraParams } = createPostStreamParams({
       streamId,
       streamTail,
@@ -694,20 +747,51 @@ export class PostStreamApplication {
       });
     }
 
-    const cacheMissPostIds = await this.getNotPersistedPostsInCache(compositePostIds);
+    const cacheMissPostIds = await this.getCacheMissPostIds(streamId, compositePostIds);
 
-    // reachedEnd is true when Nexus returned fewer posts than requested (actual end of stream)
+    // reachedEnd is true when Nexus returned fewer posts than requested (actual end of stream).
+    // Content search also ends when the NEXT offset (this skip + raw ids consumed) would
+    // overflow Nexus's inclusive skip bound: this valid page is still consumed, only the
+    // follow-up request is suppressed. A next offset landing exactly on the bound stays valid.
+    const overflowsContentSearchSkip =
+      isContentSearchStream(streamId) && streamTail + compositePostIds.length > CONTENT_SEARCH_MAX_SKIP;
+
     return {
       nextPageIds: compositePostIds,
       cacheMissPostIds,
       nextCursor: rawScore ?? undefined,
-      reachedEnd: compositePostIds.length < limit,
+      reachedEnd: compositePostIds.length < limit || overflowsContentSearchSkip,
     };
   }
 
   // Delegate to service for cache miss detection
   private static async getNotPersistedPostsInCache(postIds: string[]): Promise<string[]> {
     return LocalStreamPostsService.getNotPersistedPostsInCache(postIds);
+  }
+
+  /**
+   * Cache-miss detection for a fetched stream page. Author-scoped content search additionally
+   * treats a missing relationships row as a miss: reply exclusion classifies via
+   * `relationships.replied`, so a details-cached post without one must still be hydrated —
+   * otherwise it would stay fail-open (or be dropped by the strict second pass) forever.
+   */
+  private static async getCacheMissPostIds(streamId: PostStreamId, postIds: string[]): Promise<string[]> {
+    const missingDetailsIds = await this.getNotPersistedPostsInCache(postIds);
+    if (postIds.length === 0 || !isAuthorScopedContentSearchStream(streamId)) {
+      return missingDetailsIds;
+    }
+
+    const [details, relationships] = await Promise.all([
+      LocalPostService.readDetailsByIds(postIds),
+      LocalPostService.readRelationshipsByIds(postIds),
+    ]);
+    // A locally tombstoned post keeps its details row but its relationships row is gone
+    // for good: re-fetching can never classify it, and the deleted filter drops it
+    // anyway, so flagging it would issue a futile by_ids request on every page load.
+    const missingRelationshipsIds = postIds.filter(
+      (_postId, index) => !relationships[index] && details[index]?.content !== DELETED,
+    );
+    return Array.from(new Set([...missingDetailsIds, ...missingRelationshipsIds]));
   }
 
   private static async filterCollectionsFromStream({
@@ -727,6 +811,11 @@ export class PostStreamApplication {
 
   /** Collections appear only on streams whose id encodes `kind=collection` (e.g. timeline:all:collection). */
   private static shouldExcludeCollectionsFromStream(streamId: PostStreamId): boolean {
+    // Profile search inherits the Posts tab contract: collections have their own tab.
+    if (isAuthorScopedContentSearchStream(streamId)) {
+      return true;
+    }
+
     // Content search is the one family where `kind=all` means "including
     // collections". Narrower kinds (image, video, …) fall through and keep the
     // local collection filter as defense-in-depth, like every other family.

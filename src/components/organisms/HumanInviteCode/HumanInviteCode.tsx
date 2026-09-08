@@ -38,8 +38,13 @@ export const HumanInviteCode = ({ onBack, onVerify, onSuccess }: HumanInviteCode
   const showDestructiveBorder = !isVerifying && (verificationOutcome === 'invalid' || verificationOutcome === 'used');
   const trimmedInviteCode = inviteCode.trim();
   const isInviteCodeEntered = trimmedInviteCode.length === 14;
+  // Latest `onVerify` for the verification effect below, written from an effect
+  // (not during render) so the React Compiler `refs` rule holds. Declared first,
+  // so it has already run when the verification effect reads the ref.
   const onVerifyRef = useRef(onVerify);
-  onVerifyRef.current = onVerify;
+  useEffect(() => {
+    onVerifyRef.current = onVerify;
+  }, [onVerify]);
 
   useEffect(() => {
     if (!isInviteCodeEntered) {

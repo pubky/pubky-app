@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { MutedUsersList } from './MutedUsersList';
 
 const { mockUseMutedUsers, mockUseBulkUserAvatars, mockUseMuteUser } = vi.hoisted(() => ({
@@ -81,8 +82,8 @@ describe('MutedUsersList', () => {
     expect(screen.getByText('Unmute')).toBeInTheDocument();
   });
 
-  it('calls toggleMute when clicking unmute', () => {
-    const toggleMute = vi.fn();
+  it('calls toggleMute when clicking unmute and confirms with a generic toast', async () => {
+    const toggleMute = vi.fn().mockResolvedValue(undefined);
     mockUseMutedUsers.mockReturnValue({
       mutedUserIds: ['user-123'],
       mutedUserIdSet: new Set(['user-123']),
@@ -101,6 +102,9 @@ describe('MutedUsersList', () => {
     fireEvent.click(unmuteButton);
 
     expect(toggleMute).toHaveBeenCalledWith('user-123', true);
+    await waitFor(() => {
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'User unmuted' });
+    });
   });
 
   it('calls toggleMute for each user when clicking unmute all', async () => {

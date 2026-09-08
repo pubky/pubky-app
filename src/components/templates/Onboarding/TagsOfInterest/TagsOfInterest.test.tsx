@@ -148,7 +148,7 @@ describe('TagsOfInterest', () => {
     expect(screen.getByTestId('popular-tag-food')).not.toBeDisabled();
   });
 
-  it('keeps Continue enabled with zero tags and completes with an empty selection', () => {
+  it('keeps Continue enabled with zero tags and moves to the follow step with an empty selection', () => {
     render(<TagsOfInterest />);
 
     const continueButton = screen.getByRole('button', { name: /continue/i });
@@ -158,14 +158,14 @@ describe('TagsOfInterest', () => {
 
     const state = useOnboardingStore.getState();
     expect(state.interestTags).toEqual([]);
-    expect(state.experienceCompletedByPubky[ACTIVE_PUBKY]).toBe(true);
-    expect(mockReplace).toHaveBeenCalledTimes(1);
-    expect(mockReplace).toHaveBeenCalledWith(APP_ROUTES.HOME);
-    expect(mockPush).not.toHaveBeenCalledWith(APP_ROUTES.HOME);
+    expect(state.experienceCompletedByPubky[ACTIVE_PUBKY]).toBeUndefined();
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.FOLLOW);
+    expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByTestId('tags-of-interest-content')).toBeInTheDocument();
   });
 
-  it('persists the ordered selection and marks completion on Continue', () => {
+  it('persists the ordered selection and defers completion to the follow step on Continue', () => {
     render(<TagsOfInterest />);
 
     fireEvent.click(screen.getByTestId('popular-tag-music'));
@@ -176,10 +176,10 @@ describe('TagsOfInterest', () => {
 
     const state = useOnboardingStore.getState();
     expect(state.interestTags).toEqual(['music', 'satoshi', 'bitcoin']);
-    expect(state.experienceCompletedByPubky[ACTIVE_PUBKY]).toBe(true);
-    expect(mockReplace).toHaveBeenCalledTimes(1);
-    expect(mockReplace).toHaveBeenCalledWith(APP_ROUTES.HOME);
-    expect(mockPush).not.toHaveBeenCalledWith(APP_ROUTES.HOME);
+    expect(state.experienceCompletedByPubky[ACTIVE_PUBKY]).toBeUndefined();
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.FOLLOW);
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
   it('navigates back to the profile step without completing', () => {

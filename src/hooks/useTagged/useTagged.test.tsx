@@ -184,7 +184,7 @@ describe('useTagged', () => {
       taggedKind: TagKind.USER,
     });
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      title: 'Tag added: ethereum',
+      title: 'Tag added',
     });
   });
 
@@ -206,7 +206,7 @@ describe('useTagged', () => {
     expect(addResult!).toEqual({ success: false, error: 'Failed to add tag' });
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not add tag: ethereum',
+      description: 'Could not add tag',
     });
   });
 
@@ -237,7 +237,7 @@ describe('useTagged', () => {
       taggedKind: TagKind.USER,
     });
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      title: 'Tag removed: bitcoin',
+      title: 'Tag removed',
     });
   });
 
@@ -264,7 +264,7 @@ describe('useTagged', () => {
 
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not remove tag: bitcoin',
+      description: 'Could not remove tag',
     });
   });
 

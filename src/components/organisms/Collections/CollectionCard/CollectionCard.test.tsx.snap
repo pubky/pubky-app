@@ -473,7 +473,6 @@ exports[`CollectionCard - Snapshots > matches the default card snapshot 1`] = `
                 data-testid="container"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="bitcoin tag (5 posts)"
@@ -522,7 +521,6 @@ exports[`CollectionCard - Snapshots > matches the default card snapshot 1`] = `
                   />
                 </button>
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="ethereum tag (3 posts)"
@@ -566,7 +564,6 @@ exports[`CollectionCard - Snapshots > matches the default card snapshot 1`] = `
                   />
                 </button>
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="web3 tag (10 posts)"
@@ -811,7 +808,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
                 data-testid="container"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="bitcoin tag (5 posts)"
@@ -860,7 +856,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
                   />
                 </button>
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="ethereum tag (3 posts)"
@@ -904,7 +899,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
                   />
                 </button>
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="web3 tag (10 posts)"
@@ -1137,7 +1131,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
                 data-testid="container"
               >
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="bitcoin tag (5 posts)"
@@ -1186,7 +1179,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
                   />
                 </button>
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="ethereum tag (3 posts)"
@@ -1230,7 +1222,6 @@ exports[`CollectionCard - Snapshots > matches the snapshot when no cover image a
                   />
                 </button>
                 <button
-                  aria-controls="radix-normalized"
                   aria-expanded="false"
                   aria-haspopup="dialog"
                   aria-label="web3 tag (10 posts)"

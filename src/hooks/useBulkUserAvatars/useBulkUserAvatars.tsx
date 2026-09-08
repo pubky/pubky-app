@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { FileController } from '@/controllers/file/file';
 import { StreamUserController } from '@/controllers/stream/users/users';
@@ -44,10 +44,28 @@ export function useBulkUserAvatars(userIds: Pubky[]): UseBulkUserAvatarsResult {
     new Map<Pubky, NexusUserDetails>(),
   );
 
+  const detailsRef = useRef(userDetailsMap);
+  const inFlightIdsRef = useRef(new Set<Pubky>());
   useEffect(() => {
-    if (uniqueUserIds.length > 0) {
-      StreamUserController.getOrFetchUsers({ userIds: uniqueUserIds });
-    }
+    detailsRef.current = userDetailsMap;
+  }, [userDetailsMap]);
+
+  useEffect(() => {
+    // Dexie retains the previous query result while the next page's query runs.
+    // Avoid repeating the cache-miss scan for users we already have details for.
+    const missingIds = uniqueUserIds.filter((id) => !detailsRef.current.has(id) && !inFlightIdsRef.current.has(id));
+    if (missingIds.length === 0) return;
+    const inFlight = inFlightIdsRef.current;
+    missingIds.forEach((id) => inFlight.add(id));
+    void StreamUserController.getOrFetchUsers({ userIds: missingIds })
+      .catch(() => {
+        // Service errors are already reported. A later page can retry these IDs.
+      })
+      .finally(() => {
+        // Only actual local details count as success: a resolved batch may omit
+        // users, so neither failures nor omissions become permanently "handled".
+        missingIds.forEach((id) => inFlight.delete(id));
+      });
   }, [uniqueUserIds]);
 
   // Build map of users with computed avatar URLs

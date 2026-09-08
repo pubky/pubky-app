@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
@@ -509,6 +510,140 @@ describe('useStreamPagination', () => {
 
       // Should still fetch for new stream
       expect(callCountAfter).toBeGreaterThan(callCountBefore);
+    });
+  });
+
+  describe('Stale in-flight requests after reset', () => {
+    const streamA = 'timeline:all:all' as PostStreamId;
+    const streamB = 'timeline:following:all' as PostStreamId;
+
+    function deferred<T>() {
+      let resolve!: (value: T) => void;
+      let reject!: (reason?: unknown) => void;
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+
+    it('ignores a late-resolving fetch for the previous stream (posts, cursor, hasMore)', async () => {
+      const staleFetch = deferred<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockImplementation(async ({ streamId }) =>
+        streamId === streamA ? staleFetch.promise : { nextPageIds: ['b1', 'b2'], nextCursor: 20 },
+      );
+
+      const { result, rerender } = renderHook(({ streamId }) => useStreamPagination({ streamId }), {
+        initialProps: { streamId: streamA },
+      });
+
+      // Ensure A's slice request is actually in flight (not bailed at an earlier
+      // checkpoint) before switching, so the late resolution exercises the guard.
+      await waitFor(() =>
+        expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+          expect.objectContaining({ streamId: streamA }),
+        ),
+      );
+      rerender({ streamId: streamB });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.postIds).toEqual(['b1', 'b2']);
+
+      // A resolves late with its own posts, an end-of-stream marker, and a far cursor.
+      await act(async () => {
+        staleFetch.resolve({ nextPageIds: ['a1'], reachedEnd: true, nextCursor: 999 });
+      });
+
+      expect(result.current.postIds).toEqual(['b1', 'b2']);
+      expect(result.current.hasMore).toBe(true); // A's reachedEnd must not leak into B
+
+      // The next page must resume from B's cursor, not A's.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['b3'],
+        nextCursor: 21,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: streamB, streamTail: 20 }),
+      );
+    });
+
+    it('ignores a late-rejecting fetch for the previous stream (no error, hasMore, loading, or onError writes)', async () => {
+      const staleFetch = deferred<TReadPostStreamChunkResponse>();
+      const onError = vi.fn();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockImplementation(async ({ streamId }) =>
+        streamId === streamA ? staleFetch.promise : { nextPageIds: ['b1'], nextCursor: 20 },
+      );
+
+      const { result, rerender } = renderHook(({ streamId }) => useStreamPagination({ streamId, onError }), {
+        initialProps: { streamId: streamA },
+      });
+
+      // The rejection must reach the hook's catch: wait until A's request is in
+      // flight, otherwise the deferred has no consumer and the rejection escapes.
+      await waitFor(() =>
+        expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+          expect.objectContaining({ streamId: streamA }),
+        ),
+      );
+      rerender({ streamId: streamB });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        staleFetch.reject(new Error('network down'));
+      });
+
+      expect(result.current.error).toBeNull();
+      expect(result.current.hasMore).toBe(true);
+      expect(result.current.loading).toBe(false);
+      expect(result.current.loadingMore).toBe(false);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('does not strand loadingMore when the stream switches during an in-flight loadMore', async () => {
+      const staleLoadMore = deferred<TReadPostStreamChunkResponse>();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce({ nextPageIds: ['a1'], nextCursor: 10 }) // A initial load
+        .mockImplementationOnce(() => staleLoadMore.promise) // A loadMore, left in flight
+        .mockResolvedValue({ nextPageIds: ['b1'], nextCursor: 20 }); // B initial load
+
+      const { result, rerender } = renderHook(({ streamId }) => useStreamPagination({ streamId }), {
+        initialProps: { streamId: streamA },
+      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let staleLoadMorePromise: Promise<void> = Promise.resolve();
+      act(() => {
+        staleLoadMorePromise = result.current.loadMore();
+      });
+      expect(result.current.loadingMore).toBe(true);
+
+      rerender({ streamId: streamB });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      // The reset released the flag even though the stale request never settled.
+      expect(result.current.loadingMore).toBe(false);
+
+      await act(async () => {
+        staleLoadMore.resolve({ nextPageIds: ['a2'], nextCursor: 11 });
+        await staleLoadMorePromise;
+      });
+      expect(result.current.postIds).toEqual(['b1']);
+      expect(result.current.loadingMore).toBe(false);
+
+      // Pagination on the new stream still works and resumes from B's cursor.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['b2'],
+        nextCursor: 21,
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: streamB, streamTail: 20 }),
+      );
     });
   });
 
