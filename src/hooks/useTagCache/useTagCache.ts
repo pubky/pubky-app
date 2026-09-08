@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TagCacheController } from '@/controllers/tag/tag-cache';
 import { isAppError } from '@/libs/error/error.utils';
@@ -35,22 +35,27 @@ export function useTagCache(kind: 'post' | 'user', id: string | null | undefined
   // Dexie keeps the previous result until the new query emits after an ID change.
   const cached = observedRecord && observedRecord.id !== id ? undefined : observedRecord;
   // Project during render so retained observations cannot show a previous viewer's selection.
-  const record = cached
-    ? {
-        ...cached,
-        tags: cached.tags.map((tag) => {
-          const mutation = viewerId ? findTagMutation(cached, tag.label, viewerId) : undefined;
-          const relationship = !viewerId
-            ? false
-            : mutation
-              ? mutation.relationship
-              : cached.cache?.viewerId === undefined
-                ? tag.relationship
-                : (getTagMembership(tag, viewerId, cached.cache.viewerId) ?? false);
-          return { ...tag, relationship };
-        }),
-      }
-    : cached;
+  // The compiler skips this hook's try/finally; stable tags prevent avatar query resubscription loops.
+  const record = useMemo(
+    () =>
+      cached
+        ? {
+            ...cached,
+            tags: cached.tags.map((tag) => {
+              const mutation = viewerId ? findTagMutation(cached, tag.label, viewerId) : undefined;
+              const relationship = !viewerId
+                ? false
+                : mutation
+                  ? mutation.relationship
+                  : cached.cache?.viewerId === undefined
+                    ? tag.relationship
+                    : (getTagMembership(tag, viewerId, cached.cache.viewerId) ?? false);
+              return { ...tag, relationship };
+            }),
+          }
+        : cached,
+    [cached, viewerId],
+  );
 
   useEffect(() => {
     currentKey.current = key;

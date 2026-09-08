@@ -51,6 +51,26 @@ describe('useTagCache', () => {
   });
 
   describe('initial loading', () => {
+    it('keeps projected tags stable between unchanged local observations', async () => {
+      vi.mocked(useLiveQuery).mockReturnValue(cachedRecord);
+      const { result, rerender } = renderHook(() => useTagCache('user', 'profile', 'viewer'));
+      const tags = result.current.record?.tags;
+
+      await act(async () => {});
+      rerender();
+
+      expect(result.current.record?.tags).toBe(tags);
+
+      vi.mocked(useLiveQuery).mockReturnValue({
+        ...cachedRecord,
+        tags: [{ ...cachedRecord.tags[0], taggers_count: 2 }],
+      });
+      rerender();
+
+      expect(result.current.record?.tags[0].taggers_count).toBe(2);
+      expect(result.current.record?.tags).not.toBe(tags);
+    });
+
     it.each(['other-viewer', null])(
       'projects retained observations for the new viewer %s immediately',
       async (viewerId) => {
