@@ -63,15 +63,16 @@ interface TimelineFeedContentProps {
   transformPostIds?: (postIds: string[]) => string[];
   /**
    * Optional local-first membership (composite post ids) the feed mirrors.
-   * Added ids that are not loaded are prepended as optimistic posts; loaded
-   * ids the membership once contained but no longer does are committed out,
-   * re-evaluated whenever the loaded ids change so a removal whose post only
-   * arrives later (an in-flight page, a refresh that re-serves it) still
-   * applies. Used by the COLLECTION variant for viewers, whose envelope
-   * `items` refresh through the TTL coordinator while the skip-paginated
-   * items stream is fetched once and never polled. Reorders are handled by
-   * `transformPostIds`. The first non-undefined value is the baseline — the
-   * initial load already fetches that membership.
+   * Only loaded ids the membership contains are rendered; added ids that are
+   * not loaded are prepended as optimistic posts; loaded ids the membership
+   * once contained but no longer does are committed out, re-evaluated
+   * whenever the loaded ids change so a removal whose post only arrives later
+   * (an in-flight page, a refresh that re-serves it) still applies. Used by
+   * the COLLECTION variant for viewers, whose envelope `items` refresh through
+   * the TTL coordinator while the skip-paginated items stream is fetched once
+   * and never polled. Reorders are handled by `transformPostIds`. The first
+   * non-undefined value is the baseline — the initial load already fetches
+   * that membership.
    */
   membershipPostIds?: string[];
 }
@@ -215,7 +216,14 @@ function TimelineFeedContent({
   }, [isCollectionFeed, loading, loadingMore, hasMore, loadMore]);
 
   const dedupedPostIds = [...new Set(rawPostIds)];
-  const postIds = transformPostIds ? transformPostIds(dedupedPostIds) : dedupedPostIds;
+  const orderedPostIds = transformPostIds ? transformPostIds(dedupedPostIds) : dedupedPostIds;
+  // Mirror the membership in the render as well: a loaded id the membership
+  // does not contain is hidden in the same render, so a removal never flashes
+  // to the end of the grid (the sort appends unlisted ids) before the effect
+  // below commits it, and a stale envelope keeps grid and badge in step until
+  // the TTL refresh brings the newer items into view.
+  const membershipSet = membershipPostIds ? new Set(membershipPostIds) : null;
+  const postIds = membershipSet ? orderedPostIds.filter((id) => membershipSet.has(id)) : orderedPostIds;
 
   // Membership sync (see the `membershipPostIds` prop doc). The items stream is
   // fetched once and never polled while the envelope keeps refreshing, and

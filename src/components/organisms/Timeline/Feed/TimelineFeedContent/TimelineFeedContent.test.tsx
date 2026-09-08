@@ -772,6 +772,25 @@ describe('TimelineFeedContent', () => {
       expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post2']);
     });
 
+    it('hides a dropped id in the same render, before the removal is committed', () => {
+      const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post2,post3');
+
+      rerender(collectionFeed(['post1', 'post3']));
+
+      // The render already excludes post2 (no flash to the end of the grid)…
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post3');
+      // …and the effect commits it out of the hook state.
+      expect(mockRemovePostsOptimistically).toHaveBeenCalledWith(['post2']);
+    });
+
+    it('renders only loaded ids the membership contains, so a stale envelope matches the badge', () => {
+      render(collectionFeed(['post1', 'post3']));
+
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'post1,post3');
+      expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
+    });
+
     it('does nothing on a reorder-only change', () => {
       const { rerender } = render(collectionFeed(['post1', 'post2', 'post3']));
       rerender(collectionFeed(['post3', 'post1', 'post2']));
