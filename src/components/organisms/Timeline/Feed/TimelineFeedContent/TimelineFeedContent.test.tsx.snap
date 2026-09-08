@@ -13,7 +13,7 @@ exports[`TimelineFeedContent - Snapshots > matches snapshot for loading state 1`
 exports[`TimelineFeedContent - Snapshots > matches snapshot for the collection visual layout 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-4 lg:overflow-hidden"
     data-testid="container"
   >
     <div>
@@ -42,7 +42,7 @@ exports[`TimelineFeedContent - Snapshots > matches snapshot for the collection v
 exports[`TimelineFeedContent - Snapshots > matches snapshot with children 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-4 lg:overflow-hidden"
     data-testid="container"
   >
     <div>
@@ -76,7 +76,7 @@ exports[`TimelineFeedContent - Snapshots > matches snapshot with children 1`] = 
 exports[`TimelineFeedContent - Snapshots > matches snapshot with posts 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-4 lg:overflow-hidden"
     data-testid="container"
   >
     <div

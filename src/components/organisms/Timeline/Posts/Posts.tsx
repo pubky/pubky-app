@@ -67,7 +67,7 @@ export function TimelinePosts({
       <Container
         data-cy="timeline-container"
         overrideDefaults={showEmptyMessageWithTrailingSlot}
-        className={showEmptyMessageWithTrailingSlot ? 'flex w-full flex-col gap-6' : undefined}
+        className={showEmptyMessageWithTrailingSlot ? 'flex w-full flex-col gap-4' : undefined}
       >
         {showEmptyMessageWithTrailingSlot ? emptyState : null}
         <Container

@@ -216,6 +216,38 @@ jobs:
 
           echo "Service is ready."
 
+      # TEMP WORKAROUND: nexusd does not create the RediSearch `postContentIdx` index at
+      # startup (only via `nexusd db migration run`), so full-text post search returns 500
+      # ("No such index postContentIdx") on a fresh stack. Run the migrations once after the
+      # stack is up. The migration CLI ignores `--config-dir` and reads
+      # ~/.pubky-nexus/migrations/config.toml, which defaults to localhost, so write a config
+      # pointing at the compose service hostnames first. Remove once Nexus creates the index
+      # on startup.
+      - name: Run Nexus DB migrations (create postContentIdx)
+        run: |
+          docker exec nexusd sh -c 'mkdir -p /root/.pubky-nexus/migrations && cat > /root/.pubky-nexus/migrations/config.toml <<EOF
+          backfill_ready = []
+
+          [stack]
+          log_level = "info"
+          files_path = "/static/files/"
+
+          [stack.otlp]
+          name = "nexusd.migration"
+
+          [stack.db]
+          redis = "redis://nexus-redis:6379"
+
+          [stack.db.neo4j]
+          uri = "bolt://nexus-neo4j:7687"
+          password = "12345678"
+          EOF'
+          docker exec nexusd nexusd db migration run
+          docker exec nexus-redis redis-cli FT._LIST | grep -q postContentIdx || {
+            echo "Error: postContentIdx was not created by Nexus migrations"
+            exit 1
+          }
+
       - name: Run e2e tests - Desktop (${{ matrix.browser }}) - Spec (${{matrix.spec}})
         id: test-desktop
         uses: cypress-io/github-action@v6

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Check, Smile } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -61,6 +61,12 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
     }, 0);
   };
   const handleKeyDown = useEnterSubmit(isValidCustomStatus, handleCustomStatusSave);
+  // Android soft keyboards (e.g. Gboard) may not emit an identifiable Enter keydown,
+  // so native form submission is the reliable submit path on mobile
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    handleCustomStatusSave();
+  };
   return (
     <Container className="gap-2">
       {/* Predefined status options */}
@@ -98,12 +104,13 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
       <Container className="gap-2.5 pt-1 pb-0">
         <Label className="text-xs leading-5 tracking-[1.2px] text-muted-foreground uppercase">{'Custom Status'}</Label>
         <Container className="gap-3">
-          <Container
-            overrideDefaults={true}
+          <form
+            onSubmit={handleSubmit}
             className="flex items-center gap-2 rounded-md border border-dashed border-input bg-background/10 px-5 py-4 shadow-sm focus-within:border-white/80"
           >
             {selectedEmoji ? (
               <Button
+                type="button"
                 overrideDefaults={true}
                 onClick={() => setShowEmojiPicker(true)}
                 className={cn(
@@ -117,6 +124,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
               </Button>
             ) : (
               <Button
+                type="button"
                 overrideDefaults={true}
                 onClick={() => setShowEmojiPicker(true)}
                 className={cn(
@@ -135,6 +143,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
               value={customStatus}
               placeholder={'Add status'}
               maxLength={USER_STATUS_MAX_LENGTH}
+              enterKeyHint="done"
               onChange={(e) => setCustomStatus(e.target.value)}
               onKeyDown={handleKeyDown}
               className={cn(
@@ -145,7 +154,7 @@ export function StatusPickerContent({ onStatusSelect, currentStatus }: StatusPic
                 customStatus ? 'text-foreground' : 'text-input',
               )}
             />
-          </Container>
+          </form>
         </Container>
       </Container>
 

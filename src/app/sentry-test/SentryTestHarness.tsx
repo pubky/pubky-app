@@ -26,7 +26,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isSentryInitialized } from '@/libs/observability/sentry';
 import { getSentryDiagnostics } from '@/libs/observability/sentry-test-harness';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 
 type ServerTriggerType = 'unhandled' | 'factory';
 type RequestState = 'idle' | 'loading' | 'ok' | 'error';

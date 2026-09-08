@@ -2,11 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Button } from '@/atoms/Button/Button';
 import { COLLECTION_LAYOUT } from '@/config/collections';
+import { toast } from '@/molecules/Toaster/toast';
 import { DialogNewCollection } from './DialogNewCollection';
 
 const mocks = vi.hoisted(() => ({
   commitCreateCollection: vi.fn(),
-  toast: vi.fn(),
   push: vi.fn(),
   useAuthoredCollections: vi.fn(),
 }));
@@ -24,9 +24,7 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
   useAuthoredCollections: () => mocks.useAuthoredCollections(),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
@@ -175,7 +173,7 @@ describe('DialogNewCollection', () => {
         layout: COLLECTION_LAYOUT.LIST,
       });
     });
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Collection created',
     });
     await waitFor(() => {

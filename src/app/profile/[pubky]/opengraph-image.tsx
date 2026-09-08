@@ -1,4 +1,5 @@
 import { OG_CONTENT_TYPE, OG_SIZE } from '@/libs/og/ogConstants';
+import { renderOgWithDeadline } from '@/libs/og/renderOgWithDeadline';
 import { renderProfileOg } from '@/libs/og/renderProfileOg';
 
 // Metadata exports read by Next for the injected <meta> tags.
@@ -12,5 +13,5 @@ export const revalidate = 3600;
 
 export default async function Image({ params }: { params: Promise<{ pubky: string }> }) {
   const { pubky } = await params;
-  return renderProfileOg({ pubky });
+  return renderOgWithDeadline(() => renderProfileOg({ pubky }), { route: 'profile', pubky });
 }

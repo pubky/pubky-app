@@ -113,11 +113,7 @@ vi.mock('@/molecules/Page/Page', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock copyToClipboard function - use vi.hoisted to ensure it's available before vi.mock runs
 const { mockCopyToClipboard } = vi.hoisted(() => ({

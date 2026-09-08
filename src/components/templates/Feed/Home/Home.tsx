@@ -21,7 +21,7 @@ export function Home() {
     <>
       <DialogWelcome />
       {/* First child so the mobile tab bar sits directly under the compact header (Hot pattern). */}
-      <FeedNavigation className="-mx-6 w-auto lg:mx-0 lg:w-full" />
+      <FeedNavigation />
       <AlertBackup />
       <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} persistentHeader={<TaggedAsHeadline />}>
         <PostInput dataCy="home-post-input" variant={POST_INPUT_VARIANT.POST} />

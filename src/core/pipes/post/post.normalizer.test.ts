@@ -260,6 +260,30 @@ describe('PostNormalizer', () => {
 
           expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, null);
         });
+
+        it('should append pre-uploaded attachment URIs after uploaded file URLs', async () => {
+          const inlineUris = [
+            buildPubkyUri(TEST_PUBKY.USER_1, 'files/inlineA'),
+            buildPubkyUri(TEST_PUBKY.USER_1, 'files/inlineB'),
+          ];
+          const post = createBasicPost({ attachments: [createMockAttachment('cover')], attachmentUris: inlineUris });
+
+          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
+
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, [
+            buildPubkyUri(TEST_PUBKY.USER_1, 'files/cover'),
+            ...inlineUris,
+          ]);
+        });
+
+        it('should pass attachment URIs alone when there are no uploaded files', async () => {
+          const inlineUris = [buildPubkyUri(TEST_PUBKY.USER_1, 'files/inlineA')];
+          const post = createBasicPost({ attachmentUris: inlineUris });
+
+          await PostNormalizer.to(post, TEST_PUBKY.USER_1);
+
+          expect(mockBuilder.createPost).toHaveBeenCalledWith(post.content, post.kind, null, null, inlineUris);
+        });
       });
 
       describe('all options combined', () => {

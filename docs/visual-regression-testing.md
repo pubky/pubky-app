@@ -10,15 +10,15 @@ interaction tests for those).
 - Orphan check: `npm run test:vrt:check-baselines` (also in Code Quality CI).
 - Baselines: `__screenshots__/<file>/<name>-<browser>-<platform>.png`, one per
   browser (chromium/firefox/webkit) × platform (darwin/linux).
-- Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `VRT_ROOT_TESTID`),
+- Harness: `src/test-utils/vrt.tsx` (`renderForVRT`, `matchVrtFrameScreenshot`),
   `vrt.setup.ts` (global mocks), `vrt.clock.ts`, `vrt.viewports.ts`.
 - Reference example: `src/test/vrt/feed/Home.vrt.test.tsx`.
 
 ## Writing a test
 
 ```tsx
-const screen = await renderForVRT(<Component />, { viewport: VRT_VIEWPORT_DESKTOP });
-await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('name-desktop');
+await renderForVRT(<Component />, { viewport: VRT_VIEWPORT_DESKTOP });
+await matchVrtFrameScreenshot('name-desktop');
 ```
 
 `renderForVRT` wraps the tree in a viewport-clamped root (the screenshot is
@@ -92,6 +92,57 @@ breaks the cross-OS comparison.
 a tall page section by section (header / card / footer as separate snapshots).
 
 See [Vitest Discussion #7749](https://github.com/vitest-dev/vitest/discussions/7749).
+
+## Limitation: dialogs portal to `document.body`
+
+Radix `Dialog.Portal` mounts overlay + content on `document.body`, outside
+`[data-testid="vrt-root"]`, so an element screenshot of the VRT root would miss
+them.
+
+Do **not** `vi.mock('radix-ui')` to retarget the portal. `importOriginal()` of
+that barrel pulls in every Radix primitive (including `Slot`, used by every
+`Button`) and can shift `oklch` brand green on unrelated screenshots — often
+only on some browser/OS pairs, so it looks random. The onboarding Finish / Pay
+Once buttons are a typical false positive.
+
+Do **not** move portal DOM nodes into `vrt-root` either. React still thinks they
+live on `document.body`; the next commit then throws `NotFoundError` from
+`removeChild` and can leave the Vitest browser process hanging
+(`close timed out after 10000ms`).
+
+Instead, screenshot the iframe document with `matchVrtFrameScreenshot()`
+(exported from `vrt.tsx`) so overlay + content on `body` are in the crop.
+Query dialog contents with `page.getBy…` from `vitest/browser`, not the render
+`screen` (which is scoped to `vrt-root`). Production `Dialog.tsx` stays
+unchanged.
+
+## Gotcha: Playwright cursor position can trigger `:hover` states
+
+Playwright's default pointer position can land on interactive elements inside a
+small mobile viewport, especially when the browser window is larger than the
+VRT viewport. The screenshot then captures the `:hover` state instead of the
+resting state (e.g. `bg-brand/30` instead of `bg-brand/16`), producing a brighter
+button on some browser/OS pairs but not others. This looks like a random colour
+shift but is actually cursor position.
+
+`page.elementLocator(...).unhover()` moves the pointer to `document.body`, but
+on a small viewport the body centre can still be over a button, so the issue
+may persist.
+
+`renderForVRT` and `matchVrtFrameScreenshot` instead create a temporary 8x8
+transparent target at the top-left corner of the viewport, hover it to move the
+pointer to `(0, 0)`, and then remove the target so it cannot block interactions
+or affect the screenshot. The helper does not click or move keyboard focus —
+click-outside would collapse QuickReply, and a focused composer would lose
+`:focus-within`. The baseline is always free of accidental `:hover`. If a test
+moves the cursor by clicking, use `matchVrtFrameScreenshot()` (or call the helper
+again) before the final screenshot.
+
+Expanded QuickReply tests click the textarea again after the expand motion so
+the field stays focused. Product CSS then hides the prompt
+(`focus-within:[&_textarea::placeholder]:opacity-0`); VRT already sets
+`caret-color: transparent` and `transition: none` on `::placeholder`, so the
+capture is an empty focused input with no caret and no prompt.
 
 ## Artifact: sub-pixel seams on segmented elements
 

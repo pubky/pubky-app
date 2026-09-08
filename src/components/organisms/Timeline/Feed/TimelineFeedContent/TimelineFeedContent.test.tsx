@@ -20,12 +20,10 @@ import { useTimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
-  vi.fn(
-    (): UsePullToRefreshResult => ({
-      state: 'idle',
-      pullDistance: 0,
-    }),
-  ),
+  vi.fn((): UsePullToRefreshResult => ({
+    state: 'idle',
+    pullDistance: 0,
+  })),
 );
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
@@ -72,11 +70,7 @@ vi.mock('@/molecules/Timeline/TimelineLoading', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/organisms/Timeline/Posts/Posts', () => {
   return {
@@ -279,6 +273,7 @@ describe('TimelineFeedContent', () => {
       );
       expect(screen.getByTestId('child')).toBeInTheDocument();
       expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+      expect(screen.getByTestId('child').parentElement).toHaveClass('gap-4');
     });
 
     it('renders ordinary children before the persistent header and post list', () => {

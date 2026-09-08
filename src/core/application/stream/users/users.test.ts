@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserStreamApplication } from '@/application/stream/users/users';
 import type { Pubky } from '@/models/models.types';
-import { buildUserCompositeId } from '@/models/stream/user/userStream.helper';
+import { buildStarterPackStreamId, buildUserCompositeId } from '@/models/stream/user/userStream.helper';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
@@ -289,6 +289,40 @@ describe('UserStreamApplication', () => {
       expect(result.nextPageIds).toEqual(['influencer-1', 'influencer-2', 'influencer-3']);
     });
 
+    describe('starter pack caching', () => {
+      it('should persist reversed tag orders as distinct Dexie rows', async () => {
+        const forwardId = buildStarterPackStreamId(['travel', 'music']);
+        const reversedId = buildStarterPackStreamId(['music', 'travel']);
+        const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch').mockImplementation(async ({ streamId }) => {
+          return streamId === forwardId ? ['user-a'] : ['user-b'];
+        });
+
+        await UserStreamApplication.getOrFetchStreamSlice({
+          streamId: forwardId,
+          skip: 0,
+          limit: 1,
+          viewerId: DEFAULT_VIEWER_ID,
+        });
+        await UserStreamApplication.getOrFetchStreamSlice({
+          streamId: reversedId,
+          skip: 0,
+          limit: 1,
+          viewerId: DEFAULT_VIEWER_ID,
+        });
+
+        expect(fetchSpy).toHaveBeenNthCalledWith(1, {
+          streamId: forwardId,
+          params: { skip: 0, limit: 1, viewer_id: DEFAULT_VIEWER_ID },
+        });
+        expect(fetchSpy).toHaveBeenNthCalledWith(2, {
+          streamId: reversedId,
+          params: { skip: 0, limit: 1, viewer_id: DEFAULT_VIEWER_ID },
+        });
+        expect((await LocalStreamUsersService.findById(forwardId))?.stream).toEqual(['user-a']);
+        expect((await LocalStreamUsersService.findById(reversedId))?.stream).toEqual(['user-b']);
+      });
+    });
+
     it('should pass viewerId to Nexus API for relationship data', async () => {
       const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
       const mockUserIds: Pubky[] = ['follower-1', 'follower-2'];
@@ -560,6 +594,28 @@ describe('UserStreamApplication', () => {
         user_ids: cacheMissUserIds,
         viewer_id: undefined,
       });
+    });
+  });
+
+  describe('getStreamUserIds', () => {
+    it('returns the cached ids of a stream without touching Nexus', async () => {
+      const streamId = buildUserCompositeId({ userId: DEFAULT_VIEWER_ID, reach: 'following' });
+      const cachedUserIds: Pubky[] = ['user-1', 'user-2'];
+      await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch');
+
+      const result = await UserStreamApplication.getStreamUserIds(streamId);
+
+      expect(result).toEqual(cachedUserIds);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty list when the stream was never cached', async () => {
+      const streamId = buildUserCompositeId({ userId: 'never-cached' as Pubky, reach: 'following' });
+
+      const result = await UserStreamApplication.getStreamUserIds(streamId);
+
+      expect(result).toEqual([]);
     });
   });
 });

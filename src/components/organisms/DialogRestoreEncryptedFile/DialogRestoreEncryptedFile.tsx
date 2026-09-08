@@ -23,7 +23,7 @@ import { AppError } from '@/libs/error/error';
 import { ErrorService } from '@/libs/error/error.types';
 import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { formatFileName } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 
 export function DialogRestoreEncryptedFile({ onRestore }: { onRestore: () => void }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);

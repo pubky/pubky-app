@@ -1,0 +1,37 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FilterPostsEmpty - Snapshots > matches snapshot 1`] = `
+<div
+  data-src="/images/tagged-empty-state.webp"
+  data-testid="empty-state"
+>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-search"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="m21 21-4.34-4.34"
+    />
+    <circle
+      cx="11"
+      cy="11"
+      r="8"
+    />
+  </svg>
+  <h3>
+    No posts match your search
+  </h3>
+  <p>
+    Try a different search term.
+  </p>
+</div>
+`;

@@ -87,6 +87,20 @@ describe('Metadata - omitImages', () => {
   });
 });
 
+describe('Metadata - twitter site', () => {
+  it('defaults twitter:site to the @handle, not the site URL', () => {
+    const result = Metadata({ title: 'T', description: 'D' });
+    expect(result.twitter.site).toBe('@getpubky');
+    expect(result.twitter.creator).toBe('@getpubky');
+  });
+
+  it('uses an explicit site prop when provided', () => {
+    const result = Metadata({ title: 'T', description: 'D', site: '@custom' });
+    expect(result.twitter.site).toBe('@custom');
+    expect(result.twitter.creator).toBe('@getpubky');
+  });
+});
+
 describe('Metadata - optional description', () => {
   it('includes description everywhere when provided', () => {
     const result = Metadata({ title: 'T', description: 'D' });

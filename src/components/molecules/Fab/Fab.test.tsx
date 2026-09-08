@@ -15,6 +15,11 @@ const mockUseAuthStatus = vi.fn(() => ({
 const mockIsPublicExploreRoute = vi.fn(() => false);
 const mockRequireAuth = vi.fn((action: () => void) => action());
 const mockUseFabAction = vi.fn<() => FabAction>(() => ({ kind: 'createPost', ariaLabel: 'New post' }));
+const mockUsePathname = vi.fn(() => '/home');
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockUsePathname(),
+}));
 
 vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
   useAuthStatus: () => mockUseAuthStatus(),
@@ -109,6 +114,7 @@ describe('Fab', () => {
     mockIsPublicExploreRoute.mockReturnValue(false);
     mockRequireAuth.mockImplementation((action: () => void) => action());
     mockUseFabAction.mockReturnValue({ kind: 'createPost', ariaLabel: 'New post' });
+    mockUsePathname.mockReturnValue('/home');
     useCollectionReorderStore.setState({ activeCollectionId: null });
   });
 
@@ -156,6 +162,12 @@ describe('Fab', () => {
       hasKeypair: false,
       hasProfile: false,
     });
+    const { container } = render(<Fab />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('returns null on onboarding routes even when fully authenticated', () => {
+    mockUsePathname.mockReturnValue('/onboarding/tags');
     const { container } = render(<Fab />);
     expect(container.firstChild).toBeNull();
   });

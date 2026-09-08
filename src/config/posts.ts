@@ -73,8 +73,14 @@ export const ATTACHMENT_MAX_OTHER_SIZE = validationLimits.maxFileSizeBytes;
 /** Maximum number of attachments per post */
 export const POST_ATTACHMENT_MAX_FILES = validationLimits.postAttachmentsMaxCount;
 
-/** Maximum number of attachments per article */
-export const ARTICLE_ATTACHMENT_MAX_FILES = 1;
+/**
+ * Maximum total number of attachments per article: the optional cover plus the
+ * inline body images that map onto `attachment:{n}` slots.
+ */
+export const ARTICLE_ATTACHMENT_MAX_FILES = validationLimits.postAttachmentsMaxCount;
+
+/** Maximum number of cover images per article (the cover picker's cap) */
+export const ARTICLE_COVER_MAX_FILES = 1;
 
 /** Human-readable list of supported file types for error messages (derived from MIME types) */
 export const POST_SUPPORTED_FILE_TYPES = POST_SUPPORTED_ATTACHMENT_MIME_TYPES.map((mime) => mime.split('/')[1]).join(

@@ -2,7 +2,6 @@
 
 exports[`StatusPickerWrapper > StatusPickerWrapper - Snapshots > matches snapshot with custom sideOffset 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   class="flex h-8 cursor-pointer items-center gap-1 p-0 focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none"
@@ -45,7 +44,6 @@ exports[`StatusPickerWrapper > StatusPickerWrapper - Snapshots > matches snapsho
 
 exports[`StatusPickerWrapper > StatusPickerWrapper - Snapshots > matches snapshot with custom status 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   class="flex h-8 cursor-pointer items-center gap-1 p-0 focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none"
@@ -88,7 +86,6 @@ exports[`StatusPickerWrapper > StatusPickerWrapper - Snapshots > matches snapsho
 
 exports[`StatusPickerWrapper > StatusPickerWrapper - Snapshots > matches snapshot with onStatusChange handler 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   class="flex h-8 cursor-pointer items-center gap-1 p-0 focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none"
@@ -131,7 +128,6 @@ exports[`StatusPickerWrapper > StatusPickerWrapper - Snapshots > matches snapsho
 
 exports[`StatusPickerWrapper > StatusPickerWrapper - Snapshots > matches snapshot with predefined status 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   class="flex h-8 cursor-pointer items-center gap-1 p-0 focus-visible:border-none focus-visible:ring-0 focus-visible:outline-none"

@@ -29,6 +29,8 @@ export interface TagInputProps {
   currentTagsCount?: number;
   /** Custom class for the input placeholder when at limit */
   limitReachedPlaceholder?: string;
+  /** Clear pending text when another control reaches the shared tag limit. */
+  clearOnLimitReached?: boolean;
   /** Callback when input loses focus */
   onBlur?: () => void;
   /** Callback when the input container is clicked (useful for auth prompts) */

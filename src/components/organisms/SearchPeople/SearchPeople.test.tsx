@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SEARCH_PEOPLE_PREVIEW_COUNT } from '@/config/search';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
-import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import type { Pubky } from '@/models/models.types';
+import { toast } from '@/molecules/Toaster/toast';
 import type { UserListItemData } from '@/organisms/UserListItem/UserListItem.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SearchPeople } from './SearchPeople';
@@ -12,18 +13,15 @@ import { SearchPeople } from './SearchPeople';
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('@/hooks/useSearchStreamId/useSearchStreamId', () => ({
-  useSearchTags: vi.fn(),
+vi.mock('@/hooks/useSearchCriteria/useSearchCriteria', () => ({
+  useSearchCriteria: vi.fn(),
 }));
 
 vi.mock('@/hooks/useSearchPeople/useSearchPeople', () => ({
   useSearchPeople: vi.fn(),
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 const mockToggleFollow = vi.fn();
 vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({
@@ -49,14 +47,14 @@ vi.mock('@/organisms/UserListItem/UserListItem', () => ({
     user: UserListItemData;
     variant: string;
     isCurrentUser?: boolean;
-    onFollowClick?: (id: Pubky, isFollowing: boolean, name: string) => void;
+    onFollowClick?: (id: Pubky, isFollowing: boolean) => void;
   }) => (
     <div
       data-testid="user-list-item"
       data-user-id={user.id}
       data-variant={variant}
       data-is-current-user={String(isCurrentUser ?? false)}
-      onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false, user.name ?? '')}
+      onClick={() => onFollowClick?.(user.id, user.isFollowing ?? false)}
     />
   ),
 }));
@@ -69,7 +67,8 @@ vi.mock('@/organisms/SearchPeople/SearchPeople.skeleton', () => ({
 // Fixtures + helpers
 // ---------------------------------------------------------------------------
 
-const mockUseSearchTags = vi.mocked(useSearchTags);
+const mockUseSearchCriteria = vi.mocked(useSearchCriteria);
+const tagsCriteria = (tags: string[]) => ({ mode: 'tags' as const, tags });
 const mockUseSearchPeople = vi.mocked(useSearchPeople);
 
 function buildUsers(count: number): UserListItemData[] {
@@ -91,7 +90,7 @@ const defaultPeople = {
 };
 
 function setup({ people = {} }: { people?: Partial<typeof defaultPeople> } = {}) {
-  mockUseSearchTags.mockReturnValue(['synonym']);
+  mockUseSearchCriteria.mockReturnValue(tagsCriteria(['synonym']));
   mockUseSearchPeople.mockReturnValue({ ...defaultPeople, ...people });
 }
 
@@ -105,8 +104,17 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('SearchPeople', () => {
-  it('renders nothing without search tags', () => {
-    mockUseSearchTags.mockReturnValue([]);
+  it('renders nothing without a tag search', () => {
+    mockUseSearchCriteria.mockReturnValue({ mode: 'none' });
+
+    const { container } = render(<SearchPeople />);
+
+    expect(container.firstChild).toBeNull();
+    expect(mockUseSearchPeople).not.toHaveBeenCalled();
+  });
+
+  it('renders nothing for a full-text query, which has no tags to match', () => {
+    mockUseSearchCriteria.mockReturnValue({ mode: 'content', query: 'bitcoin wallet' });
 
     const { container } = render(<SearchPeople />);
 
@@ -214,7 +222,7 @@ describe('SearchPeople', () => {
     render(<SearchPeople />);
     fireEvent.click(screen.getByTestId('user-list-item'));
 
-    expect(mockToggleFollow).toHaveBeenCalledWith(users[0].id, false, 'User 0');
+    expect(mockToggleFollow).toHaveBeenCalledWith(users[0].id, false);
   });
 
   it('fires the error toast through the onError wiring', () => {
@@ -225,7 +233,7 @@ describe('SearchPeople', () => {
     const options = mockUseSearchPeople.mock.calls[0][1];
     options?.onError?.(new Error('boom'));
 
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
   it('collapses back to the preview when the tags change (remount)', () => {
@@ -235,7 +243,7 @@ describe('SearchPeople', () => {
     fireEvent.click(screen.getByRole('button', { name: 'See all' }));
     expect(screen.getAllByTestId('user-list-item')).toHaveLength(6);
 
-    mockUseSearchTags.mockReturnValue(['bitcoin']);
+    mockUseSearchCriteria.mockReturnValue(tagsCriteria(['bitcoin']));
     rerender(<SearchPeople />);
 
     expect(screen.getAllByTestId('user-list-item')).toHaveLength(SEARCH_PEOPLE_PREVIEW_COUNT);

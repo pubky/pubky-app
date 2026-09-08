@@ -17,9 +17,9 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
 import { getAttachmentPreviewUrl } from '@/libs/file/attachmentPreviewUrl';
 import { cn } from '@/libs/utils/utils';
+import { toast } from '@/molecules/Toaster/toast';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsCarouselImage } from '../PostAttachmentsCarouselImage/PostAttachmentsCarouselImage';
-import { useToast } from '../Toaster/use-toast';
 
 const MAX_VISIBLE_MEDIA = 4;
 
@@ -53,7 +53,6 @@ export const PostAttachmentsImagesAndVideos = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
   const openPreview = (index: number, event?: MouseEvent) => {
     event?.stopPropagation();
     setCurrentIndex(index);

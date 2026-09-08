@@ -51,7 +51,7 @@ export interface UserListItemProps {
   /** Callback when user area is clicked */
   onUserClick?: (id: Pubky) => void;
   /** Callback when follow button is clicked */
-  onFollowClick?: (id: Pubky, isCurrentlyFollowing: boolean, displayName: string) => void;
+  onFollowClick?: (id: Pubky, isCurrentlyFollowing: boolean) => void;
   /** Custom className */
   className?: string;
   /** Test ID */
@@ -62,21 +62,7 @@ export interface UserListItemProps {
 // Internal Types (used by sub-components)
 // =============================================================================
 
-export interface FollowButtonProps {
-  isFollowing: boolean;
-  isLoading: boolean;
-  isStatusLoading: boolean;
-  displayName: string;
-  variant: 'icon' | 'iconWithText';
-  onClick: (e: React.MouseEvent) => void;
-}
-
 export interface StatsSubtitleProps {
-  tags: number;
-  posts: number;
-}
-
-export interface UserStatsProps {
   tags: number;
   posts: number;
 }

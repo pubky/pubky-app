@@ -12,7 +12,23 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { TUserStreamUpsertParams } from '@/services/local/stream/users/users.types';
-import type { NexusTag, NexusUser, NexusUserCounts, NexusUserRelationship } from '@/services/nexus/nexus.types';
+import {
+  NexusSocialGraphStatus,
+  type NexusTag,
+  type NexusUser,
+  type NexusUserCounts,
+  type NexusUserRelationship,
+} from '@/services/nexus/nexus.types';
+
+const KNOWN_SOCIAL_GRAPH_STATUSES = new Set<string>(Object.values(NexusSocialGraphStatus));
+
+/**
+ * Nexus decides the badge tiers; a value this build does not know (a new tier, a renamed
+ * one) is treated as "no ranking" so the badge hides instead of rendering an empty pill.
+ */
+function toSocialGraphStatus(value: NexusUser['social_graph_status']): NexusSocialGraphStatus | null {
+  return value && KNOWN_SOCIAL_GRAPH_STATUSES.has(value) ? value : null;
+}
 
 /**
  * Local Stream Users Service
@@ -106,7 +122,10 @@ export class LocalStreamUsersService {
       userCounts.push([userId, user.counts]);
       userRelationships.push([userId, user.relationship]);
       userTags.push([userId, user.tags]);
-      userDetails.push(user.details);
+      // The badge tier lives on the Nexus user view, not on `details`; it rides on the
+      // details row so profile reads stay a single lookup. An absent field (older Nexus)
+      // is stored as `null` so readers treat it as "no ranking" rather than "never fetched".
+      userDetails.push({ ...user.details, social_graph_status: toSocialGraphStatus(user.social_graph_status) });
       userTtl.push([userId, { lastUpdatedAt: now }]);
 
       // Detect moderation from user tags

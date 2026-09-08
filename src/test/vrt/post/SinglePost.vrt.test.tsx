@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -532,26 +532,26 @@ async function renderSinglePost(layout: 'columns' | 'wide' | 'list', viewport: {
 
 describe('Single post — columns layout — visual regression', () => {
   it('renders a post at desktop viewport', async () => {
-    const screen = await renderSinglePost('columns', VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-post-columns-desktop');
+    await renderSinglePost('columns', VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('single-post-columns-desktop');
   });
 
   it('renders a post at mobile viewport', async () => {
-    const screen = await renderSinglePost('columns', VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-post-mobile');
+    await renderSinglePost('columns', VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('single-post-mobile');
   });
 });
 
 describe('Single post — wide layout — visual regression', () => {
   it('renders a post at desktop viewport', async () => {
-    const screen = await renderSinglePost('wide', VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-post-wide-desktop');
+    await renderSinglePost('wide', VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('single-post-wide-desktop');
   });
 });
 
 describe('Single post — list layout — visual regression', () => {
   it('renders a post at desktop viewport', async () => {
-    const screen = await renderSinglePost('list', VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-post-list-desktop');
+    await renderSinglePost('list', VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('single-post-list-desktop');
   });
 });

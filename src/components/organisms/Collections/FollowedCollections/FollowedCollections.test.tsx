@@ -9,6 +9,7 @@ import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/po
 import { Logger } from '@/libs/logger/logger';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { buildFollowedCollectionsStreamId } from '@/models/stream/post/postStream.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { FollowedCollections } from './FollowedCollections';
 
@@ -52,10 +53,7 @@ vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/molecules/AvatarStack/AvatarStack', () => ({
   AvatarStack: ({ pubkys }: { pubkys: string[] }) => <div data-testid="avatar-stack" data-pubkys={pubkys.join(',')} />,
@@ -344,7 +342,7 @@ describe('FollowedCollections', () => {
     });
     // Mirror of the `MyCollections` onError toast — keeps failure UX
     // consistent across the three Collections sections.
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to load collections. Please try again.',
     });

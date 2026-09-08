@@ -18,7 +18,7 @@ import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSiz
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { resolveCollectionCoverImage } from '@/libs/post/collectionCoverImage';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { UseEditCollectionParams } from './useEditCollection.types';
@@ -49,8 +49,6 @@ type UseEditCollectionResult = {
  * stay in `collections.new`.
  */
 export function useEditCollection({ compositeCollectionId }: UseEditCollectionParams): UseEditCollectionResult {
-  const { toast } = useToast();
-
   const { postDetails } = usePostDetails(compositeCollectionId);
   const collection = postDetails ? parseCollectionContent(postDetails.content) : null;
 

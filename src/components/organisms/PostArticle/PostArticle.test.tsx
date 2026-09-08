@@ -139,12 +139,14 @@ describe('PostArticle', () => {
       src: 'https://example.com/cover-image.jpg',
       alt: 'Cover Image',
     },
+    hasCover: true,
   };
 
   const mockHookReturnWithoutImage = {
     title: 'Test Article Title',
     body: 'This is the article body content.',
     coverImage: null,
+    hasCover: true,
   };
 
   beforeEach(() => {

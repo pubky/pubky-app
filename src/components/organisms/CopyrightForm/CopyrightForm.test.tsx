@@ -1,17 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { CopyrightForm } from './CopyrightForm';
 
 // Mock @/molecules
-const { mockToast } = vi.hoisted(() => ({
-  mockToast: vi.fn(),
-}));
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: mockToast,
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock @/atoms - provide minimal mocks for snapshot testing
 
@@ -224,7 +218,7 @@ describe('CopyrightForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Request sent',
       });
     });
@@ -259,7 +253,7 @@ describe('CopyrightForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Validation failed',
       });
@@ -312,7 +306,7 @@ describe('CopyrightForm', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalled();
     });
 
     // Form should be reset

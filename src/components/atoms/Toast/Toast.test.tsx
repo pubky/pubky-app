@@ -13,22 +13,19 @@ describe('Toast Components', () => {
 });
 
 describe('Toast - Snapshots', () => {
-  it.each(['default', 'error', 'warning', 'info'] as const)(
-    'matches snapshot for ToastAction variant=%s',
-    (variant) => {
-      const { container } = render(
-        <ToastProvider>
-          <Toast variant={variant} open>
-            <ToastAction altText="OK" variant={variant}>
-              OK
-            </ToastAction>
-          </Toast>
-          <ToastViewport />
-        </ToastProvider>,
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    },
-  );
+  it.each(['brand', 'muted'] as const)('matches snapshot for ToastAction variant=%s', (variant) => {
+    const { container } = render(
+      <ToastProvider>
+        <Toast open>
+          <ToastAction altText="OK" variant={variant}>
+            OK
+          </ToastAction>
+        </Toast>
+        <ToastViewport />
+      </ToastProvider>,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
 
   it.each(['default', 'error', 'warning', 'info'] as const)('matches snapshot for Toast variant=%s', (variant) => {
     const { container } = render(

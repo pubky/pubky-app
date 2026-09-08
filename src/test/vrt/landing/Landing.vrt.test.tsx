@@ -2,8 +2,8 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { describe, it, vi } from 'vitest';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
@@ -83,15 +83,15 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 describe('Landing — visual regression', () => {
   it('renders the landing hero at desktop viewport', async () => {
     await preloadImages(LANDING_LOGO_URLS);
-    const screen = await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
     // Viewport-clamped root: first fold only (hero is min-h-svh; lower
     // sections are intentionally cropped — see docs/visual-regression-testing.md).
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('landing-desktop');
+    await matchVrtFrameScreenshot('landing-desktop');
   });
 
   it('renders the landing hero at mobile viewport', async () => {
     await preloadImages(LANDING_LOGO_URLS);
-    const screen = await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('landing-mobile');
+    await renderForVRT(<LandingWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await matchVrtFrameScreenshot('landing-mobile');
   });
 });

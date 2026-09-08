@@ -9,7 +9,7 @@ import { isAppError } from '@/libs/error/error.utils';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import type { TimelineFeedContextValue } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed.types';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { CollectionPostContent } from '@/pipes/post/post.collection';

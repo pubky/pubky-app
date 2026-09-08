@@ -19,24 +19,13 @@ import type { NotificationPreferences } from '@/stores/settings/settings.types';
 export class SettingsController {
   private constructor() {} // Prevent instantiation
 
-  private static pendingCommit: Promise<void> = Promise.resolve();
-
   /**
    * Commits settings to homeserver.
    */
   private static async commitUpdate(): Promise<void> {
-    // Uses promise chaining to prevent race conditions: if multiple settings change rapidly,
-    // each commit waits for the previous one to finish, then reads the latest state.
-    // The chaining MUST happen synchronously (before any await) so that concurrent calls
-    // immediately queue behind the current pendingCommit rather than racing to overwrite it.
-    this.pendingCommit = this.pendingCommit
-      .catch(() => {})
-      .then(async () => {
-        const pubky = useAuthStore.getState().selectCurrentUserPubky();
-        const settings = SettingsNormalizer.extractState(useSettingsStore.getState());
-        await SettingsApplication.commitUpdate(settings, pubky);
-      });
-    await this.pendingCommit;
+    const pubky = useAuthStore.getState().selectCurrentUserPubky();
+    const settings = SettingsNormalizer.extractState(useSettingsStore.getState());
+    await SettingsApplication.commitUpdate(settings, pubky);
   }
 
   /**

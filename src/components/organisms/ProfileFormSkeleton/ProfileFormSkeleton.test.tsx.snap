@@ -1,0 +1,112 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProfileFormSkeleton - Snapshots > matches snapshot 1`] = `
+<div
+  class="mx-auto flex w-full flex-1 flex-col gap-6 lg:flex-none"
+  data-testid="profile-form-skeleton"
+>
+  <div
+    class="flex flex-col gap-6 text-card-foreground shadow-sm rounded-md bg-card p-6 md:p-12 lg:flex lg:flex-row lg:gap-12"
+    data-slot="card"
+    data-testid="card"
+  >
+    <div
+      class="mx-auto flex-col flex w-full gap-6"
+      data-testid="container"
+    >
+      <div
+        class="animate-pulse bg-muted h-7 w-20 rounded-md"
+        data-slot="skeleton"
+      />
+      <div
+        class="mx-auto w-full flex-col flex gap-6"
+        data-testid="container"
+      >
+        <div
+          class="mx-auto w-full flex-col flex gap-2"
+          data-testid="container"
+        >
+          <div
+            class="animate-pulse bg-muted h-3 w-12 rounded-md"
+            data-slot="skeleton"
+          />
+          <div
+            class="animate-pulse bg-muted h-10 w-full rounded-md"
+            data-slot="skeleton"
+          />
+        </div>
+        <div
+          class="mx-auto w-full flex-col flex gap-2"
+          data-testid="container"
+        >
+          <div
+            class="animate-pulse bg-muted h-3 w-8 rounded-md"
+            data-slot="skeleton"
+          />
+          <div
+            class="animate-pulse bg-muted h-24 w-full rounded-md"
+            data-slot="skeleton"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="mx-auto flex-col flex mt-6 w-full gap-6 lg:mt-0"
+      data-testid="container"
+    >
+      <div
+        class="animate-pulse bg-muted h-7 w-16 rounded-md"
+        data-slot="skeleton"
+      />
+      <div
+        class="mx-auto w-full flex-col flex gap-6"
+        data-testid="container"
+      >
+        <div
+          class="mx-auto w-full flex-col flex gap-2"
+          data-testid="container"
+        >
+          <div
+            class="animate-pulse bg-muted h-3 w-16 rounded-md"
+            data-slot="skeleton"
+          />
+          <div
+            class="animate-pulse bg-muted h-10 w-full rounded-md"
+            data-slot="skeleton"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="mx-auto flex-col flex mt-6 w-full gap-6 lg:mt-0"
+      data-testid="container"
+    >
+      <div
+        class="animate-pulse bg-muted mx-auto h-7 w-16 rounded-md"
+        data-slot="skeleton"
+      />
+      <div
+        class="animate-pulse bg-muted mx-auto size-48 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="animate-pulse bg-muted mx-auto h-8 w-28 rounded-full"
+        data-slot="skeleton"
+      />
+    </div>
+  </div>
+  <div
+    class="mx-auto w-full flex mt-auto flex-row justify-between"
+    data-testid="container"
+  >
+    <div
+      class="animate-pulse bg-muted h-10 w-28 rounded-full"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse bg-muted h-10 w-28 rounded-full"
+      data-slot="skeleton"
+    />
+  </div>
+</div>
+`;

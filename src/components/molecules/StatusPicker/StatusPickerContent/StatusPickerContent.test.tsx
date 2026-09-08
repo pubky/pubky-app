@@ -335,6 +335,70 @@ describe('StatusPickerContent', () => {
     });
   });
 
+  describe('Form Submission', () => {
+    // Android soft keyboards (e.g. Gboard) may not emit an identifiable Enter keydown,
+    // so submission must also work through the native form submit event
+    it('submits custom status on form submit without a keydown event', async () => {
+      render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} />);
+
+      const input = screen.getByPlaceholderText('Add status');
+
+      // Select an emoji first
+      const smileButton = screen.getByLabelText('Open emoji picker');
+      fireEvent.click(smileButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('emoji-select-button')).toBeInTheDocument();
+      });
+
+      const selectButton = screen.getByTestId('emoji-select-button');
+      fireEvent.click(selectButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('😊')).toBeInTheDocument();
+      });
+
+      fireEvent.change(input, { target: { value: 'Working' } });
+      fireEvent.submit(input.closest('form')!);
+
+      await waitFor(() => {
+        expect(mockOnStatusSelect).toHaveBeenCalledWith('😊Working');
+      });
+    });
+
+    it('submits text-only custom status on form submit', () => {
+      render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} />);
+
+      const input = screen.getByPlaceholderText('Add status');
+      fireEvent.change(input, { target: { value: 'Working' } });
+      fireEvent.submit(input.closest('form')!);
+
+      expect(mockOnStatusSelect).toHaveBeenCalledWith('Working');
+    });
+
+    it('does not submit on form submit when input is empty', () => {
+      render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} />);
+
+      const input = screen.getByPlaceholderText('Add status');
+      fireEvent.submit(input.closest('form')!);
+
+      expect(mockOnStatusSelect).not.toHaveBeenCalled();
+    });
+
+    it('does not submit the form when the emoji picker button is clicked', () => {
+      render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} />);
+
+      const input = screen.getByPlaceholderText('Add status');
+      fireEvent.change(input, { target: { value: 'Working' } });
+
+      const smileButton = screen.getByLabelText('Open emoji picker');
+      expect(smileButton).toHaveAttribute('type', 'button');
+      fireEvent.click(smileButton);
+
+      expect(mockOnStatusSelect).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Current Status Handling', () => {
     it('initializes with predefined status when currentStatus is provided', () => {
       render(<StatusPickerContent onStatusSelect={mockOnStatusSelect} currentStatus="available" />);

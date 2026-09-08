@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { useNotificationPostContent } from './useNotificationPostContent';
 
 type PostDetails = { kind: string; content: string } | null | undefined;
@@ -10,7 +11,6 @@ const mockUsePostDetails = vi.hoisted(() =>
     isLoading: false,
   })),
 );
-const mockToast = vi.hoisted(() => vi.fn());
 const mockWarn = vi.hoisted(() => vi.fn());
 const mockResolvePubkyToNames = vi.hoisted(() =>
   vi.fn<(content: string) => Promise<string>>((content) => Promise.resolve(content.replace('pk:abc', '@Alice'))),
@@ -22,9 +22,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: mockUsePostDetails,
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mockToast,
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/libs/logger/logger', () => ({
   Logger: { warn: mockWarn, error: vi.fn(), info: vi.fn(), debug: vi.fn() },
@@ -93,7 +91,7 @@ describe('useNotificationPostContent', () => {
     const { result } = renderHook(() => useNotificationPostContent({ compositeId: COMPOSITE_ID }));
 
     expect(result.current.content).toBe('Based Bitcoin');
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('falls back to raw content and warns the user when collection content will not parse', () => {
@@ -102,7 +100,7 @@ describe('useNotificationPostContent', () => {
     const { result } = renderHook(() => useNotificationPostContent({ compositeId: COMPOSITE_ID }));
 
     expect(result.current.content).toBe('not-json');
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
   });
 
   it('stays silent about an unparseable collection when the caller opts out', () => {
@@ -114,7 +112,7 @@ describe('useNotificationPostContent', () => {
     );
 
     expect(result.current.content).toBe('not-json');
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('reports a deleted post with the dedicated copy and the isDeleted flag', () => {

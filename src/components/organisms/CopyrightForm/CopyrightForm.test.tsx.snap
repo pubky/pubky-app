@@ -96,7 +96,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
               aria-hidden="true"
               checked=""
               name="role"
-              style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 0px; height: 0px;"
+              style="position: absolute; pointer-events: none; opacity: 0; margin: 0px; transform: translateX(-100%); width: 0px; height: 0px;"
               tabindex="-1"
               type="radio"
               value="rights_owner"
@@ -132,7 +132,7 @@ exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
             <input
               aria-hidden="true"
               name="role"
-              style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 0px; height: 0px;"
+              style="position: absolute; pointer-events: none; opacity: 0; margin: 0px; transform: translateX(-100%); width: 0px; height: 0px;"
               tabindex="-1"
               type="radio"
               value="reporting_on_behalf"

@@ -42,14 +42,18 @@ export function useNotifications(): UseNotificationsResult {
   const { mutedUserIdSet } = useMutedUsers();
   const lastRead = useNotificationStore((s) => s.lastRead);
   const unread = useNotificationStore((s) => s.unread);
-  const lastReadRef = useRef(lastRead);
+  // `lastRead` is frozen at the first non-zero value this hook instance sees, so
+  // marking notifications as read mid-session does not immediately clear the
+  // unread highlight. Held in state rather than a ref because it is read during
+  // render (`unreadNotifications`), which the React Compiler `refs` rule forbids.
+  const [frozenLastRead, setFrozenLastRead] = useState(lastRead);
   const previousUnreadRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (lastReadRef.current === 0 && lastRead > 0) {
-      lastReadRef.current = lastRead;
+    if (frozenLastRead === 0 && lastRead > 0) {
+      setFrozenLastRead(lastRead);
     }
-  }, [lastRead]);
+  }, [lastRead, frozenLastRead]);
 
   /**
    * Extracts the actor (initiator) user ID from a notification.
@@ -221,16 +225,19 @@ export function useNotifications(): UseNotificationsResult {
   /**
    * Check if a notification is unread
    */
-  const isNotificationUnread = useCallback((n: FlatNotification) => {
-    return n.timestamp > lastReadRef.current;
-  }, []);
+  const isNotificationUnread = useCallback(
+    (n: FlatNotification) => {
+      return n.timestamp > frozenLastRead;
+    },
+    [frozenLastRead],
+  );
 
   /**
    * List of unread notifications
    */
   const unreadNotifications = useMemo(() => {
-    return notifications.filter((n) => n.timestamp > lastReadRef.current);
-  }, [notifications]);
+    return notifications.filter((n) => n.timestamp > frozenLastRead);
+  }, [notifications, frozenLastRead]);
 
   /**
    * Initial load - fetch first page when component mounts

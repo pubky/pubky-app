@@ -1,12 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
+import { toast } from '@/molecules/Toaster/toast';
 import { DialogEditCollection } from './DialogEditCollection';
 
 const mocks = vi.hoisted(() => ({
   commitEditCollection: vi.fn(),
   setCollectionCover: vi.fn(),
-  toast: vi.fn(),
   postDetails: null as { content: string } | null,
 }));
 vi.mock('@/controllers/post/post', () => ({
@@ -19,9 +19,7 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: () => ({ postDetails: mocks.postDetails, isLoading: false }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: Object.assign(
@@ -118,7 +116,7 @@ describe('DialogEditCollection', () => {
       );
     });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       title: 'Collection updated',
     });
   });
@@ -133,7 +131,7 @@ describe('DialogEditCollection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
-      expect(mocks.toast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Failed to update collection.',
       });

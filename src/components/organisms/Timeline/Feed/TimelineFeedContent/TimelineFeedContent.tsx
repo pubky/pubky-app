@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
+import { CONTENT_AREA_STACK_CLASS } from '@/config/layoutClasses';
 import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { COLLECTION_ITEMS_MAX_COUNT } from '@/config/posts';
 import { useApplyPendingFeedInsert } from '@/hooks/useApplyPendingFeedInsert/useApplyPendingFeedInsert';
@@ -128,10 +129,10 @@ export function TimelineFeedWithStream({
  *
  * The outermost Atoms.Container is the default pull-to-refresh touch scope.
  * Some pages can pass an external scope (for example, the collection page wraps
- * hero + items so pulling from the hero refreshes the collection feed too). Its
- * classes match ContentLayout's main content area (min-w-0 flex-1 gap-6
- * lg:overflow-hidden) to preserve the same flex-col spacing that children
- * previously inherited as direct descendants of that container.
+ * hero + items so pulling from the hero refreshes the collection feed too). It
+ * shares CONTENT_AREA_STACK_CLASS with ContentLayout's main content area to
+ * preserve the same flex-col spacing that children previously inherited as
+ * direct descendants of that container.
  */
 function TimelineFeedContent({
   streamId,
@@ -276,7 +277,7 @@ function TimelineFeedContent({
   return (
     <TimelineFeedContext.Provider value={contextValue}>
       <PostMainLayoutProvider tagsLayout={tagsLayout}>
-        <Container ref={containerRef} className="min-w-0 flex-1 gap-6 lg:overflow-hidden">
+        <Container ref={containerRef} className={CONTENT_AREA_STACK_CLASS}>
           {enablePullToRefresh && <PullToRefreshIndicator state={pullState} pullDistance={pullDistance} />}
           {shouldRenderChildren ? children : null}
           {persistentHeader}

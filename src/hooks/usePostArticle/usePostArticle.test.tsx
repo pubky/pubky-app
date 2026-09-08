@@ -1,17 +1,13 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
+import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { usePostArticle } from './usePostArticle';
 
-// Mock useToast
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
-  };
-});
+// Mock toast
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock dependencies
 vi.mock('@/controllers/file/file', () => ({
@@ -342,7 +338,7 @@ describe('usePostArticle', () => {
         }),
       );
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not parse article content',
       });
@@ -365,10 +361,10 @@ describe('usePostArticle', () => {
       );
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalled();
+        expect(vi.mocked(toast)).toHaveBeenCalled();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not load cover image',
       });
@@ -401,7 +397,7 @@ describe('usePostArticle', () => {
       await waitFor(() => {
         expect(result.current.coverImage).toBeNull();
       });
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not load cover image',
       });
@@ -477,5 +473,65 @@ describe('usePostArticle', () => {
         });
       });
     });
+  });
+});
+
+describe('slot-0 cover rule (inline images)', () => {
+  const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+  const attachments = [`pubky://${AUTHOR}/pub/pubky.app/files/slot0`, `pubky://${AUTHOR}/pub/pubky.app/files/slot1`];
+
+  const articleContent = (body: string) => JSON.stringify({ title: 'T', body });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('treats attachments[0] as the cover when the body does not reference attachment:0', async () => {
+    mockGetMetadata.mockResolvedValue([createMockImageMetadata(`${AUTHOR}:slot0`)]);
+    mockGetFileUrl.mockReturnValue('https://cdn.example/slot0/main');
+
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('Text with ![img](attachment:1)'),
+        attachments,
+        coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(true);
+    await waitFor(() => {
+      expect(result.current.coverImage).not.toBeNull();
+    });
+    // Only the cover slot is resolved, never the inline attachments
+    expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [attachments[0]] });
+  });
+
+  it('reports no cover when the body references attachment:0', async () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('![inline slot zero](attachment:0)'),
+        attachments,
+        coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(false);
+    await waitFor(() => {
+      expect(result.current.body).toContain('attachment:0');
+    });
+    expect(result.current.coverImage).toBeNull();
+    expect(mockGetMetadata).not.toHaveBeenCalled();
+  });
+
+  it('reports no cover when there are no attachments', () => {
+    const { result } = renderHook(() =>
+      usePostArticle({
+        content: articleContent('Plain body'),
+        attachments: null,
+        coverImageVariant: FileVariant.MAIN,
+      }),
+    );
+
+    expect(result.current.hasCover).toBe(false);
   });
 });

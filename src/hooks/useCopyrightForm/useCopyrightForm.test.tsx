@@ -1,15 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { useCopyrightForm } from './useCopyrightForm';
 import { COPYRIGHT_ROLES } from './useCopyrightForm.constants';
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: (...args: unknown[]) => mockToast(...args),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 global.fetch = vi.fn();
 
@@ -159,7 +155,7 @@ describe('useCopyrightForm', () => {
         await result.current.onSubmit();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         title: 'Request sent',
       });
     });
@@ -182,7 +178,7 @@ describe('useCopyrightForm', () => {
         await result.current.onSubmit();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Validation failed',
       });
@@ -223,7 +219,7 @@ describe('useCopyrightForm', () => {
         await result.current.onSubmit();
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Network error',
       });

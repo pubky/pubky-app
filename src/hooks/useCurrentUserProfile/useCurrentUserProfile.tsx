@@ -23,14 +23,14 @@ import type { UseCurrentUserProfileResult } from './useCurrentUserProfile.types'
  * return <div>{userDetails.name}</div>;
  * ```
  */
-export function useCurrentUserProfile(): UseCurrentUserProfileResult {
+export function useCurrentUserProfile({ enabled = true }: { enabled?: boolean } = {}): UseCurrentUserProfileResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
   const { data: userDetails } = useLocalFirstQuery<NexusUserDetails>({
     queryFn: () => UserController.getDetails({ userId: currentUserPubky! }),
     fetchFn: () => UserController.fetchDetails({ userId: currentUserPubky! }),
     deps: [currentUserPubky],
-    enabled: !!currentUserPubky,
+    enabled: enabled && !!currentUserPubky,
   });
 
   return { userDetails, currentUserPubky };

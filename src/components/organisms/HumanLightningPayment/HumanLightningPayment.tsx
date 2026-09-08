@@ -14,7 +14,7 @@ import { useBtcRate } from '@/hooks/useSatUsdRate/useSatUsdRate';
 import { isAppError } from '@/libs/error/error.utils';
 import { cn, copyToClipboard } from '@/libs/utils/utils';
 import { PageTitle } from '@/molecules/Page/Page';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { PriceSkeleton, QRCodeSkeleton } from './HumanLightningPayment.skeleton';
 import type { HumanLightningPaymentProps } from './HumanLightningPayment.types';
 import { VerificationHandler } from './HumanLightningPayment.utils';
@@ -27,7 +27,6 @@ export const HumanLightningPayment = ({ onBack, onSuccess }: HumanLightningPayme
   const rate = useBtcRate();
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentExpired, setIsPaymentExpired] = useState(false);
-  const { toast } = useToast();
 
   /**
    * Request a new lightning invoice if the verification is expired or not set.

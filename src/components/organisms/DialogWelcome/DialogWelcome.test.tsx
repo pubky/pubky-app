@@ -203,13 +203,7 @@ vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => {
 });
 
 // Mock molecules
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(() => ({
-      dismiss: vi.fn(),
-    })),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 describe('DialogWelcome', () => {
   beforeEach(() => {

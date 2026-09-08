@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
+import { INLINE_IMAGE_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineImageUpload/useInlineImageUpload.types';
 import { Env } from '@/libs/env/env';
 import { AppError } from '@/libs/error/error';
 import {
@@ -104,6 +105,12 @@ export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions 
       /Loading chunk \d+ failed/,
       'AbortError',
       'Non-Error promise rejection captured',
+      // Expected article inline-image upload rejections: surfaced to the user
+      // via toast at the source, but MDXEditor's internal batch handling
+      // rethrows them into a promise nobody owns, so Sentry's globalHandlers
+      // would report them as unhandled. Genuine upload failures are already
+      // captured with full context through the Err.* factory pipeline.
+      INLINE_IMAGE_UPLOAD_REJECTION_NAME,
     ],
     beforeSend: scrubSensitiveData,
     beforeSendTransaction: scrubTransactionEvent,

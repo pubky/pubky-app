@@ -6,6 +6,7 @@ import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { TReadPostStreamChunkResponse } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
 import { buildDiscoverCollectionsStreamId } from '@/models/stream/post/postStream.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { DiscoverCollections } from './DiscoverCollections';
 
@@ -48,10 +49,7 @@ vi.mock('@/libs/logger/logger', () => ({
   Logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/molecules/AvatarStack/AvatarStack', () => ({
   AvatarStack: ({ pubkys }: { pubkys: string[] }) => <div data-testid="avatar-stack" data-pubkys={pubkys.join(',')} />,
@@ -245,18 +243,18 @@ describe('DiscoverCollections', () => {
     });
 
     const button = await screen.findByRole('button', { name: 'Show more' });
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
     await act(async () => {
       button.click();
     });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'warning',
         description: 'No new collections found right now. Try again later.',
       });
     });
-    expect(mockToast).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
     // The card list is unchanged and the button survives for another attempt,
     // which will resume from the advanced offset (420) — no dead-end, no stall.
     expect(screen.getAllByTestId('collection-card')).toHaveLength(1);
@@ -292,7 +290,7 @@ describe('DiscoverCollections', () => {
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument();
     });
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
     // Existing cards stay; the exhausted stream simply stops offering more.
     expect(screen.getAllByTestId('collection-card')).toHaveLength(1);
   });
@@ -371,7 +369,7 @@ describe('DiscoverCollections', () => {
     });
     // Mirror of the `MyCollections` onError toast — keeps failure UX
     // consistent across the three Collections sections.
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to load collections. Please try again.',
     });

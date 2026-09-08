@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { toast } from '@/molecules/Toaster/toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useTagged } from './useTagged';
 
@@ -13,7 +14,6 @@ const mockMocks = vi.hoisted(() => {
   const mockGetCounts = vi.fn();
   const mockTagCreate = vi.fn();
   const mockTagDelete = vi.fn();
-  const mockToast = vi.fn();
   return {
     mockGetTags,
     mockFetchTags,
@@ -21,7 +21,6 @@ const mockMocks = vi.hoisted(() => {
     mockGetCounts,
     mockTagCreate,
     mockTagDelete,
-    mockToast,
   };
 });
 
@@ -61,9 +60,7 @@ vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
   useProfileStats: (...args: Parameters<typeof useProfileStats>) => mockUseProfileStats(...args),
 }));
 // Mock toast
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mockMocks.mockToast,
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock dexie-react-hooks
 let mockLocalTags: NexusTag[] | null = null;
@@ -186,8 +183,8 @@ describe('useTagged', () => {
       taggerId: 'mock-current-user',
       taggedKind: TagKind.USER,
     });
-    expect(mockMocks.mockToast).toHaveBeenCalledWith({
-      title: 'Tag added: ethereum',
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      title: 'Tag added',
     });
   });
 
@@ -207,9 +204,9 @@ describe('useTagged', () => {
     });
 
     expect(addResult!).toEqual({ success: false, error: 'Failed to add tag' });
-    expect(mockMocks.mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not add tag: ethereum',
+      description: 'Could not add tag',
     });
   });
 
@@ -239,8 +236,8 @@ describe('useTagged', () => {
       taggerId: 'mock-current-user',
       taggedKind: TagKind.USER,
     });
-    expect(mockMocks.mockToast).toHaveBeenCalledWith({
-      title: 'Tag removed: bitcoin',
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      title: 'Tag removed',
     });
   });
 
@@ -265,9 +262,9 @@ describe('useTagged', () => {
       await result.current.handleTagToggle({ label: 'bitcoin', relationship: true });
     });
 
-    expect(mockMocks.mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not remove tag: bitcoin',
+      description: 'Could not remove tag',
     });
   });
 

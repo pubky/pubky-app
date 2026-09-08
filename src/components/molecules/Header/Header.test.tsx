@@ -169,6 +169,7 @@ describe('Header Components', () => {
     refresh: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn(),
+    bfcacheId: '',
   };
 
   beforeEach(() => {
@@ -283,7 +284,7 @@ describe('Header Components', () => {
 
       const progressSteps = screen.getByTestId('progress-steps');
       expect(progressSteps).toHaveAttribute('data-current', '3');
-      expect(progressSteps).toHaveAttribute('data-total', '5');
+      expect(progressSteps).toHaveAttribute('data-total', '4');
     });
   });
 
@@ -643,6 +644,7 @@ describe('Header Components - Snapshots', () => {
     refresh: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn(),
+    bfcacheId: '',
   };
 
   beforeEach(() => {

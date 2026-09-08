@@ -203,3 +203,81 @@ describe('usePostAttachmentsMedia', () => {
     expect(result.current.mediaItems).toEqual([]);
   });
 });
+
+describe('article (kind long) attachments', () => {
+  const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+  const coverUri = `pubky://${AUTHOR}/pub/pubky.app/files/cover`;
+  const inlineUri = `pubky://${AUTHOR}/pub/pubky.app/files/inline`;
+
+  const articleDetails = (body: string, attachments: string[]): EnrichedPostDetails => ({
+    ...createPostDetails(attachments),
+    kind: 'long',
+    content: JSON.stringify({ title: 'T', body }),
+  });
+
+  it('resolves only the cover for articles with a cover', async () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: articleDetails('Text ![a](attachment:1)', [coverUri, inlineUri]),
+      isLoading: false,
+    });
+    mockGetMetadata.mockResolvedValue([createFileMetadata({ uri: coverUri, id: `${AUTHOR}:cover` })]);
+
+    const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
+
+    // Wait on the end state, not the intermediate call — asserting mediaItems
+    // right after the call races the promise resolution + React flush
+    await waitFor(() => {
+      expect(result.current.mediaItems).toHaveLength(1);
+    });
+    expect(mockGetMetadata).toHaveBeenCalledWith({ fileAttachments: [coverUri] });
+  });
+
+  it('resolves no media for coverless (slot-0) articles', async () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: articleDetails('![a](attachment:0)', [inlineUri]),
+      isLoading: false,
+    });
+
+    const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
+
+    await waitFor(() => {
+      expect(result.current.mediaItems).toEqual([]);
+    });
+    expect(mockGetMetadata).not.toHaveBeenCalled();
+  });
+
+  it('limits local store entries to the cover for articles', async () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: articleDetails('Text ![a](attachment:1)', [coverUri, inlineUri]),
+      isLoading: false,
+    });
+    selectLocalFiles({
+      'pk:test:post': [
+        { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover', feed: 'blob:cover' } },
+        { type: 'image/png', name: 'inline.png', urls: { main: 'blob:inline', feed: 'blob:inline' } },
+      ],
+    });
+
+    const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
+
+    await waitFor(() => {
+      expect(result.current.mediaItems).toHaveLength(1);
+    });
+    expect(result.current.mediaItems[0].name).toBe('cover.png');
+  });
+});
+
+describe('interim renders before post details load', () => {
+  it('resolves no media while postDetails is undefined, even with seeded local entries', async () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: undefined, isLoading: true });
+    selectLocalFiles({
+      'pk:test:post': [{ type: 'image/png', name: 'maybe-inline.png', urls: { main: 'blob:x', feed: 'blob:x' } }],
+    });
+
+    const { result } = renderHook(() => usePostAttachmentsMedia('pk:test:post'));
+
+    await waitFor(() => {
+      expect(result.current.mediaItems).toEqual([]);
+    });
+  });
+});

@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ClipboardEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { useAddContentForm } from './useAddContentForm';
 import { ADD_CONTENT_FORM_FIELDS } from './useAddContentForm.types';
@@ -21,7 +22,6 @@ const mocks = vi.hoisted(() => ({
   getCollectionDetails: vi.fn(),
   commitUpdateCollectionItem: vi.fn(),
   onSuccess: vi.fn(),
-  toast: vi.fn(),
 }));
 vi.mock('@/controllers/bookmark/bookmark', () => ({
   BookmarkController: {
@@ -43,9 +43,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
     selector({ currentUserPubky: mocks.currentUserPubky }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mocks.toast,
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 function livePost() {
   return {
@@ -323,7 +321,7 @@ describe('useAddContentForm', () => {
     });
 
     await waitFor(() => expect(mocks.commitCreateBookmark).toHaveBeenCalled());
-    expect(mocks.toast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('toasts when pasteFromClipboard cannot read the clipboard', async () => {
@@ -341,7 +339,7 @@ describe('useAddContentForm', () => {
     });
 
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Could not read clipboard.',
     });
@@ -366,7 +364,7 @@ describe('useAddContentForm', () => {
     });
 
     expect(mocks.commitCreateBookmark).not.toHaveBeenCalled();
-    expect(mocks.toast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: "Clipboard access is blocked. Allow it in your browser's site settings, or paste manually.",
     });

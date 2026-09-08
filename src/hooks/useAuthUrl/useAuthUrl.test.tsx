@@ -4,22 +4,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { mockSession } from '@/test-utils/pubky';
 import { useAuthUrl } from './useAuthUrl';
 
 // Mock dependencies
-const mockToast = vi.fn();
 const mockLoggerError = vi.fn();
 const mockCopyToClipboard = vi.fn().mockResolvedValue(undefined);
 const mockGetAuthUrl = vi.fn();
 const mockGetSignupAuthUrl = vi.fn();
 const mockInitializeAuthenticatedSession = vi.fn();
 const mockCancelActiveAuthFlow = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: (...args: unknown[]) => mockToast(...args),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
@@ -162,7 +158,7 @@ describe('useAuthUrl', () => {
     rejectApproval!(new Error('User cancelled'));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Authorization failed. Try again.',
       });
@@ -192,7 +188,7 @@ describe('useAuthUrl', () => {
     rejectApproval!(canceledError);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('marks flow as expired when SESSION_EXPIRED AppError rejects', async () => {
@@ -227,7 +223,7 @@ describe('useAuthUrl', () => {
       expect(result.current.isExpired).toBe(true);
       expect(result.current.url).toBe('');
     });
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('marks flow as expired only for timeout-like AppError rejections', async () => {
@@ -262,7 +258,7 @@ describe('useAuthUrl', () => {
       expect(result.current.isExpired).toBe(true);
       expect(result.current.url).toBe('');
     });
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('shows toast when session initialization fails', async () => {
@@ -298,7 +294,7 @@ describe('useAuthUrl', () => {
     resolveApproval!(session);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Sign in failed. Try again.',
       });
@@ -339,7 +335,7 @@ describe('useAuthUrl', () => {
     resolveApproval!(session);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'This key is linked to a different homeserver. Use a staging account on this site.',
       });
@@ -355,7 +351,7 @@ describe('useAuthUrl', () => {
     renderHook(() => useAuthUrl());
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not generate QR. Refresh and try again.',
       });
@@ -439,7 +435,7 @@ describe('useAuthUrl', () => {
     resolveApproval!(session);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'This key is linked to a different homeserver. Use a staging account on this site.',
       });

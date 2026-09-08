@@ -56,6 +56,11 @@ const CONTENT_TO_KIND = {
   [CONTENT.FILES]: StreamKind.FILE,
 } as const satisfies Record<ContentType, PostStreamKindSegment>;
 
+/** Maps a CONTENT filter directly to the stream-id kind segment. */
+export function getKindFromContent(content: ContentType): PostStreamKindSegment {
+  return CONTENT_TO_KIND[content];
+}
+
 /**
  * Tagged as is a standalone depth-2 Home feed in the V1 UI. Depth 0/1 domain
  * paths remain supported by custom-feed models for foreign/legacy feed

@@ -2135,4 +2135,245 @@ describe('PostController', () => {
       }
     });
   });
+  describe('commitCreate with attachmentUris (article inline images)', () => {
+    const inlineUriA = `pubky://${testData.authorPubky}/pub/pubky.app/files/inlineA`;
+    const inlineUriB = `pubky://${testData.authorPubky}/pub/pubky.app/files/inlineB`;
+
+    const stubTo = () =>
+      vi.spyOn(PostNormalizer, 'to').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { id: 'post123', url: `pubky://${testData.authorPubky}/pub/pubky.app/posts/post123` },
+      } as never);
+
+    it('passes author-owned attachment URIs through to the normalizer', async () => {
+      const toSpy = stubTo();
+      const commitCreateSpy = vi.spyOn(PostApplication, 'commitCreate').mockResolvedValue(undefined as never);
+
+      const { PostController } = await import('./post');
+      await PostController.commitCreate({
+        content: JSON.stringify({ title: 'T', body: '![a](attachment:0)' }),
+        authorId: testData.authorPubky,
+        isArticle: true,
+        attachmentUris: [inlineUriA, inlineUriB],
+      });
+
+      expect(toSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ attachmentUris: [inlineUriA, inlineUriB], kind: PubkyAppPostKind.Long }),
+        testData.authorPubky,
+      );
+      expect(commitCreateSpy).toHaveBeenCalled();
+    });
+
+    it("rejects another user's file URIs", async () => {
+      const otherUri = 'pubky://someone-else/pub/pubky.app/files/theirs';
+
+      const { PostController } = await import('./post');
+      await expect(
+        PostController.commitCreate({
+          content: JSON.stringify({ title: 'T', body: 'x' }),
+          authorId: testData.authorPubky,
+          isArticle: true,
+          attachmentUris: [inlineUriA, otherUri],
+        }),
+      ).rejects.toThrow('Attachment URIs must be homeserver files owned by the author');
+    });
+
+    it('rejects URIs that are not homeserver file resources', async () => {
+      const blobUri = `pubky://${testData.authorPubky}/pub/pubky.app/blobs/blob1`;
+
+      const { PostController } = await import('./post');
+      await expect(
+        PostController.commitCreate({
+          content: JSON.stringify({ title: 'T', body: 'x' }),
+          authorId: testData.authorPubky,
+          isArticle: true,
+          attachmentUris: [blobUri],
+        }),
+      ).rejects.toThrow('Attachment URIs must be homeserver files owned by the author');
+    });
+  });
+
+  describe('commitEdit with nextOrder (article inline images)', () => {
+    const coverUri = `pubky://${testData.authorPubky}/pub/pubky.app/files/cover1`;
+    const inlineA = `pubky://${testData.authorPubky}/pub/pubky.app/files/inlineA`;
+    const inlineB = `pubky://${testData.authorPubky}/pub/pubky.app/files/inlineB`;
+    const inlineNew = `pubky://${testData.authorPubky}/pub/pubky.app/files/inlineNew`;
+    const postUrl = `pubky://${testData.authorPubky}/pub/pubky.app/posts/${testData.postId}`;
+
+    const createArticleDetails = (attachments: string[]) =>
+      ({
+        id: testData.fullPostId,
+        content: JSON.stringify({ title: 'T', body: 'body' }),
+        indexed_at: Date.now(),
+        kind: 'long',
+        uri: postUrl,
+        attachments,
+        is_moderated: false,
+        is_blurred: false,
+      }) as Awaited<ReturnType<typeof PostApplication.getDetails>>;
+
+    const stubToEdit = () =>
+      vi.spyOn(PostNormalizer, 'toEdit').mockResolvedValue({
+        post: { toJson: () => ({}) },
+        meta: { url: postUrl },
+      } as never);
+
+    it('persists nextOrder verbatim, diffs removals against the snapshot, and keeps the long kind', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createArticleDetails([coverUri, inlineA, inlineB]));
+      const toEditSpy = stubToEdit();
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+      const getMetadataSpy = vi.spyOn(FileApplication, 'getMetadata');
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEdit({
+          compositePostId: testData.fullPostId,
+          content: JSON.stringify({ title: 'T', body: 'new body' }),
+          attachments: {
+            original: [coverUri, inlineA, inlineB],
+            kept: [coverUri, inlineA],
+            added: [],
+            addedUris: [inlineNew],
+            nextOrder: [coverUri, inlineA, inlineNew],
+          },
+        });
+
+        expect(toEditSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            attachments: [coverUri, inlineA, inlineNew],
+            kind: PubkyAppPostKind.Long,
+          }),
+        );
+        expect(commitEditSpy).toHaveBeenCalledWith({
+          compositePostId: testData.fullPostId,
+          post: expect.any(Object),
+          postUrl,
+          removedUris: [inlineB],
+        });
+        const commitEditArg = commitEditSpy.mock.calls[0][0];
+        expect('fileAttachments' in commitEditArg).toBe(false);
+        // Articles keep their kind without resolving attachment metadata
+        expect(getMetadataSpy).not.toHaveBeenCalled();
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('allows the same URI in the cover and an inline slot (duplicates)', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createArticleDetails([coverUri]));
+      const toEditSpy = stubToEdit();
+      vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEdit({
+          compositePostId: testData.fullPostId,
+          content: JSON.stringify({ title: 'T', body: 'body' }),
+          attachments: {
+            original: [coverUri],
+            kept: [coverUri],
+            added: [],
+            nextOrder: [coverUri, coverUri],
+          },
+        });
+
+        expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ attachments: [coverUri, coverUri] }));
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('clears attachments when nextOrder is empty and removes the full snapshot', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createArticleDetails([coverUri, inlineA]));
+      const toEditSpy = stubToEdit();
+      const commitEditSpy = vi.spyOn(PostApplication, 'commitEdit').mockResolvedValue(undefined);
+
+      try {
+        const { PostController } = await import('./post');
+        await PostController.commitEdit({
+          compositePostId: testData.fullPostId,
+          content: JSON.stringify({ title: 'T', body: 'body' }),
+          attachments: { original: [coverUri, inlineA], kept: [], added: [], nextOrder: [] },
+        });
+
+        expect(toEditSpy).toHaveBeenCalledWith(expect.objectContaining({ attachments: null }));
+        expect(commitEditSpy).toHaveBeenCalledWith(expect.objectContaining({ removedUris: [coverUri, inlineA] }));
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects File uploads combined with nextOrder', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createArticleDetails([coverUri]));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEdit({
+            compositePostId: testData.fullPostId,
+            content: 'c',
+            attachments: {
+              original: [coverUri],
+              kept: [coverUri],
+              added: [new File(['x'], 'x.png', { type: 'image/png' })],
+              nextOrder: [coverUri],
+            },
+          }),
+        ).rejects.toThrow('nextOrder edits must not include File uploads');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects nextOrder entries that are neither kept nor addedUris', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createArticleDetails([coverUri]));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEdit({
+            compositePostId: testData.fullPostId,
+            content: 'c',
+            attachments: {
+              original: [coverUri],
+              kept: [coverUri],
+              added: [],
+              nextOrder: [coverUri, inlineNew],
+            },
+          }),
+        ).rejects.toThrow('nextOrder entries must come from kept or addedUris');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('rejects addedUris not owned by the author', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createArticleDetails([coverUri]));
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEdit({
+            compositePostId: testData.fullPostId,
+            content: 'c',
+            attachments: {
+              original: [coverUri],
+              kept: [coverUri],
+              added: [],
+              addedUris: ['pubky://someone-else/pub/pubky.app/files/theirs'],
+              nextOrder: [coverUri],
+            },
+          }),
+        ).rejects.toThrow('Added attachment URIs must be homeserver files owned by the author');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+  });
 });

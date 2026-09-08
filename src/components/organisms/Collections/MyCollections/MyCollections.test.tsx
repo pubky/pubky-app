@@ -9,6 +9,7 @@ import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagina
 import type { Pubky } from '@/models/models.types';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
+import { toast } from '@/molecules/Toaster/toast';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { MyCollections } from './MyCollections';
@@ -49,10 +50,7 @@ vi.mock('@/controllers/post/post', () => ({
   },
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: (selector: (state: { profile: string | null | undefined }) => unknown) =>
@@ -365,8 +363,8 @@ describe('MyCollections', () => {
       capturedOnError!(new Error('network down'));
     });
 
-    expect(mockToast).toHaveBeenCalledTimes(1);
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to load collections. Please try again.',
     });

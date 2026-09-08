@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
+import { toast } from '@/molecules/Toaster/toast';
 import { useCollectionReorderStore } from '@/stores/collectionReorder/collectionReorder.store';
 import { useReorderCollection } from './useReorderCollection';
 
@@ -17,10 +18,7 @@ vi.mock('@/controllers/stream/posts/posts', () => ({
   },
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 const collectionId = 'collection_author:collection123';
 const uriA = 'pubky://author_a/pub/pubky.app/posts/post_a';
@@ -168,7 +166,7 @@ describe('useReorderCollection', () => {
     await act(async () => result.current.saveOrder());
 
     expect(PostController.commitReorderCollectionItems).not.toHaveBeenCalled();
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
     expect(result.current.isReorderMode).toBe(false);
   });
 
@@ -183,7 +181,7 @@ describe('useReorderCollection', () => {
       collectionId,
       items: [uriC, uriA, uriB],
     });
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: expect.any(String) }));
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ title: expect.any(String) }));
     expect(result.current.isReorderMode).toBe(false);
     expect(useCollectionReorderStore.getState().activeCollectionId).toBeNull();
   });
@@ -196,7 +194,7 @@ describe('useReorderCollection', () => {
     act(() => result.current.moveItem(uriC, uriA));
     await act(async () => result.current.saveOrder());
 
-    expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ variant: 'error' }));
     expect(result.current.isReorderMode).toBe(true);
     expect(result.current.draftEntries.map((entry) => entry.uri)).toEqual([uriC, uriA, uriB]);
     expect(result.current.isSaving).toBe(false);

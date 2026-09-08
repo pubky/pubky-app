@@ -34,7 +34,8 @@ export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: Dialo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent avoidKeyboard className="w-3xl" hiddenTitle={title}>
+      {/* Articles get a wider dialog so the editor toolbar fits on one row on large displays */}
+      <DialogContent avoidKeyboard className={isArticle ? 'w-4xl' : 'w-3xl'} hiddenTitle={title}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="sr-only">{`${title} dialog`}</DialogDescription>

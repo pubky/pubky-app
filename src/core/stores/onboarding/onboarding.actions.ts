@@ -1,3 +1,4 @@
+import type { Pubky } from '@/models/models.types';
 import { type ZustandSet } from '../stores.types';
 import {
   type OnboardingActions,
@@ -13,6 +14,9 @@ export const createOnboardingActions = (set: ZustandSet<OnboardingStore>): Onboa
       (state) => ({
         ...onboardingInitialState,
         hasHydrated: state.hasHydrated, // Preserve hydration state during reset
+        // Preserve per-pubky Experience completion: logout and sign-in both call reset(),
+        // and a completed account must never be re-prompted with the tags step.
+        experienceCompletedByPubky: state.experienceCompletedByPubky,
       }),
       false,
       OnboardingActionTypes.RESET,
@@ -37,5 +41,31 @@ export const createOnboardingActions = (set: ZustandSet<OnboardingStore>): Onboa
 
   setInviteCode: (inviteCode: string) => {
     set({ inviteCode }, false, OnboardingActionTypes.SET_INVITE_CODE);
+  },
+
+  setInterestTags: (interestTags: string[]) => {
+    set({ interestTags }, false, OnboardingActionTypes.SET_INTEREST_TAGS);
+  },
+
+  markExperienceCompleted: (pubky: Pubky) => {
+    set(
+      (state) => ({
+        experienceCompletedByPubky: { ...state.experienceCompletedByPubky, [pubky]: true as const },
+      }),
+      false,
+      OnboardingActionTypes.MARK_EXPERIENCE_COMPLETED,
+    );
+  },
+
+  clearExperienceCompleted: (pubky: Pubky) => {
+    set(
+      (state) => {
+        const experienceCompletedByPubky = { ...state.experienceCompletedByPubky };
+        delete experienceCompletedByPubky[pubky];
+        return { experienceCompletedByPubky };
+      },
+      false,
+      OnboardingActionTypes.CLEAR_EXPERIENCE_COMPLETED,
+    );
   },
 });

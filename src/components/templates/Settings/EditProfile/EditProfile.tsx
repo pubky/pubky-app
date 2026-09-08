@@ -4,7 +4,9 @@ import { EditProfileHeader } from '@/organisms/Settings/EditProfileHeader/EditPr
 
 export function EditProfile() {
   return (
-    <OnboardingLayout testId="edit-profile-content">
+    // Sibling settings pages get a 16px mobile gutter from ContentLayout;
+    // override OnboardingLayout's 24px (kept for the onboarding flows) to match.
+    <OnboardingLayout testId="edit-profile-content" className="px-4 lg:px-6">
       <EditProfileHeader />
       <EditProfileForm />
     </OnboardingLayout>

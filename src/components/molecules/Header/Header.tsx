@@ -60,7 +60,7 @@ export const HeaderTitle = ({ currentTitle }: { currentTitle: string }) => {
   );
 };
 export const HeaderOnboarding = ({ currentStep }: { currentStep: number }) => {
-  return <ProgressSteps currentStep={currentStep} totalSteps={5} />;
+  return <ProgressSteps currentStep={currentStep} totalSteps={4} />;
 };
 export function HeaderSocialLinks({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (

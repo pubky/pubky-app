@@ -1,0 +1,85 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SearchContentTags > matches snapshot 1`] = `
+<div>
+  <div
+    class="flex w-full flex-col gap-4"
+    data-cy="search-content-tags-section"
+    data-testid="container"
+  >
+    <h2
+      class="text-2xl font-light text-muted-foreground"
+      data-testid="heading-2"
+    >
+      Tags
+    </h2>
+    <div
+      class="flex flex-wrap gap-2"
+      data-testid="container"
+    >
+      <button
+        aria-label="bitcoin tag"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-cy="post-tag"
+        data-state="off"
+        data-tag-label="bitcoin"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 153, 0) 0%, rgb(255, 153, 0) 100%);"
+        type="button"
+      >
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="bitcoin"
+        >
+          <p
+            class="text-sm text-foreground truncate font-bold"
+            data-cy="tag-name"
+            data-testid="tag-name"
+          >
+            bitcoin
+          </p>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF9900;"
+        />
+      </button>
+      <button
+        aria-label="design tag"
+        aria-pressed="false"
+        class="cursor-pointer inline-flex items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 min-w-9 group/tag relative h-8 max-w-full gap-1 rounded-md px-3 backdrop-blur-lg border-0 text-sm leading-5 font-bold text-white subpixel-antialiased transition-all duration-200 hover:bg-transparent hover:text-white data-[state=on]:border data-[state=on]:border-solid data-[state=on]:bg-transparent data-[state=on]:text-white"
+        data-cy="post-tag"
+        data-state="off"
+        data-tag-label="design"
+        style="background-image: linear-gradient(90deg, rgba(5, 5, 10, 0.7) 0%, rgba(5, 5, 10, 0.7) 100%), linear-gradient(90deg, rgb(255, 0, 66) 0%, rgb(255, 0, 66) 100%);"
+        type="button"
+      >
+        <div
+          class="flex h-8 w-fit max-w-full min-w-0 cursor-pointer items-center justify-between rounded-md transition-all duration-200 px-0"
+          data-cy="tag"
+          data-testid="tag"
+          style="background-color: transparent; border: medium; box-shadow: none;"
+          title="design"
+        >
+          <p
+            class="text-sm text-foreground truncate font-bold"
+            data-cy="tag-name"
+            data-testid="tag-name"
+          >
+            design
+          </p>
+        </div>
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 rounded-md opacity-0 transition-opacity group-hover/tag:opacity-100"
+          style="box-shadow: inset 0px 0px 8px 0px #FF0042;"
+        />
+      </button>
+    </div>
+  </div>
+</div>
+`;

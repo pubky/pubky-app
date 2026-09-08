@@ -118,11 +118,13 @@ export class PostNormalizer {
         }
       }
 
-      let attachments: string[] | null = null;
-
-      if (post.attachments) {
-        attachments = post.attachments.map((attachment) => attachment.fileResult.meta.url);
-      }
+      // Final attachment order: uploaded files first (article cover), then
+      // pre-uploaded URIs (article inline images, already on the homeserver).
+      const attachmentList = [
+        ...(post.attachments ?? []).map((attachment) => attachment.fileResult.meta.url),
+        ...(post.attachmentUris ?? []),
+      ];
+      const attachments = attachmentList.length > 0 ? attachmentList : null;
 
       return builder.createPost(post.content, post.kind, post.parentUri ?? null, embedObject, attachments);
     } catch (error) {

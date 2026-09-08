@@ -2,8 +2,9 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
+import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { describe, expect, it, vi } from 'vitest';
-import { preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -396,13 +397,14 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
   };
 });
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => {
-  const result = {
-    taggersByLabel: new Map<string, string[]>(),
-    taggerStates: new Map<string, { isLoading: boolean; error: string | null }>(),
-    fetchAllTaggers: async () => {},
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  const result: UseEntityTaggersResult = {
+    taggerStates: new Map(),
+    loadTaggers: async () => {},
+    loadMoreTaggers: async () => {},
   };
-  return { usePostTaggers: () => result };
+  return { ...actual, useEntityTaggers: () => result };
 });
 
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => {
@@ -682,54 +684,54 @@ async function renderBookmarks(viewport: { width: number; height: number }) {
 
 describe('Collections overview — visual regression', () => {
   it('renders the collections overview at desktop viewport', async () => {
-    const screen = await renderCollectionsOverview(VRT_VIEWPORT_DESKTOP);
+    await renderCollectionsOverview(VRT_VIEWPORT_DESKTOP);
     // Viewport-clamped root: first fold (My + start of Followed/Discover).
     // This is a particularly heavy surface in the VRT suite — increase timeout to give this one more headroom.
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('collections-overview-desktop', {
+    await matchVrtFrameScreenshot('collections-overview-desktop', {
       timeout: 25_000,
     });
   }, 40_000);
 
   it('renders the collections overview at mobile viewport', async () => {
-    const screen = await renderCollectionsOverview(VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('collections-overview-mobile');
+    await renderCollectionsOverview(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('collections-overview-mobile');
   });
 });
 
 describe('Single collection — grid layout — visual regression', () => {
   it('renders a grid collection at desktop viewport', async () => {
-    const screen = await renderSingleCollection('grid', VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-grid-desktop');
+    await renderSingleCollection('grid', VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('single-collection-grid-desktop');
   });
 
   it('renders a grid collection at mobile viewport', async () => {
-    const screen = await renderSingleCollection('grid', VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-grid-mobile');
+    await renderSingleCollection('grid', VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('single-collection-grid-mobile');
   });
 });
 
 describe('Single collection — list layout — visual regression', () => {
   it('renders a list collection at desktop viewport', async () => {
-    const screen = await renderSingleCollection('list', VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-list-desktop');
+    await renderSingleCollection('list', VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('single-collection-list-desktop');
   });
 });
 
 describe('Single collection — visual layout — visual regression', () => {
   it('renders a visual collection at desktop viewport', async () => {
-    const screen = await renderSingleCollection('visual', VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('single-collection-visual-desktop');
+    await renderSingleCollection('visual', VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('single-collection-visual-desktop');
   });
 });
 
 describe('Bookmarks collection — visual regression', () => {
   it('renders bookmarks at desktop viewport', async () => {
-    const screen = await renderBookmarks(VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('bookmarks-collection-desktop');
+    await renderBookmarks(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('bookmarks-collection-desktop');
   });
 
   it('renders bookmarks at mobile viewport', async () => {
-    const screen = await renderBookmarks(VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('bookmarks-collection-mobile');
+    await renderBookmarks(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('bookmarks-collection-mobile');
   });
 });

@@ -1,7 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Pubky } from '@/models/models.types';
-import type { RecentTagSearchItem, RecentUserSearchItem } from '../SearchRecentUserItem/SearchRecentUserItem.types';
+import type {
+  RecentQuerySearchItem,
+  RecentTagSearchItem,
+  RecentUserSearchItem,
+} from '../SearchRecentUserItem/SearchRecentUserItem.types';
 import { SearchRecentItem } from './SearchRecentItem';
 import { RECENT_ITEM_TYPE } from './SearchRecentItem.constants';
 
@@ -42,6 +46,11 @@ describe('SearchRecentItem', () => {
     searchedAt: Date.now(),
   };
 
+  const mockQuery: RecentQuerySearchItem = {
+    query: 'bitcoin wallets',
+    searchedAt: Date.now(),
+  };
+
   it('renders user item when type is USER and onUserClick provided', () => {
     const onUserClick = vi.fn();
     render(<SearchRecentItem type={RECENT_ITEM_TYPE.USER} user={mockUser} onUserClick={onUserClick} />);
@@ -55,6 +64,24 @@ describe('SearchRecentItem', () => {
 
     expect(screen.getByTestId(`recent-tag-${mockTag.tag}`)).toBeInTheDocument();
     expect(screen.getByText('technology')).toBeInTheDocument();
+  });
+
+  it('renders query item when type is QUERY and onQueryClick provided', () => {
+    const onQueryClick = vi.fn();
+    render(<SearchRecentItem type={RECENT_ITEM_TYPE.QUERY} query={mockQuery} onQueryClick={onQueryClick} />);
+
+    expect(screen.getByTestId(`recent-query-${mockQuery.query}`)).toBeInTheDocument();
+    expect(screen.getByText('bitcoin wallets')).toBeInTheDocument();
+  });
+
+  it('query chip keeps the base focus-visible ring and never submits an enclosing form', () => {
+    render(<SearchRecentItem type={RECENT_ITEM_TYPE.QUERY} query={mockQuery} onQueryClick={vi.fn()} />);
+
+    const chip = screen.getByTestId(`recent-query-${mockQuery.query}`);
+    // Buttons default to type="submit" inside a <form>.
+    expect(chip).toHaveAttribute('type', 'button');
+    // The base Button class carries the focus ring; `overrideDefaults` would drop it.
+    expect(chip.className).toContain('focus-visible:ring-ring/50');
   });
 
   it('calls onUserClick with user when user item is clicked', () => {
@@ -75,31 +102,17 @@ describe('SearchRecentItem', () => {
     expect(onTagClick).toHaveBeenCalledWith(mockTag.tag);
   });
 
-  it('returns null when type is USER but user is not provided', () => {
-    const onUserClick = vi.fn();
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.USER} onUserClick={onUserClick} />);
+  it('calls onQueryClick with query string when query item is clicked', () => {
+    const onQueryClick = vi.fn();
+    render(<SearchRecentItem type={RECENT_ITEM_TYPE.QUERY} query={mockQuery} onQueryClick={onQueryClick} />);
 
-    expect(container.firstChild).toBeNull();
+    fireEvent.click(screen.getByTestId(`recent-query-${mockQuery.query}`));
+
+    expect(onQueryClick).toHaveBeenCalledWith(mockQuery.query);
   });
 
-  it('returns null when type is TAG but tag is not provided', () => {
-    const onTagClick = vi.fn();
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.TAG} onTagClick={onTagClick} />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('returns null when type is USER but onUserClick is not provided', () => {
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.USER} user={mockUser} />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('returns null when type is TAG but onTagClick is not provided', () => {
-    const { container } = render(<SearchRecentItem type={RECENT_ITEM_TYPE.TAG} tag={mockTag} />);
-
-    expect(container.firstChild).toBeNull();
-  });
+  // Invalid type/data combos (e.g. USER without user data) are compile errors
+  // now that the props are a discriminated union, so no runtime tests for them.
 
   describe('SearchRecentItem - Snapshots', () => {
     it('matches snapshot for user type', () => {

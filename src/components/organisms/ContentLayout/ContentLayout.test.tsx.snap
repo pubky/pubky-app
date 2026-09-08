@@ -13,7 +13,7 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <div
@@ -30,7 +30,7 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
         </div>
       </div>
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>
@@ -81,7 +81,7 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
     right
   </button>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <div
@@ -89,7 +89,7 @@ exports[`ContentLayout - Custom Feed Layout Override > matches snapshot when cus
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>
@@ -141,7 +141,7 @@ exports[`ContentLayout - Mobile Snapshots > matches snapshot on mobile viewport 
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <div
@@ -149,7 +149,7 @@ exports[`ContentLayout - Mobile Snapshots > matches snapshot on mobile viewport 
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>
@@ -192,7 +192,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with both sidebars hidden 
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <div
@@ -200,7 +200,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with both sidebars hidden 
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>
@@ -230,7 +230,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with complex children 1`] 
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <div
@@ -238,7 +238,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with complex children 1`] 
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>
@@ -276,7 +276,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with custom className 1`] 
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0 custom-layout"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0 custom-layout"
     data-testid="container"
   >
     <div
@@ -284,7 +284,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with custom className 1`] 
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>
@@ -314,7 +314,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <div
@@ -322,7 +322,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>
@@ -355,7 +355,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with default props 1`] = `
 exports[`ContentLayout - Snapshots > matches snapshot with renderMobileHeader false 1`] = `
 <div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <div
@@ -363,7 +363,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with renderMobileHeader fa
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>
@@ -393,7 +393,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with showLeftSidebar false
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <div
@@ -401,7 +401,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with showLeftSidebar false
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>
@@ -431,7 +431,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with showRightSidebar fals
     </button>
   </div>
   <div
-    class="container max-w-(--container-max-width) m-auto w-full px-6 pb-12 xl:px-0 pt-0"
+    class="container m-auto w-full max-w-(--container-max-width) pb-12 px-4 lg:px-6 xl:px-0"
     data-testid="container"
   >
     <div
@@ -439,7 +439,7 @@ exports[`ContentLayout - Snapshots > matches snapshot with showRightSidebar fals
       data-testid="container"
     >
       <div
-        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-6 lg:overflow-hidden"
+        class="mx-auto flex-col flex w-full min-w-0 flex-1 gap-4 lg:overflow-hidden"
         data-testid="container"
       >
         <div>

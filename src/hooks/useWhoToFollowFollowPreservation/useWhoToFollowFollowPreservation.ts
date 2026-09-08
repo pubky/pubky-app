@@ -10,7 +10,7 @@ type UseWhoToFollowFollowPreservationParams = {
 
 export function useWhoToFollowFollowPreservation({ resetKey }: UseWhoToFollowFollowPreservationParams = {}) {
   const [preservedFollowedUserIds, setPreservedFollowedUserIds] = useState<Pubky[]>([]);
-  const { toggleFollow, isUserLoading } = useFollowUser();
+  const { toggleFollow, isUserLoading, isLoading: isFollowPending } = useFollowUser();
 
   useEffect(() => {
     setPreservedFollowedUserIds((prev) => (prev.length > 0 ? [] : prev));
@@ -34,10 +34,10 @@ export function useWhoToFollowFollowPreservation({ resetKey }: UseWhoToFollowFol
     });
   };
 
-  const handleFollowClick = async (userId: Pubky, isCurrentlyFollowing: boolean, displayName: string) => {
+  const handleFollowClick = async (userId: Pubky, isCurrentlyFollowing: boolean) => {
     updatePreservedUserIds(userId, isCurrentlyFollowing);
 
-    const ok = await toggleFollow(userId, isCurrentlyFollowing, displayName);
+    const ok = await toggleFollow(userId, isCurrentlyFollowing);
     if (!ok) {
       rollbackPreservedUserIds(userId, isCurrentlyFollowing);
     }
@@ -47,5 +47,15 @@ export function useWhoToFollowFollowPreservation({ resetKey }: UseWhoToFollowFol
     preservedFollowedUserIds,
     handleFollowClick,
     isUserLoading,
+    /**
+     * True while any follow toggle is still committing (concurrent clicks included).
+     * Relationship-derived state (e.g. `isFollowing`, followed counts) lags behind the click
+     * until the local write lands, so callers that act on that state should wait for this to clear.
+     */
+    isFollowPending,
+    /** Drop a user from preservation after a follow committed outside `handleFollowClick` failed. */
+    unpreserveFollowedUser: (userId: Pubky) => rollbackPreservedUserIds(userId, false),
+    /** Keep a user visible after a follow committed outside `handleFollowClick` (e.g. Follow All). */
+    preserveFollowedUser: (userId: Pubky) => updatePreservedUserIds(userId, false),
   };
 }

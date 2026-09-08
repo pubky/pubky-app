@@ -10,7 +10,7 @@ import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
 import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 import type { ProfileMenuActionItem, UseProfileMenuActionsResult } from './useProfileMenuActions.types';
 
@@ -50,7 +50,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     icon: isFollowing ? UserRoundMinus : UserRoundPlus,
     onClick: async () => {
       // useFollowUser handles all feedback (toast + state) and never throws.
-      await toggleFollow(userId, isFollowing, profile?.name);
+      await toggleFollow(userId, isFollowing);
     },
     disabled: isFollowLoading || isUserLoading(userId),
   });
@@ -98,7 +98,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await toggleMute(userId, isUserMuted);
         toast({
-          title: isUserMuted ? `${username} unmuted` : `${username} muted`,
+          title: isUserMuted ? 'User unmuted' : 'User muted',
         });
       } catch (error) {
         toast({

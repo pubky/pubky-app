@@ -6,7 +6,7 @@ import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewpo
 import { PostAttachmentsAudios } from '@/molecules/PostAttachmentsAudios/PostAttachmentsAudios';
 import { PostAttachmentsGenericFiles } from '@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { categorizeAttachments, splitAttachmentsByMediaType } from './PostAttachments.helpers';
 import type { AttachmentConstructed, CategorizedAttachments, PostAttachmentsProps } from './PostAttachments.types';
 
@@ -16,7 +16,6 @@ export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 
   const [audios, setAudios] = useState<AttachmentConstructed[]>([]);
   const [genericFiles, setGenericFiles] = useState<AttachmentConstructed[]>([]);
 
-  const { toast } = useToast();
   useEffect(() => {
     let cancelled = false;
 
@@ -57,7 +56,6 @@ export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
   }, [attachments, localAttachments]);
 
   if (!imagesAndVideos.length && !audios.length && !genericFiles.length) return null;

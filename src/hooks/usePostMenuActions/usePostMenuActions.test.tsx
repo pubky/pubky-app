@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { usePostMenuActions } from './usePostMenuActions';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
 
@@ -8,7 +9,6 @@ import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
 const {
   mockIsAppError,
   mockParseCompositeId,
-  mockToast,
   mockUseCurrentUserProfile,
   mockUsePostDetails,
   mockUseUserProfile,
@@ -20,7 +20,6 @@ const {
 } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
   mockParseCompositeId: vi.fn(),
-  mockToast: vi.fn(),
   mockUseCurrentUserProfile: vi.fn(),
   mockUsePostDetails: vi.fn(),
   mockUseUserProfile: vi.fn(),
@@ -70,11 +69,7 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: (props: unknown) => mockToast(props),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/libs/error/error.utils', async () => {
   const actual = await vi.importActual<typeof import('@/libs/error/error.utils')>('@/libs/error/error.utils');
@@ -216,7 +211,7 @@ describe('usePostMenuActions', () => {
       expect(followItem?.disabled).toBe(true);
     });
 
-    it('calls toggleFollow with full author name on follow action click', async () => {
+    it('calls toggleFollow with the author id on follow action click', async () => {
       const { result } = renderHook(() =>
         usePostMenuActions(mockPostId, { onReportClick: vi.fn(), onEditClick: vi.fn(), onDeleteClick: vi.fn() }),
       );
@@ -228,10 +223,10 @@ describe('usePostMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, false, 'Test Author');
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, false);
     });
 
-    it('calls toggleFollow with full author name on unfollow action click', async () => {
+    it('calls toggleFollow with the author id on unfollow action click', async () => {
       mockUseIsFollowing.mockReturnValue({
         isFollowing: true,
         isLoading: false,
@@ -248,7 +243,7 @@ describe('usePostMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, true, 'Test Author');
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockAuthorId, true);
     });
 
     it('does not throw when the follow fails (useFollowUser handles feedback)', async () => {
@@ -305,8 +300,8 @@ describe('usePostMenuActions', () => {
       });
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockAuthorId, false);
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Test Author muted',
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        title: 'User muted',
       });
     });
 

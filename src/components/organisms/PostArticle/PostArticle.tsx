@@ -21,7 +21,7 @@ interface PostArticleProps {
 }
 
 export const PostArticle = ({ content, attachments, localAttachments, className }: PostArticleProps) => {
-  const { title, body, coverImage } = usePostArticle({
+  const { title, body, coverImage, hasCover } = usePostArticle({
     content,
     attachments,
     coverImageVariant: FileVariant.FEED,
@@ -29,9 +29,12 @@ export const PostArticle = ({ content, attachments, localAttachments, className 
 
   const { dialogOpen, setDialogOpen, clickedLink, handleLinkClick } = useLinkConfirmation();
 
-  const localCoverImage = localAttachments?.[0]?.type.startsWith('image')
-    ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
-    : null;
+  // Local entries are index-aligned with attachments; slot 0 is the cover
+  // only when the slot-0 rule says so (otherwise it's an inline image).
+  const localCoverImage =
+    hasCover && localAttachments?.[0]?.type.startsWith('image')
+      ? { src: localAttachments[0].urls.main, alt: localAttachments[0].name }
+      : null;
 
   const finalCoverImage = localCoverImage || coverImage;
 

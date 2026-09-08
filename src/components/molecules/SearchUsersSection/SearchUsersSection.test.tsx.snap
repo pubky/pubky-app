@@ -13,7 +13,7 @@ exports[`SearchUsersSection > SearchUsersSection - Snapshots > matches snapshot 
     Users
   </span>
   <div
-    class="flex flex-wrap gap-3"
+    class="flex flex-wrap gap-x-6 gap-y-3"
     data-cy="search-users-section"
   >
     <div

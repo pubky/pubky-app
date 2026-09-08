@@ -192,6 +192,17 @@ describe('ContentLayout', () => {
     expect(screen.getByText('Test Content')).toBeInTheDocument();
   });
 
+  it('applies the shared gutter and content-area stack classes', () => {
+    const { container } = render(
+      <ContentLayout>
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(container.querySelector('.container')).toHaveClass('px-4', 'lg:px-6', 'xl:px-0');
+    expect(screen.getByText('Test Content').parentElement).toHaveClass('gap-4');
+  });
+
   it('shows left sidebar when showLeftSidebar is true and layout is not wide', () => {
     render(
       <ContentLayout

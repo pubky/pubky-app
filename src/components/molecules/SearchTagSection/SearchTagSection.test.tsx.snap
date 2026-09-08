@@ -16,7 +16,7 @@ exports[`SearchTagSection > SearchTagSection - Snapshots > matches snapshot with
     Recent searches
   </span>
   <div
-    class="flex flex-wrap gap-3"
+    class="flex flex-wrap gap-2"
     data-override-defaults="true"
     data-testid="container"
   >

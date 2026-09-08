@@ -28,7 +28,9 @@ import { vi } from 'vitest';
 // Applied once per test file at setup time.
 
 // 1. Disable animations, transitions, and caret blinking — these are the
-//    most common causes of flaky pixel diffs.
+//    most common causes of flaky pixel diffs. `*` does not match
+//    pseudo-elements; list `::placeholder` so the 150ms composer prompt
+//    fade cannot race a focused capture.
 // 2. Hide the and document scrollbars (OS-dependent gutter)
 // 3. Freeze facehash avatars — disable 3D tilt, blink, and hover transitions
 //    (see FacehashAvatar `__VRT__` props) so GPU rasterisation is identical
@@ -38,6 +40,11 @@ const stabilizerCss = `
     transition: none !important;
     animation: none !important;
     caret-color: transparent !important;
+  }
+
+  *::placeholder {
+    transition: none !important;
+    animation: none !important;
   }
 
   [data-facehash],

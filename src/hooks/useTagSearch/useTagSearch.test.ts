@@ -1,6 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAX_ACTIVE_SEARCH_TAGS } from '@/stores/search/search.constants';
 import { useTagSearch } from './useTagSearch';
 import { buildSearchUrl } from './useTagSearch.utils';
 
@@ -115,7 +114,9 @@ describe('useTagSearch', () => {
       expect(mockPush).toHaveBeenCalledWith('/search?tags=typescript');
     });
 
-    it('navigates to home when removing last tag', () => {
+    it('lands on the /search empty state when removing the last tag', () => {
+      // Same destination as clearing the search from the bar's X — the two
+      // "search is now empty" paths must not diverge.
       mockActiveTags = ['react'];
       const { result } = renderHook(() => useTagSearch());
 
@@ -124,7 +125,7 @@ describe('useTagSearch', () => {
       });
 
       expect(mockRemoveActiveTag).toHaveBeenCalledWith('react');
-      expect(mockPush).toHaveBeenCalledWith('/home');
+      expect(mockPush).toHaveBeenCalledWith('/search');
     });
 
     it('normalizes tag before removing', () => {
@@ -136,29 +137,6 @@ describe('useTagSearch', () => {
       });
 
       expect(mockRemoveActiveTag).toHaveBeenCalledWith('react');
-    });
-  });
-
-  describe('isReadOnly', () => {
-    it('returns false when under max tags', () => {
-      mockActiveTags = ['react'];
-      const { result } = renderHook(() => useTagSearch());
-
-      expect(result.current.isReadOnly).toBe(false);
-    });
-
-    it('returns true when at max tags', () => {
-      mockActiveTags = Array(MAX_ACTIVE_SEARCH_TAGS).fill('tag');
-      const { result } = renderHook(() => useTagSearch());
-
-      expect(result.current.isReadOnly).toBe(true);
-    });
-
-    it('returns false when empty', () => {
-      mockActiveTags = [];
-      const { result } = renderHook(() => useTagSearch());
-
-      expect(result.current.isReadOnly).toBe(false);
     });
   });
 

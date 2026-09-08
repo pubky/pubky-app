@@ -508,6 +508,19 @@ describe('PostText', () => {
       const items = screen.getAllByRole('listitem');
       expect(items).toHaveLength(3);
     });
+
+    it('keeps inside markers on the same line as loose list items', () => {
+      // Blank lines between items make a "loose" list whose item text is wrapped
+      // in a block-level <p>; rendered inline it shares the marker's line.
+      render(<PostText content={'1. First\n\n2. Second'} />);
+
+      const list = screen.getByRole('list');
+      expect(list).toHaveClass('[&>li>p:first-child]:inline');
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+      expect(items[0].querySelector('p')).not.toBeNull();
+    });
   });
 
   describe('Blockquotes', () => {
@@ -554,6 +567,93 @@ describe('PostText', () => {
       expect(container).toHaveTextContent('| Item | Category | Price |');
       expect(container).toHaveTextContent('| :--- | :---: | ---: |');
       expect(container).toHaveTextContent('| Apple | Fruit | $1.00 |');
+    });
+  });
+
+  describe('Full article mode (fullArticle prop)', () => {
+    beforeEach(() => {
+      mockUsePathname.mockReturnValue('/post/user123/post456');
+    });
+
+    it('renders with the article prose typography instead of pre-line whitespace', () => {
+      render(<PostText content="Article body" isArticle fullArticle />);
+
+      const container = screen.getByTestId('container');
+      expect(container).toHaveClass('prose', 'prose-invert', 'max-w-none', '[&_a]:no-underline');
+      expect(container).not.toHaveClass('whitespace-pre-line');
+    });
+
+    it('keeps pre-line whitespace when fullArticle is off', () => {
+      render(<PostText content="Article preview copy" isArticle />);
+
+      expect(screen.getByTestId('container')).toHaveClass('whitespace-pre-line');
+      expect(screen.getByTestId('container')).not.toHaveClass('prose');
+    });
+
+    it('leaves list styling to prose instead of inside markers', () => {
+      render(<PostText content={'1. First\n2. Second'} isArticle fullArticle />);
+
+      const list = screen.getByRole('list');
+      expect(list.tagName).toBe('OL');
+      expect(list).not.toHaveClass('list-inside');
+    });
+
+    it('renders loose ordered list items with their block paragraphs', () => {
+      render(<PostText content={'1. First\n\n2. Second'} isArticle fullArticle />);
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+      expect(items[0].querySelector('p')).not.toBeNull();
+    });
+
+    it('renders single newlines as line breaks', () => {
+      const { container } = render(<PostText content={'First line\nSecond line'} isArticle fullArticle />);
+
+      expect(container.querySelector('p br')).not.toBeNull();
+    });
+
+    it('renders a newline inside a list item as a line break', () => {
+      const { container } = render(<PostText content={'- First line\nsecond line'} isArticle fullArticle />);
+
+      expect(container.querySelector('li br')).not.toBeNull();
+    });
+
+    it('neutralizes prose blockquote quotes and italics', () => {
+      render(<PostText content="> A quote" isArticle fullArticle />);
+
+      const blockquote = screen.getByText('A quote').closest('blockquote');
+      expect(blockquote).toHaveClass('not-italic', '[quotes:none]', 'text-secondary-foreground');
+    });
+
+    it('gives h5 and h6 headings block margins, which prose does not style', () => {
+      render(<PostText content={'##### Level five\n\n###### Level six'} isArticle fullArticle />);
+
+      expect(screen.getByRole('heading', { level: 5 })).toHaveClass('mt-[1.5em]', 'mb-[0.5em]');
+      expect(screen.getByRole('heading', { level: 6 })).toHaveClass('mt-[1.5em]', 'mb-[0.5em]');
+    });
+
+    it('keeps a hashtag on the line after a newline linked and breaks before it', () => {
+      // Pins the plugin order: remarkHashtags must see the "\n" before remarkSoftBreaks
+      // splits it out, or `(^|\s)#tag` no longer matches.
+      const { container } = render(<PostText content={'first line\n#design'} isArticle fullArticle />);
+
+      expect(screen.getByTestId('post-hashtag')).toHaveTextContent('#design');
+      expect(container.querySelector('p br')).not.toBeNull();
+    });
+
+    it('never truncates a full article to its preview, even off the post page', () => {
+      mockUsePathname.mockReturnValue('/home');
+      const paragraphs = Array.from({ length: 8 }, (_, i) => `Paragraph number ${i + 1}.`);
+
+      render(<PostText content={paragraphs.join('\n\n')} isArticle fullArticle />);
+
+      expect(screen.getByText('Paragraph number 8.')).toBeInTheDocument();
+    });
+
+    it('leaves h5 and h6 margins off outside full article mode', () => {
+      render(<PostText content={'##### Level five'} isArticle />);
+
+      expect(screen.getByRole('heading', { level: 5 })).not.toHaveClass('mt-[1.5em]');
     });
   });
 
@@ -1545,5 +1645,102 @@ Even more specific information.`}
   it('matches snapshot with custom className', () => {
     const { container } = render(<PostText content="Content with custom class" className="my-custom-class" />);
     expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+vi.mock('@/molecules/ArticleInlineImage/ArticleInlineImage', () => ({
+  ArticleInlineImage: ({ src, alt }: { src?: string; alt?: string }) => (
+    // Mock renders the RAW destination so tests can assert the custom
+    // urlTransform passed it through unmodified
+    <span data-testid="mock-article-inline-image" data-src={src} data-alt={alt} />
+  ),
+}));
+
+describe('Article inline images', () => {
+  const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+  const articleImages = {
+    attachments: [`pubky://${AUTHOR}/pub/pubky.app/files/cover`, `pubky://${AUTHOR}/pub/pubky.app/files/inline`],
+    authorId: AUTHOR,
+    postId: `${AUTHOR}:post1`,
+  };
+
+  beforeEach(() => {
+    mockUsePathname.mockReturnValue('/post/user/post1');
+  });
+
+  it('renders inline images with the raw attachment destination when articleImages is provided', () => {
+    render(
+      <PostText
+        content="Before
+
+![My alt](attachment:1)
+
+After"
+        isArticle
+        articleImages={articleImages}
+      />,
+    );
+
+    const image = screen.getByTestId('mock-article-inline-image');
+    expect(image).toHaveAttribute('data-src', 'attachment:1');
+    expect(image).toHaveAttribute('data-alt', 'My alt');
+  });
+
+  it('passes pubky and https destinations through to the image component', () => {
+    render(
+      <PostText
+        content={`![P](pubky://${AUTHOR}/pub/pubky.app/files/direct)
+
+![E](https://example.com/pic.png)`}
+        isArticle
+        articleImages={articleImages}
+      />,
+    );
+
+    const images = screen.getAllByTestId('mock-article-inline-image');
+    expect(images[0]).toHaveAttribute('data-src', `pubky://${AUTHOR}/pub/pubky.app/files/direct`);
+    expect(images[1]).toHaveAttribute('data-src', 'https://example.com/pic.png');
+  });
+
+  it('strips article images entirely without articleImages (embedded card on post page)', () => {
+    const { container } = render(
+      <PostText
+        content="Before
+
+![My alt](attachment:1)
+
+After"
+        isArticle
+      />,
+    );
+
+    expect(screen.queryByTestId('mock-article-inline-image')).not.toBeInTheDocument();
+    expect(container.querySelector('img')).not.toBeInTheDocument();
+    expect(container).not.toHaveTextContent('My alt');
+    expect(container).toHaveTextContent('Before');
+    expect(container).toHaveTextContent('After');
+  });
+
+  it('strips article images from feed previews and keeps alt text out of the preview budget', () => {
+    mockUsePathname.mockReturnValue('/home');
+    const { container } = render(
+      <PostText
+        content="![Alt only](attachment:1)
+
+First paragraph."
+        isArticle
+      />,
+    );
+
+    expect(container.querySelector('img')).not.toBeInTheDocument();
+    expect(container).not.toHaveTextContent('Alt only');
+    expect(container).toHaveTextContent('First paragraph.');
+  });
+
+  it('does not render images for non-article posts regardless of articleImages', () => {
+    const { container } = render(<PostText content="![alt](https://example.com/image.png)" />);
+
+    expect(container.querySelector('img')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mock-article-inline-image')).not.toBeInTheDocument();
   });
 });

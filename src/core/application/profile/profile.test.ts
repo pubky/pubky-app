@@ -65,6 +65,8 @@ beforeEach(async () => {
   ({ ProfileApplication } = await import('./profile'));
   ({ NexusBootstrapService } = await import('@/services/nexus/bootstrap/bootstrap'));
 
+  await UserDetailsModel.table.clear();
+
   // Mock Logger to prevent AppError from logging during tests
   vi.spyOn(Logger, 'error').mockImplementation(() => {});
   vi.spyOn(Logger, 'warn').mockImplementation(() => {});
@@ -75,8 +77,14 @@ beforeEach(async () => {
 describe('ProfileApplication', () => {
   describe('commitCreate', () => {
     it('creates profile and sets auth state on success', async () => {
-      const profileJson = { name: 'Alice' };
-      const profile = asOpaque<PubkyAppUser>({ toJson: vi.fn(() => profileJson) });
+      const profileJson = {
+        name: 'Alice',
+        bio: 'Alice bio',
+        image: null,
+        links: [{ title: 'Website', url: 'https://example.com' }],
+        status: '',
+      };
+      const profile = asOpaque<PubkyAppUser>({ ...profileJson, toJson: vi.fn(() => profileJson) });
       const url = 'pubky://user/pub/pubky.app/user';
       const pubky = 'test-pubky' as Pubky;
 
@@ -89,11 +97,21 @@ describe('ProfileApplication', () => {
       expect(NexusBootstrapService.ingest).toHaveBeenCalledWith(pubky);
       expect(mockAuthState.setCurrentUserPubky).toHaveBeenCalledWith(pubky);
       expect(mockAuthState.setHasProfile).toHaveBeenCalledWith(true);
+
+      const localProfile = await UserDetailsModel.findById(pubky);
+      expect(localProfile).toMatchObject({
+        id: pubky,
+        name: profileJson.name,
+        bio: profileJson.bio,
+        image: profileJson.image,
+        links: profileJson.links,
+        status: null,
+      });
     });
 
-    it('rethrows on failure without resetting auth state', async () => {
-      const profileJson = { name: 'Bob' };
-      const profile = asOpaque<PubkyAppUser>({ toJson: vi.fn(() => profileJson) });
+    it('does not persist the local profile when the homeserver write fails', async () => {
+      const profileJson = { name: 'Bob', bio: '', image: null, links: [], status: '' };
+      const profile = asOpaque<PubkyAppUser>({ ...profileJson, toJson: vi.fn(() => profileJson) });
       const url = 'pubky://user/pub/pubky.app/user';
       const pubky = 'test-pubky' as Pubky;
 
@@ -106,6 +124,9 @@ describe('ProfileApplication', () => {
       expect(mockAuthState.setCurrentUserPubky).not.toHaveBeenCalled();
       // Ingest only fires after profile.json is actually saved
       expect(NexusBootstrapService.ingest).not.toHaveBeenCalled();
+
+      const localProfile = await UserDetailsModel.findById(pubky);
+      expect(localProfile).toBeNull();
     });
   });
 

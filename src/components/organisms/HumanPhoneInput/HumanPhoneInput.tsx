@@ -11,7 +11,7 @@ import { parsePhoneNumber } from '@/libs/phone/phone';
 import { cn } from '@/libs/utils/utils';
 import { HumanPhoneInputField } from '@/molecules/HumanPhoneInputField/HumanPhoneInputField';
 import { PageTitle } from '@/molecules/Page/Page';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { SmsCodeErrorType } from '@/services/homegate/homegate.constants';
 
 type HumanPhoneInputProps = {

@@ -37,7 +37,7 @@ import { isArticleContent } from '@/libs/post/articleContent';
 import { stripPubkyPrefix, truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { POST_MENU_ACTION_IDS, POST_MENU_ACTION_VARIANTS } from './usePostMenuActions.constants';
 import type {
   PostMenuActionItem,
@@ -85,7 +85,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       icon: isFollowing ? UserRoundMinus : UserRoundPlus,
       onClick: async () => {
         // useFollowUser handles all feedback (toast + state) and never throws.
-        await toggleFollow(postAuthorId, isFollowing, authorProfile?.name);
+        await toggleFollow(postAuthorId, isFollowing);
       },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
       disabled: isFollowLoading || isUserLoading(postAuthorId),
@@ -150,7 +150,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         try {
           await toggleMute(postAuthorId, isUserMuted);
           toast({
-            title: isUserMuted ? `${username} unmuted` : `${username} muted`,
+            title: isUserMuted ? 'User unmuted' : 'User muted',
           });
         } catch (error) {
           toast({

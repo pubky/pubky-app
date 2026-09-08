@@ -40,11 +40,7 @@ vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: vi.fn(),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/application/stream/posts/muting/mute-filter', () => ({
   MuteFilter: {

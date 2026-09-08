@@ -69,7 +69,7 @@ exports[`Metadata - Snapshots > matches snapshot for default metadata configurat
     "images": [
       "/preview.webp",
     ],
-    "site": "https://pubky.app",
+    "site": "@getpubky",
     "title": "Test Title",
   },
 }
@@ -144,7 +144,7 @@ exports[`Metadata - Snapshots > matches snapshot for metadata with custom parame
     "images": [
       "/custom-image.jpg",
     ],
-    "site": "https://pubky.app",
+    "site": "@getpubky",
     "title": "Custom Title",
   },
 }
@@ -219,7 +219,7 @@ exports[`Metadata - Snapshots > matches snapshot for metadata with image 1`] = `
     "images": [
       "/image.jpg",
     ],
-    "site": "https://pubky.app",
+    "site": "@getpubky",
     "title": "Image Test",
   },
 }
@@ -294,7 +294,7 @@ exports[`Metadata - Snapshots > matches snapshot for metadata with minimal confi
     "images": [
       "/preview.webp",
     ],
-    "site": "https://pubky.app",
+    "site": "@getpubky",
     "title": "Minimal",
   },
 }
@@ -369,7 +369,7 @@ exports[`Metadata - Snapshots > matches snapshot with empty strings 1`] = `
     "images": [
       "/preview.webp",
     ],
-    "site": "https://pubky.app",
+    "site": "@getpubky",
     "title": "",
   },
 }
@@ -444,7 +444,7 @@ exports[`Metadata - Snapshots > matches snapshot with long title and description
     "images": [
       "/preview.webp",
     ],
-    "site": "https://pubky.app",
+    "site": "@getpubky",
     "title": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   },
 }
@@ -519,7 +519,7 @@ exports[`Metadata - Snapshots > matches snapshot with special characters 1`] = `
     "images": [
       "/preview.webp",
     ],
-    "site": "https://pubky.app",
+    "site": "@getpubky",
     "title": "Special chars: <>&\\"'",
   },
 }

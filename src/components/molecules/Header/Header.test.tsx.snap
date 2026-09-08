@@ -523,7 +523,7 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderOnboarding 1
 <div
   data-current="3"
   data-testid="progress-steps"
-  data-total="5"
+  data-total="4"
 >
   Progress Steps
 </div>

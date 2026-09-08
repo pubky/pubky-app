@@ -4,6 +4,7 @@ import { AUTH_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { ProfileController } from '@/controllers/profile/profile';
 import type { Pubky } from '@/models/models.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useDeleteAccount } from './useDeleteAccount';
 
@@ -30,12 +31,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 describe('useDeleteAccount', () => {
   const mockPubky = 'test-user-pubky' as Pubky;
@@ -134,7 +130,7 @@ describe('useDeleteAccount', () => {
       await result.current.handleDeleteAccount();
     });
 
-    expect(mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
       description: 'Failed to delete account. Please try again.',
     });
@@ -155,7 +151,7 @@ describe('useDeleteAccount', () => {
 
     // The account data is already gone, so no misleading "deletion failed" toast
     // and no retryable state — the user is moved to the logout page regardless.
-    expect(mockToast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
     expect(mockPush).toHaveBeenCalledWith(AUTH_ROUTES.LOGOUT);
     expect(result.current.isDeleting).toBe(true);
   });

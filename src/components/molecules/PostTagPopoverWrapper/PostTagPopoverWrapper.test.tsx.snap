@@ -12,6 +12,8 @@ exports[`PostTagPopoverWrapper - Snapshots > matches snapshot with taggers (open
   aria-expanded="true"
   aria-haspopup="dialog"
   data-as-child="true"
+  data-radix-popper-align="start"
+  data-radix-popper-side="bottom"
   data-slot="popover-trigger"
   data-state="open"
   data-testid="trigger"
@@ -23,7 +25,6 @@ exports[`PostTagPopoverWrapper - Snapshots > matches snapshot with taggers (open
 
 exports[`PostTagPopoverWrapper - Snapshots > matches snapshot with taggers (trigger only, closed state) 1`] = `
 <button
-  aria-controls="radix-normalized"
   aria-expanded="false"
   aria-haspopup="dialog"
   data-as-child="true"
