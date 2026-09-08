@@ -11,7 +11,8 @@ import type { UseKeyboardVisibleOptions } from './useKeyboardVisible.types';
  *
  * When the soft keyboard appears on mobile:
  * - The visual viewport height decreases
- * - The difference between window.innerHeight and visualViewport.height increases
+ * - The difference between window.innerHeight and the zoom-normalized viewport height increases
+ * Pinch-zoom alone does not count as an open keyboard.
  *
  * @param options - Configuration options
  * @param options.threshold - Height difference threshold in pixels (default: 150)

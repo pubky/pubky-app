@@ -5,6 +5,7 @@ import { useKeyboardViewport } from './useKeyboardViewport';
 const listeners = new Map<string, Set<EventListener>>();
 const mockVisualViewport = {
   height: 800,
+  scale: 1,
   offsetTop: 0,
   addEventListener: vi.fn((event: string, listener: EventListener) => {
     const eventListeners = listeners.get(event) ?? new Set<EventListener>();
@@ -31,6 +32,7 @@ describe('useKeyboardViewport', () => {
     vi.clearAllMocks();
 
     mockVisualViewport.height = 800;
+    mockVisualViewport.scale = 1;
     mockVisualViewport.offsetTop = 0;
 
     Object.defineProperty(window, 'innerHeight', {
@@ -82,6 +84,51 @@ describe('useKeyboardViewport', () => {
       viewportHeight: 500,
       viewportOffsetTop: 0,
     });
+  });
+
+  it.each([1.25, 2, 3])('does not mistake pinch-zoom at %sx for a keyboard', (scale) => {
+    mockVisualViewport.scale = scale;
+    mockVisualViewport.height = 800 / scale;
+    mockVisualViewport.offsetTop = 50;
+
+    const { result } = renderHook(() => useKeyboardViewport());
+
+    expect(result.current.isKeyboardVisible).toBe(false);
+    expect(result.current.keyboardHeight).toBe(0);
+  });
+
+  it('detects keyboard opening and dismissal while remaining zoomed', async () => {
+    mockVisualViewport.scale = 2;
+    mockVisualViewport.height = 400;
+    const { result } = renderHook(() => useKeyboardViewport());
+    expect(result.current.isKeyboardVisible).toBe(false);
+
+    act(() => {
+      mockVisualViewport.height = 250;
+      dispatchViewportEvent('resize');
+    });
+    await waitFor(() => expect(result.current.isKeyboardVisible).toBe(true));
+
+    act(() => {
+      mockVisualViewport.height = 400;
+      dispatchViewportEvent('resize');
+    });
+    expect(result.current.isKeyboardVisible).toBe(false);
+    expect(result.current.keyboardHeight).toBe(0);
+  });
+
+  it('keeps the keyboard detected when zoom changes during typing', async () => {
+    mockVisualViewport.height = 500;
+    const { result } = renderHook(() => useKeyboardViewport());
+    expect(result.current.isKeyboardVisible).toBe(true);
+
+    act(() => {
+      mockVisualViewport.scale = 2;
+      mockVisualViewport.height = 250;
+      dispatchViewportEvent('resize');
+    });
+    await waitFor(() => expect(result.current.viewportHeight).toBe(250));
+    expect(result.current.isKeyboardVisible).toBe(true);
   });
 
   it('accounts for visual viewport offsetTop', () => {
