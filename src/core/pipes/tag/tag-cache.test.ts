@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reconcileTagCounts } from '@/pipes/tag/tag-cache';
+import { reconcileTagCounts, reconcileTagWindow } from '@/pipes/tag/tag-cache';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
 const tag = (count: number, relationship: boolean): NexusTag => ({
@@ -10,6 +10,37 @@ const tag = (count: number, relationship: boolean): NexusTag => ({
 });
 
 describe('tag count reconciliation', () => {
+  it('accepts fresh totals when a guest preview proves another viewer addition was indexed', () => {
+    const incoming = { ...tag(2, false), taggers: ['viewer', 'remaining'] };
+    const existing = {
+      id: 'post',
+      tags: [{ ...incoming, taggers_count: 3 }],
+      mutations: { x: { viewerId: 'viewer', relationship: true, expiresAt: 200 } },
+    };
+    expect(
+      reconcileTagCounts(
+        { tags: 2, unique_tags: 1 },
+        [incoming],
+        existing,
+        { tags: 3, unique_tags: 1 },
+        undefined,
+        100,
+      ),
+    ).toEqual({ tags: 2, unique_tags: 1 });
+    expect(reconcileTagWindow([incoming], existing, 100).mutations).toEqual({});
+  });
+
+  it('preserves a pending viewer membership through a guest refresh', () => {
+    const incoming = { ...tag(1, false), taggers: ['other'] };
+    const existing = {
+      id: 'post',
+      tags: [{ ...tag(2, true), taggers: ['other', 'viewer'] }],
+      mutations: { x: { viewerId: 'viewer', relationship: true, expiresAt: 200, synced: false } },
+    };
+    expect(reconcileTagWindow([incoming], existing, 100).tags).toEqual([
+      { ...incoming, taggers: ['other', 'viewer'], taggers_count: 2 },
+    ]);
+  });
   it.each([
     { name: 'unacknowledged addition', intent: true, remote: [], total: 0, expected: 1, unique: 1 },
     { name: 'acknowledged addition', intent: true, remote: [tag(1, true)], total: 1, expected: 1, unique: 1 },
@@ -61,5 +92,53 @@ describe('tag count reconciliation', () => {
         100,
       ),
     ).toEqual({ tags: expected, unique_tags: expected });
+  });
+});
+
+describe('shared-viewer counter reconciliation', () => {
+  it.each([
+    { intent: true, previous: { tags: 22, unique_tags: 12 }, expected: { tags: 22, unique_tags: 11 } },
+    { intent: false, previous: { tags: 18, unique_tags: 8 }, expected: { tags: 18, unique_tags: 9 } },
+  ])('bounds unknown memberships once per label (addition: $intent)', ({ intent, previous, expected }) => {
+    const existing = {
+      id: 'profile',
+      tags: [],
+      mutations: {
+        a: { label: 'bitcoin', viewerId: 'alice', relationship: intent, expiresAt: 200 },
+        b: { label: 'Bitcoin', viewerId: 'bob', relationship: intent, expiresAt: 200 },
+      },
+    };
+    expect(reconcileTagCounts({ tags: 20, unique_tags: 10 }, [], existing, previous, undefined, 100)).toEqual(expected);
+  });
+
+  it('counts a new label once when two viewers add it', () => {
+    const existing = {
+      id: 'profile',
+      tags: [],
+      mutations: {
+        a: { label: 'bitcoin', viewerId: 'alice', relationship: true, expiresAt: 200 },
+        b: { label: 'Bitcoin', viewerId: 'bob', relationship: true, expiresAt: 200 },
+      },
+    };
+    expect(reconcileTagCounts({ tags: 0, unique_tags: 0 }, [], existing, undefined, undefined, 100)).toEqual({
+      tags: 2,
+      unique_tags: 1,
+    });
+  });
+
+  it('removes a label once after its two remaining viewers delete it', () => {
+    const preview = [{ label: 'bitcoin', taggers: ['alice', 'bob'], taggers_count: 2, relationship: false }];
+    const existing = {
+      id: 'profile',
+      tags: [],
+      mutations: {
+        a: { label: 'bitcoin', viewerId: 'alice', relationship: false, expiresAt: 200 },
+        b: { label: 'Bitcoin', viewerId: 'bob', relationship: false, expiresAt: 200 },
+      },
+    };
+    expect(reconcileTagCounts({ tags: 2, unique_tags: 1 }, preview, existing, undefined, undefined, 100)).toEqual({
+      tags: 0,
+      unique_tags: 0,
+    });
   });
 });

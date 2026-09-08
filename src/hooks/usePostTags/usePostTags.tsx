@@ -6,6 +6,8 @@ import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
 import { useTagCache } from '@/hooks/useTagCache/useTagCache';
+import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
 import { toast } from '@/molecules/Toaster/toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
@@ -62,7 +64,12 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
   const postCounts = useLiveQuery(
     async () => {
       if (!postId) return null;
-      return await PostController.getCounts({ compositeId: postId });
+      try {
+        return await PostController.getCounts({ compositeId: postId });
+      } catch (error) {
+        if (!isAppError(error)) Logger.warn('Could not read local post counts', { error });
+        return null;
+      }
     },
     [postId],
     undefined,

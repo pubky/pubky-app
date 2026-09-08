@@ -4,6 +4,7 @@ import type { NexusPost } from '@/services/nexus/nexus.types';
 import type { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 
 export interface TFetchStreamParams {
+  isCurrent?: () => boolean;
   streamId: PostStreamId;
   streamHead: number;
   streamTail: number;
@@ -40,6 +41,7 @@ export interface TPostStreamChunkResponse {
 }
 
 export interface TPartialCacheHitParams {
+  isCurrent?: () => boolean;
   cachedStreamChunk: string[];
   limit: number;
   streamTail: number;

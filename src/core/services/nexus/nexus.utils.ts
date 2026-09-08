@@ -108,6 +108,13 @@ export async function fetchNexusNoContent({ url, method }: Pick<TFetchNexusParam
   }
 }
 
+const responseStartedAt = new WeakMap<object, number>();
+
+/** Conservative snapshot cutoff; unknown/legacy responses carry no freshness proof. */
+export function getNexusResponseStartedAt(response: object): number | undefined {
+  return responseStartedAt.get(response);
+}
+
 /**
  * Queries Nexus API with automatic retry logic via TanStack Query.
  * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
@@ -134,9 +141,21 @@ export async function queryNexus<T>({
     const pending = nexusQueryClient.getQueryCache().find({ queryKey, exact: true });
     if (pending?.state.fetchStatus === 'fetching') await pending.promise?.catch(() => {});
   }
-  return nexusQueryClient.fetchQuery({
+  let startedAt: number | undefined;
+  const data = await nexusQueryClient.fetchQuery({
     queryKey,
     ...(force ? { staleTime: 0 } : staleTime !== undefined ? { staleTime } : {}),
-    queryFn: () => fetchNexus<T>({ url, method, body }),
+    queryFn: () => {
+      startedAt = Date.now();
+      return fetchNexus<T>({ url, method, body });
+    },
   });
+  // Record the returned reference after TanStack's structural sharing. Cached
+  // and concurrent callers reuse this evidence rather than stamping a new time.
+  if (startedAt !== undefined) {
+    if (data !== null && typeof data === 'object') responseStartedAt.set(data, startedAt);
+    const cached = nexusQueryClient.getQueryData(queryKey);
+    if (cached !== null && typeof cached === 'object') responseStartedAt.set(cached, startedAt);
+  }
+  return data;
 }

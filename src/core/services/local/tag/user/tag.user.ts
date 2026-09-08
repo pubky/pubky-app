@@ -3,31 +3,41 @@ import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
-import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserTagsModel, type UserTagsModelSchema } from '@/models/user/tags/userTags';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
-import { ViewerTagMarkerStorage } from '@/services/local/tag/viewerTagMarkerStorage';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
 export class LocalUserTagService {
   private static readonly TAG_TABLES = [UserTagsModel.table, UserCountsModel.table] as const;
 
-  static async create({ taggerId, taggedId, label }: TLocalTagParams): Promise<boolean> {
-    let taggersCount = 0;
+  static async create({
+    taggerId,
+    taggedId,
+    label,
+    mutationId,
+    expectedMutationId,
+    synced,
+    isCurrent,
+  }: TLocalTagParams): Promise<boolean> {
     try {
       const didCreate = await db.transaction('rw', this.TAG_TABLES, async () => {
         const userTagsModel = await UserTagsModel.getOrCreate<Pubky, UserTagsModelSchema>(taggedId);
+        if ((isCurrent && !isCurrent()) || !userTagsModel.ownsMutation(label, taggerId, expectedMutationId))
+          return false;
         const tagExists = userTagsModel.addTagger(label, taggerId);
 
         // Idempotent: user already tagged this user with this label
-        if (tagExists === null) {
+        if (tagExists === null && expectedMutationId === undefined) {
           return false;
         }
-        userTagsModel.recordMutation(label, taggerId, true);
-        taggersCount = userTagsModel.findByLabel(label)?.taggers_count ?? 0;
+        userTagsModel.recordMutation(label, taggerId, true, mutationId, synced ?? mutationId === undefined);
+        if (tagExists === null) {
+          await this.saveUserTagsModel(taggedId, userTagsModel);
+          return true;
+        }
         await Promise.all([
           this.saveUserTagsModel(taggedId, userTagsModel),
           UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: 1 } }),
@@ -40,7 +50,6 @@ export class LocalUserTagService {
       });
 
       if (didCreate) {
-        ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId, label, op: HttpMethod.PUT, taggersCount });
         // Profile tags define wot_domain (Tagged as) membership. Defer cache
         // invalidation to each domain stream's next initial load (#2302).
         postStreamDirtyRegistry.markDirty('profile_tag');
@@ -67,16 +76,28 @@ export class LocalUserTagService {
    * @returns {boolean} true if tag was deleted, false if nothing to delete (idempotent)
    * @throws {AppError} When database operations fail
    */
-  static async delete({ taggerId, taggedId, label }: TLocalTagParams): Promise<boolean> {
-    let taggersCount = 0;
+  static async delete({
+    taggerId,
+    taggedId,
+    label,
+    mutationId,
+    expectedMutationId,
+    synced,
+    isCurrent,
+  }: TLocalTagParams): Promise<boolean> {
     try {
       const deleted = await db.transaction('rw', this.TAG_TABLES, async () => {
         const userTagsModel = await UserTagsModel.findById(taggedId);
         if (!userTagsModel) return false;
+        if ((isCurrent && !isCurrent()) || !userTagsModel.ownsMutation(label, taggerId, expectedMutationId))
+          return false;
         const lastTaggerOnTag = userTagsModel.removeTagger(label, taggerId);
-        if (lastTaggerOnTag === null) return false;
-        userTagsModel.recordMutation(label, taggerId, false);
-        taggersCount = userTagsModel.findByLabel(label)?.taggers_count ?? 0;
+        if (lastTaggerOnTag === null && expectedMutationId === undefined) return false;
+        userTagsModel.recordMutation(label, taggerId, false, mutationId, synced ?? mutationId === undefined);
+        if (lastTaggerOnTag === null) {
+          await this.saveUserTagsModel(taggedId, userTagsModel);
+          return true;
+        }
         await Promise.all([
           this.saveUserTagsModel(taggedId, userTagsModel),
           UserCountsModel.updateCounts({ userId: taggerId, countChanges: { tagged: -1 } }),
@@ -88,7 +109,6 @@ export class LocalUserTagService {
         return true;
       });
       if (!deleted) return false;
-      ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId, label, op: HttpMethod.DELETE, taggersCount });
       // Profile tags define wot_domain (Tagged as) membership. Defer cache
       // invalidation to each domain stream's next initial load (#2302).
       postStreamDirtyRegistry.markDirty('profile_tag');

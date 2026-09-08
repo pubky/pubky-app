@@ -16,10 +16,10 @@ const { tagTable, countsTable, findByIds, transaction } = vi.hoisted(() => ({
 }));
 vi.mock('@/database/franky/franky', () => ({ db: { transaction } }));
 vi.mock('@/models/post/tags/postTags', () => ({
-  PostTagsModel: { table: tagTable, findByIdsPreserveOrder: findByIds },
+  PostTagsModel: { table: tagTable, findByIdsPreserveOrder: findByIds, findById: tagTable.get },
 }));
 vi.mock('@/models/user/tags/userTags', () => ({
-  UserTagsModel: { table: tagTable, findByIdsPreserveOrder: findByIds },
+  UserTagsModel: { table: tagTable, findByIdsPreserveOrder: findByIds, findById: tagTable.get },
 }));
 vi.mock('@/models/post/counts/postCounts', () => ({ PostCountsModel: { table: countsTable } }));
 vi.mock('@/models/user/counts/userCounts', () => ({ UserCountsModel: { table: countsTable } }));
@@ -46,6 +46,33 @@ describe('LocalTagCacheService', () => {
     countsTable.get.mockReset().mockResolvedValue({ tags: 5, unique_tags: 5 });
     findByIds.mockReset().mockResolvedValue([]);
   });
+
+  it('records cooldown when an invalidation supersedes a failing refresh', async () => {
+    tagTable.get.mockResolvedValue({ ...record(), cache: { ...record().cache!, fetchedAt: 0, revision: 3 } });
+    await LocalTagCacheService.deferRefresh(entity, { revision: 2, retryAt: 30_000 });
+    expect(tagTable.put).toHaveBeenCalledWith(
+      expect.objectContaining({ cache: expect.objectContaining({ fetchedAt: 0, revision: 3, retryAt: 30_000 }) }),
+    );
+  });
+
+  it('does not delay a newer successful refresh after an older request fails', async () => {
+    tagTable.get.mockResolvedValue({ ...record(), cache: { ...record().cache!, fetchedAt: 10_000, revision: 3 } });
+    await LocalTagCacheService.deferRefresh(entity, { revision: 2, retryAt: 30_000 });
+    expect(tagTable.put).not.toHaveBeenCalled();
+  });
+
+  it.each(['viewer', undefined])(
+    'reopens an exhausted expanded list for a fresh total from viewer %s',
+    async (viewerId) => {
+      tagTable.get.mockResolvedValue({ ...record(25), cache: { ...record(25).cache!, exhausted: true } });
+      await LocalTagCacheService.savePreviews('user', [[entity.id, tags(5)]], { viewerId }, [
+        [entity.id, { tags: 30, unique_tags: 30, replies: 0, reposts: 0 }],
+      ]);
+      expect(tagTable.put).toHaveBeenCalledWith(
+        expect.objectContaining({ tags: tags(25), cache: expect.objectContaining({ exhausted: false, cursor: 25 }) }),
+      );
+    },
+  );
 
   it('rejects pages from an older revision without writing', async () => {
     expect(await LocalTagCacheService.savePage(entity, tags(20, 5), { skip: 5, limit: 20, revision: 1 })).toBe(false);
@@ -76,6 +103,23 @@ describe('LocalTagCacheService', () => {
         cache: expect.objectContaining({ cursor: 25, exhausted: false, fetchedAt: 1, revision: 3 }),
       }),
     );
+  });
+
+  it.each([
+    { prefix: 100, page: 200, expected: 100 },
+    { prefix: 200, page: 100, expected: 100 },
+    { prefix: undefined, page: 200, expected: undefined },
+    { prefix: 100, page: undefined, expected: undefined },
+  ])('keeps the oldest proven snapshot when appending ($prefix, $page)', async ({ prefix, page, expected }) => {
+    tagTable.get.mockResolvedValue({ ...record(), cache: { ...record().cache!, validatedAt: prefix } });
+    await LocalTagCacheService.savePage(entity, tags(20, 5), {
+      skip: 5,
+      limit: 20,
+      revision: 2,
+      viewerId: 'viewer',
+      validatedAt: page,
+    });
+    expect(tagTable.put.mock.calls[0][0].cache.validatedAt).toBe(expected);
   });
 
   it('replaces a refreshed prefix so deleted labels disappear and clears its cooldown', async () => {
@@ -183,5 +227,47 @@ describe('LocalTagCacheService', () => {
     expect(
       await LocalTagCacheService.findStale('user', ['cooldown', 'fresh', 'stale', 'missing', 'legacy'], 1000),
     ).toEqual(['stale']);
+  });
+});
+
+describe('LocalTagCacheService shared mutations', () => {
+  const mutation = {
+    label: 'bitcoin',
+    viewerId: 'viewer',
+    relationship: true,
+    expiresAt: Date.now() + 100_000,
+    id: 'latest',
+    synced: false,
+  };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    tagTable.get.mockResolvedValue({ ...record(), mutations: { 'viewer:bitcoin': mutation } });
+  });
+
+  it('does not settle an older operation over a newer toggle', async () => {
+    await LocalTagCacheService.completeMutation(entity, { mutationId: 'older' });
+    expect(tagTable.put).not.toHaveBeenCalled();
+    await LocalTagCacheService.completeMutation(entity, { mutationId: 'latest' });
+    expect(tagTable.put).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutations: {
+          'viewer:bitcoin': { ...mutation, synced: true },
+        },
+      }),
+    );
+  });
+
+  it('does not settle into a replaced session', async () => {
+    await LocalTagCacheService.completeMutation(entity, { mutationId: 'latest', isCurrent: () => false });
+    expect(tagTable.put).not.toHaveBeenCalled();
+  });
+
+  it('reads only the requested viewer intent without writing', async () => {
+    expect((await LocalTagCacheService.getViewerMutations(entity, 'viewer')).get('bitcoin')).toMatchObject({
+      id: 'latest',
+      relationship: true,
+    });
+    expect((await LocalTagCacheService.getViewerMutations(entity, 'other')).size).toBe(0);
+    expect(tagTable.put).not.toHaveBeenCalled();
   });
 });

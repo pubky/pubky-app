@@ -22,6 +22,7 @@ export type TReadUserStreamChunkParams = {
  * Used internally by application layer - limit comes from NEXUS_USERS_PER_PAGE
  */
 export type TFetchUserStreamChunkParams = TReadUserStreamChunkParams & {
+  isCurrent?: () => boolean;
   limit: number;
   viewerId?: Pubky;
 };
@@ -65,6 +66,7 @@ export type TFetchStreamFromNexusParams = TFetchUserStreamChunkParams & {
  * Used by controller (without viewerId) and application (with viewerId)
  */
 export type TGetOrFetchUsersParams = {
+  isCurrent?: () => boolean;
   userIds: Pubky[];
   viewerId?: Pubky;
 };

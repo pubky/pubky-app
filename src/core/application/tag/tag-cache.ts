@@ -5,6 +5,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { getTagCursor } from '@/models/shared/tag/tag.utils';
 import { LocalTagCacheService, type TagEntity } from '@/services/local/tag/tag-cache';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 import { NexusPostService } from '@/services/nexus/post/post';
 import { NexusUserService } from '@/services/nexus/user/user';
 
@@ -80,11 +81,13 @@ export class TagCacheApplication {
     const limit = mode === 'refresh' ? Math.max(pageSize, cursor) : pageSize;
     try {
       const tags: NexusTag[] = [];
+      let validatedAt = Infinity;
       // Nexus limits each request to 100 tags. Refresh the loaded prefix atomically.
       while (tags.length < limit) {
         const size = Math.min(100, limit - tags.length);
         if (request.isCurrent && !request.isCurrent()) return;
         const page = await this.fetchPage(request, skip + tags.length, size, mode === 'refresh' || attempt > 0);
+        validatedAt = Math.min(validatedAt, getNexusResponseStartedAt(page) ?? 0);
         tags.push(...page);
         if (page.length < size) break;
       }
@@ -92,6 +95,7 @@ export class TagCacheApplication {
       const saved = await LocalTagCacheService.savePage(request, tags, {
         skip,
         limit,
+        validatedAt: validatedAt > 0 && Number.isFinite(validatedAt) ? validatedAt : undefined,
         revision: existing ? (existing.cache?.revision ?? 0) : null,
         viewerId: request.viewerId,
         isCurrent: request.isCurrent,

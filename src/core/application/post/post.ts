@@ -105,7 +105,11 @@ export class PostApplication {
    * @param viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async getOrFetch({ compositeId, viewerId }: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
+  static async getOrFetch({
+    compositeId,
+    viewerId,
+    isCurrent,
+  }: TGetOrFetchPostParams & { isCurrent?: () => boolean }): Promise<PostDetailsModelSchema | null> {
     const localPost = await LocalPostService.readDetails({ postId: compositeId });
     if (localPost) return localPost;
 
@@ -113,6 +117,7 @@ export class PostApplication {
     await PostStreamApplication.fetchMissingPostsFromNexus({
       cacheMissPostIds: [compositeId],
       viewerId,
+      isCurrent,
     });
 
     // Return the persisted post details
@@ -127,10 +132,15 @@ export class PostApplication {
    * @param viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found on Nexus
    */
-  static async fetch({ compositeId, viewerId }: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
+  static async fetch({
+    compositeId,
+    viewerId,
+    isCurrent,
+  }: TGetOrFetchPostParams & { isCurrent?: () => boolean }): Promise<PostDetailsModelSchema | null> {
     await PostStreamApplication.fetchMissingPostsFromNexus({
       cacheMissPostIds: [compositeId],
       viewerId,
+      isCurrent,
     });
 
     return await LocalPostService.readDetails({ postId: compositeId });
@@ -164,7 +174,8 @@ export class PostApplication {
   static async fetchAuthoredCollections({
     authorId,
     viewerId,
-  }: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
+    isCurrent,
+  }: TAuthoredCollectionsParams & { isCurrent?: () => boolean }): Promise<CollectionPost[] | null> {
     const streamId = buildAuthorCollectionsStreamId(authorId);
     const { cacheMissPostIds } = await PostStreamApplication.fetchStreamSlice({
       streamId,
@@ -172,19 +183,21 @@ export class PostApplication {
       streamTail: NOT_FOUND_CACHED_STREAM,
       limit: NEXUS_STREAM_MAX_LIMIT,
       viewerId: viewerId ?? null,
+      isCurrent,
     });
 
     if (cacheMissPostIds.length > 0) {
       await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
+        isCurrent,
       });
     }
 
     return await this.getAuthoredCollections({ authorId, viewerId });
   }
 
-  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }: TCreatePostInput) {
+  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags, isCurrent }: TCreatePostInput) {
     const hasFiles = fileAttachments != null && fileAttachments.length > 0;
 
     if (hasFiles) {
@@ -221,7 +234,7 @@ export class PostApplication {
     }
 
     if (tags && tags.length > 0) {
-      await TagApplication.commitCreate({ tagList: tags });
+      await TagApplication.commitCreate({ tagList: tags, isCurrent });
     }
   }
 

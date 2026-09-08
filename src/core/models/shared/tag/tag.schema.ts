@@ -1,5 +1,16 @@
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
+export interface TagMutation {
+  viewerId: string;
+  relationship: boolean;
+  expiresAt: number;
+  /** Optional only on legacy rows written before mutation identities existed. */
+  id?: string;
+  label?: string;
+  /** Pending homeserver operations retain their identity even after protection expires. */
+  synced?: boolean;
+}
+
 export interface TagCollectionModelSchema<Id> {
   id: Id;
   tags: NexusTag[];
@@ -8,6 +19,8 @@ export interface TagCollectionModelSchema<Id> {
     cursor: number;
     exhausted: boolean;
     fetchedAt: number;
+    /** Earliest actual network request start in the accepted window. */
+    validatedAt?: number;
     revision: number;
     /** Earliest background retry after a failed refresh; successful data clears it. */
     retryAt?: number;
@@ -15,7 +28,7 @@ export interface TagCollectionModelSchema<Id> {
     viewerId?: string | null;
   };
   /** Local intent survives delayed Nexus responses, independently of server pagination. */
-  mutations?: Record<string, { viewerId: string; relationship: boolean; expiresAt: number }>;
+  mutations?: Record<string, TagMutation>;
 }
 
 // Keep only the primary key index. Tag arrays are read/updated by id.

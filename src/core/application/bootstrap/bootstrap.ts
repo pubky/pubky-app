@@ -22,6 +22,7 @@ import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalUserService } from '@/services/local/user/user';
 import { NexusBootstrapService } from '@/services/nexus/bootstrap/bootstrap';
 import { UserStreamTimeframe } from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 import type { NotificationState } from '@/stores/notification/notification.types';
 
 /**
@@ -53,6 +54,8 @@ export class BootstrapApplication {
       MuteApplication.fetchMutedUsers(pubky), // fetches and persists MUTED stream internally
       FeedApplication.fetchFeeds(pubky),
     ]);
+    if (params.isCurrent && !params.isCurrent())
+      return { unread: 0, lastRead: userLastRead, lastPolledTimestamp: undefined };
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
     if (!bootstrapData.indexed) {
@@ -75,13 +78,24 @@ export class BootstrapApplication {
     const [{ unread, nextPollCursor }] = await Promise.all([
       NotificationApplication.persistAndSummarize({
         notifications: bootstrapData.notifications,
+        isCurrent: params.isCurrent,
         lastRead: userLastRead,
         allowedTypes: params.allowedTypes,
       }),
-      LocalStreamUsersService.persistUsers(bootstrapData.users, { revisions: new Map(), viewerId: pubky }),
+      LocalStreamUsersService.persistUsers(bootstrapData.users, {
+        revisions: new Map(),
+        viewerId: pubky,
+        isCurrent: params.isCurrent,
+        validatedAt: getNexusResponseStartedAt(bootstrapData),
+      }),
       LocalStreamPostsService.persistPosts({
         posts: bootstrapData.posts,
-        tagGuard: { revisions: new Map(), viewerId: pubky },
+        tagGuard: {
+          revisions: new Map(),
+          viewerId: pubky,
+          isCurrent: params.isCurrent,
+          validatedAt: getNexusResponseStartedAt(bootstrapData),
+        },
       }),
       LocalStreamPostsService.upsert({
         streamId: PostStreamTypes.TIMELINE_ALL_ALL,

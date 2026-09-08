@@ -162,7 +162,7 @@ describe('UserController', () => {
       const result = await UserController.getOrFetchCounts({ userId });
 
       expect(result).toEqual(mockUserCounts);
-      expect(countsSpy).toHaveBeenCalledWith({ userId });
+      expect(countsSpy).toHaveBeenCalledWith({ isCurrent: expect.any(Function), userId });
     });
 
     it('should return null when user counts not found', async () => {
@@ -202,7 +202,7 @@ describe('UserController', () => {
       const result = await UserController.fetchDetails({ userId });
 
       expect(result).toEqual(mockUserDetails);
-      expect(spy).toHaveBeenCalledWith({ userId });
+      expect(spy).toHaveBeenCalledWith({ isCurrent: expect.any(Function), userId });
     });
 
     it('should return null when user not found', async () => {
@@ -256,7 +256,11 @@ describe('UserController', () => {
 
       await UserController.getOrFetch({ userId: TEST_PUBKY.USER_1 });
 
-      expect(spy).toHaveBeenCalledWith({ userId: TEST_PUBKY.USER_1, viewerId: TEST_PUBKY.USER_2 });
+      expect(spy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
+        userId: TEST_PUBKY.USER_1,
+        viewerId: TEST_PUBKY.USER_2,
+      });
     });
   });
 
@@ -267,7 +271,11 @@ describe('UserController', () => {
 
       await UserController.fetch({ userId: TEST_PUBKY.USER_1, viewerId: TEST_PUBKY.USER_2 });
 
-      expect(spy).toHaveBeenCalledWith({ userId: TEST_PUBKY.USER_1, viewerId: TEST_PUBKY.USER_2 });
+      expect(spy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
+        userId: TEST_PUBKY.USER_1,
+        viewerId: TEST_PUBKY.USER_2,
+      });
     });
 
     it('should default the viewer to the signed-in user', async () => {
@@ -279,7 +287,11 @@ describe('UserController', () => {
 
       await UserController.fetch({ userId: TEST_PUBKY.USER_1 });
 
-      expect(spy).toHaveBeenCalledWith({ userId: TEST_PUBKY.USER_1, viewerId: TEST_PUBKY.USER_2 });
+      expect(spy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
+        userId: TEST_PUBKY.USER_1,
+        viewerId: TEST_PUBKY.USER_2,
+      });
     });
 
     it('should leave the viewer undefined for guests', async () => {
@@ -288,7 +300,11 @@ describe('UserController', () => {
 
       await UserController.fetch({ userId: TEST_PUBKY.USER_1 });
 
-      expect(spy).toHaveBeenCalledWith({ userId: TEST_PUBKY.USER_1, viewerId: undefined });
+      expect(spy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
+        userId: TEST_PUBKY.USER_1,
+        viewerId: undefined,
+      });
     });
 
     it('should delegate to UserApplication.fetch', async () => {
@@ -308,7 +324,7 @@ describe('UserController', () => {
       const result = await UserController.fetch({ userId });
 
       expect(result).toEqual(mockUserDetails);
-      expect(spy).toHaveBeenCalledWith({ userId });
+      expect(spy).toHaveBeenCalledWith({ isCurrent: expect.any(Function), userId });
     });
 
     it('should return null when user not found', async () => {
@@ -351,7 +367,7 @@ describe('UserController', () => {
       const result = await UserController.fetchCounts({ userId });
 
       expect(result).toEqual(mockUserCounts);
-      expect(spy).toHaveBeenCalledWith({ userId });
+      expect(spy).toHaveBeenCalledWith({ isCurrent: expect.any(Function), userId });
     });
 
     it('should return null when counts not found', async () => {

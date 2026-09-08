@@ -17,6 +17,7 @@ import type {
   TUpdateCollectionItemParams,
 } from '@/controllers/post/post.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -108,7 +109,7 @@ export class PostController {
    * @returns Post details or null if not found
    */
   static async getOrFetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
-    return await PostApplication.getOrFetch(params);
+    return await PostApplication.getOrFetch({ ...params, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -120,7 +121,7 @@ export class PostController {
    * @returns Post details or null if not found
    */
   static async fetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
-    return await PostApplication.fetch(params);
+    return await PostApplication.fetch({ ...params, isCurrent: captureViewerSession() });
   }
 
   static async getAuthoredCollections(params: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
@@ -128,7 +129,7 @@ export class PostController {
   }
 
   static async fetchAuthoredCollections(params: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
-    return await PostApplication.fetchAuthoredCollections(params);
+    return await PostApplication.fetchAuthoredCollections({ ...params, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -162,6 +163,7 @@ export class PostController {
     parentPostId,
     originalPostId,
   }: TCreatePostParams): Promise<string> {
+    const isCurrent = captureViewerSession();
     let parentUri: string | undefined = undefined;
     let repostedUri: string | undefined = undefined;
     let tagList: TCreateTagInput[] = [];
@@ -235,6 +237,7 @@ export class PostController {
       postUrl: meta.url,
       fileAttachments,
       tags: tagList,
+      isCurrent,
     });
 
     return compositePostId;

@@ -85,8 +85,47 @@ describe('TagCollection local intent', () => {
       },
     });
     collection.recordMutation('NEW', 'viewer', true);
-    expect(Object.keys(collection.mutations ?? {})).toEqual(['live', 'new']);
+    expect(Object.keys(collection.mutations ?? {})).toEqual(['live', 'viewer:new']);
     expect(collection.mutations?.live).toEqual({ viewerId: 'other', relationship: false, expiresAt: now + 60_000 });
-    expect(collection.mutations?.new).toMatchObject({ viewerId: 'viewer', relationship: true });
+    expect(collection.mutations?.['viewer:new']).toMatchObject({ viewerId: 'viewer', relationship: true });
+  });
+});
+
+describe('TagCollection mutation ownership', () => {
+  it('keeps operations from different viewers on the same label independently', () => {
+    const row = new TestTagCollection({ id: 'profile', tags: [] });
+    row.recordMutation('Bitcoin', 'alice', true, 'a', false);
+    row.recordMutation('bitcoin', 'bob', false, 'b', false);
+    expect(row.ownsMutation('BITCOIN', 'alice', 'a')).toBe(true);
+    expect(row.ownsMutation('bitcoin', 'bob', 'b')).toBe(true);
+    row.recordMutation('bitcoin', 'alice', false, 'newer', false);
+    expect(row.ownsMutation('bitcoin', 'alice', 'a')).toBe(false);
+    expect(row.ownsMutation('bitcoin', 'bob', 'b')).toBe(true);
+  });
+
+  it('can undo an active viewer addition after a guest refresh changes the raw relationship', () => {
+    const row = new TestTagCollection({
+      id: 'profile',
+      tags: [{ label: 'bitcoin', taggers: ['other', 'alice'], taggers_count: 2, relationship: false }],
+      cache: { viewerId: null, cursor: 1, exhausted: true, fetchedAt: 1, revision: 2 },
+      mutations: {
+        bitcoin: { viewerId: 'alice', relationship: true, expiresAt: Date.now() + 1000, id: 'pending', synced: false },
+      },
+    });
+    expect(row.ownsMutation('bitcoin', 'alice', 'pending')).toBe(true);
+    expect(row.removeTagger('bitcoin', 'alice')).toBe(false);
+    expect(row.tags[0]).toMatchObject({ taggers: ['other'], taggers_count: 1, relationship: false });
+  });
+
+  it('retains expired pending operation identity until it settles', () => {
+    const row = new TestTagCollection({
+      id: 'profile',
+      tags: [],
+      mutations: {
+        bitcoin: { viewerId: 'alice', relationship: true, expiresAt: 0, id: 'pending', synced: false },
+      },
+    });
+    row.recordMutation('other', 'bob', true, 'other');
+    expect(row.ownsMutation('bitcoin', 'alice', 'pending')).toBe(true);
   });
 });

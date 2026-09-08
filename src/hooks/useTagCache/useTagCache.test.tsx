@@ -51,11 +51,57 @@ describe('useTagCache', () => {
   });
 
   describe('initial loading', () => {
+    it.each(['other-viewer', null])(
+      'projects retained observations for the new viewer %s immediately',
+      async (viewerId) => {
+        vi.mocked(useLiveQuery).mockReturnValue({
+          ...cachedRecord,
+          tags: [{ ...cachedRecord.tags[0], taggers: ['viewer'], relationship: true }],
+        });
+        const { result, rerender } = renderHook((viewer: string | null) => useTagCache('user', 'profile', viewer), {
+          initialProps: initialParams.viewerId,
+        });
+        await act(async () => {});
+        expect(result.current.record?.tags[0].relationship).toBe(true);
+        rerender(viewerId);
+        expect(result.current.record?.tags[0].relationship).toBe(false);
+        await act(async () => {});
+      },
+    );
+
+    it.each([true, false])(
+      'projects the current viewer pending intent (%s) without mutating shared data',
+      async (relationship) => {
+        const shared = {
+          ...cachedRecord,
+          mutations: {
+            other: { label: 'pubky', viewerId: 'other-viewer', relationship, expiresAt: Date.now() + 60_000 },
+          },
+        };
+        vi.mocked(useLiveQuery).mockReturnValue(shared);
+        const { result } = renderHook(() => useTagCache('user', 'profile', 'other-viewer'));
+        expect(result.current.record?.tags[0].relationship).toBe(relationship);
+        expect(shared.tags[0].relationship).toBe(false);
+        await act(async () => {});
+      },
+    );
+
     it('contains a local read failure so the query does not reject into React', async () => {
       vi.mocked(TagCacheController.get).mockRejectedValueOnce(offlineError());
       renderHook(() => useTagCache('user', 'profile', null));
       const query = vi.mocked(useLiveQuery).mock.calls[0][0];
       await expect(query()).resolves.toBeNull();
+    });
+
+    it('filters expired intent in the local observation without changing the persisted record', async () => {
+      const active = { label: 'pubky', viewerId: 'viewer', relationship: true, expiresAt: Date.now() + 60_000 };
+      const shared = { ...cachedRecord, mutations: { active, expired: { ...active, expiresAt: 0 } } };
+      vi.mocked(TagCacheController.get).mockResolvedValueOnce(shared);
+      renderHook(() => useTagCache('user', 'profile', 'viewer'));
+      const query = vi.mocked(useLiveQuery).mock.calls[0][0];
+      await expect(query()).resolves.toEqual({ ...shared, mutations: { active } });
+      expect(shared.mutations.expired).toBeDefined();
+      await act(async () => {});
     });
 
     it.each([null, undefined])('does not load or paginate without an ID (%s)', async (id) => {

@@ -1,4 +1,5 @@
 import { HotApplication } from '@/application/hot/hot';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import type { NexusHotTag } from '@/services/nexus/nexus.types';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -22,9 +23,9 @@ export class HotController {
     if (params.reach && !params.user_id) {
       const currentUserPubky = useAuthStore.getState().currentUserPubky;
       if (currentUserPubky) {
-        return await HotApplication.getOrFetch({ ...params, user_id: currentUserPubky });
+        return await HotApplication.getOrFetch({ ...params, user_id: currentUserPubky }, captureViewerSession());
       }
     }
-    return await HotApplication.getOrFetch(params);
+    return await HotApplication.getOrFetch(params, captureViewerSession());
   }
 }

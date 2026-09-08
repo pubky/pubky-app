@@ -13,7 +13,7 @@ import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.view
 vi.mock('@/controllers/user/user', () => ({ UserController: { fetchTaggers: vi.fn() } }));
 vi.mock('@/controllers/post/post', () => ({ PostController: { fetchTaggers: vi.fn() } }));
 vi.mock('@/controllers/tag/tag', () => ({
-  TagController: { getViewerMutation: () => null, subscribeViewerMutations: () => () => {} },
+  TagController: { getViewerMutations: async () => new Map() },
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/hooks/useFollowUser/useFollowUser', () => ({

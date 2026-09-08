@@ -6,7 +6,14 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { mockResponse } from '@/test-utils/dom';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { buildCdnUrl, buildNexusUrl, buildUrlWithQuery, createFetchOptions, queryNexus } from './nexus.utils';
+import {
+  buildCdnUrl,
+  buildNexusUrl,
+  buildUrlWithQuery,
+  createFetchOptions,
+  getNexusResponseStartedAt,
+  queryNexus,
+} from './nexus.utils';
 
 describe('nexus.utils', () => {
   it.each([undefined, 60_000])('forces revalidation even with staleTime %s', async (staleTime) => {
@@ -160,6 +167,36 @@ describe('nexus.utils', () => {
       // Clear query client cache between tests
       const { nexusQueryClient } = await import('./nexus.query-client');
       nexusQueryClient.clear();
+    });
+
+    it('keeps actual request-start evidence through delayed, joined, cached and structurally shared responses', async () => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+      const pending = Promise.withResolvers<Response>();
+      mockFetch.mockReturnValueOnce(pending.promise);
+      const url = 'https://example.com/api/snapshot-cutoff';
+      try {
+        const first = queryNexus<object>({ url });
+        await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledOnce());
+        now.mockReturnValue(5000);
+        const joined = queryNexus<object>({ url });
+        pending.resolve(new Response(JSON.stringify({ tags: [] })));
+        const [a, b] = await Promise.all([first, joined]);
+        expect(a).toBe(b);
+        expect(getNexusResponseStartedAt(a)).toBe(1000);
+        expect(getNexusResponseStartedAt(b)).toBe(1000);
+        now.mockReturnValue(6000);
+        expect(getNexusResponseStartedAt(await queryNexus<object>({ url }))).toBe(1000);
+        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ tags: [] })));
+        const refreshed = await queryNexus<object>({ url, force: true });
+        expect(refreshed).toEqual(a);
+        const shared = await queryNexus<object>({ url });
+        expect(shared).toBe(a);
+        expect(getNexusResponseStartedAt(shared)).toBe(6000);
+        expect(getNexusResponseStartedAt(refreshed)).toBe(6000);
+        expect(getNexusResponseStartedAt({ tags: [] })).toBeUndefined();
+      } finally {
+        now.mockRestore();
+      }
     });
 
     it('should fetch and parse JSON response successfully', async () => {

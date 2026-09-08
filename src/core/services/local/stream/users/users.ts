@@ -18,6 +18,7 @@ import {
   type NexusUserCounts,
   type NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 
 const KNOWN_SOCIAL_GRAPH_STATUSES = new Set<string>(Object.values(NexusSocialGraphStatus));
 
@@ -105,6 +106,7 @@ export class LocalStreamUsersService {
    * @returns Array of user IDs (Pubky)
    */
   static async persistUsers(users: NexusUser[], tagGuard: TagPreviewGuard = {}): Promise<Pubky[]> {
+    tagGuard = { ...tagGuard, validatedAt: tagGuard.validatedAt ?? getNexusResponseStartedAt(users) };
     if (tagGuard.isCurrent && !tagGuard.isCurrent()) return [];
     const userCounts: NexusModelTuple<NexusUserCounts>[] = [];
     const userRelationships: NexusModelTuple<NexusUserRelationship>[] = [];

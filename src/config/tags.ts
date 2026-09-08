@@ -70,3 +70,6 @@ export const USER_TAGS_PER_PAGE = 20;
 
 /** Cooldown after a background tag refresh fails. */
 export const TAG_REFRESH_RETRY_MS = 30_000;
+
+/** Protection while a local tag write is waiting for Nexus indexing. */
+export const TAG_MUTATION_TTL_MS = 300_000;

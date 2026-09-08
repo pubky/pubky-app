@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -69,6 +70,16 @@ describe('usePostTags', () => {
     vi.clearAllMocks();
     vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('mock-user-id'));
     vi.mocked(useLiveQuery).mockReturnValue(undefined);
+  });
+
+  it('contains a counts read failure while keeping cached tag chips visible', async () => {
+    setupLiveQueryMock({ tags: [{ label: 'cached', taggers: [], taggers_count: 1, relationship: false }] }, null);
+    vi.mocked(PostController.getCounts).mockRejectedValueOnce(new Error('IndexedDB unavailable'));
+    const { result } = renderHook(() => usePostTags('author:post123'));
+    const query = vi.mocked(useLiveQuery).mock.calls.find(([query]) => query.toString().includes('getCounts'))![0];
+    await expect(query()).resolves.toBeNull();
+    expect(result.current.tags.map((tag) => tag.label)).toEqual(['cached']);
+    expect(result.current.hasMore).toBe(false);
   });
 
   it('discards zero-tagger placeholders when the viewer changes on the same post', async () => {

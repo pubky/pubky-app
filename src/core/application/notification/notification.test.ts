@@ -726,6 +726,7 @@ describe('NotificationApplication tag invalidation', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     mockFetchMissingEntities();
+    vi.spyOn(LocalTagCacheService, 'read').mockResolvedValue(null);
     vi.spyOn(LocalTagCacheService, 'invalidate').mockResolvedValue(undefined);
     vi.spyOn(TagCacheApplication, 'forceRefresh').mockResolvedValue(undefined);
   });
@@ -734,6 +735,87 @@ describe('NotificationApplication tag invalidation', () => {
     timestamp: 123,
     body: { type: NotificationType.TagProfile, tagged_by: 'tagger', tag_label: 'new' },
   };
+
+  it('does not refetch fresh tags when opening an older notification page', async () => {
+    vi.spyOn(LocalTagCacheService, 'read').mockResolvedValue({
+      id: userId,
+      tags: [],
+      cache: {
+        cursor: 0,
+        exhausted: true,
+        fetchedAt: 200,
+        validatedAt: 150,
+        revision: 1,
+        viewerId: userId,
+      },
+    });
+    const result = await NotificationApplication.fetchMissingEntities({
+      notifications: [notification],
+      viewerId: userId,
+    });
+    expect(result).toHaveLength(1);
+    expect(LocalTagCacheService.invalidate).not.toHaveBeenCalled();
+    expect(UserStreamApplication.fetchMissingUsersFromNexus).not.toHaveBeenCalled();
+    expect(TagCacheApplication.forceRefresh).not.toHaveBeenCalled();
+  });
+
+  it('still hydrates missing details when their tag snapshot is newer than a historical event', async () => {
+    vi.spyOn(LocalTagCacheService, 'read').mockResolvedValue({
+      id: userId,
+      tags: [],
+      cache: {
+        cursor: 0,
+        exhausted: true,
+        fetchedAt: 200,
+        validatedAt: 150,
+        revision: 1,
+        viewerId: userId,
+      },
+    });
+    vi.mocked(LocalStreamUsersService.getNotPersistedUsersInCache).mockResolvedValue([userId]);
+    await NotificationApplication.fetchMissingEntities({ notifications: [notification], viewerId: userId });
+    expect(LocalTagCacheService.invalidate).not.toHaveBeenCalled();
+    expect(UserStreamApplication.fetchMissingUsersFromNexus).toHaveBeenCalledWith(
+      expect.objectContaining({ cacheMissUserIds: [userId] }),
+    );
+  });
+
+  it('does not mistake a delayed old response for a snapshot covering the notification', async () => {
+    vi.spyOn(LocalTagCacheService, 'read').mockResolvedValue({
+      id: userId,
+      tags: [],
+      cache: {
+        cursor: 0,
+        exhausted: true,
+        fetchedAt: 200,
+        validatedAt: 100,
+        revision: 1,
+        viewerId: userId,
+      },
+    });
+    vi.spyOn(TagCacheApplication, 'get').mockResolvedValue(null);
+    await NotificationApplication.fetchMissingEntities({ notifications: [notification], viewerId: userId });
+    expect(LocalTagCacheService.invalidate).toHaveBeenCalledOnce();
+    expect(TagCacheApplication.forceRefresh).toHaveBeenCalledOnce();
+  });
+
+  it('invalidates an initialized snapshot when a newer tag event arrives', async () => {
+    vi.spyOn(LocalTagCacheService, 'read').mockResolvedValue({
+      id: userId,
+      tags: [],
+      cache: {
+        cursor: 0,
+        exhausted: true,
+        fetchedAt: 122,
+        revision: 1,
+        viewerId: userId,
+      },
+    });
+    vi.spyOn(TagCacheApplication, 'get').mockResolvedValue(null);
+    await NotificationApplication.fetchMissingEntities({ notifications: [notification], viewerId: userId });
+    expect(LocalTagCacheService.invalidate).toHaveBeenCalledOnce();
+    expect(TagCacheApplication.forceRefresh).toHaveBeenCalledOnce();
+  });
 
   it('deduplicates target invalidation and uses complete accepted hydration without an extra tag fetch', async () => {
     vi.spyOn(TagCacheApplication, 'get').mockResolvedValue({

@@ -1018,3 +1018,31 @@ describe('UserApplication.getSocialGraphStatus', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('UserApplication session replacement', () => {
+  it('starts a separate fetch after re-login and rejects the old response without deleting the new in-flight task', async () => {
+    vi.spyOn(LocalTagCacheService, 'captureRevisions').mockResolvedValue(new Map());
+    vi.spyOn(LocalUserService, 'readDetails').mockResolvedValue(null);
+    const persist = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+    const older = Promise.withResolvers<NexusUser[]>();
+    const newer = Promise.withResolvers<NexusUser[]>();
+    const fetch = vi
+      .spyOn(NexusUserStreamService, 'fetchByIds')
+      .mockReturnValueOnce(older.promise)
+      .mockReturnValueOnce(newer.promise);
+    let oldSession = true;
+    const first = UserApplication.fetch({ userId: 'target', viewerId: 'same-viewer', isCurrent: () => oldSession });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    oldSession = false;
+    const second = UserApplication.fetch({ userId: 'target', viewerId: 'same-viewer', isCurrent: () => true });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    older.resolve([asOpaque<NexusUser>({ details: { id: 'target' } })]);
+    await first;
+    expect(persist).not.toHaveBeenCalled();
+    const third = UserApplication.fetch({ userId: 'target', viewerId: 'same-viewer', isCurrent: () => true });
+    newer.resolve([asOpaque<NexusUser>({ details: { id: 'target' } })]);
+    await Promise.all([second, third]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(persist).toHaveBeenCalledOnce();
+  });
+});

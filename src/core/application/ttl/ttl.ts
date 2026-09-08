@@ -97,12 +97,8 @@ export class TtlApplication {
       ),
     );
 
-    // Opportunistic cache warm: fetch missing authors
-    await PostStreamApplication.fetchMissingPostAuthors({
-      posts: postBatch,
-      viewerId: params.viewerId,
-      isCurrent: params.isCurrent,
-    });
+    // Visible authors have their own user subscriptions and retry queue. Their
+    // availability must not turn a successful post refresh into a failed batch.
 
     // Fetch original posts for any reposts (to display embedded repost content)
     const repostedUris = postBatch

@@ -7,13 +7,15 @@ import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { getTagCursor } from '@/models/shared/tag/tag.utils';
+import { getTagCursor, getTagMutationEntries } from '@/models/shared/tag/tag.utils';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { reconcileTagCounts, reconcileTagWindow } from '@/pipes/tag/tag-cache';
+import type { ViewerTagMutation } from '@/services/local/tag/tag.types';
 import type { NexusPostCounts, NexusTag, NexusUserCounts } from '@/services/nexus/nexus.types';
 
 export type TagPreviewGuard = {
+  validatedAt?: number;
   revisions?: Map<string, number | null>;
   isCurrent?: () => boolean;
   viewerId?: string | null;
@@ -30,6 +32,43 @@ export class LocalTagCacheService {
   static async read(entity: TagEntity): Promise<TagCollectionModelSchema<string> | null> {
     const model = entity.kind === 'post' ? PostTagsModel : UserTagsModel;
     return model.findById(entity.id);
+  }
+
+  static async getViewerMutations(entity: TagEntity, viewerId: string): Promise<Map<string, ViewerTagMutation>> {
+    const record = await this.read(entity);
+    return new Map(
+      getTagMutationEntries(record)
+        .filter(({ mutation }) => mutation.viewerId === viewerId && mutation.expiresAt > Date.now())
+        .map(({ label, mutation }) => [
+          label,
+          {
+            id: mutation.id ?? `${mutation.expiresAt}:${mutation.relationship}`,
+            relationship: mutation.relationship,
+            expiresAt: mutation.expiresAt,
+            taggersCount: record?.tags.find((tag) => tag.label.toLowerCase() === label)?.taggers_count ?? 0,
+          },
+        ]),
+    );
+  }
+
+  /** A completed request may settle only the operation it originally wrote. */
+  static async completeMutation(entity: TagEntity, options: { mutationId: string; isCurrent?: () => boolean }) {
+    const table = this.table(entity);
+    await this.write(table.name, () =>
+      db.transaction('rw', table, async () => {
+        const existing = await table.get(entity.id);
+        if (!existing || (options.isCurrent && !options.isCurrent())) return;
+        const entry = getTagMutationEntries(existing).find(({ mutation }) => mutation.id === options.mutationId);
+        if (!entry) return;
+        await table.put({
+          ...existing,
+          mutations: {
+            ...existing.mutations,
+            [entry.key]: { ...entry.mutation, synced: true },
+          },
+        });
+      }),
+    );
   }
 
   static async findStale(kind: TagEntity['kind'], ids: string[], ttlMs: number) {
@@ -82,7 +121,10 @@ export class LocalTagCacheService {
       db.transaction('rw', table, async () => {
         const existing = await table.get(entity.id);
         if (options.isCurrent && !options.isCurrent()) return;
-        if (!existing || (existing.cache?.revision ?? 0) !== options.revision) return;
+        if (!existing) return;
+        // Invalidation may have joined this failing refresh. It still needs a
+        // cooldown; only a newer accepted, fresh window supersedes this failure.
+        if ((existing.cache?.revision ?? 0) !== options.revision && existing.cache?.fetchedAt !== 0) return;
         await table.put({
           ...existing,
           cache: {
@@ -91,7 +133,7 @@ export class LocalTagCacheService {
             exhausted: existing.cache?.exhausted ?? false,
             fetchedAt: 0,
             revision: existing.cache?.revision ?? 0,
-            retryAt: options.retryAt,
+            retryAt: Math.max(existing.cache?.retryAt ?? 0, options.retryAt),
           },
         });
       }),
@@ -130,17 +172,26 @@ export class LocalTagCacheService {
             Object.values(existing?.mutations ?? {}).some(
               (mutation) => mutation.expiresAt > Date.now() && mutation.viewerId !== guard.viewerId,
             );
-          if (superseded || foreignPreview) continue;
-          // A preview cannot establish which labels disappeared from an expanded list.
-          // Keep that window until its full refresh succeeds (including when offline).
-          if (getTagCursor(existing) > tags.length) continue;
+          if (superseded) continue;
+          // Global totals can prove more labels even when a different viewer's
+          // preview cannot replace this tab's expanded window.
+          if (existing?.cache?.exhausted && totals && totals.unique_tags > getTagCursor(existing)) {
+            await table.put({
+              ...existing,
+              cache: { ...existing.cache, exhausted: false, revision: existing.cache.revision + 1 },
+            });
+          }
+          if (foreignPreview || getTagCursor(existing) > tags.length) continue;
           await table.put({
             id,
-            ...reconcileTagWindow(tags, existing, Date.now(), guard.viewerId ?? undefined),
+            ...reconcileTagWindow(tags, existing, Date.now(), guard.viewerId ?? undefined, {
+              complete: totals !== undefined && totals.unique_tags <= tags.length,
+            }),
             cache: {
               cursor: tags.length,
               exhausted: totals !== undefined && totals.unique_tags <= tags.length,
               fetchedAt: Date.now(),
+              validatedAt: guard.validatedAt,
               viewerId: guard.viewerId ?? null,
               revision: (existing?.cache?.revision ?? 0) + 1,
             },
@@ -154,6 +205,7 @@ export class LocalTagCacheService {
     entity: TagEntity,
     tags: TagCollectionModelSchema<string>['tags'],
     options: {
+      validatedAt?: number;
       skip: number;
       limit: number;
       revision: number | null;
@@ -173,17 +225,21 @@ export class LocalTagCacheService {
           !(options.revision === null && existing?.cache?.initialized === false && existing.cache.revision === 0)
         )
           return false;
-        const merged = new Map(
-          (options.skip ? (existing?.tags ?? []) : []).map((tag) => [tag.label.toLowerCase(), tag]),
-        );
-        for (const tag of tags) merged.set(tag.label.toLowerCase(), tag);
         await table.put({
           id: entity.id,
-          ...reconcileTagWindow([...merged.values()], existing, Date.now(), options.viewerId),
+          ...reconcileTagWindow(tags, existing, Date.now(), options.viewerId, {
+            append: options.skip > 0,
+            complete: options.skip === 0 && tags.length < options.limit,
+          }),
           cache: {
             cursor: options.skip + tags.length,
             exhausted: tags.length < options.limit,
             fetchedAt: options.skip ? (existing?.cache?.fetchedAt ?? Date.now()) : Date.now(),
+            validatedAt: options.skip
+              ? existing?.cache?.validatedAt !== undefined && options.validatedAt !== undefined
+                ? Math.min(existing.cache.validatedAt, options.validatedAt)
+                : undefined
+              : options.validatedAt,
             viewerId: options.viewerId ?? null,
             revision: (existing?.cache?.revision ?? 0) + 1,
           },

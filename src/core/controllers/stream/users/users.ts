@@ -5,6 +5,7 @@ import type {
   TReadUserStreamChunkResponse,
 } from '@/application/stream/users/users.types';
 import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 /**
@@ -34,6 +35,7 @@ export class StreamUserController {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile followers/following)
     const viewerId = useAuthStore.getState().currentUserPubky;
+    const isCurrent = captureViewerSession();
 
     const {
       nextPageIds,
@@ -45,6 +47,7 @@ export class StreamUserController {
       skip,
       limit,
       viewerId: viewerId ?? undefined,
+      isCurrent,
       ...(allowPartialCache !== undefined && { allowPartialCache }),
     });
 
@@ -54,6 +57,7 @@ export class StreamUserController {
       await UserStreamApplication.fetchMissingUsersFromNexus({
         cacheMissUserIds,
         viewerId: viewerId ?? undefined,
+        isCurrent,
       });
     }
 
@@ -77,6 +81,7 @@ export class StreamUserController {
     skip,
   }: TReadUserStreamChunkParams): Promise<TReadUserStreamChunkResponse> {
     const viewerId = useAuthStore.getState().currentUserPubky;
+    const isCurrent = captureViewerSession();
 
     const {
       nextPageIds,
@@ -88,12 +93,14 @@ export class StreamUserController {
       skip,
       limit,
       viewerId: viewerId ?? undefined,
+      isCurrent,
     });
 
     if (cacheMissUserIds.length > 0) {
       await UserStreamApplication.fetchMissingUsersFromNexus({
         cacheMissUserIds,
         viewerId: viewerId ?? undefined,
+        isCurrent,
       });
     }
 
@@ -108,10 +115,12 @@ export class StreamUserController {
    */
   static async getOrFetchUsers({ userIds }: Pick<TGetOrFetchUsersParams, 'userIds'>): Promise<void> {
     const viewerId = useAuthStore.getState().currentUserPubky;
+    const isCurrent = captureViewerSession();
 
     await UserStreamApplication.getOrFetchUsers({
       userIds,
       viewerId: viewerId ?? undefined,
+      isCurrent,
     });
   }
 }

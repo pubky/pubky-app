@@ -42,6 +42,7 @@ export class UserStreamApplication {
     skip,
     limit,
     viewerId,
+    isCurrent,
     allowPartialCache,
   }: TFetchUserStreamChunkParams): Promise<TUserStreamChunkResponse> {
     // Try cache first
@@ -55,7 +56,7 @@ export class UserStreamApplication {
     }
 
     // Cache miss - fetch from Nexus
-    return await this.fetchStreamFromNexus({ streamId, skip, limit, viewerId, cachedStream });
+    return await this.fetchStreamFromNexus({ streamId, skip, limit, viewerId, cachedStream, isCurrent });
   }
 
   /**
@@ -73,6 +74,7 @@ export class UserStreamApplication {
     skip,
     limit,
     viewerId,
+    isCurrent,
   }: TFetchUserStreamChunkParams): Promise<TUserStreamChunkResponse> {
     const cachedStream = await LocalStreamUsersService.findById(streamId);
 
@@ -81,6 +83,7 @@ export class UserStreamApplication {
       skip,
       limit,
       viewerId,
+      isCurrent,
       cachedStream,
       replaceCache: skip === 0,
     });
@@ -128,6 +131,7 @@ export class UserStreamApplication {
     skip = 0,
     limit = NEXUS_USERS_PER_PAGE,
     viewerId,
+    isCurrent,
     cachedStream,
     replaceCache = false,
   }: TFetchStreamFromNexusParams): Promise<TUserStreamChunkResponse> {
@@ -137,6 +141,8 @@ export class UserStreamApplication {
       params: { skip, limit, viewer_id: viewerId },
     });
 
+    if (isCurrent && !isCurrent())
+      return { nextPageIds: [], cacheMissUserIds: [], skip: undefined, isExhausted: false };
     const isExhausted = userIds.length < limit;
 
     // Handle empty response
@@ -198,13 +204,13 @@ export class UserStreamApplication {
    * @param userIds - Array of user IDs to ensure are cached
    * @param viewerId - Optional viewer ID for relationship data
    */
-  static async getOrFetchUsers({ userIds, viewerId }: TGetOrFetchUsersParams): Promise<void> {
+  static async getOrFetchUsers({ userIds, viewerId, isCurrent }: TGetOrFetchUsersParams): Promise<void> {
     if (userIds.length === 0) return;
 
     const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds);
     if (cacheMissUserIds.length === 0) return;
 
-    await this.fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId });
+    await this.fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId, isCurrent });
   }
 
   /**

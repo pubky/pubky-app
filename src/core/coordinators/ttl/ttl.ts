@@ -36,7 +36,7 @@ import type {
  * - Posts: postRefCount Map + postBatchQueue Set
  * - Users: userRefCount Map + userBatchQueue Set
  *
- * Note: Post and user subscriptions are independent.
+ * Each visible post also owns one reference to its author, whose refresh has a separate queue.
  * User subscriptions are managed explicitly via subscribeUser/unsubscribeUser,
  * with reference counting to handle multiple subscribers to the same user.
  *
@@ -131,6 +131,7 @@ export class TtlCoordinator {
     const count = this.state.postRefCount.get(compositePostId) ?? 0;
     this.state.postRefCount.set(compositePostId, count + 1);
     if (count > 0) return;
+    this.subscribeUser({ pubky: compositePostId.split(':')[0] });
 
     Logger.debug('TtlCoordinator: Post subscribed', {
       compositePostId,
@@ -157,6 +158,7 @@ export class TtlCoordinator {
       return;
     }
     this.state.postRefCount.delete(compositePostId);
+    this.unsubscribeUser({ pubky: compositePostId.split(':')[0] });
     this.removePostSubscription(compositePostId);
     Logger.debug('TtlCoordinator: Post unsubscribed', {
       compositePostId,
@@ -519,6 +521,10 @@ export class TtlCoordinator {
         });
       }
 
+      const stale = new Set(staleIds);
+      for (const id of ops.batchQueue) {
+        if (!stale.has(id)) ops.batchQueue.delete(id);
+      }
       for (const id of staleIds) {
         // Guard: don't enqueue if unsubscribed mid-flight
         if (ops.subscribed.has(id)) {

@@ -344,22 +344,42 @@ export class NotificationApplication {
         : [],
     );
 
-    const taggedPostIds = [
-      ...new Set(
-        flatNotifications.flatMap((n) =>
-          n.type === NotificationType.TagPost
-            ? (buildCompositeIdFromPubkyUri({ uri: n.post_uri, domain: CompositeIdDomain.POSTS }) ?? [])
-            : [],
-        ),
-      ),
-    ];
-    const profileTagged = flatNotifications.some((n) => n.type === NotificationType.TagProfile);
+    const tagEvents = new Map<string, { entity: TagEntity; timestamp: number }>();
+    for (const notification of flatNotifications) {
+      const id =
+        notification.type === NotificationType.TagPost
+          ? buildCompositeIdFromPubkyUri({ uri: notification.post_uri, domain: CompositeIdDomain.POSTS })
+          : notification.type === NotificationType.TagProfile
+            ? viewerId
+            : null;
+      if (!id) continue;
+      const kind = notification.type === NotificationType.TagPost ? 'post' : 'user';
+      const key = `${kind}:${id}`;
+      const previous = tagEvents.get(key);
+      if (!previous || notification.timestamp > previous.timestamp) {
+        tagEvents.set(key, { entity: { kind, id }, timestamp: notification.timestamp });
+      }
+    }
+    const taggedEntities: TagEntity[] = [];
+    for (const { entity, timestamp } of tagEvents.values()) {
+      const cached = await LocalTagCacheService.read(entity);
+      // Notification and cache timestamps are epoch milliseconds. Historical
+      // pages do not invalidate a snapshot whose actual request started after the event.
+      if (
+        cached?.cache &&
+        cached.cache.initialized !== false &&
+        cached.cache.fetchedAt > 0 &&
+        cached.cache.validatedAt !== undefined &&
+        cached.cache.validatedAt > timestamp &&
+        cached.cache.viewerId === viewerId
+      )
+        continue;
+      taggedEntities.push(entity);
+    }
+    const taggedPostIds = taggedEntities.filter((entity) => entity.kind === 'post').map((entity) => entity.id);
+    const profileTagged = taggedEntities.some((entity) => entity.kind === 'user');
     const postIdsToFetch = [...new Set([...notPersistedPostIds, ...editedPostIds, ...taggedPostIds])];
 
-    // A tag notification is evidence that the cached window changed. Refresh the
-    // affected entity once, including any pages the viewer already expanded.
-    const taggedEntities: TagEntity[] = taggedPostIds.map((id) => ({ kind: 'post', id }));
-    if (profileTagged) taggedEntities.push({ kind: 'user', id: viewerId });
     await Promise.all(taggedEntities.map((entity) => LocalTagCacheService.invalidate(entity, isCurrent)));
 
     if (isCurrent && !isCurrent()) return [];

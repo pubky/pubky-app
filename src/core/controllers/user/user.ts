@@ -1,6 +1,7 @@
 import { UserApplication } from '@/application/user/user';
 import type { TUserCountsOrFetchResult, TUserSocialGraphStatusResult } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import type { TFetchUserParams, TFollowParams, TPubkyListParams } from '@/controllers/user/user.type';
 import { HttpMethod } from '@/libs/http/http.types';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
@@ -58,7 +59,7 @@ export class UserController {
    * Get user counts from local database, fetching from Nexus API if not found.
    */
   static async getOrFetchCounts(params: TReadProfileParams): Promise<TUserCountsOrFetchResult | null> {
-    return await UserApplication.getOrFetchCounts(params);
+    return await UserApplication.getOrFetchCounts({ ...params, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -66,7 +67,7 @@ export class UserController {
    * Use instead of `getOrFetchCounts` when the caller already knows counts are not cached.
    */
   static async fetchCounts(params: TReadProfileParams): Promise<NexusUserCounts | null> {
-    return await UserApplication.fetchCounts(params);
+    return await UserApplication.fetchCounts({ ...params, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -118,7 +119,7 @@ export class UserController {
    * The fetch is scoped to `viewerId`, defaulting to the signed-in user.
    */
   static async getOrFetch(params: TFetchUserParams): Promise<NexusUserDetails | null> {
-    return await UserApplication.getOrFetch(this.withViewer(params));
+    return await UserApplication.getOrFetch({ ...this.withViewer(params), isCurrent: captureViewerSession() });
   }
 
   /**
@@ -128,7 +129,7 @@ export class UserController {
    * relationship row never reads as "not following" for a user the viewer follows.
    */
   static async fetch(params: TFetchUserParams): Promise<NexusUserDetails | null> {
-    return await UserApplication.fetch(this.withViewer(params));
+    return await UserApplication.fetch({ ...this.withViewer(params), isCurrent: captureViewerSession() });
   }
 
   /**
@@ -136,7 +137,7 @@ export class UserController {
    * This is a read-only operation that queries the local cache
    */
   static async getOrFetchDetails(param: TReadProfileParams): Promise<NexusUserDetails | null> {
-    return await UserApplication.getOrFetchDetails(param);
+    return await UserApplication.getOrFetchDetails({ ...param, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -144,7 +145,7 @@ export class UserController {
    * Use instead of `getOrFetchDetails` when the caller already knows the user is not cached.
    */
   static async fetchDetails(param: TReadProfileParams): Promise<NexusUserDetails | null> {
-    return await UserApplication.fetchDetails(param);
+    return await UserApplication.fetchDetails({ ...param, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -152,7 +153,7 @@ export class UserController {
    * Reads from cache first, fetches from API only for missing users
    */
   static async getManyTagsOrFetch(params: TPubkyListParams): Promise<Map<Pubky, NexusTag[]>> {
-    return await UserApplication.getManyTagsOrFetch(params);
+    return await UserApplication.getManyTagsOrFetch({ ...params, isCurrent: captureViewerSession() });
   }
 
   /**

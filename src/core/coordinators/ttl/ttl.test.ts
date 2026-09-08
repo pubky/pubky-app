@@ -123,6 +123,28 @@ describe('TtlCoordinator', () => {
     );
   });
 
+  it('retries a failed author batch without downloading its successfully refreshed posts again', async () => {
+    const coordinator = TtlCoordinator.getInstance();
+    let postFresh = false;
+    findStalePostsSpy.mockImplementation(async () => (postFresh ? [] : ['author:post']));
+    findStaleUsersSpy.mockImplementation(async ({ userIds }: { userIds: string[] }) => userIds);
+    forceRefreshPostsSpy.mockImplementation(async () => {
+      postFresh = true;
+    });
+    forceRefreshUsersSpy.mockRejectedValueOnce(new Error('author endpoint unavailable')).mockResolvedValue(['author']);
+    coordinator.subscribePost({ compositePostId: 'author:post' });
+    coordinator.start();
+    await waitForTick();
+    await waitForTick();
+    expect(forceRefreshPostsSpy).toHaveBeenCalledOnce();
+    expect(forceRefreshUsersSpy).toHaveBeenCalledTimes(2);
+    expect(forceRefreshUsersSpy).toHaveBeenLastCalledWith({ userIds: ['author'], viewerId: undefined });
+    coordinator.unsubscribePost({ compositePostId: 'author:post' });
+    forceRefreshUsersSpy.mockClear();
+    await waitForTick();
+    expect(forceRefreshUsersSpy).not.toHaveBeenCalled();
+  });
+
   it('checks tag freshness even when subscribed entity details are fresh', async () => {
     const coordinator = TtlCoordinator.getInstance();
     coordinator.subscribePost({ compositePostId: 'author:post' });
@@ -135,7 +157,7 @@ describe('TtlCoordinator', () => {
       expect.objectContaining({ kind: 'post', ids: ['author:post'] }),
     );
     expect(TtlController.refreshStaleTags).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'user', ids: ['profile'] }),
+      expect.objectContaining({ kind: 'user', ids: ['author', 'profile'] }),
     );
   });
 
@@ -1154,8 +1176,8 @@ describe('TtlCoordinator', () => {
 
       const postId = createCompositePostId('author1', 'post1');
 
-      // First tick: post is stale
-      findStalePostsSpy.mockResolvedValueOnce([postId]);
+      // Subscribe and first tick both find the post stale.
+      findStalePostsSpy.mockResolvedValueOnce([postId]).mockResolvedValueOnce([postId]);
       // Second tick: post is no longer stale (was refreshed)
       findStalePostsSpy.mockResolvedValueOnce([]);
 
@@ -1487,7 +1509,7 @@ describe('TtlCoordinator', () => {
       }
     });
 
-    it('findStaleByIds error adds entity to queue (assume stale)', async () => {
+    it('prunes an assumed-stale queued request when a later TTL check proves it fresh', async () => {
       setupAuthenticatedUser();
 
       const coordinator = TtlCoordinator.getInstance();
@@ -1507,8 +1529,8 @@ describe('TtlCoordinator', () => {
       forceRefreshPostsSpy.mockClear();
       await waitForTick();
 
-      // Should have queued for refresh (assumed stale on error)
-      expect(forceRefreshPostsSpy).toHaveBeenCalled();
+      // The successful tick check supersedes the earlier read error.
+      expect(forceRefreshPostsSpy).not.toHaveBeenCalled();
     });
 
     it('forceRefresh error leaves entities in queue for retry', async () => {

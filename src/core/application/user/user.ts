@@ -30,6 +30,7 @@ import type {
   NexusUserDetails,
   NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { NexusUserService } from '@/services/nexus/user/user';
 import type { TUserTaggersParams } from '@/services/nexus/user/user.types';
@@ -41,7 +42,10 @@ export class UserApplication {
    * can miss the cache for the same user at once; sharing one promise keeps the Nexus
    * request and the multi-table persist to a single run.
    */
-  private static readonly inFlightFetches = new Map<string, Promise<NexusUserDetails | null>>();
+  private static readonly inFlightFetches = new Map<
+    string,
+    { request: Promise<NexusUserDetails | null>; isCurrent?: () => boolean }
+  >();
 
   /**
    * Get user details from local database
@@ -66,12 +70,13 @@ export class UserApplication {
    * @param params - Parameters containing user ID
    * @returns Promise resolving to user details or null if not found
    */
-  static async getOrFetchDetails({ userId }: TReadProfileParams) {
+  static async getOrFetchDetails({ userId, isCurrent }: TReadProfileParams & { isCurrent?: () => boolean }) {
     const userDetails = await LocalUserService.readDetails({ userId });
     if (userDetails) {
       return userDetails;
     }
     const nexusUserDetails = await NexusUserService.details({ user_id: userId });
+    if (isCurrent && !isCurrent()) return null;
     await LocalProfileService.upsertDetails(nexusUserDetails);
     return await LocalUserService.readDetails({ userId });
   }
@@ -83,8 +88,9 @@ export class UserApplication {
    * @param params - Parameters containing user ID
    * @returns Promise resolving to user details or null if not found
    */
-  static async fetchDetails({ userId }: TReadProfileParams) {
+  static async fetchDetails({ userId, isCurrent }: TReadProfileParams & { isCurrent?: () => boolean }) {
     const nexusUserDetails = await NexusUserService.details({ user_id: userId });
+    if (isCurrent && !isCurrent()) return null;
     await LocalProfileService.upsertDetails(nexusUserDetails);
     return await LocalUserService.readDetails({ userId });
   }
@@ -98,7 +104,11 @@ export class UserApplication {
    * @param params - Parameters containing user ID and optional viewer ID (scopes the relationship row)
    * @returns Promise resolving to user details or null if not found
    */
-  static async getOrFetch({ userId, viewerId }: TFetchUserParams): Promise<NexusUserDetails | null> {
+  static async getOrFetch({
+    userId,
+    viewerId,
+    isCurrent,
+  }: TFetchUserParams & { isCurrent?: () => boolean }): Promise<NexusUserDetails | null> {
     // 1. Check local cache first
     const localDetails = await LocalUserService.readDetails({ userId });
     if (localDetails) {
@@ -110,13 +120,14 @@ export class UserApplication {
       const revisions = await LocalTagCacheService.captureRevisions('user', [userId]);
       const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId], viewer_id: viewerId });
 
+      if (isCurrent && !isCurrent()) return null;
       if (!users || users.length === 0) {
         Logger.warn('User not found on Nexus', { userId });
         return null;
       }
 
       // 3. Persist full user entity (details, counts, relationships, tags, TTL, moderation)
-      await LocalStreamUsersService.persistUsers(users, { revisions, viewerId });
+      await LocalStreamUsersService.persistUsers(users, { revisions, viewerId, isCurrent });
     } catch (error) {
       Logger.warn('Failed to fetch user from Nexus', { userId, error });
       return null;
@@ -136,27 +147,38 @@ export class UserApplication {
    * @param params - Parameters containing user ID and optional viewer ID (scopes the relationship row)
    * @returns Promise resolving to user details or null if not found on Nexus
    */
-  static async fetch({ userId, viewerId }: TFetchUserParams): Promise<NexusUserDetails | null> {
+  static async fetch({
+    userId,
+    viewerId,
+    isCurrent,
+  }: TFetchUserParams & { isCurrent?: () => boolean }): Promise<NexusUserDetails | null> {
     const key = `${userId}:${viewerId ?? ''}`;
     const inFlight = this.inFlightFetches.get(key);
-    if (inFlight) return await inFlight;
+    if (inFlight && (!inFlight.isCurrent || inFlight.isCurrent())) return await inFlight.request;
 
-    const request = this.fetchAndPersist({ userId, viewerId }).finally(() => this.inFlightFetches.delete(key));
-    this.inFlightFetches.set(key, request);
+    const request = this.fetchAndPersist({ userId, viewerId, isCurrent }).finally(() => {
+      if (this.inFlightFetches.get(key)?.request === request) this.inFlightFetches.delete(key);
+    });
+    this.inFlightFetches.set(key, { request, isCurrent });
     return await request;
   }
 
-  private static async fetchAndPersist({ userId, viewerId }: TFetchUserParams): Promise<NexusUserDetails | null> {
+  private static async fetchAndPersist({
+    userId,
+    viewerId,
+    isCurrent,
+  }: TFetchUserParams & { isCurrent?: () => boolean }): Promise<NexusUserDetails | null> {
     try {
       const revisions = await LocalTagCacheService.captureRevisions('user', [userId]);
       const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId], viewer_id: viewerId });
 
+      if (isCurrent && !isCurrent()) return null;
       if (!users || users.length === 0) {
         Logger.warn('User not found on Nexus', { userId });
         return null;
       }
 
-      await LocalStreamUsersService.persistUsers(users, { revisions, viewerId });
+      await LocalStreamUsersService.persistUsers(users, { revisions, viewerId, isCurrent });
     } catch (error) {
       Logger.warn('Failed to fetch user from Nexus', { userId, error });
       return null;
@@ -190,7 +212,10 @@ export class UserApplication {
    * @param params - Parameters containing user ID
    * @returns Cached row (includes `id`) or Nexus payload or null if unavailable
    */
-  static async getOrFetchCounts({ userId }: TReadProfileParams): Promise<TUserCountsOrFetchResult | null> {
+  static async getOrFetchCounts({
+    userId,
+    isCurrent,
+  }: TReadProfileParams & { isCurrent?: () => boolean }): Promise<TUserCountsOrFetchResult | null> {
     const userCounts = await LocalUserService.readCounts({ userId });
     if (userCounts) {
       return userCounts;
@@ -198,6 +223,7 @@ export class UserApplication {
 
     try {
       const nexusUserCounts = await NexusUserService.counts({ user_id: userId });
+      if (isCurrent && !isCurrent()) return null;
       await LocalProfileService.upsertCounts(userId, nexusUserCounts);
       return nexusUserCounts;
     } catch (error) {
@@ -214,9 +240,13 @@ export class UserApplication {
    * @param params - Parameters containing user ID
    * @returns Promise resolving to user counts or null if fetch fails
    */
-  static async fetchCounts({ userId }: TReadProfileParams): Promise<NexusUserCounts | null> {
+  static async fetchCounts({
+    userId,
+    isCurrent,
+  }: TReadProfileParams & { isCurrent?: () => boolean }): Promise<NexusUserCounts | null> {
     try {
       const nexusUserCounts = await NexusUserService.counts({ user_id: userId });
+      if (isCurrent && !isCurrent()) return null;
       await LocalProfileService.upsertCounts(userId, nexusUserCounts);
       return nexusUserCounts;
     } catch (error) {
@@ -337,7 +367,10 @@ export class UserApplication {
    * @param userIds - Array of user IDs to fetch tags for
    * @returns Promise resolving to a Map of user ID to tags array
    */
-  static async getManyTagsOrFetch({ userIds }: TPubkyListParams): Promise<Map<Pubky, NexusTag[]>> {
+  static async getManyTagsOrFetch({
+    userIds,
+    isCurrent,
+  }: TPubkyListParams & { isCurrent?: () => boolean }): Promise<Map<Pubky, NexusTag[]>> {
     if (userIds.length === 0) return new Map();
 
     // 1. Find users without cached tags
@@ -345,7 +378,7 @@ export class UserApplication {
 
     // 2. Fetch missing from API (parallel requests)
     if (cacheMissUserIds.length > 0) {
-      await this.fetchMissingUserTagsFromNexus(cacheMissUserIds);
+      await this.fetchMissingUserTagsFromNexus(cacheMissUserIds, isCurrent);
     }
 
     // 3. Return all tags from cache (now populated with fetched data)
@@ -356,14 +389,18 @@ export class UserApplication {
    * Fetch missing user tags from Nexus API and persist to cache.
    * @param cacheMissUserIds - Array of user IDs that need tags fetched
    */
-  private static async fetchMissingUserTagsFromNexus(cacheMissUserIds: Pubky[]) {
+  private static async fetchMissingUserTagsFromNexus(cacheMissUserIds: Pubky[], isCurrent?: () => boolean) {
     if (cacheMissUserIds.length === 0) return;
 
     const fetchPromises = cacheMissUserIds.map(async (userId) => {
       try {
         const revisions = await LocalTagCacheService.captureRevisions('user', [userId]);
         const tags = await NexusUserService.tags({ user_id: userId, skip_tags: 0, limit_tags: 10 });
-        await LocalUserService.upsertTags(userId, tags, { revisions });
+        await LocalUserService.upsertTags(userId, tags, {
+          revisions,
+          isCurrent,
+          validatedAt: getNexusResponseStartedAt(tags),
+        });
       } catch {
         // Silently fail for individual user - they'll just have no tags
       }

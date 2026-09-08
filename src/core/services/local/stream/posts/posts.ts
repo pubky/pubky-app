@@ -34,6 +34,7 @@ import type {
 } from '@/services/local/stream/posts/post.types';
 import { LocalTagCacheService, type TagPreviewGuard } from '@/services/local/tag/tag-cache';
 import type { NexusFileDetails, NexusPostCounts, NexusPostRelationships, NexusTag } from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { sortPostIdsByTimestamp } from '@/utils/sorting';
 
@@ -232,6 +233,7 @@ export class LocalStreamPostsService {
     posts,
     tagGuard = {},
   }: TPersistPostsParams & { tagGuard?: TagPreviewGuard }): Promise<TPostStreamPersistResult> {
+    tagGuard = { ...tagGuard, validatedAt: tagGuard.validatedAt ?? getNexusResponseStartedAt(posts) };
     // Defensive check: if posts is empty or undefined, return early
     if (!posts?.length) return { attachmentMetadata: [] };
 
