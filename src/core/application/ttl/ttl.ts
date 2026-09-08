@@ -78,11 +78,14 @@ export class TtlApplication {
       postCount: postBatch.length,
     });
 
-    const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({
+    // Do not publish a fresh post/TTL until its attachment metadata is durable.
+    // A failed file write leaves the existing batch eligible for the next tick.
+    await FileApplication.persistFiles(postBatch.flatMap((post) => post.attachments_metadata ?? []));
+    if (params.isCurrent && !params.isCurrent()) return;
+    await LocalStreamPostsService.persistPosts({
       posts: postBatch,
       tagGuard: { revisions, isCurrent: params.isCurrent, viewerId: params.viewerId },
     });
-    await FileApplication.persistFiles(attachmentMetadata);
     await this.refreshTagWindows(
       postBatch.map((post) =>
         TagCacheApplication.refreshExpanded(

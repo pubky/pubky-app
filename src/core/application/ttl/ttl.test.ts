@@ -9,8 +9,9 @@ import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
-import type { NexusPost, NexusUser } from '@/services/nexus/nexus.types';
+import type { NexusFileDetails, NexusPost, NexusUser } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
+import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
@@ -87,6 +88,44 @@ describe('TtlApplication', () => {
   });
 
   describe('forceRefreshPostsByIds', () => {
+    it('does not mark a batch fresh before its attachment metadata can be saved', async () => {
+      const metadata = asOpaque<NexusFileDetails>({ uri: 'pubky://author/pub/pubky.app/files/image' });
+      const batch = [
+        asOpaque<NexusPost>({
+          details: { author: 'author', id: 'post' },
+          tags: [],
+          relationships: { reposted: null },
+          attachments_metadata: [metadata],
+        }),
+      ];
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(batch);
+      const persisted = vi
+        .spyOn(LocalStreamPostsService, 'persistPosts')
+        .mockResolvedValue({ attachmentMetadata: [metadata] });
+      const failure = new Error('file table unavailable');
+      const files = vi
+        .spyOn(FileApplication, 'persistFiles')
+        .mockRejectedValueOnce(failure)
+        .mockResolvedValue(undefined);
+      vi.spyOn(PostStreamApplication, 'fetchOriginalPostsByUris').mockResolvedValue(undefined);
+      await expect(TtlApplication.forceRefreshPostsByIds({ postIds: ['author:post'] })).rejects.toBe(failure);
+      expect(persisted).not.toHaveBeenCalled();
+      await TtlApplication.forceRefreshPostsByIds({ postIds: ['author:post'] });
+      expect(files).toHaveBeenLastCalledWith([metadata]);
+      expect(persisted).toHaveBeenCalledOnce();
+    });
+
+    it('discards the post write when its session changes while attachments are being saved', async () => {
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
+      let current = true;
+      vi.spyOn(FileApplication, 'persistFiles').mockImplementation(async () => {
+        current = false;
+      });
+      const persisted = vi.spyOn(LocalStreamPostsService, 'persistPosts');
+      await TtlApplication.forceRefreshPostsByIds({ postIds: ['author:post'], isCurrent: () => current });
+      expect(persisted).not.toHaveBeenCalled();
+    });
+
     it('fetches and persists posts (TTL handled by persistPosts)', async () => {
       const viewerId = 'viewer' as Pubky;
 

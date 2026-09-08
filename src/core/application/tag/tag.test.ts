@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -33,6 +33,16 @@ describe.each([TagKind.POST, TagKind.USER])('TagApplication (%s)', (taggedKind) 
     vi.mocked(local.delete).mockResolvedValue(true);
     vi.mocked(HomeserverService.request).mockResolvedValue(undefined);
     vi.mocked(LocalTagCacheService.completeMutation).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each(['create', 'delete'] as const)('can %s on an origin without randomUUID', async (action) => {
+    vi.stubGlobal('crypto', { getRandomValues: crypto.getRandomValues.bind(crypto) });
+    if (action === 'create') await TagApplication.commitCreate({ tagList: [data] });
+    else await TagApplication.commitDelete(data);
+    expect(local[action]).toHaveBeenCalledWith(expect.objectContaining({ mutationId: expect.any(String) }));
+    expect(HomeserverService.request).toHaveBeenCalledOnce();
   });
 
   it.each(['create', 'delete'] as const)('persists %s before syncing, then settles that operation', async (action) => {

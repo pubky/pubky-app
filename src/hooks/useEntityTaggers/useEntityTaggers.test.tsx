@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
@@ -23,6 +24,7 @@ vi.mock('@/controllers/user/user', () => ({
 
 const observed = vi.hoisted(() => ({
   entries: new Map<string, ViewerTagMutation>(),
+  loading: false,
   listeners: new Set<() => void>(),
 }));
 vi.mock('dexie-react-hooks', async () => {
@@ -38,7 +40,7 @@ vi.mock('dexie-react-hooks', async () => {
         },
         () => observed.entries,
       );
-      return { key: `${kind}:${id}:${viewer}`, entries };
+      return observed.loading ? undefined : { key: `${kind}:${id}:${viewer}`, entries };
     },
   };
 });
@@ -74,6 +76,38 @@ describe('useEntityTaggers', () => {
     vi.clearAllMocks();
     useAuthStore.setState({ currentUserPubky: null });
     observed.entries = new Map();
+    observed.loading = false;
+  });
+
+  it('waits for local viewer intent before loading an expanded list', async () => {
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
+    observed.loading = true;
+    vi.mocked(PostController.fetchTaggers).mockResolvedValue(page(['other']));
+    const { result, rerender } = renderHook(() => {
+      const hook = useEntityTaggers('author:post', TagKind.POST);
+      const { loadTaggers } = hook;
+      useEffect(() => {
+        void loadTaggers('bitcoin', 2);
+      }, [loadTaggers]);
+      return hook;
+    });
+    expect(PostController.fetchTaggers).not.toHaveBeenCalled();
+    observed.loading = false;
+    observed.entries = new Map([
+      [
+        'bitcoin',
+        {
+          id: 'pending',
+          relationship: true,
+          expiresAt: Date.now() + 300_000,
+          taggersCount: 2,
+        },
+      ],
+    ]);
+    rerender();
+    await waitFor(() => expect(result.current.taggerStates.get('bitcoin')?.hasFetched).toBe(true));
+    expect(result.current.taggerStates.get('bitcoin')?.isViewerTagger).toBe(true);
+    expect(PostController.fetchTaggers).toHaveBeenCalledOnce();
   });
 
   it('stays disabled without complete entity context', async () => {

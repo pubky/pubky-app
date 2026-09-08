@@ -52,6 +52,7 @@ describe('LocalUserTagService', () => {
       expect(collection.removeTagger).not.toHaveBeenCalled();
       expect(saved).not.toHaveBeenCalled();
       expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
+      expect(postStreamDirtyRegistry.markDirty).not.toHaveBeenCalled();
     },
   );
 
@@ -61,6 +62,8 @@ describe('LocalUserTagService', () => {
       read.mockImplementation(async () => collection);
       expect(await LocalUserTagService[action]({ ...params, isCurrent: () => false })).toBe(false);
       expect(saved).not.toHaveBeenCalled();
+      expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
+      expect(postStreamDirtyRegistry.markDirty).not.toHaveBeenCalled();
     },
   );
 
@@ -69,6 +72,8 @@ describe('LocalUserTagService', () => {
     collection.removeTagger.mockReturnValue(null);
     expect(await LocalUserTagService[action](params)).toBe(false);
     expect(saved).not.toHaveBeenCalled();
+    expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
+    expect(postStreamDirtyRegistry.markDirty).not.toHaveBeenCalled();
     expect(collection.recordMutation).not.toHaveBeenCalled();
   });
 
@@ -120,8 +125,31 @@ describe('LocalUserTagService', () => {
     });
   });
 
+  it('keeps the unique tag count when another tagger remains after deletion', async () => {
+    collection.removeTagger.mockReturnValue(false);
+    expect(await LocalUserTagService.delete(params)).toBe(true);
+    expect(UserCountsModel.updateCounts).toHaveBeenCalledWith({
+      userId: params.taggedId,
+      countChanges: { tags: -1, unique_tags: undefined },
+    });
+    expect(UserCountsModel.updateCounts).toHaveBeenCalledWith({
+      userId: params.taggerId,
+      countChanges: { tagged: -1 },
+    });
+  });
+
+  it('does not write when deleting from a missing collection', async () => {
+    read.mockResolvedValue(null);
+    expect(await LocalUserTagService.delete(params)).toBe(false);
+    expect(saved).not.toHaveBeenCalled();
+    expect(collection.recordMutation).not.toHaveBeenCalled();
+    expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
+    expect(postStreamDirtyRegistry.markDirty).not.toHaveBeenCalled();
+  });
+
   it('propagates a failed tag save', async () => {
     saved.mockRejectedValue(new Error('disk unavailable'));
     await expect(LocalUserTagService.create(params)).rejects.toThrow('Failed to create user tag');
+    expect(postStreamDirtyRegistry.markDirty).not.toHaveBeenCalled();
   });
 });

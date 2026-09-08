@@ -19,7 +19,7 @@ export class LocalUserTagService {
     label,
     mutationId,
     expectedMutationId,
-    synced,
+    synced = false,
     isCurrent,
   }: TLocalTagParams): Promise<boolean> {
     try {
@@ -33,7 +33,7 @@ export class LocalUserTagService {
         if (tagExists === null && expectedMutationId === undefined) {
           return false;
         }
-        userTagsModel.recordMutation(label, taggerId, true, mutationId, synced ?? mutationId === undefined);
+        userTagsModel.recordMutation(label, taggerId, true, mutationId, synced);
         if (tagExists === null) {
           await this.saveUserTagsModel(taggedId, userTagsModel);
           return true;
@@ -82,7 +82,7 @@ export class LocalUserTagService {
     label,
     mutationId,
     expectedMutationId,
-    synced,
+    synced = false,
     isCurrent,
   }: TLocalTagParams): Promise<boolean> {
     try {
@@ -93,7 +93,7 @@ export class LocalUserTagService {
           return false;
         const lastTaggerOnTag = userTagsModel.removeTagger(label, taggerId);
         if (lastTaggerOnTag === null && expectedMutationId === undefined) return false;
-        userTagsModel.recordMutation(label, taggerId, false, mutationId, synced ?? mutationId === undefined);
+        userTagsModel.recordMutation(label, taggerId, false, mutationId, synced);
         if (lastTaggerOnTag === null) {
           await this.saveUserTagsModel(taggedId, userTagsModel);
           return true;

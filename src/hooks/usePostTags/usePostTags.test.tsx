@@ -72,6 +72,21 @@ describe('usePostTags', () => {
     vi.mocked(useLiveQuery).mockReturnValue(undefined);
   });
 
+  it('rejects an existing viewer tag even when its tagger sample omits the viewer', async () => {
+    setupLiveQueryMock(
+      { tags: [{ label: 'bitcoin', taggers: ['other'], taggers_count: 10, relationship: true }] },
+      null,
+    );
+    const { result } = renderHook(() => usePostTags('author:post123'));
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.handleTagAdd('BITCOIN');
+    });
+    expect(outcome).toEqual({ success: false, error: 'You have already added this tag' });
+    expect(TagController.commitCreate).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
   it('contains a counts read failure while keeping cached tag chips visible', async () => {
     setupLiveQueryMock({ tags: [{ label: 'cached', taggers: [], taggers_count: 1, relationship: false }] }, null);
     vi.mocked(PostController.getCounts).mockRejectedValueOnce(new Error('IndexedDB unavailable'));

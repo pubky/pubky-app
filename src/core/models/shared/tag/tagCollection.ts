@@ -23,7 +23,7 @@ export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<
     return expectedId === undefined || findTagMutation(this, label, viewerId)?.id === expectedId;
   }
 
-  recordMutation(label: string, viewerId: string, relationship: boolean, id = crypto.randomUUID(), synced = true) {
+  recordMutation(label: string, viewerId: string, relationship: boolean, id: string, synced: boolean) {
     const now = Date.now();
     this.initializeLegacyCursor();
     this.mutations = {

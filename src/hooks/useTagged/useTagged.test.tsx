@@ -68,6 +68,18 @@ vi.mock('dexie-react-hooks', () => ({
 describe('useTagged', () => {
   const mockUserId = 'test-user-pubky';
 
+  it('rejects an existing viewer tag even when its tagger sample omits the viewer', async () => {
+    mockLocalTags = [{ label: 'bitcoin', taggers: ['other'], taggers_count: 10, relationship: true }];
+    const { result } = renderHook(() => useTagged(mockUserId));
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.handleTagAdd('BITCOIN');
+    });
+    expect(outcome).toEqual({ success: false, error: 'You have already added this tag' });
+    expect(mockMocks.mockTagCreate).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocalTags = null;

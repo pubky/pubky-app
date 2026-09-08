@@ -38,7 +38,7 @@ export class LocalPostTagService {
     taggerId,
     mutationId,
     expectedMutationId,
-    synced,
+    synced = false,
     isCurrent,
   }: TLocalTagParams): Promise<boolean> {
     // True only when the transaction actually changed IndexedDB state.
@@ -53,7 +53,7 @@ export class LocalPostTagService {
         if (status === null && expectedMutationId === undefined) {
           return false;
         }
-        postTagsModel.recordMutation(label, taggerId, true, mutationId, synced ?? mutationId === undefined);
+        postTagsModel.recordMutation(label, taggerId, true, mutationId, synced);
         if (status === null) {
           await this.savePostTagsModel(postId, postTagsModel);
           return true;
@@ -104,7 +104,7 @@ export class LocalPostTagService {
     taggerId,
     mutationId,
     expectedMutationId,
-    synced,
+    synced = false,
     isCurrent,
   }: TLocalTagParams): Promise<boolean> {
     let deleted: boolean;
@@ -116,7 +116,7 @@ export class LocalPostTagService {
           return false;
         const status = postTagsModel.removeTagger(label, taggerId);
         if (status === null && expectedMutationId === undefined) return false;
-        postTagsModel.recordMutation(label, taggerId, false, mutationId, synced ?? mutationId === undefined);
+        postTagsModel.recordMutation(label, taggerId, false, mutationId, synced);
         await this.savePostTagsModel(postId, postTagsModel);
         if (status === null) return true;
         await PostCountsModel.updateCounts({

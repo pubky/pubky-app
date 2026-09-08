@@ -1,4 +1,5 @@
 import { TagKind, type TCreateTagListInput, type TDeleteTagInput } from '@/application/tag/tag.types';
+import { createTagMutationId } from '@/application/tag/tag.utils';
 import { AppError } from '@/libs/error/error';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { isAppError } from '@/libs/error/error.utils';
@@ -21,7 +22,7 @@ export class TagApplication {
     for (const { taggerId, taggedId, label, tagUrl, tagJson, taggedKind } of tagList) {
       if (isCurrent && !isCurrent()) return;
       const local = taggedKind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
-      const mutationId = crypto.randomUUID();
+      const mutationId = createTagMutationId();
       const params = { taggerId, taggedId, label, mutationId, isCurrent };
       const changed = await local.create(params);
       if (isCurrent && !isCurrent()) return;
@@ -32,7 +33,7 @@ export class TagApplication {
           try {
             await local.delete({
               ...params,
-              mutationId: crypto.randomUUID(),
+              mutationId: createTagMutationId(),
               expectedMutationId: mutationId,
               synced: true,
             });
@@ -51,7 +52,7 @@ export class TagApplication {
   static async commitDelete({ taggerId, taggedId, label, tagUrl, taggedKind, isCurrent }: TDeleteTagInput) {
     if (isCurrent && !isCurrent()) return;
     const local = taggedKind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
-    const mutationId = crypto.randomUUID();
+    const mutationId = createTagMutationId();
     const params = { taggerId, taggedId, label, mutationId, isCurrent };
     const changed = await local.delete(params);
     if (!changed || (isCurrent && !isCurrent())) return;
@@ -64,7 +65,7 @@ export class TagApplication {
           try {
             await local.create({
               ...params,
-              mutationId: crypto.randomUUID(),
+              mutationId: createTagMutationId(),
               expectedMutationId: mutationId,
               synced: true,
             });

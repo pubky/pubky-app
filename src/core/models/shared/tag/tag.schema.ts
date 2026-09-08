@@ -7,7 +7,7 @@ export interface TagMutation {
   /** Optional only on legacy rows written before mutation identities existed. */
   id?: string;
   label?: string;
-  /** Pending homeserver operations retain their identity even after protection expires. */
+  /** Pending ownership survives expiry until settlement or replacement of the cached window. */
   synced?: boolean;
 }
 

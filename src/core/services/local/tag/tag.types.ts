@@ -1,7 +1,7 @@
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 
 export type TLocalTagParams = Omit<TTagEventParams, 'taggedKind'> & {
-  mutationId?: string;
+  mutationId: string;
   expectedMutationId?: string;
   synced?: boolean;
   isCurrent?: () => boolean;

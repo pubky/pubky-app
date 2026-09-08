@@ -112,7 +112,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
       // Check if user already tagged
       const existingTag = allTags.find((t) => t.label.toLowerCase() === label.toLowerCase());
-      if (existingTag?.taggers?.includes(viewerId)) {
+      if (existingTag?.relationship) {
         return { success: false, error: 'You have already added this tag' };
       }
 

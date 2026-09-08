@@ -52,6 +52,8 @@ describe('LocalPostTagService', () => {
       expect(collection.removeTagger).not.toHaveBeenCalled();
       expect(saved).not.toHaveBeenCalled();
       expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
+      expect(PostCountsModel.updateCounts).not.toHaveBeenCalled();
+      expect(PostTtlModel.upsert).not.toHaveBeenCalled();
     },
   );
 
@@ -61,6 +63,9 @@ describe('LocalPostTagService', () => {
       read.mockImplementation(async () => collection);
       expect(await LocalPostTagService[action]({ ...params, isCurrent: () => false })).toBe(false);
       expect(saved).not.toHaveBeenCalled();
+      expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
+      expect(PostCountsModel.updateCounts).not.toHaveBeenCalled();
+      expect(PostTtlModel.upsert).not.toHaveBeenCalled();
     },
   );
 
@@ -69,6 +74,9 @@ describe('LocalPostTagService', () => {
     collection.removeTagger.mockReturnValue(null);
     expect(await LocalPostTagService[action](params)).toBe(false);
     expect(saved).not.toHaveBeenCalled();
+    expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
+    expect(PostCountsModel.updateCounts).not.toHaveBeenCalled();
+    expect(PostTtlModel.upsert).not.toHaveBeenCalled();
     expect(collection.recordMutation).not.toHaveBeenCalled();
   });
 
@@ -118,6 +126,28 @@ describe('LocalPostTagService', () => {
       postCompositeId: params.taggedId,
       countChanges: { tags: 1, unique_tags: undefined },
     });
+  });
+
+  it('keeps the unique tag count when another tagger remains after deletion', async () => {
+    collection.removeTagger.mockReturnValue(false);
+    expect(await LocalPostTagService.delete(params)).toBe(true);
+    expect(PostCountsModel.updateCounts).toHaveBeenCalledWith({
+      postCompositeId: params.taggedId,
+      countChanges: { tags: -1, unique_tags: undefined },
+    });
+    expect(UserCountsModel.updateCounts).toHaveBeenCalledWith({
+      userId: params.taggerId,
+      countChanges: { tagged: -1 },
+    });
+  });
+
+  it('does not write when deleting from a missing collection', async () => {
+    read.mockResolvedValue(null);
+    expect(await LocalPostTagService.delete(params)).toBe(false);
+    expect(saved).not.toHaveBeenCalled();
+    expect(collection.recordMutation).not.toHaveBeenCalled();
+    expect(UserCountsModel.updateCounts).not.toHaveBeenCalled();
+    expect(PostCountsModel.updateCounts).not.toHaveBeenCalled();
   });
 
   it('propagates a failed tag save', async () => {

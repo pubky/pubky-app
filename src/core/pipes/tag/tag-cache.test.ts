@@ -10,6 +10,27 @@ const tag = (count: number, relationship: boolean): NexusTag => ({
 });
 
 describe('tag count reconciliation', () => {
+  it.each([true, false])(
+    'retires an expired pending mutation when a fresh window replaces it (intent=%s)',
+    (relationship) => {
+      const existing = {
+        id: 'post',
+        tags: [tag(1, relationship)],
+        mutations: { x: { viewerId: 'viewer', relationship, expiresAt: 100, synced: false, id: 'abandoned' } },
+      };
+      const incoming = [tag(2, !relationship)];
+      expect(reconcileTagWindow(incoming, existing, 100, 'viewer')).toEqual({ tags: incoming, mutations: {} });
+    },
+  );
+
+  it('keeps an expired pending operation owned while pagination retains its earlier page', () => {
+    const mutation = { viewerId: 'other-viewer', relationship: true, expiresAt: 100, synced: false, id: 'in-flight' };
+    const existing = { id: 'post', tags: [tag(1, true)], mutations: { x: mutation } };
+    expect(reconcileTagWindow([], existing, 100, 'viewer', { append: true })).toEqual({
+      tags: existing.tags,
+      mutations: { x: mutation },
+    });
+  });
   it('accepts fresh totals when a guest preview proves another viewer addition was indexed', () => {
     const incoming = { ...tag(2, false), taggers: ['viewer', 'remaining'] };
     const existing = {

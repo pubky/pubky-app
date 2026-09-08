@@ -97,20 +97,22 @@ async function fetchTaggerPage({
  */
 export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind | null): UseEntityTaggersResult {
   const viewerId = useAuthStore((state) => state.currentUserPubky);
+  const entityKey = taggedId && taggedKind ? `${taggedKind}:${taggedId}:${viewerId ?? ''}` : null;
   const observedMutations = useLiveQuery(async () => {
     if (!taggedId || !taggedKind || !viewerId) return null;
+    const key = `${taggedKind}:${taggedId}:${viewerId}`;
     try {
       return {
-        key: `${taggedKind}:${taggedId}:${viewerId}`,
+        key,
         entries: await TagController.getViewerMutations({ taggedId, taggedKind, taggerId: viewerId }),
       };
     } catch (error) {
       if (!isAppError(error)) Logger.warn('Could not read local tag mutations', { error });
-      return null;
+      return { key, entries: null };
     }
   }, [taggedId, taggedKind, viewerId]);
-  const entityKey = taggedId && taggedKind ? `${taggedKind}:${taggedId}:${viewerId ?? ''}` : null;
   const mutations = observedMutations?.key === entityKey ? observedMutations.entries : undefined;
+  const waitingForMutations = !!viewerId && observedMutations?.key !== entityKey;
   const [cache, setCache] = useState<{ entityKey: string | null; states: TaggersCache }>({
     entityKey,
     states: EMPTY_STATES,
@@ -200,7 +202,7 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
   };
 
   const loadTaggers = async (label: string, totalCount?: number, mutationCount?: number) => {
-    if (!entityKey) return;
+    if (!entityKey || waitingForMutations) return;
     const existing = statesFor(entityKey).get(label.toLowerCase());
     const mutation = readMutation(label);
     if (existing && existing.totalCount === totalCount && existing.mutationKey === mutation.mutationKey) return;
@@ -235,7 +237,7 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
   };
 
   const loadMoreTaggers = async (label: string) => {
-    if (!entityKey) return;
+    if (!entityKey || waitingForMutations) return;
     const existing = statesFor(entityKey).get(label.toLowerCase());
     if (!existing || existing.isLoading) return;
     const mutation = readMutation(label);

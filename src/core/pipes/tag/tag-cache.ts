@@ -15,7 +15,9 @@ export function reconcileTagWindow(
   );
   const mutations: NonNullable<TagCollectionModelSchema<string>['mutations']> = {};
   for (const { key, label, mutation } of getTagMutationEntries(existing)) {
-    if (mutation.expiresAt <= now && mutation.synced !== false) continue;
+    // A replacement retires expired intent along with the optimistic window.
+    // An append still retains earlier pages, so preserve pending rollback ownership.
+    if (mutation.expiresAt <= now && (mutation.synced !== false || !options.append)) continue;
     const remote = incoming.find((tag) => tag.label.toLowerCase() === label);
     const acknowledged = remote
       ? getTagMembership(remote, mutation.viewerId, viewerId)
