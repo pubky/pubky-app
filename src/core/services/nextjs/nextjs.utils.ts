@@ -67,12 +67,10 @@ export async function checkDnsSafety(hostname: string): Promise<TDnsSafetyResult
   for (const result of [ipv4Result, ipv6Result]) {
     if (result.status === 'fulfilled') {
       resolvedAddresses.push(
-        ...result.value.map(
-          (address): TDnsSafeAddress => ({
-            address,
-            family: address.includes(':') ? IP_FAMILY_IPV6 : IP_FAMILY_IPV4,
-          }),
-        ),
+        ...result.value.map((address): TDnsSafeAddress => ({
+          address,
+          family: address.includes(':') ? IP_FAMILY_IPV6 : IP_FAMILY_IPV4,
+        })),
       );
       continue;
     }

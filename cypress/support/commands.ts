@@ -3,7 +3,7 @@
 import { backupDownloadFilePath, extendedTimeout } from './common';
 import { goToProfilePageFromHeader } from './header';
 import { waitForFeedToLoad } from './posts';
-import { BackupType, CheckForNewPosts, PostType, WaitForNewPosts } from './types/enums';
+import { BackupType, CheckForNewPosts, OnboardingExperience, PostType, WaitForNewPosts } from './types/enums';
 // ***********************************************
 // This example commands.ts shows you how to
 // create various custom commands and overwrite
@@ -17,7 +17,13 @@ import { BackupType, CheckForNewPosts, PostType, WaitForNewPosts } from './types
 // Complete onboarding from install page. Separated from onboardAsNewUser to allow for reuse in onboarding test for /invite/<code> URL
 Cypress.Commands.add(
   'completeOnboardingFromInstall',
-  (profileName: string, profileBio: string = '', backup?: BackupType[], pubkyAlias?: string) => {
+  (
+    profileName: string,
+    profileBio: string = '',
+    backup?: BackupType[],
+    pubkyAlias?: string,
+    experience: OnboardingExperience = OnboardingExperience.Skip,
+  ) => {
     cy.get('#create-keys-in-browser-btn').click();
     cy.location('pathname').should('eq', '/onboarding/pubky');
 
@@ -87,17 +93,38 @@ Cypress.Commands.add(
 
     cy.location('pathname').should('eq', '/onboarding/tags');
     cy.get('[data-testid="tags-of-interest-form"]').should('be.visible');
+
+    if (experience === OnboardingExperience.StopAtTags) {
+      return;
+    }
+
     cy.get('[data-testid="tags-of-interest-form"]').within(() => {
       cy.get('#profile-finish-btn').click();
     });
 
-    cy.location('pathname').should('eq', '/home');
-
-    // confirm welcome message is shown and dismiss it
-    cy.get('#welcome-title').should('exist');
-    cy.get('#welcome-explore-pubky-btn').click();
+    // Follow step: no follows here so the landing feed stays on All for every existing spec
+    cy.finishFollowBestMatchesStep();
   },
 );
+
+// From /onboarding/follow: wait for suggestions (or the empty state), click Finish, land on /home
+// and dismiss the welcome dialog. Does not follow anyone by itself.
+Cypress.Commands.add('finishFollowBestMatchesStep', () => {
+  cy.location('pathname').should('eq', '/onboarding/follow');
+  cy.get('[data-cy="follow-best-matches-form"]').should('be.visible');
+  cy.get('[data-testid="suggested-people-grid"], [data-testid="suggested-people-empty"]', extendedTimeout()).should(
+    'exist',
+  );
+  cy.get('[data-cy="follow-best-matches-form"]').within(() => {
+    cy.get('#profile-finish-btn').should('not.be.disabled').click();
+  });
+
+  cy.location('pathname').should('eq', '/home');
+
+  // confirm welcome message is shown and dismiss it
+  cy.get('#welcome-title').should('exist');
+  cy.get('#welcome-explore-pubky-btn').click();
+});
 
 Cypress.Commands.add(
   'onboardAsNewUser',
@@ -107,6 +134,7 @@ Cypress.Commands.add(
     backup?: BackupType[],
     //skipOnboardingSlides: SkipOnboardingSlides = SkipOnboardingSlides.Yes,
     pubkyAlias?: string,
+    experience: OnboardingExperience = OnboardingExperience.Skip,
   ) => {
     cy.location('pathname').then((pathname) => {
       if (pathname !== '/') cy.visit('/');
@@ -139,7 +167,7 @@ Cypress.Commands.add(
 
     cy.location('pathname').should('eq', '/onboarding/install');
 
-    cy.completeOnboardingFromInstall(profileName, profileBio, backup, pubkyAlias);
+    cy.completeOnboardingFromInstall(profileName, profileBio, backup, pubkyAlias, experience);
   },
 );
 

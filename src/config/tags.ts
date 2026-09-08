@@ -73,3 +73,8 @@ export const TAG_REFRESH_RETRY_MS = 30_000;
 
 /** Protection while a local tag write is waiting for Nexus indexing. */
 export const TAG_MUTATION_TTL_MS = 300_000;
+/**
+ * Maximum profile-tag chips on a "Follow your best matches" suggestion card (per design).
+ * Only tags that intersect the chosen interests are shown.
+ */
+export const SUGGESTED_USER_CARD_MAX_TAGS = 2;
