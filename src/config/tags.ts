@@ -63,3 +63,9 @@ export const HOT_TAGS_FEATURED_COUNT = 3;
 
 /** Number of popular interest chips shown on the onboarding "Tags of interest" step (per design) */
 export const ONBOARDING_INTERESTS_SUGGESTED_COUNT = 21;
+
+/**
+ * Maximum profile-tag chips on a "Follow your best matches" suggestion card (per design).
+ * Only tags that intersect the chosen interests are shown.
+ */
+export const SUGGESTED_USER_CARD_MAX_TAGS = 2;

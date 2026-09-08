@@ -11,8 +11,7 @@ export type GroupableNotification = Extract<FlatNotification, { type: GroupableN
  * members, newest first (mirroring the source order).
  */
 export type NotificationListEntry =
-  | { kind: 'single'; notification: FlatNotification }
-  | { kind: 'group'; notifications: GroupableNotification[] };
+  { kind: 'single'; notification: FlatNotification } | { kind: 'group'; notifications: GroupableNotification[] };
 
 export interface NotificationsListProps {
   /** Rows to display, already grouped by `groupNotifications`. */

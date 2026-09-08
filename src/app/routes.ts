@@ -10,6 +10,7 @@ export enum ONBOARDING_ROUTES {
   SCAN = '/onboarding/scan',
   HUMAN = '/onboarding/human',
   TAGS = '/onboarding/tags',
+  FOLLOW = '/onboarding/follow',
 }
 
 export enum AUTH_ROUTES {
@@ -104,6 +105,7 @@ export const PUBLIC_ROUTES: string[] = [
 export const ALLOWED_ROUTES = [
   ONBOARDING_ROUTES.PROFILE,
   ONBOARDING_ROUTES.TAGS,
+  ONBOARDING_ROUTES.FOLLOW,
   APP_ROUTES.HOME,
   APP_ROUTES.FEED,
   APP_ROUTES.SEARCH,

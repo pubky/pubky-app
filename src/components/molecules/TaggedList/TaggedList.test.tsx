@@ -13,13 +13,11 @@ const { mockLoadTaggers, mockLoadMoreTaggers, mockUseEntityTaggers, mockTaggerSt
     mockLoadTaggers: loadTaggers,
     mockLoadMoreTaggers: loadMoreTaggers,
     mockTaggerStates: taggerStates,
-    mockUseEntityTaggers: vi.fn(
-      (): UseEntityTaggersResult => ({
-        taggerStates,
-        loadTaggers,
-        loadMoreTaggers,
-      }),
-    ),
+    mockUseEntityTaggers: vi.fn((): UseEntityTaggersResult => ({
+      taggerStates,
+      loadTaggers,
+      loadMoreTaggers,
+    })),
   };
 });
 

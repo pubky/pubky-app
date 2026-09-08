@@ -33,10 +33,7 @@ export type TUsersByTagsSearchParams = TPaginationParams & {
 };
 
 export type TSearchQueryParams =
-  | TTagSearchParams
-  | TPrefixSearchParams
-  | TContentSearchParams
-  | TUsersByTagsSearchParams;
+  TTagSearchParams | TPrefixSearchParams | TContentSearchParams | TUsersByTagsSearchParams;
 
 // Common return type for search results (array of IDs/labels)
 export type TSearchResult = string[];
