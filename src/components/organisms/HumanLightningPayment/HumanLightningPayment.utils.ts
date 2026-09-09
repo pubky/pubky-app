@@ -25,6 +25,7 @@ export class VerificationHandler {
   private retryAttempt = 0;
   private sleepTimer: NodeJS.Timeout | null = null;
   private sleepResolve: (() => void) | null = null;
+  private ignoreNextAbortError = false;
   private visibilityRecoveryInProgress = false;
   private lastVisibilityRecoveryAt = 0;
 
@@ -161,9 +162,13 @@ export class VerificationHandler {
     return this.awaitLnVerificationPromise;
   }
 
-  private async abortInFlightAwait(): Promise<void> {
+  private async abortInFlightAwait(forVisibilityRecovery: boolean): Promise<void> {
     if (!this.awaitLnVerificationPromise || !this.awaitLnVerificationAbortController) {
       return;
+    }
+
+    if (forVisibilityRecovery) {
+      this.ignoreNextAbortError = true;
     }
 
     const inFlightPromise = this.awaitLnVerificationPromise;
@@ -179,13 +184,8 @@ export class VerificationHandler {
   private async handleAwaitError(error: unknown): Promise<boolean> {
     if (this.aborted) return false;
 
-    // Intentional aborts are control flow, not failures: user cancel,
-    // component teardown, payment expiration, and visibility-recovery all
-    // abort the in-flight long poll locally, and that rejection previously
-    // reached Sentry as "Request was aborted" (PUBKY-APP-4F). Any
-    // REQUEST_ABORTED observed by this handler is therefore ours by
-    // construction (every abort originates from this instance).
-    if (isAppError(error) && error.code === TimeoutErrorCode.REQUEST_ABORTED) {
+    if (isAppError(error) && error.code === TimeoutErrorCode.REQUEST_ABORTED && this.ignoreNextAbortError) {
+      this.ignoreNextAbortError = false;
       return true;
     }
 
@@ -291,10 +291,11 @@ export class VerificationHandler {
 
     try {
       // Force-refresh status on foreground by canceling stale in-flight poll first.
-      await this.abortInFlightAwait();
+      await this.abortInFlightAwait(true);
       await this.checkPaymentStatus();
     } finally {
       this.visibilityRecoveryInProgress = false;
+      this.ignoreNextAbortError = false; // Ensure flag never leaks across recovery cycles
     }
   }
 

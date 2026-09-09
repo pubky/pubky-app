@@ -13,7 +13,7 @@ import type {
 } from '@/application/feed/feed.types';
 import { db } from '@/database/franky/franky';
 import { AppError } from '@/libs/error/error';
-import { ServerErrorCode } from '@/libs/error/error.codes';
+import { DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
@@ -463,6 +463,17 @@ describe('FeedApplication', () => {
       expect(result.name).toBe('Original Name');
       expect(result.icon).toBe('activity');
       expect(result.tags).toEqual(['new-tag']);
+    });
+
+    it('should throw RECORD_NOT_FOUND when the feed no longer exists locally', async () => {
+      const { readSpy } = setupMocks();
+      readSpy.mockResolvedValue(null);
+
+      await expect(
+        FeedApplication.prepareUpdateParams({ feedId: 'feed123', changes: { name: 'Updated Name' } }),
+      ).rejects.toMatchObject({
+        code: DatabaseErrorCode.RECORD_NOT_FOUND,
+      });
     });
 
     it('should apply an icon-only update without changing the other feed fields', async () => {

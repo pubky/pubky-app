@@ -288,9 +288,10 @@ export class AppDatabase extends Dexie {
             maxAttempts: DB_INIT_MAX_ATTEMPTS,
           });
           this.close();
-          // Backoff grows quadratically (150ms -> 600ms -> 1350ms): Safari evicts
-          // the DB under storage pressure and needs real time to release the
-          // handles, so a linear 150ms step gave up too early (PUBKY-APP-2Q).
+          // Backoff grows quadratically (150ms -> 600ms across the two retries
+          // allowed by DB_INIT_MAX_ATTEMPTS = 3): Safari evicts the DB under
+          // storage pressure and needs real time to release the handles, so a
+          // linear 150ms step gave up too early (PUBKY-APP-2Q).
           await delay(DB_INIT_RETRY_BASE_DELAY_MS * attempt * attempt);
           continue;
         }
