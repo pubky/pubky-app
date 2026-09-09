@@ -28,6 +28,8 @@ export function withPubkyPrefix(key: string): string {
 
 export function stripPubkyPrefix(key: string): string {
   if (!key) return '';
+  // A raw key can itself start with "pubky"; only strip a display prefix.
+  if (isPubkyIdentifier(key)) return key;
   if (key.startsWith(PUBKY_PREFIX)) return key.slice(PUBKY_PREFIX.length);
   if (key.startsWith(LEGACY_PUBKY_PREFIX)) return key.slice(LEGACY_PUBKY_PREFIX.length);
   return key;

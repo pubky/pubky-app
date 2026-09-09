@@ -198,8 +198,8 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => false,
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({

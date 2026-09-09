@@ -1,6 +1,7 @@
 import { permanentRedirect } from 'next/navigation';
 import type { Metadata as NextMetadata } from 'next';
 import { getCollectionRoute, POST_ROUTES } from '@/app/routes';
+import { normalizePostIds } from '@/libs/og/routeIds';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
 import { deriveTextPreview } from '@/libs/post/postPreview';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
@@ -20,7 +21,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
   try {
     const { userId, postId } = await params;
 
-    const result = await fetchUserAndPostForMetadata(userId, postId);
+    // Crawl-mangled ids (trailing dots, brackets, bad percent-encoding) are
+    // rejected at the boundary: null falls back to empty metadata without a
+    // Nexus round-trip or a Sentry event (PUBKY-APP-1E/9Z/A0/BQ).
+    const ids = normalizePostIds(userId, postId);
+    if (!ids) return {};
+
+    const result = await fetchUserAndPostForMetadata(ids.userId, ids.postId);
     if (!result) return {};
 
     const { user, post } = result;
@@ -28,7 +35,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     // Collection-kind posts canonicalize to /collections (the page also redirects
     // there) so crawlers/search engines consolidate onto the canonical URL.
     if (post.kind === 'collection') {
-      return { alternates: { canonical: getCollectionRoute(userId, postId) } };
+      return { alternates: { canonical: getCollectionRoute(ids.userId, ids.postId) } };
     }
 
     const username = resolveDisplayName(user);
@@ -42,7 +49,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     const { openGraph, twitter, alternates } = Metadata({
       title,
       description,
-      url: `${POST_ROUTES.POST}/${userId}/${postId}`,
+      url: `${POST_ROUTES.POST}/${ids.userId}/${ids.postId}`,
       omitImages: true,
     });
 
@@ -74,17 +81,22 @@ export default async function PostPage({ params }: PostPageProps) {
   // Next 16 router does not act on the streamed NEXT_REDIRECT during soft
   // navigation. SinglePostPage has a client-side guard that handles those
   // paths — keep both in sync.
+  const ids = normalizePostIds(userId, postId);
   let isCollection = false;
-  try {
-    const result = await fetchUserAndPostForMetadata(userId, postId);
-    isCollection = result?.post.kind === 'collection';
-  } catch {
-    // Ignore — render the post normally when the kind lookup fails.
+  if (ids) {
+    try {
+      const result = await fetchUserAndPostForMetadata(ids.userId, ids.postId);
+      isCollection = result?.post.kind === 'collection';
+    } catch {
+      // Ignore — render the post normally when the kind lookup fails.
+    }
   }
-  if (isCollection) {
-    permanentRedirect(getCollectionRoute(userId, postId));
+  if (isCollection && ids) {
+    permanentRedirect(getCollectionRoute(ids.userId, ids.postId));
   }
 
+  // Malformed ids never reach Nexus; render with them as-is so the client-side
+  // guard in SinglePostPage handles the not-found state as before.
   const compositeId = buildCompositeId({ pubky: userId, id: postId });
 
   return <SinglePostPage postId={compositeId} />;
