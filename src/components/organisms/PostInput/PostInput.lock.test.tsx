@@ -307,6 +307,14 @@ describe('PostInput lock wiring', () => {
     expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Draft title');
   });
 
+  it('disables save when the edit lock title is cleared', () => {
+    renderEditLock();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lock title' }), { target: { value: '   ' } });
+
+    expect(screen.getByTestId('post-button')).toBeDisabled();
+  });
+
   it('disables save when the serialized edit teaser exceeds the post limit', () => {
     renderEditLock();
 
@@ -317,6 +325,19 @@ describe('PostInput lock wiring', () => {
 
   // The single most important rule: while the switch is on, the composer body is the content to be
   // locked. Publishing before the price is applied would put that content out in the clear.
+  it('publishes nothing once the lock title is cleared', async () => {
+    renderComposer();
+    await configureLock();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lock title' }), { target: { value: '' } });
+    expect(screen.getByTestId('post-button')).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('post-button'));
+    await act(async () => {});
+
+    expect(mocks.createLockContent).not.toHaveBeenCalled();
+  });
+
   it('publishes nothing while the lock is on but not configured', async () => {
     renderComposer();
     act(() => mocks.composer.setContent('secret body'));

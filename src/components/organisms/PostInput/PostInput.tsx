@@ -243,8 +243,12 @@ export function PostInput({
         articleTitle,
         uploadingCount > 0,
       ) &&
-      // Validate the serialized announcement envelope before publish or edit reaches its write.
-      (!isLockMode || isLockTeaserWithinLimit({ lock_title: activeLockTitle, teaser_description: content }))
+      // Validate the serialized announcement envelope before publish or edit reaches its write. The
+      // title is required like an article's: the card only shows a placeholder when it is blank, so an
+      // empty one reads as set and would be written as an empty string.
+      (!isLockMode ||
+        (activeLockTitle.trim().length > 0 &&
+          isLockTeaserWithinLimit({ lock_title: activeLockTitle, teaser_description: content })))
     );
   };
 
