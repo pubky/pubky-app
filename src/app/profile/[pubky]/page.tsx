@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { fetchProfileForMetadata } from '@/libs/og/ogData';
+import { normalizeProfileId } from '@/libs/og/routeIds';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
-import { resolveDisplayName, stripPubkyPrefix } from '@/libs/utils/utils';
+import { resolveDisplayName } from '@/libs/utils/utils';
 import { Metadata as buildMetadata } from '@/molecules/Metadata/Metadata';
 import { ProfilePostsPage } from '@/templates/Profile/Posts/ProfilePostsPage';
 
@@ -25,11 +26,18 @@ interface DynamicProfilePageProps {
  */
 export async function generateMetadata({ params }: DynamicProfilePageProps): Promise<Metadata> {
   const { pubky } = await params;
-  const normalizedPubky = stripPubkyPrefix(decodeURIComponent(pubky));
-  const canonical = `/profile/${normalizedPubky}`;
+
+  // Crawl-mangled ids (trailing dots, bad percent-encoding) are rejected at the
+  // boundary: null falls back to the parent metadata without a Nexus round-trip
+  // or a Sentry event (PUBKY-APP-1E/9Z/A0/BQ). No canonical is emitted for an
+  // invalid id — pointing crawlers at the mangled URL would consolidate onto junk.
+  const profileId = normalizeProfileId(pubky);
+  if (!profileId) return {};
+
+  const canonical = `/profile/${profileId}`;
 
   try {
-    const result = await fetchProfileForMetadata(pubky);
+    const result = await fetchProfileForMetadata(profileId);
     if (!result) return { alternates: { canonical } };
 
     const { user } = result;
