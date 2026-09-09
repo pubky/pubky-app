@@ -28,9 +28,12 @@ export function Header() {
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
   const currentTitle = stepConfig?.title;
-  // Onboarding steps reached after authentication (profile setup and tags of interest).
+  // Onboarding steps reached after authentication (profile setup and the Experience screens).
   // Step numbers are not unique in the 4-step model, so match on the path instead.
-  const isPostAuthOnboardingStep = pathname === ONBOARDING_ROUTES.PROFILE || pathname === ONBOARDING_ROUTES.TAGS;
+  const isPostAuthOnboardingStep =
+    pathname === ONBOARDING_ROUTES.PROFILE ||
+    pathname === ONBOARDING_ROUTES.TAGS ||
+    pathname === ONBOARDING_ROUTES.FOLLOW;
 
   // Hide header on mobile when:
   // - User is on a core explore route (/home, /hot, /search, /collections) — MobileHeader + MobileFooter
@@ -39,7 +42,7 @@ export function Header() {
   const shouldHideHeaderOnMobile =
     isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
   // Show title only for onboarding/logout pages (when stepConfig exists) and user is not authenticated,
-  // or during the post-auth onboarding steps (profile setup, tags of interest)
+  // or during the post-auth onboarding steps (profile setup, tags of interest, follow matches)
   const shouldShowTitle = currentTitle && (!isAuthenticated || isPostAuthOnboardingStep);
 
   // App-shell layout: authenticated app pages and Explore mode (unauthenticated on a

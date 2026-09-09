@@ -596,4 +596,26 @@ describe('UserStreamApplication', () => {
       });
     });
   });
+
+  describe('getStreamUserIds', () => {
+    it('returns the cached ids of a stream without touching Nexus', async () => {
+      const streamId = buildUserCompositeId({ userId: DEFAULT_VIEWER_ID, reach: 'following' });
+      const cachedUserIds: Pubky[] = ['user-1', 'user-2'];
+      await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch');
+
+      const result = await UserStreamApplication.getStreamUserIds(streamId);
+
+      expect(result).toEqual(cachedUserIds);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty list when the stream was never cached', async () => {
+      const streamId = buildUserCompositeId({ userId: 'never-cached' as Pubky, reach: 'following' });
+
+      const result = await UserStreamApplication.getStreamUserIds(streamId);
+
+      expect(result).toEqual([]);
+    });
+  });
 });

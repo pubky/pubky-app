@@ -473,8 +473,7 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
       const cached = cache.get(compositeId);
       if (cached) return cached;
       const fixture = f.entitiesByCompositeId.get(compositeId) as
-        | { relationships?: { reposted?: string | null } }
-        | undefined;
+        { relationships?: { reposted?: string | null } } | undefined;
       const result = {
         showRepostHeader: !!fixture?.relationships?.reposted,
         shouldShowPostHeader: true,
