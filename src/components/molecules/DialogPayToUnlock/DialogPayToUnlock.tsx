@@ -53,6 +53,8 @@ export function DialogPayToUnlock({
 }: DialogPayToUnlockProps) {
   const isInstall = stage === 'install';
   const showPrimary = stage === 'pay' || stage === 'install';
+  // `unopened` reached this screen by a completed payment too, so it must not show a cost to pay.
+  const isPaid = stage === 'paid' || stage === 'unopened';
   const [isConfirmingClose, setIsConfirmingClose] = useState(false);
 
   const handleOpenChange = (next: boolean) => {
@@ -104,8 +106,8 @@ export function DialogPayToUnlock({
         <Container overrideDefaults className="flex items-start gap-6 rounded-md border border-dashed border-input p-6">
           <Container overrideDefaults className="flex min-w-0 flex-1 flex-col gap-3">
             <Container overrideDefaults className="flex flex-col gap-1">
-              <Typography className={cn(FIELD_LABEL_CLASS, stage === 'paid' && 'text-brand')}>
-                {stage === 'paid' ? 'PAYMENT RECEIVED' : 'COST TO UNLOCK'}
+              <Typography className={cn(FIELD_LABEL_CLASS, isPaid && 'text-brand')}>
+                {isPaid ? 'PAYMENT RECEIVED' : 'COST TO UNLOCK'}
               </Typography>
               <Typography className="text-2xl font-bold text-foreground">
                 {formatSats(priceSats, { space: true })}
@@ -184,6 +186,17 @@ export function DialogPayToUnlock({
               </Typography>
             )}
 
+            {stage === 'unopened' && (
+              <Container overrideDefaults className="flex flex-col items-center gap-3 py-4">
+                <Typography className="text-center text-base text-secondary-foreground">
+                  {'Payment received. The content could not be opened — nothing is lost.'}
+                </Typography>
+                <Button variant={ButtonVariant.OUTLINE} size="lg" onClick={onRecheck} data-cy="pay-to-unlock-recheck">
+                  {'Check again'}
+                </Button>
+              </Container>
+            )}
+
             {stage === 'blocked' && (
               <Typography className="text-base text-secondary-foreground">
                 {'This purchase could not be checked. Close the dialog and try again.'}
@@ -218,7 +231,7 @@ export function DialogPayToUnlock({
               data-cy="pay-to-unlock-cancel"
             >
               {/* Past submission there is nothing to cancel — the purchase continues server-side. */}
-              {stage === 'waiting' ? 'Close' : 'Cancel'}
+              {stage === 'waiting' || stage === 'unopened' ? 'Close' : 'Cancel'}
             </Button>
           )}
           {showPrimary && (

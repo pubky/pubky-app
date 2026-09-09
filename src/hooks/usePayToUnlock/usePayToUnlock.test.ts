@@ -268,26 +268,27 @@ describe('usePayToUnlock (finishing)', () => {
     vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValue('completed');
   });
 
-  // A failed read must leave the reader something to press, not a spinner.
-  it('parks in the waiting stage when the completion fails, so Check again is reachable', async () => {
+  // The payment landed and only the read failed, so this must not share the waiting screen, which
+  // asks the reader to go pay.
+  it('lands on its own stage when the completion fails, so Check again is reachable', async () => {
     vi.mocked(LocksController.fetchPaidContent).mockRejectedValue(new Error('down'));
 
     const { result, onCompleted } = renderPay();
 
-    await waitFor(() => expect(result.current.isStalled).toBe(true));
-    expect(result.current.stage).toBe('waiting');
+    await waitFor(() => expect(result.current.stage).toBe('unopened'));
+    expect(result.current.isStalled).toBe(false);
     expect(onCompleted).not.toHaveBeenCalled();
     expect(toastMock).toHaveBeenCalledWith(
       expect.objectContaining({ description: expect.stringContaining('went through') }),
     );
   });
 
-  // Parked with no polling behind it (the purchase was already complete when the modal opened):
+  // Nothing is polling behind this (the purchase was already complete when the modal opened):
   // recheck still has to retry, which it cannot do without a remembered bundle.
   it('retries the completion when Check again is pressed', async () => {
     vi.mocked(LocksController.fetchPaidContent).mockRejectedValue(new Error('down'));
     const { result, onCompleted } = renderPay();
-    await waitFor(() => expect(result.current.isStalled).toBe(true));
+    await waitFor(() => expect(result.current.stage).toBe('unopened'));
 
     vi.mocked(LocksController.fetchPaidContent).mockResolvedValue(unlockedContent);
     const before = vi.mocked(LocksController.fetchPaidContent).mock.calls.length;
@@ -298,6 +299,19 @@ describe('usePayToUnlock (finishing)', () => {
     act(() => result.current.viewContent());
     expect(onCompleted).toHaveBeenCalledWith(unlockedContent);
     expect(vi.mocked(LocksController.fetchPaidContent).mock.calls.length).toBeGreaterThan(before);
+  });
+
+  // Leaving Check again on screen through the lookup invites a second one for the same bundle.
+  it('takes the retry screen away as soon as Check again is pressed', async () => {
+    vi.mocked(LocksController.fetchPaidContent).mockRejectedValue(new Error('down'));
+    const { result } = renderPay();
+    await waitFor(() => expect(result.current.stage).toBe('unopened'));
+
+    // Hangs, so the stage can only have moved from the press itself.
+    vi.mocked(LocksController.fetchPaymentStatus).mockReturnValue(new Promise<TVerificationStatus>(() => {}));
+    act(() => result.current.recheck());
+
+    expect(result.current.stage).toBe('waiting');
   });
 });
 

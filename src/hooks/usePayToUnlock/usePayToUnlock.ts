@@ -84,10 +84,10 @@ export function usePayToUnlock({
     try {
       content = await LocksController.fetchPaidContent({ lockFile, bundleId });
     } catch {
-      // Already reported by the Err factory. Parked, not lost: the purchase stands and
-      // "Check again" runs this path again.
+      // Already reported by the Err factory. The payment stands — only the download failed — so
+      // this gets its own stage rather than the waiting copy that asks the reader to go pay.
       if (generation.current !== gen) return;
-      setIsStalled(true);
+      setStage('unopened');
       toast({ variant: 'error', description: FINISH_FAILED_TOAST });
       return;
     }
@@ -272,6 +272,9 @@ export function usePayToUnlock({
   const recheck = () => {
     const bundleId = waitingBundleId.current;
     if (!bundleId) return;
+    // Take the retry screen away before the lookup goes out, so Check again cannot be pressed
+    // again while it is still running.
+    setStage('waiting');
     startPolling(generation.current, bundleId, true);
   };
 

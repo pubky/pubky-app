@@ -132,6 +132,31 @@ describe('DialogPayToUnlock', () => {
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
+  // The payment went through here, so the waiting copy ("pay in Bitkit, then check again") would
+  // be telling a reader who already paid to pay again.
+  it('unopened: says the payment landed and offers the retry, with no cost to pay', () => {
+    const onRecheck = vi.fn();
+    renderDialog('unopened', { onRecheck });
+
+    expect(screen.getByText('PAYMENT RECEIVED')).toHaveClass('text-brand');
+    expect(screen.getByText(/could not be opened/)).toBeInTheDocument();
+    expect(screen.queryByText(/Pay in Bitkit/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Pay with Bitkit/ })).not.toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-recheck"]') as HTMLElement);
+    expect(onRecheck).toHaveBeenCalledTimes(1);
+  });
+
+  // Nothing is running behind it, so this close needs no confirmation.
+  it('unopened: closes without asking', () => {
+    const onOpenChange = vi.fn();
+    renderDialog('unopened', { onOpenChange });
+
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.queryByText('The payment is still running')).not.toBeInTheDocument();
+  });
+
   it('waiting: the close button asks before it closes', () => {
     const onOpenChange = vi.fn();
     renderDialog('waiting', { onOpenChange });
