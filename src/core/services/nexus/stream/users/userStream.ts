@@ -81,7 +81,14 @@ export class NexusUserStreamService {
     if (params.user_ids.length === 0) {
       return [];
     }
-    const { url, body } = userStreamApi.usersByIds(params);
-    return await queryNexus<NexusUser[]>({ url, method: HttpMethod.POST, body: JSON.stringify(body), force });
+    // Canonicalize (sorted user_ids) so identical concurrent batches share one query key and
+    // coalesce in the query cache instead of racing the rate-limited by_ids endpoint (PUBKY-APP-B3).
+    const { url, body } = userStreamApi.usersByIds({ ...params, user_ids: [...params.user_ids].sort() });
+    return await queryNexus<NexusUser[]>({
+      url,
+      method: HttpMethod.POST,
+      body: JSON.stringify(body),
+      force,
+    });
   }
 }

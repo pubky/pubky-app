@@ -1512,6 +1512,11 @@ describe('Utils', () => {
   });
 
   describe('stripPubkyPrefix', () => {
+    it.each(['', 'pubky', 'pk:'])('preserves a raw key starting with pubky after the %s prefix', (prefix) => {
+      const rawKey = `pubky${'o'.repeat(47)}`;
+      expect(stripPubkyPrefix(`${prefix}${rawKey}`)).toBe(rawKey);
+    });
+
     it('should strip "pubky" prefix from a pubky identifier', () => {
       const prefixedKey = 'pubkyo1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
       const expected = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
