@@ -264,8 +264,8 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => false,
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
@@ -339,6 +339,13 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => {
 vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => {
   const result = { isFollowing: false, isLoading: false };
   return { useIsFollowing: () => result };
+});
+
+// No social graph tier: the real hook would fetch the full user view from Nexus on the
+// fixture's cache miss, and the sidebar section stays hidden while no tier is known.
+vi.mock('@/hooks/useSocialGraphStatus/useSocialGraphStatus', () => {
+  const result = { status: null, isLoading: false };
+  return { useSocialGraphStatus: () => result };
 });
 
 vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => {
@@ -466,8 +473,7 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
       const cached = cache.get(compositeId);
       if (cached) return cached;
       const fixture = f.entitiesByCompositeId.get(compositeId) as
-        | { relationships?: { reposted?: string | null } }
-        | undefined;
+        { relationships?: { reposted?: string | null } } | undefined;
       const result = {
         showRepostHeader: !!fixture?.relationships?.reposted,
         shouldShowPostHeader: true,

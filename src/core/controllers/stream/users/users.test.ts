@@ -373,4 +373,17 @@ describe('StreamUserController', () => {
       });
     });
   });
+
+  describe('getStreamUserIds', () => {
+    it('delegates the local-only read to the application layer', async () => {
+      const streamId = buildUserCompositeId({ userId: viewerId, reach: 'following' });
+      const cachedUserIds: Pubky[] = ['user-1', 'user-2'];
+      const getStreamUserIdsSpy = vi.spyOn(UserStreamApplication, 'getStreamUserIds').mockResolvedValue(cachedUserIds);
+
+      const result = await StreamUserController.getStreamUserIds(streamId);
+
+      expect(getStreamUserIdsSpy).toHaveBeenCalledWith(streamId);
+      expect(result).toEqual(cachedUserIds);
+    });
+  });
 });

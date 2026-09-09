@@ -1,5 +1,6 @@
 import type { Metadata as NextMetadata } from 'next';
 import { getCollectionRoute } from '@/app/routes';
+import { normalizePostIds } from '@/libs/og/routeIds';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
@@ -18,7 +19,11 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
   try {
     const { userId, postId } = await params;
 
-    const result = await fetchUserAndPostForMetadata(userId, postId);
+    // Crawl-mangled ids never reach Nexus (PUBKY-APP-1E/9Z/A0/BQ).
+    const ids = normalizePostIds(userId, postId);
+    if (!ids) return {};
+
+    const result = await fetchUserAndPostForMetadata(ids.userId, ids.postId);
     if (!result) return {};
 
     const { user, post } = result;
@@ -40,7 +45,7 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
     const { openGraph, twitter, alternates } = Metadata({
       title,
       description,
-      url: getCollectionRoute(userId, postId),
+      url: getCollectionRoute(ids.userId, ids.postId),
       omitImages: true,
     });
 
@@ -60,6 +65,8 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
 
 export default async function CollectionPage({ params }: CollectionPageProps) {
   const { userId, postId } = await params;
+  // Malformed ids never reach Nexus; render with them as-is so the client-side
+  // not-found state handles them as before.
   const compositeId = buildCompositeId({ pubky: userId, id: postId });
 
   return <Collection postId={compositeId} />;

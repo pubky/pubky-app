@@ -4,6 +4,7 @@ import type {
   TUserApplicationFetchParams,
   TUserApplicationFollowParams,
   TUserCountsOrFetchResult,
+  TUserSocialGraphStatusResult,
 } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
@@ -35,6 +36,14 @@ import { NexusUserService } from '@/services/nexus/user/user';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
 
 export class UserApplication {
+  /**
+   * Full-user fetches in flight, keyed by user and viewer. Responsive profile surfaces
+   * (desktop sidebar, mobile overview) stay mounted together, so several local-first hooks
+   * can miss the cache for the same user at once; sharing one promise keeps the Nexus
+   * request and the multi-table persist to a single run.
+   */
+  private static readonly inFlightFetches = new Map<string, Promise<NexusUserDetails | null>>();
+
   /**
    * Get user details from local database
    * This is a read-only operation that queries the local cache
@@ -106,10 +115,25 @@ export class UserApplication {
    * Use instead of `getOrFetch` when the caller already knows the user is not cached
    * (e.g. `useLocalFirstQuery` hook where `useLiveQuery` handles the local read).
    *
+   * Concurrent calls for the same user and viewer share a single request and persist.
+   *
    * @param params - Target user ID and the signed-in viewer for relative relationship data
    * @returns Promise resolving to user details or null if not found on Nexus
    */
   static async fetch({ userId, viewerId }: TUserApplicationFetchParams): Promise<NexusUserDetails | null> {
+    const key = `${userId}:${viewerId ?? ''}`;
+    const inFlight = this.inFlightFetches.get(key);
+    if (inFlight) return await inFlight;
+
+    const request = this.fetchAndPersist({ userId, viewerId }).finally(() => this.inFlightFetches.delete(key));
+    this.inFlightFetches.set(key, request);
+    return await request;
+  }
+
+  private static async fetchAndPersist({
+    userId,
+    viewerId,
+  }: TUserApplicationFetchParams): Promise<NexusUserDetails | null> {
     try {
       const users = await NexusUserStreamService.fetchByIds({
         user_ids: [userId],
@@ -129,6 +153,16 @@ export class UserApplication {
     }
 
     return await LocalUserService.readDetails({ userId });
+  }
+
+  /**
+   * Reads a user's social graph badge tier from local database.
+   * Local-only read per ADR 0001 (get* methods don't call Nexus).
+   * @param params - Parameters containing user ID
+   * @returns `{ status }` once a full user view was cached, or null when the tier is still unknown
+   */
+  static async getSocialGraphStatus(params: TReadProfileParams): Promise<TUserSocialGraphStatusResult | null> {
+    return await LocalUserService.readSocialGraphStatus(params);
   }
 
   /**

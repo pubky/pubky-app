@@ -62,21 +62,7 @@ export interface UserListItemProps {
 // Internal Types (used by sub-components)
 // =============================================================================
 
-export interface FollowButtonProps {
-  isFollowing: boolean;
-  isLoading: boolean;
-  isStatusLoading: boolean;
-  displayName: string;
-  variant: 'icon' | 'iconWithText';
-  onClick: (e: React.MouseEvent) => void;
-}
-
 export interface StatsSubtitleProps {
-  tags: number;
-  posts: number;
-}
-
-export interface UserStatsProps {
   tags: number;
   posts: number;
 }

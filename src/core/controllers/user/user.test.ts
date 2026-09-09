@@ -5,7 +5,13 @@ import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { UserCountsModel } from '@/models/user/counts/userCounts';
 import { FollowNormalizer } from '@/pipes/follow/follow.normalizer';
-import type { NexusTag, NexusTaggers, NexusUserCounts, NexusUserDetails } from '@/services/nexus/nexus.types';
+import {
+  NexusSocialGraphStatus,
+  type NexusTag,
+  type NexusTaggers,
+  type NexusUserCounts,
+  type NexusUserDetails,
+} from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { mockAuthStore } from '@/test-utils/stores';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -149,14 +155,14 @@ describe('UserController', () => {
       expect(spy.mock.calls[0][0]).toStrictEqual({ userId, viewerId });
     });
 
-    it('should delegate to UserApplication.getOrFetch with a null viewer for guests', async () => {
+    it('should leave the viewer undefined for guests', async () => {
       const userId = TEST_PUBKY.USER_2;
       vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ currentUserPubky: null }));
       const spy = vi.spyOn(UserApplication, 'getOrFetch').mockResolvedValue(null);
 
       await UserController.getOrFetch({ userId });
 
-      expect(spy.mock.calls[0][0]).toStrictEqual({ userId, viewerId: null });
+      expect(spy.mock.calls[0][0]).toStrictEqual({ userId, viewerId: undefined });
     });
   });
 
@@ -243,7 +249,73 @@ describe('UserController', () => {
     });
   });
 
+  describe('getSocialGraphStatus', () => {
+    it('should delegate to UserApplication.getSocialGraphStatus', async () => {
+      const userId = 'test-user-id';
+      const spy = vi
+        .spyOn(UserApplication, 'getSocialGraphStatus')
+        .mockResolvedValue({ status: NexusSocialGraphStatus.ESTABLISHED });
+
+      const result = await UserController.getSocialGraphStatus({ userId });
+
+      expect(result).toEqual({ status: NexusSocialGraphStatus.ESTABLISHED });
+      expect(spy).toHaveBeenCalledWith({ userId });
+    });
+
+    it('should return null when the tier is unknown', async () => {
+      vi.spyOn(UserApplication, 'getSocialGraphStatus').mockResolvedValue(null);
+
+      const result = await UserController.getSocialGraphStatus({ userId: 'test-user-id' });
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getOrFetch viewer scoping', () => {
+    it('should default the viewer to the signed-in user', async () => {
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue({
+        ...useAuthStore.getState(),
+        currentUserPubky: TEST_PUBKY.USER_2,
+      });
+      const spy = vi.spyOn(UserApplication, 'getOrFetch').mockResolvedValue(null);
+
+      await UserController.getOrFetch({ userId: TEST_PUBKY.USER_1 });
+
+      expect(spy).toHaveBeenCalledWith({ userId: TEST_PUBKY.USER_1, viewerId: TEST_PUBKY.USER_2 });
+    });
+  });
+
   describe('fetch', () => {
+    it('should pass an explicit viewer id through to UserApplication.fetch', async () => {
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue({ ...useAuthStore.getState(), currentUserPubky: 'other' });
+      const spy = vi.spyOn(UserApplication, 'fetch').mockResolvedValue(null);
+
+      await UserController.fetch({ userId: TEST_PUBKY.USER_1, viewerId: TEST_PUBKY.USER_2 });
+
+      expect(spy).toHaveBeenCalledWith({ userId: TEST_PUBKY.USER_1, viewerId: TEST_PUBKY.USER_2 });
+    });
+
+    it('should default the viewer to the signed-in user', async () => {
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue({
+        ...useAuthStore.getState(),
+        currentUserPubky: TEST_PUBKY.USER_2,
+      });
+      const spy = vi.spyOn(UserApplication, 'fetch').mockResolvedValue(null);
+
+      await UserController.fetch({ userId: TEST_PUBKY.USER_1 });
+
+      expect(spy).toHaveBeenCalledWith({ userId: TEST_PUBKY.USER_1, viewerId: TEST_PUBKY.USER_2 });
+    });
+
+    it('should leave the viewer undefined for guests', async () => {
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue({ ...useAuthStore.getState(), currentUserPubky: null });
+      const spy = vi.spyOn(UserApplication, 'fetch').mockResolvedValue(null);
+
+      await UserController.fetch({ userId: TEST_PUBKY.USER_1 });
+
+      expect(spy).toHaveBeenCalledWith({ userId: TEST_PUBKY.USER_1, viewerId: undefined });
+    });
+
     it('should delegate to UserApplication.fetch with the authenticated viewer', async () => {
       const userId = TEST_PUBKY.USER_2;
       const viewerId = TEST_PUBKY.USER_1;
@@ -264,17 +336,6 @@ describe('UserController', () => {
 
       expect(result).toEqual(mockUserDetails);
       expect(spy).toHaveBeenCalledWith({ userId, viewerId });
-    });
-
-    it('should delegate to UserApplication.fetch with a null viewer for guests', async () => {
-      const userId = TEST_PUBKY.USER_2;
-      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ currentUserPubky: null }));
-      const spy = vi.spyOn(UserApplication, 'fetch').mockResolvedValue(null);
-
-      await UserController.fetch({ userId });
-
-      // Strict: the viewer key must be present (null), not merely absent
-      expect(spy.mock.calls[0][0]).toStrictEqual({ userId, viewerId: null });
     });
 
     it('should return null when user not found', async () => {

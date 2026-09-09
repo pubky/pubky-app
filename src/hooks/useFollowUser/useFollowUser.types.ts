@@ -10,13 +10,13 @@ export type FollowAction = (typeof FOLLOW_ACTIONS)[keyof typeof FOLLOW_ACTIONS];
 export interface UseFollowUserResult {
   /** Toggles follow status for a user. Resolves `true` on success, `false` on failure (feedback is handled internally). */
   toggleFollow: (userId: Pubky, isCurrentlyFollowing: boolean) => Promise<boolean>;
-  /** Whether a follow/unfollow action is in progress */
+  /** Whether any follow/unfollow action is in progress (concurrent toggles included) */
   isLoading: boolean;
-  /** Current action in progress (follow/unfollow), null if idle */
+  /** Most recent action in progress (follow/unfollow), null if idle */
   loadingAction: FollowAction | null;
-  /** The user ID currently being followed/unfollowed (null if none) */
+  /** The user ID most recently toggled and still in flight (null if none) */
   loadingUserId: Pubky | null;
-  /** Helper to check if a specific user is loading */
+  /** Whether a follow/unfollow for this specific user is still in flight */
   isUserLoading: (userId: Pubky) => boolean;
   /** Error message if the action failed */
   error: string | null;

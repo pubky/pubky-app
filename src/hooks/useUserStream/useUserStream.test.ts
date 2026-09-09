@@ -14,9 +14,20 @@ const { mockUseLiveQuery, mockGetOrFetchStreamSlice, mockRefreshStreamSlice } = 
   mockRefreshStreamSlice: vi.fn(),
 }));
 
-// Mock dexie-react-hooks
+// Mock dexie-react-hooks. The details/relationships queries (the two-argument calls, no default)
+// resolve to a `{ forIds, map }` snapshot tagged with the ids they ran for; tests keep returning
+// plain Maps and this shim tags them with the current `userIds` (deps[0]). Returning `undefined`
+// from the mock models a live query that has not settled yet.
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: (...args: unknown[]) => mockUseLiveQuery(...args),
+  useLiveQuery: (...args: unknown[]) => {
+    const value = mockUseLiveQuery(...args);
+    const isSnapshotQuery = args.length === 2;
+    if (isSnapshotQuery && value instanceof Map) {
+      const deps = args[1] as unknown[];
+      return { forIds: deps[0], map: value };
+    }
+    return value;
+  },
 }));
 
 // Mock dependencies
@@ -392,12 +403,13 @@ describe('useUserStream', () => {
         ]),
       );
 
+    // `undefined` models a live query that has not resolved yet (the real pre-settle value).
     const mockLiveQueryMaps = ({
       details,
       relationships,
     }: {
-      details: Map<string, unknown>;
-      relationships: Map<string, unknown>;
+      details: Map<string, unknown> | undefined;
+      relationships: Map<string, unknown> | undefined;
     }) => {
       let callCount = 0;
       mockUseLiveQuery.mockImplementation(() => {
@@ -494,11 +506,11 @@ describe('useUserStream', () => {
         skip: ids.length,
         isExhausted: true,
       });
-      // Both live queries return their default empty Map — simulates the synchronous
-      // pre-resolve render that useLiveQuery exposes on every mount.
+      // Both live queries are still unresolved — simulates the synchronous pre-resolve render
+      // that useLiveQuery exposes on every mount.
       mockLiveQueryMaps({
-        details: new Map(),
-        relationships: new Map(),
+        details: undefined,
+        relationships: undefined,
       });
 
       renderHook(() =>
@@ -538,7 +550,7 @@ describe('useUserStream', () => {
       // to the filtered slice once relationships catch up.
       mockLiveQueryMaps({
         details: createDetailsMap(ids),
-        relationships: new Map(),
+        relationships: undefined,
       });
 
       const { result } = renderHook(() =>
@@ -574,7 +586,7 @@ describe('useUserStream', () => {
       // relationships data needed to make that decision.
       mockLiveQueryMaps({
         details: createDetailsMap(ids),
-        relationships: new Map(),
+        relationships: undefined,
       });
 
       renderHook(() =>
@@ -592,6 +604,65 @@ describe('useUserStream', () => {
       });
       await new Promise((resolve) => setTimeout(resolve, 0));
 
+      expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
+    });
+
+    it('clears isLoading when the details query settles empty (nothing cached or read failed)', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: ids,
+        skip: ids.length,
+        isExhausted: true,
+      });
+      // Both queries settled for these ids but returned nothing: hydration is done, there is
+      // simply no data. The consumer must get isLoading=false and an empty list, not a skeleton.
+      mockLiveQueryMaps({
+        details: new Map(),
+        relationships: new Map(),
+      });
+
+      const { result } = renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+      expect(result.current.users).toEqual([]);
+    });
+
+    it('stays hydrating while the details query is unresolved', async () => {
+      const ids = ['user-1', 'user-2', 'user-3'];
+      mockGetOrFetchStreamSlice.mockResolvedValue({
+        nextPageIds: ids,
+        skip: ids.length,
+        isExhausted: true,
+      });
+      mockLiveQueryMaps({
+        details: undefined,
+        relationships: new Map(),
+      });
+
+      const { result } = renderHook(() =>
+        useUserStream({
+          streamId: UserStreamTypes.RECOMMENDED,
+          limit: 3,
+          includeRelationships: true,
+          excludeFollowing: true,
+        }),
+      );
+
+      await waitFor(() => {
+        expect(mockGetOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(result.current.isLoading).toBe(true);
       expect(mockRefreshStreamSlice).not.toHaveBeenCalled();
     });
 
