@@ -48,13 +48,18 @@ export class FeedApplication {
 
     const now = Date.now();
     const createdAt = existingId
-      ? ((await LocalFeedService.read({ feedId: existingId }).catch((error) => {
-          // A genuine DB failure must not silently reset created_at on a
-          // user-initiated update; surface it (this is a best-effort lookup,
-          // so the update proceeds with a fresh timestamp instead of failing).
-          Logger.warn('[FeedApplication.update] Failed to read existing feed created_at', { feedId: existingId, error });
-          return null;
-        })) ?? { created_at: now }).created_at
+      ? (
+          (await LocalFeedService.read({ feedId: existingId }).catch((error) => {
+            // A genuine DB failure must not silently reset created_at on a
+            // user-initiated update; surface it (this is a best-effort lookup,
+            // so the update proceeds with a fresh timestamp instead of failing).
+            Logger.warn('[FeedApplication.update] Failed to read existing feed created_at', {
+              feedId: existingId,
+              error,
+            });
+            return null;
+          })) ?? { created_at: now }
+        ).created_at
       : now;
 
     const { tags, domain_tags, reach, sort, content, layout } = feed.feed;
