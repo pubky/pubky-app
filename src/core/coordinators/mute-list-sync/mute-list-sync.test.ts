@@ -8,6 +8,7 @@ import {
   MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD,
 } from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
+import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
 import type { AppError } from '@/libs/error/error';
 import { ServerErrorCode } from '@/libs/error/error.codes';
@@ -365,6 +366,48 @@ describe('MuteListSyncCoordinator', () => {
       await vi.advanceTimersByTimeAsync(1);
       await flushPromises();
       expect(subscribe).toHaveBeenCalledTimes(failures + 1);
+    });
+
+    it('ignores a rejection from a stale loop generation so the new loop does not inherit the failure', async () => {
+      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+      let rejectStale: ((error: unknown) => void) | undefined;
+      subscribe.mockImplementationOnce(
+        () =>
+          new Promise<ReadableStream<TMuteDirectoryEvent>>((_, reject) => {
+            rejectStale = reject;
+          }),
+      );
+      subscribe.mockImplementation(async () => {
+        throw subscribeConnectFailure();
+      });
+      const serverSpy = vi.spyOn(Err, 'server');
+
+      startCoordinator();
+      await flushPromises();
+      expect(subscribe).toHaveBeenCalledTimes(1);
+      expect(rejectStale).toBeDefined();
+
+      // Restart while the first subscribe is still pending: generation 1 is now stale.
+      const coordinator = MuteListSyncCoordinator.getInstance();
+      coordinator.stop();
+      coordinator.start();
+      await flushPromises();
+      expect(subscribe).toHaveBeenCalledTimes(2);
+
+      // The stale generation rejects after the new loop already failed once.
+      rejectStale!(subscribeConnectFailure());
+      await flushPromises();
+
+      // New loop: 1 own failure + 0 inherited. If the stale rejection had counted, the streak would be 2 and the
+      // threshold-th own failure would report one early; walk exactly (threshold - 1) more failures and assert
+      // no report, then one more and assert the report.
+      for (let ownFailures = 1; ownFailures < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; ownFailures += 1) {
+        expect(escalationReports(serverSpy)).toBe(0);
+        await vi.advanceTimersByTimeAsync(backoffAfterFailure(ownFailures));
+        await flushPromises();
+      }
+      expect(subscribe).toHaveBeenCalledTimes(1 + MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
+      expect(escalationReports(serverSpy)).toBe(1);
     });
 
     it('resets the failure streak after a healthy read so a later blip does not report', async () => {

@@ -244,12 +244,20 @@ export class MuteListSyncCoordinator {
           }
         }
       } catch (error) {
-        this.consecutiveStreamFailures += 1;
+        // A stale generation (stopped, or replaced while its subscribe was in flight) must not
+        // feed the streak or the outage report of the loop that superseded it.
+        const isCurrentLoop = this.state.isStarted && generation === this.loopGeneration;
+        if (isCurrentLoop) {
+          this.consecutiveStreamFailures += 1;
+        }
         Logger.error('Mute list homeserver event stream failed', {
           error,
           consecutiveFailures: this.consecutiveStreamFailures,
+          staleGeneration: !isCurrentLoop,
         });
-        this.reportStreamOutageIfPersistent(error);
+        if (isCurrentLoop) {
+          this.reportStreamOutageIfPersistent(error);
+        }
       } finally {
         if (reader) {
           await reader.cancel().catch(() => {});
