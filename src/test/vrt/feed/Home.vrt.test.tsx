@@ -27,6 +27,7 @@ import { VIBES_ALERT_STORAGE_ID } from '@/config/vibes';
 // prepend `VRT_ARTICLE` via this flag so existing baselines stay put.
 const feedState = vi.hoisted(() => ({
   mode: 'default' as 'default' | 'article',
+  keyboardVisible: false,
 }));
 
 const fixtures = vi.hoisted(async () => {
@@ -154,8 +155,8 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => feedState.keyboardVisible,
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
@@ -636,5 +637,32 @@ describe('New article dialog — visual regression', () => {
   it('renders the new article dialog at mobile viewport', async () => {
     await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('dialog-new-article-mobile');
+  });
+});
+
+describe('Mobile keyboard navigation visibility', () => {
+  beforeEach(() => {
+    feedState.mode = 'default';
+    feedState.keyboardVisible = false;
+  });
+
+  it.each([false, true])('renders mobile controls with keyboard visibility %s', async (keyboardVisible) => {
+    feedState.keyboardVisible = keyboardVisible;
+    await renderForVRT(<HomeWithFab />, { viewport: VRT_VIEWPORT_MOBILE });
+    if (keyboardVisible) {
+      await expect.element(page.getByTestId('new-post-cta')).not.toBeVisible();
+      await expect.element(page.getByRole('link', { name: 'Home', exact: true })).not.toBeInTheDocument();
+    } else {
+      await expect.element(page.getByTestId('new-post-cta')).toBeVisible();
+      await expect.element(page.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
+    }
+    feedState.keyboardVisible = false;
+  });
+
+  it('keeps the desktop plus button visible when the visual viewport shrinks', async () => {
+    feedState.keyboardVisible = true;
+    await renderForVRT(<HomeWithFab />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(page.getByTestId('new-post-cta')).toBeVisible();
+    feedState.keyboardVisible = false;
   });
 });

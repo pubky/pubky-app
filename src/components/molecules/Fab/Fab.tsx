@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { useFabAction } from '@/hooks/useFabAction/useFabAction';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { cn } from '@/libs/utils/utils';
@@ -24,6 +25,7 @@ import { useCollectionReorderStore } from '@/stores/collectionReorder/collection
  * - everywhere else (incl. non-owned)   -> create a new post
  *
  * Visibility rules:
+ * - Hide the button below lg while the keyboard is open; keep its dialog mounted
  * - Shows for authenticated users (opens the context dialog)
  * - Shows for unauthenticated users on public explore routes (opens sign-in)
  * - Hidden on landing page and other non-public routes for unauthenticated users
@@ -47,6 +49,7 @@ export function Fab() {
   const { isPublicExploreRoute } = usePublicRoute();
   const { requireAuth } = useRequireAuth();
   const action = useFabAction();
+  const isKeyboardVisible = useKeyboardVisible();
   const isReorderActive = useCollectionReorderStore((state) => state.activeCollectionId !== null);
 
   const isOnboardingRoute = pathname?.startsWith('/onboarding') ?? false;
@@ -58,7 +61,7 @@ export function Fab() {
   const buttonClasses = cn(
     'fixed right-3 bottom-18 sm:right-10 md:bottom-20 lg:bottom-6',
     'size-20 rounded-full',
-    'flex items-center justify-center',
+    isKeyboardVisible ? 'hidden items-center justify-center lg:flex' : 'flex items-center justify-center',
     'bg-white/12 backdrop-blur-lg',
     'hover:bg-brand',
     'text-white',
