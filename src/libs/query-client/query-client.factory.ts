@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
+import { getRetryAfter } from '@/libs/error/error.utils';
 import { isAppError } from '../error/error';
-import { getRetryAfter } from '../error/error.utils';
 import { HttpStatusCode } from '../http/http.types';
 import type { QueryClientConfig } from './query-client.types';
 

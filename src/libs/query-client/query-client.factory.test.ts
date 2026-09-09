@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppError } from '../error/error';
-import { RateLimitErrorCode } from '../error/error.codes';
-import { ErrorCategory, ErrorService } from '../error/error.types';
+import { AppError } from '@/libs/error/error';
+import { RateLimitErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { clearAllQueryClients, createQueryClient } from './query-client.factory';
 import type { QueryClientConfig } from './query-client.types';
 
