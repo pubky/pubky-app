@@ -69,6 +69,20 @@ describe('vibesReminder', () => {
     expect(JSON.parse(localStorage.getItem(aliceKey)!)).toEqual({ ...snooze, tried: true });
   });
 
+  it('keeps Try permanent when another tab writes Later after reading the old reminder', () => {
+    const setItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce((key, value) => {
+      // The other tab selects Try between Later's read and write.
+      markTried('alice');
+      setItem.call(localStorage, key, value);
+    });
+
+    remindLater('alice');
+    vi.setSystemTime(Date.now() + 365 * 24 * hour);
+    expect(isReminderDue('alice')).toBe(false);
+    expect(isReminderDue('bob')).toBe(true);
+  });
+
   it.each([
     '{broken',
     'null',
@@ -130,6 +144,12 @@ describe('vibesReminder', () => {
       localStorage.removeItem(aliceKey);
       window.dispatchEvent(new StorageEvent('storage', { key: aliceKey }));
       expect(onDismiss).toHaveBeenCalledOnce();
+      localStorage.setItem(`${bobKey}:tried`, 'true');
+      window.dispatchEvent(new StorageEvent('storage', { key: `${bobKey}:tried` }));
+      expect(onDismiss).toHaveBeenCalledOnce();
+      localStorage.setItem(`${aliceKey}:tried`, 'true');
+      window.dispatchEvent(new StorageEvent('storage', { key: `${aliceKey}:tried` }));
+      expect(onDismiss).toHaveBeenCalledTimes(2);
     } finally {
       unsubscribe();
     }

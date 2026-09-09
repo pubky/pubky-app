@@ -18,7 +18,12 @@ function storageKey(pubky: string) {
   return buildFeatureDiscoveryStorageKey(pubky, VIBES_ALERT_STORAGE_ID);
 }
 
+function triedStorageKey(pubky: string) {
+  return `${storageKey(pubky)}:tried`;
+}
+
 function readReminder(pubky: string): Reminder {
+  if (window.localStorage.getItem(triedStorageKey(pubky)) === 'true') return { ...initialReminder, tried: true };
   const raw = window.localStorage.getItem(storageKey(pubky));
   if (!raw) return initialReminder;
   try {
@@ -40,9 +45,11 @@ export function isReminderDue(pubky: string): boolean {
 
 function updateReminder(pubky: string, update: (previous: Reminder) => Reminder) {
   try {
-    // Re-read so a stale tab cannot undo Try or shorten an existing snooze.
+    // Use the latest saved snooze when handling a previously rendered alert.
     const previous = readReminder(pubky);
     const next = update(previous);
+    // A concurrent snooze cannot overwrite this separate permanent dismissal flag.
+    if (next.tried) window.localStorage.setItem(triedStorageKey(pubky), 'true');
     if (next !== previous) window.localStorage.setItem(storageKey(pubky), JSON.stringify(next));
   } catch {
     // Still dismiss mounted alerts if saving becomes unavailable.
@@ -73,7 +80,11 @@ export function subscribeToDismissal(pubky: string, onDismiss: () => void): () =
     if (dismissedPubky === pubky) onDismiss();
   };
   const onStorage = (event: StorageEvent) => {
-    if ((event.key === storageKey(pubky) || event.key === null) && !isReminderDue(pubky)) onDismiss();
+    if (
+      (event.key === storageKey(pubky) || event.key === triedStorageKey(pubky) || event.key === null) &&
+      !isReminderDue(pubky)
+    )
+      onDismiss();
   };
   dismissalListeners.add(onLocalDismissal);
   window.addEventListener('storage', onStorage);
