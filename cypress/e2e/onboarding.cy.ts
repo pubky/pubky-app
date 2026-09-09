@@ -5,6 +5,28 @@ import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { addProfileTags } from '../support/profile';
 import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 
+const waitUntilStarterPackHasUsers = (tag: string) => {
+  const deadline = Date.now() + 90_000;
+  cy.env(['nexusUrl']).then(({ nexusUrl }) => {
+    const nexusOrigin = String(nexusUrl).replace(/\/$/, '');
+    const poll = () => {
+      cy.request({
+        url: `${nexusOrigin}/v0/stream/users/ids?source=starter_pack&tags=${encodeURIComponent(tag)}&skip=0&limit=10`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        const ids = Array.isArray(response.body) ? response.body : [];
+        if (ids.length > 0) return;
+        if (Date.now() >= deadline) {
+          throw new Error(`Nexus starter_pack did not index ${tag}`);
+        }
+        cy.wait(2000);
+        poll();
+      });
+    };
+    poll();
+  });
+};
+
 describe('Onboarding', () => {
   before(() => {
     slowCypressDown();
@@ -84,6 +106,7 @@ describe('Onboarding', () => {
     goToProfilePageFromHeader();
     cy.get('[data-cy="profile-filter-item-tagged"]').click();
     addProfileTags([interestTag]);
+    waitUntilStarterPackHasUsers(interestTag);
     cy.signOut(HasBackedUp.Yes);
 
     cy.onboardAsNewUser('Interested User', '', undefined, undefined, OnboardingExperience.StopAtTags);
