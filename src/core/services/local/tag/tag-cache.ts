@@ -42,7 +42,7 @@ export class LocalTagCacheService {
         .map(({ label, mutation }) => [
           label,
           {
-            id: mutation.id ?? `${mutation.expiresAt}:${mutation.relationship}`,
+            id: mutation.id,
             relationship: mutation.relationship,
             expiresAt: mutation.expiresAt,
             taggersCount: record?.tags.find((tag) => tag.label.toLowerCase() === label)?.taggers_count ?? 0,
@@ -220,11 +220,7 @@ export class LocalTagCacheService {
         // A newer batch/page won the race. Never overwrite it with an older response.
         if (options.isCurrent && !options.isCurrent()) return false;
         const revision = existing ? (existing.cache?.revision ?? 0) : null;
-        if (
-          revision !== options.revision &&
-          !(options.revision === null && existing?.cache?.initialized === false && existing.cache.revision === 0)
-        )
-          return false;
+        if (revision !== options.revision) return false;
         await table.put({
           id: entity.id,
           ...reconcileTagWindow(tags, existing, Date.now(), options.viewerId, {

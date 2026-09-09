@@ -1,8 +1,7 @@
 /**
- * Tag-related display configuration constants
+ * Tag display, cache and pagination configuration.
  *
- * These are display/truncation limits, not validation limits.
- * For input validation limits, see posts.ts (TAG_MAX_LENGTH for max input length)
+ * Input validation limits live in posts.ts (TAG_MAX_LENGTH for max input length).
  */
 
 import { TAG_MAX_LENGTH } from './posts';
@@ -64,6 +63,16 @@ export const HOT_TAGS_FEATURED_COUNT = 3;
 /** Number of popular interest chips shown on the onboarding "Tags of interest" step (per design) */
 export const ONBOARDING_INTERESTS_SUGGESTED_COUNT = 21;
 
+/**
+ * Maximum profile-tag chips on a "Follow your best matches" suggestion card (per design).
+ * Only tags that intersect the chosen interests are shown.
+ */
+export const SUGGESTED_USER_CARD_MAX_TAGS = 2;
+
+// =============================================================================
+// Tag Cache and Pagination
+// =============================================================================
+
 /** Server page sizes for post and profile tag collections. */
 export const POST_TAGS_PER_PAGE = 3;
 export const USER_TAGS_PER_PAGE = 20;
@@ -73,8 +82,3 @@ export const TAG_REFRESH_RETRY_MS = 30_000;
 
 /** Protection while a local tag write is waiting for Nexus indexing. */
 export const TAG_MUTATION_TTL_MS = 300_000;
-/**
- * Maximum profile-tag chips on a "Follow your best matches" suggestion card (per design).
- * Only tags that intersect the chosen interests are shown.
- */
-export const SUGGESTED_USER_CARD_MAX_TAGS = 2;

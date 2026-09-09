@@ -1512,7 +1512,7 @@ describe('PostStreamApplication', () => {
       vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(createMockNexusPosts(1));
       vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
-      vi.spyOn(PostStreamApplication, 'fetchMissingPostAuthors').mockResolvedValue(undefined);
+      vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder').mockResolvedValue([createMockNexusUser().details]);
     });
 
     it('passes all inline attachment metadata to file persistence, including mixed batches', async () => {
@@ -1556,13 +1556,13 @@ describe('PostStreamApplication', () => {
 
       if (source === 'missing') expect(result).toBe(false);
       expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
-      expect(PostStreamApplication.fetchMissingPostAuthors).not.toHaveBeenCalled();
+      expect(UserDetailsModel.findByIdsPreserveOrder).not.toHaveBeenCalled();
 
       await hydrate();
 
       expect(FileApplication.persistFiles).toHaveBeenCalledTimes(2);
       expect(LocalStreamPostsService.persistPosts).toHaveBeenCalledOnce();
-      expect(PostStreamApplication.fetchMissingPostAuthors).toHaveBeenCalledOnce();
+      expect(UserDetailsModel.findByIdsPreserveOrder).toHaveBeenCalledOnce();
     });
 
     it('does not publish posts while attachment persistence is pending or after the session changes', async () => {
@@ -1579,7 +1579,7 @@ describe('PostStreamApplication', () => {
 
       if (source === 'missing') expect(result).toBe(false);
       expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
-      expect(PostStreamApplication.fetchMissingPostAuthors).not.toHaveBeenCalled();
+      expect(UserDetailsModel.findByIdsPreserveOrder).not.toHaveBeenCalled();
     });
   });
 

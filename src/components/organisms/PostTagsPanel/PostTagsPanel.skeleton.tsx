@@ -5,7 +5,7 @@ import { POST_TAGS_PER_PAGE } from '@/config/tags';
 import { cn } from '@/libs/utils/utils';
 import type { PostTagsPanelProps } from './PostTagsPanel.types';
 
-type PostTagsPanelSkeletonProps = Omit<PostTagsPanelProps, 'postId'>;
+type PostTagsPanelSkeletonProps = Pick<PostTagsPanelProps, 'widthMode' | 'className'>;
 
 export function PostTagsPanelSkeleton({ widthMode = 'fit', className }: PostTagsPanelSkeletonProps) {
   return (

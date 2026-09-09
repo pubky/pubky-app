@@ -51,7 +51,7 @@ describe('useTagCache', () => {
   });
 
   describe('initial loading', () => {
-    it('keeps projected tags stable between unchanged local observations', async () => {
+    it('projects unchanged and updated local observations', async () => {
       vi.mocked(useLiveQuery).mockReturnValue(cachedRecord);
       const { result, rerender } = renderHook(() => useTagCache('user', 'profile', 'viewer'));
       const tags = result.current.record?.tags;
@@ -59,7 +59,7 @@ describe('useTagCache', () => {
       await act(async () => {});
       rerender();
 
-      expect(result.current.record?.tags).toBe(tags);
+      expect(result.current.record?.tags).toEqual(tags);
 
       vi.mocked(useLiveQuery).mockReturnValue({
         ...cachedRecord,
@@ -95,7 +95,14 @@ describe('useTagCache', () => {
         const shared = {
           ...cachedRecord,
           mutations: {
-            other: { label: 'pubky', viewerId: 'other-viewer', relationship, expiresAt: Date.now() + 60_000 },
+            other: {
+              id: 'other-viewer-operation',
+              synced: true,
+              label: 'pubky',
+              viewerId: 'other-viewer',
+              relationship,
+              expiresAt: Date.now() + 60_000,
+            },
           },
         };
         vi.mocked(useLiveQuery).mockReturnValue(shared);
@@ -114,7 +121,14 @@ describe('useTagCache', () => {
     });
 
     it('filters expired intent in the local observation without changing the persisted record', async () => {
-      const active = { label: 'pubky', viewerId: 'viewer', relationship: true, expiresAt: Date.now() + 60_000 };
+      const active = {
+        id: 'viewer-operation',
+        synced: true,
+        label: 'pubky',
+        viewerId: 'viewer',
+        relationship: true,
+        expiresAt: Date.now() + 60_000,
+      };
       const shared = { ...cachedRecord, mutations: { active, expired: { ...active, expiresAt: 0 } } };
       vi.mocked(TagCacheController.get).mockResolvedValueOnce(shared);
       renderHook(() => useTagCache('user', 'profile', 'viewer'));

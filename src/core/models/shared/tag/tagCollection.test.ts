@@ -80,13 +80,27 @@ describe('TagCollection local intent', () => {
       id: 'profile',
       tags: [],
       mutations: {
-        expired: { viewerId: 'old', relationship: true, expiresAt: now },
-        live: { viewerId: 'other', relationship: false, expiresAt: now + 60_000 },
+        expired: { id: 'expired', label: 'expired', synced: true, viewerId: 'old', relationship: true, expiresAt: now },
+        live: {
+          id: 'live',
+          label: 'live',
+          synced: true,
+          viewerId: 'other',
+          relationship: false,
+          expiresAt: now + 60_000,
+        },
       },
     });
     collection.recordMutation('NEW', 'viewer', true, 'new-operation', true);
     expect(Object.keys(collection.mutations ?? {})).toEqual(['live', 'viewer:new']);
-    expect(collection.mutations?.live).toEqual({ viewerId: 'other', relationship: false, expiresAt: now + 60_000 });
+    expect(collection.mutations?.live).toEqual({
+      id: 'live',
+      label: 'live',
+      synced: true,
+      viewerId: 'other',
+      relationship: false,
+      expiresAt: now + 60_000,
+    });
     expect(collection.mutations?.['viewer:new']).toMatchObject({ viewerId: 'viewer', relationship: true });
   });
 });
@@ -109,7 +123,14 @@ describe('TagCollection mutation ownership', () => {
       tags: [{ label: 'bitcoin', taggers: ['other', 'alice'], taggers_count: 2, relationship: false }],
       cache: { viewerId: null, cursor: 1, exhausted: true, fetchedAt: 1, revision: 2 },
       mutations: {
-        bitcoin: { viewerId: 'alice', relationship: true, expiresAt: Date.now() + 1000, id: 'pending', synced: false },
+        bitcoin: {
+          label: 'bitcoin',
+          viewerId: 'alice',
+          relationship: true,
+          expiresAt: Date.now() + 1000,
+          id: 'pending',
+          synced: false,
+        },
       },
     });
     expect(row.ownsMutation('bitcoin', 'alice', 'pending')).toBe(true);
@@ -122,7 +143,14 @@ describe('TagCollection mutation ownership', () => {
       id: 'profile',
       tags: [],
       mutations: {
-        bitcoin: { viewerId: 'alice', relationship: true, expiresAt: 0, id: 'pending', synced: false },
+        bitcoin: {
+          label: 'bitcoin',
+          viewerId: 'alice',
+          relationship: true,
+          expiresAt: 0,
+          id: 'pending',
+          synced: false,
+        },
       },
     });
     row.recordMutation('other', 'bob', true, 'other', true);

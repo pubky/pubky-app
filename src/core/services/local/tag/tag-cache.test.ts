@@ -136,11 +136,20 @@ describe('LocalTagCacheService', () => {
     tagTable.get.mockResolvedValue({
       id: entity.id,
       tags: [optimistic],
-      cache: { cursor: 0, revision: 0, fetchedAt: 0, exhausted: false, initialized: false },
-      mutations: { local: { viewerId: 'viewer', relationship: true, expiresAt: Date.now() + 60_000 } },
+      cache: { cursor: 0, revision: 1, fetchedAt: 0, exhausted: false, initialized: false },
+      mutations: {
+        local: {
+          id: 'viewer-operation',
+          label: 'local',
+          synced: true,
+          viewerId: 'viewer',
+          relationship: true,
+          expiresAt: Date.now() + 60_000,
+        },
+      },
     });
     expect(
-      await LocalTagCacheService.savePage(entity, [], { skip: 0, limit: 20, revision: null, viewerId: 'viewer' }),
+      await LocalTagCacheService.savePage(entity, [], { skip: 0, limit: 20, revision: 1, viewerId: 'viewer' }),
     ).toBe(true);
     expect(tagTable.put).toHaveBeenCalledWith(
       expect.objectContaining({ tags: [optimistic], cache: expect.objectContaining({ cursor: 0, exhausted: true }) }),

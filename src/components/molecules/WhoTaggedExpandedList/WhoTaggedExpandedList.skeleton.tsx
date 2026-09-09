@@ -1,7 +1,8 @@
 'use client';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
-import { POST_TAGS_PER_PAGE } from '@/config/tags';
+
+const VISIBLE_TAGGER_ROWS = 3;
 
 export function WhoTaggedExpandedListSkeleton() {
   return (
@@ -12,7 +13,7 @@ export function WhoTaggedExpandedListSkeleton() {
       className="flex max-h-(--who-tagged-expanded-list-max-height) w-full max-w-(--who-tagged-expanded-list-width) flex-col gap-2 overflow-y-auto rounded-md border border-border bg-popover p-4 shadow-2xl"
       data-testid="who-tagged-expanded-list-skeleton"
     >
-      {Array.from({ length: POST_TAGS_PER_PAGE }).map((_, index) => (
+      {Array.from({ length: VISIBLE_TAGGER_ROWS }).map((_, index) => (
         <TaggerRowSkeleton key={`who-tagged-expanded-list-skeleton-row-${index}`} />
       ))}
     </Container>

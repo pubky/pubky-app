@@ -51,16 +51,13 @@ vi.mock('@/molecules/Toaster/toast');
  *   - TagCacheController.get → tagsValue
  *   - PostController.getCounts → countsValue
  *
- * The mapping is based on the query factory function content rather than call
- * order, so the mock stays correct even if a future change reorders or adds
- * additional useLiveQuery calls in the hook.
+ * Tag observations depend on ID and kind; counts depend only on ID.
+ * Route by those query dependencies without inspecting function source text.
  */
 function setupLiveQueryMock(tagsValue: { tags: NexusTag[] } | undefined, countsValue: unknown) {
-  vi.mocked(useLiveQuery).mockImplementation((queryFn) => {
-    const fnStr = queryFn.toString();
-    if (fnStr.includes('TagCacheController'))
-      return tagsValue ? { id: 'author:post123', tags: tagsValue.tags } : undefined;
-    if (fnStr.includes('getCounts')) return countsValue;
+  vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => {
+    if (deps?.length === 2) return tagsValue ? { id: 'author:post123', tags: tagsValue.tags } : undefined;
+    if (deps?.length === 1) return countsValue;
     return undefined;
   });
 }
@@ -91,7 +88,7 @@ describe('usePostTags', () => {
     setupLiveQueryMock({ tags: [{ label: 'cached', taggers: [], taggers_count: 1, relationship: false }] }, null);
     vi.mocked(PostController.getCounts).mockRejectedValueOnce(new Error('IndexedDB unavailable'));
     const { result } = renderHook(() => usePostTags('author:post123'));
-    const query = vi.mocked(useLiveQuery).mock.calls.find(([query]) => query.toString().includes('getCounts'))![0];
+    const query = vi.mocked(useLiveQuery).mock.calls.find(([, deps]) => deps?.length === 1)![0];
     await expect(query()).resolves.toBeNull();
     expect(result.current.tags.map((tag) => tag.label)).toEqual(['cached']);
     expect(result.current.hasMore).toBe(false);
@@ -361,9 +358,8 @@ describe('usePostTags', () => {
       ];
 
       let liveTags = [...existingTags];
-      vi.mocked(useLiveQuery).mockImplementation((queryFn) => {
-        const fnStr = queryFn.toString();
-        if (fnStr.includes('TagCacheController')) return { id: 'author:post123', tags: liveTags };
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => {
+        if (deps?.length === 2) return { id: 'author:post123', tags: liveTags };
         return undefined;
       });
 
@@ -394,9 +390,8 @@ describe('usePostTags', () => {
       let liveTags: Array<{ label: string; taggers_count: number; taggers: string[]; relationship: boolean }> = [
         { label: 'alpha', taggers_count: 5, taggers: ['other-1'], relationship: false },
       ];
-      vi.mocked(useLiveQuery).mockImplementation((queryFn) => {
-        const fnStr = queryFn.toString();
-        if (fnStr.includes('TagCacheController')) return { id: 'author:post123', tags: liveTags };
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => {
+        if (deps?.length === 2) return { id: 'author:post123', tags: liveTags };
         return undefined;
       });
 
@@ -455,9 +450,8 @@ describe('usePostTags', () => {
         { label: 'alpha', taggers_count: 5, taggers: ['other-1'], relationship: false },
         { label: 'beta', taggers_count: 4, taggers: ['other-2'], relationship: false },
       ];
-      vi.mocked(useLiveQuery).mockImplementation((queryFn) => {
-        const fnStr = queryFn.toString();
-        if (fnStr.includes('TagCacheController')) return { id: 'author:post123', tags: liveTags };
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => {
+        if (deps?.length === 2) return { id: 'author:post123', tags: liveTags };
         return undefined;
       });
 

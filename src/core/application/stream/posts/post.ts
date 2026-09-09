@@ -722,7 +722,7 @@ export class PostStreamApplication {
     };
   }
 
-  static async fetchMissingPostAuthors({ posts, viewerId, isCurrent }: TFetchMissingUsersParams) {
+  private static async fetchMissingPostAuthors({ posts, viewerId, isCurrent }: TFetchMissingUsersParams) {
     const cacheMissUserIds = await this.getNotPersistedUsersInCache(posts.map((post) => post.details.author));
     if (cacheMissUserIds.length > 0) {
       if (isCurrent && !isCurrent()) return;

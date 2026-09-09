@@ -1,5 +1,5 @@
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import { getTagMembership, getTagMutationEntries } from '@/models/shared/tag/tag.utils';
+import { findTagMutation, getTagMembership, getTagMutationEntries } from '@/models/shared/tag/tag.utils';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
 /** Reconcile server evidence and pending local writes; pagination can retain earlier pages. */
@@ -10,6 +10,8 @@ export function reconcileTagWindow(
   viewerId?: string,
   options: { append?: boolean; complete?: boolean } = {},
 ) {
+  const remoteTags = new Map(incoming.map((tag) => [tag.label.toLowerCase(), tag]));
+  const localTags = new Map(existing?.tags.map((tag) => [tag.label.toLowerCase(), tag]));
   const tags = new Map(
     [...(options.append ? (existing?.tags ?? []) : []), ...incoming].map((tag) => [tag.label.toLowerCase(), tag]),
   );
@@ -17,35 +19,41 @@ export function reconcileTagWindow(
   for (const { key, label, mutation } of getTagMutationEntries(existing)) {
     // A replacement retires expired intent along with the optimistic window.
     // An append still retains earlier pages, so preserve pending rollback ownership.
-    if (mutation.expiresAt <= now && (mutation.synced !== false || !options.append)) continue;
-    const remote = incoming.find((tag) => tag.label.toLowerCase() === label);
+    if (mutation.expiresAt <= now && (mutation.synced || !options.append)) continue;
+    const remote = remoteTags.get(label);
     const acknowledged = remote
       ? getTagMembership(remote, mutation.viewerId, viewerId)
       : options.complete
         ? false
         : undefined;
-    if (mutation.synced !== false && acknowledged === mutation.relationship) continue;
+    if (mutation.synced && acknowledged === mutation.relationship) continue;
     mutations[key] = mutation;
     if (mutation.expiresAt <= now) continue;
 
+    const local = localTags.get(label);
+    if (!remote && local && !options.complete) {
+      // Retained rows already contain every local edit. Project membership without
+      // applying the same count deltas again. A complete response uses server absence.
+      const viewerMutation = viewerId ? findTagMutation(existing, label, viewerId) : undefined;
+      const relationship = !viewerId
+        ? false
+        : viewerMutation && viewerMutation.expiresAt > now
+          ? viewerMutation.relationship
+          : existing?.cache?.viewerId === undefined
+            ? local.relationship
+            : (getTagMembership(local, viewerId, existing.cache.viewerId) ?? false);
+      tags.set(label, { ...local, relationship });
+      continue;
+    }
     const tag = tags.get(label);
     if (!tag) {
       if (mutation.relationship) {
-        const local = existing?.tags.find((item) => item.label.toLowerCase() === label);
-        tags.set(
-          label,
-          local
-            ? {
-                ...local,
-                relationship: mutation.viewerId === viewerId,
-              }
-            : {
-                label: mutation.label ?? label,
-                taggers: [mutation.viewerId],
-                taggers_count: 1,
-                relationship: mutation.viewerId === viewerId,
-              },
-        );
+        tags.set(label, {
+          label: mutation.label,
+          taggers: [mutation.viewerId],
+          taggers_count: 1,
+          relationship: mutation.viewerId === viewerId,
+        });
       }
       continue;
     }

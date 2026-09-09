@@ -4,11 +4,10 @@ export interface TagMutation {
   viewerId: string;
   relationship: boolean;
   expiresAt: number;
-  /** Optional only on legacy rows written before mutation identities existed. */
-  id?: string;
-  label?: string;
+  id: string;
+  label: string;
   /** Pending ownership survives expiry until settlement or replacement of the cached window. */
-  synced?: boolean;
+  synced: boolean;
 }
 
 export interface TagCollectionModelSchema<Id> {

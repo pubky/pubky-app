@@ -20,7 +20,7 @@ export function getTagMembership(
 export function getTagMutationEntries(record: TagCollectionModelSchema<unknown> | null | undefined) {
   return Object.entries(record?.mutations ?? {}).map(([key, mutation]) => ({
     key,
-    label: (mutation.label ?? key).toLowerCase(),
+    label: mutation.label.toLowerCase(),
     mutation,
   }));
 }

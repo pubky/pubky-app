@@ -89,6 +89,61 @@ describe('useTagged', () => {
     mockMocks.mockTagDelete.mockResolvedValue(undefined);
   });
 
+  it.each([false, true])('ignores an old add completion after revisiting the profile (failed=%s)', async (failed) => {
+    const pending = Promise.withResolvers<void>();
+    mockMocks.mockTagCreate.mockReturnValueOnce(pending.promise);
+    const { result, rerender } = renderHook((id: string) => useTagged(id), { initialProps: mockUserId });
+    let action!: ReturnType<typeof result.current.handleTagAdd>;
+    act(() => {
+      action = result.current.handleTagAdd('bitcoin');
+    });
+    rerender('another-profile');
+    rerender(mockUserId);
+
+    await act(async () => {
+      if (failed)
+        pending.reject(
+          Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Unavailable', {
+            service: ErrorService.Nexus,
+            operation: 'createTag',
+          }),
+        );
+      else pending.resolve();
+      expect(await action).toEqual({ success: false });
+    });
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('does not remove a new profile placeholder when an old removal rolls back', async () => {
+    const pending = Promise.withResolvers<void>();
+    const tag = { label: 'bitcoin', taggers: ['mock-current-user'], taggers_count: 1, relationship: true };
+    mockLocalTags = [tag];
+    mockMocks.mockTagDelete.mockReturnValueOnce(pending.promise);
+    const { result, rerender } = renderHook((id: string) => useTagged(id), { initialProps: mockUserId });
+    let previous!: Promise<void>;
+    act(() => {
+      previous = result.current.handleTagToggle(tag);
+    });
+    rerender('another-profile');
+    await act(() => result.current.handleTagToggle(tag));
+    mockLocalTags = [];
+    rerender('another-profile');
+    expect(result.current.tags).toEqual([expect.objectContaining({ label: 'bitcoin', taggers_count: 0 })]);
+    vi.mocked(toast).mockClear();
+
+    await act(async () => {
+      pending.reject(
+        Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Unavailable', {
+          service: ErrorService.Nexus,
+          operation: 'deleteTag',
+        }),
+      );
+      await previous;
+    });
+    expect(result.current.tags).toEqual([expect.objectContaining({ label: 'bitcoin', taggers_count: 0 })]);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
   it('returns empty data when userId is null', () => {
     const { result } = renderHook(() => useTagged(null));
     expect(result.current.tags).toHaveLength(0);

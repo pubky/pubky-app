@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import type { TaggersState, UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import type { TaggedItemProps, TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import { TaggedList } from './TaggedList';
 
@@ -83,10 +84,36 @@ const mockTags: TagWithAvatars[] = [
 
 const mockOnTagToggle = vi.fn();
 
+vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({ useInfiniteScroll: vi.fn() }));
+const resumeAutoLoad = vi.fn();
+
 describe('TaggedList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockTaggerStates.clear();
+    vi.mocked(useInfiniteScroll).mockReturnValue({ sentinelRef: vi.fn(), isStalled: false, resumeAutoLoad });
+  });
+
+  it('limits automatic pages without new tags and offers manual loading when stalled', () => {
+    vi.mocked(useInfiniteScroll).mockReturnValue({ sentinelRef: vi.fn(), isStalled: true, resumeAutoLoad });
+    const onLoadMore = vi.fn();
+    render(<TaggedList tags={mockTags} hasMore onLoadMore={onLoadMore} onTagToggle={mockOnTagToggle} />);
+
+    expect(useInfiniteScroll).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemCount: mockTags.length,
+        maxUnproductiveLoads: 1,
+        onLoadMore,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    expect(resumeAutoLoad).toHaveBeenCalledOnce();
+  });
+
+  it('disables manual loading while a page is pending', () => {
+    vi.mocked(useInfiniteScroll).mockReturnValue({ sentinelRef: vi.fn(), isStalled: true, resumeAutoLoad });
+    render(<TaggedList tags={mockTags} hasMore isLoadingMore onTagToggle={mockOnTagToggle} />);
+    expect(screen.getByRole('button', { name: 'Load more' })).toBeDisabled();
   });
 
   it('renders all tags', () => {

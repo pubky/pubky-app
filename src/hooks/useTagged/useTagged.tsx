@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TagKind } from '@/application/tag/tag.types';
 import { TagController } from '@/controllers/tag/tag';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
@@ -44,10 +44,15 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
     loadMore: loadNextPage,
   } = useTagCache('user', userId, viewerId);
   const localTags = record?.tags;
+  const viewRevision = useRef(0);
 
   useEffect(() => {
+    viewRevision.current += 1;
     setZeroTaggerTags(new Map());
     setTagOrder(new Map());
+    return () => {
+      viewRevision.current += 1;
+    };
   }, [userId, viewerId]);
 
   // Update tag order map when localTags change (only for new tags)
@@ -104,6 +109,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
   const handleTagAdd = useCallback(
     async (tagString: string): Promise<{ success: boolean; error?: string }> => {
+      const revision = viewRevision.current;
       const label = tagString.trim();
 
       if (!label) return { success: false, error: 'Tag label cannot be empty' };
@@ -126,6 +132,8 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           taggedKind: TagKind.USER,
         });
 
+        if (viewRevision.current !== revision) return { success: false };
+
         // Remove from zero-tagger list if it was there
         const labelLower = label.toLowerCase();
         setZeroTaggerTags((prev) => {
@@ -139,6 +147,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         });
         return { success: true };
       } catch {
+        if (viewRevision.current !== revision) return { success: false };
         toast({
           variant: 'error',
           description: 'Could not add tag',
@@ -151,6 +160,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
   const handleTagToggle = useCallback(
     async (tag: { label: string; relationship?: boolean }): Promise<void> => {
+      const revision = viewRevision.current;
       if (!userId || !viewerId) return;
 
       const currentTagIndex = allTags.findIndex((t) => t.label === tag.label);
@@ -188,12 +198,16 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           // TagController.commitDelete updates IndexedDB first and rolls back on homeserver failure.
           await TagController.commitDelete(params);
 
+          if (viewRevision.current !== revision) return;
+
           toast({
             title: 'Tag removed',
           });
         } else {
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
           await TagController.commitCreate(params);
+
+          if (viewRevision.current !== revision) return;
 
           // Remove from zero-tagger list
           setZeroTaggerTags((prev) => {
@@ -207,6 +221,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
         }
       } catch {
+        if (viewRevision.current !== revision) return;
         // Rollback zero-tagger state on error
         if (userIsTagger) {
           setZeroTaggerTags((prev) => {
@@ -240,7 +255,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
     count: enableStats ? stats.uniqueTags : 0,
     isLoading,
     isLoadingMore,
-    hasMore: enablePagination ? hasMore : false,
+    hasMore,
     loadMore,
     handleTagAdd,
     handleTagToggle,

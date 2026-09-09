@@ -31,7 +31,7 @@ export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<
         getTagMutationEntries(this)
           .filter(
             (entry) =>
-              (entry.mutation.expiresAt > now || entry.mutation.synced === false) &&
+              (entry.mutation.expiresAt > now || !entry.mutation.synced) &&
               !(entry.label === label.toLowerCase() && entry.mutation.viewerId === viewerId),
           )
           .map(({ key, mutation }) => [key, mutation]),
