@@ -10,6 +10,9 @@ export const homegateQueryClient = createQueryClient({
   retry: {
     nonRetryable: [ValidationErrorCode.INVALID_INPUT],
     limits: {
+      // A single retry after the 429 backoff floor; the shared 429 branch in
+      // query-client.factory applies here too, so make it explicit.
+      rateLimited: 1,
       serverError: 3,
       default: 3,
     },

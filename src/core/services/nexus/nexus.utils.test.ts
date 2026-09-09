@@ -6,15 +6,7 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { mockResponse } from '@/test-utils/dom';
 import { asOpaque } from '@/test-utils/type-assertions';
-import {
-  buildCdnUrl,
-  buildNexusUrl,
-  buildUrlWithQuery,
-  clearInFlightQueriesForTest,
-  createFetchOptions,
-  queryNexus,
-  queryNexusDeduped,
-} from './nexus.utils';
+import { buildCdnUrl, buildNexusUrl, buildUrlWithQuery, createFetchOptions, queryNexus } from './nexus.utils';
 
 describe('nexus.utils', () => {
   describe('buildNexusUrl', () => {
@@ -156,6 +148,28 @@ describe('nexus.utils', () => {
       expect(mockFetch).toHaveBeenCalledWith(url, expect.objectContaining({ method: 'POST', body }));
     });
 
+    it('keeps the default cache policy for callers that do not override it', async () => {
+      mockFetch.mockResolvedValue(createMockResponse({ text: vi.fn().mockResolvedValue('{"version":1}') }));
+      const params = { url: 'https://example.com/api/cached' };
+
+      await queryNexus(params);
+      await queryNexus(params);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('revalidates stale pages while sharing concurrent requests', async () => {
+      mockFetch.mockResolvedValueOnce(createMockResponse({ text: vi.fn().mockResolvedValue('{"version":1}') }));
+      const params = { url: 'https://example.com/api/revalidate', staleTime: 0 };
+      expect(await queryNexus(params)).toEqual({ version: 1 });
+      mockFetch.mockResolvedValueOnce(createMockResponse({ text: vi.fn().mockResolvedValue('{"version":2}') }));
+
+      const results = await Promise.all([queryNexus(params), queryNexus(params)]);
+
+      expect(results).toEqual([{ version: 2 }, { version: 2 }]);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
     it('should throw server error for empty response', async () => {
       const url = 'https://example.com/api/test3';
       mockFetch.mockResolvedValueOnce(createMockResponse({ status: 204, text: vi.fn().mockResolvedValue('') }));
@@ -180,71 +194,5 @@ describe('nexus.utils', () => {
         code: ClientErrorCode.BAD_REQUEST,
       });
     });
-  });
-});
-
-describe('queryNexusDeduped', () => {
-  const mockFetch = vi.fn();
-  const createMockResponse = (overrides: Record<string, unknown> = {}) => ({
-    ok: true,
-    status: 200,
-    headers: { get: vi.fn() },
-    text: vi.fn().mockResolvedValue(''),
-    ...overrides,
-  });
-
-  beforeEach(async () => {
-    clearInFlightQueriesForTest();
-    vi.clearAllMocks();
-    global.fetch = asOpaque<typeof fetch>(mockFetch);
-  });
-
-  it('coalesces concurrent identical requests into one fetch and removes the entry on settle', async () => {
-    const url = 'https://example.com/api/batch';
-    const body = JSON.stringify({ ids: ['a', 'b'] });
-    let resolveFetch!: (value: unknown) => void;
-    const pending = new Promise((resolve) => {
-      resolveFetch = resolve;
-    });
-    mockFetch.mockReturnValueOnce(pending);
-
-    const p1 = queryNexusDeduped({ url, method: HttpMethod.POST, body });
-    const p2 = queryNexusDeduped({ url, method: HttpMethod.POST, body });
-
-    // Second concurrent caller must share the first's promise: only one fetch.
-    resolveFetch(createMockResponse({ text: vi.fn().mockResolvedValue(JSON.stringify({ ok: true })) }));
-    const [r1, r2] = await Promise.all([p1, p2]);
-    expect(r1).toEqual({ ok: true });
-    expect(r2).toEqual({ ok: true });
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-
-    // Within TanStack's staleTime a settled success is served from the query
-    // cache regardless of the dedupe map; the map's own removal is exercised
-    // by the rejection test below (errors are never cached).
-  });
-
-  it('starts a fresh request after a rejection (no poisoned entries)', async () => {
-    const url = 'https://example.com/api/batch-fail';
-    const body = JSON.stringify({ ids: ['x'] });
-
-    // 400 is non-retryable in the nexus client config, so it rejects immediately
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      statusText: 'Bad Request',
-      headers: { get: vi.fn() },
-      text: vi.fn().mockResolvedValue(''),
-    });
-    await expect(queryNexusDeduped({ url, method: HttpMethod.POST, body })).rejects.toMatchObject({
-      category: ErrorCategory.Client,
-      code: ClientErrorCode.BAD_REQUEST,
-    });
-
-    mockFetch.mockResolvedValueOnce(
-      createMockResponse({ text: vi.fn().mockResolvedValue(JSON.stringify({ recovered: true })) }),
-    );
-    const r = await queryNexusDeduped({ url, method: HttpMethod.POST, body });
-    expect(r).toEqual({ recovered: true });
-    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

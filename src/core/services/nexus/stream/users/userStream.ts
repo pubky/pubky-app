@@ -4,7 +4,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUser, NexusUserIdsStream } from '@/services/nexus/nexus.types';
-import { queryNexus, queryNexusDeduped } from '@/services/nexus/nexus.utils';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import { userStreamApi } from '@/services/nexus/stream/users/userStream.api';
 import type {
   TFetchUserStreamParams,
@@ -79,9 +79,9 @@ export class NexusUserStreamService {
       return [];
     }
     const { url } = userStreamApi.usersByIds(params);
-    // Deduped: racing caller of the rate-limited by_ids endpoint (PUBKY-APP-B3).
-    // Canonicalize (sorted user_ids) so identical batches coalesce.
-    return await queryNexusDeduped<NexusUser[]>({
+    // Canonicalize (sorted user_ids) so identical concurrent batches coalesce in
+    // the query cache instead of racing the rate-limited by_ids endpoint (B3).
+    return await queryNexus<NexusUser[]>({
       url,
       method: HttpMethod.POST,
       body: JSON.stringify({

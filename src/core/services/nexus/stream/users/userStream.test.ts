@@ -540,3 +540,42 @@ describe('NexusUserStreamService.fetch', () => {
     });
   });
 });
+
+describe('NexusUserStreamService.fetchByIds', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('sorts user_ids in the request body so identical batches coalesce (B3)', async () => {
+    const mockUsers = [{ details: { id: 'user1' } } as never];
+    const queryNexusSpy = vi.mocked(queryNexus).mockResolvedValue(mockUsers);
+
+    const result = await NexusUserStreamService.fetchByIds({
+      user_ids: ['zuser', 'auser', 'muser'] as Pubky[],
+    });
+
+    expect(queryNexusSpy).toHaveBeenCalledTimes(1);
+    expect(queryNexusSpy).toHaveBeenCalledWith({
+      url: expect.stringContaining('/stream/users/by_ids'),
+      method: 'POST',
+      body: JSON.stringify({ user_ids: ['auser', 'muser', 'zuser'] }),
+    });
+    expect(result).toEqual(mockUsers);
+  });
+
+  it('keeps viewer_id alongside the sorted user_ids', async () => {
+    const mockUsers = [{ details: { id: 'user1' } } as never];
+    const queryNexusSpy = vi.mocked(queryNexus).mockResolvedValue(mockUsers);
+
+    await NexusUserStreamService.fetchByIds({
+      user_ids: ['zuser', 'auser'] as Pubky[],
+      viewer_id: 'viewer' as Pubky,
+    });
+
+    expect(queryNexusSpy).toHaveBeenCalledWith({
+      url: expect.stringContaining('/stream/users/by_ids'),
+      method: 'POST',
+      body: JSON.stringify({ user_ids: ['auser', 'zuser'], viewer_id: 'viewer' }),
+    });
+  });
+});

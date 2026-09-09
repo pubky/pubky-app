@@ -3,7 +3,7 @@ import { AppError } from '@/libs/error/error';
 import type { Pubky } from '@/models/models.types';
 import { buildContentSearchStreamId, type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { type NexusPost, type NexusPostsKeyStream, StreamSorting } from '@/services/nexus/nexus.types';
-import { queryNexus, queryNexusDeduped } from '@/services/nexus/nexus.utils';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import {
   StreamSource,
   type TPostStreamFetchParams,
@@ -29,12 +29,10 @@ vi.mock('@/services/nexus/nexus.utils', async (importOriginal) => {
   return {
     ...actual,
     queryNexus: vi.fn(),
-    queryNexusDeduped: vi.fn(),
   };
 });
 
 const mockQueryNexus = vi.mocked(queryNexus);
-const mockQueryNexusDeduped = vi.mocked(queryNexusDeduped);
 
 function callStreamEndpoint(
   endpoint: keyof typeof postStreamApi,
@@ -1477,7 +1475,7 @@ describe('NexusPostStreamService', () => {
         { details: { id: 'post2', author: 'author1' } } as NexusPost,
         { details: { id: 'post3', author: 'author2' } } as NexusPost,
       ];
-      const dedupeSpy = mockQueryNexusDeduped.mockResolvedValue(mockPosts);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockPosts);
 
       // Act
       const result = await NexusPostStreamService.fetchByIds({
@@ -1486,16 +1484,11 @@ describe('NexusPostStreamService', () => {
       });
 
       // Assert
-      expect(dedupeSpy).toHaveBeenCalledTimes(1);
-      expect(dedupeSpy).toHaveBeenCalledWith({
+      expect(queryNexusSpy).toHaveBeenCalledTimes(1);
+      expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringContaining('/stream/posts/by_ids'),
         method: 'POST',
-        // post_ids are sorted for in-flight dedupe canonicalization
-        body: JSON.stringify({
-          post_ids: [...mockPostIds].sort(),
-          include_attachment_metadata: true,
-          viewer_id: mockViewerId,
-        }),
+        body: JSON.stringify({ post_ids: mockPostIds, include_attachment_metadata: true, viewer_id: mockViewerId }),
       });
       expect(result).toEqual(mockPosts);
     });
@@ -1504,13 +1497,13 @@ describe('NexusPostStreamService', () => {
       // Arrange
       const mockPostIds = ['author1:post1'];
       const mockPosts: NexusPost[] = [{ details: { id: 'post1', author: 'author1' } } as NexusPost];
-      const dedupeSpy = mockQueryNexusDeduped.mockResolvedValue(mockPosts);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockPosts);
 
       // Act
       const result = await NexusPostStreamService.fetchByIds({ post_ids: mockPostIds });
 
       // Assert
-      expect(dedupeSpy).toHaveBeenCalledWith({
+      expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringContaining('/stream/posts/by_ids'),
         method: 'POST',
         body: JSON.stringify({ post_ids: mockPostIds, include_attachment_metadata: true }),
@@ -1520,13 +1513,13 @@ describe('NexusPostStreamService', () => {
 
     it('should return empty array when fetching empty post IDs', async () => {
       // Arrange
-      const dedupeSpy = mockQueryNexusDeduped.mockResolvedValue([]);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
 
       // Act
       const result = await NexusPostStreamService.fetchByIds({ post_ids: [] });
 
       // Assert
-      expect(dedupeSpy).toHaveBeenCalledWith({
+      expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringContaining('/stream/posts/by_ids'),
         method: 'POST',
         body: JSON.stringify({ post_ids: [], include_attachment_metadata: true }),

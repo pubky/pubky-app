@@ -81,13 +81,14 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
       // grow exponentially) and only retry once — retrying fast into the same
       // burst amplifies the spike (Sentry PUBKY-APP-B3). Honor the server's
       // Retry-After hint when present (the HTTP error factory parses it into
-      // context.retryAfter, in seconds); the configured backoff is the fallback.
+      // context.retryAfter, in seconds), clamped between the 2s floor and the
+      // configured max; the configured backoff is the fallback.
       if (statusCode === HttpStatusCode.TOO_MANY_REQUESTS) {
         const retryAfterSeconds = getRetryAfter(error);
         if (retryAfterSeconds !== undefined) {
-          return Math.max(retryAfterSeconds * 1_000, 2_000);
+          return Math.min(Math.max(retryAfterSeconds * 1_000, 2_000), delays.default.max);
         }
-        return Math.max(2_000, Math.min(delays.default.initial * 4 ** attemptIndex, delays.default.max));
+        return Math.max(2_000, Math.min(delays.default.initial * 2 ** attemptIndex, delays.default.max));
       }
 
       // 404: Use notFound delays if configured
@@ -114,7 +115,8 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
         gcTime,
       },
       mutations: {
-        // Mutations are user actions, not fetch bursts: never blind-retry them.
+        // Mutations are user actions: never blind-retry them (explicit over
+        // TanStack's default of 0 so the intent is visible and enforced).
         retry: false,
       },
     },

@@ -14,6 +14,9 @@ export const exchangerateQueryClient = createQueryClient({
     // NOT_FOUND: BTCUSD ticker missing - permanent failure
     nonRetryable: [ServerErrorCode.INVALID_RESPONSE, ClientErrorCode.NOT_FOUND],
     limits: {
+      // A single retry after the 429 backoff floor; the shared 429 branch in
+      // query-client.factory applies here too, so make it explicit.
+      rateLimited: 1,
       serverError: 3,
       default: 3,
     },

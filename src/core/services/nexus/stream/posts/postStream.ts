@@ -3,10 +3,10 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { NexusPostsKeyStream, NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
-import { queryNexus, queryNexusDeduped } from '@/services/nexus/nexus.utils';
+import { queryNexus } from '@/services/nexus/nexus.utils';
 import { searchApi } from '@/services/nexus/search/search.api';
 import type { TContentSearchResult } from '@/services/nexus/search/search.types';
-import { buildPostStreamBodyUrl, postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
+import { postStreamApi } from '@/services/nexus/stream/posts/postStream.api';
 import {
   StreamSource,
   type TPostStreamFetchParams,
@@ -31,15 +31,11 @@ export class NexusPostStreamService {
    * @returns Array of posts
    */
   static async fetchByIds(params: TStreamPostsByIdsParams): Promise<NexusPostWithAttachmentMetadata[]> {
-    // Deduped: this endpoint is the hottest racing caller (Sentry PUBKY-APP-B3).
-    // Reuse the shared body builder (include_attachment_metadata default) and
-    // canonicalize post_ids (sorted) so semantically identical batches share
-    // one in-flight request regardless of caller ordering.
-    const { url } = postStreamApi.postsByIds({ ...params, post_ids: [...params.post_ids].sort() });
-    return await queryNexusDeduped<NexusPostWithAttachmentMetadata[]>({
+    const { url, body } = postStreamApi.postsByIds(params);
+    return await queryNexus<NexusPostWithAttachmentMetadata[]>({
       url,
       method: HttpMethod.POST,
-      body: JSON.stringify(buildPostStreamBodyUrl({ ...params, post_ids: [...params.post_ids].sort() })),
+      body: JSON.stringify(body),
     });
   }
 
