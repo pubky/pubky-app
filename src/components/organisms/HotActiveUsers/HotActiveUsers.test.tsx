@@ -9,14 +9,12 @@ const hooksMocks = vi.hoisted(() => ({
 }));
 
 const mockUseMutedUsers = vi.hoisted(() =>
-  vi.fn(
-    (): UseMutedUsersResult => ({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: (_userId: Pubky) => false,
-      isLoading: false,
-    }),
-  ),
+  vi.fn((): UseMutedUsersResult => ({
+    mutedUserIds: [],
+    mutedUserIdSet: new Set(),
+    isMuted: (_userId: Pubky) => false,
+    isLoading: false,
+  })),
 );
 
 vi.mock('next/navigation', () => ({
@@ -96,25 +94,21 @@ describe('HotActiveUsers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hooksMocks.useUserStream.mockReset();
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: [],
-        mutedUserIdSet: new Set(),
-        isMuted: (_userId: Pubky) => false,
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: [],
+      mutedUserIdSet: new Set(),
+      isMuted: (_userId: Pubky) => false,
+      isLoading: false,
+    }));
   });
 
   it('hides muted users from the active users list', () => {
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: ['muted-user'],
-        mutedUserIdSet: new Set(['muted-user']),
-        isMuted: (id: Pubky) => id === 'muted-user',
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: ['muted-user'],
+      mutedUserIdSet: new Set(['muted-user']),
+      isMuted: (id: Pubky) => id === 'muted-user',
+      isLoading: false,
+    }));
 
     hooksMocks.useUserStream.mockReturnValue({
       ...baseStreamResult,
@@ -133,14 +127,12 @@ describe('HotActiveUsers', () => {
   });
 
   it('shows empty state when every influencer is muted', () => {
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: ['only-user'],
-        mutedUserIdSet: new Set(['only-user']),
-        isMuted: (_userId: Pubky) => true,
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: ['only-user'],
+      mutedUserIdSet: new Set(['only-user']),
+      isMuted: (_userId: Pubky) => true,
+      isLoading: false,
+    }));
 
     hooksMocks.useUserStream.mockReturnValue({
       ...baseStreamResult,

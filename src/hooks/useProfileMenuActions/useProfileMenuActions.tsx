@@ -50,7 +50,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     icon: isFollowing ? UserRoundMinus : UserRoundPlus,
     onClick: async () => {
       // useFollowUser handles all feedback (toast + state) and never throws.
-      await toggleFollow(userId, isFollowing, profile?.name);
+      await toggleFollow(userId, isFollowing);
     },
     disabled: isFollowLoading || isUserLoading(userId),
   });
@@ -98,7 +98,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
       try {
         await toggleMute(userId, isUserMuted);
         toast({
-          title: isUserMuted ? `${username} unmuted` : `${username} muted`,
+          title: isUserMuted ? 'User unmuted' : 'User muted',
         });
       } catch (error) {
         toast({

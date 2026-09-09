@@ -42,6 +42,8 @@ export type TFetchNexusParams = {
  * @see queryNexus in nexus.utils.ts
  */
 export type TQueryNexusParams = {
+  /** Cache freshness in milliseconds; omit to use the shared default. */
+  staleTime?: number;
   /** Full API endpoint URL */
   url: string;
   /** HTTP method (defaults to GET) */

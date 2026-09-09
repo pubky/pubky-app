@@ -67,13 +67,17 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => ({
-  usePostTaggers: () => ({
-    taggersByLabel: new Map(),
-    taggerStates: new Map(),
-    fetchAllTaggers: vi.fn(),
-  }),
-}));
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  return {
+    ...actual,
+    useEntityTaggers: () => ({
+      taggerStates: new Map(),
+      loadTaggers: vi.fn(),
+      loadMoreTaggers: vi.fn(),
+    }),
+  };
+});
 
 vi.mock('@/molecules/UserInfoPopover/UserInfoPopover', () => ({
   UserInfoPopover: ({ children }: { children: React.ReactNode }) => (

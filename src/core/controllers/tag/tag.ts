@@ -1,9 +1,17 @@
 import { TagApplication } from '@/application/tag/tag';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+import type { TLocalTagMutation, TLocalTagParams } from '@/services/local/tag/tag.types';
 
 export class TagController {
+  static subscribeViewerMutations(listener: (params: TLocalTagMutation) => void) {
+    return TagApplication.subscribeViewerMutations(listener);
+  }
   private constructor() {}
+
+  static getViewerMutation(params: TLocalTagParams) {
+    return TagApplication.getViewerMutation(params);
+  }
 
   /**
    * Create a tag

@@ -8,6 +8,7 @@ import type {
 import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { TCacheUserStreamParams } from '@/services/local/stream/users/users.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
@@ -196,6 +197,17 @@ export class UserStreamApplication {
     if (cacheMissUserIds.length === 0) return;
 
     await this.fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId });
+  }
+
+  /**
+   * Read the cached user IDs of a stream from local database only (no network).
+   * Resolves to an empty array when the stream has never been cached.
+   *
+   * @param streamId - User stream identifier (e.g., 'user123:following')
+   */
+  static async getStreamUserIds(streamId: UserStreamId): Promise<Pubky[]> {
+    const cached = await LocalStreamUsersService.findById(streamId);
+    return cached?.stream ?? [];
   }
 
   /**

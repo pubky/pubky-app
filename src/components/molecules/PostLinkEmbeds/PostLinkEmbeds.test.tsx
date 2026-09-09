@@ -141,6 +141,14 @@ describe('PostLinkEmbeds', () => {
       expect(iframe).not.toHaveAttribute('enablejsapi');
     });
 
+    it('renders YouTube embed for a protocol-less URL', () => {
+      render(<PostLinkEmbeds content="Check out youtube.com/watch?v=dQw4w9WgXcQ" />);
+
+      const iframe = screen.getByTestId('YouTube video player');
+      expect(iframe).toBeInTheDocument();
+      expect(iframe).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
+    });
+
     it('renders YouTube embed for youtu.be URL', () => {
       render(<PostLinkEmbeds content="Watch this: https://youtu.be/dQw4w9WgXcQ" />);
 
