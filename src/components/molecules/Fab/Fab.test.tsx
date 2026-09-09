@@ -132,16 +132,16 @@ describe('Fab', () => {
     expect(button).toHaveAttribute('aria-label', 'New post');
   });
 
-  it('returns null while a collection is in reorder mode', () => {
+  it('hides the button while a collection is in reorder mode', () => {
     useCollectionReorderStore.setState({ activeCollectionId: 'author:collection123' });
-    const { container } = render(<Fab />);
-    expect(container.firstChild).toBeNull();
+    render(<Fab />);
+    expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
   });
 
   it('reappears when reorder mode exits', () => {
     useCollectionReorderStore.setState({ activeCollectionId: 'author:collection123' });
-    const { container } = render(<Fab />);
-    expect(container.firstChild).toBeNull();
+    render(<Fab />);
+    expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
 
     act(() => useCollectionReorderStore.getState().exit());
 
@@ -172,10 +172,10 @@ describe('Fab', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('returns null on onboarding routes even when fully authenticated', () => {
+  it('hides the button on onboarding routes even when fully authenticated', () => {
     mockUsePathname.mockReturnValue('/onboarding/tags');
-    const { container } = render(<Fab />);
-    expect(container.firstChild).toBeNull();
+    render(<Fab />);
+    expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
   });
 
   describe('createPost action', () => {
@@ -256,14 +256,21 @@ describe('Fab', () => {
   });
 
   describe('while the soft keyboard is visible', () => {
-    it('renders nothing so the button does not cover the text being typed', () => {
+    it('hides the button so it does not cover the text being typed, but keeps the dialog mounted', () => {
       mockUseKeyboardOffset.mockReturnValue({ isKeyboardVisible: true, keyboardOffset: 300 });
 
-      const { container } = render(<Fab />);
+      render(<Fab />);
 
-      expect(container).toBeEmptyDOMElement();
       expect(screen.queryByTestId('new-post-cta')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('dialog-new-post')).not.toBeInTheDocument();
+      // The dialog must survive: unmounting it with the button killed the open
+      // composer when its textarea raised the keyboard (focus loop, PR 2489 QA).
+      expect(screen.getByTestId('dialog-new-post')).toBeInTheDocument();
+    });
+
+    it('shows the button again once the keyboard closes', () => {
+      mockUseKeyboardOffset.mockReturnValue({ isKeyboardVisible: false, keyboardOffset: 0 });
+      render(<Fab />);
+      expect(screen.getByTestId('new-post-cta')).toBeInTheDocument();
     });
   });
 });

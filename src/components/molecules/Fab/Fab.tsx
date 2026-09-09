@@ -56,9 +56,11 @@ export function Fab() {
   const isOnboardingRoute = pathname?.startsWith('/onboarding') ?? false;
   // Show FAB for authenticated users OR unauthenticated users on public explore routes
   const shouldShow = isFullyAuthenticated || isPublicExploreRoute;
-  if (isLoading || !shouldShow || isReorderActive || isOnboardingRoute || isKeyboardVisible) {
-    return null;
-  }
+  // Hide only the button while the keyboard is open. The context dialogs stay
+  // mounted: they are this component's children, so unmounting the whole Fab
+  // (the old behavior) killed the open New Post dialog the moment its textarea
+  // raised the keyboard, dropped focus and closed the keyboard in a loop.
+  const showButton = !isLoading && shouldShow && !isReorderActive && !isOnboardingRoute && !isKeyboardVisible;
   const buttonClasses = cn(
     'fixed right-3 bottom-18 sm:right-10 md:bottom-20 lg:bottom-6',
     'size-20 rounded-full',
@@ -70,7 +72,7 @@ export function Fab() {
     'group cursor-pointer',
     'z-40',
   );
-  const button = (
+  const button = showButton ? (
     <Button
       data-cy="new-post-btn"
       overrideDefaults
@@ -81,14 +83,16 @@ export function Fab() {
     >
       <Plus className="size-10 transition-colors group-hover:text-black" strokeWidth={0.8} />
     </Button>
-  );
+  ) : null;
 
   // Unauthenticated: button only opens the sign-in dialog via requireAuth
   if (!isFullyAuthenticated) {
     return button;
   }
 
-  // Authenticated: render the button next to the context dialog it controls
+  // Authenticated: render the button next to the context dialog it controls.
+  // The dialog renders even while the button is hidden (keyboard open), so an
+  // open composer survives the keyboard lifecycle.
   return (
     <>
       {button}

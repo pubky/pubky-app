@@ -14,6 +14,7 @@ import { FULL_BLEED_GUTTER_CLASS } from '@/config/layoutClasses';
 import { FeedController } from '@/controllers/feed/feed';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useScrollDirection } from '@/hooks/useScrollDirection/useScrollDirection';
 import { useSelectedReachFilter } from '@/hooks/useSelectedReachFilter/useSelectedReachFilter';
 import { Logger } from '@/libs/logger/logger';
 import { preloadLucideIcons } from '@/libs/lucide/lucideIcons';
@@ -63,8 +64,15 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   // Below lg this strip is sticky chrome under the mobile header. Hide it while
   // the soft keyboard is open, like MobileHeader/MobileFooter/Fab do (#2286):
   // otherwise tapping the inline composer on Home / My network leaves the tab
-  // bar pinned over the text.
+  // bar pinned over the text. This component also hosts the custom-feed
+  // create/edit dialogs, so it must never unmount while the keyboard is open.
   const { isKeyboardVisible } = useKeyboardOffset();
+  // Track the same scroll signal MobileHeader uses: when the header hides on a
+  // downward scroll, nothing fills its 72px slot, so the strip sticks at
+  // `top-(--header-height-settings)` over an empty band ("strange gap to the
+  // top"). Move the sticky offset to the viewport top in that state.
+  const scrollDirection = useScrollDirection();
+  const isHeaderScrolledAway = scrollDirection === 'down';
   const [editingFeed, setEditingFeed] = useState<FeedModelSchema | null>(null);
   const customFeeds = useLiveQuery(
     async () => {
@@ -124,12 +132,6 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
     'cursor-pointer border-border text-muted-foreground hover:text-white',
   );
 
-  const isHidden = isKeyboardVisible;
-
-  if (isHidden) {
-    return null;
-  }
-
   return (
     <Container
       className={cn(
@@ -141,7 +143,12 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
         // The sticky chrome and gradient fade live on this non-scrolling
         // wrapper — on the scroll container itself the ::after fade would be
         // clipped into the scrollport and add phantom vertical scroll.
-        'mobile-menu-gradient-fade sticky top-(--header-height-settings) z-(--z-mobile-menu) bg-background',
+        'mobile-menu-gradient-fade sticky z-(--z-mobile-menu) bg-background',
+        // Stick under the mobile header by default; slide to the viewport top
+        // while the header is hidden by a downward scroll, so no empty band is
+        // left above the strip. Keyboard-open fully hides the strip below.
+        isHeaderScrolledAway ? 'top-0' : 'top-(--header-height-settings)',
+        isKeyboardVisible && 'invisible',
         'lg:static lg:top-auto lg:z-auto lg:bg-transparent lg:after:hidden',
         className,
       )}

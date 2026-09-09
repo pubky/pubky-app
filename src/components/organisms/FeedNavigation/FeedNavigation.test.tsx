@@ -20,6 +20,12 @@ vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
   })),
 }));
 
+// Scroll direction moves the strip's sticky offset when the header hides; controllable per test
+let mockScrollDirection: 'up' | 'down' | null = null;
+vi.mock('@/hooks/useScrollDirection/useScrollDirection', () => ({
+  useScrollDirection: vi.fn(() => mockScrollDirection),
+}));
+
 // Mock dexie-react-hooks — allow controlling useLiveQuery return value per test
 let mockCustomFeeds: FeedModelSchema[];
 let mockIsAuthenticated = true;
@@ -223,6 +229,7 @@ describe('FeedNavigation', () => {
     mockHomeState.taggedAsActive = false;
     mockHomeState.profileTags = [];
     mockIsKeyboardVisible = false;
+    mockScrollDirection = null;
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);
@@ -647,22 +654,40 @@ describe('FeedNavigation', () => {
     expect(row).toHaveClass('overflow-x-auto');
   });
 
-  it('unmounts while the soft keyboard is open so it stops covering the composer', () => {
+  it('hides via CSS while the soft keyboard is open so it stops covering the composer', () => {
     mockIsKeyboardVisible = true;
     render(<FeedNavigation />);
 
-    expect(screen.queryByText('All')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('custom-feed-dialog-create')).not.toBeInTheDocument();
+    // Stays mounted (it hosts the custom-feed dialogs) but visually hidden.
+    expect(screen.getByText('All')).toBeInTheDocument();
+    expect(screen.getAllByTestId('container')[0]).toHaveClass('invisible');
   });
 
-  it('returns when the keyboard closes', () => {
+  it('returns visible when the keyboard closes', () => {
     mockIsKeyboardVisible = true;
     const { rerender } = render(<FeedNavigation />);
-    expect(screen.queryByText('All')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('container')[0]).toHaveClass('invisible');
 
     mockIsKeyboardVisible = false;
     rerender(<FeedNavigation />);
-    expect(screen.getByText('All')).toBeInTheDocument();
+    expect(screen.getAllByTestId('container')[0]).not.toHaveClass('invisible');
+    expect(screen.getByText('All')).toBeVisible();
+  });
+
+  it('sticks under the mobile header by default, at the viewport top while the header is scrolled away', () => {
+    const { rerender } = render(<FeedNavigation />);
+    expect(screen.getAllByTestId('container')[0]).toHaveClass('top-(--header-height-settings)');
+    expect(screen.getAllByTestId('container')[0]).not.toHaveClass('top-0');
+
+    // Header hides on downward scroll: the strip must slide up with it, or an
+    // empty 72px band stays above it (the "strange gap").
+    mockScrollDirection = 'down';
+    rerender(<FeedNavigation />);
+    expect(screen.getAllByTestId('container')[0]).toHaveClass('top-0');
+
+    mockScrollDirection = 'up';
+    rerender(<FeedNavigation />);
+    expect(screen.getAllByTestId('container')[0]).toHaveClass('top-(--header-height-settings)');
   });
 
   it('renders tabs with Figma chrome classes', () => {
