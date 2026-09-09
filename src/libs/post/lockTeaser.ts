@@ -10,6 +10,22 @@ export type TLockTeaser = {
   teaser_description: string;
 };
 
+/** The read parser accepts any JSON object, so require a field of our own before the edit UI re-serializes the content. */
+export function isEditableLockTeaserContent(content: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(content);
+
+    return (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      !Array.isArray(parsed) &&
+      ('lock_title' in parsed || 'teaser_description' in parsed)
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Picks the two fields by name, so a new field is never published before we count its length. */
 export function buildLockTeaserContent({ lock_title, teaser_description }: TLockTeaser): string {
   return JSON.stringify({ lock_title, teaser_description });

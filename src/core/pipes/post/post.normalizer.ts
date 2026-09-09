@@ -198,22 +198,22 @@ export class PostNormalizer {
       }
     }
 
-    // TODO:[Locks] #2312 — this drops `lock`: the constructor cannot carry it (only the static
-    // `new_with_lock` can) and the local model never persisted it. Editing a lock announcement
-    // therefore unlinks its guarded content for good. Needs the `lock` field the reader adds (#2027).
-
     // `builder.editPost` swaps content only, so attachment/kind changes ride on
     // the reconstructed "original" post: it carries the *next* attachments and
     // kind, and `editPost` validates the result under the existing post id/URL.
     const nextAttachments =
       attachments === undefined ? postDetails.attachments : attachments && attachments.length > 0 ? attachments : null;
 
-    const originalPost = new PubkyAppPost(
+    // Everything but the content is carried over from this pre-edit post, so `lock` has to be on it —
+    // and `new_with_lock` is the only constructor that accepts one. Omit it and editing an
+    // announcement republishes it with no link to the paid content, unrecoverably.
+    const originalPost = PubkyAppPost.new_with_lock(
       postDetails.content,
       kind ?? this.mapKindToEnum(postDetails.kind),
       postRelationships?.replied ?? null,
       embedObject ?? null,
       nextAttachments,
+      postDetails.lock ?? null,
     );
 
     const result = builder.editPost(originalPost, postId, content);

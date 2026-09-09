@@ -2,9 +2,11 @@
 
 import { Dispatch, SetStateAction } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { LocksController } from '@/controllers/locks/locks';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
+import { isEditableLockTeaserContent } from '@/libs/post/lockTeaser';
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
@@ -25,9 +27,9 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
 
   if (!postDetails) return null;
 
-  // TODO:[Locks] #2312 — a lock announcement is `short`, so it misses this branch and its teaser
-  // envelope reaches the textarea as raw JSON. Needs a dedicated dialog once the post model carries
-  // `lock` (#2027) — collections route the same way.
+  const lockUrl = postDetails.lock;
+  const parsedTeaser = lockUrl ? LocksController.getLockContent(postDetails.content) : null;
+  const teaser = parsedTeaser && isEditableLockTeaserContent(postDetails.content) ? parsedTeaser : null;
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const title = isArticle ? 'Edit Article' : 'Edit Post';
 
@@ -50,9 +52,10 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           autoFocusTextarea={!isArticle}
           onContentChange={handleContentChange}
           editPostId={postDetails.id}
-          editContent={postDetails.content}
+          editContent={teaser ? teaser.teaser_description : postDetails.content}
           editIsArticle={isArticle}
           editAttachments={postDetails.attachments ?? []}
+          editLock={lockUrl && teaser ? { lockUrl, title: teaser.lock_title } : undefined}
           layoutOverride="inline"
         />
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}

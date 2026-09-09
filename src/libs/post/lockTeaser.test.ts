@@ -4,7 +4,7 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
-import { buildLockTeaserContent, isLockTeaserWithinLimit } from './lockTeaser';
+import { buildLockTeaserContent, isEditableLockTeaserContent, isLockTeaserWithinLimit } from './lockTeaser';
 
 const teaser = (lock_title: string, teaser_description: string) => ({ lock_title, teaser_description });
 
@@ -29,6 +29,21 @@ describe('buildLockTeaserContent', () => {
     const withExtra = { ...teaser('T', 'B'), cover_image: 'x'.repeat(500) };
 
     expect(buildLockTeaserContent(withExtra)).toBe(buildLockTeaserContent(teaser('T', 'B')));
+  });
+});
+
+describe('isEditableLockTeaserContent', () => {
+  it('accepts complete and partially populated pubky.app envelopes', () => {
+    expect(isEditableLockTeaserContent('{"lock_title":"Title","teaser_description":"Body"}')).toBe(true);
+    expect(isEditableLockTeaserContent('{"lock_title":""}')).toBe(true);
+    expect(isEditableLockTeaserContent('{"teaser_description":"Body"}')).toBe(true);
+  });
+
+  it('rejects content without a pubky.app envelope field', () => {
+    expect(isEditableLockTeaserContent('plain text')).toBe(false);
+    expect(isEditableLockTeaserContent('{"title":"Not a teaser"}')).toBe(false);
+    expect(isEditableLockTeaserContent('{}')).toBe(false);
+    expect(isEditableLockTeaserContent('42')).toBe(false);
   });
 });
 
