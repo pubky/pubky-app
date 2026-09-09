@@ -52,6 +52,37 @@ describe('generateMetadata', () => {
   const jsonResponse = (body: unknown) =>
     new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
+  it.each(['0032PARTQP4G0]', '0032PARTQP4G0%5D', '0032PARTQP4G0!', '0032PARTQP4G0%21', '[0032PARTQP4G0'])(
+    'returns fallback metadata without fetching for malformed post id %s',
+    async (postId) => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId }),
+      });
+
+      expect(metadata).toEqual({});
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+
+  it('fetches metadata for a raw author key starting with pubky', async () => {
+    const userId = `pubky${'o'.repeat(47)}`;
+    const postId = '0032PARTQP4G0';
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ id: userId, name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hello world' }));
+
+    const metadata = await generateMetadata({ params: Promise.resolve({ userId, postId }) });
+
+    expect(metadata.title).toBe('Alice on Pubky');
+    expect(metadata.alternates?.canonical).toBe(`/post/${userId}/${postId}`);
+    expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
+      `https://nexus.staging.pubky.app/v0/user/${userId}/details`,
+      `https://nexus.staging.pubky.app/v0/post/${userId}/${postId}/details`,
+    ]);
+  });
+
   it('canonicalizes collection-kind posts to /collections', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     fetchMock
@@ -116,20 +147,21 @@ describe('PostPage (collection redirect)', () => {
     vi.restoreAllMocks();
   });
 
-  it('permanently redirects a collection-kind post to /collections', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
-      .mockResolvedValueOnce(jsonResponse({ kind: 'collection', content: '{"name":"Art"}' }));
+  it.each(['o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', `pubky${'o'.repeat(47)}`])(
+    'permanently redirects a collection-kind post by %s to /collections',
+    async (userId) => {
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+        .mockResolvedValueOnce(jsonResponse({ kind: 'collection', content: '{"name":"Art"}' }));
 
-    await expect(
-      PostPage({
-        params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
-      }),
-    ).rejects.toThrow('NEXT_REDIRECT');
-    expect(permanentRedirect).toHaveBeenCalledWith(
-      '/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/post-1',
-    );
-  });
+      await expect(
+        PostPage({
+          params: Promise.resolve({ userId, postId: 'post-1' }),
+        }),
+      ).rejects.toThrow('NEXT_REDIRECT');
+      expect(permanentRedirect).toHaveBeenCalledWith(`/collections/${userId}/post-1`);
+    },
+  );
 
   it('renders the post (no redirect) for a non-collection post', async () => {
     vi.spyOn(globalThis, 'fetch')

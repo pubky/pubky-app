@@ -37,8 +37,8 @@ export function normalizeProfileId(raw: string): string | null {
 /**
  * Normalizes the user/post id pair of a post route param.
  * Returns `null` when either id cannot decode or is not usable: the user id
- * must be a valid pubky identifier and the post id must be non-empty with no
- * leading/trailing punctuation.
+ * must be a valid pubky identifier and the post id must start and end with an
+ * alphanumeric character.
  */
 export function normalizePostIds(rawUserId: string, rawPostId: string): { userId: string; postId: string } | null {
   const decodedUserId = safeDecode(rawUserId);
@@ -51,7 +51,7 @@ export function normalizePostIds(rawUserId: string, rawPostId: string): { userId
   const postId = decodedPostId.trim();
   // A post id is opaque to this layer (short id), but punctuation glued to it
   // by crawlers is never part of one. Mid-id characters stay untouched.
-  if (postId.length === 0 || /^[).\s, "']+|[).\s, "']+$/.test(postId)) return null;
+  if (postId.length === 0 || /^[^a-z0-9]|[^a-z0-9]$/i.test(postId)) return null;
 
   return { userId, postId };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { normalizePostIds, normalizeProfileId, safeDecode } from './routeIds';
 
 const VALID_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
+const PUBKY_STARTING_WITH_PREFIX = `pubky${'o'.repeat(47)}`;
 
 describe('safeDecode', () => {
   it('decodes percent-encoded segments', () => {
@@ -17,6 +18,10 @@ describe('safeDecode', () => {
 describe('normalizeProfileId', () => {
   it('accepts a valid pubky identifier', () => {
     expect(normalizeProfileId(VALID_PUBKY)).toBe(VALID_PUBKY);
+  });
+
+  it.each(['', 'pubky', 'pk%3A'])('preserves a raw key starting with pubky after the %s prefix', (prefix) => {
+    expect(normalizeProfileId(`${prefix}${PUBKY_STARTING_WITH_PREFIX}`)).toBe(PUBKY_STARTING_WITH_PREFIX);
   });
 
   it('decodes the segment before validating', () => {
@@ -38,11 +43,28 @@ describe('normalizeProfileId', () => {
 });
 
 describe('normalizePostIds', () => {
-  const POST_ID = '3nelqvaws4knxg6oyvffy7ctidxm1wpuh4udemtxyyy4zcsyjwgy';
+  const POST_ID = '0032PARTQP4G0';
 
   it('accepts a valid user/post pair', () => {
     expect(normalizePostIds(VALID_PUBKY, POST_ID)).toEqual({ userId: VALID_PUBKY, postId: POST_ID });
   });
+
+  it.each(['', 'pubky', 'pk%3A'])('preserves an author key starting with pubky after the %s prefix', (prefix) => {
+    expect(normalizePostIds(`${prefix}${PUBKY_STARTING_WITH_PREFIX}`, POST_ID)).toEqual({
+      userId: PUBKY_STARTING_WITH_PREFIX,
+      postId: POST_ID,
+    });
+  });
+
+  it.each([']', '[', '!', '?', ';', ':', '}', '{', '>', '<', '”', '’', '…'])(
+    'rejects leading and trailing %s, including encoded delimiters',
+    (delimiter) => {
+      for (const value of [delimiter, encodeURIComponent(delimiter)]) {
+        expect(normalizePostIds(VALID_PUBKY, `${value}${POST_ID}`)).toBeNull();
+        expect(normalizePostIds(VALID_PUBKY, `${POST_ID}${value}`)).toBeNull();
+      }
+    },
+  );
 
   it('rejects crawl-mangled variants: trailing dot, bracket, comma, quote', () => {
     expect(normalizePostIds(`${VALID_PUBKY}.`, POST_ID)).toBeNull();
