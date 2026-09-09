@@ -100,6 +100,27 @@ describe('UserStreamApplication', () => {
       expect(result.skip).toBeUndefined(); // Cache hit returns undefined skip
     });
 
+    it('should treat a stream cache hit as a user miss when details exist without a viewer relationship (#1803)', async () => {
+      const streamId = buildUserCompositeId({ userId: 'user-guest-cache' as Pubky, reach: 'followers' });
+      const cachedUserIds: Pubky[] = ['guest-follower-1', 'guest-follower-2', 'guest-follower-3'];
+
+      await LocalStreamUsersService.upsert({ streamId, stream: cachedUserIds });
+      await LocalStreamUsersService.persistUsers(cachedUserIds.map((id) => createMockNexusUser(id)));
+      const fetchSpy = vi.spyOn(NexusUserStreamService, 'fetch');
+
+      const result = await UserStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        skip: 0,
+        limit: 2,
+        viewerId: DEFAULT_VIEWER_ID,
+      });
+
+      expect(result.nextPageIds).toEqual(['guest-follower-1', 'guest-follower-2']);
+      expect(result.cacheMissUserIds).toEqual(['guest-follower-1', 'guest-follower-2']);
+      expect(result.skip).toBeUndefined();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
     it('should fetch from Nexus when cache is empty', async () => {
       const streamId = buildUserCompositeId({ userId: DEFAULT_USER_ID, reach: 'followers' });
       const mockUserIds: Pubky[] = ['follower-1', 'follower-2', 'follower-3'];

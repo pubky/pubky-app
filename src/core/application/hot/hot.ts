@@ -4,7 +4,6 @@ import { Logger } from '@/libs/logger/logger';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
 import type { Pubky } from '@/models/models.types';
 import { LocalHotService } from '@/services/local/hot/hot';
-import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { NexusHotService } from '@/services/nexus/hot/hot';
 import { type NexusHotTag, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
@@ -125,24 +124,13 @@ export class HotApplication {
    * @param viewerId - Signed-in viewer so persisted relationships are viewer-relative
    */
   private static async fetchUsersForTags(tags: NexusHotTag[], viewerId?: Pubky | null) {
-    // Extract all unique tagger IDs from tags
-    const allTaggerIds = [...new Set(tags.flatMap((tag) => tag.taggers_id))];
-    if (allTaggerIds.length === 0) {
+    const userIds = [...new Set(tags.flatMap((tag) => tag.taggers_id))];
+    if (userIds.length === 0) {
       return;
     }
 
-    // Check which users are not already in cache
-    const cacheMissUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(
-      allTaggerIds,
-      viewerId ?? undefined,
-    );
-    if (cacheMissUserIds.length === 0) {
-      return;
-    }
-
-    // Fetch only missing users
-    await UserStreamApplication.fetchMissingUsersFromNexus({
-      cacheMissUserIds,
+    await UserStreamApplication.getOrFetchUsers({
+      userIds,
       viewerId: viewerId ?? undefined,
     });
   }

@@ -7,7 +7,6 @@ import { Logger } from '@/libs/logger/logger';
 import type { HotTagsModel } from '@/models/hot/hot';
 import type { Pubky } from '@/models/models.types';
 import { LocalHotService } from '@/services/local/hot/hot';
-import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { NexusHotService } from '@/services/nexus/hot/hot';
 import { type NexusHotTag, UserStreamReach, UserStreamTimeframe } from '@/services/nexus/nexus.types';
 import type { TTagHotParams } from '@/services/nexus/tag/tag.types';
@@ -17,8 +16,7 @@ describe('HotApplication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock user fetching to prevent actual network calls
-    vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
-    vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
+    vi.spyOn(UserStreamApplication, 'getOrFetchUsers').mockResolvedValue(undefined);
   });
 
   describe('getOrFetch', () => {
@@ -148,14 +146,13 @@ describe('HotApplication', () => {
 
       vi.spyOn(LocalHotService, 'findById').mockResolvedValue(null);
       vi.spyOn(LocalHotService, 'upsert').mockResolvedValue(undefined);
-      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue(['user1' as Pubky]);
       const fetchSpy = vi.spyOn(NexusHotService, 'fetch').mockResolvedValue(mockHotTags);
-      const fetchUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
+      const fetchUsersSpy = vi.spyOn(UserStreamApplication, 'getOrFetchUsers').mockResolvedValue(undefined);
 
       await HotApplication.getOrFetch({ ...params, viewerId });
 
       expect(fetchSpy).toHaveBeenCalledWith(params);
-      expect(fetchUsersSpy).toHaveBeenCalledWith({ cacheMissUserIds: ['user1'], viewerId });
+      expect(fetchUsersSpy).toHaveBeenCalledWith({ userIds: ['user1', 'user2'], viewerId });
     });
 
     it('should handle user_id parameter', async () => {
