@@ -6,6 +6,7 @@ import {
   MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS,
   MUTE_SYNC_RECONNECT_BACKOFF_MS,
   MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD,
+  MUTE_SYNC_STREAM_HEALTHY_AFTER_MS,
 } from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
 import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
@@ -407,6 +408,70 @@ describe('MuteListSyncCoordinator', () => {
         await flushPromises();
       }
       expect(subscribe).toHaveBeenCalledTimes(1 + MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
+      expect(escalationReports(serverSpy)).toBe(1);
+    });
+
+    /** Subscribe resolves to an idle stream (read never completes) that can be errored later from the test. */
+    function subscribeIdleStreams(): { dropCurrent: () => void } {
+      let controller: ReadableStreamDefaultController<TMuteDirectoryEvent> | undefined;
+      vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
+        return new ReadableStream<TMuteDirectoryEvent>({
+          start(c) {
+            controller = c;
+          },
+        });
+      });
+      return {
+        dropCurrent: () => {
+          controller?.error(subscribeConnectFailure());
+          controller = undefined;
+        },
+      };
+    }
+
+    it('does not treat drops of long-lived idle connections as an accumulating outage', async () => {
+      const idle = subscribeIdleStreams();
+      const serverSpy = vi.spyOn(Err, 'server');
+      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+      const tenMinutes = 10 * 60 * 1000;
+
+      startCoordinator();
+      await flushPromises();
+      expect(subscribe).toHaveBeenCalledTimes(1);
+
+      // Reproduction from review: six healthy idle connections of ten minutes each, each ending in a drop.
+      for (let connection = 1; connection <= MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1; connection += 1) {
+        await vi.advanceTimersByTimeAsync(tenMinutes);
+        idle.dropCurrent();
+        await flushPromises();
+        // Each drop starts a fresh streak of 1, so the reconnect delay stays at the base value.
+        await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS);
+        await flushPromises();
+        expect(subscribe).toHaveBeenCalledTimes(connection + 1);
+      }
+
+      expect(escalationReports(serverSpy)).toBe(0);
+    });
+
+    it('still reports when connections are established but drop again before the healthy window', async () => {
+      const idle = subscribeIdleStreams();
+      const serverSpy = vi.spyOn(Err, 'server');
+      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+
+      startCoordinator();
+      await flushPromises();
+      expect(subscribe).toHaveBeenCalledTimes(1);
+
+      for (let failure = 1; failure <= MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
+        await vi.advanceTimersByTimeAsync(MUTE_SYNC_STREAM_HEALTHY_AFTER_MS - 1);
+        idle.dropCurrent();
+        await flushPromises();
+        expect(escalationReports(serverSpy)).toBe(failure === MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD ? 1 : 0);
+        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
+        await flushPromises();
+      }
+
+      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1);
       expect(escalationReports(serverSpy)).toBe(1);
     });
 

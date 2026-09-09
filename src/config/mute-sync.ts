@@ -23,8 +23,15 @@ export const MUTE_SYNC_RECONNECT_BACKOFF_MS = 1000;
 export const MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS = 30_000;
 
 /**
- * Consecutive stream failures (no healthy read in between) after which the coordinator reports the outage
- * to Sentry once. Routine reconnects are dropped by the `homeserver-event-stream-connect` rule; with the
- * doubling backoff this threshold corresponds to roughly one minute of continuous failure.
+ * A stream connection that stayed open at least this long is considered healthy: a failure after it starts a
+ * new failure streak instead of extending the previous one. Needed because a healthy idle stream (no mute
+ * changes) never completes a `read()`, so completed reads alone cannot mark it healthy.
+ */
+export const MUTE_SYNC_STREAM_HEALTHY_AFTER_MS = 30_000;
+
+/**
+ * Consecutive stream failures (no healthy read or sustained connection in between) after which the coordinator
+ * reports the outage to Sentry once. Routine reconnects are dropped by the `homeserver-event-stream-connect`
+ * rule; with the doubling backoff this threshold corresponds to roughly one minute of continuous failure.
  */
 export const MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD = 6;

@@ -5,6 +5,7 @@ import {
   MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS,
   MUTE_SYNC_RECONNECT_BACKOFF_MS,
   MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD,
+  MUTE_SYNC_STREAM_HEALTHY_AFTER_MS,
 } from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
 import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
@@ -205,6 +206,7 @@ export class MuteListSyncCoordinator {
     while (this.state.isStarted && generation === this.loopGeneration && this.shouldSyncMuteStream()) {
       const pubky = useAuthStore.getState().currentUserPubky as Pubky;
       let reader: ReadableStreamDefaultReader<TMuteDirectoryEvent> | undefined;
+      let connectedAt: number | undefined;
 
       try {
         const cursor = this.readStoredCursor(pubky);
@@ -216,6 +218,7 @@ export class MuteListSyncCoordinator {
             .catch(() => {});
           break;
         }
+        connectedAt = Date.now();
         reader = stream.getReader();
         this.activeReader = reader;
 
@@ -248,7 +251,12 @@ export class MuteListSyncCoordinator {
         // feed the streak or the outage report of the loop that superseded it.
         const isCurrentLoop = this.state.isStarted && generation === this.loopGeneration;
         if (isCurrentLoop) {
-          this.consecutiveStreamFailures += 1;
+          // A healthy idle stream never completes a read, so a connection that stayed open long enough
+          // counts as healthy: its eventual drop starts a fresh streak instead of extending the old one.
+          // Immediate connect failures and fast connect→drop cycles still accumulate.
+          const wasSustained =
+            connectedAt !== undefined && Date.now() - connectedAt >= MUTE_SYNC_STREAM_HEALTHY_AFTER_MS;
+          this.consecutiveStreamFailures = wasSustained ? 1 : this.consecutiveStreamFailures + 1;
         }
         Logger.error('Mute list homeserver event stream failed', {
           error,
