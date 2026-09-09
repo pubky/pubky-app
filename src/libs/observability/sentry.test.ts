@@ -332,10 +332,10 @@ describe('captureAppError filtering', () => {
  * shape the pipeline never emits is dead code that looks green.
  */
 describe('expected-error drop rules (pipeline-verified)', () => {
-  async function runSafeFetchRejectingWith(rejection: unknown): Promise<AppError> {
+  async function runSafeFetchRejectingWith(rejection: unknown, options: RequestInit = {}): Promise<AppError> {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(rejection);
     try {
-      await safeFetch('https://homegate.pubky.app/v0/verify', {}, ErrorService.Homegate, 'awaitLnVerification');
+      await safeFetch('https://homegate.pubky.app/v0/verify', options, ErrorService.Homegate, 'awaitLnVerification');
       throw new Error('safeFetch should have thrown');
     } catch (error) {
       expect(error).toBeInstanceOf(AppError);
@@ -345,11 +345,30 @@ describe('expected-error drop rules (pipeline-verified)', () => {
     }
   }
 
-  it('drops REQUEST_ABORTED produced by safeFetch when fetch rejects with an AbortError', async () => {
-    const error = await runSafeFetchRejectingWith(new DOMException('The operation was aborted.', 'AbortError'));
+  const abortError = () => new DOMException('The operation was aborted.', 'AbortError');
+
+  it("drops REQUEST_ABORTED when the caller's own AbortSignal fired", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const error = await runSafeFetchRejectingWith(abortError(), { signal: controller.signal });
 
     expect(error.code).toBe(TimeoutErrorCode.REQUEST_ABORTED);
+    expect(error.context?.signalAborted).toBe(true);
     expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+  });
+
+  it('keeps REQUEST_ABORTED reportable when no caller signal was aborted (browser-driven abort)', async () => {
+    const error = await runSafeFetchRejectingWith(abortError());
+
+    expect(error.code).toBe(TimeoutErrorCode.REQUEST_ABORTED);
+    expect(error.context?.signalAborted).toBe(false);
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+
+  it('keeps REQUEST_ABORTED reportable when a signal was passed but never fired', async () => {
+    const error = await runSafeFetchRejectingWith(abortError(), { signal: new AbortController().signal });
+
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
   });
 
   it('keeps AbortSignal.timeout() TimeoutError rejections reportable', async () => {
@@ -440,6 +459,7 @@ describe('once-per-error-chain capture', () => {
       const dropped = Err.timeout(TimeoutErrorCode.REQUEST_ABORTED, 'Request was aborted', {
         service: ErrorService.Homegate,
         operation: 'awaitLnVerification',
+        context: { signalAborted: true },
       });
       Err.server(ServerErrorCode.UNKNOWN_ERROR, 'verification failed', {
         service: ErrorService.Homegate,

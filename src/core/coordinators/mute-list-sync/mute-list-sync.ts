@@ -2,11 +2,17 @@ import { AUTH_ROUTES } from '@/app/routes';
 import {
   MUTE_SYNC_CURSOR_STORAGE_PREFIX,
   MUTE_SYNC_DEBOUNCE_MS,
+  MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS,
   MUTE_SYNC_RECONNECT_BACKOFF_MS,
+  MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD,
 } from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
 import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import { getNotificationRespectPageVisibility } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
@@ -55,6 +61,8 @@ export class MuteListSyncCoordinator {
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private reconnectBackoffTimer: ReturnType<typeof setTimeout> | undefined;
   private reconnectBackoffWake: (() => void) | undefined;
+  /** Stream iterations that threw without a healthy read in between; drives backoff and the one-shot outage report. */
+  private consecutiveStreamFailures = 0;
 
   private constructor() {
     this.setupListeners();
@@ -83,6 +91,7 @@ export class MuteListSyncCoordinator {
   public stop(): void {
     this.state.isStarted = false;
     this.loopGeneration += 1;
+    this.consecutiveStreamFailures = 0;
     void this.teardownReaderAndTimers();
     Logger.debug('MuteListSyncCoordinator stopped');
   }
@@ -221,6 +230,9 @@ export class MuteListSyncCoordinator {
             break;
           }
 
+          // A completed read (event or clean end) means the stream is healthy again.
+          this.consecutiveStreamFailures = 0;
+
           if (done) {
             break;
           }
@@ -232,7 +244,12 @@ export class MuteListSyncCoordinator {
           }
         }
       } catch (error) {
-        Logger.error('Mute list homeserver event stream failed', { error });
+        this.consecutiveStreamFailures += 1;
+        Logger.error('Mute list homeserver event stream failed', {
+          error,
+          consecutiveFailures: this.consecutiveStreamFailures,
+        });
+        this.reportStreamOutageIfPersistent(error);
       } finally {
         if (reader) {
           await reader.cancel().catch(() => {});
@@ -250,6 +267,36 @@ export class MuteListSyncCoordinator {
     }
   }
 
+  /**
+   * Routine stream failures are dropped from Sentry by the `homeserver-event-stream-connect` rule
+   * (see `sentry.utils.ts`), so a persistent outage must be surfaced explicitly. Reports exactly once
+   * per outage, when the failure streak reaches the threshold; the loop keeps reconnecting regardless.
+   *
+   * Deliberately no `cause`: the last error is an already-captured (or dropped) AppError, and the
+   * factory's once-per-chain guard would swallow this report if it were attached.
+   */
+  private reportStreamOutageIfPersistent(lastError: unknown): void {
+    if (this.consecutiveStreamFailures !== MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD) return;
+
+    const lastAppError = lastError instanceof AppError ? lastError : undefined;
+    Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'Mute list event stream unavailable after repeated failures', {
+      service: ErrorService.Homeserver,
+      operation: 'muteListEventStreamExhausted',
+      context: {
+        consecutiveFailures: this.consecutiveStreamFailures,
+        lastErrorCategory: lastAppError?.category,
+        lastErrorCode: lastAppError?.code,
+        lastErrorOperation: lastAppError?.operation,
+      },
+    });
+  }
+
+  /** Reconnect delay doubles per consecutive failure, capped, so an outage is not hammered at a fixed 1s. */
+  private currentReconnectBackoffMs(): number {
+    const exponent = Math.max(0, this.consecutiveStreamFailures - 1);
+    return Math.min(MUTE_SYNC_RECONNECT_BACKOFF_MS * 2 ** exponent, MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS);
+  }
+
   /** Schedules reconnect delay; {@link teardownReaderAndTimers} clears the timer and completes this await immediately. */
   private awaitReconnectBackoff(): Promise<void> {
     return new Promise<void>((resolve) => {
@@ -260,7 +307,7 @@ export class MuteListSyncCoordinator {
         const wake = this.reconnectBackoffWake;
         this.reconnectBackoffWake = undefined;
         wake?.();
-      }, MUTE_SYNC_RECONNECT_BACKOFF_MS);
+      }, this.currentReconnectBackoffMs());
     });
   }
 

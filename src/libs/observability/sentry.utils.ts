@@ -86,12 +86,12 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'aborted-requests',
     reason:
-      'REQUEST_ABORTED is only produced by safeFetch when fetch rejects with an AbortError DOMException: a caller ' +
-      'called AbortController.abort() (navigation, teardown, deliberate long-poll reset) or the browser cancelled ' +
-      'an in-flight request. Control flow, not a failure; every caller already handles the rejection ' +
-      '(PUBKY-APP-3N/4F). AbortSignal.timeout() raises a TimeoutError DOMException, which safeFetch does not map ' +
-      'to REQUEST_ABORTED, so real timeouts stay reportable.',
-    matches: (error) => error.code === TimeoutErrorCode.REQUEST_ABORTED,
+      'REQUEST_ABORTED is only produced by safeFetch when fetch rejects with an AbortError DOMException. When the ' +
+      "caller's own AbortSignal fired (context.signalAborted) the cancellation is deliberate control flow — " +
+      'navigation, teardown, long-poll reset — and every such caller handles the rejection (PUBKY-APP-3N/4F). ' +
+      'Aborts with no signal (browser-driven) and AbortSignal.timeout() TimeoutErrors (mapped to a Network code) ' +
+      'stay reportable.',
+    matches: (error) => error.code === TimeoutErrorCode.REQUEST_ABORTED && error.context?.signalAborted === true,
   },
   {
     name: 'homeserver-event-stream-connect',
@@ -100,7 +100,8 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       'MuteListSyncCoordinator reconnects with backoff by design. Connect failures reach here as ' +
       'handleError → httpStatusCodeToError(500) → Err.server(INTERNAL_ERROR) tagged with the subscribe operation ' +
       '(PUBKY-APP-11/1Y/6G/CX). Auth/validation failures on the same operation and every other Homeserver ' +
-      'operation stay reportable.',
+      'operation stay reportable, and the coordinator reports a persistent outage once via the ' +
+      "'muteListEventStreamExhausted' operation after MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD consecutive failures.",
     matches: (error) =>
       error.service === ErrorService.Homeserver &&
       error.operation === HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION &&

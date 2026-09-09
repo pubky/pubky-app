@@ -217,12 +217,14 @@ export async function safeFetch(
     const appError = findAppError(error);
     if (appError) throw appError;
 
-    // Aborted requests (user cancellation or signal timeout)
+    // Aborted requests. `signalAborted` records whether the caller's own AbortSignal fired
+    // (deliberate cancellation) as opposed to a browser-driven abort with no signal; the
+    // `aborted-requests` Sentry drop rule keys on it.
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw Err.timeout(TimeoutErrorCode.REQUEST_ABORTED, 'Request was aborted', {
         service,
         operation,
-        context: { url },
+        context: { url, signalAborted: options.signal?.aborted === true },
         cause: error,
       });
     }
