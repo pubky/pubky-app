@@ -286,6 +286,43 @@ describe('FeedApplication', () => {
       expect(unreadPostStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
     });
 
+    it('should warn and fall back to a fresh created_at when the existing feed read fails', async () => {
+      const mockParams: TFeedPersistCreateParams = {
+        feed: createMockFeedResult(),
+        existingId: 'feed-existing',
+      };
+      const {
+        readSpy,
+        requestSpy,
+        dbTransactionSpy,
+        feedUpsertSpy,
+        feedDeleteByIdSpy,
+        feedFindByIdOrThrowSpy,
+        loggerWarnSpy,
+      } = setupMocks();
+
+      readSpy.mockRejectedValue(new Error('IndexedDB unavailable'));
+      dbTransactionSpy.mockImplementation(((...args: unknown[]) =>
+        (args[args.length - 1] as () => Promise<unknown>)()) as never);
+      feedUpsertSpy.mockResolvedValue(undefined);
+      feedDeleteByIdSpy.mockResolvedValue(undefined);
+      feedFindByIdOrThrowSpy.mockResolvedValue(createMockFeedSchema({ id: 'feed123' }));
+      requestSpy.mockResolvedValue(undefined);
+      const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(5_000_000);
+
+      try {
+        await FeedApplication.persist({ userId: testUserId, params: mockParams });
+      } finally {
+        nowSpy.mockRestore();
+      }
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to read existing feed created_at'),
+        expect.objectContaining({ feedId: 'feed-existing' }),
+      );
+      expect(feedUpsertSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed123', created_at: 5_000_000 }));
+    });
+
     it('should migrate a malformed legacy feed without requiring stream cache cleanup', async () => {
       const mockParams: TFeedPersistCreateParams = {
         feed: createMockFeedResult(),
