@@ -578,4 +578,21 @@ describe('NexusUserStreamService.fetchByIds', () => {
       body: JSON.stringify({ user_ids: ['auser', 'zuser'], viewer_id: 'viewer' }),
     });
   });
+
+  it('builds the body through userStreamApi so depth and key order come from the builder', async () => {
+    const queryNexusSpy = vi.mocked(queryNexus).mockResolvedValue([]);
+
+    await NexusUserStreamService.fetchByIds({
+      depth: 2,
+      viewer_id: 'viewer' as Pubky,
+      user_ids: ['zuser', 'auser'] as Pubky[],
+    });
+
+    // Caller passed keys in a different order; the canonical body order is the builder's.
+    expect(queryNexusSpy).toHaveBeenCalledWith({
+      url: expect.stringContaining('/stream/users/by_ids'),
+      method: 'POST',
+      body: JSON.stringify({ user_ids: ['auser', 'zuser'], viewer_id: 'viewer', depth: 2 }),
+    });
+  });
 });

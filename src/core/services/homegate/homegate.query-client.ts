@@ -10,8 +10,10 @@ export const homegateQueryClient = createQueryClient({
   retry: {
     nonRetryable: [ValidationErrorCode.INVALID_INPUT],
     limits: {
-      // A single retry after the 429 backoff floor; the shared 429 branch in
-      // query-client.factory applies here too, so make it explicit.
+      // 429: retry once, after the shared 2s floor (or Retry-After) in query-client.factory.
+      // Behavior change: without this key the factory falls back to serverError (3 retries),
+      // which is what this client did before; re-firing three times into a closed window only
+      // extends it.
       rateLimited: 1,
       serverError: 3,
       default: 3,
