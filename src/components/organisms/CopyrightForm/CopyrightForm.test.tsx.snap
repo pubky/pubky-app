@@ -2,7 +2,7 @@
 
 exports[`CopyrightForm - Snapshots > matches snapshot for default state 1`] = `
 <div
-  class="mx-auto w-full flex-col flex container max-w-(--container-max-width) px-6 pb-12 xl:px-0"
+  class="mx-auto w-full flex-col flex container max-w-(--container-max-width) pb-12 xl:px-0 px-4 lg:px-6"
   data-testid="container"
 >
   <form>

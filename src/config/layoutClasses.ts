@@ -8,7 +8,19 @@
  */
 
 /**
- * Horizontal app-shell gutter: 16px on mobile, 24px from `lg`, none at `xl`
+ * Horizontal page gutter: 16px on mobile, 24px from `lg`.
+ * The outer container edge for every page-level surface — header nav,
+ * onboarding, auth, landing, copyright, and full-screen error states — so
+ * mobile content keeps one 16px edge across the whole app.
+ *
+ * Overriding: the gutter spans two breakpoint groups, so cn resolves caller
+ * overrides per group — a bare `px-0` only replaces the sub-`lg` value;
+ * override each group you target (e.g. `px-0 lg:px-0`).
+ */
+export const PAGE_GUTTER_CLASS = 'px-4 lg:px-6';
+
+/**
+ * Horizontal app-shell gutter: `PAGE_GUTTER_CLASS` with no padding at `xl`
  * (the `xl` shell centers content via `--container-max-width` instead).
  * Shared by ContentLayout, ProfilePageLayoutWrapper, and MobileHeader so
  * header chrome and page content keep one content edge.
@@ -17,7 +29,7 @@
  * resolves caller overrides per group — a bare `px-0` only replaces the
  * sub-`lg` value; override each group you target (e.g. `px-0 lg:px-0`).
  */
-export const CONTENT_GUTTER_CLASS = 'px-4 lg:px-6 xl:px-0';
+export const CONTENT_GUTTER_CLASS = `${PAGE_GUTTER_CLASS} xl:px-0`;
 
 /**
  * Cancels `CONTENT_GUTTER_CLASS` below `lg` so mobile-only chrome (tab bars,

@@ -2,7 +2,9 @@
 import './globals.css';
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
 import { AppError } from '@/libs/error/error';
+import { cn } from '@/libs/utils/utils';
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -17,7 +19,12 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
   return (
     <html lang="en" dir="ltr">
       <body className="bg-background text-foreground antialiased">
-        <main className="mx-auto flex min-h-screen w-full max-w-[640px] flex-col items-center justify-center p-6 text-center">
+        <main
+          className={cn(
+            'mx-auto flex min-h-screen w-full max-w-[640px] flex-col items-center justify-center py-6 text-center',
+            PAGE_GUTTER_CLASS,
+          )}
+        >
           <h1 className="m-0 text-[28px] leading-[1.2] font-semibold">Something went wrong</h1>
           <p className="mt-3 mb-0 text-destructive">{error.message || 'Unexpected error occurred.'}</p>
           <button
