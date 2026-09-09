@@ -119,18 +119,28 @@ export function usePayToUnlock({
     setIsStalled(false);
     let windowStartedAt = Date.now();
     let timer: number | null = null;
+    // One opening can start several loops (Check again, a re-submit), so `generation` cannot tell
+    // them apart, and clearing `timer` does nothing to a lookup that is already awaiting the
+    // server. This is what makes a superseded loop's continuations inert.
+    let active = true;
+    // A fired timer leaves `timer` holding its spent id, so this flag is the only way to see that
+    // a lookup is still out.
+    let inFlight = false;
 
     const poll = async () => {
-      if (generation.current !== gen) return;
+      if (!active || generation.current !== gen) return;
       let status: TVerificationStatus | null;
+      inFlight = true;
       try {
         status = await LocksController.fetchPaymentStatus({ lockFile, bundleId });
       } catch {
         // Already reported by the Err factory; a lookup blip is not worth surfacing mid-wait.
+        inFlight = false;
         schedule();
         return;
       }
-      if (generation.current !== gen) return;
+      inFlight = false;
+      if (!active || generation.current !== gen) return;
       // A null mid-wait would mean the server lost the payment; treat like still-pending.
       if (status && !applyStatus(gen, bundleId, status)) {
         stop();
@@ -140,7 +150,7 @@ export function usePayToUnlock({
     };
 
     const schedule = () => {
-      if (generation.current !== gen) return;
+      if (!active || generation.current !== gen) return;
       if (Date.now() - windowStartedAt > STALL_AFTER_MS) {
         setIsStalled(true);
         return;
@@ -152,26 +162,31 @@ export function usePayToUnlock({
     // wait. Returning is the real signal: look up immediately and, if the loop had parked,
     // grant a fresh wall-clock window so it truly resumes.
     const onVisible = () => {
-      if (document.visibilityState !== 'visible' || generation.current !== gen) return;
-      if (timer !== null) window.clearTimeout(timer);
+      if (document.visibilityState !== 'visible' || !active || generation.current !== gen) return;
       windowStartedAt = Date.now();
       setIsStalled(false);
+      // The lookup already out will schedule the next one. Starting a second here forks the loop
+      // into two chains that both poll, both finish, and that `stop()` can only half tear down.
+      if (inFlight) return;
+      if (timer !== null) window.clearTimeout(timer);
       void poll();
     };
     document.addEventListener('visibilitychange', onVisible);
+
+    const stop = () => {
+      active = false;
+      document.removeEventListener('visibilitychange', onVisible);
+      if (timer !== null) window.clearTimeout(timer);
+      if (stopPolling.current === stop) stopPolling.current = null;
+    };
+    // Retire the previous loop before this one starts, so only one is ever live.
+    stopPolling.current?.();
+    stopPolling.current = stop;
 
     // After submit/open the caller has just received a status, so the first lookup can wait one
     // interval; Check again is the reader asking for one now.
     if (lookupNow) void poll();
     else schedule();
-
-    const stop = () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      if (timer !== null) window.clearTimeout(timer);
-      if (stopPolling.current === stop) stopPolling.current = null;
-    };
-    stopPolling.current?.();
-    stopPolling.current = stop;
   };
 
   // Modal opened: resolve the saved bundle id, then route. Closed: bump the generation so every

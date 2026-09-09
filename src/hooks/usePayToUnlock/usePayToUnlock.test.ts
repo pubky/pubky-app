@@ -4,6 +4,7 @@ import { LocksController } from '@/controllers/locks/locks';
 import type { LockFile, TUnlockedContent, TVerificationStatus } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { POLL_INTERVAL_MS, STALL_AFTER_MS, usePayToUnlock } from './usePayToUnlock';
+import type { TPayToUnlockStage } from './usePayToUnlock.types';
 
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
@@ -317,6 +318,21 @@ describe('usePayToUnlock (waiting)', () => {
       await vi.advanceTimersByTimeAsync(ms);
     });
 
+  /** Arranges the wait so the second lookup hangs, and hands back its release. */
+  const holdOneLookup = (thenAlways: TVerificationStatus) => {
+    let release: (status: TVerificationStatus) => void = () => {};
+    vi.mocked(LocksController.fetchPaymentStatus)
+      .mockResolvedValueOnce('pending')
+      .mockImplementationOnce(
+        () =>
+          new Promise((r) => {
+            release = r;
+          }),
+      )
+      .mockResolvedValue(thenAlways);
+    return (status: TVerificationStatus) => release(status);
+  };
+
   it('stops polling and shows the paid confirmation when a poll sees the payment complete', async () => {
     vi.mocked(LocksController.fetchPaymentStatus).mockResolvedValueOnce('pending').mockResolvedValueOnce('completed');
 
@@ -440,6 +456,101 @@ describe('usePayToUnlock (waiting)', () => {
     });
     expect(result.current.isStalled).toBe(false);
     expect(statusCalls()).toBeGreaterThan(lookupsWhenParked + 1);
+  });
+
+  // The tab coming back from Bitkit right as the throttled timer fires is the normal case, not a
+  // race: `timer` already holds the fired id, so nothing cancels the lookup that is still awaiting
+  // the server. A second loop from here means every symptom below.
+  describe('tab returns while a lookup is in flight', () => {
+    // Drives the wait to the moment the timer-fired lookup is awaiting the server, then returns
+    // the tab to the foreground.
+    const returnToTabMidLookup = async () => {
+      await advance(POLL_INTERVAL_MS);
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+    };
+
+    it('keeps one lookup per interval', async () => {
+      const release = holdOneLookup('pending');
+
+      const { result } = renderPay();
+      await advance(0);
+      expect(result.current.stage).toBe('waiting');
+
+      await returnToTabMidLookup();
+      release('pending');
+      await advance(0);
+
+      const lookupsBefore = statusCalls();
+      await advance(POLL_INTERVAL_MS);
+      expect(statusCalls()).toBe(lookupsBefore + 1);
+    });
+
+    // Two chains both seeing `completed` mint two credentials and download the same post twice,
+    // and the second `finish()` drags the confirmation back through its own waiting stage.
+    it('finishes the completed payment once', async () => {
+      const release = holdOneLookup('completed');
+      const stages: TPayToUnlockStage[] = [];
+
+      const { result } = renderHook(() => {
+        const value = usePayToUnlock({ open: true, lockUrl: LOCK_URL, lockFile, onCompleted: vi.fn(), onPurchased });
+        stages.push(value.stage);
+        return value;
+      });
+      await advance(0);
+      expect(result.current.stage).toBe('waiting');
+
+      await returnToTabMidLookup();
+      release('completed');
+      await advance(0);
+
+      expect(result.current.stage).toBe('paid');
+      expect(LocksController.fetchPaidContent).toHaveBeenCalledTimes(1);
+      // The confirmation is final: no flip back to the spinner once it is on screen.
+      expect(stages.slice(stages.indexOf('paid'))).not.toContain('waiting');
+    });
+
+    it('reports a failed payment once', async () => {
+      const release = holdOneLookup('failed');
+
+      const { result } = renderPay();
+      await advance(0);
+      expect(result.current.stage).toBe('waiting');
+
+      await returnToTabMidLookup();
+      release('failed');
+      await advance(0);
+
+      expect(result.current.stage).toBe('pay');
+      expect(toastMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // Check again retires the running loop, but `stop()` cannot cancel a lookup that is already
+  // awaiting the server — only the per-loop flag can. Today the button hides the moment the retry
+  // starts, so this is the guard behind the restart path rather than a reachable screen.
+  it('leaves the loop Check again retired unable to schedule or finish', async () => {
+    const release = holdOneLookup('pending');
+
+    const { result } = renderPay();
+    await advance(0);
+    expect(result.current.stage).toBe('waiting');
+
+    // The retired loop's lookup is awaiting the server at the moment it is replaced.
+    await advance(POLL_INTERVAL_MS);
+    act(() => result.current.recheck());
+    await advance(0);
+
+    release('completed');
+    await advance(0);
+    expect(LocksController.fetchPaidContent).not.toHaveBeenCalled();
+    expect(result.current.stage).toBe('waiting');
+
+    const lookupsBefore = statusCalls();
+    await advance(POLL_INTERVAL_MS);
+    expect(statusCalls()).toBe(lookupsBefore + 1);
   });
 
   it('goes quiet when the modal closes mid-wait', async () => {
