@@ -27,10 +27,12 @@ function measureKeyboardViewport(threshold: number): KeyboardViewportState {
   const offsetTop = window.visualViewport.offsetTop ?? 0;
   const rawKeyboardHeight = window.innerHeight - height - offsetTop;
   const keyboardHeight = Math.max(0, rawKeyboardHeight);
-  // Pinch-zoom reduces the viewport in CSS pixels without opening a keyboard.
-  // Normalize only visibility detection; positioning still uses viewport coordinates.
+  // Unlike innerHeight on Safari, the layout viewport height does not shrink
+  // during pinch-zoom. Compare it with the zoom-normalized visual height.
+  // Positioning above still uses viewport coordinates.
+  const layoutViewportHeight = document.documentElement.clientHeight;
   const scale = window.visualViewport.scale || 1;
-  const isKeyboardVisible = window.innerHeight - height * scale > threshold;
+  const isKeyboardVisible = layoutViewportHeight - height * scale > threshold;
   const keyboardTop = height + offsetTop;
 
   return {
