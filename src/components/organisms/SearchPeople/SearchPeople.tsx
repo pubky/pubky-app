@@ -9,7 +9,6 @@ import { SEARCH_PEOPLE_PREVIEW_COUNT } from '@/config/search';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
-import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { UserListItem } from '@/organisms/UserListItem/UserListItem';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -66,10 +65,6 @@ function SearchPeopleContent({ tags }: { tags: string[] }) {
   // "Show more" directly so the cursor can still advance.
   const showShowMore = !loading && hasMore && (isExpanded || users.length === 0);
 
-  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean, displayName: string) => {
-    await toggleFollow(userId, isCurrentlyFollowing, displayName);
-  };
-
   return (
     <Container overrideDefaults data-cy="search-people-section" className="flex w-full flex-col gap-4">
       <Container overrideDefaults className="flex items-center justify-between gap-3">
@@ -95,7 +90,7 @@ function SearchPeopleContent({ tags }: { tags: string[] }) {
                 variant="card"
                 isLoading={isUserLoading(user.id)}
                 isCurrentUser={currentUserPubky === user.id}
-                onFollowClick={handleFollow}
+                onFollowClick={toggleFollow}
               />
             ))}
       </Container>

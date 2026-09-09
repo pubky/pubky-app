@@ -5,11 +5,13 @@ import { usePathname } from 'next/navigation';
 import { Container } from '@/atoms/Container/Container';
 import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useSocialGraphStatus } from '@/hooks/useSocialGraphStatus/useSocialGraphStatus';
 import { useStickyWhenFits } from '@/hooks/useStickyWhenFits/useStickyWhenFits';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { cn } from '@/libs/utils/utils';
 import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
+import { ProfilePageSocialGraph } from '@/molecules/ProfilePageSocialGraph/ProfilePageSocialGraph';
 import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { FeedbackCard } from '../FeedbackCard/FeedbackCard';
@@ -24,6 +26,9 @@ export function ProfilePageSidebar() {
 
   // Get user profile data for the target user
   const { profile } = useUserProfile(pubky ?? '');
+
+  // Social graph badge tier; null hides the section (no ranking on Nexus yet)
+  const { status: socialGraphStatus } = useSocialGraphStatus(pubky);
 
   const {
     tags,
@@ -59,6 +64,7 @@ export function ProfilePageSidebar() {
       className={cn('hidden w-(--filter-bar-width) flex-col gap-6 self-start lg:flex', 'sticky')}
       style={{ top: `${stickyTop}px` }}
     >
+      {socialGraphStatus && <ProfilePageSocialGraph status={socialGraphStatus} />}
       {!isTaggedPage && (
         <ProfilePageTaggedAs tags={topTags} isLoading={isLoadingTags} onTagClick={handleTagClick} pubky={pubky ?? ''} />
       )}

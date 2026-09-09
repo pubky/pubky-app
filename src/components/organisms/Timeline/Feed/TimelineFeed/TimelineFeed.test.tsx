@@ -25,12 +25,10 @@ import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
 
 const mockUsePullToRefresh = vi.hoisted(() =>
-  vi.fn(
-    (): UsePullToRefreshResult => ({
-      state: 'idle',
-      pullDistance: 0,
-    }),
-  ),
+  vi.fn((): UsePullToRefreshResult => ({
+    state: 'idle',
+    pullDistance: 0,
+  })),
 );
 
 // Route params default to empty; the Collection variant tests override this to

@@ -225,7 +225,7 @@ toast({ variant: 'error', title: 'Upload failed', description: 'The file exceeds
 
 // Warning / info
 toast({ variant: 'warning', title: 'Heads up', description: 'You are posting quickly.' });
-toast({ variant: 'info', title: 'Copied to clipboard', description: text, dismissButton: true });
+toast({ variant: 'info', title: 'Copied to clipboard', dismissButton: true });
 
 // Custom action (e.g. repost Undo) — the Toaster renders the button and
 // dismisses the toast when it is clicked
@@ -237,6 +237,24 @@ toast({ title: 'Reposted', action: { label: 'Undo', altText: 'Undo', onClick: ()
 - **`dismissButton: true`** when the toast should show an OK action (brand-styled on default toasts, muted otherwise, via `toastActionVariants`).
 - **`action`** is a plain descriptor `{ label, altText, onClick }` — never a component. The Toaster owns action rendering and styling, and dismisses the toast before invoking `onClick`.
 - **`toast()` returns a `ToastHandle`** with `dismiss()` for dismissing that toast programmatically.
+
+### Copy is static
+
+Toast `title` / `description` strings are fixed product copy. Never interpolate user-entered text into them — feed names, tag labels, display names, file names, or anything else a user typed. Toasts are narrow and user text is unbounded: a long feed name turns a one-line confirmation into a wrapped block (and, before the title learned to break long words, was clipped at the edge — see [#2419](https://github.com/pubky/pubky-app/issues/2419)). Say what happened generically instead:
+
+```tsx
+// ❌ user-defined value — overflows the toast
+toast({ title: `Feed created: ${feed.name}` });
+toast({ title: `Tag added: ${label}` });
+toast({ description: `${file.name} exceeds the 20MB limit.` });
+
+// ✅ static, still informative
+toast({ title: 'Feed created' });
+toast({ title: 'Tag added' });
+toast({ variant: 'error', description: 'Image exceeds the 20MB limit.' });
+```
+
+Short bounded values are fine to interpolate: build-time config constants (for example `ARTICLE_ATTACHMENT_MAX_FILES` or a size label derived from `IMAGE_MAX_RAW_SIZE`), small numbers such as counts or retry-after seconds, and authored `AppError` messages from the `Err.*` factories. Choosing between two literals with a ternary is also fine.
 
 ### Tests
 

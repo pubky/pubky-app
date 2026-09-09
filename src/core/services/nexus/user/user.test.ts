@@ -184,7 +184,7 @@ describe('NexusUserService', () => {
 
   describe('taggers', () => {
     it('should construct correct URL with encoded label', async () => {
-      const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue({ users: [], relationship: false });
 
       await NexusUserService.taggers({
         user_id: testUserId,
@@ -196,6 +196,7 @@ describe('NexusUserService', () => {
       // Verify label is URL-encoded (& becomes %26)
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: expect.stringMatching(/\/taggers\/rust%20%26%20wasm\?skip=10&limit=5$/),
+        staleTime: 0,
       });
     });
   });

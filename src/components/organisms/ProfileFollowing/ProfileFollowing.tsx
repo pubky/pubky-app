@@ -7,7 +7,6 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
 import { CONNECTION_TYPE } from '@/hooks/useProfileConnections/useProfileConnections.types';
-import type { Pubky } from '@/models/models.types';
 import { FollowingEmpty } from '@/molecules/FollowingEmpty/FollowingEmpty';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -41,11 +40,6 @@ export function ProfileFollowing() {
     hasMore,
     isLoading: isLoadingMore,
   });
-
-  // Handle follow/unfollow action
-  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean, displayName: string) => {
-    await toggleFollow(userId, isCurrentlyFollowing, displayName);
-  };
 
   if (isLoading) {
     return (
@@ -91,7 +85,7 @@ export function ProfileFollowing() {
             isLoading={isUserLoading(connection.id)}
             isStatusLoading={isLoading}
             isCurrentUser={currentUserPubky === connection.id}
-            onFollowClick={handleFollow}
+            onFollowClick={toggleFollow}
           />
         ))}
       </Container>

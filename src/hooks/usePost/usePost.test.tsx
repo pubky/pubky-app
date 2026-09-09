@@ -1279,26 +1279,7 @@ describe('usePost', () => {
       });
     });
 
-    it('should show toast with author name when originalAuthorName is provided', async () => {
-      const { result } = renderHook(() => usePost());
-
-      await act(async () => {
-        await result.current.repost({
-          originalPostId: 'test-post-123',
-          originalAuthorName: 'John Doe',
-          onSuccess: vi.fn(),
-          onUndo: vi.fn(),
-        });
-      });
-
-      expect(vi.mocked(toast)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: "Reposted John Doe's post",
-        }),
-      );
-    });
-
-    it('should show toast with fallback message when originalAuthorName is not provided', async () => {
+    it('should show the generic repost toast', async () => {
       const { result } = renderHook(() => usePost());
 
       await act(async () => {
@@ -1316,13 +1297,12 @@ describe('usePost', () => {
       );
     });
 
-    it('should use successToastTitle override when provided, taking precedence over author name', async () => {
+    it('should use successToastTitle override when provided', async () => {
       const { result } = renderHook(() => usePost());
 
       await act(async () => {
         await result.current.repost({
           originalPostId: 'test-post-123',
-          originalAuthorName: 'John Doe',
           successToastTitle: "You've shared the My Collection collection",
           onSuccess: vi.fn(),
           onUndo: vi.fn(),

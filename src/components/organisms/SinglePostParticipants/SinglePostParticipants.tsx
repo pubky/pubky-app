@@ -63,10 +63,6 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
     router.push(getUserProfileUrl(pubky, currentUserId));
   };
 
-  const handleFollowClick = async (userId: string, isFollowing: boolean, displayName: string) => {
-    await toggleFollow(userId, isFollowing, displayName);
-  };
-
   if (isLoading && participants.length === 0) {
     return <SinglePostParticipantsSkeleton className={className} />;
   }
@@ -84,7 +80,7 @@ export function SinglePostParticipants({ postId, className }: SinglePostParticip
           participant={participant}
           currentUserId={currentUserId}
           onUserClick={handleUserClick}
-          onFollowClick={handleFollowClick}
+          onFollowClick={toggleFollow}
           isUserLoading={isUserLoading}
         />
       ))}
