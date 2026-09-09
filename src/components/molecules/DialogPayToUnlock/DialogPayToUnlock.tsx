@@ -73,6 +73,12 @@ export function DialogPayToUnlock({
 
   const confirmClose = () => {
     setIsConfirmingClose(false);
+    // The payment can finish while this prompt is open. Show the content we already downloaded
+    // instead of throwing it away and downloading it again later.
+    if (stage === 'paid') {
+      onViewContent();
+      return;
+    }
     onOpenChange(false);
   };
 

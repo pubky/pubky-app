@@ -11,34 +11,34 @@ vi.mock('@/stores/auth/auth.store', () => ({
     selector({ currentUserPubky: 'reader1' }),
 }));
 
-const renderDialog = (
-  stage: TPayToUnlockStage,
-  overrides: {
-    isSubmitting?: boolean;
-    onSubmit?: () => void;
-    isStalled?: boolean;
-    onRecheck?: () => void;
-    onViewContent?: () => void;
-    onOpenChange?: (open: boolean) => void;
-    wrapper?: React.JSXElementConstructor<{ children: React.ReactNode }>;
-  } = {},
-) =>
-  render(
-    <DialogPayToUnlock
-      open
-      onOpenChange={overrides.onOpenChange ?? vi.fn()}
-      lockTitle="My locked post"
-      authorId="pubkycreator"
-      priceSats="1000"
-      stage={stage}
-      isStalled={overrides.isStalled ?? false}
-      isSubmitting={overrides.isSubmitting ?? false}
-      onSubmit={overrides.onSubmit ?? vi.fn()}
-      onRecheck={overrides.onRecheck ?? vi.fn()}
-      onViewContent={overrides.onViewContent ?? vi.fn()}
-    />,
-    { wrapper: overrides.wrapper },
-  );
+type DialogOverrides = {
+  isSubmitting?: boolean;
+  onSubmit?: () => void;
+  isStalled?: boolean;
+  onRecheck?: () => void;
+  onViewContent?: () => void;
+  onOpenChange?: (open: boolean) => void;
+  wrapper?: React.JSXElementConstructor<{ children: React.ReactNode }>;
+};
+
+const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}) => (
+  <DialogPayToUnlock
+    open
+    onOpenChange={overrides.onOpenChange ?? vi.fn()}
+    lockTitle="My locked post"
+    authorId="pubkycreator"
+    priceSats="1000"
+    stage={stage}
+    isStalled={overrides.isStalled ?? false}
+    isSubmitting={overrides.isSubmitting ?? false}
+    onSubmit={overrides.onSubmit ?? vi.fn()}
+    onRecheck={overrides.onRecheck ?? vi.fn()}
+    onViewContent={overrides.onViewContent ?? vi.fn()}
+  />
+);
+
+const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}) =>
+  render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
   it('always shows the grouped price and the creator', () => {
@@ -158,6 +158,23 @@ describe('DialogPayToUnlock', () => {
     fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
     fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-close-anyway"]') as HTMLElement);
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  // Polling never stopped under the prompt, so the payment can land while it is up. Closing then
+  // must reveal the content already downloaded — dropping it leaves the background recovery to mint
+  // a second credential and fetch the same post again.
+  it('waiting: Close anyway reveals content that arrived while the prompt was up', () => {
+    const overrides = { onViewContent: vi.fn(), onOpenChange: vi.fn() };
+    const { rerender } = renderDialog('waiting', overrides);
+
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-cancel"]') as HTMLElement);
+    expect(screen.getByText('The payment is still running')).toBeInTheDocument();
+
+    rerender(dialogElement('paid', overrides));
+    fireEvent.click(document.querySelector('[data-cy="pay-to-unlock-close-anyway"]') as HTMLElement);
+
+    expect(overrides.onViewContent).toHaveBeenCalledTimes(1);
+    expect(overrides.onOpenChange).not.toHaveBeenCalled();
   });
 
   // Nothing is in flight before the payment starts, so that close needs no prompt.
