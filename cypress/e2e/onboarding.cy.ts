@@ -1,7 +1,9 @@
 import { slowCypressDown } from 'cypress-slow-down';
-import { BackupType, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 import { backupDownloadFilePath, extendedTimeout } from '../support/common';
-import { waitForFeedToLoad } from '../support/posts';
+import { goToProfilePageFromHeader } from '../support/header';
+import { createQuickPost, waitForFeedToLoad } from '../support/posts';
+import { addProfileTags } from '../support/profile';
+import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 
 describe('Onboarding', () => {
   before(() => {
@@ -72,12 +74,29 @@ describe('Onboarding', () => {
   });
 
   it('suggests people for a chosen interest, follows them all, and lands on the My network feed', () => {
+    // Docker Nexus has no popular-tag chips. Seed a user who owns this tag so
+    // starter_pack can return a match after the next signup types it in.
+    const interestTag = `e2e${Date.now().toString().slice(-8)}`;
+
+    cy.onboardAsNewUser('Tagged Seed');
+    createQuickPost(`Seed post for ${interestTag}`, [interestTag]);
+    cy.findFirstPostInFeed(CheckForNewPosts.Yes);
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-filter-item-tagged"]').click();
+    addProfileTags([interestTag]);
+    cy.signOut(HasBackedUp.Yes);
+
     cy.onboardAsNewUser('Interested User', '', undefined, undefined, OnboardingExperience.StopAtTags);
 
-    // Pick the first popular interest chip and continue to the follow step
     cy.get('[data-testid="tags-of-interest-form"]').within(() => {
-      cy.get('[data-testid^="popular-tag-"]', extendedTimeout()).first().click();
-      cy.get('[data-testid^="popular-tag-"][aria-pressed="true"]').should('have.length', 1);
+      cy.get('[data-testid="popular-interests-empty"], [data-testid^="popular-tag-"]', extendedTimeout()).should(
+        'exist',
+      );
+      cy.get('[data-cy="add-tag-input"]').type(`${interestTag}{enter}`);
+      // Seeded tags often land in Popular interests; otherwise they show as a custom chip
+      cy.get(
+        `[data-testid="popular-tag-${interestTag}"][aria-pressed="true"], [data-testid="interest-tag-${interestTag}"]`,
+      ).should('be.visible');
       cy.get('#profile-finish-btn').click();
     });
 
