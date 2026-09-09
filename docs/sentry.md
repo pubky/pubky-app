@@ -20,6 +20,25 @@ How errors and performance data flow into Sentry from Pubky App.
 
 The `Err.*` factories already log once and capture once — adding extra `Sentry.captureException` calls causes duplicate issues in the dashboard. Anything that bubbles to the browser global handler or the server `onRequestError` hook is captured automatically by the SDK.
 
+### Capture happens at construction, once per error chain
+
+`createAppError` calls `captureAppError` **when the `AppError` is built**, before any `catch` block runs. Two consequences:
+
+- **Once per chain (ADR-0015 §5.1 Challenge 1).** If `params.cause` is, or wraps via `Error.cause`, an `AppError`, the wrapper is _not_ captured — the root already reached Sentry with the most precise stack and context. The wrapper's `Logger.error` line is still emitted for local logs. Wrapping a root that a drop rule suppressed therefore stays suppressed.
+- **Downstream mitigations do not reduce Sentry volume.** Lowering a `Logger` level (`Logger` has no Sentry sink), re-tagging a category at the throw site, handling the error more gracefully in a `catch`, or `event.preventDefault()` on an unhandled rejection all run _after_ the event was sent. The only ways to keep an expected `AppError` out of Sentry are to avoid creating it (handle the expected state before `Err.*`, see _OG metadata enrichment_ below) or to add a drop rule.
+
+### Adding a drop rule (`APP_ERROR_DROP_RULES` in `sentry.utils.ts`)
+
+Drop rules implement the `shouldReportToSentry` predicate from ADR-0015 §5.1 Challenge 3. Before adding one:
+
+1. **Trace the pipeline, don't guess the shape.** Find where the error is materialised (`safeFetch`, `httpStatusCodeToError`, homeserver `handleError`, a model `Err.database`, …) and read the `service` / `operation` / `category` / `code` / `context.statusCode` it actually sets. Example: an SDK connect failure with no status code goes `handleError` → `httpStatusCodeToError(500)` → `Err.server(INTERNAL_ERROR)`, so a rule matching `ErrorCategory.Network` would never fire.
+2. **Match on codes and tags, not message text.** `error.message` comes from third-party SDKs and changes between versions.
+3. **Scope it to one operation.** If the operation tag is `'unknown'`, tag the throw site first (e.g. `additionalContext.operation`), so unrelated errors from the same service stay reportable.
+4. **Test through the pipeline.** The rule's test must obtain its fixture by running the real code path (`safeFetch` with a mocked `fetch`, the service method with a mocked SDK, `Err.*` with an `AppError` cause) and then assert `shouldDropAppErrorFromSentry(caught)`. A test that hand-builds `new AppError({...})` proves nothing about production. Add a negative case for the closest reportable neighbour (same operation, different category; same category, different operation).
+5. **Record the Sentry short IDs** in the rule's `reason` so the decision can be revisited against real data.
+
+Global-handler noise that is not an `AppError` (extension `inpage.js`, native webview bridge scripts) belongs in `ignoreErrors`, with a pattern specific enough to match only the third-party message.
+
 The two route-segment error boundaries (`app/error.tsx`, `app/global-error.tsx`) guard their `Sentry.captureException` call with `if (!(error instanceof AppError))` so an `AppError` thrown during render isn't captured twice (once by the factory, once by the boundary).
 
 For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('actionName', { headers: await headers() }, async () => { ... })` so server-action errors are captured and traces stitch with the client.

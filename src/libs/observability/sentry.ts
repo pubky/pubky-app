@@ -111,6 +111,19 @@ export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions 
       // would report them as unhandled. Genuine upload failures are already
       // captured with full context through the Err.* factory pipeline.
       INLINE_IMAGE_UPLOAD_REJECTION_NAME,
+      // Native webview bridges (pubky-ring iOS/Android hosts) inject scripts that
+      // talk to `window.webkit.messageHandlers` / the Android JavascriptInterface.
+      // When the host tears the bridge down mid-navigation those injected scripts
+      // throw from frames outside our bundle (PUBKY-APP-B6/B7/CJ). Nothing in the
+      // app references the bridge (see rg for `messageHandlers`), so there is no
+      // call site to guard — the patterns are specific to the host's messages.
+      /window\.webkit\.messageHandlers/,
+      /Java object is gone/,
+      /Java exception was raised during method invocation/,
+      // MetaMask (and similar wallets) inject `inpage.js` into every page; it
+      // rejects with "Failed to connect to MetaMask" when the extension is
+      // disabled mid-session (PUBKY-APP-8G). Not our code.
+      /Failed to connect to MetaMask/,
     ],
     beforeSend: scrubSensitiveData,
     beforeSendTransaction: scrubTransactionEvent,

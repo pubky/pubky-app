@@ -1,12 +1,13 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import type * as Sentry from '@sentry/nextjs';
 import { AppError } from '@/libs/error/error';
-import { ClientErrorCode } from '@/libs/error/error.codes';
-import { ErrorService } from '@/libs/error/error.types';
+import { ClientErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import {
   EMAIL_PATTERN,
   EMAIL_REDACTED,
+  HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
   NEXUS_POST_TAGS_PATH_PATTERN,
   PHONE_PATTERN,
   PHONE_REDACTED,
@@ -60,6 +61,17 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
   return endpointPath ? pattern.test(endpointPath) : false;
 }
 
+/**
+ * Expected-error drop rules (ADR-0015 §5.1 Challenge 3).
+ *
+ * `Err.*` captures at construction time, before any `catch` runs, so this list is the ONLY place an
+ * expected `AppError` can be kept out of Sentry. Downgrading a `Logger` level, re-tagging a category,
+ * or `preventDefault()` on an unhandled rejection all happen after the event has been sent.
+ *
+ * Every rule must match on the shape the error pipeline actually emits (`service` / `operation` /
+ * `code` / `context.statusCode`) and be covered by a test that routes a fixture through that pipeline
+ * (`safeFetch`, homeserver `handleError`, ...) rather than a hand-built `new AppError(...)`.
+ */
 const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'nexus-post-tags-404',
@@ -70,6 +82,29 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       error.code === ClientErrorCode.NOT_FOUND &&
       error.context?.statusCode === HttpStatusCode.NOT_FOUND &&
       matchesEndpointPath(error, NEXUS_POST_TAGS_PATH_PATTERN),
+  },
+  {
+    name: 'aborted-requests',
+    reason:
+      'REQUEST_ABORTED is only produced by safeFetch when fetch rejects with an AbortError DOMException: a caller ' +
+      'called AbortController.abort() (navigation, teardown, deliberate long-poll reset) or the browser cancelled ' +
+      'an in-flight request. Control flow, not a failure; every caller already handles the rejection ' +
+      '(PUBKY-APP-3N/4F). AbortSignal.timeout() raises a TimeoutError DOMException, which safeFetch does not map ' +
+      'to REQUEST_ABORTED, so real timeouts stay reportable.',
+    matches: (error) => error.code === TimeoutErrorCode.REQUEST_ABORTED,
+  },
+  {
+    name: 'homeserver-event-stream-connect',
+    reason:
+      'The mute-list SSE subscribe drops routinely (homeserver deploys, idle timeouts, mobile backgrounding) and ' +
+      'MuteListSyncCoordinator reconnects with backoff by design. Connect failures reach here as ' +
+      'handleError → httpStatusCodeToError(500) → Err.server(INTERNAL_ERROR) tagged with the subscribe operation ' +
+      '(PUBKY-APP-11/1Y/6G/CX). Auth/validation failures on the same operation and every other Homeserver ' +
+      'operation stay reportable.',
+    matches: (error) =>
+      error.service === ErrorService.Homeserver &&
+      error.operation === HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION &&
+      error.category === ErrorCategory.Server,
   },
 ];
 

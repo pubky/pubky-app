@@ -31,6 +31,24 @@ type FactoryParams = {
 };
 
 /**
+ * True when `cause` is, or wraps (via `Error.cause`), an AppError that already went through
+ * this factory. Bounded walk with cycle protection; mirrors `findAppError` in error.http.ts,
+ * which cannot be imported here without a circular dependency.
+ */
+function hasAppErrorInCauseChain(cause: unknown): boolean {
+  const seen = new Set<unknown>();
+  let current = cause;
+
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    if (current instanceof AppError) return true;
+    seen.add(current);
+    current = (current as { cause?: unknown }).cause;
+  }
+
+  return false;
+}
+
+/**
  * Helper function to create AppError with common pattern.
  * Reduces boilerplate in each factory method.
  *
@@ -55,6 +73,15 @@ function createAppError<C extends ErrorCategory>(
   } as AppErrorParams);
 
   Logger.error(`[${params.service}:${params.operation}]`, error.message, params.context);
+
+  // Once per error chain (ADR-0015 §5.1 Challenge 1): when a caller wraps an AppError
+  // in another Err.* to add its own service/operation, the root was already captured
+  // with the most precise stack and context. Capturing the wrapper too creates a second
+  // Sentry issue (different fingerprint) for the same failure. The Logger line above is
+  // kept so local logs still show the wrapper's operation.
+  if (hasAppErrorInCauseChain(params.cause)) {
+    return error;
+  }
 
   // Defensive: an AppError factory must ALWAYS return. If Sentry isn't ready (e.g. a
   // circular-dep race during env.ts init) or the SDK throws, we log and move on so

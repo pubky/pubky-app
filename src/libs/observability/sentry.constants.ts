@@ -12,6 +12,8 @@ export const PUBKY_COMPACT_URI_PATTERN = new RegExp(`\\bpubky[${Z32_ALPHABET}]{5
 export const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 export const PHONE_PATTERN = /\+?\d[\d\s().-]{7,}\d/g;
 export const NEXUS_POST_TAGS_PATH_PATTERN = /^\/v0\/post\/[^/]+\/[^/]+\/tags$/;
+/** `operation` tag set by `HomeserverService.subscribeUserEventStreamForPath`; matched by a Sentry drop rule. */
+export const HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION = 'subscribeUserEventStreamForPath';
 
 export const SENSITIVE_CONTEXT_KEYS = new Set([
   'avatar',
