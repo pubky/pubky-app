@@ -10,20 +10,24 @@ export type TLockTeaser = {
   teaser_description: string;
 };
 
-/** The read parser accepts any JSON object, so require a field of our own before the edit UI re-serializes the content. */
-export function isEditableLockTeaserContent(content: string): boolean {
+/**
+ * Strict counterpart to the read parser, which coerces anything missing or mistyped to `''`. The edit
+ * composer re-serializes what it parses, so it has to recognise the envelope exactly — otherwise
+ * content it only half understood is written back as two empty strings. Mirrors `parseArticleContent`.
+ */
+export function parseLockTeaserContent(content: string): TLockTeaser | null {
+  let parsed: Partial<TLockTeaser>;
   try {
-    const parsed: unknown = JSON.parse(content);
-
-    return (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      !Array.isArray(parsed) &&
-      ('lock_title' in parsed || 'teaser_description' in parsed)
-    );
+    parsed = JSON.parse(content) as Partial<TLockTeaser>;
   } catch {
-    return false;
+    return null;
   }
+
+  if (!parsed || typeof parsed !== 'object') return null;
+  if (typeof parsed.lock_title !== 'string') return null;
+  if (typeof parsed.teaser_description !== 'string') return null;
+
+  return { lock_title: parsed.lock_title, teaser_description: parsed.teaser_description };
 }
 
 /** Picks the two fields by name, so a new field is never published before we count its length. */

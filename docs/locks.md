@@ -107,8 +107,8 @@ honoring the specs contract and returning this field.
 ## Editing an announcement
 
 Lock announcements use the existing `DialogEditPost` composer. The dialog detects the top-level
-`lock`, parses the public envelope through `LocksController.getLockContent`, and exposes only the
-teaser description and editable lock title. Saving rebuilds the envelope with
+`lock`, parses the public envelope with `parseLockTeaserContent`, and exposes only the teaser
+description and editable lock title. Saving rebuilds the envelope with
 `buildLockTeaserContent`; `PostNormalizer.toEdit` reconstructs the original post with
 `PubkyAppPost.new_with_lock` so the stored lock URL survives content, kind, and attachment edits.
 The price is read-only from the existing `lock.json`; the edit composer cannot change lock criteria
@@ -116,13 +116,14 @@ or guarded content.
 
 ### When the content is not a teaser envelope
 
-Teaser mode needs two things to agree: the read parser must return a value, **and**
-`isEditableLockTeaserContent` must find one of the envelope's own fields. The second check is needed
-because the read parser is deliberately forgiving — every field has a Zod `.catch('')`, so unrelated
-JSON such as `{"title":"…"}` parses successfully into two empty strings. Editing on that basis would
-overwrite the stored content with a blank envelope.
+`parseLockTeaserContent` accepts the envelope only when **both** `lock_title` and
+`teaser_description` are present and are strings; extra fields are ignored. It is deliberately
+stricter than the read parser used for rendering, where every field has a Zod `.catch('')` — under
+those rules unrelated JSON such as `{"title":"…"}` parses successfully into two empty strings, and
+saving would overwrite the stored content with a blank envelope. A half-envelope is rejected for the
+same reason: filling the missing field with `''` would write a value the creator never authored.
 
-When the guard rejects the content, the dialog falls back to a plain post edit:
+When the parse is rejected, the dialog falls back to a plain post edit:
 
 |                  | teaser mode                            | fallback                       |
 | ---------------- | -------------------------------------- | ------------------------------ |

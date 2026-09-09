@@ -2,11 +2,10 @@
 
 import { Dispatch, SetStateAction } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
-import { LocksController } from '@/controllers/locks/locks';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
-import { isEditableLockTeaserContent } from '@/libs/post/lockTeaser';
+import { parseLockTeaserContent } from '@/libs/post/lockTeaser';
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
@@ -28,8 +27,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
   if (!postDetails) return null;
 
   const lockUrl = postDetails.lock;
-  const parsedTeaser = lockUrl ? LocksController.getLockContent(postDetails.content) : null;
-  const teaser = parsedTeaser && isEditableLockTeaserContent(postDetails.content) ? parsedTeaser : null;
+  const teaser = lockUrl ? parseLockTeaserContent(postDetails.content) : null;
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const title = isArticle ? 'Edit Article' : 'Edit Post';
 

@@ -323,12 +323,12 @@ describe('DialogEditPost', () => {
     );
   });
 
-  it('keeps an explicitly empty title in a partial pubky.app teaser envelope', () => {
+  it('keeps an explicitly empty title when the envelope is complete', () => {
     const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
         id: 'test-lock-post-123',
-        content: '{"lock_title":""}',
+        content: '{"lock_title":"","teaser_description":"Public teaser"}',
         kind: 'short',
         attachments: postAttachments,
         lock: lockUrl,
@@ -339,10 +339,31 @@ describe('DialogEditPost', () => {
     render(<DialogEditPost postId="test-lock-post-123" open onOpenChangeAction={vi.fn()} />);
 
     expect(PostInput).toHaveBeenCalledWith(
-      expect.objectContaining({
-        editContent: '',
-        editLock: { lockUrl, title: '' },
-      }),
+      expect.objectContaining({ editContent: 'Public teaser', editLock: { lockUrl, title: '' } }),
+      undefined,
+    );
+  });
+
+  // A half-envelope is content we only partly understand; re-serializing it would drop the missing
+  // field, so it edits as plain text instead.
+  it('treats a partial envelope as a plain post edit', () => {
+    const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
+    const partialContent = '{"lock_title":"Private note"}';
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: {
+        id: 'test-lock-post-123',
+        content: partialContent,
+        kind: 'short',
+        attachments: postAttachments,
+        lock: lockUrl,
+      } as ReturnType<typeof usePostDetails>['postDetails'],
+      isLoading: false,
+    });
+
+    render(<DialogEditPost postId="test-lock-post-123" open onOpenChangeAction={vi.fn()} />);
+
+    expect(PostInput).toHaveBeenCalledWith(
+      expect.objectContaining({ editContent: partialContent, editLock: undefined }),
       undefined,
     );
   });
