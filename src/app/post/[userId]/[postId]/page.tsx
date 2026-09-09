@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     // Collection-kind posts canonicalize to /collections (the page also redirects
     // there) so crawlers/search engines consolidate onto the canonical URL.
     if (post.kind === 'collection') {
-      return { alternates: { canonical: getCollectionRoute(userId, postId) } };
+      return { alternates: { canonical: getCollectionRoute(ids.userId, ids.postId) } };
     }
 
     const username = resolveDisplayName(user);
@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     const { openGraph, twitter, alternates } = Metadata({
       title,
       description,
-      url: `${POST_ROUTES.POST}/${userId}/${postId}`,
+      url: `${POST_ROUTES.POST}/${ids.userId}/${ids.postId}`,
       omitImages: true,
     });
 
@@ -91,8 +91,8 @@ export default async function PostPage({ params }: PostPageProps) {
       // Ignore — render the post normally when the kind lookup fails.
     }
   }
-  if (isCollection) {
-    permanentRedirect(getCollectionRoute(userId, postId));
+  if (isCollection && ids) {
+    permanentRedirect(getCollectionRoute(ids.userId, ids.postId));
   }
 
   // Malformed ids never reach Nexus; render with them as-is so the client-side

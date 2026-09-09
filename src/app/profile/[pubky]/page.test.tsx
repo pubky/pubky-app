@@ -96,4 +96,14 @@ describe('generateMetadata', () => {
 
     expect(metadata).toEqual({ alternates: { canonical: `/profile/${PUBKY}` } });
   });
+
+  it('emits no canonical and makes no Nexus request for a crawl-mangled id', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    for (const mangled of [`${PUBKY}.`, `${PUBKY})`, `${PUBKY}%2E`, 'abc%', '.']) {
+      const metadata = await generateMetadata({ params: Promise.resolve({ pubky: mangled }) });
+      expect(metadata).toEqual({});
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });

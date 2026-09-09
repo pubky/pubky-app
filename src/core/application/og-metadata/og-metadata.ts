@@ -30,15 +30,15 @@ export class OgMetadataApplication {
    */
   static async fetch(validatedUrl: URL): Promise<TOgMetadataResult> {
     const key = validatedUrl.toString();
-    const existing = this.inFlight.get(key);
+    const existing = OgMetadataApplication.inFlight.get(key);
     if (existing) {
       return existing;
     }
 
     const promise = NextJsOgMetadataService.fetch(validatedUrl).finally(() => {
-      this.inFlight.delete(key);
+      OgMetadataApplication.inFlight.delete(key);
     });
-    this.inFlight.set(key, promise);
+    OgMetadataApplication.inFlight.set(key, promise);
     return promise;
   }
 }

@@ -28,12 +28,13 @@ export async function generateMetadata({ params }: DynamicProfilePageProps): Pro
   const { pubky } = await params;
 
   // Crawl-mangled ids (trailing dots, bad percent-encoding) are rejected at the
-  // boundary: null falls back to canonical-only metadata without a Nexus
-  // round-trip or a Sentry event (PUBKY-APP-1E/9Z/A0/BQ).
+  // boundary: null falls back to the parent metadata without a Nexus round-trip
+  // or a Sentry event (PUBKY-APP-1E/9Z/A0/BQ). No canonical is emitted for an
+  // invalid id — pointing crawlers at the mangled URL would consolidate onto junk.
   const profileId = normalizeProfileId(pubky);
-  const canonical = `/profile/${profileId ?? pubky}`;
+  if (!profileId) return {};
 
-  if (!profileId) return { alternates: { canonical } };
+  const canonical = `/profile/${profileId}`;
 
   try {
     const result = await fetchProfileForMetadata(profileId);

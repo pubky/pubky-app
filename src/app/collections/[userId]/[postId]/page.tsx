@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
     const { openGraph, twitter, alternates } = Metadata({
       title,
       description,
-      url: getCollectionRoute(userId, postId),
+      url: getCollectionRoute(ids.userId, ids.postId),
       omitImages: true,
     });
 
