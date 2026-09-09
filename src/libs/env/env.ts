@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { parseSessionBridgeAllowlist } from '@/libs/session-bridge/allowlist';
 
 /**
  * Build-time environment schema.
@@ -47,6 +48,29 @@ const envSchema = z.object({
   BASE_URL_SUPPORT: z.url().optional(),
   SUPPORT_API_ACCESS_TOKEN: z.string().min(1).optional(),
   SUPPORT_ACCOUNT_ID: z.string().min(1).optional(),
+
+  /**
+   * Comma-separated origins allowed to embed /session-bridge and receive sessionExport via postMessage.
+   * Supports exact https origins and single-label wildcards (`https://*.vibes.pubky.app`).
+   * First-party team-operated hosts are added to the default by exact origin via PR, never by wildcard.
+   * Loopback http is allowed only when listed explicitly (e.g. http://localhost:3000).
+   * Unset, empty, and whitespace-only values use the NODE_ENV-dependent default.
+   * Staging pubky.app deployments are production builds and must set this explicitly.
+   */
+  NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS: z
+    .string()
+    .optional()
+    .transform((value, ctx) => {
+      try {
+        return parseSessionBridgeAllowlist(value);
+      } catch (error) {
+        ctx.addIssue({
+          code: 'custom',
+          message: error instanceof Error ? error.message : 'Invalid session bridge allowlist',
+        });
+        return z.NEVER;
+      }
+    }),
 });
 
 /**
@@ -138,6 +162,7 @@ function parseEnv(): z.infer<typeof envSchema> {
     BASE_URL_SUPPORT: process.env.BASE_URL_SUPPORT,
     SUPPORT_API_ACCESS_TOKEN: process.env.SUPPORT_API_ACCESS_TOKEN,
     SUPPORT_ACCOUNT_ID: process.env.SUPPORT_ACCOUNT_ID,
+    NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS: process.env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS,
   });
 
   if (!result.success) {

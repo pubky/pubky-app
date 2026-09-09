@@ -26,4 +26,22 @@ describe('Environment variables configuration', () => {
     expect(Env.SUPPORT_API_ACCESS_TOKEN).toBeDefined();
     expect(Env.SUPPORT_ACCOUNT_ID).toBeDefined();
   });
+
+  it('should parse NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS as a non-empty string array', () => {
+    expect(Array.isArray(Env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS)).toBe(true);
+    expect(Env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS.length).toBeGreaterThan(0);
+    expect(Env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS).toContain('https://vibes.pubky.app');
+    expect(Env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS).toContain('https://*.vibes.pubky.app');
+    expect(Env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS).toContain('https://shop.pubky.app');
+    expect(Env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS).toContain('https://vibes.staging.pubky.app');
+  });
+});
+
+describe('session bridge allowlist env validation', () => {
+  it('rejects invalid allowlist entries at parse time', async () => {
+    const { parseSessionBridgeAllowlist } = await import('@/libs/session-bridge/allowlist');
+    expect(() => parseSessionBridgeAllowlist('*')).toThrow(
+      'Invalid NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS entries: *',
+    );
+  });
 });

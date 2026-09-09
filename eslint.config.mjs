@@ -29,6 +29,7 @@ const eslintConfig = [
       'next-env.d.ts',
       // PWA generated files (serwist)
       'public/sw.js',
+      '**/._*',
     ],
   },
   {
@@ -83,23 +84,25 @@ const eslintConfig = [
           varsIgnorePattern: '^_',
         },
       ],
-      // Deployer-facing public values are runtime-configurable (PUBKY_RUNTIME_*). Only the four
-      // build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) may be
-      // read directly; everything else must go through the getters in @/libs/runtime-config, and
-      // only the runtime-config resolver may touch process.env.PUBKY_RUNTIME_*.
+      // Deployer-facing public values are runtime-configurable (PUBKY_RUNTIME_*). Only the
+      // build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION,
+      // SESSION_BRIDGE_ALLOWED_ORIGINS) may be read directly; everything else must go through
+      // the getters in @/libs/runtime-config, and only the runtime-config resolver may touch
+      // process.env.PUBKY_RUNTIME_*. SESSION_BRIDGE_ALLOWED_ORIGINS is build-intrinsic because
+      // next.config.ts emits CSP frame-ancestors from the same parsed allowlist.
       'no-restricted-syntax': [
         'error',
         {
           selector:
-            'MemberExpression[object.name="Env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION)$)/]',
+            'MemberExpression[object.name="Env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION|SESSION_BRIDGE_ALLOWED_ORIGINS)$)/]',
           message:
-            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) exist on Env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
+            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION, SESSION_BRIDGE_ALLOWED_ORIGINS) exist on Env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
         },
         {
           selector:
-            'MemberExpression[object.type="MemberExpression"][object.object.name="process"][object.property.name="env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION)$)/]',
+            'MemberExpression[object.type="MemberExpression"][object.object.name="process"][object.property.name="env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION|SESSION_BRIDGE_ALLOWED_ORIGINS)$)/]',
           message:
-            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) may be read from process.env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
+            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION, SESSION_BRIDGE_ALLOWED_ORIGINS) may be read from process.env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
         },
         {
           selector:

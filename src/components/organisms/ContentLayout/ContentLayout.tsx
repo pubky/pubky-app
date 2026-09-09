@@ -22,7 +22,7 @@ import type { ContentLayoutProps, StickySidebarProps } from './ContentLayout.typ
 // `ContentLayout` is rendered once by `app/(feeds)/layout.tsx` so that the shell
 // (sidebars, mobile header, drawers, layout-resolution state) persists across
 // intra-cluster navigation. The per-route shell props for those routes live in
-// `app/(feeds)/_shell/configs.tsx`. Other routes (e.g. `/hot`, `/who-to-follow`,
+// `app/(main)/(feeds)/_shell/configs.tsx`. Other routes (e.g. `/hot`, `/who-to-follow`,
 // `/settings`, `/profile`, `/share`) continue to render `ContentLayout` per-page
 // from their templates. `/post/[userId]/[postId]` uses `PostPageShell` from
 // `app/post/[userId]/[postId]/layout.tsx` (and `SinglePost` for the intercept).

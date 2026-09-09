@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 import withSerwistInit from '@serwist/next';
 import { withSentryConfig } from '@sentry/nextjs';
 import packageJson from './package.json';
+import { buildSessionBridgeRouteHeaders } from './src/libs/session-bridge/allowlist';
 
 const nextConfig: NextConfig = {
   env: {
@@ -49,6 +50,11 @@ const nextConfig: NextConfig = {
       '@synonymdev/pubky': '@synonymdev/pubky/index.js',
       'pubky-app-specs': 'pubky-app-specs/index.js',
     },
+  },
+  // No global X-Frame-Options or CSP frame-ancestors. Route-specific CSP below
+  // is the only framing policy; it applies only to /session-bridge.
+  async headers() {
+    return buildSessionBridgeRouteHeaders(process.env.NEXT_PUBLIC_SESSION_BRIDGE_ALLOWED_ORIGINS);
   },
 };
 

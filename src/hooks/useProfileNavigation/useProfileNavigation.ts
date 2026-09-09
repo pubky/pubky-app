@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { FilterBarPageType, PROFILE_PAGE_TYPES, ProfilePageType } from '@/app/profile/types';
+import { FilterBarPageType, PROFILE_PAGE_TYPES, ProfilePageType } from '@/app/(main)/profile/types';
 import { getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 

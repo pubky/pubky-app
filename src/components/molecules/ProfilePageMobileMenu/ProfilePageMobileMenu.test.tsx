@@ -2,7 +2,7 @@ import React, { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { PROFILE_PAGE_TYPES } from '@/app/(main)/profile/types';
 import { PROFILE_MENU_ITEMS, ProfilePageMobileMenu } from './ProfilePageMobileMenu';
 
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({

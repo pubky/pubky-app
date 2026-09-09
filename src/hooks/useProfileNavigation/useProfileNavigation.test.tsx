@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { PROFILE_PAGE_TYPES } from '@/app/(main)/profile/types';
 import { PROFILE_ROUTES } from '@/app/routes';
 import { useProfileNavigation } from './useProfileNavigation';
 

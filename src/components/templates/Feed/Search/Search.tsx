@@ -34,7 +34,7 @@ import { CONTENT } from '@/stores/home/home.types';
  *
  * Mounted as `{children}` of `(feeds)/layout.tsx`, which keeps the page shell
  * (sidebars, drawers, right rail) mounted across feed-page navigations. The
- * shell config for `/search` lives in `app/(feeds)/_shell/configs.tsx`.
+ * shell config for `/search` lives in `app/(main)/(feeds)/_shell/configs.tsx`.
  */
 export function Search() {
   const criteria = useSearchCriteria();

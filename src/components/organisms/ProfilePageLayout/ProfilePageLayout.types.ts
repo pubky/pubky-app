@@ -1,4 +1,4 @@
-import { FilterBarPageType, ProfilePageType } from '@/app/profile/types';
+import { FilterBarPageType, ProfilePageType } from '@/app/(main)/profile/types';
 import { FollowAction } from '@/hooks/useFollowUser/useFollowUser.types';
 import { ProfileStats } from '@/hooks/useProfileHeader/useProfileHeader';
 

@@ -11,6 +11,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   test: {
+    exclude: ['**/node_modules/**', '**/.claude/**', '**/._*'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -47,7 +48,7 @@ export default defineConfig({
           globals: true,
           include: ['**/*.test.{ts,tsx}'],
           // .claude excludes local tooling worktrees checked out inside the repo.
-          exclude: ['**/node_modules/**', '**/.claude/**', '**/*.vrt.test.{ts,tsx}'],
+          exclude: ['**/node_modules/**', '**/.claude/**', '**/*.vrt.test.{ts,tsx}', '**/._*'],
           server: { deps: { inline: ['react-tweet'] } },
         },
       },
@@ -75,7 +76,7 @@ export default defineConfig({
           // chromium, firefox, and webkit run concurrently.
           fileParallelism: false,
           include: ['**/*.vrt.test.{ts,tsx}'],
-          exclude: ['**/node_modules/**', '**/.claude/**'],
+          exclude: ['**/node_modules/**', '**/.claude/**', '**/._*'],
           setupFiles: ['./src/test-utils/vrt.setup.ts'],
           server: { deps: { inline: ['react-tweet'] } },
           browser: {

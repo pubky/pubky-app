@@ -11,7 +11,7 @@ import {
   Tag,
   UsersRound,
 } from 'lucide-react';
-import { PROFILE_PAGE_TYPES, type ProfilePageType } from '@/app/profile/types';
+import { PROFILE_PAGE_TYPES, type ProfilePageType } from '@/app/(main)/profile/types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { UsersRound2 } from '@/icons';
 import { MobileTabBar } from '../MobileTabBar/MobileTabBar';

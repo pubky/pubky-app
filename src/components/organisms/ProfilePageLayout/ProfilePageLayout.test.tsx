@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { PROFILE_PAGE_TYPES } from '@/app/(main)/profile/types';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { ProfilePageLayout } from './ProfilePageLayout';
 import { ProfilePageLayoutProps } from './ProfilePageLayout.types';
