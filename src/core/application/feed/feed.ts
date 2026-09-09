@@ -47,19 +47,9 @@ export class FeedApplication {
     const idChanged = existingId != null && existingId !== newId;
 
     const now = Date.now();
+    // Model errors are already logged; this ancillary lookup can fall back to a fresh timestamp.
     const createdAt = existingId
-      ? (
-          (await LocalFeedService.read({ feedId: existingId }).catch((error) => {
-            // A genuine DB failure must not silently reset created_at on a
-            // user-initiated update; surface it (this is a best-effort lookup,
-            // so the update proceeds with a fresh timestamp instead of failing).
-            Logger.warn('[FeedApplication.update] Failed to read existing feed created_at', {
-              feedId: existingId,
-              error,
-            });
-            return null;
-          })) ?? { created_at: now }
-        ).created_at
+      ? ((await LocalFeedService.read({ feedId: existingId }).catch(() => null)) ?? { created_at: now }).created_at
       : now;
 
     const { tags, domain_tags, reach, sort, content, layout } = feed.feed;
@@ -83,12 +73,8 @@ export class FeedApplication {
     // 1) create new homeserver resource, 2) atomically swap local feed records,
     // 3) best-effort delete old homeserver resource.
     if (idChanged) {
-      const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch((error) => {
-        // Same as above: log genuine DB failures instead of silently degrading
-        // the migration (the atomic swap falls back to a fresh record).
-        Logger.warn('[FeedApplication.update] Failed to read old feed for migration', { feedId: existingId, error });
-        return null;
-      });
+      // Model errors are already logged; migration can proceed without the old stream cache.
+      const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
       const newFeedUrl = feedUriBuilder(userId, newId);
       const newFeedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
 
@@ -116,12 +102,8 @@ export class FeedApplication {
     const feedId = (params as TFeedPersistDeleteParams).feedId;
     const feedUrl = feedUriBuilder(userId, feedId);
 
-    const feed = await LocalFeedService.read({ feedId }).catch((error) => {
-      // Ancillary lookup for cache cleanup; a genuine DB failure must not block
-      // the delete itself, but it is surfaced rather than swallowed.
-      Logger.warn('[FeedApplication.commitDelete] Failed to read feed for stream cleanup', { feedId, error });
-      return null;
-    });
+    // Model errors are already logged; cache cleanup must not block the delete itself.
+    const feed = await LocalFeedService.read({ feedId }).catch(() => null);
     let streamId: ReturnType<typeof buildFeedStreamId> | null = null;
     if (feed) {
       try {

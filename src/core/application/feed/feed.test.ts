@@ -165,6 +165,16 @@ describe('FeedApplication', () => {
     vi.clearAllMocks();
   });
 
+  describe('get', () => {
+    it('should return null when the feed is not found locally', async () => {
+      const { readSpy } = setupMocks();
+      readSpy.mockResolvedValue(null);
+
+      await expect(FeedApplication.get({ feedId: 'feed-nonexistent' })).resolves.toBeNull();
+      expect(readSpy).toHaveBeenCalledWith({ feedId: 'feed-nonexistent' });
+    });
+  });
+
   describe('persist with PUT action (create)', () => {
     it('should save locally and sync to homeserver successfully', async () => {
       const mockParams = createMockCreateParams();
@@ -286,7 +296,7 @@ describe('FeedApplication', () => {
       expect(unreadPostStreamDeleteByIdSpy).toHaveBeenCalledWith(oldStreamId);
     });
 
-    it('should warn and fall back to a fresh created_at when the existing feed read fails', async () => {
+    it('should fall back to a fresh created_at without logging database read failures again', async () => {
       const mockParams: TFeedPersistCreateParams = {
         feed: createMockFeedResult(),
         existingId: 'feed-existing',
@@ -301,7 +311,16 @@ describe('FeedApplication', () => {
         loggerWarnSpy,
       } = setupMocks();
 
-      readSpy.mockRejectedValue(new Error('IndexedDB unavailable'));
+      readSpy.mockRejectedValue(
+        new AppError({
+          category: ErrorCategory.Database,
+          code: DatabaseErrorCode.QUERY_FAILED,
+          message: 'IndexedDB unavailable',
+          service: ErrorService.Local,
+          operation: 'findById',
+          context: { table: 'feeds', id: 'feed-existing' },
+        }),
+      );
       dbTransactionSpy.mockImplementation(((...args: unknown[]) =>
         (args[args.length - 1] as () => Promise<unknown>)()) as never);
       feedUpsertSpy.mockResolvedValue(undefined);
@@ -316,10 +335,7 @@ describe('FeedApplication', () => {
         nowSpy.mockRestore();
       }
 
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to read existing feed created_at'),
-        expect.objectContaining({ feedId: 'feed-existing' }),
-      );
+      expect(loggerWarnSpy).not.toHaveBeenCalled();
       expect(feedUpsertSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed123', created_at: 5_000_000 }));
     });
 
@@ -597,7 +613,7 @@ describe('FeedApplication', () => {
       const mockParams = createMockDeleteParams();
       const { deleteSpy, readSpy, requestSpy, streamDeleteSpy, streamClearUnreadSpy } = setupMocks();
 
-      readSpy.mockRejectedValue(new Error('not found'));
+      readSpy.mockResolvedValue(null);
       deleteSpy.mockResolvedValue(undefined);
       requestSpy.mockResolvedValue(undefined);
 
@@ -607,11 +623,40 @@ describe('FeedApplication', () => {
       expect(streamClearUnreadSpy).not.toHaveBeenCalled();
     });
 
+    it('should delete the feed without logging an ancillary database read failure again', async () => {
+      const mockParams = createMockDeleteParams();
+      const { deleteSpy, readSpy, requestSpy, streamDeleteSpy, streamClearUnreadSpy, loggerWarnSpy } = setupMocks();
+
+      readSpy.mockRejectedValue(
+        new AppError({
+          category: ErrorCategory.Database,
+          code: DatabaseErrorCode.QUERY_FAILED,
+          message: 'IndexedDB unavailable',
+          service: ErrorService.Local,
+          operation: 'findById',
+          context: { table: 'feeds', id: 'feed123' },
+        }),
+      );
+      deleteSpy.mockResolvedValue(undefined);
+      requestSpy.mockResolvedValue(undefined);
+
+      await FeedApplication.commitDelete({ userId: testUserId, params: mockParams });
+
+      expect(deleteSpy).toHaveBeenCalledWith({ feedId: 'feed123' });
+      expect(requestSpy).toHaveBeenCalledWith({
+        method: HttpMethod.DELETE,
+        url: expect.stringContaining('/feeds/feed123'),
+      });
+      expect(streamDeleteSpy).not.toHaveBeenCalled();
+      expect(streamClearUnreadSpy).not.toHaveBeenCalled();
+      expect(loggerWarnSpy).not.toHaveBeenCalled();
+    });
+
     it('should throw when local delete fails', async () => {
       const mockParams = createMockDeleteParams();
       const { deleteSpy, readSpy } = setupMocks();
 
-      readSpy.mockRejectedValue(new Error('not found'));
+      readSpy.mockResolvedValue(null);
       deleteSpy.mockRejectedValue(new Error('Feed not found'));
 
       await expect(FeedApplication.commitDelete({ userId: testUserId, params: mockParams })).rejects.toThrow(
@@ -623,7 +668,7 @@ describe('FeedApplication', () => {
       const mockParams = createMockDeleteParams();
       const { deleteSpy, readSpy, requestSpy } = setupMocks();
 
-      readSpy.mockRejectedValue(new Error('not found'));
+      readSpy.mockResolvedValue(null);
       deleteSpy.mockResolvedValue(undefined);
       requestSpy.mockRejectedValue(new Error('Failed to DELETE from homeserver: 404'));
 
