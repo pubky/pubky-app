@@ -220,7 +220,6 @@ export class LocalStreamPostsService {
    * - Post counts (likes, replies, etc.)
    * - Post relationships (replies, reposts, etc.)
    * - Post tags
-   * - Post attachments
    *
    * Additionally, creates reply streams for posts that are replies to other posts,
    * mapping parent posts to their reply post IDs.

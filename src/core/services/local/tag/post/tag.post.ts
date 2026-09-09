@@ -29,7 +29,6 @@ export class LocalPostTagService {
    * @param params.taggerId - Unique identifier of the user adding the tag
    *
    * @returns {boolean} true if local state changed; false if the tagger already had this tag (idempotent — no writes)
-   * @throws {AppError} When user has already tagged this post with the same label
    * @throws {DatabaseError} When database operations fail
    */
   static async create({
@@ -95,7 +94,6 @@ export class LocalPostTagService {
    * @param params.taggerId - Unique identifier of the user removing the tag
    *
    * @returns {boolean} true if tag was deleted, false if nothing to delete (idempotent)
-   * @throws {AppError} When post has no tags or user hasn't tagged with this label
    * @throws {DatabaseError} When database operations fail
    */
   static async delete({
