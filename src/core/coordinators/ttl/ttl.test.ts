@@ -98,34 +98,6 @@ describe('TtlCoordinator', () => {
   // 1. Singleton Behavior
   // ===========================================================================
 
-  it('starts refreshing after a restored session becomes authenticated', async () => {
-    const coordinator = TtlCoordinator.getInstance();
-    coordinator.start();
-    findStaleUsersSpy.mockResolvedValue(['target-user']);
-    coordinator.subscribeUser({ pubky: 'target-user' });
-    setupAuthenticatedUser();
-
-    await vi.advanceTimersByTimeAsync(5_000);
-
-    expect(forceRefreshUsersSpy).toHaveBeenCalledWith({
-      userIds: ['target-user'],
-      viewerId: 'test-user-pubky',
-    });
-  });
-
-  it('starts refreshing when the profile becomes ready after sign-in', async () => {
-    useAuthStore.getState().init({ session: mockSession(), currentUserPubky: 'viewer', hasProfile: null });
-    const coordinator = TtlCoordinator.getInstance();
-    coordinator.start();
-    useAuthStore.getState().setHasProfile(true);
-    findStaleUsersSpy.mockResolvedValue(['target-user']);
-    coordinator.subscribeUser({ pubky: 'target-user' });
-
-    await vi.advanceTimersByTimeAsync(5_000);
-
-    expect(forceRefreshUsersSpy).toHaveBeenCalledWith({ userIds: ['target-user'], viewerId: 'viewer' });
-  });
-
   describe('Singleton Behavior', () => {
     it('returns the same instance on multiple getInstance() calls', () => {
       const instance1 = TtlCoordinator.getInstance();

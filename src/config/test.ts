@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom';
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
-import { locks } from 'node:worker_threads';
 import { cleanup } from '@testing-library/react';
 import { expect, vi } from 'vitest';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
@@ -45,15 +44,6 @@ process.env.SUPPORT_ACCOUNT_ID = '123';
 // =============================================================================
 
 const { db } = await import('@/database/franky/franky');
-
-// Use native lock semantics, isolated between Vitest workers whose fake databases are separate.
-Object.defineProperty(navigator, 'locks', {
-  configurable: true,
-  value: {
-    request: <T>(name: string, options: LockOptions, callback: (lock: Lock | null) => Promise<T> | T) =>
-      locks.request(`vitest:${process.env.VITEST_POOL_ID}:${name}`, options, callback),
-  },
-});
 
 // Global snapshot serializer to normalize Radix UI generated IDs
 // This ensures snapshot tests are consistent across test runs

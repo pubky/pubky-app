@@ -1,14 +1,10 @@
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
-import { db } from '@/database/franky/franky';
-import { ErrorService } from '@/libs/error/error.types';
-import { toAppError } from '@/libs/error/error.utils';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
 import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { UserStreamModel } from '@/models/stream/user/userStream';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
-import { UserConnectionsModel } from '@/models/user/connections/userConnections';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
@@ -94,6 +90,7 @@ export class LocalStreamUsersService {
    * Used to identify missing user data that needs to be fetched
    *
    * @param userIds - Array of user IDs to check
+   * @param viewerId - When set, a missing relationship row is also a cache miss (#1803)
    * @returns Array of user IDs that are not persisted in cache
    */
   static async getNotPersistedUsersInCache(userIds: Pubky[], viewerId?: Pubky): Promise<Pubky[]> {
@@ -157,68 +154,16 @@ export class LocalStreamUsersService {
     // Bulk save to normalized tables
     await Promise.all([
       UserDetailsModel.bulkSave(userDetails),
-      this.persistViewerData(userCounts, userRelationships, viewerId),
+      UserCountsModel.bulkSave(userCounts),
       UserTagsModel.bulkSave(userTags),
+      // Guest / viewer-less Nexus payloads are not relative to anyone; skip the row so a later
+      // signed-in read is a cache miss and fetches with viewer_id (#1803).
+      viewerId ? UserRelationshipsModel.bulkSave(userRelationships) : Promise.resolve(),
       UserTtlModel.bulkSave(userTtl),
       // Persist moderation records for flagged profiles
       userModerations.length > 0 ? ModerationModel.bulkSave(userModerations) : Promise.resolve(),
     ]);
 
     return userIds;
-  }
-
-  private static async persistViewerData(
-    counts: NexusModelTuple<NexusUserCounts>[],
-    relationships: NexusModelTuple<NexusUserRelationship>[],
-    viewerId?: Pubky | null,
-  ): Promise<void> {
-    try {
-      // Serialize with follow reconciliation and optimistic mutations. Read the authority inside
-      // the transaction so even a Nexus request begun before the SSE event cannot overwrite it.
-      await db.transaction(
-        'rw',
-        [UserConnectionsModel.table, UserRelationshipsModel.table, UserCountsModel.table],
-        async () => {
-          const connections = viewerId ? await UserConnectionsModel.findById(viewerId) : null;
-          const following = connections?.followingSyncedAt !== undefined ? new Set(connections.following) : null;
-          // A viewerless request can have started before session restoration and finish after sync.
-          const countConnections = viewerId ? [] : await UserConnectionsModel.findByIds(counts.map(([id]) => id));
-          const followingCounts = new Map(
-            countConnections
-              .filter((row) => row.followingSyncedAt !== undefined)
-              .map((row) => [row.id, row.following.length]),
-          );
-          if (following && viewerId) followingCounts.set(viewerId, following.size);
-          if (viewerId) {
-            const local = following ? [] : await UserRelationshipsModel.findByIds(relationships.map(([id]) => id));
-            const overrides = new Map(local.filter((row) => row.followingBy === viewerId).map((row) => [row.id, row]));
-            await UserRelationshipsModel.bulkSave(
-              relationships.map(([id, relationship]) => {
-                const override = overrides.get(id);
-                return [
-                  id,
-                  {
-                    ...relationship,
-                    ...(following
-                      ? { following: following.has(id) }
-                      : override
-                        ? { following: override.following, followingBy: viewerId }
-                        : {}),
-                  },
-                ];
-              }),
-            );
-          }
-          await UserCountsModel.bulkSave(
-            counts.map(([id, value]) => [
-              id,
-              followingCounts.has(id) ? { ...value, following: followingCounts.get(id)! } : value,
-            ]),
-          );
-        },
-      );
-    } catch (error) {
-      throw toAppError(error, ErrorService.Local, 'persistViewerData');
-    }
   }
 }

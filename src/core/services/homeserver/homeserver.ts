@@ -3,7 +3,6 @@ import {
   AuthFlowKind,
   Capabilities,
   Client,
-  type Event as PubkyEvent,
   Keypair,
   Pubky,
   PublicKey,
@@ -69,7 +68,9 @@ const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
 const LIST_DEFAULT_LIMIT = 500;
 
-type HomeserverSdkUserEvent = Pick<PubkyEvent, 'cursor' | 'eventType' | 'resource' | 'free'>;
+type HomeserverSdkUserEvent = THomeserverUserEvent & {
+  free(): void;
+};
 
 export class HomeserverService {
   private constructor() {}
@@ -538,13 +539,11 @@ export class HomeserverService {
    * @param {string} baseDirectory - Base directory path to list all files from.
    * @returns {Promise<string[]>} Array of every file URL under the directory.
    */
-  static async listAll({ baseDirectory, signal }: THomeserverListAllParams): Promise<string[]> {
+  static async listAll({ baseDirectory }: THomeserverListAllParams): Promise<string[]> {
     const files: string[] = [];
     let cursor: string | undefined;
 
     for (;;) {
-      // SDK requests cannot be aborted, but an obsolete traversal must not request another page.
-      if (signal?.aborted) return [];
       const batch = await this.list({ baseDirectory, cursor, limit: LIST_DEFAULT_LIMIT });
       files.push(...batch);
 
@@ -702,7 +701,7 @@ export class HomeserverService {
 
   /**
    * Subscribe to homeserver `/events-stream` for a user's pub directory subtree (SDK SSE wrapper).
-   * Used for account synchronization; callers own {@link ReadableStreamDefaultReader} lifecycle.
+   * Used for mute-list sync; callers own {@link ReadableStreamDefaultReader} lifecycle.
    */
   static async subscribeUserEventStreamForPath(params: {
     userZ32: TPubkyModel;
@@ -727,32 +726,6 @@ export class HomeserverService {
     }
   }
 
-  /** Capture the head before reading a snapshot; replaying after it closes the snapshot/subscription gap. */
-  static async fetchUserEventStreamCursor(params: { userZ32: TPubkyModel; pathPrefix: string }): Promise<string> {
-    try {
-      const stream = await this.getPubkySdk()
-        .eventStreamForUser(PublicKey.from(params.userZ32), null)
-        .path(params.pathPrefix)
-        .reverse()
-        .limit(1)
-        .subscribe();
-      const reader = stream.getReader();
-      try {
-        const { done, value } = await reader.read();
-        if (done) return '0';
-        try {
-          return value.cursor;
-        } finally {
-          value.free();
-        }
-      } finally {
-        await reader.cancel().catch(() => {});
-      }
-    } catch (error) {
-      return handleError({ error, additionalContext: { operation: 'fetchUserEventStreamCursor', ...params } });
-    }
-  }
-
   private static normalizeUserEventStream(
     stream: ReadableStream<HomeserverSdkUserEvent>,
   ): ReadableStream<THomeserverUserEvent> {
@@ -767,19 +740,12 @@ export class HomeserverService {
           return;
         }
 
-        const resource = value.resource;
         try {
           controller.enqueue({
             cursor: value.cursor,
             eventType: value.eventType,
-            resourcePath: resource.path,
           });
         } finally {
-          try {
-            resource.free();
-          } catch {
-            // Ignore WASM dispose errors, but still release the parent event.
-          }
           try {
             value.free();
           } catch {

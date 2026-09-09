@@ -14,13 +14,11 @@ export class UserRelationshipsModel
 
   following: boolean;
   followed_by: boolean;
-  followingBy?: Pubky;
 
   constructor(userRelationships: UserRelationshipsModelSchema) {
     super(userRelationships);
     this.following = userRelationships.following;
     this.followed_by = userRelationships.followed_by;
-    this.followingBy = userRelationships.followingBy;
   }
 
   // Adapter function to convert NexusUserRelationship to UserRelationshipsModelSchema

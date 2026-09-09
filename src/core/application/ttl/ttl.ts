@@ -102,7 +102,7 @@ export class TtlApplication {
     const authors = Array.from(new Set(params.posts.map((post) => post.details.author)));
     if (authors.length === 0) return;
 
-    const cacheMissUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(authors);
+    const cacheMissUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(authors, params.viewerId);
     if (cacheMissUserIds.length === 0) return;
 
     const userBatch = await NexusUserStreamService.fetchByIds({

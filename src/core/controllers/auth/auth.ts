@@ -11,7 +11,6 @@ import type {
   TLoginWithMnemonicParams,
   TSignUpParams,
 } from '@/controllers/auth/auth.types';
-import { FollowSyncCoordinator } from '@/coordinators/follow-sync/follow-sync';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
@@ -363,7 +362,6 @@ export class AuthController {
     // Reset singletons
     PubkySpecsSingleton.reset();
     TtlCoordinator.resetInstance();
-    FollowSyncCoordinator.resetInstance();
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();
 

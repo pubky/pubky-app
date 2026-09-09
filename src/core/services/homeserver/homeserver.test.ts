@@ -952,16 +952,6 @@ describe('HomeserverService', () => {
       const makeFiles = (count: number, offset = 0) =>
         Array.from({ length: count }, (_, i) => `${baseDirectory}file${String(offset + i).padStart(4, '0')}`);
 
-      it('does not request another page after the traversal is cancelled', async () => {
-        const controller = new AbortController();
-        mockState.publicStorageList.mockImplementation(async () => {
-          controller.abort();
-          return makeFiles(500);
-        });
-        expect(await HomeserverService.listAll({ baseDirectory, signal: controller.signal })).toEqual([]);
-        expect(mockState.publicStorageList).toHaveBeenCalledTimes(1);
-      });
-
       it('should return all files in a single page when below the page limit', async () => {
         const files = makeFiles(3);
         mockState.publicStorageList.mockResolvedValue(files);
@@ -1408,55 +1398,15 @@ describe('HomeserverService', () => {
       });
     });
 
-    describe('fetchUserEventStreamCursor', () => {
-      it.each([true, false])(
-        'captures the most recent matching event (nonempty: %s) and closes the reader',
-        async (nonempty) => {
-          const free = vi.fn();
-          const cancel = vi.fn();
-          const path = vi.fn().mockReturnThis();
-          const reverse = vi.fn().mockReturnThis();
-          const limit = vi.fn().mockReturnThis();
-          const subscribe = vi.fn().mockResolvedValue(
-            new ReadableStream({
-              start(controller) {
-                if (nonempty) controller.enqueue({ cursor: '123', free });
-                else controller.close();
-              },
-              cancel,
-            }),
-          );
-          mockState.eventStreamForUser.mockReturnValue({ path, reverse, limit, subscribe });
-
-          const cursor = await HomeserverService.fetchUserEventStreamCursor({
-            userZ32: 'user-pubky',
-            pathPrefix: '/pub/pubky.app/follows/',
-          });
-          expect(cursor).toBe(nonempty ? '123' : '0');
-          expect(path).toHaveBeenCalledWith('/pub/pubky.app/follows/');
-          expect(reverse).toHaveBeenCalledTimes(1);
-          expect(limit).toHaveBeenCalledWith(1);
-          expect(free).toHaveBeenCalledTimes(nonempty ? 1 : 0);
-          expect(cancel).toHaveBeenCalledTimes(nonempty ? 1 : 0);
-        },
-      );
-    });
-
     describe('subscribeUserEventStreamForPath', () => {
       it('normalizes SDK events and disposes raw WASM objects internally', async () => {
         const free = vi.fn();
-        const resourceFree = vi.fn();
         const path = vi.fn().mockReturnThis();
         const live = vi.fn().mockReturnThis();
         const subscribe = vi.fn().mockResolvedValue(
           new ReadableStream({
             start(controller) {
-              controller.enqueue({
-                cursor: 'cursor-1',
-                eventType: 'PUT',
-                resource: { path: '/pub/pubky.app/mutes/target', free: resourceFree },
-                free,
-              });
+              controller.enqueue({ cursor: 'cursor-1', eventType: 'PUT', free });
               controller.close();
             },
           }),
@@ -1476,14 +1426,9 @@ describe('HomeserverService', () => {
         expect(path).toHaveBeenCalledWith('/pub/pubky.app/mutes/');
         expect(live).toHaveBeenCalled();
         expect(subscribe).toHaveBeenCalled();
-        expect(result.value).toEqual({
-          cursor: 'cursor-1',
-          eventType: 'PUT',
-          resourcePath: '/pub/pubky.app/mutes/target',
-        });
+        expect(result.value).toEqual({ cursor: 'cursor-1', eventType: 'PUT' });
         expect(result.value).not.toHaveProperty('free');
         expect(free).toHaveBeenCalledTimes(1);
-        expect(resourceFree).toHaveBeenCalledTimes(1);
       });
     });
 

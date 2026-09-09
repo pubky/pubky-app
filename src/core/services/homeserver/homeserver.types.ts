@@ -77,12 +77,11 @@ export type THomeserverListParams = {
   limit?: number;
 };
 
-export type THomeserverListAllParams = Pick<THomeserverListParams, 'baseDirectory'> & { signal?: AbortSignal };
+export type THomeserverListAllParams = Pick<THomeserverListParams, 'baseDirectory'>;
 
 export type THomeserverUserEvent = {
   cursor: string;
   eventType: string;
-  resourcePath: string;
 };
 
 // Utility function parameter types

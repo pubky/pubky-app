@@ -1,11 +1,8 @@
 'use client';
 
-import { useLiveQuery } from 'dexie-react-hooks';
-import { FollowSyncController } from '@/controllers/follow-sync/follow-sync';
 import { UserController } from '@/controllers/user/user';
 import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
 import type { NexusUserCounts } from '@/services/nexus/nexus.types';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { ProfileStats, UseProfileStatsOptions, UseProfileStatsResult } from './useProfileStats.types';
 
@@ -27,13 +24,6 @@ import { ProfileStats, UseProfileStatsOptions, UseProfileStatsResult } from './u
  */
 export function useProfileStats(userId: string, options?: UseProfileStatsOptions): UseProfileStatsResult {
   const enabled = isLocalFirstQueryEnabled(userId, options?.enabled);
-
-  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const followingCount = useLiveQuery(
-    () => (enabled && userId === currentUserPubky ? FollowSyncController.getFollowingCount(userId) : null),
-    [userId, currentUserPubky, enabled],
-    null,
-  );
 
   // Fetch user counts using local-first pattern — replaces manual useLiveQuery + buggy useEffect
   const { data: userCounts, isLoading } = useLocalFirstQuery<NexusUserCounts>({
@@ -62,7 +52,7 @@ export function useProfileStats(userId: string, options?: UseProfileStatsOptions
     replies: repliesCount,
     collections: collectionsCount,
     followers: userCounts?.followers ?? 0,
-    following: followingCount ?? userCounts?.following ?? 0,
+    following: userCounts?.following ?? 0,
     friends: userCounts?.friends ?? 0,
     uniqueTags: userCounts?.unique_tags ?? 0,
   };

@@ -16,15 +16,11 @@ export class UserConnectionsModel
 
   following: Pubky[];
   followers: Pubky[];
-  followingSyncedAt?: number;
-  followingRevision?: string;
 
   constructor(userConnections: UserConnectionsModelSchema) {
     super(userConnections);
     this.following = userConnections.following;
     this.followers = userConnections.followers;
-    this.followingSyncedAt = userConnections.followingSyncedAt;
-    this.followingRevision = userConnections.followingRevision;
   }
 
   static toSchema(

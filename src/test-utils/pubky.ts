@@ -1,4 +1,4 @@
-import { Keypair, type Session } from '@synonymdev/pubky';
+import type { Keypair, Session } from '@synonymdev/pubky';
 import type { Pubky } from '@/models/models.types';
 import { asOpaque } from './type-assertions';
 
@@ -44,17 +44,3 @@ export const PUBKY_INVALID_TOO_LONG = `${PUBKY_52_STAGING_FIXTURE}x`;
 
 /** 52 chars but invalid (uppercase breaks pubky identifier rules) */
 export const PUBKY_INVALID_BAD_CHAR = `${PUBKY_52_STAGING_FIXTURE.slice(0, 51)}O`;
-
-/** Deterministic canonical SDK keys for resource-ingestion tests. */
-export function canonicalPubky(index: number): Pubky {
-  const secret = new Uint8Array(32);
-  new DataView(secret.buffer).setUint32(0, index);
-  const pair = Keypair.fromSecret(secret);
-  const key = pair.publicKey;
-  try {
-    return key.z32();
-  } finally {
-    key.free();
-    pair.free();
-  }
-}

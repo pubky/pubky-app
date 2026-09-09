@@ -232,8 +232,6 @@ user_ttl           — Cache staleness (id, lastUpdatedAt)
 notifications      — Notification records
 ```
 
-For the signed-in account, `user_connections.followingSyncedAt` marks a complete homeserver following set. Its membership overrides outgoing Nexus relationship flags and supplies the account's following count even without a Nexus counts row. `user_relationships.followingBy` protects optimistic follow/unfollow flags before the first complete snapshot. `user_connections.followingRevision` and Web Locks reject responses overlapping local mutations across windows. These optional fields are not indexed; see [ADR 0019](adr/0019-homeserver-follow-synchronization.md).
-
 ### Post Tables
 
 ```

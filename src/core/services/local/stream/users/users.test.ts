@@ -545,4 +545,33 @@ describe('LocalStreamUsersService', () => {
       });
     });
   });
+
+  describe('getNotPersistedUsersInCache', () => {
+    it('treats missing details as a cache miss', async () => {
+      const userId = 'user-1' as Pubky;
+
+      await expect(LocalStreamUsersService.getNotPersistedUsersInCache([userId])).resolves.toEqual([userId]);
+    });
+
+    it('treats details without a viewer as a hit even when the relationship row is missing', async () => {
+      const userId = 'user-1' as Pubky;
+      await LocalStreamUsersService.persistUsers([createMockNexusUser(userId)]);
+
+      await expect(LocalStreamUsersService.getNotPersistedUsersInCache([userId])).resolves.toEqual([]);
+    });
+
+    it('treats a missing relationship as a miss when a viewer is present', async () => {
+      const userId = 'user-1' as Pubky;
+      await LocalStreamUsersService.persistUsers([createMockNexusUser(userId)]);
+
+      await expect(LocalStreamUsersService.getNotPersistedUsersInCache([userId], VIEWER_ID)).resolves.toEqual([userId]);
+    });
+
+    it('treats details plus a relationship as a hit when a viewer is present', async () => {
+      const userId = 'user-1' as Pubky;
+      await LocalStreamUsersService.persistUsers([createMockNexusUser(userId)], VIEWER_ID);
+
+      await expect(LocalStreamUsersService.getNotPersistedUsersInCache([userId], VIEWER_ID)).resolves.toEqual([]);
+    });
+  });
 });

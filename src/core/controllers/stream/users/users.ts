@@ -32,7 +32,6 @@ export class StreamUserController {
     limit = NEXUS_USERS_PER_PAGE,
     skip,
     allowPartialCache,
-    anchorIds,
   }: TReadUserStreamChunkParams): Promise<TReadUserStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile followers/following)
@@ -49,7 +48,6 @@ export class StreamUserController {
       limit,
       viewerId: viewerId ?? undefined,
       ...(allowPartialCache !== undefined && { allowPartialCache }),
-      ...(anchorIds !== undefined && { anchorIds }),
     });
 
     // Background fetch for missing users (non-blocking)

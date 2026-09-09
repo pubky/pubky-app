@@ -62,7 +62,6 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - **NEVER** call application directly
 - **NEVER** call services directly
 - **Mute list (homeserver events stream)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/pub/pubky.app/mutes/`; see `docs/adr/0014-muting-system.md`.
-- **Outgoing follows (homeserver events stream)**: `FollowSyncCoordinator` reconciles the signed-in account's follows, resumes after disconnects, and keeps live batches bounded; see [ADR 0019](adr/0019-homeserver-follow-synchronization.md).
 
 ### Application (`src/core/application/`)
 
@@ -310,7 +309,6 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0014 | Muting system                          |
 | 0015 | Error handling                         |
 | 0016 | Service worker local file cache        |
-| 0019 | Homeserver follow synchronization      |
 
 ## Quick Checklist
 
