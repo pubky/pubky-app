@@ -1,46 +1,32 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { VIBES_URL } from '@/config/vibes';
 import { AlertVibes } from './AlertVibes';
 
-const state = vi.hoisted(() => ({ showVibesAlert: true, tryVibes: vi.fn(), remindLater: vi.fn() }));
-vi.mock('@/hooks/useVibesAlert/useVibesAlert', () => ({ useVibesAlert: () => state }));
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: (selector: (state: { currentUserPubky: string }) => unknown) =>
+    selector({ currentUserPubky: 'vibes-test-user' }),
+}));
 
-beforeEach(() => {
-  state.showVibesAlert = true;
-  vi.clearAllMocks();
-});
+const storageKey = 'pubky-feature-discovery:vibes-test-user:vibes-alert-v1';
+beforeEach(() => localStorage.clear());
 
 describe('AlertVibes', () => {
-  it('opens Vibes in a new tab and records Try from either link', () => {
+  it.each(['vibes.pubky.app', 'Try now'])('records Try and dismisses from the %s link', (name) => {
     render(<AlertVibes />);
-
-    const links = [
-      screen.getByRole('link', { name: 'vibes.pubky.app' }),
-      screen.getByRole('link', { name: 'Try now' }),
-    ];
-    for (const link of links) {
-      expect(link).toHaveAttribute('href', VIBES_URL);
-      expect(link).toHaveAttribute('target', '_blank');
-      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    }
-
-    fireEvent.click(links[0]);
-    expect(state.tryVibes).toHaveBeenCalledOnce();
-    state.tryVibes.mockClear();
-    fireEvent.click(links[1]);
-    expect(state.tryVibes).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('link', { name }));
+    expect(JSON.parse(localStorage.getItem(storageKey)!)).toMatchObject({ tried: true });
+    expect(screen.queryByRole('region', { name: 'Discover Pubky Vibes' })).not.toBeInTheDocument();
   });
 
   it('snoozes when Later is clicked', () => {
     render(<AlertVibes />);
     fireEvent.click(screen.getByRole('button', { name: 'Later' }));
-    expect(state.remindLater).toHaveBeenCalledOnce();
-    expect(state.tryVibes).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem(storageKey)!)).toMatchObject({ tried: false, laterCount: 1 });
+    expect(screen.queryByRole('region', { name: 'Discover Pubky Vibes' })).not.toBeInTheDocument();
   });
 
-  it('renders nothing while dismissed', () => {
-    state.showVibesAlert = false;
+  it('renders nothing for a previously dismissed account', () => {
+    localStorage.setItem(storageKey, JSON.stringify({ tried: true, laterCount: 0, nextShowAt: 0 }));
     const { container } = render(<AlertVibes />);
     expect(container).toBeEmptyDOMElement();
   });

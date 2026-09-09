@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildFeatureDiscoveryStorageKey } from '@/config/featureDiscovery';
-import { VIBES_ALERT_STORAGE_ID, VIBES_URL } from '@/config/vibes';
+import { AlertVibes } from '../AlertVibes/AlertVibes';
 import { VibesCard } from './VibesCard';
 
 vi.mock('@/stores/auth/auth.store', () => ({
@@ -12,12 +11,25 @@ vi.mock('@/stores/auth/auth.store', () => ({
 beforeEach(() => localStorage.clear());
 
 describe('VibesCard', () => {
+  it('dismisses the mounted Home alert when opening the sidebar link in a background tab', () => {
+    render(
+      <>
+        <AlertVibes />
+        <VibesCard />
+      </>,
+    );
+    expect(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Try vibes.pubky.app' }), { metaKey: true });
+    expect(screen.queryByRole('region', { name: 'Discover Pubky Vibes' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Try vibes.pubky.app' })).toBeInTheDocument();
+  });
+
   it('renders the exact copy and opens Vibes in a new tab', () => {
     render(<VibesCard />);
     expect(screen.getByRole('heading', { name: 'Experimental' })).toBeInTheDocument();
     expect(screen.getByText('Get a taste of the future.')).toBeInTheDocument();
     const link = screen.getByRole('link', { name: 'Try vibes.pubky.app' });
-    expect(link).toHaveAttribute('href', VIBES_URL);
+    expect(link).toHaveAttribute('href', 'https://vibes.pubky.app');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
@@ -25,7 +37,7 @@ describe('VibesCard', () => {
   it('stops home reminders after opening Vibes but keeps the sidebar entry available', () => {
     const { unmount } = render(<VibesCard />);
     fireEvent.click(screen.getByRole('link', { name: 'Try vibes.pubky.app' }));
-    const saved = localStorage.getItem(buildFeatureDiscoveryStorageKey('vibes-test-user', VIBES_ALERT_STORAGE_ID));
+    const saved = localStorage.getItem('pubky-feature-discovery:vibes-test-user:vibes-alert-v1');
     expect(JSON.parse(saved!)).toMatchObject({ tried: true });
     expect(screen.getByRole('link', { name: 'Try vibes.pubky.app' })).toBeInTheDocument();
     unmount();

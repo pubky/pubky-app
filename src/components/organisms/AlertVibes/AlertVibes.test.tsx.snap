@@ -54,13 +54,14 @@ exports[`AlertVibes - Snapshots > matches the visible alert 1`] = `
       data-testid="typography"
     >
       Check out experimental features at
+       
       <a
         class="text-inherit no-underline"
         href="https://vibes.pubky.app"
         rel="noopener noreferrer"
         target="_blank"
       >
-         vibes.pubky.app
+        vibes.pubky.app
       </a>
       !
     </p>

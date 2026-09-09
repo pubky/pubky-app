@@ -46,7 +46,7 @@ const configs: Record<FeedsRouteKey, FeedsShellConfig> = {
     leftSidebarContent: <HomeFeedSidebar allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />,
     rightSidebarContent: <HomeFeedRightSidebar showVibes />,
     leftDrawerContent: <HomeFeedDrawer allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />,
-    rightDrawerContent: <HomeFeedRightDrawer />,
+    rightDrawerContent: <HomeFeedRightDrawer showVibes />,
     leftDrawerContentMobile: <HomeFeedDrawerMobile allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.HOME} />,
   },
   customFeed: {

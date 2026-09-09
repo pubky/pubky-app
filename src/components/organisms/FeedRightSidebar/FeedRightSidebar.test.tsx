@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
 import { HomeFeedRightDrawer, HomeFeedRightSidebar, HotFeedRightDrawer, HotFeedRightSidebar } from './FeedRightSidebar';
 
 // Mock Molecules
@@ -8,6 +9,11 @@ vi.mock('@/organisms/VibesCard/VibesCard', () => ({
 }));
 
 describe('Vibes sidebar placement', () => {
+  it.each(['rightSidebarContent', 'rightDrawerContent'] as const)('keeps the permanent Home entry in %s', (content) => {
+    render(tryResolveFeedsShellConfig('/home')![content]);
+    expect(screen.getByTestId('feedback-card').previousElementSibling).toBe(screen.getByTestId('vibes-card'));
+  });
+
   it('places Vibes directly above Feedback in the Home sidebar', () => {
     render(<HomeFeedRightSidebar showVibes />);
     expect(screen.getByTestId('feedback-card').previousElementSibling).toBe(screen.getByTestId('vibes-card'));

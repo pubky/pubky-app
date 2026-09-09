@@ -46,10 +46,10 @@ export function HomeFeedRightSidebar({ showVibes = false }: { showVibes?: boolea
  *
  * Right drawer for Home feed (tablet) - displays WhoToFollow, ActiveUsers, HotTags, FeedbackCard.
  */
-export function HomeFeedRightDrawer() {
+export function HomeFeedRightDrawer({ showVibes = false }: { showVibes?: boolean }) {
   return (
     <Container overrideDefaults className="flex flex-col gap-6">
-      <HomeFeedContent />
+      <HomeFeedContent showVibes={showVibes} />
     </Container>
   );
 }

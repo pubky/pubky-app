@@ -4,12 +4,12 @@ import { WandSparkles } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
-import { VIBES_URL } from '@/config/vibes';
 import { useVibesAlert } from '@/hooks/useVibesAlert/useVibesAlert';
+import { VibesLink } from '@/molecules/VibesLink/VibesLink';
 
 export function AlertVibes() {
-  const { showVibesAlert, tryVibes, remindLater } = useVibesAlert();
-  if (!showVibesAlert) return null;
+  const { visible, remindLater } = useVibesAlert();
+  if (!visible) return null;
 
   return (
     <Container
@@ -21,17 +21,8 @@ export function AlertVibes() {
       <Container className="min-w-0 flex-1 flex-row items-start gap-3">
         <WandSparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary-foreground" />
         <Typography size="sm" className="min-w-0 font-bold text-primary-foreground">
-          Check out experimental features at
-          <a
-            href={VIBES_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-inherit no-underline"
-            onClick={tryVibes}
-          >
-            {' vibes.pubky.app'}
-          </a>
-          !
+          Check out experimental features at{' '}
+          <VibesLink className="text-inherit no-underline">vibes.pubky.app</VibesLink>!
         </Typography>
       </Container>
       <div className="flex shrink-0 items-center justify-end gap-3">
@@ -44,9 +35,7 @@ export function AlertVibes() {
           Later
         </Button>
         <Button variant="dark" size="sm" className="border-card bg-card px-3.5 text-xs font-bold" asChild>
-          <a href={VIBES_URL} target="_blank" rel="noopener noreferrer" onClick={tryVibes}>
-            Try now
-          </a>
+          <VibesLink>Try now</VibesLink>
         </Button>
       </div>
     </Container>
