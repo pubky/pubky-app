@@ -25,6 +25,9 @@ export class SettingsApplication {
    * sign-in). When the local state lacks the field, the remote value is carried over first.
    * This self-limits: once the store has learned the field, no extra read happens.
    *
+   * A failed read rejects the write rather than pushing blind: settings are local-first, so
+   * the change stays in the store and the next sign-in pushes it with the field carried over.
+   *
    * @param settings, The current settings state to persist
    * @param pubky, The user's public key
    * @param signal, Optional cancellation signal checked when this queued write starts
@@ -35,11 +38,7 @@ export class SettingsApplication {
 
       let resolved = settings;
       if (settings.privacy.moderationBot === undefined) {
-        // Best effort: a failed read must not block an ordinary settings change.
-        const remote = await this.fetchFromHomeserver(pubky).catch((error: unknown) => {
-          Logger.warn('[Settings] Could not read remote moderation-bot state before write', { error });
-          return null;
-        });
+        const remote = await this.fetchFromHomeserver(pubky);
         if (signal?.aborted) return;
         resolved = this.withRemoteModerationBot(settings, remote);
       }
