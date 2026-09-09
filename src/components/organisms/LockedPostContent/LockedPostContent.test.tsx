@@ -19,8 +19,19 @@ const payMocks = vi.hoisted(() => ({
   params: null as null | PayParams,
   submit: vi.fn(),
   viewContent: vi.fn(),
-  requireAuth: vi.fn((action: () => unknown) => action()),
 }));
+const authMocks = vi.hoisted(() => {
+  const mocks = {
+    isAuthenticated: true,
+    setShowSignInDialog: vi.fn(),
+    requireAuth: vi.fn((action: () => unknown) => {
+      if (mocks.isAuthenticated) return action();
+      mocks.setShowSignInDialog(true);
+      return undefined;
+    }),
+  };
+  return mocks;
+});
 vi.mock('@/hooks/usePayToUnlock/usePayToUnlock', () => ({
   usePayToUnlock: (params: PayParams) => {
     payMocks.params = params;
@@ -49,7 +60,7 @@ vi.mock('@/hooks/usePurchaseResume/usePurchaseResume', () => ({
   },
 }));
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
-  useRequireAuth: () => ({ isAuthenticated: true, requireAuth: payMocks.requireAuth }),
+  useRequireAuth: () => ({ isAuthenticated: authMocks.isAuthenticated, requireAuth: authMocks.requireAuth }),
 }));
 vi.mock('@/molecules/DialogPayToUnlock/DialogPayToUnlock', () => ({
   DialogPayToUnlock: ({
@@ -111,6 +122,20 @@ const mockLockData = ({
 
 const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
 
+/** jsdom reports every offset as 0, which would make the slide-over a no-op no test could see. */
+const useSlideGeometry = () => {
+  const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetLeft');
+  Object.defineProperty(HTMLElement.prototype, 'offsetLeft', {
+    configurable: true,
+    get(this: HTMLElement) {
+      return this.tagName === 'BUTTON' ? 0 : 120;
+    },
+  });
+  return () => {
+    if (original) Object.defineProperty(HTMLElement.prototype, 'offsetLeft', original);
+  };
+};
+
 describe('LockedPostContent', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -118,6 +143,9 @@ describe('LockedPostContent', () => {
     purchasedMocks.hasPurchase.mockReset(); // back to the `lock1` implementation
     purchasedMocks.markPurchased.mockClear();
     payMocks.viewContent.mockClear();
+    authMocks.isAuthenticated = true;
+    authMocks.requireAuth.mockClear();
+    authMocks.setShowSignInDialog.mockClear();
     vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(null);
     vi.mocked(LocksController.replicateUnlockedContent).mockResolvedValue(undefined);
   });
@@ -162,8 +190,27 @@ describe('LockedPostContent', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
       // The card defers onUnlock until its slide-over finishes; findBy waits that out.
       expect(await screen.findByTestId('pay-dialog')).toHaveTextContent('1000');
-      expect(payMocks.requireAuth).toHaveBeenCalled();
+      expect(authMocks.requireAuth).toHaveBeenCalled();
       expect(screen.queryByRole('heading', { name: 'Password to Unlock' })).not.toBeInTheDocument();
+    });
+
+    // Signed out, Unlock opens the sign-in dialog and no unlock modal follows — so the card never
+    // gets the close that snaps the slid-over button back, and it would sit over the price for good.
+    it('leaves the Unlock button in place for a signed-out reader', async () => {
+      const restoreGeometry = useSlideGeometry();
+      try {
+        authMocks.isAuthenticated = false;
+        paymentData();
+        render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
+        await waitFor(() => expect(authMocks.setShowSignInDialog).toHaveBeenCalledWith(true));
+
+        expect(screen.queryByTestId('pay-dialog')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Unlock' })).toHaveStyle({ transform: 'translateX(0px)' });
+      } finally {
+        restoreGeometry();
+      }
     });
 
     // Paid while away: the content arrives without the reader pressing anything.

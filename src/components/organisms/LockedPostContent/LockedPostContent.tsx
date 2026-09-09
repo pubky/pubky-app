@@ -67,7 +67,7 @@ export function LockedPostContent({
     lockFile,
     authorId,
   });
-  const { requireAuth } = useRequireAuth();
+  const { requireAuth, isAuthenticated } = useRequireAuth();
   const isPaymentLock = unlockInfo?.method === 'payment';
 
   /** Renders unlocked content, closes whichever dialog produced it, and reports dropped media. */
@@ -179,6 +179,9 @@ export function LockedPostContent({
           unlockInfo={unlockInfo}
           unlockOpen={isUnlockOpen || isPayOpen}
           onUnlock={handleUnlock}
+          // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
+          // closing snaps the button back.
+          slideOnUnlock={!isPaymentLock || isAuthenticated}
         />
       )}
       <DialogUnlockContent

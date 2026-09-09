@@ -17,6 +17,12 @@ interface LockedPostCardProps {
   onUnlock?: () => void;
   /** Whether the unlock modal is open. Keeps the slid-over button parked until the modal closes. */
   unlockOpen?: boolean;
+  /**
+   * Whether pressing Unlock opens the unlock modal. False runs `onUnlock` straight away without the
+   * slide-over — only a modal closing snaps the button back, so a click that opens something else
+   * (sign-in) would leave it parked over the price for good.
+   */
+  slideOnUnlock?: boolean;
   /** Force the Unlock control disabled. Defaults to `!onUnlock` (inert without a handler). */
   disabled?: boolean;
   /**
@@ -40,6 +46,7 @@ export function LockedPostCard({
   unlockInfo,
   onUnlock,
   unlockOpen,
+  slideOnUnlock = true,
   disabled,
   editableTitle,
   className,
@@ -71,6 +78,10 @@ export function LockedPostCard({
     event.stopPropagation();
     // The ref guard also blocks a double-click: a second click during the slide is a no-op.
     if (isDisabled || slideTimer.current !== null) return;
+    if (!slideOnUnlock) {
+      onUnlock?.();
+      return;
+    }
 
     const button = buttonRef.current;
     const lockInfo = lockInfoRef.current;
