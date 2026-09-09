@@ -7,7 +7,9 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import type { UseFollowUserResult } from './useFollowUser.types';
+import { FOLLOW_ACTIONS, type FollowAction, type UseFollowUserResult } from './useFollowUser.types';
+
+const EMPTY_PENDING_ACTIONS: ReadonlyMap<Pubky, FollowAction> = new Map();
 
 /**
  * useFollowUser
@@ -32,9 +34,9 @@ import type { UseFollowUserResult } from './useFollowUser.types';
  */
 export function useFollowUser(): UseFollowUserResult {
   const { currentUserPubky } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingAction, setLoadingAction] = useState<UseFollowUserResult['loadingAction']>(null);
-  const [loadingUserId, setLoadingUserId] = useState<Pubky | null>(null);
+  // Every in-flight toggle keyed by user, so concurrent clicks on different users each keep their
+  // own loading state instead of the last click overwriting a single `loadingUserId`.
+  const [pendingActions, setPendingActions] = useState<ReadonlyMap<Pubky, FollowAction>>(EMPTY_PENDING_ACTIONS);
   const [error, setError] = useState<string | null>(null);
 
   const toggleFollow = useCallback(
@@ -49,9 +51,8 @@ export function useFollowUser(): UseFollowUserResult {
         return false;
       }
 
-      setLoadingAction(isCurrentlyFollowing ? 'unfollow' : 'follow');
-      setIsLoading(true);
-      setLoadingUserId(userId);
+      const pendingAction: FollowAction = isCurrentlyFollowing ? FOLLOW_ACTIONS.UNFOLLOW : FOLLOW_ACTIONS.FOLLOW;
+      setPendingActions((prev) => new Map(prev).set(userId, pendingAction));
       setError(null);
 
       try {
@@ -84,24 +85,27 @@ export function useFollowUser(): UseFollowUserResult {
         Logger.error('[useFollowUser] Failed to toggle follow:', err);
         return false;
       } finally {
-        setIsLoading(false);
-        setLoadingAction(null);
-        setLoadingUserId(null);
+        setPendingActions((prev) => {
+          if (!prev.has(userId)) return prev;
+          const next = new Map(prev);
+          next.delete(userId);
+          return next.size === 0 ? EMPTY_PENDING_ACTIONS : next;
+        });
       }
     },
     [currentUserPubky],
   );
 
-  const isUserLoading = useCallback(
-    (userId: Pubky) => isLoading && loadingUserId === userId,
-    [isLoading, loadingUserId],
-  );
+  const isUserLoading = useCallback((userId: Pubky) => pendingActions.has(userId), [pendingActions]);
+
+  // Single-target consumers (profile pages) read the most recent in-flight toggle.
+  const latestPending = [...pendingActions.entries()].at(-1);
 
   return {
     toggleFollow,
-    isLoading,
-    loadingAction,
-    loadingUserId,
+    isLoading: pendingActions.size > 0,
+    loadingAction: latestPending?.[1] ?? null,
+    loadingUserId: latestPending?.[0] ?? null,
     isUserLoading,
     error,
   };

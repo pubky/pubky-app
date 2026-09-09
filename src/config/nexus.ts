@@ -24,6 +24,9 @@ export const NEXUS_SERVER_FETCH_TIMEOUT_MS = 3000;
  */
 export const STARTER_PACK_MAX_TAGS = 5;
 
+/** Maximum suggestions shown on the onboarding "Follow your best matches" step (per design) */
+export const STARTER_PACK_SUGGESTIONS_LIMIT = 10;
+
 /**
  * Labels rejected by Nexus for `source=starter_pack` (pubky/pubky-nexus#1024).
  * This is intentionally separate from the app's runtime moderation configuration:
