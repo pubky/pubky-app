@@ -12,6 +12,7 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FULL_BLEED_GUTTER_CLASS } from '@/config/layoutClasses';
 import { FeedController } from '@/controllers/feed/feed';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset/useKeyboardOffset';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSelectedReachFilter } from '@/hooks/useSelectedReachFilter/useSelectedReachFilter';
 import { Logger } from '@/libs/logger/logger';
@@ -59,6 +60,11 @@ interface FeedNavigationProps {
 export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const pathname = usePathname();
   const { isAuthenticated, requireAuth } = useRequireAuth();
+  // Below lg this strip is sticky chrome under the mobile header. Hide it while
+  // the soft keyboard is open, like MobileHeader/MobileFooter/Fab do (#2286):
+  // otherwise tapping the inline composer on Home / My network leaves the tab
+  // bar pinned over the text.
+  const { isKeyboardVisible } = useKeyboardOffset();
   const [editingFeed, setEditingFeed] = useState<FeedModelSchema | null>(null);
   const customFeeds = useLiveQuery(
     async () => {
@@ -117,6 +123,12 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
     FEED_TAB_INACTIVE_PADDING_CLASS,
     'cursor-pointer border-border text-muted-foreground hover:text-white',
   );
+
+  const isHidden = isKeyboardVisible;
+
+  if (isHidden) {
+    return null;
+  }
 
   return (
     <Container

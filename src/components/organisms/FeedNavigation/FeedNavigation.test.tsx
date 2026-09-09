@@ -11,6 +11,15 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
 }));
 
+// Keyboard state drives the mobile chrome hiding (see #2286); controllable per test
+let mockIsKeyboardVisible = false;
+vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
+  useKeyboardOffset: vi.fn(() => ({
+    isKeyboardVisible: mockIsKeyboardVisible,
+    keyboardOffset: mockIsKeyboardVisible ? 300 : 0,
+  })),
+}));
+
 // Mock dexie-react-hooks — allow controlling useLiveQuery return value per test
 let mockCustomFeeds: FeedModelSchema[];
 let mockIsAuthenticated = true;
@@ -213,6 +222,7 @@ describe('FeedNavigation', () => {
     mockHomeState.reach = REACH.ALL;
     mockHomeState.taggedAsActive = false;
     mockHomeState.profileTags = [];
+    mockIsKeyboardVisible = false;
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);
@@ -635,6 +645,24 @@ describe('FeedNavigation', () => {
     expect(wrapper).not.toHaveClass('overflow-x-auto');
     expect(row).toHaveClass('flex', 'flex-row');
     expect(row).toHaveClass('overflow-x-auto');
+  });
+
+  it('unmounts while the soft keyboard is open so it stops covering the composer', () => {
+    mockIsKeyboardVisible = true;
+    render(<FeedNavigation />);
+
+    expect(screen.queryByText('All')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('custom-feed-dialog-create')).not.toBeInTheDocument();
+  });
+
+  it('returns when the keyboard closes', () => {
+    mockIsKeyboardVisible = true;
+    const { rerender } = render(<FeedNavigation />);
+    expect(screen.queryByText('All')).not.toBeInTheDocument();
+
+    mockIsKeyboardVisible = false;
+    rerender(<FeedNavigation />);
+    expect(screen.getByText('All')).toBeInTheDocument();
   });
 
   it('renders tabs with Figma chrome classes', () => {
