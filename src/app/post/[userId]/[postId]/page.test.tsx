@@ -39,7 +39,10 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(new Response('Not Found', { status: 404, statusText: 'Not Found' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'missing-post' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: 'missing-post',
+      }),
     });
 
     expect(metadata).toEqual({});
@@ -59,7 +62,9 @@ describe('generateMetadata', () => {
       params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
     });
 
-    expect(metadata).toEqual({ alternates: { canonical: '/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/post-1' } });
+    expect(metadata).toEqual({
+      alternates: { canonical: '/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/post-1' },
+    });
   });
 
   it('builds title/description and omits static images for a normal post', async () => {
@@ -116,10 +121,14 @@ describe('PostPage (collection redirect)', () => {
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
       .mockResolvedValueOnce(jsonResponse({ kind: 'collection', content: '{"name":"Art"}' }));
 
-    await expect(PostPage({ params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }) })).rejects.toThrow(
-      'NEXT_REDIRECT',
+    await expect(
+      PostPage({
+        params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+      }),
+    ).rejects.toThrow('NEXT_REDIRECT');
+    expect(permanentRedirect).toHaveBeenCalledWith(
+      '/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/post-1',
     );
-    expect(permanentRedirect).toHaveBeenCalledWith('/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/post-1');
   });
 
   it('renders the post (no redirect) for a non-collection post', async () => {
@@ -127,7 +136,9 @@ describe('PostPage (collection redirect)', () => {
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
       .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: 'hi' }));
 
-    const element = await PostPage({ params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }) });
+    const element = await PostPage({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
     expect(element.props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
@@ -136,7 +147,9 @@ describe('PostPage (collection redirect)', () => {
   it('renders the post (no redirect) when the kind lookup fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('nexus down'));
 
-    const element = await PostPage({ params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }) });
+    const element = await PostPage({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
     expect(element.props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
