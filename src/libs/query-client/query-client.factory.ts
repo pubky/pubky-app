@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { getRetryAfter } from '@/libs/error/error.utils';
 import { isAppError } from '../error/error';
 import { HttpStatusCode } from '../http/http.types';
 import type { QueryClientConfig } from './query-client.types';
@@ -76,6 +77,20 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
     if (isAppError(error)) {
       const statusCode = error.context?.statusCode as number | undefined;
 
+      // 429: the server is telling us to slow down. Back off hard (start at 2s,
+      // grow exponentially) and only retry once — retrying fast into the same
+      // burst amplifies the spike (Sentry PUBKY-APP-B3). Honor the server's
+      // Retry-After hint when present (the HTTP error factory parses it into
+      // context.retryAfter, in seconds), clamped between the 2s floor and the
+      // configured max; the configured backoff is the fallback.
+      if (statusCode === HttpStatusCode.TOO_MANY_REQUESTS) {
+        const retryAfterSeconds = getRetryAfter(error);
+        if (retryAfterSeconds !== undefined) {
+          return Math.min(Math.max(retryAfterSeconds * 1_000, 2_000), delays.default.max);
+        }
+        return Math.max(2_000, Math.min(delays.default.initial * 2 ** attemptIndex, delays.default.max));
+      }
+
       // 404: Use notFound delays if configured
       if (statusCode === HttpStatusCode.NOT_FOUND && delays.notFound) {
         return Math.min(delays.notFound.initial * 2 ** attemptIndex, delays.notFound.max);
@@ -98,6 +113,11 @@ export function createQueryClient(config: QueryClientConfig): QueryClient {
         retryDelay: retryDelay,
         staleTime,
         gcTime,
+      },
+      mutations: {
+        // Mutations are user actions: never blind-retry them (explicit over
+        // TanStack's default of 0 so the intent is visible and enforced).
+        retry: false,
       },
     },
   });

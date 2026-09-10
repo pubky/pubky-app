@@ -15,6 +15,8 @@ import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
 import { Home } from '@/templates/Feed/Home/Home';
 import { Fab } from '@/molecules/Fab/Fab';
+import { buildFeatureDiscoveryStorageKey } from '@/config/featureDiscovery';
+import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -25,6 +27,7 @@ import { Fab } from '@/molecules/Fab/Fab';
 // prepend `VRT_ARTICLE` via this flag so existing baselines stay put.
 const feedState = vi.hoisted(() => ({
   mode: 'default' as 'default' | 'article',
+  keyboardVisible: false,
 }));
 
 const fixtures = vi.hoisted(async () => {
@@ -152,8 +155,8 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => feedState.keyboardVisible,
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
@@ -456,11 +459,11 @@ vi.mock('@/controllers/search/search', () => ({
 // ContentLayout. Resolve the same shell config here so VRT matches prod.
 const homeShellConfig = tryResolveFeedsShellConfig('/home')!;
 
-function HomeWithLayout() {
+function HomeWithLayout({ layout }: { layout?: LayoutType }) {
   return (
     <>
       <Header />
-      <ContentLayout {...homeShellConfig}>
+      <ContentLayout {...homeShellConfig} layoutOverride={layout}>
         <Home />
       </ContentLayout>
     </>
@@ -501,6 +504,69 @@ async function waitForArticleComposer() {
   await expect.element(page.getByText('Publish')).toBeVisible();
   await waitForMarkdownEditorReady();
 }
+
+// Existing feed scenarios represent a returning user who has already tried Vibes.
+// Fresh-user alert coverage below removes this saved choice explicitly.
+beforeEach(async () => {
+  const f = await fixtures;
+  localStorage.setItem(
+    buildFeatureDiscoveryStorageKey(f.viewerPubky, 'vibes-alert-v1'),
+    JSON.stringify({ tried: true, laterCount: 0, nextShowAt: 0 }),
+  );
+});
+
+describe('Home — Vibes alert — visual regression', () => {
+  beforeEach(async () => {
+    feedState.mode = 'default';
+    const f = await fixtures;
+    localStorage.removeItem(buildFeatureDiscoveryStorageKey(f.viewerPubky, 'vibes-alert-v1'));
+  });
+
+  it('renders Vibes above the composer at desktop viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).toBeVisible();
+    await matchVrtFrameScreenshot('home-feed-vibes-desktop');
+  });
+
+  it('renders Vibes with wrapped copy and actions at mobile viewport', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).toBeVisible();
+    await matchVrtFrameScreenshot('home-feed-vibes-mobile');
+    await screen.getByRole('button', { name: 'Later', exact: true }).click();
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Home — Vibes discovery — visual regression', () => {
+  beforeEach(() => {
+    feedState.mode = 'default';
+  });
+
+  it('keeps the sidebar entry after permanent dismissal', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).not.toBeInTheDocument();
+    await screen.getByRole('link', { name: 'Try vibes.pubky.app' }).hover();
+    await matchVrtFrameScreenshot('home-feed-vibes-sidebar-desktop');
+  });
+
+  it('keeps the permanent entry in the mobile right drawer', async () => {
+    const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByRole('region', { name: 'Discover Pubky Vibes' })).not.toBeInTheDocument();
+    await screen.getByRole('button', { name: 'Open right panel' }).click();
+    await page.getByRole('link', { name: 'Try vibes.pubky.app' }).hover();
+    await matchVrtFrameScreenshot('home-feed-vibes-drawer-mobile');
+  });
+
+  it.each([LAYOUT.WIDE, LAYOUT.LIST, LAYOUT.VISUAL])(
+    'keeps the permanent entry in the %s layout drawer',
+    async (layout) => {
+      await renderForVRT(<HomeWithLayout layout={layout} />, { viewport: VRT_VIEWPORT_DESKTOP });
+      await page.elementLocator(document.querySelector('[data-cy="button-filters-right"]')!).click();
+      await page.getByRole('link', { name: 'Try vibes.pubky.app' }).hover();
+      if (layout === LAYOUT.WIDE) await matchVrtFrameScreenshot('home-feed-vibes-drawer-desktop');
+    },
+  );
+});
 
 describe('Home (global feed) — visual regression', () => {
   beforeEach(() => {
@@ -602,5 +668,32 @@ describe('New article dialog — visual regression', () => {
   it('renders the new article dialog at mobile viewport', async () => {
     await renderNewArticleDialog(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('dialog-new-article-mobile');
+  });
+});
+
+describe('Mobile keyboard navigation visibility', () => {
+  beforeEach(() => {
+    feedState.mode = 'default';
+    feedState.keyboardVisible = false;
+  });
+
+  it.each([false, true])('renders mobile controls with keyboard visibility %s', async (keyboardVisible) => {
+    feedState.keyboardVisible = keyboardVisible;
+    await renderForVRT(<HomeWithFab />, { viewport: VRT_VIEWPORT_MOBILE });
+    if (keyboardVisible) {
+      await expect.element(page.getByTestId('new-post-cta')).not.toBeVisible();
+      await expect.element(page.getByRole('link', { name: 'Home', exact: true })).not.toBeInTheDocument();
+    } else {
+      await expect.element(page.getByTestId('new-post-cta')).toBeVisible();
+      await expect.element(page.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
+    }
+    feedState.keyboardVisible = false;
+  });
+
+  it('keeps the desktop plus button visible when the visual viewport shrinks', async () => {
+    feedState.keyboardVisible = true;
+    await renderForVRT(<HomeWithFab />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(page.getByTestId('new-post-cta')).toBeVisible();
+    feedState.keyboardVisible = false;
   });
 });
