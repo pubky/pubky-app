@@ -16,8 +16,10 @@ import { buildInterestsFeedParams } from './useCreateInterestsFeed.utils';
  * homeserver through `FeedController.commitCreate`, so it shows up in the feed tab bar next to
  * Home and can be edited or deleted like any other.
  *
- * The feed ID is derived from its config, so re-running with the same tags upserts the same
- * feed instead of duplicating it.
+ * The feed ID is derived from its config, and a failed homeserver write leaves the local row in
+ * place (no rollback, same as the custom feed dialog). A retry therefore updates the existing
+ * Interests feed in place — even with a changed selection, which would otherwise hash to a new
+ * ID and leave two Interests tabs — instead of creating a second one.
  *
  * `createInterestsFeed` never rejects: with no tags there is nothing to create, and a
  * controller failure is reported with a toast — either way it resolves `false` so the caller
@@ -35,7 +37,12 @@ export function useCreateInterestsFeed(): UseCreateInterestsFeedResult {
     setIsCreating(true);
 
     try {
-      await FeedController.commitCreate(buildInterestsFeedParams(tags));
+      const existing = (await FeedController.getList()).find((feed) => feed.name === INTERESTS_FEED_NAME);
+      if (existing) {
+        await FeedController.commitUpdate({ feedId: existing.id, changes: { tags } });
+      } else {
+        await FeedController.commitCreate(buildInterestsFeedParams(tags));
+      }
       return true;
     } catch {
       // Controller errors are already logged by the Err factories. The local row is written

@@ -1,16 +1,21 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { INTERESTS_FEED_NAME } from '@/config/feed';
 import { toast } from '@/molecules/Toaster/toast';
 import { useCreateInterestsFeed } from './useCreateInterestsFeed';
 import { buildInterestsFeedParams } from './useCreateInterestsFeed.utils';
 
 const mocks = vi.hoisted(() => ({
   commitCreate: vi.fn(),
+  commitUpdate: vi.fn(),
+  getList: vi.fn(),
 }));
 
 vi.mock('@/controllers/feed/feed', () => ({
   FeedController: {
     commitCreate: (...args: unknown[]) => mocks.commitCreate(...args),
+    commitUpdate: (...args: unknown[]) => mocks.commitUpdate(...args),
+    getList: (...args: unknown[]) => mocks.getList(...args),
   },
 }));
 
@@ -19,7 +24,9 @@ vi.mock('@/molecules/Toaster/toast');
 describe('useCreateInterestsFeed', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getList.mockResolvedValue([]);
     mocks.commitCreate.mockResolvedValue({ id: 'feed-interests' });
+    mocks.commitUpdate.mockResolvedValue({ id: 'feed-interests-2' });
   });
 
   it('creates the feed from the chosen tags and resolves true', async () => {
@@ -35,6 +42,29 @@ describe('useCreateInterestsFeed', () => {
     expect(mocks.commitCreate).toHaveBeenCalledWith(buildInterestsFeedParams(['bitcoin', 'privacy']));
     expect(toast).not.toHaveBeenCalled();
     expect(result.current.isCreating).toBe(false);
+  });
+
+  it('updates an existing Interests feed in place instead of creating a second one', async () => {
+    // A failed homeserver write leaves the local row behind; a retry with a changed selection
+    // must not add a second Interests tab under a new config-derived ID.
+    mocks.getList.mockResolvedValue([
+      { id: 'feed-interests', name: INTERESTS_FEED_NAME, tags: ['bitcoin'] },
+      { id: 'feed-other', name: 'Other', tags: ['nostr'] },
+    ]);
+    const { result } = renderHook(() => useCreateInterestsFeed());
+
+    let created: boolean | undefined;
+    await act(async () => {
+      created = await result.current.createInterestsFeed(['bitcoin', 'privacy']);
+    });
+
+    expect(created).toBe(true);
+    expect(mocks.commitUpdate).toHaveBeenCalledTimes(1);
+    expect(mocks.commitUpdate).toHaveBeenCalledWith({
+      feedId: 'feed-interests',
+      changes: { tags: ['bitcoin', 'privacy'] },
+    });
+    expect(mocks.commitCreate).not.toHaveBeenCalled();
   });
 
   it('does nothing without tags', async () => {
