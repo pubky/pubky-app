@@ -183,9 +183,7 @@ describe('useTagged', () => {
       taggerId: 'mock-current-user',
       taggedKind: TagKind.USER,
     });
-    expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      title: 'Tag added',
-    });
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('shows an error toast when adding a tag fails', async () => {
@@ -210,7 +208,7 @@ describe('useTagged', () => {
     });
   });
 
-  it('shows a success toast when removing a tag', async () => {
+  it('does not show a success toast when removing a tag', async () => {
     mockLocalTags = [
       {
         label: 'bitcoin',
@@ -236,9 +234,36 @@ describe('useTagged', () => {
       taggerId: 'mock-current-user',
       taggedKind: TagKind.USER,
     });
-    expect(vi.mocked(toast)).toHaveBeenCalledWith({
-      title: 'Tag removed',
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
+  it('does not show a success toast when adding a tag via an existing chip', async () => {
+    mockLocalTags = [
+      {
+        label: 'bitcoin',
+        taggers: ['other-user'],
+        taggers_count: 1,
+        relationship: false,
+      },
+    ];
+
+    const { result } = renderHook(() => useTagged(mockUserId));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
+
+    await act(async () => {
+      await result.current.handleTagToggle({ label: 'bitcoin', relationship: false });
+    });
+
+    expect(mockMocks.mockTagCreate).toHaveBeenCalledWith({
+      taggedId: mockUserId,
+      label: 'bitcoin',
+      taggerId: 'mock-current-user',
+      taggedKind: TagKind.USER,
+    });
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('shows an error toast when removing a tag fails', async () => {

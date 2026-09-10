@@ -1,0 +1,93 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AlertVibes - Snapshots > matches the visible alert 1`] = `
+<div
+  aria-label="Discover Pubky Vibes"
+  class="mx-auto w-full flex-col flex gap-3 rounded-lg bg-brand px-6 py-3 sm:flex-row sm:items-center"
+  data-testid="alert-vibes"
+  role="region"
+>
+  <div
+    class="mx-auto w-full flex min-w-0 flex-1 flex-row items-start gap-3"
+    data-testid="container"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-wand-sparkles mt-0.5 size-4 shrink-0 text-primary-foreground"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"
+      />
+      <path
+        d="m14 7 3 3"
+      />
+      <path
+        d="M5 6v4"
+      />
+      <path
+        d="M19 14v4"
+      />
+      <path
+        d="M10 2v2"
+      />
+      <path
+        d="M7 8H3"
+      />
+      <path
+        d="M21 16h-4"
+      />
+      <path
+        d="M11 3H9"
+      />
+    </svg>
+    <p
+      class="text-sm min-w-0 font-bold text-primary-foreground"
+      data-testid="typography"
+    >
+      Check out experimental features at
+       
+      <a
+        class="text-inherit no-underline"
+        href="https://vibes.pubky.app"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        vibes.pubky.app
+      </a>
+      !
+    </p>
+  </div>
+  <div
+    class="flex shrink-0 items-center justify-end gap-3"
+  >
+    <button
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-white border-neutral-700 hover:bg-neutral-800 h-8 gap-1.5 has-[>svg]:px-3.5 bg-input/30 px-3.5 text-xs font-bold text-primary-foreground"
+      data-size="sm"
+      data-slot="button"
+      data-variant="dark-outline"
+    >
+      Later
+    </button>
+    <a
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs text-white hover:bg-neutral-800 hover:border-neutral-800 h-8 gap-1.5 has-[>svg]:px-3.5 border-card bg-card px-3.5 text-xs font-bold"
+      data-size="sm"
+      data-slot="button"
+      data-variant="dark"
+      href="https://vibes.pubky.app"
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      Try now
+    </a>
+  </div>
+</div>
+`;
