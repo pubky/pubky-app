@@ -25,8 +25,10 @@ export class SettingsApplication {
    * sign-in). When the local state lacks the field, the remote value is carried over first.
    * This self-limits: once the store has learned the field, no extra read happens.
    *
-   * A failed read rejects the write rather than pushing blind: settings are local-first, so
-   * the change stays in the store and the next sign-in pushes it with the field carried over.
+   * A failed read rejects the write rather than pushing blind. Settings are local-first, so the
+   * change stays in the persisted store and the user keeps seeing it; it reaches the homeserver
+   * only if the user changes settings again, since sign-in resets the store and session restore
+   * does not sync settings. Dropping one toggle beats erasing the field and re-following the bot.
    *
    * @param settings, The current settings state to persist
    * @param pubky, The user's public key
