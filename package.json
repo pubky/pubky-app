@@ -139,8 +139,6 @@
   "allowScripts": {
     "@sentry/cli": true,
     "browser-tabs-lock": true,
-    "cypress": true,
-    "sharp": true,
-    "unrs-resolver": true
+    "cypress": true
   }
 }
