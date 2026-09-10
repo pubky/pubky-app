@@ -174,9 +174,6 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           return next;
         });
 
-        toast({
-          title: 'Tag added',
-        });
         return { success: true };
       } catch {
         toast({
@@ -227,10 +224,6 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
           // TagController.commitDelete updates IndexedDB first and rolls back on homeserver failure.
           await TagController.commitDelete(params);
-
-          toast({
-            title: 'Tag removed',
-          });
         } else {
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
           await TagController.commitCreate(params);
@@ -240,10 +233,6 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
             const next = new Map(prev);
             next.delete(labelLower);
             return next;
-          });
-
-          toast({
-            title: 'Tag added',
           });
         }
       } catch {
