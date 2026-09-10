@@ -1,8 +1,35 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
 import { HomeFeedRightDrawer, HomeFeedRightSidebar, HotFeedRightDrawer, HotFeedRightSidebar } from './FeedRightSidebar';
 
 // Mock Molecules
+vi.mock('@/organisms/VibesCard/VibesCard', () => ({
+  VibesCard: () => <div data-testid="vibes-card">VibesCard</div>,
+}));
+
+describe('Vibes sidebar placement', () => {
+  it.each(['rightSidebarContent', 'rightDrawerContent'] as const)('keeps the permanent Home entry in %s', (content) => {
+    render(tryResolveFeedsShellConfig('/home')![content]);
+    expect(screen.getByTestId('feedback-card').previousElementSibling).toBe(screen.getByTestId('vibes-card'));
+  });
+
+  it('places Vibes directly above Feedback in the Home sidebar', () => {
+    render(<HomeFeedRightSidebar showVibes />);
+    expect(screen.getByTestId('feedback-card').previousElementSibling).toBe(screen.getByTestId('vibes-card'));
+  });
+
+  it.each([HomeFeedRightSidebar, HomeFeedRightDrawer])('excludes Vibes from other regular feed surfaces', (Surface) => {
+    render(<Surface />);
+    expect(screen.queryByTestId('vibes-card')).not.toBeInTheDocument();
+  });
+
+  it.each([HotFeedRightSidebar, HotFeedRightDrawer])('places Vibes directly above Hot feedback', (Sidebar) => {
+    render(<Sidebar />);
+    expect(screen.getByTestId('feedback-card').previousElementSibling).toBe(screen.getByTestId('vibes-card'));
+  });
+});
+
 // Mock Organisms
 vi.mock('@/organisms/ActiveUsers/ActiveUsers', () => {
   return {
