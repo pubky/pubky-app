@@ -10,7 +10,9 @@
 #   gh workflow run e2e-test.yml --ref <branch> -f specs=onboarding.cy.ts,feed.cy.ts
 #
 # `specs` is a comma-separated list of file names from cypress/e2e/ (whitespace
-# around names is ignored). Leave it empty to run the full default list. Names
+# around names is ignored, and newlines also work as separators, so
+# `-F specs=@file` with one name per line is fine). Leave it empty to run the
+# full default list. Names
 # that are not in `default_specs` fail the run in the `resolve_specs` job,
 # before any docker image work starts. The default list lives only in
 # `default_specs`, so add new spec files there.
@@ -66,6 +68,10 @@ jobs:
             echo "No specs input given; running the full default list."
             selected=("${defaults[@]}")
           else
+            # Treat newlines as separators. `read` below only consumes the first
+            # line, and the runner parses `::cmd::` at the start of any echoed
+            # line, so strip them before splitting or echoing the input.
+            REQUESTED_SPECS="${REQUESTED_SPECS//[$'\r\n']/,}"
             IFS=',' read -r -a requested <<< "$REQUESTED_SPECS"
             unknown=()
             for raw in "${requested[@]}"; do
@@ -206,6 +212,8 @@ jobs:
     steps:
       - name: Report pending commit status
         if: github.event_name == 'workflow_dispatch'
+        # Reporting must never decide the outcome of the tests it reports on.
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -368,6 +376,7 @@ jobs:
 
       - name: Report commit status
         if: always() && github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           TEST_OUTCOME: ${{ steps.test-desktop.outcome }}
