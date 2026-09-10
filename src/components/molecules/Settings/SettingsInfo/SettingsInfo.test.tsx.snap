@@ -256,80 +256,6 @@ exports[`SettingsInfo - Snapshots > matches snapshot 1`] = `
           </div>
         </a>
         <a
-          href="/settings/help"
-        >
-          <div
-            class="relative w-full min-w-0 cursor-pointer rounded-md border border-border p-4 transition-colors hover:border-white"
-            data-testid="container"
-          >
-            <span
-              class="block pr-6 leading-normal font-bold text-popover-foreground"
-              data-testid="typography"
-            >
-              How can I restore my account?
-            </span>
-            <div
-              class="absolute top-1/2 right-3 -translate-y-1/2"
-              data-testid="container"
-            >
-              <svg
-                aria-hidden="true"
-                class="lucide lucide-chevron-right"
-                fill="none"
-                height="16"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="16"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="m9 18 6-6-6-6"
-                />
-              </svg>
-            </div>
-          </div>
-        </a>
-        <a
-          href="/settings/help"
-        >
-          <div
-            class="relative w-full min-w-0 cursor-pointer rounded-md border border-border p-4 transition-colors hover:border-white"
-            data-testid="container"
-          >
-            <span
-              class="block pr-6 leading-normal font-bold text-popover-foreground"
-              data-testid="typography"
-            >
-              How is Pubky different from other social platforms?
-            </span>
-            <div
-              class="absolute top-1/2 right-3 -translate-y-1/2"
-              data-testid="container"
-            >
-              <svg
-                aria-hidden="true"
-                class="lucide lucide-chevron-right"
-                fill="none"
-                height="16"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                viewBox="0 0 24 24"
-                width="16"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="m9 18 6-6-6-6"
-                />
-              </svg>
-            </div>
-          </div>
-        </a>
-        <a
           class="w-full"
           href="/settings/help"
         >
@@ -366,6 +292,79 @@ exports[`SettingsInfo - Snapshots > matches snapshot 1`] = `
           </button>
         </a>
       </div>
+    </div>
+    <div
+      class="w-full flex-col flex m-0 min-w-0 gap-2 bg-background p-0"
+      data-slot="filter-root"
+      data-testid="vibes-card"
+    >
+      <div
+        class="m-0 gap-2 p-0"
+        data-slot="filter-header"
+        data-testid="filter-header"
+      >
+        <h2
+          class="text-2xl font-light text-muted-foreground"
+          data-testid="heading-2"
+        >
+          Experimental
+        </h2>
+        <p
+          class="text-base leading-normal font-medium text-secondary-foreground"
+          data-testid="typography"
+        >
+          Get a taste of the future.
+        </p>
+      </div>
+      <a
+        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs hover:text-white hover:bg-neutral-800 h-8 gap-1.5 px-3 has-[>svg]:px-3.5 w-full border-border bg-white/5 text-xs font-bold"
+        data-size="sm"
+        data-slot="button"
+        data-variant="dark-outline"
+        href="https://vibes.pubky.app"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-wand-sparkles size-4"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"
+          />
+          <path
+            d="m14 7 3 3"
+          />
+          <path
+            d="M5 6v4"
+          />
+          <path
+            d="M19 14v4"
+          />
+          <path
+            d="M10 2v2"
+          />
+          <path
+            d="M7 8H3"
+          />
+          <path
+            d="M21 16h-4"
+          />
+          <path
+            d="M11 3H9"
+          />
+        </svg>
+        Try vibes.pubky.app
+      </a>
     </div>
     <div
       class="flex w-full max-w-(--filter-bar-width) flex-col gap-2"

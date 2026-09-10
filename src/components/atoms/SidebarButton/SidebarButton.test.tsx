@@ -39,6 +39,23 @@ describe('SidebarButton', () => {
     fireEvent.click(screen.getByRole('button'));
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
+
+  it('supports a link with the shared icon and styling without nesting a button', () => {
+    const onClick = vi.fn();
+    render(
+      <SidebarButton icon={FileText} asChild>
+        <a href="https://example.com" target="_blank" rel="noopener noreferrer" onClick={onClick}>
+          Example
+        </a>
+      </SidebarButton>,
+    );
+    const link = screen.getByRole('link', { name: 'Example' });
+    expect(link).toHaveAttribute('data-variant', 'dark-outline');
+    expect(link.querySelector('svg')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    fireEvent.click(link);
+    expect(onClick).toHaveBeenCalledOnce();
+  });
 });
 
 describe('SidebarButton - Snapshots', () => {
