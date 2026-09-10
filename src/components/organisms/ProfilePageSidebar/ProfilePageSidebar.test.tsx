@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NexusSocialGraphStatus } from '@/services/nexus/nexus.types';
 import { ProfilePageSidebar } from './ProfilePageSidebar';
 
+vi.mock('@/organisms/VibesCard/VibesCard', () => ({
+  VibesCard: () => <div data-testid="vibes-card">VibesCard</div>,
+}));
+
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -113,6 +117,7 @@ describe('ProfilePageSidebar', () => {
   it('renders FeedbackCard component', () => {
     render(<ProfilePageSidebar />);
     expect(screen.getByTestId('feedback-card')).toBeInTheDocument();
+    expect(screen.getByTestId('feedback-card').previousElementSibling).toBe(screen.getByTestId('vibes-card'));
   });
 
   it('has correct structure with sticky positioning', () => {
@@ -154,6 +159,6 @@ describe('ProfilePageSidebar - Snapshots', () => {
     const { container } = render(<ProfilePageSidebar />);
     const rootElement = container.firstChild as HTMLElement;
     expect(rootElement.tagName).toBe('DIV');
-    expect(rootElement.children.length).toBe(3);
+    expect(rootElement.children.length).toBe(4);
   });
 });

@@ -15,6 +15,7 @@ import { cn } from '@/libs/utils/utils';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
 import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { FeedbackCard } from '@/organisms/FeedbackCard/FeedbackCard';
+import { VibesCard } from '@/organisms/VibesCard/VibesCard';
 import { COPYRIGHT_TEXT, FAQ_QUESTIONS } from './SettingsInfo.constants';
 import type { SettingsInfoProps } from './SettingsInfo.types';
 
@@ -63,6 +64,7 @@ export function SettingsInfo({ className, hideFAQ = false }: SettingsInfoProps) 
       )}
 
       {/* Feedback Section */}
+      <VibesCard />
       <FeedbackCard />
 
       {/* Version Section */}
