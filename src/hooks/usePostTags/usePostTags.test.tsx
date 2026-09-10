@@ -130,6 +130,36 @@ describe('usePostTags', () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
+  it("keeps the new viewer's tag pinned when an earlier removal finishes", async () => {
+    const pending = Promise.withResolvers<void>();
+    vi.mocked(TagController.commitDelete).mockReturnValueOnce(pending.promise);
+    const tags = [
+      { label: 'first', taggers: ['other'], taggers_count: 5, relationship: false },
+      { label: 'shared', taggers: ['mock-user-id', 'other'], taggers_count: 2, relationship: true },
+    ];
+    setupLiveQueryMock({ tags }, { unique_tags: 2 });
+    const { result, rerender } = renderHook(() => usePostTags('author:post123'));
+    let removal!: Promise<void>;
+    act(() => {
+      removal = result.current.handleTagToggle({ label: 'shared', relationship: true });
+    });
+
+    vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('new-viewer'));
+    setupLiveQueryMock({ tags: tags.map((tag) => ({ ...tag, relationship: false })) }, { unique_tags: 2 });
+    rerender();
+    await act(async () => {
+      await result.current.handleTagAdd('shared');
+    });
+    expect(result.current.tags.map((tag) => tag.label)).toEqual(['shared', 'first']);
+
+    await act(async () => {
+      pending.resolve();
+      await removal;
+    });
+    expect(result.current.tags.map((tag) => tag.label)).toEqual(['shared', 'first']);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
   it('does not show a failed toggle toast after the owning view unmounts', async () => {
     const pending = Promise.withResolvers<void>();
     vi.mocked(TagController.commitDelete).mockReturnValueOnce(pending.promise);
@@ -218,7 +248,7 @@ describe('usePostTags', () => {
       expect(response.error).toBe('You must be logged in to add tags');
     });
 
-    it('shows a success toast when a tag is added', async () => {
+    it('does not show a success toast when a tag is added', async () => {
       const { result } = renderHook(() => usePostTags('author:post123'));
 
       let response: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
@@ -227,9 +257,7 @@ describe('usePostTags', () => {
       });
 
       expect(response!).toEqual({ success: true });
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Tag added',
-      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('shows an error toast when adding a tag fails', async () => {
@@ -300,7 +328,7 @@ describe('usePostTags', () => {
       expect(result.current.tags[0].relationship).toBe(false);
     });
 
-    it('shows a success toast when a tag is removed', async () => {
+    it('does not show a success toast when a tag is removed', async () => {
       const mockViewerId = 'viewer-123';
       vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
       vi.mocked(useLiveQuery).mockReturnValue({
@@ -314,9 +342,7 @@ describe('usePostTags', () => {
         await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
       });
 
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Tag removed',
-      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('shows an error toast when removing a tag fails', async () => {
@@ -440,6 +466,7 @@ describe('usePostTags', () => {
       expect(result.current.tags[0].label).toBe('alpha');
       expect(result.current.tags[1].label).toBe('beta');
       expect(result.current.tags[2].label).toBe('gamma');
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('clears the recently-added pin when the viewer removes the tag right after adding it', async () => {

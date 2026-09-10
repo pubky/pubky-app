@@ -28,6 +28,13 @@ describe('SettingsInfo', () => {
     expect(screen.getByText('Please read our terms carefully.')).toBeInTheDocument();
   });
 
+  it('places the permanent Vibes entry directly above Feedback', () => {
+    render(<SettingsInfo />);
+    expect(screen.getByTestId('vibes-card').nextElementSibling?.getAttribute('data-testid')).toMatch(
+      /^feedback-card(?:-skeleton)?$/,
+    );
+  });
+
   it('renders version section with title and version number', () => {
     render(<SettingsInfo />);
     expect(screen.getByText('Version')).toBeInTheDocument();
