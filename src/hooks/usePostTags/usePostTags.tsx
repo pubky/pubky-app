@@ -274,9 +274,6 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
         const counter = addCounterRef.current;
         setRecentlyAddedLabels((prev) => new Map(prev).set(labelLower, counter));
 
-        toast({
-          title: 'Tag added',
-        });
         return { success: true };
       } catch {
         toast({
@@ -326,9 +323,6 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             taggedKind: TagKind.POST,
           });
 
-          toast({
-            title: 'Tag removed',
-          });
           // Removing the tag clears its "recently added" pinning so the natural
           // ordering takes over again if it ever resurfaces.
           setRecentlyAddedLabels((prev) => {
@@ -349,10 +343,6 @@ export function usePostTags(postId: string | null | undefined, options: UsePostT
             const next = new Map(prev);
             next.delete(labelLower);
             return next;
-          });
-
-          toast({
-            title: 'Tag added',
           });
         }
       } catch {
