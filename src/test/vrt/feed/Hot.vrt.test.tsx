@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
-import { describe, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -475,7 +475,8 @@ describe('Hot — visual regression', () => {
   });
 
   it('renders the hot discovery page at mobile viewport', async () => {
-    await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    const screen = await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByTestId('vibes-card')).not.toBeVisible();
     // Mobile defaults to the Tags tab (HotMobileMenu); Users/Posts stay mounted
     // but CSS-hidden so the snapshot matches the Tags first fold.
     await matchVrtFrameScreenshot('hot-mobile');
