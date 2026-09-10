@@ -77,7 +77,7 @@ jobs:
 
       - name: Set HEAD commit hash
         id: sha_tag
-        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
+        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           path: '.'
 
@@ -88,13 +88,13 @@ jobs:
           echo image_name=pubky-app >> $GITHUB_OUTPUT
 
       - name: Login to registry
-        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
 
       - name: Check if image needs to be rebuild
-        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
+        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         id: check_image
         with:
           image: ${{ env.registry }}/${{ steps.set_tag.outputs.image_name }}
@@ -113,13 +113,13 @@ jobs:
           ref: ${{ inputs.commit_sha || github.sha }}
 
       - name: Login to registry
-        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
 
       - name: Build and push image pubky-app
-        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
+        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           image: 'pubky-app'
           context: '.'
