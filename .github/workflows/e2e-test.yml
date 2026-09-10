@@ -1,20 +1,103 @@
+# Cypress end-to-end tests against a freshly built pubky-stack + pubky-app.
+#
+# Pushes to master/dev always run every spec in `default_specs` below.
+#
+# Manual runs (workflow_dispatch) accept an optional `specs` input to run only
+# a subset, one matrix job per spec. Handy for exercising just the specs a PR
+# touches without spinning up the stack locally:
+#
+#   gh workflow run e2e-test.yml --ref <branch> -f specs=onboarding.cy.ts
+#   gh workflow run e2e-test.yml --ref <branch> -f specs=onboarding.cy.ts,feed.cy.ts
+#
+# `specs` is a comma-separated list of file names from cypress/e2e/ (whitespace
+# around names is ignored). Leave it empty to run the full default list. Names
+# that are not in `default_specs` fail the run in the `resolve_specs` job,
+# before any docker image work starts. The default list lives only in
+# `default_specs`, so add new spec files there.
 name: e2e-test
+run-name: ${{ inputs.specs && format('e2e-test ({0})', inputs.specs) || '' }}
 env:
   pubky_stack_ref: 'staging'
   platforms: 'linux/amd64'
   registry: 'europe-west6-docker.pkg.dev/infra-464608/synonym-private-repo'
+  # Single source of truth for the specs the e2e-test matrix runs.
+  default_specs: 'contacts.cy.ts,feed.cy.ts,notifications.cy.ts,onboarding.cy.ts,posts.cy.ts,profile.cy.ts,search.cy.ts,settings.cy.ts,collections.cy.ts'
 
 on:
   workflow_dispatch:
+    inputs:
+      specs:
+        description: 'Comma-separated Cypress spec files to run (e.g. onboarding.cy.ts,feed.cy.ts). Empty runs all specs.'
+        required: false
+        default: ''
+        type: string
   push:
     branches:
       - master
       - dev
 
 jobs:
+  resolve_specs:
+    name: Resolve Cypress specs
+    runs-on: ubuntu-latest
+    outputs:
+      specs: ${{ steps.resolve.outputs.specs }}
+    steps:
+      - name: Build spec matrix from input
+        id: resolve
+        env:
+          DEFAULT_SPECS: ${{ env.default_specs }}
+          REQUESTED_SPECS: ${{ inputs.specs }}
+        run: |
+          set -euo pipefail
+
+          trim() { printf '%s' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
+
+          IFS=',' read -r -a defaults <<< "$DEFAULT_SPECS"
+
+          selected=()
+          if [ -z "$(trim "$REQUESTED_SPECS")" ]; then
+            echo "No specs input given; running the full default list."
+            selected=("${defaults[@]}")
+          else
+            IFS=',' read -r -a requested <<< "$REQUESTED_SPECS"
+            unknown=()
+            for raw in "${requested[@]}"; do
+              spec="$(trim "$raw")"
+              [ -z "$spec" ] && continue
+              known=false
+              for candidate in "${defaults[@]}"; do
+                [ "$spec" = "$candidate" ] && known=true && break
+              done
+              if [ "$known" != true ]; then
+                unknown+=("$spec")
+                continue
+              fi
+              duplicate=false
+              for existing in "${selected[@]}"; do
+                [ "$spec" = "$existing" ] && duplicate=true && break
+              done
+              [ "$duplicate" = true ] || selected+=("$spec")
+            done
+
+            if [ "${#unknown[@]}" -gt 0 ]; then
+              echo "::error::Unknown spec(s) in 'specs' input: ${unknown[*]}. Valid specs: ${defaults[*]}"
+              exit 1
+            fi
+            if [ "${#selected[@]}" -eq 0 ]; then
+              echo "::error::'specs' input '$REQUESTED_SPECS' resolved to no specs. Valid specs: ${defaults[*]}"
+              exit 1
+            fi
+          fi
+
+          specs_json="$(printf '%s\n' "${selected[@]}" | jq -R . | jq -c -s .)"
+          echo "Running specs: ${selected[*]}"
+          echo "specs=$specs_json" >> "$GITHUB_OUTPUT"
+
   rebuild_images:
     name: Getting images to rebuild
     runs-on: ubuntu-latest
+    needs: [resolve_specs]
     outputs:
       homeserver-testnet_tag: ${{ steps.set_tag.outputs.homeserver-testnet_tag }}
       pubky-nexus_tag: ${{ steps.set_tag.outputs.pubky-nexus_tag }}
@@ -89,7 +172,7 @@ jobs:
           echo platforms=${{ env.platforms }} >> $GITHUB_OUTPUT
 
   rebuild_pubky_app:
-    needs: [ set_vars_pubky_app ]
+    needs: [ resolve_specs, set_vars_pubky_app ]
     uses: ./.github/workflows/build-docker-image.yml
     with:
       platforms: ${{ needs.set_vars_pubky_app.outputs.platforms }}
@@ -98,7 +181,7 @@ jobs:
   e2e-test:
     name: End-to-End Tests
     runs-on: ubuntu-latest
-    needs: [rebuild_images, rebuild_pubky_app]
+    needs: [resolve_specs, rebuild_images, rebuild_pubky_app]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
       PUBKY_APP_TAG: ${{ needs.rebuild_pubky_app.outputs.image_tag }}
@@ -110,7 +193,7 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chrome]
-        spec: ["contacts.cy.ts", "feed.cy.ts", "notifications.cy.ts", "onboarding.cy.ts", "posts.cy.ts", "profile.cy.ts", "search.cy.ts", "settings.cy.ts", "collections.cy.ts"]
+        spec: ${{ fromJSON(needs.resolve_specs.outputs.specs) }}
 
     steps:
       - name: Validate envs from rebuild_images job
