@@ -163,7 +163,7 @@ describe('usePostTags', () => {
       expect(response.error).toBe('You must be logged in to add tags');
     });
 
-    it('shows a success toast when a tag is added', async () => {
+    it('does not show a success toast when a tag is added', async () => {
       const { result } = renderHook(() => usePostTags('author:post123'));
 
       let response: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
@@ -172,9 +172,7 @@ describe('usePostTags', () => {
       });
 
       expect(response!).toEqual({ success: true });
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Tag added',
-      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('shows an error toast when adding a tag fails', async () => {
@@ -240,7 +238,7 @@ describe('usePostTags', () => {
       expect(result.current.tags[0].relationship).toBe(false);
     });
 
-    it('shows a success toast when a tag is removed', async () => {
+    it('does not show a success toast when a tag is removed', async () => {
       const mockViewerId = 'viewer-123';
       vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
       vi.mocked(useLiveQuery).mockReturnValue([
@@ -255,9 +253,7 @@ describe('usePostTags', () => {
         await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
       });
 
-      expect(vi.mocked(toast)).toHaveBeenCalledWith({
-        title: 'Tag removed',
-      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('shows an error toast when removing a tag fails', async () => {
@@ -379,6 +375,7 @@ describe('usePostTags', () => {
       expect(result.current.tags[0].label).toBe('alpha');
       expect(result.current.tags[1].label).toBe('beta');
       expect(result.current.tags[2].label).toBe('gamma');
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('clears the recently-added pin when the viewer removes the tag right after adding it', async () => {
