@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ONBOARDING_ROUTES } from '@/app/routes';
@@ -22,6 +22,10 @@ import { PopularInterestTagsSkeleton } from './TagsOfInterestForm.skeleton';
 export const TagsOfInterestForm = () => {
   const router = useRouter();
   const setInterestTags = useOnboardingStore((state) => state.setInterestTags);
+  // Nothing prefetches the follow route (the Continue button is not a Link), so the push
+  // fetches it on click. Running it as a transition keeps Continue in its loading state until
+  // the next step actually renders, instead of a dead button during the fetch.
+  const [isNavigating, startNavigation] = useTransition();
 
   const { tags: fetchedPopularTags, isLoading: arePopularTagsLoading } = useHotTags({
     limit: ONBOARDING_INTERESTS_SUGGESTED_COUNT,
@@ -45,7 +49,9 @@ export const TagsOfInterestForm = () => {
   const handleContinue = () => {
     // Selection is already persisted by the sync effect above. Experience completion is
     // written by the Follow screen's Finish action, so Back from there lands here again.
-    router.push(ONBOARDING_ROUTES.FOLLOW);
+    startNavigation(() => {
+      router.push(ONBOARDING_ROUTES.FOLLOW);
+    });
   };
 
   const handleBack = () => {
@@ -147,7 +153,9 @@ export const TagsOfInterestForm = () => {
         className="onboarding-nav mt-auto flex-col sm:flex-row lg:pt-0"
         backText={'Back'}
         onHandleBackButton={handleBack}
-        continueButtonDisabled={false}
+        backButtonDisabled={isNavigating}
+        continueButtonDisabled={isNavigating}
+        continueButtonLoading={isNavigating}
         continueText={'Continue'}
         onContinue={handleContinue}
       />
