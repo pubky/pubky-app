@@ -1,6 +1,6 @@
 import { Logger } from '../logger/logger';
 import { captureAppError } from '../observability/sentry';
-import { AppError, type AppErrorParams } from './error';
+import { AppError, type AppErrorParams, hasAppErrorInCauseChain } from './error';
 import type {
   AuthErrorCode,
   ClientErrorCode,
@@ -29,24 +29,6 @@ type FactoryParams = {
   /** Correlates errors across the call chain (set by Application layer) */
   traceId?: string;
 };
-
-/**
- * True when `cause` is, or wraps (via `Error.cause`), an AppError that already went through
- * this factory. Bounded walk with cycle protection; mirrors `findAppError` in error.http.ts,
- * which cannot be imported here without a circular dependency.
- */
-function hasAppErrorInCauseChain(cause: unknown): boolean {
-  const seen = new Set<unknown>();
-  let current = cause;
-
-  while (current && typeof current === 'object' && !seen.has(current)) {
-    if (current instanceof AppError) return true;
-    seen.add(current);
-    current = (current as { cause?: unknown }).cause;
-  }
-
-  return false;
-}
 
 /**
  * Helper function to create AppError with common pattern.
@@ -78,7 +60,9 @@ function createAppError<C extends ErrorCategory>(
   // in another Err.* to add its own service/operation, the root was already captured
   // with the most precise stack and context. Capturing the wrapper too creates a second
   // Sentry issue (different fingerprint) for the same failure. The Logger line above is
-  // kept so local logs still show the wrapper's operation.
+  // kept so local logs still show the wrapper's operation. The same predicate is enforced in
+  // the Sentry beforeSend hook (sentry.ts) so a wrapper that escapes as an unhandled rejection
+  // is not captured by the SDK's global handlers either.
   if (hasAppErrorInCauseChain(params.cause)) {
     return error;
   }

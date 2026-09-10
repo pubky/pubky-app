@@ -1,6 +1,6 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import type * as Sentry from '@sentry/nextjs';
-import { AppError } from '@/libs/error/error';
+import { AppError, hasAppErrorInCauseChain } from '@/libs/error/error';
 import { ClientErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -111,6 +111,23 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
 
 export function shouldDropAppErrorFromSentry(error: AppError): boolean {
   return APP_ERROR_DROP_RULES.some((rule) => rule.matches(error));
+}
+
+/**
+ * Whether an exception reaching the SDK outside `captureAppError` must be dropped.
+ *
+ * `Err.*` decides at construction whether an AppError is captured (drop rules) and skips wrappers
+ * whose cause chain already holds a captured AppError (once per chain). That decision only covers
+ * the factory's own `captureException` call: the same object can reach the SDK again through
+ * `globalHandlers` when a caller lets the promise reject unhandled, or through `app/error.tsx`.
+ * Sentry's dedupe works per error object, not per cause chain, and a rule-dropped error was never
+ * captured at all — so `beforeSend` re-applies both predicates to `hint.originalException`.
+ *
+ * Non-AppError exceptions are untouched: the once-per-chain contract only exists for `Err.*`.
+ */
+export function shouldDropCapturedExceptionFromSentry(originalException: unknown): boolean {
+  if (!(originalException instanceof AppError)) return false;
+  return shouldDropAppErrorFromSentry(originalException) || hasAppErrorInCauseChain(originalException.cause);
 }
 
 function isSensitiveFieldValue(parent: Record<string, unknown>, key: string): boolean {

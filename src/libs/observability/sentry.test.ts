@@ -472,6 +472,121 @@ describe('once-per-error-chain capture', () => {
   });
 });
 
+/**
+ * Capture paths that bypass `captureAppError`: the SDK's globalHandlers (an AppError rejected without a
+ * handler), `app/error.tsx`, or any direct `captureException`. The factory's decision must hold there too.
+ */
+describe('once-per-chain and drop rules enforced in beforeSend', () => {
+  const rootParams = { service: ErrorService.Local, operation: 'findById' } as const;
+  const wrapperParams = { service: ErrorService.Local, operation: 'unblurModeration' } as const;
+
+  function rootAndWrapper(): { root: AppError; wrapper: AppError } {
+    const root = new AppError({
+      category: ErrorCategory.Database,
+      code: DatabaseErrorCode.QUERY_FAILED,
+      message: 'query failed',
+      ...rootParams,
+    });
+    const wrapper = new AppError({
+      category: ErrorCategory.Database,
+      code: DatabaseErrorCode.WRITE_FAILED,
+      message: 'unblur failed',
+      ...wrapperParams,
+      cause: root,
+    });
+    return { root, wrapper };
+  }
+
+  function ruleDroppedError(): AppError {
+    return new AppError({
+      category: ErrorCategory.Timeout,
+      code: TimeoutErrorCode.REQUEST_ABORTED,
+      message: 'Request was aborted',
+      service: ErrorService.Homegate,
+      operation: 'awaitLnVerification',
+      context: { signalAborted: true },
+    });
+  }
+
+  function runBeforeSendWithException(originalException: unknown): Sentry.ErrorEvent | null {
+    const beforeSend = getSentryInitBase().beforeSend;
+    expect(beforeSend).toBeTypeOf('function');
+    const event = asOpaque<Sentry.ErrorEvent>({ message: 'event' });
+    return beforeSend!(event, { originalException }) as Sentry.ErrorEvent | null;
+  }
+
+  it('drops an AppError wrapper whose cause chain holds an AppError', () => {
+    const { wrapper } = rootAndWrapper();
+
+    expect(runBeforeSendWithException(wrapper)).toBeNull();
+  });
+
+  it('drops an AppError matched by a drop rule', () => {
+    expect(runBeforeSendWithException(ruleDroppedError())).toBeNull();
+  });
+
+  it('keeps a root AppError and non-AppError exceptions', () => {
+    const { root } = rootAndWrapper();
+
+    expect(runBeforeSendWithException(root)).not.toBeNull();
+    expect(runBeforeSendWithException(new TypeError('native'))).not.toBeNull();
+    expect(runBeforeSendWithException(undefined)).not.toBeNull();
+  });
+
+  /**
+   * Same scenario through the real SDK pipeline (scope capture → client → dedupe → beforeSend → transport).
+   * `Scope.captureException` attaches `hint.originalException` the same way the browser globalHandlers
+   * integration does for an unhandled rejection (`captureEvent(event, { originalException: error, ... })`),
+   * so this exercises the hint shape `beforeSend` sees in production. Only the transport is stubbed.
+   */
+  async function captureThroughRealSdk(exceptions: unknown[]): Promise<string[]> {
+    const exceptionValues: string[] = [];
+    const transport = Sentry.createTransport({ recordDroppedEvent: () => {} }, async (request) => {
+      // Envelope: header line, item header line, item payload line.
+      const [, , payload] = String(request.body).split('\n');
+      const event = JSON.parse(payload) as Sentry.ErrorEvent;
+      exceptionValues.push(...(event.exception?.values ?? []).map((exception) => exception.value ?? ''));
+      return { statusCode: 200 };
+    });
+    const client = new Sentry.NodeClient({
+      ...getSentryInitBase(),
+      dsn: TEST_DSN,
+      transport: () => transport,
+      stackParser: Sentry.defaultStackParser,
+      integrations: [Sentry.dedupeIntegration(), Sentry.linkedErrorsIntegration()],
+      sendClientReports: false,
+    });
+    client.init();
+    const scope = new Sentry.Scope();
+    scope.setClient(client);
+
+    for (const exception of exceptions) {
+      scope.captureException(exception);
+    }
+    await client.flush(2000);
+    await client.close(0);
+
+    return exceptionValues;
+  }
+
+  it('delivers exactly one event for a chain when the root is captured twice and the wrapper escapes unhandled', async () => {
+    const { root, wrapper } = rootAndWrapper();
+
+    // Factory capture of the root, then the global handler sees the wrapper AND the root again.
+    const delivered = await captureThroughRealSdk([root, wrapper, root]);
+
+    expect(delivered).toEqual(['query failed']);
+  });
+
+  it('delivers nothing for a rule-dropped AppError that escapes unhandled', async () => {
+    expect(await captureThroughRealSdk([ruleDroppedError()])).toEqual([]);
+  });
+
+  it('still delivers ordinary exceptions through the same pipeline', async () => {
+    expect(await captureThroughRealSdk([new TypeError('native failure')])).toEqual(['native failure']);
+  });
+});
+
 describe('Sentry PII scrubbing', () => {
   it('redacts identifiers from messages, exception values, and breadcrumb messages', () => {
     const event = runBeforeSend(

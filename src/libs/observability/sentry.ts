@@ -8,6 +8,7 @@ import {
   scrubSpanJson,
   scrubTransactionEvent,
   shouldDropAppErrorFromSentry,
+  shouldDropCapturedExceptionFromSentry,
 } from '@/libs/observability/sentry.utils';
 import {
   getSentryDsn,
@@ -125,10 +126,20 @@ export function getSentryInitBase(): Sentry.NodeOptions & Sentry.BrowserOptions 
       // disabled mid-session (PUBKY-APP-8G). Not our code.
       /Failed to connect to MetaMask/,
     ],
-    beforeSend: scrubSensitiveData,
+    beforeSend: filterAndScrubErrorEvent,
     beforeSendTransaction: scrubTransactionEvent,
     beforeSendSpan: scrubSpanJson,
   };
+}
+
+/**
+ * `beforeSend` for error events. The SDK's own capture paths (`globalHandlers` for unhandled
+ * rejections, `app/error.tsx`, `captureException` calls) bypass `captureAppError`, so the drop
+ * rules and the once-per-chain guard are enforced here as well before PII scrubbing.
+ */
+function filterAndScrubErrorEvent(event: Sentry.ErrorEvent, hint: Sentry.EventHint): Sentry.ErrorEvent | null {
+  if (shouldDropCapturedExceptionFromSentry(hint.originalException)) return null;
+  return scrubSensitiveData(event);
 }
 
 /**
