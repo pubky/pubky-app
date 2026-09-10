@@ -16,9 +16,20 @@ All build-time variables are validated in `src/libs/env/env.ts` using Zod schema
 
 The schema is intentionally small:
 
-- **Build-intrinsic public values** (baked into the artifact by design): `NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION`, `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`.
+- **Build-intrinsic public values** (baked into the artifact by design): `NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION`, `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`, and the optional vibe-fork consumer pair `NEXT_PUBLIC_VIBE_SESSION_BRIDGE_ORIGIN` / `NEXT_PUBLIC_VIBE_ID`.
 - **Server-only variables** (never exposed to the browser): `HOMESERVER_ADMIN_URL` / `HOMESERVER_ADMIN_PASSWORD` (dev/test signup tokens) and the Chatwoot support credentials (`BASE_URL_SUPPORT`, `SUPPORT_API_ACCESS_TOKEN`, `SUPPORT_ACCOUNT_ID`).
 - `NODE_ENV` / `VITEST`.
+
+### Vibe session consumer (optional)
+
+A pubky-app **fork** deployed as a vibe on `<slug>.vibes.pubky.app` can sign in silently from the visitor's existing `pubky.app` session. These two values are baked into that fork's artifact (they are not runtime-configurable):
+
+| Variable                                 | Required | Meaning                                                                                                                                                                                                                                                          |
+| ---------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_VIBE_SESSION_BRIDGE_ORIGIN` | No       | Exact `https://` origin of the pubky-app that hosts `/session-bridge` (typically `https://pubky.app`). `http://localhost:<port>` is allowed only when `NODE_ENV !== 'production'`. Invalid values fail env parse. Consumer mode is **on** only when this is set. |
+| `NEXT_PUBLIC_VIBE_ID`                    | No       | Vibe slug (e.g. `my-vibe`). Informational; not used as an origin check.                                                                                                                                                                                          |
+
+Canonical `pubky.app` leaves both unset. The first client pass always strips `#s=` from the URL, even when consumer mode is off. See [ADR 0019](adr/0019-vibe-session-consumer.md).
 
 ### Adding or Modifying Variables
 

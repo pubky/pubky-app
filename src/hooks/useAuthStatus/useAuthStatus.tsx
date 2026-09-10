@@ -12,7 +12,8 @@ export function useAuthStatus(): AuthStatusResult {
     // On page reload sessionExport (serialized credentials in localStorage) is restored
     // before session (live auth object) is recreated. This flag prevents premature
     // redirects by keeping isLoading true until session restoration is completed.
-    const isSessionRestorePending = authStore.sessionExport !== null && authStore.session === null;
+    const isSessionRestorePending =
+      authStore.sessionExport !== null && authStore.session === null && !authStore.sessionRestoreDeferred;
 
     const isLoading =
       !onboardingStore.hasHydrated || !authStore.hasHydrated || authStore.isRestoringSession || isSessionRestorePending;
@@ -52,6 +53,7 @@ export function useAuthStatus(): AuthStatusResult {
     authStore.isRestoringSession,
     authStore.sessionExport,
     authStore.session,
+    authStore.sessionRestoreDeferred,
     authStore.hasProfile,
   ]);
 

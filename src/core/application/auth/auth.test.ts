@@ -1,12 +1,16 @@
 import type { Keypair, Session } from '@synonymdev/pubky';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthApplication } from '@/application/auth/auth';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthApplication, isDefinitiveSessionAuthFailure } from '@/application/auth/auth';
 import type { THomeserverAuthenticateParams } from '@/application/auth/auth.types';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import * as vibeSessionAutoRestore from '@/libs/vibe-session/auto-restore';
+import * as vibeSessionBridge from '@/libs/vibe-session/bridge';
+import * as vibeSessionConfig from '@/libs/vibe-session/config';
+import * as vibeSessionFragment from '@/libs/vibe-session/fragment';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { THomeserverSignUpParams } from '@/services/homeserver/homeserver.types';
@@ -240,7 +244,7 @@ describe('AuthApplication', () => {
 
       expect(restoreSpy).toHaveBeenCalledOnce();
       expect(assertSpy).toHaveBeenCalledWith({ publicKey });
-      expect(result).toEqual({ session });
+      expect(result).toEqual({ status: 'restored', session });
       // Ensure loading state is toggled: true on start, false on finish (prevents stuck spinner)
       expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(true);
       expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(false);
@@ -253,7 +257,7 @@ describe('AuthApplication', () => {
 
       const result = await AuthApplication.restorePersistedSession({ authStore });
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'signed-out' });
     });
 
     it('should retry on retryable error and succeed on subsequent attempt', async () => {
@@ -272,7 +276,7 @@ describe('AuthApplication', () => {
 
       expect(restoreSpy).toHaveBeenCalledTimes(3);
       expect(sleepSpy).toHaveBeenCalledTimes(2);
-      expect(result).toEqual({ session });
+      expect(result).toEqual({ status: 'restored', session });
     });
 
     // Errors like expired session (Auth category) are permanent — retrying won't help.
@@ -285,7 +289,7 @@ describe('AuthApplication', () => {
 
       expect(restoreSpy).toHaveBeenCalledOnce();
       expect(sleepSpy).not.toHaveBeenCalled();
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'signed-out' });
     });
 
     it('should not retry on non-AppError (plain Error)', async () => {
@@ -298,7 +302,7 @@ describe('AuthApplication', () => {
 
       expect(restoreSpy).toHaveBeenCalledOnce();
       expect(sleepSpy).not.toHaveBeenCalled();
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'signed-out' });
     });
 
     it('should return null after exhausting all retry attempts', async () => {
@@ -311,7 +315,7 @@ describe('AuthApplication', () => {
       expect(restoreSpy).toHaveBeenCalledTimes(10);
       // 10 attempts but only 9 sleeps: on the 10th attempt, `attempt < MAX` is false so it breaks instead of sleeping
       expect(sleepSpy).toHaveBeenCalledTimes(9);
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'signed-out' });
       expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(false);
     });
 
@@ -383,13 +387,309 @@ describe('AuthApplication', () => {
 
       const result = await AuthApplication.restorePersistedSession({ authStore });
 
-      expect(result).toEqual({ session });
+      expect(result).toEqual({ status: 'restored', session });
       expect(sleepSpy).toHaveBeenCalledOnce();
       // The already-restored session is reused — only the failed check retries.
       expect(restoreSpy).toHaveBeenCalledOnce();
       // Only a definitive wrong-environment rejection signs the session out.
       expect(logoutSpy).not.toHaveBeenCalled();
       expect(authStore.setIsRestoringSession).toHaveBeenLastCalledWith(false);
+    });
+  });
+
+  describe('restorePersistedSession vibe consumer', () => {
+    const BRIDGE = 'https://pubky.app';
+    const FRAGMENT_EXPORT = 'fragment-export';
+    const BRIDGE_EXPORT = 'bridge-export';
+    const PERSISTED_EXPORT = 'persisted-export';
+
+    const createMockAuthStore = (sessionExport: string | null = null) =>
+      mockAuthStore({
+        sessionExport,
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+      });
+
+    const createAuthError = () =>
+      new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.SESSION_EXPIRED,
+        message: 'Session expired',
+        service: ErrorService.Homeserver,
+        operation: 'restoreSession',
+      });
+
+    const createNetworkError = () =>
+      new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'ERR_NETWORK_CHANGED',
+        service: ErrorService.Homeserver,
+        operation: 'restoreSession',
+      });
+
+    const liveSession = () => {
+      const publicKey = asOpaque({ z32: () => 'user-pubky' });
+      return asOpaque<Session>({ token: 'test-token', info: { publicKey } });
+    };
+
+    beforeEach(async () => {
+      await spyOnSleep();
+      vi.spyOn(vibeSessionConfig, 'getVibeSessionBridgeOrigin').mockReturnValue(undefined);
+      vi.spyOn(vibeSessionFragment, 'takeFragmentSessionExport').mockReturnValue(null);
+      vi.spyOn(vibeSessionBridge, 'requestFromBridge').mockResolvedValue({ kind: 'none' });
+      vi.spyOn(vibeSessionConfig, 'getVibeId').mockReturnValue('test-vibe');
+      vi.spyOn(vibeSessionAutoRestore, 'isVibeSessionAutoRestoreSuppressed').mockReturnValue(false);
+    });
+
+    afterEach(() => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockRestore();
+      vi.mocked(vibeSessionFragment.takeFragmentSessionExport).mockRestore();
+      vi.mocked(vibeSessionBridge.requestFromBridge).mockRestore();
+      vi.mocked(vibeSessionConfig.getVibeId).mockRestore();
+      vi.mocked(vibeSessionAutoRestore.isVibeSessionAutoRestoreSuppressed).mockRestore();
+    });
+
+    it('does not consult fragment or bridge when consumer mode is off', async () => {
+      const authStore = createMockAuthStore(null);
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession');
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(result).toEqual({ status: 'signed-out' });
+      expect(restoreSpy).not.toHaveBeenCalled();
+      expect(vibeSessionFragment.takeFragmentSessionExport).not.toHaveBeenCalled();
+      expect(vibeSessionBridge.requestFromBridge).not.toHaveBeenCalled();
+    });
+
+    it('restores from a fragment export when consumer mode is on and nothing is persisted', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.mocked(vibeSessionFragment.takeFragmentSessionExport).mockReturnValue(FRAGMENT_EXPORT);
+      const session = liveSession();
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(session);
+      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
+      const authStore = createMockAuthStore(null);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenCalledOnce();
+      expect(restoreSpy).toHaveBeenCalledWith({ sessionExport: FRAGMENT_EXPORT });
+      expect(vibeSessionBridge.requestFromBridge).not.toHaveBeenCalled();
+      expect(result).toEqual({ status: 'restored', session });
+    });
+
+    it('restores from a bridge reply when consumer mode is on and nothing is persisted', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.mocked(vibeSessionFragment.takeFragmentSessionExport).mockReturnValue(null);
+      vi.mocked(vibeSessionBridge.requestFromBridge).mockResolvedValue({
+        kind: 'export',
+        sessionExport: BRIDGE_EXPORT,
+      });
+      const session = liveSession();
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(session);
+      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
+      const authStore = createMockAuthStore(null);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenCalledWith({ sessionExport: BRIDGE_EXPORT });
+      expect(result).toEqual({ status: 'restored', session });
+    });
+
+    it('returns null and does not restore when the bridge replies none', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.mocked(vibeSessionBridge.requestFromBridge).mockResolvedValue({ kind: 'none' });
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession');
+      const authStore = createMockAuthStore(null);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(result).toEqual({ status: 'signed-out' });
+      expect(restoreSpy).not.toHaveBeenCalled();
+      expect(authStore.init).not.toHaveBeenCalled();
+    });
+
+    it('returns null and does not restore when the bridge times out', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.mocked(vibeSessionBridge.requestFromBridge).mockResolvedValue({ kind: 'timeout', phase: 'reply' });
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession');
+      const authStore = createMockAuthStore(null);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(result).toEqual({ status: 'signed-out' });
+      expect(restoreSpy).not.toHaveBeenCalled();
+    });
+
+    it('replaces an expired persisted export with a fresh bridge export', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.mocked(vibeSessionFragment.takeFragmentSessionExport).mockReturnValue(null);
+      vi.mocked(vibeSessionBridge.requestFromBridge).mockResolvedValue({
+        kind: 'export',
+        sessionExport: BRIDGE_EXPORT,
+      });
+      const session = liveSession();
+      const restoreSpy = vi
+        .spyOn(HomeserverService, 'restoreSession')
+        .mockRejectedValueOnce(createAuthError())
+        .mockResolvedValueOnce(session);
+      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
+      const authStore = createMockAuthStore(PERSISTED_EXPORT);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenNthCalledWith(1, { sessionExport: PERSISTED_EXPORT });
+      expect(restoreSpy).toHaveBeenNthCalledWith(2, { sessionExport: BRIDGE_EXPORT });
+      expect(result).toEqual({ status: 'restored', session });
+    });
+
+    it('preserves a persisted export when a transient restore fails and the bridge times out', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.mocked(vibeSessionBridge.requestFromBridge).mockResolvedValue({ kind: 'timeout', phase: 'load' });
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockRejectedValue(createNetworkError());
+      const authStore = createMockAuthStore(PERSISTED_EXPORT);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenCalledTimes(10);
+      expect(result).toEqual({ status: 'deferred' });
+      expect(authStore.sessionExport).toBe(PERSISTED_EXPORT);
+      expect(authStore.init).not.toHaveBeenCalled();
+    });
+
+    it('falls through to the bridge when a fragment export fails to restore', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.mocked(vibeSessionFragment.takeFragmentSessionExport).mockReturnValue(FRAGMENT_EXPORT);
+      vi.mocked(vibeSessionBridge.requestFromBridge).mockResolvedValue({
+        kind: 'export',
+        sessionExport: BRIDGE_EXPORT,
+      });
+      const session = liveSession();
+      const restoreSpy = vi
+        .spyOn(HomeserverService, 'restoreSession')
+        .mockRejectedValueOnce(createAuthError())
+        .mockResolvedValueOnce(session);
+      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
+      const authStore = createMockAuthStore(null);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenNthCalledWith(1, { sessionExport: FRAGMENT_EXPORT });
+      expect(restoreSpy).toHaveBeenNthCalledWith(2, { sessionExport: BRIDGE_EXPORT });
+      expect(result).toEqual({ status: 'restored', session });
+    });
+
+    it('skips the bridge when auto-restore is suppressed and still restores a fragment', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.spyOn(vibeSessionAutoRestore, 'isVibeSessionAutoRestoreSuppressed').mockReturnValue(true);
+      vi.mocked(vibeSessionFragment.takeFragmentSessionExport).mockReturnValue(FRAGMENT_EXPORT);
+      const session = liveSession();
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockResolvedValue(session);
+      vi.spyOn(HomeserverService, 'assertUserHomeserverAllowed').mockResolvedValue(undefined);
+      const authStore = createMockAuthStore(null);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenCalledWith({ sessionExport: FRAGMENT_EXPORT });
+      expect(vibeSessionBridge.requestFromBridge).not.toHaveBeenCalled();
+      expect(result).toEqual({ status: 'restored', session });
+    });
+
+    it('does not call the bridge when auto-restore is suppressed and nothing is persisted', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.spyOn(vibeSessionAutoRestore, 'isVibeSessionAutoRestoreSuppressed').mockReturnValue(true);
+      vi.mocked(vibeSessionFragment.takeFragmentSessionExport).mockReturnValue(null);
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession');
+      const authStore = createMockAuthStore(null);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(result).toEqual({ status: 'signed-out' });
+      expect(restoreSpy).not.toHaveBeenCalled();
+      expect(vibeSessionBridge.requestFromBridge).not.toHaveBeenCalled();
+    });
+
+    it('does not consult the bridge when suppressed and a bogus #s= fragment fails to restore', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.spyOn(vibeSessionAutoRestore, 'isVibeSessionAutoRestoreSuppressed').mockReturnValue(true);
+      vi.mocked(vibeSessionFragment.takeFragmentSessionExport).mockReturnValue('bogus');
+      const restoreSpy = vi.spyOn(HomeserverService, 'restoreSession').mockRejectedValue(createAuthError());
+      const authStore = createMockAuthStore(null);
+
+      const result = await AuthApplication.restorePersistedSession({ authStore });
+
+      expect(restoreSpy).toHaveBeenCalledWith({ sessionExport: 'bogus' });
+      expect(vibeSessionBridge.requestFromBridge).not.toHaveBeenCalled();
+      expect(authStore.init).not.toHaveBeenCalled();
+      expect(result).toEqual({ status: 'signed-out' });
+    });
+
+    it('passes an AbortSignal to the bridge and abortInFlightBridgeRequest cancels it', async () => {
+      vi.mocked(vibeSessionConfig.getVibeSessionBridgeOrigin).mockReturnValue(BRIDGE);
+      vi.mocked(vibeSessionFragment.takeFragmentSessionExport).mockReturnValue(null);
+      let capturedSignal: AbortSignal | undefined;
+      vi.mocked(vibeSessionBridge.requestFromBridge).mockImplementation((_win, _origin, _load, _reply, signal) => {
+        capturedSignal = signal;
+        return new Promise((resolve) => {
+          signal?.addEventListener('abort', () => resolve({ kind: 'aborted' }));
+        });
+      });
+      const authStore = createMockAuthStore(null);
+
+      const restorePromise = AuthApplication.restorePersistedSession({ authStore });
+      await Promise.resolve();
+      expect(capturedSignal).toBeDefined();
+      expect(capturedSignal?.aborted).toBe(false);
+      AuthApplication.abortInFlightBridgeRequest();
+      expect(capturedSignal?.aborted).toBe(true);
+      await expect(restorePromise).resolves.toEqual({ status: 'signed-out' });
+    });
+  });
+
+  describe('isDefinitiveSessionAuthFailure', () => {
+    const requestError = (statusCode?: number) => {
+      const err = new Error('HTTP error') as Error & { name: string; data?: { statusCode?: number } };
+      err.name = 'RequestError';
+      if (statusCode !== undefined) {
+        err.data = { statusCode };
+      }
+      return err;
+    };
+
+    it('excludes wrong-environment homeserver errors', () => {
+      expect(
+        isDefinitiveSessionAuthFailure(
+          Err.auth(AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER, 'wrong env', {
+            service: ErrorService.Homeserver,
+            operation: 'assertUserHomeserverAllowed',
+          }),
+        ),
+      ).toBe(false);
+    });
+
+    it('treats AppError auth-category as definitive', () => {
+      expect(
+        isDefinitiveSessionAuthFailure(
+          new AppError({
+            category: ErrorCategory.Auth,
+            code: AuthErrorCode.SESSION_EXPIRED,
+            message: 'Session expired',
+            service: ErrorService.Homeserver,
+            operation: 'restoreSession',
+          }),
+        ),
+      ).toBe(true);
+    });
+
+    it('treats RequestError 401 and 403 as definitive', () => {
+      expect(isDefinitiveSessionAuthFailure(requestError(401))).toBe(true);
+      expect(isDefinitiveSessionAuthFailure(requestError(403))).toBe(true);
+    });
+
+    it('does not treat RequestError 5xx or missing status as definitive', () => {
+      expect(isDefinitiveSessionAuthFailure(requestError(500))).toBe(false);
+      expect(isDefinitiveSessionAuthFailure(requestError())).toBe(false);
     });
   });
 

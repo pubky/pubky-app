@@ -17,6 +17,8 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
+import * as vibeSessionAutoRestore from '@/libs/vibe-session/auto-restore';
+import * as vibeSessionConfig from '@/libs/vibe-session/config';
 import type { Pubky } from '@/models/models.types';
 import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
@@ -197,6 +199,7 @@ const storeMocks = vi.hoisted(() => {
     setHasProfile: vi.fn(),
     setIsRestoringSession: vi.fn(),
     setHasHydrated: vi.fn(),
+    setSessionRestoreDeferred: vi.fn(),
     reset: resetAuthStore,
     selectCurrentUserPubky: vi.fn(() => TEST_PUBKY),
     selectIsAuthenticated: vi.fn(() => false),
@@ -1214,12 +1217,15 @@ describe('AuthController', () => {
     it('should restore a session when sessionExport exists and store has hydrated', async () => {
       const mockSession = buildMockSession();
       const mockPubky = TEST_PUBKY as Pubky;
+      const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
 
       const authStore = mockAuthStore({
         ...storeMocks.getAuthState(),
         hasHydrated: true,
         session: null,
         sessionExport: 'session-export',
+        currentUserPubky: mockPubky,
         hasProfile: true,
         isRestoringSession: false,
         setIsRestoringSession: vi.fn(),
@@ -1227,14 +1233,20 @@ describe('AuthController', () => {
       });
 
       vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
-      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+        status: 'restored',
+        session: mockSession,
+      });
       vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
 
       const result = await AuthController.restorePersistedSession();
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ status: 'restored' });
       expect(AuthApplication.restorePersistedSession).toHaveBeenCalledWith({ authStore });
       expect(Identity.z32FromSession).toHaveBeenCalledWith({ session: mockSession });
+      expect(userIsSignedUpSpy).not.toHaveBeenCalled();
+      expect(authStore.reset).not.toHaveBeenCalled();
+      expect(clearDatabaseSpy).not.toHaveBeenCalled();
       expect(authStore.init).toHaveBeenCalledWith({
         session: mockSession,
         currentUserPubky: mockPubky,
@@ -1254,7 +1266,7 @@ describe('AuthController', () => {
       });
 
       vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
-      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue(null);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ status: 'signed-out' });
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
       const clearCookiesSpy = await spyOnClearCookies();
       await spyOnClearAllQueryClients();
@@ -1272,7 +1284,7 @@ describe('AuthController', () => {
 
       const result = await AuthController.restorePersistedSession();
 
-      expect(result).toBe(false);
+      expect(result).toEqual({ status: 'signed-out' });
       expect(authStore.init).not.toHaveBeenCalled();
       // cleanupLocalState should have been called
       expect(resetSpy).toHaveBeenCalled();
@@ -1352,7 +1364,7 @@ describe('AuthController', () => {
       vi.spyOn(useNotificationStore, 'getState').mockReturnValue(mockNotificationStore(notificationStore));
       vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
 
-      await expect(AuthController.restorePersistedSession()).resolves.toBe(false);
+      await expect(AuthController.restorePersistedSession()).resolves.toEqual({ status: 'signed-out' });
 
       expect(loggerErrorSpy).toHaveBeenCalledWith(
         `[${ErrorService.Local}:restorePersistedSession]`,
@@ -1360,6 +1372,177 @@ describe('AuthController', () => {
         undefined,
       );
       expect(authStore.reset).toHaveBeenCalled();
+    });
+
+    it('does not cleanup when restore asks to preserve the persisted export', async () => {
+      const authStore = mockAuthStore({
+        ...storeMocks.getAuthState(),
+        hasHydrated: true,
+        session: null,
+        sessionExport: 'session-export',
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+      });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ status: 'deferred' });
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+
+      const result = await AuthController.restorePersistedSession();
+
+      expect(result).toEqual({ status: 'deferred' });
+      expect(authStore.setSessionRestoreDeferred).toHaveBeenCalledWith(true);
+      expect(authStore.init).not.toHaveBeenCalled();
+      expect(authStore.reset).not.toHaveBeenCalled();
+      expect(clearDatabaseSpy).not.toHaveBeenCalled();
+    });
+
+    it('inits a fresh vibe restore with fetched hasProfile after account cleanup', async () => {
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const authStore = mockAuthStore({
+        ...storeMocks.getAuthState(),
+        hasHydrated: true,
+        session: null,
+        sessionExport: null,
+        currentUserPubky: null,
+        hasProfile: null,
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+      });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+        status: 'restored',
+        session: mockSession,
+      });
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
+      mockClearDatabase.mockResolvedValue(undefined);
+      await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+      const homeStore = storeMocks.getHomeState();
+      const searchStore = storeMocks.getSearchState();
+      const notificationStore = storeMocks.getNotificationState();
+      const settingsStore = storeMocks.getSettingsState();
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(mockHomeStore(homeStore));
+      vi.spyOn(useSearchStore, 'getState').mockReturnValue(mockSearchStore(searchStore));
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(mockNotificationStore(notificationStore));
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
+
+      const result = await AuthController.restorePersistedSession();
+
+      expect(result).toEqual({ status: 'restored' });
+      expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: mockPubky });
+      expect(authStore.reset).toHaveBeenCalled();
+      expect(authStore.init).toHaveBeenCalledWith({
+        session: mockSession,
+        currentUserPubky: mockPubky,
+        hasProfile: true,
+      });
+      expect(vi.mocked(authStore.init).mock.invocationCallOrder[0]).toBeGreaterThan(
+        vi.mocked(authStore.reset).mock.invocationCallOrder[0]!,
+      );
+    });
+
+    it('cleans up before init when the restored pubky differs from the persisted identity', async () => {
+      const mockSession = buildMockSession();
+      const restoredPubky = TEST_PUBKY as Pubky;
+      const previousPubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
+      const authStore = mockAuthStore({
+        ...storeMocks.getAuthState(),
+        hasHydrated: true,
+        session: null,
+        sessionExport: 'old-session-export',
+        currentUserPubky: previousPubky,
+        hasProfile: true,
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+      });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+        status: 'restored',
+        session: mockSession,
+      });
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(restoredPubky);
+      const userIsSignedUpSpy = vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(false);
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+      await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+      const homeStore = storeMocks.getHomeState();
+      const searchStore = storeMocks.getSearchState();
+      const notificationStore = storeMocks.getNotificationState();
+      const settingsStore = storeMocks.getSettingsState();
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(mockHomeStore(homeStore));
+      vi.spyOn(useSearchStore, 'getState').mockReturnValue(mockSearchStore(searchStore));
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(mockNotificationStore(notificationStore));
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
+
+      const result = await AuthController.restorePersistedSession();
+
+      expect(result).toEqual({ status: 'restored' });
+      expect(clearDatabaseSpy).toHaveBeenCalled();
+      expect(authStore.reset).toHaveBeenCalled();
+      expect(userIsSignedUpSpy).toHaveBeenCalledWith({ pubky: restoredPubky });
+      expect(authStore.init).toHaveBeenCalledWith({
+        session: mockSession,
+        currentUserPubky: restoredPubky,
+        hasProfile: false,
+      });
+      expect(authStore.init).not.toHaveBeenCalledWith(expect.objectContaining({ hasProfile: true }));
+      expect(vi.mocked(authStore.init).mock.invocationCallOrder[0]).toBeGreaterThan(
+        vi.mocked(authStore.reset).mock.invocationCallOrder[0]!,
+      );
+      expect(vi.mocked(authStore.init).mock.invocationCallOrder[0]).toBeGreaterThan(
+        clearDatabaseSpy.mock.invocationCallOrder[0]!,
+      );
+    });
+
+    it('ends signed-out with isRestoringSession false and cleanup once when userIsSignedUp throws', async () => {
+      const mockSession = buildMockSession();
+      const restoredPubky = TEST_PUBKY as Pubky;
+      const previousPubky = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky;
+      const authStore = mockAuthStore({
+        ...storeMocks.getAuthState(),
+        hasHydrated: true,
+        session: null,
+        sessionExport: 'old-session-export',
+        currentUserPubky: previousPubky,
+        hasProfile: true,
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+      });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+        status: 'restored',
+        session: mockSession,
+      });
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(restoredPubky);
+      vi.spyOn(AuthApplication, 'userIsSignedUp').mockRejectedValue(new Error('profile lookup failed'));
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+      await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+      const homeStore = storeMocks.getHomeState();
+      const searchStore = storeMocks.getSearchState();
+      const notificationStore = storeMocks.getNotificationState();
+      const settingsStore = storeMocks.getSettingsState();
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(mockHomeStore(homeStore));
+      vi.spyOn(useSearchStore, 'getState').mockReturnValue(mockSearchStore(searchStore));
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(mockNotificationStore(notificationStore));
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
+
+      await expect(AuthController.restorePersistedSession()).resolves.toEqual({ status: 'signed-out' });
+
+      expect(authStore.init).not.toHaveBeenCalled();
+      expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+      expect(authStore.reset).toHaveBeenCalledTimes(1);
+      expect(authStore.setIsRestoringSession).toHaveBeenCalledWith(false);
     });
   });
 
@@ -1622,6 +1805,7 @@ describe('AuthController', () => {
         setHasHydrated: vi.fn(),
         setIsRestoringSession: vi.fn(),
         setIsLoggingOut: vi.fn(),
+        setSessionRestoreDeferred: vi.fn(),
         ...overrides,
       });
 
@@ -1785,7 +1969,7 @@ describe('AuthController', () => {
         .mockImplementation(async () => {
           authStore.session = restoredSession;
           authStore.sessionExport = null;
-          return true;
+          return { status: 'restored' };
         });
 
       await AuthController.logout();
@@ -1809,7 +1993,7 @@ describe('AuthController', () => {
 
       vi.spyOn(useAuthStore, 'getState').mockImplementation(() => authStore);
       vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
-      vi.spyOn(AuthController, 'restorePersistedSession').mockResolvedValue(false);
+      vi.spyOn(AuthController, 'restorePersistedSession').mockResolvedValue({ status: 'signed-out' });
 
       await AuthController.logout();
 
@@ -1854,6 +2038,84 @@ describe('AuthController', () => {
       expect(logoutSpy).toHaveBeenCalled();
       expect(clearCookiesSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('suppresses vibe auto-restore and aborts the bridge before any logout await', async () => {
+      let suppressedDuringRestore = false;
+      let abortCalledBeforeRestore = false;
+      const authStore = createAuthStore({
+        session: null,
+        sessionExport: 'session-export',
+      });
+      vi.spyOn(useAuthStore, 'getState').mockImplementation(() => authStore);
+      vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
+      vi.spyOn(vibeSessionConfig, 'isVibeSessionConsumerEnabled').mockReturnValue(true);
+      const abortSpy = vi.spyOn(AuthApplication, 'abortInFlightBridgeRequest').mockImplementation(() => {});
+      vi.spyOn(AuthController, 'restorePersistedSession').mockImplementation(async () => {
+        suppressedDuringRestore = vibeSessionAutoRestore.isVibeSessionAutoRestoreSuppressed();
+        abortCalledBeforeRestore = abortSpy.mock.calls.length > 0;
+        return { status: 'signed-out' };
+      });
+
+      await AuthController.logout();
+
+      expect(suppressedDuringRestore).toBe(true);
+      expect(abortCalledBeforeRestore).toBe(true);
+      expect(vibeSessionAutoRestore.isVibeSessionAutoRestoreSuppressed()).toBe(true);
+      vibeSessionAutoRestore.clearVibeSessionAutoRestoreSuppressed();
+    });
+
+    it('does not re-restore from the bridge after consumer logout', async () => {
+      const authStore = createAuthStore();
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
+      vi.spyOn(vibeSessionConfig, 'isVibeSessionConsumerEnabled').mockReturnValue(true);
+      vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+      mockClearDatabase.mockResolvedValue(undefined);
+      await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+      const restoreAppSpy = vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+        status: 'signed-out',
+      });
+
+      await AuthController.logout();
+      expect(vibeSessionAutoRestore.isVibeSessionAutoRestoreSuppressed()).toBe(true);
+
+      restoreAppSpy.mockClear();
+      const afterLogout = await AuthController.restorePersistedSession();
+
+      expect(afterLogout).toEqual({ status: 'signed-out' });
+      expect(restoreAppSpy).toHaveBeenCalledOnce();
+      // Application still runs (RouteGuard may call it) but the flag stays set so the bridge leg is skipped.
+      expect(vibeSessionAutoRestore.isVibeSessionAutoRestoreSuppressed()).toBe(true);
+      vibeSessionAutoRestore.clearVibeSessionAutoRestoreSuppressed();
+    });
+
+    it('cleans up local state when restore during logout is deferred', async () => {
+      const authStore = createAuthStore({
+        session: null,
+        sessionExport: 'session-export',
+      });
+      const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+      vi.spyOn(useAuthStore, 'getState').mockImplementation(() => authStore);
+      vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
+      vi.spyOn(vibeSessionConfig, 'isVibeSessionConsumerEnabled').mockReturnValue(true);
+      vi.spyOn(AuthController, 'restorePersistedSession').mockResolvedValue({ status: 'deferred' });
+      const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+      const clearCookiesSpy = await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+
+      await AuthController.logout();
+
+      expect(logoutSpy).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith('Homeserver logout failed, clearing local state anyway', {
+        error: 'Session restore deferred; homeserver sign-out could not run',
+      });
+      expect(authStore.reset).toHaveBeenCalled();
+      expect(clearCookiesSpy).toHaveBeenCalled();
+      expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+      vibeSessionAutoRestore.clearVibeSessionAutoRestoreSuppressed();
     });
 
     it('should throw error if clearing the database fails', async () => {

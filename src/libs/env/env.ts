@@ -11,43 +11,86 @@ import { ErrorService } from '@/libs/error/error.types';
  * `PUBKY_RUNTIME_*` and resolved by `@/libs/runtime-config` (see ADR 0017/0018).
  */
 
+const emptyToUndefined = (val: unknown) => (typeof val === 'string' && val.length === 0 ? undefined : val);
+
+/**
+ * Exact `https://` origin, or `http://localhost:<port>` when `nodeEnv !== 'production'`.
+ * Paths, bare hosts, and non-loopback `http://` fail.
+ */
+export function isValidVibeSessionBridgeOrigin(value: string, nodeEnv: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.origin !== value) {
+    return false;
+  }
+  if (url.protocol === 'https:') {
+    return true;
+  }
+  if (nodeEnv !== 'production' && url.protocol === 'http:' && url.hostname === 'localhost') {
+    return true;
+  }
+  return false;
+}
+
 // Schema for environment variables
-const envSchema = z.object({
-  // Node.js environment
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+export const envSchema = z
+  .object({
+    // Node.js environment
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  // Build-intrinsic public values. These are intentionally baked into the artifact.
-  NEXT_PUBLIC_DB_NAME: z.string().default('franky'),
-  NEXT_PUBLIC_DB_VERSION: z
-    .string()
-    .default('2')
-    .transform((val) => parseInt(val, 10))
-    .pipe(z.number().int().positive()),
+    // Build-intrinsic public values. These are intentionally baked into the artifact.
+    NEXT_PUBLIC_DB_NAME: z.string().default('franky'),
+    NEXT_PUBLIC_DB_VERSION: z
+      .string()
+      .default('2')
+      .transform((val) => parseInt(val, 10))
+      .pipe(z.number().int().positive()),
 
-  NEXT_PUBLIC_DEBUG_MODE: z
-    .string()
-    .default('false')
-    .transform((val) => val === 'true')
-    .pipe(z.boolean()),
+    NEXT_PUBLIC_DEBUG_MODE: z
+      .string()
+      .default('false')
+      .transform((val) => val === 'true')
+      .pipe(z.boolean()),
 
-  // Build-intrinsic release value (package version locally; Git SHA in Docker CI).
-  NEXT_PUBLIC_APP_VERSION: z.string(),
+    // Build-intrinsic release value (package version locally; Git SHA in Docker CI).
+    NEXT_PUBLIC_APP_VERSION: z.string(),
 
-  // Test environment variable (optional)
-  VITEST: z.string().optional(),
+    // Vibe-fork consumer mode (baked per artifact). Unset = consumer off.
+    NEXT_PUBLIC_VIBE_SESSION_BRIDGE_ORIGIN: z.preprocess(emptyToUndefined, z.string().optional()),
+    NEXT_PUBLIC_VIBE_ID: z.preprocess(emptyToUndefined, z.string().optional()),
 
-  // Server-side only admin credentials for signup token generation (dev/test only)
-  // These are NOT exposed to the client bundle - only available on the server
-  HOMESERVER_ADMIN_URL: z.url().default('http://localhost:6288/generate_signup_token'),
-  HOMESERVER_ADMIN_PASSWORD: z.string().default('admin'),
+    // Test environment variable (optional)
+    VITEST: z.string().optional(),
 
-  // Server-side Chatwoot configuration (optional in schema, validated at runtime when service is used)
-  // These are server-side only and not available in browser, so we make them optional here
-  // but ChatwootService.getConfig() will validate they exist when actually needed
-  BASE_URL_SUPPORT: z.url().optional(),
-  SUPPORT_API_ACCESS_TOKEN: z.string().min(1).optional(),
-  SUPPORT_ACCOUNT_ID: z.string().min(1).optional(),
-});
+    // Server-side only admin credentials for signup token generation (dev/test only)
+    // These are NOT exposed to the client bundle - only available on the server
+    HOMESERVER_ADMIN_URL: z.url().default('http://localhost:6288/generate_signup_token'),
+    HOMESERVER_ADMIN_PASSWORD: z.string().default('admin'),
+
+    // Server-side Chatwoot configuration (optional in schema, validated at runtime when service is used)
+    // These are server-side only and not available in browser, so we make them optional here
+    // but ChatwootService.getConfig() will validate they exist when actually needed
+    BASE_URL_SUPPORT: z.url().optional(),
+    SUPPORT_API_ACCESS_TOKEN: z.string().min(1).optional(),
+    SUPPORT_ACCOUNT_ID: z.string().min(1).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const origin = data.NEXT_PUBLIC_VIBE_SESSION_BRIDGE_ORIGIN;
+    if (origin === undefined) {
+      return;
+    }
+    if (!isValidVibeSessionBridgeOrigin(origin, data.NODE_ENV)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['NEXT_PUBLIC_VIBE_SESSION_BRIDGE_ORIGIN'],
+        message: 'Must be an exact https:// origin, or http://localhost:<port> when NODE_ENV is not production',
+      });
+    }
+  });
 
 /**
  * Format a Zod error into a human-readable message for DevOps
@@ -132,6 +175,8 @@ function parseEnv(): z.infer<typeof envSchema> {
     NEXT_PUBLIC_DB_VERSION: process.env.NEXT_PUBLIC_DB_VERSION,
     NEXT_PUBLIC_DEBUG_MODE: process.env.NEXT_PUBLIC_DEBUG_MODE,
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
+    NEXT_PUBLIC_VIBE_SESSION_BRIDGE_ORIGIN: process.env.NEXT_PUBLIC_VIBE_SESSION_BRIDGE_ORIGIN,
+    NEXT_PUBLIC_VIBE_ID: process.env.NEXT_PUBLIC_VIBE_ID,
     VITEST: process.env.VITEST,
     HOMESERVER_ADMIN_URL: process.env.HOMESERVER_ADMIN_URL,
     HOMESERVER_ADMIN_PASSWORD: process.env.HOMESERVER_ADMIN_PASSWORD,
