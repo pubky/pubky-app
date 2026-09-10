@@ -510,5 +510,116 @@ describe('MuteListSyncCoordinator', () => {
       expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1);
       expect(escalationReports(serverSpy)).toBe(0);
     });
+
+    it('treats a stream that closes before delivering an event as a failure: backoff grows and the outage reports', async () => {
+      // Reproduction from review: the homeserver accepts every subscribe and closes the stream cleanly at once.
+      vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
+        return new ReadableStream<TMuteDirectoryEvent>({
+          start(controller) {
+            controller.close();
+          },
+        });
+      });
+      const serverSpy = vi.spyOn(Err, 'server');
+      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+
+      startCoordinator();
+      await flushPromises();
+      expect(subscribe).toHaveBeenCalledTimes(1);
+
+      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
+        expect(escalationReports(serverSpy)).toBe(0);
+        // Not yet reconnected just before the (growing) backoff elapses…
+        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure) - 1);
+        await flushPromises();
+        expect(subscribe).toHaveBeenCalledTimes(failure);
+        // …and reconnected right after it.
+        await vi.advanceTimersByTimeAsync(1);
+        await flushPromises();
+        expect(subscribe).toHaveBeenCalledTimes(failure + 1);
+      }
+
+      expect(escalationReports(serverSpy)).toBe(1);
+      const [, , params] = serverSpy.mock.calls.find(([, , p]) => p.operation === 'muteListEventStreamExhausted')!;
+      expect(params.context).toMatchObject({
+        consecutiveFailures: MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD,
+        lastFailure: 'prematureClose',
+      });
+    });
+
+    it('lets a healthy connection torn down by hide/show clear earlier failures instead of carrying them over', async () => {
+      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+      const tenMinutes = 10 * 60 * 1000;
+      let call = 0;
+      subscribe.mockImplementation(async () => {
+        call += 1;
+        // Fail (threshold - 1) times, then hand out an idle stream that stays healthy until torn down, then fail.
+        if (call === MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD) {
+          return new ReadableStream<TMuteDirectoryEvent>({ start() {} });
+        }
+        throw subscribeConnectFailure();
+      });
+      const serverSpy = vi.spyOn(Err, 'server');
+
+      startCoordinator();
+      await flushPromises();
+      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
+        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
+        await flushPromises();
+      }
+      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
+      expect(escalationReports(serverSpy)).toBe(0);
+
+      // Healthy idle connection for ten minutes, then the tab is hidden (controlled teardown) and shown again.
+      await vi.advanceTimersByTimeAsync(tenMinutes);
+      setVisibilityState('hidden');
+      document.dispatchEvent(new Event('visibilitychange'));
+      await flushPromises();
+      setVisibilityState('visible');
+      document.dispatchEvent(new Event('visibilitychange'));
+      await flushPromises();
+      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1);
+
+      // The reconnect after show failed once: with the streak cleared by the healthy connection, that is 1, not
+      // threshold — no report, and the next reconnect is scheduled at the base delay.
+      expect(escalationReports(serverSpy)).toBe(0);
+      await vi.advanceTimersByTimeAsync(MUTE_SYNC_RECONNECT_BACKOFF_MS);
+      await flushPromises();
+      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 2);
+      expect(escalationReports(serverSpy)).toBe(0);
+    });
+
+    it('scopes the failure streak to the signed-in user so a second user’s outage is reported on its own', async () => {
+      const otherPubky = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy' as Pubky;
+      vi.mocked(MuteController.subscribeMuteDirectoryEventStream).mockImplementation(async () => {
+        throw subscribeConnectFailure();
+      });
+      const serverSpy = vi.spyOn(Err, 'server');
+      const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+
+      startCoordinator();
+      await flushPromises();
+      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
+        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
+        await flushPromises();
+      }
+      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
+      expect(escalationReports(serverSpy)).toBe(1);
+
+      // Switch users mid-outage: the new loop starts a streak of its own instead of inheriting the exhausted one.
+      useAuthStore.getState().setCurrentUserPubky(otherPubky);
+      await flushPromises();
+      expect(subscribe).toHaveBeenCalledTimes(MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD + 1);
+      expect(subscribe).toHaveBeenLastCalledWith(otherPubky, null);
+      expect(escalationReports(serverSpy)).toBe(1);
+
+      for (let failure = 1; failure < MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD; failure += 1) {
+        expect(escalationReports(serverSpy)).toBe(1);
+        await vi.advanceTimersByTimeAsync(backoffAfterFailure(failure));
+        await flushPromises();
+      }
+      expect(subscribe).toHaveBeenCalledTimes(2 * MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD);
+      expect(escalationReports(serverSpy)).toBe(2);
+    });
   });
 });
