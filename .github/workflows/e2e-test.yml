@@ -72,8 +72,8 @@ jobs:
         with:
           registry: ${{ env.registry }}
           image: ${{ matrix.image }}
-          cache_from: type=registry,ref=${{ env.registry }}/${{ matrix.image }}:cache
-          cache_to: type=registry,ref=${{ env.registry }}/${{ matrix.image }}:cache,mode=max
+          cache_from: type=gha,scope=${{ matrix.image }}
+          cache_to: type=gha,mode=max,scope=${{ matrix.image }}
           context: ${{ matrix.submodule_dir }}
           platforms: ${{ env.platforms }}
         if: ${{ steps.check_image.outputs.exists != 'true' }}

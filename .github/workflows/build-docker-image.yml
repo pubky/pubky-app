@@ -122,8 +122,8 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           image: 'pubky-app'
-          cache_from: type=registry,ref=${{ env.registry }}/pubky-app:cache
-          cache_to: type=registry,ref=${{ env.registry }}/pubky-app:cache,mode=max
+          cache_from: type=gha
+          cache_to: type=gha,mode=max
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
