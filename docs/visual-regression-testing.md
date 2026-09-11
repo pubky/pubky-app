@@ -39,6 +39,13 @@ to genuinely-changed surfaces. The trade-off is that a visual change under 0.1%
 of pixels won't be flagged — still pin every deterministic source below so real
 diffs stand out:
 
+The comparator also has a per-pixel `threshold` (pixelmatch default `0.1`)
+below which a colour change is not counted at all. Very low-contrast content —
+e.g. the dark-gray empty-state illustrations on the near-black background —
+falls entirely under it, so VRT does not guard that artwork, and `--update`
+will not rewrite a baseline whose only change is in such content. To refresh
+those baselines, delete the PNGs first so they are regenerated from scratch.
+
 - **Async data** — mock the hook/controller to a fixed value. An unmocked fetch
   resolves differently per run/region. This is the #1 cause of flakiness.
 - **Time** — `renderForVRT` calls `freezeNow()`; mock any relative-time hook to
