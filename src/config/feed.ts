@@ -4,6 +4,15 @@
 export const DEFAULT_CUSTOM_FEED_ICON = 'activity';
 
 /**
+ * The custom feed created for a new account from the interest tags chosen on
+ * the onboarding "Tags of interest" step. A regular custom feed (saved to the
+ * homeserver like any other) so the user can edit or delete it afterwards.
+ * Icon per Figma "Pubky / Navbar / Feeds" (Icon / Tags).
+ */
+export const INTERESTS_FEED_NAME = 'Interests';
+export const INTERESTS_FEED_ICON = 'tags';
+
+/**
  * A dynamic Lucide icon name: lowercase kebab-case. Shared by the UI resolver
  * and the persistence validator so a name that survives one cannot be rejected
  * by the other and silently render as the fallback glyph.
