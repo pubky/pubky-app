@@ -111,6 +111,45 @@ describe('TtlApplication', () => {
       expect(persistFilesSpy).toHaveBeenCalledWith([]);
     });
 
+    it('keeps a row written locally while the fetch was in flight', async () => {
+      const viewerId = 'viewer' as Pubky;
+      const postIds = ['alice:1', 'bob:2'];
+      vi.spyOn(postStreamApi, 'postsByIds').mockReturnValue({
+        url: '/stream/posts/by_ids',
+        body: { post_ids: postIds, viewer_id: viewerId },
+      } as ReturnType<typeof postStreamApi.postsByIds>);
+
+      const nexusPost = (author: string, id: string): NexusPost => ({
+        details: { id, author: author as Pubky, content: '', indexed_at: 0, kind: 'note', uri: '', attachments: null },
+        counts: { tags: 0, unique_tags: 0, replies: 0, reposts: 0 },
+        tags: [],
+        relationships: { replied: null, reposted: null, mentioned: [] },
+        bookmark: null,
+      });
+      mockQueryNexus.mockResolvedValue([nexusPost('alice', '1'), nexusPost('bob', '2')]);
+      const persistPostsSpy = vi
+        .spyOn(LocalStreamPostsService, 'persistPosts')
+        .mockResolvedValue({ attachmentMetadata: [] });
+      vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([]);
+      vi.spyOn(PostStreamApplication, 'fetchOriginalPostsByUris').mockResolvedValue(undefined);
+
+      // The owner edited alice:1 locally after the fetch started: its TTL row is
+      // newer than the fetch, so Nexus's (pre-edit) copy must not overwrite it.
+      const now = Date.now();
+      vi.spyOn(PostTtlModel, 'findByIds').mockResolvedValue([
+        asOpaque<PostTtlModel>({ id: 'alice:1', lastUpdatedAt: now + 60_000 }),
+        asOpaque<PostTtlModel>({ id: 'bob:2', lastUpdatedAt: now - 60_000 }),
+      ]);
+
+      await TtlApplication.forceRefreshPostsByIds({ postIds, viewerId });
+
+      expect(persistPostsSpy).toHaveBeenCalledTimes(1);
+      const persisted = persistPostsSpy.mock.calls[0][0].posts.map(
+        (post) => `${post.details.author}:${post.details.id}`,
+      );
+      expect(persisted).toEqual(['bob:2']);
+    });
+
     it('does not persist when fetch fails', async () => {
       const viewerId = 'viewer' as Pubky;
       vi.spyOn(postStreamApi, 'postsByIds').mockReturnValue({

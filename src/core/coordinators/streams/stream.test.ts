@@ -178,6 +178,32 @@ describe('StreamCoordinator', () => {
     vi.clearAllMocks();
   });
 
+  describe('Session restore after start()', () => {
+    it('starts polling the reply stream once the persisted session is restored', async () => {
+      // A public /post route mounts CoordinatorsManager (and calls start()) before
+      // the persisted session is restored, so start() runs signed out.
+      setupHomeStore();
+      const { getOrFetchStreamSliceSpy } = setupControllerSpies();
+      const coordinator = StreamCoordinator.getInstance();
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      setupPostRoute(coordinator);
+      coordinator.start();
+
+      await flushPromises();
+      vi.advanceTimersByTime(3_000);
+      await flushPromises();
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+
+      // Session restore lands: only the session changes on the store.
+      setupAuth();
+
+      await flushPromises();
+      vi.advanceTimersByTime(1_000);
+      await flushPromises();
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalled();
+    });
+  });
+
   describe('Singleton Behavior', () => {
     it('always returns the same instance', () => {
       const instance1 = StreamCoordinator.getInstance();

@@ -169,6 +169,30 @@ describe('MuteListSyncCoordinator', () => {
     expect(subscribe).toHaveBeenCalledTimes(1);
   });
 
+  it('opens the homeserver stream once the persisted session is restored after start()', async () => {
+    const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
+    const subscribe = vi.mocked(MuteController.subscribeMuteDirectoryEventStream);
+
+    // Public-route reload: the persisted identity hydrates first, the live session lands later.
+    useAuthStore.getState().setCurrentUserPubky(pubky);
+    useAuthStore.getState().setHasProfile(true);
+
+    const coordinator = MuteListSyncCoordinator.getInstance();
+    coordinator.setRoute(APP_ROUTES.HOME);
+    coordinator.start();
+
+    await flushPromises();
+    expect(subscribe).not.toHaveBeenCalled();
+
+    // Session restore writes back the same pubky / hasProfile — only the session changes.
+    useAuthStore.getState().init({ session: mockSession(), currentUserPubky: pubky, hasProfile: true });
+
+    await flushPromises();
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(subscribe.mock.calls[0][0]).toBe(pubky);
+    coordinator.stop();
+  });
+
   it('does not open the homeserver stream on disabled auth routes', async () => {
     const pubky = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
     useAuthStore.getState().init({

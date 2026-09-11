@@ -10,6 +10,7 @@ import { routeToRegex } from '@/coordinators/base/coordinators.utils';
 import { Logger } from '@/libs/logger/logger';
 import { getNotificationRespectPageVisibility } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
+import { isAuthenticatedState } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 type PendingMuteRefresh = {
@@ -110,8 +111,10 @@ export class MuteListSyncCoordinator {
 
   private setupListeners(): void {
     this.authStoreUnsubscribe = useAuthStore.subscribe((state, prevState) => {
-      const isAuthenticated = state.selectIsAuthenticated();
-      const wasAuthenticated = prevState.selectIsAuthenticated();
+      // Pure snapshot compare — the store selectors read the live store, so
+      // `prevState.selectIsAuthenticated()` would never differ (see auth.selectors).
+      const isAuthenticated = isAuthenticatedState(state);
+      const wasAuthenticated = isAuthenticatedState(prevState);
       const profileChanged = state.hasProfile !== prevState.hasProfile;
       const userChanged = state.currentUserPubky !== prevState.currentUserPubky;
       if (isAuthenticated !== wasAuthenticated || profileChanged || userChanged) {

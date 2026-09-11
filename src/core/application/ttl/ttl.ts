@@ -2,6 +2,7 @@ import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import { buildCompositeId } from '@/models/models.utils';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
@@ -58,16 +59,34 @@ export class TtlApplication {
     const uniqueIds = Array.from(new Set(params.postIds));
     if (uniqueIds.length === 0) return;
 
+    const fetchStartedAt = Date.now();
     const postBatch = await NexusPostStreamService.fetchByIds({
       post_ids: uniqueIds,
       viewer_id: params.viewerId,
     });
 
+    // A local-first write that landed while this fetch was in flight (local
+    // services bump `post_ttl` on every write) is newer than anything Nexus
+    // could have returned; keep the local row and let the next TTL cycle pick
+    // up the indexed version instead of clobbering the edit.
+    const locallyWrittenIds = await this.findPostsWrittenSince({ postIds: uniqueIds, since: fetchStartedAt });
+    const postsToPersist =
+      locallyWrittenIds.size === 0
+        ? postBatch
+        : postBatch.filter(
+            (post) => !locallyWrittenIds.has(buildCompositeId({ pubky: post.details.author, id: post.details.id })),
+          );
+    if (locallyWrittenIds.size > 0) {
+      Logger.debug('TtlApplication: Skipped posts written locally during refresh', {
+        skipped: Array.from(locallyWrittenIds),
+      });
+    }
+
     Logger.debug('TtlApplication: Fetched posts from Nexus', {
-      postCount: postBatch.length,
+      postCount: postsToPersist.length,
     });
 
-    const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({ posts: postBatch });
+    const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({ posts: postsToPersist });
     await FileApplication.persistFiles(attachmentMetadata);
 
     // Opportunistic cache warm: fetch missing authors
@@ -93,6 +112,15 @@ export class TtlApplication {
     });
 
     await LocalStreamUsersService.persistUsers(userBatch);
+  }
+
+  /**
+   * Ids whose `post_ttl` row was written after `since` — i.e. touched by a
+   * local-first write while a refresh of the same ids was in flight.
+   */
+  private static async findPostsWrittenSince(params: { postIds: string[]; since: number }): Promise<Set<string>> {
+    const ttlRecords = await PostTtlModel.findByIds(params.postIds);
+    return new Set(ttlRecords.filter((record) => record.lastUpdatedAt > params.since).map((record) => record.id));
   }
 
   /**

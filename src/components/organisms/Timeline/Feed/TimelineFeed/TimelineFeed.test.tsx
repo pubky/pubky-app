@@ -10,6 +10,7 @@ import { PROFILE_POSTS_FILTER_DEBOUNCE_MS } from '@/hooks/useProfilePostsFilter/
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import type { Pubky } from '@/models/models.types';
 import {
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
@@ -18,6 +19,7 @@ import {
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
 import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
 import { asInvalid } from '@/test-utils/type-assertions';
@@ -805,7 +807,7 @@ describe('TimelineFeed', () => {
       expect(mockUsePostDetails).toHaveBeenCalledWith(`${collectionAuthor}:${collectionPost}`);
     });
 
-    it('sorts the stream by the envelope items order, appending ids outside the envelope', () => {
+    const orderedEnvelope = () =>
       mockUsePostDetails.mockReturnValue({
         postDetails: {
           content: JSON.stringify({
@@ -815,6 +817,9 @@ describe('TimelineFeed', () => {
         },
         isLoading: false,
       });
+
+    it('renders viewers the envelope items in envelope order, hiding ids the envelope does not contain', () => {
+      orderedEnvelope();
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
         postIds: ['author_b:post_b', 'author_a:post_a', 'stranger:post_x'],
@@ -822,10 +827,29 @@ describe('TimelineFeed', () => {
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
 
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
-        'data-post-ids',
-        'author_a:post_a,author_b:post_b,stranger:post_x',
-      );
+      // A stream id the envelope lacks is either stale or not yet reflected in
+      // the envelope; hiding it keeps the grid in step with the count badge.
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'author_a:post_a,author_b:post_b');
+    });
+
+    it('keeps ids outside the envelope for the owner, appended after the envelope order', () => {
+      orderedEnvelope();
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['author_b:post_b', 'author_a:post_a', 'stranger:post_x'],
+      });
+      useAuthStore.getState().setCurrentUserPubky(collectionAuthor as Pubky);
+
+      try {
+        render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
+
+        expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
+          'data-post-ids',
+          'author_a:post_a,author_b:post_b,stranger:post_x',
+        );
+      } finally {
+        useAuthStore.getState().reset();
+      }
     });
 
     it('leaves the stream order untouched while the envelope has not resolved', () => {

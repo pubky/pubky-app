@@ -57,6 +57,54 @@ describe('NotificationCoordinator', () => {
     useAuthStore.getState().reset();
   });
 
+  describe('Session restore after start()', () => {
+    it('starts polling once the persisted session is restored', () => {
+      const spy = vi.spyOn(NotificationController, 'fetchNotifications').mockResolvedValue(undefined);
+
+      // A public route mounts CoordinatorsManager (and calls start()) before the
+      // persisted session is restored, so start() runs signed out.
+      const coordinator = NotificationCoordinator.getInstance();
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute(PROFILE_ROUTES.PROFILE);
+      coordinator.start();
+
+      vi.advanceTimersByTime(3_000);
+      expect(spy).not.toHaveBeenCalled();
+
+      // Session restore lands: only the session changes on the store.
+      useAuthStore.getState().init({
+        session: mockSession(),
+        currentUserPubky: 'user123',
+        hasProfile: true,
+      });
+
+      vi.advanceTimersByTime(1_000);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('starts polling once the profile resolves after start()', () => {
+      const spy = vi.spyOn(NotificationController, 'fetchNotifications').mockResolvedValue(undefined);
+      useAuthStore.getState().init({
+        session: mockSession(),
+        currentUserPubky: 'user123',
+        hasProfile: false,
+      });
+
+      const coordinator = NotificationCoordinator.getInstance();
+      coordinator.configure({ pollOnStart: false, intervalMs: 1_000 } as Partial<CoordinatorConfigWithBase>);
+      coordinator.setRoute(APP_ROUTES.HOME);
+      coordinator.start();
+
+      vi.advanceTimersByTime(3_000);
+      expect(spy).not.toHaveBeenCalled();
+
+      useAuthStore.getState().setHasProfile(true);
+
+      vi.advanceTimersByTime(1_000);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Singleton Behavior', () => {
     it('returns the same instance on multiple getInstance() calls', () => {
       const instance1 = NotificationCoordinator.getInstance();
