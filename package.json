@@ -24,6 +24,7 @@
     "test:vrt": "vitest run --project vrt",
     "test:vrt:check-baselines": "bash src/test-utils/vrt.screenshot-siblings.sh",
     "test:vrt:regenerate-baseline": "vitest run --project vrt --update",
+    "test:vrt:setup": "playwright install --with-deps chromium firefox webkit",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path .prettierignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path .prettierignore",
     "precommit": "lint-staged && npm run typecheck",
