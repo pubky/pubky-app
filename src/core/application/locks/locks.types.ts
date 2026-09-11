@@ -6,13 +6,6 @@ import type {
   TVerificationStatus,
 } from '@/services/locks/locks.types';
 
-/** Params for the reader unlock flow. `lockUrl` is the post's public `lock.json` URL. */
-export type TUnlockContentParams = {
-  lockFile: LockFile;
-  lockUrl: string;
-  password: string;
-};
-
 /** Params to read or write the bundle id the reader saved for one lock (`/priv/social/purchases/<lockId>.json`). */
 export type TPurchaseBundleIdParams = {
   lockUrl: string;
@@ -75,15 +68,11 @@ export type TFetchOwnContentParams = {
 };
 
 /**
- * How the creator chose to gate the content, as configured in the lock dialog. `amountSats` stays a
- * string end to end — the Lock Server wants the amount as a positive integer string, not a number.
- *
- * The password itself is not carried: the placeholder verifier ignores it, so keeping the plaintext
- * alive in composer state for the whole authoring session would buy nothing.
- *
- * TODO:[Locks] #2369 — password and `dev-static` all go away here.
+ * The creator's payment lock configuration. `amountSats` stays a string end to end — the Lock
+ * Server wants the amount as a positive integer string, not a number.
+ * Keep this object boundary so future lock options can grow without changing every workflow signature.
  */
-export type TLockConfig = { method: 'password' } | { method: 'payment'; amountSats: string };
+export type TLockConfig = { amountSats: string };
 
 /**
  * One file to guard. The storage path is minted per upload, so the original filename is not part of

@@ -1,5 +1,5 @@
 export interface UsePurchasedLocksParams {
-  /** False skips the listing, so a password-only feed never reads the purchases directory. */
+  /** False skips the listing until a supported payment lock is available. */
   enabled: boolean;
 }
 

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Check, Lock } from 'lucide-react';
-import type { TLockConfig } from '@/application/locks/locks.types';
 import { Container } from '@/atoms/Container/Container';
 import { LocksController } from '@/controllers/locks/locks';
 import { useLockFile } from '@/hooks/useLockFile/useLockFile';
@@ -15,7 +14,6 @@ import { isArticleContent } from '@/libs/post/articleContent';
 import { cn } from '@/libs/utils/utils';
 import type { PostDetailsModel } from '@/models/post/details/postDetails';
 import { DialogPayToUnlock } from '@/molecules/DialogPayToUnlock/DialogPayToUnlock';
-import { DialogUnlockContent } from '@/molecules/DialogUnlockContent/DialogUnlockContent';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
 import { toast } from '@/molecules/Toaster/toast';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
@@ -50,29 +48,18 @@ export function LockedPostContent({
   className,
   textClassName,
 }: LockedPostContentProps) {
-  const [isUnlockOpen, setIsUnlockOpen] = useState(false);
   const [isPayOpen, setIsPayOpen] = useState(false);
-  const [isUnlocking, setIsUnlocking] = useState(false);
-  const [unlockError, setUnlockError] = useState(false);
   const lockContent = LocksController.getLockContent(content);
   const { lockFile, priceSats } = useLockFile(lock);
-  // Null until the lock file lands, so the card never names an unlock method it cannot know yet.
-  const unlockInfo: TLockConfig | null = !lockFile
-    ? null
-    : priceSats
-      ? { method: 'payment', amountSats: priceSats }
-      : { method: 'password' };
   const { unlockedPost, applyUnlockedContent, media, isOwnLock, isResolvingReplica } = useUnlockedContent({
     lock,
     lockFile,
     authorId,
   });
   const { requireAuth, isAuthenticated } = useRequireAuth();
-  const isPaymentLock = unlockInfo?.method === 'payment';
 
   /** Renders unlocked content, closes whichever dialog produced it, and reports dropped media. */
   const showUnlockedContent = (unlocked: TUnlockedContent) => {
-    setIsUnlockOpen(false);
     setIsPayOpen(false);
 
     applyUnlockedContent(unlocked); // renders + replicates into the reader's /priv
@@ -85,7 +72,7 @@ export function LockedPostContent({
 
   // Paid but never received: the payment completed while the reader was away, so nothing on screen
   // would otherwise say so. Resolves itself, without the reader pressing anything.
-  const { hasPurchase, markPurchased } = usePurchasedLocks({ enabled: isPaymentLock });
+  const { hasPurchase, markPurchased } = usePurchasedLocks({ enabled: priceSats !== null });
   const lockId = lock ? LockContentParser.lockIdFromUrl(lock) : null;
   usePurchaseResume({
     lock,
@@ -108,33 +95,9 @@ export function LockedPostContent({
 
   if (!lockContent) return null;
 
-  // No lock file (still loading, or its fetch failed) → nothing to unlock against.
-  const handleUnlock = !lockFile
-    ? undefined
-    : isPaymentLock
-      ? // Paying needs the reader's pubky (it is the payment-request delivery address),
-        // so a signed-out reader gets the sign-in dialog instead.
-        () => requireAuth(() => setIsPayOpen(true))
-      : () => {
-          setUnlockError(false); // clear a prior failure so reopening starts clean
-          setIsUnlockOpen(true);
-        };
-
-  // TODO:[Locks] #2369 — the password path (this handler + DialogUnlockContent below) goes away.
-  const handleViewContent = async (password: string) => {
-    if (!lockFile || !lock) return;
-    setIsUnlocking(true);
-    setUnlockError(false);
-    try {
-      const { credential } = await LocksController.unlock({ lockFile, lockUrl: lock, password });
-      // Throws if the guarded post is unparseable; the catch below keeps the dialog open.
-      showUnlockedContent(await LocksController.fetchUnlockedContent({ lockFile, credential }));
-    } catch {
-      setUnlockError(true); // already logged by the Err factory
-    } finally {
-      setIsUnlocking(false);
-    }
-  };
+  // Paying needs the reader's pubky (it is the payment-request delivery address), so a signed-out
+  // reader gets the sign-in dialog instead. Unsupported legacy locks have no unlock handler.
+  const handleUnlock = priceSats ? () => requireAuth(() => setIsPayOpen(true)) : undefined;
 
   return (
     <Container className={cn('min-w-0 gap-4', className)}>
@@ -147,7 +110,7 @@ export function LockedPostContent({
       {unlockedPost ? (
         <>
           {/* Own lock: keep the (now inert) lock card above the content so the price/terms stay visible. */}
-          {isOwnLock && <LockedPostCard title={lockContent.lock_title} unlockInfo={unlockInfo} />}
+          {isOwnLock && <LockedPostCard title={lockContent.lock_title} priceSats={priceSats} />}
           <div className="flex w-full flex-col gap-4">
             <div className="border-t border-border" />
             {/* Access indicator: the creator's own content vs. a lock the reader unlocked. */}
@@ -176,23 +139,15 @@ export function LockedPostContent({
       ) : (
         <LockedPostCard
           title={lockContent.lock_title}
-          unlockInfo={unlockInfo}
-          unlockOpen={isUnlockOpen || isPayOpen}
+          priceSats={priceSats}
+          unlockOpen={isPayOpen}
           onUnlock={handleUnlock}
           // A signed-out reader gets the sign-in dialog instead of the pay modal, and only a modal
           // closing snaps the button back.
-          slideOnUnlock={!isPaymentLock || isAuthenticated}
+          slideOnUnlock={isAuthenticated}
         />
       )}
-      <DialogUnlockContent
-        open={isUnlockOpen}
-        onOpenChange={setIsUnlockOpen}
-        lockTitle={lockContent.lock_title}
-        onSubmit={handleViewContent}
-        loading={isUnlocking}
-        error={unlockError}
-      />
-      {isPaymentLock && priceSats && (
+      {priceSats && (
         <DialogPayToUnlock
           open={isPayOpen}
           onOpenChange={setIsPayOpen}

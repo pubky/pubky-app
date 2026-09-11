@@ -58,7 +58,7 @@ const teaser = { lock_title: 'My quote', teaser_description: 'a public teaser' }
 const params = (lockedAttachments: File[] = [], announcementAttachments: File[] = []) => ({
   lockedPost: { content: 'locked body', kind: PubkyAppPostKind.Short, attachments: lockedAttachments },
   announcement: { teaser, attachments: announcementAttachments, tags: ['bitcoin'] },
-  lockConfig: { method: 'password' } as const,
+  lockConfig: { amountSats: '1000' },
 });
 
 describe('useCreateLockContent', () => {
@@ -189,7 +189,7 @@ describe('useCreateLockContent', () => {
   });
 
   describe('price guard', () => {
-    const withPrice = (amountSats: string) => ({ ...params(), lockConfig: { method: 'payment', amountSats } as const });
+    const withPrice = (amountSats: string) => ({ ...params(), lockConfig: { amountSats } });
 
     it('sends the applied price on to the lock', async () => {
       const { result } = renderHook(() => useCreateLockContent(withPrice('1234')));
@@ -197,7 +197,7 @@ describe('useCreateLockContent', () => {
       await act(() => result.current.publish());
 
       const [{ lockConfig }] = mocks.createLockContent.mock.calls[0];
-      expect(lockConfig).toEqual({ method: 'payment', amountSats: '1234' });
+      expect(lockConfig).toEqual({ amountSats: '1234' });
     });
 
     it.each(['0', '', '12.5'])('never creates the lock for the price %j', async (amountSats) => {

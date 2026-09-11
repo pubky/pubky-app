@@ -13,7 +13,13 @@ export const mockLockFile = (overrides: Partial<LockFile> = {}): LockFile => ({
     size: 13,
   },
   secondary_resources: {},
-  criteria: [{ criterion_id: 'criterion-1', verifier_type: 'password', params: { satisfied: true } }],
+  criteria: [
+    {
+      criterion_id: 'criterion-1',
+      verifier_type: 'paykit-payment',
+      params: { recipient_pubky: 'pubkycreator123', amount: '1000', asset: 'BTC' },
+    },
+  ],
   lock_logic: { type: 'all', criteria: ['criterion-1'] },
   access_policy: { requested_credential_ttl_seconds: 900 },
   lock_server: { override: 'pubkyserver123' },

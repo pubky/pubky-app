@@ -22,7 +22,7 @@ export interface UsePostInputLockOptions {
   captureComposer: () => TLockDraft;
   /**
    * Puts the captured draft back into the composer. Called whenever the lock is abandoned — switch
-   * off, sign-in cancelled, unlock method cancelled — because the content becomes a normal post again.
+   * off, sign-in cancelled, lock configuration cancelled — because the content becomes a normal post again.
    */
   restoreComposer: (draft: TLockDraft) => void;
   /** Empties the composer so the creator can write the announcement teaser. */
@@ -48,9 +48,9 @@ export interface UsePostInputLockReturn {
   };
   /** The lock switch is on: this post must never be published as a normal, public post. */
   isLockEnabled: boolean;
-  /** The unlock method was applied (Apply Lock): the announcement form and its "Locked content" card show. */
+  /** The lock price was applied (Apply Lock): the announcement form and its "Locked content" card show. */
   isLockConfigured: boolean;
-  /** The applied unlock method, for the composer's lock card. Null before Apply Lock. */
+  /** The applied price, for the composer's lock card. Null before Apply Lock. */
   lockConfig: TLockConfig | null;
   /** Lock Server the auth modal signs into; empty when unconfigured. */
   lockServerPubky: string;

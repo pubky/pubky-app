@@ -6,9 +6,7 @@ rest of the app — and gets more detailed the further down you read. If you kno
 but not locks, read top to bottom.
 
 Phase 2 (epic **#2364**) makes locks **payable**: a creator sets a price in sats and the
-reader pays it from Bitkit. The Phase 1 password lock still exists until **#2369** deletes
-it. See [Phase 1 & marker tracking](#phase-1--marker-tracking) for what is deliberately
-temporary.
+reader pays it from Bitkit.
 
 ## Table of contents
 
@@ -22,16 +20,16 @@ temporary.
   - [Render flow (shared by feed and detail)](#render-flow-shared-by-feed-and-detail)
   - [Reading a lock post](#reading-a-lock-post)
   - [The Unlocked screen](#the-unlocked-screen)
-  - [Phase 1 & marker tracking](#phase-1--marker-tracking)
+  - [Marker tracking](#marker-tracking)
   - [Testing & local demo](#testing--local-demo)
   - [References](#references)
 
 ## What a lock is
 
 To the user: a post in the feed that looks normal — a short teaser, maybe an image — with a
-lock card on top ("Secret essay · Unlock ₿1,000"). Paying the price from Bitkit (or, until
-#2369, entering the password) reveals the real content in place: a post, an article, images,
-files. Everything the user unlocked is listed on their own profile under **Unlocked**.
+lock card on top ("Secret essay · Unlock ₿1,000"). Paying the price from Bitkit reveals the
+real content in place: a post, an article, images, files. Everything the user unlocked is
+listed on their own profile under **Unlocked**.
 
 Two roles: the **creator** publishes locked content behind a public announcement; the
 **reader** unlocks and reads it.
@@ -71,11 +69,10 @@ article button while the lock switch is on (`PostInputExpandableSection`), and
 (`core/pipes/post/post.kind.ts`), which throws on those two kinds. The guard is the
 backstop for the UI rule, so a UI change can't loosen it silently.
 
-**2. Unlock (reader).** The lock card opens the unlock dialog for the lock's kind — Pay to
-Unlock for a payment lock, a password prompt until #2369. Either way the FE submits a
-**proof** to the Lock Server, waits until it verifies (for a payment: until the reader has
-paid in Bitkit), gets a short-lived credential, proxy-reads the guarded bytes with it — and
-then **replicates** them into the reader's own `/priv`.
+**2. Unlock (reader).** The lock card opens Pay to Unlock. The FE submits a **proof** to the
+Lock Server, waits until the reader has paid in Bitkit, gets a short-lived credential,
+proxy-reads the guarded bytes with it — and then **replicates** them into the reader's own
+`/priv`.
 Details: [Reading a lock post](#reading-a-lock-post).
 
 **3. Read again.** Every later view skips the Lock Server entirely: the post renders from
@@ -139,17 +136,16 @@ detail page ─┴─→ PostContentBase ──(isLock)──→ LockedPostConte
 `LockedPostContent` renders the teaser body (via the shared `PostBody`) + a lock card,
 and swaps in the guarded post once it becomes readable.
 
-| File                                                               | Role                                                                                |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `components/organisms/PostContentBase/PostContentBase.tsx`         | detect lock by `!!postDetails.lock`                                                 |
-| `components/organisms/LockedPostContent/LockedPostContent.tsx`     | teaser + lock card + unlock dialog; renders the content once unlocked               |
-| `components/organisms/PostBody/PostBody.tsx`                       | shared text + link-embed + attachment renderer (feed post body **and** lock teaser) |
-| `components/molecules/LockedPostCard/LockedPostCard.tsx`           | lock card: title, shield graphic, Unlock control (also used by the composer)        |
-| `components/molecules/DialogUnlockContent/DialogUnlockContent.tsx` | password prompt                                                                     |
-| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx`     | Pay to Unlock modal (checking / pay / install / waiting / blocked)                  |
-| `hooks/usePayToUnlock/usePayToUnlock.ts`                           | the payment state machine: bundle-id routing, submit, polling, stall/resume         |
-| `hooks/usePurchasedLocks/usePurchasedLocks.ts`                     | one listing of the reader's purchases, shared by every lock post                    |
-| `hooks/usePurchaseResume/usePurchaseResume.ts`                     | finishes a paid purchase whose content never landed, without interaction            |
+| File                                                           | Role                                                                                |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `components/organisms/PostContentBase/PostContentBase.tsx`     | detect lock by `!!postDetails.lock`                                                 |
+| `components/organisms/LockedPostContent/LockedPostContent.tsx` | teaser + lock card + unlock dialog; renders the content once unlocked               |
+| `components/organisms/PostBody/PostBody.tsx`                   | shared text + link-embed + attachment renderer (feed post body **and** lock teaser) |
+| `components/molecules/LockedPostCard/LockedPostCard.tsx`       | lock card: title, shield graphic, Unlock control (also used by the composer)        |
+| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal (checking / pay / install / waiting / blocked)                  |
+| `hooks/usePayToUnlock/usePayToUnlock.ts`                       | the payment state machine: bundle-id routing, submit, polling, stall/resume         |
+| `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                    |
+| `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction            |
 
 ## Reading a lock post
 
@@ -164,31 +160,20 @@ LockedPostContent
   ├─ useUnlockedContent(lock, lockFile, authorId)
   │    ├─ 1) already unlocked as a reader → fetchReplicatedContent  (my HS /priv copy)
   │    ├─ 2) my own post (a == b)         → fetchOwnContent         (my HS /priv original)
-  │    └─ 3) neither → lock card → unlock (below)
-  │             ├─ password lock → DialogUnlockContent
-  │             └─ payment lock  → DialogPayToUnlock (sign-in required first)
-  └─ 4) saved purchase, no replica → usePurchaseResume → fetchPaidContentIfCompleted
+  │    ├─ 3) valid payment price → lock card → DialogPayToUnlock (sign-in required first)
+  │    └─ 4) no valid price → masked lock card with Unlock disabled
+  └─ 5) saved purchase, no replica → usePurchaseResume → fetchPaidContentIfCompleted
 ```
+
+The no-price state covers legacy or unreadable lock files. Their content remains masked and
+cannot be unlocked; a separate unsupported-lock experience is outside the payment-only flow.
 
 `a == b` is team shorthand: **a** = the announcement's author account, **b** = the account
 that owns the lock (Lock Server side). Phase 1 assumes they are the same person, and
 own-content reads rely on it.
 
-**Password unlock** (`LocksApplication.unlockContent`) — one blocking call; steps 1–4 run
-against the Lock Server and need no pubky.app session; step 5 writes to the reader's
-homeserver with it. Goes away with #2369:
-
-1. `submitProofBundle` — proof built from `lock.json` by `LockProofBundler`
-2. `lookupVerificationTask` — poll every 1.5s, max 40 attempts, until `completed`
-3. `issueAccessCredential` — bearer credential, TTL 900s
-4. `proxyReadGuardedResource` — read the post + each attachment with the credential
-5. `replicateUnlockedContent` — copy into the reader's own `/priv/social/unlocked/<lockId>/`,
-   **attachments first, `post.json` last** (the completion marker), so a partial copy is
-   never mistaken for an unlocked post
-
-**Payment unlock** (#2368) is the same pipeline split into steps the modal drives, because a
-real payment takes minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the
-state machine:
+**Payment unlock** (#2368) is split into steps the modal drives because a real payment takes
+minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state machine:
 
 1. On open: `fetchPurchaseBundleId` — the reader's `/priv/social/purchases/<lockId>.json` holds
    the bundle id of a purchase in flight (#2297). It is the ONLY handle to reach a purchase
@@ -247,7 +232,7 @@ screen does not re-read every marker.
 | ----------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
 | hook        | `hooks/useLockFile/useLockFile.ts`   | network-only fetch (`useEffect` + state; no local cache); catch → `hasError`             |
 | hook        | `hooks/useUnlockedContent/…`         | pick the read path (replicated / own / locked) and hold the resolved content             |
-| controller  | `core/controllers/locks/locks.ts`    | thin delegate to the application; announcement parse + verifier-type resolve (pipes)     |
+| controller  | `core/controllers/locks/locks.ts`    | thin delegate to the application; announcement parse + price resolve (pipes)             |
 | application | `core/application/locks/locks.ts`    | orchestrate unlock, guarded reads, and replication                                       |
 | service     | `core/services/locks/locks.ts`       | Lock SDK (wasm) boundary: viewer calls, creator session, guarded-resource registration   |
 | pipe        | `core/pipes/locks/locks.parser.ts`   | `LockContentParser`, `LockFileParser`, `GuardedContentParser`, `LockProofBundler` (pure) |
@@ -301,16 +286,12 @@ profile/(own)/layout.tsx → ProfilePageContainer
 - **Not cached.** Re-entering the profile re-lists the root and re-reads each marker; #2296
   moves this to IndexedDB.
 
-## Phase 1 & marker tracking
+## Marker tracking
 
-Phase 1 (epic **#1998**) was password locks only: every criterion used a `dev-static`
-placeholder that always passes. Phase 2 (**#2364**) adds the price: a payment lock writes a
-single `paykit-payment` criterion instead, holding the recipient (always the lock's creator),
-the amount in sats as a string, and `BTC` as the asset. The password path still writes
-`dev-static` until **#2369** removes it. Reader-side payment (**#2368**) is in: a payment
-lock is unlocked by paying from Bitkit (see
-[Reading a lock post](#reading-a-lock-post)). Creator-configurable credential TTLs and
-IndexedDB caching still come later.
+Locks use one `paykit-payment` criterion holding the recipient (always the lock's creator),
+the amount in sats as a string, and `BTC` as the asset. A reader unlocks it by paying from
+Bitkit (see [Reading a lock post](#reading-a-lock-post)). Creator-configurable credential
+TTLs and IndexedDB caching still come later.
 
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
@@ -344,5 +325,5 @@ the copy — if lock imports suddenly fail or behave stale, re-copy first.
 - Lock server FE integration: `pubky/locks` → `docs/_front_end_integration.md` — the
   `lock.json` shape and the submit-proof → credential → proxy-read access flow.
 - Creator side: [ADR 0019](adr/0019-locks-creator-publishing.md)
-- Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2468 (multi-tab read-back),
-  #2369 (password-lock removal), #1998 (Phase 1 epic).
+- Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2369 (payment-only locks),
+  #2468 (multi-tab read-back), #1998 (Phase 1 epic).

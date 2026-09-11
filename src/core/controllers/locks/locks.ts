@@ -4,7 +4,6 @@ import type {
   TFetchOwnContentParams,
   TFetchReplicatedAttachmentsParams,
   TFetchReplicatedContentParams,
-  TFetchUnlockedContentParams,
   TFetchUnlockedListParams,
   TPaymentBundleParams,
   TPaymentLockParams,
@@ -12,7 +11,6 @@ import type {
   TReplicateUnlockedContentParams,
   TStartPaymentParams,
   TStartPaymentResult,
-  TUnlockContentParams,
 } from '@/application/locks/locks.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
 import { sleep } from '@/libs/utils/utils';
@@ -29,7 +27,6 @@ import type {
   TUnlockedAttachment,
   TUnlockedContent,
   TUnlockedListItem,
-  TUnlockResult,
   TVerificationStatus,
 } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -170,7 +167,6 @@ export class LocksController {
     const lockFile = await LocksApplication.fetchLockFile(params);
     return {
       lockFile,
-      verifierType: LockFileParser.resolveVerifierType(lockFile),
       priceSats: LockFileParser.resolvePriceSats(lockFile),
     };
   }
@@ -178,11 +174,6 @@ export class LocksController {
   /** Announcement content of a lock post; null when the post's `content` isn't valid announcement JSON. */
   static getLockContent(content: string): LockPostContent | null {
     return LockContentParser.parse(content);
-  }
-
-  /** Password unlock (blocking submit+poll). TODO:[Locks] #2369 — deleted with the password UI. */
-  static unlock(params: TUnlockContentParams): Promise<TUnlockResult> {
-    return LocksApplication.unlockContent(params);
   }
 
   /** Whether the reader's wallet has published a Paykit receiver. */
@@ -218,11 +209,6 @@ export class LocksController {
   /** `fetchPaidContent` for the background recovery, which knows neither the bundle id nor the status; null unless `completed`. */
   static fetchPaidContentIfCompleted(params: TPaymentLockParams): Promise<TUnlockedContent | null> {
     return LocksApplication.fetchPaidContentIfCompleted(params);
-  }
-
-  /** Reads the guarded post + attachments after unlock, using the access credential. */
-  static fetchUnlockedContent(params: TFetchUnlockedContentParams): Promise<TUnlockedContent> {
-    return LocksApplication.fetchUnlockedContent(params);
   }
 
   /** Copies unlocked content into the reader's own `/priv`, so later reads need no credential. */

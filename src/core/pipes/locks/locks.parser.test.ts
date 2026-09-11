@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type GuardedPost, VerifierType } from '@/services/locks/locks.types';
+import type { GuardedPost } from '@/services/locks/locks.types';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
 import { GuardedContentParser, LockContentParser, LockFileParser, LockProofBundler } from './locks.parser';
 
@@ -70,31 +70,6 @@ describe('LockContentParser', () => {
 });
 
 describe('LockFileParser', () => {
-  describe('resolveVerifierType', () => {
-    it('resolves password from the mock lock file', () => {
-      expect(LockFileParser.resolveVerifierType(MOCK_LOCK_FILE)).toBe(VerifierType.PASSWORD);
-    });
-
-    it('resolves payment from a payment criterion', () => {
-      const paymentLock = {
-        ...MOCK_LOCK_FILE,
-        criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: {} }],
-      };
-      expect(LockFileParser.resolveVerifierType(paymentLock)).toBe(VerifierType.PAYMENT);
-    });
-
-    it('returns null for missing, empty or unsupported verifier types', () => {
-      expect(LockFileParser.resolveVerifierType(null)).toBeNull();
-      expect(LockFileParser.resolveVerifierType({ ...MOCK_LOCK_FILE, criteria: [] })).toBeNull();
-
-      const devStaticLock = {
-        ...MOCK_LOCK_FILE,
-        criteria: [{ criterion_id: 'criterion-1', verifier_type: 'dev-static', params: {} }],
-      };
-      expect(LockFileParser.resolveVerifierType(devStaticLock)).toBeNull();
-    });
-  });
-
   describe('resolvePriceSats', () => {
     const paymentLock = (params: Record<string, unknown>) => ({
       ...MOCK_LOCK_FILE,
@@ -107,7 +82,12 @@ describe('LockFileParser', () => {
 
     it('returns null for a lock that is not a payment lock', () => {
       expect(LockFileParser.resolvePriceSats(null)).toBeNull();
-      expect(LockFileParser.resolvePriceSats(MOCK_LOCK_FILE)).toBeNull();
+      expect(
+        LockFileParser.resolvePriceSats({
+          ...MOCK_LOCK_FILE,
+          criteria: [{ criterion_id: 'criterion-1', verifier_type: 'unsupported', params: {} }],
+        }),
+      ).toBeNull();
     });
 
     // Amount shapes are `isPositiveIntegerString`'s own table; here only that the parser defers to it.
@@ -123,28 +103,6 @@ describe('LockFileParser', () => {
 
 describe('LockProofBundler', () => {
   const LOCK_URL = `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/lock1.json`;
-
-  it('builds a proof bundle: one satisfied proof per criterion (verifier_type mirrored), scheme stripped from the resource', () => {
-    const bundle = LockProofBundler.build(MOCK_LOCK_FILE, LOCK_URL, 'bundle-1');
-
-    expect(bundle).toEqual({
-      version: 1,
-      bundle_id: 'bundle-1',
-      pubky_lock_resource: `${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/lock1.json`,
-      proofs: [{ criterion_id: 'criterion-1', verifier_type: 'password', payload: { satisfied: true } }],
-    });
-  });
-
-  it('emits a proof for every criterion', () => {
-    const twoCriteria = {
-      ...MOCK_LOCK_FILE,
-      criteria: [
-        { criterion_id: 'c-1', verifier_type: 'dev-static', params: {} },
-        { criterion_id: 'c-2', verifier_type: 'dev-static', params: {} },
-      ],
-    };
-    expect(LockProofBundler.build(twoCriteria, LOCK_URL, 'b').proofs).toHaveLength(2);
-  });
 
   describe('buildPayment', () => {
     it('builds one empty-payload proof with the reader pubky at the top level', () => {

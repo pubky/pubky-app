@@ -1,7 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksController } from '@/controllers/locks/locks';
-import { VerifierType } from '@/services/locks/locks.types';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
 import { useLockFile } from './useLockFile';
 
@@ -17,8 +16,7 @@ describe('useLockFile', () => {
   beforeEach(() => {
     vi.mocked(LocksController.fetchLockFile).mockResolvedValue({
       lockFile: MOCK_LOCK_FILE,
-      verifierType: VerifierType.PASSWORD,
-      priceSats: null,
+      priceSats: '1000',
     });
   });
 
@@ -31,11 +29,6 @@ describe('useLockFile', () => {
   });
 
   it('exposes the price of a payment lock', async () => {
-    vi.mocked(LocksController.fetchLockFile).mockResolvedValue({
-      lockFile: MOCK_LOCK_FILE,
-      verifierType: VerifierType.PAYMENT,
-      priceSats: '1000',
-    });
     const { result } = renderHook(() => useLockFile(LOCK_URL));
 
     await waitFor(() => expect(result.current.priceSats).toBe('1000'));

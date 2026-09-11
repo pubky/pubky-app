@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   createContentLock: vi.fn(),
   randomUUID: vi.fn(),
   generateBundleId: vi.fn(),
-  submitProofBundle: vi.fn(),
   submitProof: vi.fn(),
   lookupVerificationTask: vi.fn(),
   issueAccessCredential: vi.fn(),
@@ -39,7 +38,6 @@ vi.mock('@/services/locks/locks', () => ({
     registerGuardedResource: mocks.registerGuardedResource,
     createContentLock: mocks.createContentLock,
     generateBundleId: mocks.generateBundleId,
-    submitProofBundle: mocks.submitProofBundle,
     submitProof: mocks.submitProof,
     lookupVerificationTask: mocks.lookupVerificationTask,
     issueAccessCredential: mocks.issueAccessCredential,
@@ -52,7 +50,7 @@ const file = (contentType = 'application/json') => ({ contentType, bytes: new Ui
 const descriptor = (path: string) => ({ path, hash: 'HASH', content_type: 'application/json', size: 1 });
 /** Default builder: ignores the attachment paths and returns a fixed post JSON. */
 const buildPost = () => file();
-const passwordConfig = { method: 'password' } as const;
+const paymentConfig = { amountSats: '1000' };
 
 describe('LocksApplication (content)', () => {
   beforeEach(() => {
@@ -81,7 +79,7 @@ describe('LocksApplication (content)', () => {
         seenOwner = ownerPubky;
         return file();
       },
-      lockConfig: passwordConfig,
+      lockConfig: paymentConfig,
     });
 
     // Attachments upload first (id-1, id-2); the post is uploaded last (id-3).
@@ -104,7 +102,7 @@ describe('LocksApplication (content)', () => {
     await LocksApplication.createLockContent({
       attachments: [file('image/png'), file('image/png')],
       buildPost,
-      lockConfig: passwordConfig,
+      lockConfig: paymentConfig,
     });
 
     const paths = mocks.registerGuardedResource.mock.calls.map(([params]) => params.path);
@@ -114,26 +112,15 @@ describe('LocksApplication (content)', () => {
   it('builds the post with an empty list when there are no attachments', async () => {
     const builder = vi.fn(() => file());
 
-    await LocksApplication.createLockContent({ buildPost: builder, lockConfig: passwordConfig });
+    await LocksApplication.createLockContent({ buildPost: builder, lockConfig: paymentConfig });
 
     expect(builder).toHaveBeenCalledWith([], undefined);
     expect(mocks.registerGuardedResource).toHaveBeenCalledTimes(1);
     expect(mocks.createContentLock).toHaveBeenCalledWith(expect.objectContaining({ secondaryResources: [] }));
   });
 
-  it('sends the placeholder dev-static criterion and lock logic', async () => {
-    await LocksApplication.createLockContent({ buildPost, lockConfig: passwordConfig });
-
-    const [params] = mocks.createContentLock.mock.calls[0];
-    expect(params.criteria).toEqual([
-      { criterion_id: 'criterion-1', verifier_type: 'dev-static', params: { satisfied: true } },
-    ]);
-    expect(params.lockLogic).toEqual({ type: 'all', criteria: ['criterion-1'] });
-    expect(params.accessPolicy).toEqual({ requested_credential_ttl_seconds: 900 });
-  });
-
   it('sends the paykit-payment criterion, paying the account the post landed on', async () => {
-    await LocksApplication.createLockContent({ buildPost, lockConfig: { method: 'payment', amountSats: '1234' } });
+    await LocksApplication.createLockContent({ buildPost, lockConfig: { amountSats: '1234' } });
 
     const [params] = mocks.createContentLock.mock.calls[0];
     expect(params.criteria).toEqual([
@@ -146,6 +133,7 @@ describe('LocksApplication (content)', () => {
     ]);
     // v1 wants that single criterion referenced exactly once.
     expect(params.lockLogic).toEqual({ type: 'all', criteria: ['criterion-1'] });
+    expect(params.accessPolicy).toEqual({ requested_credential_ttl_seconds: 900 });
   });
 
   it('does not build the post or create the lock when an attachment upload fails', async () => {
@@ -156,7 +144,7 @@ describe('LocksApplication (content)', () => {
       LocksApplication.createLockContent({
         attachments: [file('image/png')],
         buildPost: builder,
-        lockConfig: passwordConfig,
+        lockConfig: paymentConfig,
       }),
     ).rejects.toThrow('upload failed');
 
@@ -171,7 +159,7 @@ const lockFile: LockFile = {
   creator: 'pubkybob',
   primary_resource: { path: '/priv/locks.app/content/x', hash: 'h', content_type: 'application/octet-stream', size: 1 },
   secondary_resources: {},
-  criteria: [{ criterion_id: 'c1', verifier_type: 'password', params: {} }],
+  criteria: [{ criterion_id: 'c1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
   lock_logic: { type: 'all', criteria: ['c1'] },
   access_policy: { requested_credential_ttl_seconds: 900 },
   lock_server: { override: 'pubkyserver' },
@@ -193,79 +181,6 @@ describe('LocksApplication.fetchLockFile', () => {
     expect(mocks.readContentLock).toHaveBeenCalledWith(VALID_LOCK_URL);
     expect(result).toBe(lockFile);
   });
-});
-
-describe('LocksApplication (reader unlock)', () => {
-  const lockFile = {
-    version: 1,
-    creator: 'pubkybob',
-    secondary_resources: {},
-    criteria: [{ criterion_id: 'criterion-1', verifier_type: 'dev-static', params: {} }],
-    lock_logic: { type: 'all', criteria: ['criterion-1'] },
-    access_policy: { requested_credential_ttl_seconds: 900 },
-    lock_server: { override: 'server1' },
-  } as LockFile;
-  const lockUrl = 'pubky://pubkybob/pub/locks.app/LOCK1.json';
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Skip the real poll delay so tests don't wait on timers.
-    vi.spyOn(asOpaque<{ wait: (ms: number) => Promise<void> }>(LocksApplication), 'wait').mockResolvedValue(undefined);
-    mocks.generateBundleId.mockResolvedValue('bundle-1');
-    mocks.issueAccessCredential.mockResolvedValue({ credential: 'cred-abc', expires_at: '2026-01-01' });
-  });
-
-  it('mints a bundle, submits the proof, polls to completed, and returns the credential', async () => {
-    mocks.submitProofBundle.mockResolvedValue({ status: 'pending' });
-    mocks.lookupVerificationTask.mockResolvedValue({ status: 'completed' });
-
-    const result = await LocksApplication.unlockContent({ lockFile, lockUrl, password: 'hunter2' });
-
-    expect(mocks.submitProofBundle).toHaveBeenCalledWith(
-      expect.objectContaining({ bundle_id: 'bundle-1', pubky_lock_resource: 'pubkybob/pub/locks.app/LOCK1.json' }),
-      'hunter2',
-    );
-    expect(mocks.lookupVerificationTask).toHaveBeenCalledWith('pubkybob', 'bundle-1');
-    expect(result).toEqual({ bundleId: 'bundle-1', credential: 'cred-abc', expiresAt: '2026-01-01' });
-  });
-
-  it('issues the credential without polling when submit already reports completed', async () => {
-    mocks.submitProofBundle.mockResolvedValue({ status: 'completed' });
-
-    await LocksApplication.unlockContent({ lockFile, lockUrl, password: 'pw' });
-
-    expect(mocks.lookupVerificationTask).not.toHaveBeenCalled();
-    expect(mocks.issueAccessCredential).toHaveBeenCalledWith('pubkybob', 'bundle-1');
-  });
-
-  it.each(['failed', 'expired'] as const)(
-    'throws a validation error and issues no credential when verification is %s',
-    async (status) => {
-      mocks.submitProofBundle.mockResolvedValue({ status: 'pending' });
-      mocks.lookupVerificationTask.mockResolvedValue({ status, failure_message: 'nope' });
-
-      await expect(LocksApplication.unlockContent({ lockFile, lockUrl, password: 'pw' })).rejects.toMatchObject({
-        code: ValidationErrorCode.INVALID_INPUT,
-        context: { status, failureMessage: 'nope' },
-      });
-      expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
-    },
-  );
-
-  it.each(['pending', 'in_progress'] as const)(
-    'stops polling and throws a server error when the task is still %s on the last poll',
-    async (status) => {
-      mocks.submitProofBundle.mockResolvedValue({ status: 'pending' });
-      mocks.lookupVerificationTask.mockResolvedValue({ status });
-
-      await expect(LocksApplication.unlockContent({ lockFile, lockUrl, password: 'pw' })).rejects.toMatchObject({
-        code: ServerErrorCode.SERVICE_UNAVAILABLE,
-        context: { status },
-      });
-      expect(mocks.lookupVerificationTask).toHaveBeenCalledTimes(40); // MAX_POLL_ATTEMPTS
-      expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
-    },
-  );
 });
 
 describe('LocksApplication (payment unlock)', () => {

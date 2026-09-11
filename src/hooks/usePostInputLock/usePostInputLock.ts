@@ -146,7 +146,7 @@ export function usePostInputLock({
     if (!canEnable) return;
 
     // The composer currently holds the content to be locked. Snapshot it, but leave it on screen so the
-    // creator still sees their draft behind the auth/unlock-method dialogs — it is only swapped for the
+    // creator still sees their draft behind the auth/lock dialogs — it is only swapped for the
     // empty announcement composer once the lock is applied (see `handleLockApplied`).
     setLockDraft(captureComposer());
     setLockEnabled(true);
@@ -187,11 +187,11 @@ export function usePostInputLock({
     clearComposer();
   };
 
-  // Dismissing the unlock-method dialog without applying abandons the lock.
+  // Dismissing the lock dialog without applying abandons the lock.
   const closeLockDialog = () => revertToNormalPost();
 
   // The session was rejected while publishing. Reopen sign-in, keeping the draft and the configured
-  // unlock method so the creator only has to sign in again, not redo the lock.
+  // price so the creator only has to sign in again, not redo the lock.
   const handleAuthExpired = () => setIsAuthDialogOpen(true);
 
   const submitOrPublish = async () => {
@@ -201,7 +201,7 @@ export function usePostInputLock({
       onNormalSubmit();
       return;
     }
-    if (!isLockConfigured) return; // switch on, unlock method never applied — publish nothing
+    if (!isLockConfigured) return; // switch on, price never applied — publish nothing
 
     const result = await publish();
     if (result.status === 'auth-expired') {

@@ -8,8 +8,8 @@ Covers the creator side of Locks Phase 1. The reader/unlock side is a separate, 
 
 ## Context
 
-Locks lets a creator publish content that readers can only open after satisfying a condition
-(Phase 1: a password). The condition is enforced by a **Lock Server** — a separate service, not the
+Locks lets a creator publish content that readers can only open after satisfying a payment proof.
+The condition is enforced by a **Lock Server** — a separate service, not the
 homeserver and not Nexus — accessed through the `@pubky/locks-sdk` WASM package (epic #1998,
 publishing #2002).
 
@@ -67,8 +67,8 @@ frontend must handle both cases.
 
 1. The creator writes the content, then flips the lock switch (disabled while the composer is
    empty). The body is captured as the _lock draft_ and the same composer is reused to write the
-   public announcement. Sign-in gates the switch; the password dialog only **configures** the unlock
-   method — nothing is published on Apply.
+   public announcement. Sign-in gates the switch; the lock dialog only **configures** the price —
+   nothing is published on Apply.
 2. **Post** publishes, in order: guarded uploads (each under a fresh UUID path) → content lock →
    announcement carrying the lock URL. Failure before the announcement publishes nothing public.
 3. Cancelling at any step (switch off, sign-in cancel, dialog cancel) restores the draft as a normal
@@ -97,9 +97,8 @@ frontend must handle both cases.
 - The homeserver ignores the sent Content-Type and detects one from the bytes. JSON is not
   detectable, so the guarded post JSON is declared `application/octet-stream`; the reader knows the
   primary resource is a `PubkyAppPost` by convention.
-- Phase 1 unlocks with a **password** verifier. `dev-static` is currently used as a master key that
-  passes everything, but it may go away soon; such temporaries carry a `TODO:[Locks] #NNNN` marker
-  and `grep -rn "TODO:\[Locks\]"` is the release gate (#2040).
+- Locks use the `paykit-payment` verifier. The creator supplies a positive integer sats amount; the
+  application derives the recipient from the account that owns the guarded upload.
 
 ## Consequences
 
@@ -137,8 +136,8 @@ explicitly allows authorizing the Lock Server with a different Pubky Ring identi
 
 ### Publish on "Apply Lock"
 
-Rejected: Post is the single publish action in the composer. Applying only configures the unlock
-method, which keeps accidental publishes impossible and lets the creator abandon a lock losslessly.
+Rejected: Post is the single publish action in the composer. Applying only configures the price,
+which keeps accidental publishes impossible and lets the creator abandon a lock losslessly.
 
 ### Spec-owned announcement metadata
 

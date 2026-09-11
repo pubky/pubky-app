@@ -405,15 +405,6 @@ describe('LocksService (reader unlock)', () => {
     expect(error).toMatchObject({ operation: 'LocksService.generateBundleId' });
   });
 
-  it('submitProofBundle sends the bundle to the viewer (never the password) and returns the task state', async () => {
-    const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
-    const task = await LocksService.submitProofBundle(bundle, 'hunter2');
-
-    // The password is intentionally not forwarded to the SDK (no password verifier yet).
-    expect(mocks.fakeViewer.submitProofBundle).toHaveBeenCalledWith(bundle);
-    expect(task).toEqual({ status: 'pending' });
-  });
-
   it('lookupVerificationTask polls by the { creator, bundleId } handle', async () => {
     const task = await LocksService.lookupVerificationTask('creator-b', 'b1');
 
@@ -423,7 +414,7 @@ describe('LocksService (reader unlock)', () => {
     expect(task).toEqual({ status: 'completed' });
   });
 
-  it('submitProof sends the bundle to the viewer without a password', async () => {
+  it('submitProof sends the bundle to the viewer', async () => {
     const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
     const task = await LocksService.submitProof(bundle);
 

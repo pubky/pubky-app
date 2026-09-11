@@ -12,7 +12,6 @@ import {
   purchaseFileSchema,
   type ReplicatedPost,
   replicatedPostSchema,
-  type TProof,
   type TSubmittedProofBundle,
   VerifierType,
 } from '@/services/locks/locks.types';
@@ -78,23 +77,12 @@ export class LockFileParser {
   private constructor() {}
 
   /**
-   * Resolve how the lock is gated (password / payment) from its first criterion.
-   * Returns `null` for missing or unsupported verifier types (e.g. "dev-static").
-   */
-  static resolveVerifierType(lockFile: LockFile | null): VerifierType | null {
-    const rawVerifierType = lockFile?.criteria?.[0]?.verifier_type;
-    if (rawVerifierType === VerifierType.PASSWORD) return VerifierType.PASSWORD;
-    if (rawVerifierType === VerifierType.PAYMENT) return VerifierType.PAYMENT;
-    return null;
-  }
-
-  /**
    * A payment lock's price in sats, or null for any other lock. `params` is untyped and the file is
    * creator-published, so the value is only accepted in the shape the Lock Server's payment verifier
    * requires — a positive integer string.
    */
   static resolvePriceSats(lockFile: LockFile | null): string | null {
-    if (this.resolveVerifierType(lockFile) !== VerifierType.PAYMENT) return null;
+    if (lockFile?.criteria?.[0]?.verifier_type !== VerifierType.PAYMENT) return null;
     const amount = lockFile?.criteria?.[0]?.params?.amount;
     return typeof amount === 'string' && isPositiveIntegerString(amount) ? amount : null;
   }
@@ -132,23 +120,6 @@ export class LockProofBundler {
       pubky_lock_resource: lockUrl.replace(/^pubky:\/\//, ''),
       reader_public_key: withPubkyPrefix(readerPubky),
       proofs: [{ criterion_id: criterionId, verifier_type: VerifierType.PAYMENT, payload: {} }],
-    };
-  }
-
-  // TODO:[Locks] #2369 — password and `dev-static` go away here.
-  static build(lockFile: LockFile, lockUrl: string, bundleId: string): TSubmittedProofBundle {
-    const proofs: TProof[] = lockFile.criteria.map((criterion) => ({
-      criterion_id: criterion.criterion_id,
-      verifier_type: criterion.verifier_type,
-      payload: { satisfied: true },
-    }));
-
-    return {
-      version: 1,
-      bundle_id: bundleId,
-      // The server wants the lock file path without the `pubky://` scheme.
-      pubky_lock_resource: lockUrl.replace(/^pubky:\/\//, ''),
-      proofs,
     };
   }
 }

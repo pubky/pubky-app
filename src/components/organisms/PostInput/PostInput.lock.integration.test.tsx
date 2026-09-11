@@ -15,7 +15,7 @@ import { POST_INPUT_VARIANT } from './PostInput.constants';
 
 /**
  * Integration test of the composer lock flow: real action bar (switch, Post button, article button),
- * real password dialog, real locked-post card and real lock hooks, driven the way a creator would.
+ * real payment lock dialog, real locked-post card and real lock hooks, driven the way a creator would.
  * Only the IO boundary (controllers, stores, env) and db/editor-heavy leaves are mocked.
  * See `.taehwa-work/Locks/2026-locks-create-content.md` → "Post-commit: RTL integration test".
  */
@@ -213,12 +213,8 @@ const renderComposer = () => {
 const lockSwitch = () => screen.getByRole('switch', { name: 'Lock content' });
 const postButton = () => screen.getByRole('button', { name: 'Post' });
 
-const fillValidPassword = () => {
-  fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'Secret12!' } });
-  fireEvent.change(screen.getByLabelText('Repeat Password', { selector: 'input' }), {
-    target: { value: 'Secret12!' },
-  });
-};
+const fillValidPrice = () =>
+  fireEvent.change(screen.getByLabelText('Bitcoin Amount', { selector: 'input' }), { target: { value: '1000' } });
 
 /** Locks fully set up: signed into the Lock Server with a connected Bitkit payout account. */
 const setUpLocks = () => {
@@ -226,13 +222,13 @@ const setUpLocks = () => {
   mocks.paykitConnected = true;
 };
 
-/** Seed a body, switch on (already set up), set a valid password and apply it. */
+/** Seed a body, switch on (already set up), set a valid price and apply it. */
 const configureLock = (body = 'secret body', files: File[] = []) => {
   setUpLocks();
   act(() => mocks.composer.setContent(body));
   if (files.length > 0) act(() => mocks.composer.setAttachments(files));
   fireEvent.click(lockSwitch());
-  fillValidPassword();
+  fillValidPrice();
   fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
 };
 
@@ -250,7 +246,7 @@ describe('PostInput lock flow (integration)', () => {
     mocks.commitCreate.mockResolvedValue('alice:POST1');
   });
 
-  // Full creator journey: write → switch on → sign in → password → teaser → Post.
+  // Full creator journey: write → switch on → sign in → price → teaser → Post.
   it.each([
     ['short text', 'my secret note', [] as File[]],
     ['a link', 'see https://pubky.app', [] as File[]],
@@ -263,7 +259,7 @@ describe('PostInput lock flow (integration)', () => {
     fireEvent.click(lockSwitch()); // not signed in yet → auth modal first
     fireEvent.click(screen.getByTestId('auth-success'));
 
-    fillValidPassword(); // real password dialog
+    fillValidPrice();
     fireEvent.click(screen.getByRole('button', { name: 'Apply Lock' }));
 
     // The card stands in for the locked content; the teaser can never become an article.
@@ -312,7 +308,7 @@ describe('PostInput lock flow (integration)', () => {
         },
       ],
       [
-        'password dialog is cancelled',
+        'lock dialog is cancelled',
         () => {
           setUpLocks();
           fireEvent.click(lockSwitch());
@@ -429,16 +425,13 @@ describe('PostInput lock flow (integration)', () => {
     expect(screen.queryByRole('switch', { name: 'Lock content' })).not.toBeInTheDocument();
   });
 
-  it('keeps Apply Lock disabled for a password that fails the policy', () => {
+  it('keeps Apply Lock disabled for a non-positive price', () => {
     renderComposer();
     setUpLocks();
     act(() => mocks.composer.setContent('secret body'));
     fireEvent.click(lockSwitch());
 
-    fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), { target: { value: 'abcd1234' } });
-    fireEvent.change(screen.getByLabelText('Repeat Password', { selector: 'input' }), {
-      target: { value: 'abcd1234' },
-    });
+    fireEvent.change(screen.getByLabelText('Bitcoin Amount', { selector: 'input' }), { target: { value: '0' } });
 
     expect(screen.getByRole('button', { name: 'Apply Lock' })).toBeDisabled();
   });

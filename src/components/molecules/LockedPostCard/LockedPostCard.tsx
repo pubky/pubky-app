@@ -1,8 +1,7 @@
 'use client';
 
 import { type MouseEvent, useEffect, useRef, useState } from 'react';
-import { Check, LockOpen, Pencil, Shield, StickyNote, Wallet } from 'lucide-react';
-import type { TLockConfig } from '@/application/locks/locks.types';
+import { Check, LockOpen, Pencil, StickyNote, Wallet } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
@@ -12,8 +11,8 @@ import { cn } from '@/libs/utils/utils';
 interface LockedPostCardProps {
   /** Creator-typed lock title for the reader/preview view. Ignored when `editableTitle` is set. */
   title?: string;
-  /** How the lock opens, shown beside Unlock. Nullish until known → the masked dots. */
-  unlockInfo?: TLockConfig | null;
+  /** The lock price shown beside Unlock. Nullish until known → the masked dots. */
+  priceSats?: string | null;
   onUnlock?: () => void;
   /** Whether the unlock modal is open. Keeps the slid-over button parked until the modal closes. */
   unlockOpen?: boolean;
@@ -33,7 +32,7 @@ interface LockedPostCardProps {
   className?: string;
 }
 
-/** Stands in for an unlock requirement the reader can't be shown — a password, or an unresolved lock. */
+/** Stands in for a payment requirement that is unresolved or unsupported. */
 const HIDDEN_REQUIREMENT_MASK = '••••••';
 
 /** Slide-over duration — the single source for both the CSS transition and the deferred modal open.
@@ -43,7 +42,7 @@ export const SLIDE_MS = 200;
 /** The shared lock card. */
 export function LockedPostCard({
   title,
-  unlockInfo,
+  priceSats,
   onUnlock,
   unlockOpen,
   slideOnUnlock = true,
@@ -52,9 +51,7 @@ export function LockedPostCard({
   className,
 }: LockedPostCardProps) {
   const isDisabled = disabled ?? !onUnlock;
-  const UnlockInfoIcon = unlockInfo?.method === 'payment' ? Wallet : Shield;
-  const unlockInfoLabel =
-    unlockInfo?.method === 'payment' ? formatSats(unlockInfo.amountSats) : HIDDEN_REQUIREMENT_MASK;
+  const priceLabel = priceSats ? formatSats(priceSats) : HIDDEN_REQUIREMENT_MASK;
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const lockInfoRef = useRef<HTMLDivElement>(null);
@@ -141,7 +138,6 @@ export function LockedPostCard({
           )}
         </div>
 
-        {/* TODO:[Locks] #2369 — the password variant goes away here, leaving only the price. */}
         <div
           className={cn(
             'relative flex w-fit items-center gap-1 rounded-full bg-card p-1',
@@ -161,8 +157,8 @@ export function LockedPostCard({
             {'Unlock'}
           </Button>
           <div ref={lockInfoRef} className="flex items-center gap-1.5 px-4 text-brand">
-            <UnlockInfoIcon className="size-4 shrink-0" aria-hidden />
-            <span className="text-xs leading-4 font-medium tracking-[1.2px]">{unlockInfoLabel}</span>
+            <Wallet className="size-4 shrink-0" aria-hidden />
+            <span className="text-xs leading-4 font-medium tracking-[1.2px]">{priceLabel}</span>
           </div>
         </div>
       </div>

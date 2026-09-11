@@ -164,11 +164,7 @@ vi.mock('@/molecules/DialogLockContent/DialogLockContent', () => ({
   }) =>
     props.open ? (
       <div data-testid="lock-dialog">
-        <button data-testid="apply-lock" onClick={() => props.onApplied({ method: 'password' })} />
-        <button
-          data-testid="apply-lock-price"
-          onClick={() => props.onApplied({ method: 'payment', amountSats: '1234' })}
-        />
+        <button data-testid="apply-lock" onClick={() => props.onApplied({ amountSats: '1234' })} />
         <button data-testid="cancel-lock" onClick={() => props.onOpenChange(false)} />
       </div>
     ) : null,
@@ -180,11 +176,11 @@ vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({
 vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({
   LockedPostCard: ({
     title,
-    unlockInfo,
+    priceSats,
     editableTitle,
   }: {
     title?: string;
-    unlockInfo?: TLockConfig | null;
+    priceSats?: string | null;
     editableTitle?: { value: string; onChange: (value: string) => void };
   }) =>
     editableTitle ? (
@@ -194,7 +190,7 @@ vi.mock('@/molecules/LockedPostCard/LockedPostCard', () => ({
           value={editableTitle.value}
           onChange={(event) => editableTitle.onChange(event.target.value)}
         />
-        <span data-testid="lock-card-price">{unlockInfo?.method === 'payment' ? unlockInfo.amountSats : ''}</span>
+        <span data-testid="lock-card-price">{priceSats ?? ''}</span>
       </>
     ) : (
       <div data-testid="locked-post-card">{title}</div>
@@ -215,7 +211,7 @@ const renderComposer = () => {
   return { onSuccess };
 };
 
-/** Seed a body, switch the lock on (session already live), and apply the unlock method. */
+/** Seed a body, switch the lock on (session already live), and apply the price. */
 const configureLock = async (body = 'secret body') => {
   act(() => mocks.composer.setContent(body));
   fireEvent.click(screen.getByTestId('lock-switch'));
@@ -239,13 +235,13 @@ describe('PostInput lock wiring', () => {
     renderComposer();
     act(() => mocks.composer.setContent('secret body'));
     fireEvent.click(screen.getByTestId('lock-switch'));
-    fireEvent.click(screen.getByTestId('apply-lock-price'));
+    fireEvent.click(screen.getByTestId('apply-lock'));
 
     expect(screen.getByTestId('lock-card-price')).toHaveTextContent('1234');
   });
 
   // The single most important rule: while the switch is on, the composer body is the content to be
-  // locked. Publishing before the unlock method is applied would put that content out in the clear.
+  // locked. Publishing before the price is applied would put that content out in the clear.
   it('publishes nothing while the lock is on but not configured', async () => {
     renderComposer();
     act(() => mocks.composer.setContent('secret body'));
