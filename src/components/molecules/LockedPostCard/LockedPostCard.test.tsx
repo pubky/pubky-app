@@ -34,7 +34,11 @@ describe('LockedPostCard', () => {
   // Composer preview: no `onUnlock`, so the lock (which does not exist until Post) cannot be opened.
   it('renders the Unlock control as inert without an onUnlock handler', () => {
     render(<LockedPostCard title="" />);
-    expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
+    const button = screen.getByRole('button', { name: 'Unlock' });
+
+    expect(button).toBeDisabled();
+    expect(button).toHaveClass('disabled:opacity-100');
+    expect(button.parentElement).toHaveClass('cursor-not-allowed', 'opacity-50');
   });
 
   // Reader: an `onUnlock` handler enables the control; it runs after the slide-over transition.
@@ -122,5 +126,10 @@ describe('LockedPostCard', () => {
     render(<LockedPostCard title="Secret" />);
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('Secret');
+  });
+
+  it('applies two-line clamping and anywhere wrapping to a reader title', () => {
+    render(<LockedPostCard title="A long lock title" />);
+    expect(screen.getByRole('heading', { level: 4 })).toHaveClass('line-clamp-2', 'wrap-anywhere');
   });
 });
