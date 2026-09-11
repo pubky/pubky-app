@@ -1,4 +1,6 @@
 import { Container } from '@/atoms/Container/Container';
+import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
+import { cn } from '@/libs/utils/utils';
 import { HomeActions, HomeFooter, HomePageHeading, HomeSectionTitle } from '@/molecules/Home/Home';
 import { PageContainer } from '@/molecules/Page/Page';
 import { LANDING_HERO_SECTION_ID } from './Landing.constants';
@@ -19,7 +21,7 @@ export function Landing() {
       </div>
       <LandingSwirlState />
       <LandingScrollCue />
-      <Container id={LANDING_HERO_SECTION_ID} as="section" size="container" className="relative min-h-svh px-6 pb-24">
+      <Container id={LANDING_HERO_SECTION_ID} as="section" size="container" className={cn('relative min-h-svh pb-24', PAGE_GUTTER_CLASS)}>
         <div className="grid w-full items-start gap-6 lg:grid-cols-2 xl:grid-cols-[minmax(0,588px)_minmax(320px,560px)] xl:justify-between">
           <PageContainer size="narrow" className="mx-0 flex flex-col items-start gap-6">
             <HomePageHeading />

@@ -1,7 +1,8 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { useCreateInterestsFeed } from '@/hooks/useCreateInterestsFeed/useCreateInterestsFeed';
 import { useFollowAll } from '@/hooks/useFollowAll/useFollowAll';
 import { useFollowingCount } from '@/hooks/useFollowingCount/useFollowingCount';
 import { useStarterPackSuggestions } from '@/hooks/useStarterPackSuggestions/useStarterPackSuggestions';
@@ -35,6 +36,10 @@ vi.mock('@/hooks/useFollowingCount/useFollowingCount', () => ({
   useFollowingCount: vi.fn(),
 }));
 
+vi.mock('@/hooks/useCreateInterestsFeed/useCreateInterestsFeed', () => ({
+  useCreateInterestsFeed: vi.fn(),
+}));
+
 vi.mock('@/organisms/AvatarWithFallback/AvatarWithFallback', () => ({
   AvatarWithFallback: ({ name }: { name: string }) => <div data-testid="avatar" aria-label={name} />,
 }));
@@ -60,6 +65,7 @@ const mockIsUserLoading = vi.fn((_userId: string) => false);
 const mockPreserveFollowedUser = vi.fn();
 const mockUnpreserveFollowedUser = vi.fn();
 const mockFollowAll = vi.fn();
+const mockCreateInterestsFeed = vi.fn();
 
 function mockSuggestions(
   users: SuggestedUser[],
@@ -93,14 +99,29 @@ function mockFollowingCount(followingCount: number, isLoading = false) {
   vi.mocked(useFollowingCount).mockReturnValue({ followingCount, isLoading });
 }
 
+function mockInterestsFeedState(overrides: Partial<ReturnType<typeof useCreateInterestsFeed>> = {}) {
+  vi.mocked(useCreateInterestsFeed).mockReturnValue({
+    createInterestsFeed: mockCreateInterestsFeed,
+    isCreating: false,
+    ...overrides,
+  });
+}
+
+/** Finish awaits the Interests feed before completing, so completion lands after the click settles */
+async function expectFinished() {
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(APP_ROUTES.HOME));
+}
+
 describe('FollowBestMatchesForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFollowAll.mockResolvedValue({ followed: [], failed: [], skipped: [] });
+    mockCreateInterestsFeed.mockResolvedValue(true);
     mockIsUserLoading.mockReturnValue(false);
     mockSuggestions([]);
     mockFollowAllState();
     mockFollowingCount(0);
+    mockInterestsFeedState();
     useOnboardingStore.setState({ hasHydrated: true, interestTags: [], experienceCompletedByPubky: {} });
     useHomeStore.setState({ ...homeInitialState, hasHydrated: true });
   });
@@ -239,22 +260,22 @@ describe('FollowBestMatchesForm', () => {
   });
 
   describe('Finish', () => {
-    it('marks completion, lands on My network with at least one follow, and goes home', () => {
+    it('marks completion, lands on My network with at least one follow, and goes home', async () => {
       mockSuggestions([makeUser('a', { isFollowing: true }), makeUser('b')]);
       mockFollowingCount(1);
 
       render(<FollowBestMatchesForm />);
       fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+      await expectFinished();
 
       expect(useOnboardingStore.getState().experienceCompletedByPubky[ACTIVE_PUBKY]).toBe(true);
       const home = useHomeStore.getState();
       expect(home.reach).toBe(REACH.NETWORK);
       expect(home.hasUserSetReach).toBe(true);
       expect(mockReplace).toHaveBeenCalledTimes(1);
-      expect(mockReplace).toHaveBeenCalledWith(APP_ROUTES.HOME);
     });
 
-    it('lands on My network from real follows even when no followed card is on screen', () => {
+    it('lands on My network from real follows even when no followed card is on screen', async () => {
       // Back → Continue or a refresh drops preservation and `excludeFollowing` hides the people
       // already followed; the landing feed must still reflect the follows that exist in Dexie.
       mockSuggestions([makeUser('b')]);
@@ -262,33 +283,108 @@ describe('FollowBestMatchesForm', () => {
 
       render(<FollowBestMatchesForm />);
       fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+      await expectFinished();
 
       expect(useHomeStore.getState().reach).toBe(REACH.NETWORK);
-      expect(mockReplace).toHaveBeenCalledWith(APP_ROUTES.HOME);
     });
 
-    it('marks completion and leaves the All feed untouched with zero follows', () => {
+    it('marks completion and leaves the All feed untouched with zero follows', async () => {
       mockSuggestions([makeUser('a'), makeUser('b')]);
       mockFollowingCount(0);
 
       render(<FollowBestMatchesForm />);
       fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+      await expectFinished();
 
       expect(useOnboardingStore.getState().experienceCompletedByPubky[ACTIVE_PUBKY]).toBe(true);
       const home = useHomeStore.getState();
       expect(home.reach).toBe(REACH.ALL);
       // Untouched so the >= 3 follows soft default from useDefaultHomeReach can still apply later
       expect(home.hasUserSetReach).toBe(false);
-      expect(mockReplace).toHaveBeenCalledWith(APP_ROUTES.HOME);
     });
 
-    it('still finishes with no suggestions at all', () => {
+    it('still finishes with no suggestions at all', async () => {
       render(<FollowBestMatchesForm />);
       fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+      await expectFinished();
 
       expect(useOnboardingStore.getState().experienceCompletedByPubky[ACTIVE_PUBKY]).toBe(true);
       expect(useHomeStore.getState().reach).toBe(REACH.ALL);
-      expect(mockReplace).toHaveBeenCalledWith(APP_ROUTES.HOME);
+    });
+
+    it('creates the Interests feed from the chosen tags before marking completion', async () => {
+      useOnboardingStore.setState({ interestTags: ['bitcoin', 'privacy'] });
+      let completedWhenCreating: boolean | undefined;
+      mockCreateInterestsFeed.mockImplementation(async () => {
+        completedWhenCreating = Boolean(useOnboardingStore.getState().experienceCompletedByPubky[ACTIVE_PUBKY]);
+        return true;
+      });
+
+      render(<FollowBestMatchesForm />);
+      fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+      await expectFinished();
+
+      expect(mockCreateInterestsFeed).toHaveBeenCalledTimes(1);
+      expect(mockCreateInterestsFeed).toHaveBeenCalledWith(['bitcoin', 'privacy']);
+      // An interrupted Finish must re-prompt (and upsert the feed) rather than lose the feed
+      expect(completedWhenCreating).toBe(false);
+      expect(useOnboardingStore.getState().experienceCompletedByPubky[ACTIVE_PUBKY]).toBe(true);
+    });
+
+    it('locks navigation and shows the spinner while the Interests feed is being created', () => {
+      mockSuggestions([makeUser('a')]);
+      mockInterestsFeedState({ isCreating: true });
+
+      render(<FollowBestMatchesForm />);
+
+      const finish = screen.getByRole('button', { name: /finish/i });
+      expect(finish).toBeDisabled();
+      expect(finish.querySelector('.animate-spin')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /back/i })).toBeDisabled();
+    });
+
+    it('locks the follow toggles while finishing so no follow can land after the count was read', () => {
+      mockSuggestions([makeUser('a'), makeUser('b')]);
+      mockInterestsFeedState({ isCreating: true });
+
+      render(<FollowBestMatchesForm />);
+
+      expect(screen.getByTestId('follow-all-btn')).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Follow User a' })).toBeDisabled();
+      // Locked, not in flight: no per-card spinner
+      expect(screen.getByRole('button', { name: 'Follow User a' }).querySelector('.animate-spin')).toBeNull();
+    });
+
+    it('skips the Interests feed and finishes when no interests were chosen', async () => {
+      useOnboardingStore.setState({ interestTags: [] });
+
+      render(<FollowBestMatchesForm />);
+      fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+      await expectFinished();
+
+      expect(mockCreateInterestsFeed).not.toHaveBeenCalled();
+      expect(useOnboardingStore.getState().experienceCompletedByPubky[ACTIVE_PUBKY]).toBe(true);
+    });
+
+    it('stays on the step with Finish re-enabled when the Interests feed could not be saved', async () => {
+      useOnboardingStore.setState({ interestTags: ['bitcoin'] });
+      mockCreateInterestsFeed.mockResolvedValue(false);
+
+      render(<FollowBestMatchesForm />);
+      fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+      await waitFor(() => expect(mockCreateInterestsFeed).toHaveBeenCalledWith(['bitcoin']));
+
+      // The hook already toasted; the user keeps their selection and can simply try again
+      expect(useOnboardingStore.getState().experienceCompletedByPubky[ACTIVE_PUBKY]).toBeUndefined();
+      expect(mockReplace).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /finish/i })).not.toBeDisabled();
+
+      mockCreateInterestsFeed.mockResolvedValue(true);
+      fireEvent.click(screen.getByRole('button', { name: /finish/i }));
+      await expectFinished();
+
+      expect(mockCreateInterestsFeed).toHaveBeenCalledTimes(2);
+      expect(useOnboardingStore.getState().experienceCompletedByPubky[ACTIVE_PUBKY]).toBe(true);
     });
   });
 });

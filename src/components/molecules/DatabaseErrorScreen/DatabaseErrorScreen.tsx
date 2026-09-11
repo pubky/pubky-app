@@ -6,6 +6,8 @@ import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
+import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
+import { cn } from '@/libs/utils/utils';
 
 interface DatabaseErrorScreenProps {
   /** Re-runs database initialization (wired to `DatabaseContext.retry`). */
@@ -36,7 +38,7 @@ export function DatabaseErrorScreen({ onRetry }: DatabaseErrorScreenProps) {
     <Container
       overrideDefaults
       data-testid="database-error-screen"
-      className="flex min-h-screen w-full flex-col items-center justify-center gap-6 p-6"
+      className={cn('flex min-h-screen w-full flex-col items-center justify-center gap-6 py-6', PAGE_GUTTER_CLASS)}
     >
       <Container overrideDefaults className="flex shrink-0 items-center justify-center rounded-full bg-brand/16 p-6">
         <DatabaseZap className="size-12 text-brand" strokeWidth={1.5} />

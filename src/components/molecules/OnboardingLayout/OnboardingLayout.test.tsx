@@ -36,16 +36,28 @@ describe('OnboardingLayout', () => {
     expect(navContainer).not.toBeInTheDocument();
   });
 
+  it('applies the shared page gutter (16px mobile, 24px from lg)', () => {
+    render(
+      <OnboardingLayout testId="default-gutter">
+        <div>Content</div>
+      </OnboardingLayout>,
+    );
+
+    const root = screen.getByTestId('default-gutter').parentElement;
+    expect(root).toHaveClass('px-4', 'lg:px-6');
+    expect(root).not.toHaveClass('px-6');
+  });
+
   it('merges a caller className into the root container', () => {
     render(
-      <OnboardingLayout testId="custom-gutter" className="px-4 lg:px-6">
+      <OnboardingLayout testId="custom-gutter" className="px-0 lg:px-0">
         <div>Content</div>
       </OnboardingLayout>,
     );
 
     const root = screen.getByTestId('custom-gutter').parentElement;
-    expect(root).toHaveClass('px-4', 'lg:px-6');
-    expect(root).not.toHaveClass('px-6');
+    expect(root).toHaveClass('px-0', 'lg:px-0');
+    expect(root).not.toHaveClass('px-4', 'lg:px-6');
   });
 
   it('keeps navigation close to content when bottom pinning is disabled', () => {
