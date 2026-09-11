@@ -136,5 +136,10 @@
     "typescript": "5.9.3",
     "vite-tsconfig-paths": "6.1.1",
     "vitest-browser-react": "^2.2.0"
+  },
+  "allowScripts": {
+    "@sentry/cli": true,
+    "browser-tabs-lock": true,
+    "cypress": true
   }
 }
