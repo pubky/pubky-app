@@ -1,5 +1,5 @@
 import React, { createRef } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StickyNote, Tag, UsersRound } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
@@ -115,6 +115,34 @@ describe('MobileTabBar', () => {
     const { container } = render(<MobileTabBar items={makeItems()} />);
     const inactiveButtons = container.querySelectorAll('button:not([aria-current])');
     expect(inactiveButtons).toHaveLength(2);
+  });
+
+  it('realigns the active tab when its item index changes', async () => {
+    const items = makeItems();
+    const { rerender } = render(<MobileTabBar items={items} />);
+    const scroller = screen.getByTestId('mobile-tab-bar-scroll-container');
+    const activeTab = screen.getByRole('button', { name: 'Tags' });
+    const scrollBy = vi.fn();
+    scroller.scrollBy = scrollBy;
+    vi.spyOn(scroller, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 40));
+    vi.spyOn(activeTab, 'getBoundingClientRect').mockReturnValue(new DOMRect(80, 0, 40, 40));
+
+    rerender(
+      <MobileTabBar
+        items={[
+          {
+            key: 'new',
+            icon: StickyNote,
+            label: 'New',
+            isActive: false,
+            onSelect: vi.fn(),
+          },
+          ...items,
+        ]}
+      />,
+    );
+
+    await waitFor(() => expect(scrollBy).toHaveBeenCalledWith({ left: 20 }));
   });
 
   it('calls onSelect when clicked', async () => {
