@@ -156,6 +156,10 @@ vi.mock('@/molecules/FilterPostsEmpty/FilterPostsEmpty', () => ({
   FilterPostsEmpty: () => <div data-testid="filter-posts-empty" />,
 }));
 
+vi.mock('@/molecules/CollectionsEmpty/CollectionsEmpty', () => ({
+  CollectionsEmpty: () => <div data-testid="collections-empty" />,
+}));
+
 vi.mock('@/organisms/Timeline/Posts/Posts', () => {
   return {
     TimelinePosts: ({
@@ -778,6 +782,22 @@ describe('TimelineFeed', () => {
       expect(mockUseStreamPagination).toHaveBeenCalledWith({
         streamId: buildAuthorCollectionsStreamId(profilePubky),
       });
+    });
+
+    it('renders the collections empty state when the author has no collections', () => {
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: [],
+        hasMore: false,
+      });
+
+      render(
+        <ProfileProvider pubky={profilePubky}>
+          <TimelineFeed variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS} />
+        </ProfileProvider>,
+      );
+
+      expect(screen.getByTestId('collections-empty')).toBeInTheDocument();
     });
   });
 

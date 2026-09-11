@@ -20,6 +20,7 @@ import {
   buildContentSearchStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
+import { CollectionsEmpty } from '@/molecules/CollectionsEmpty/CollectionsEmpty';
 import { FilterPostsBar } from '@/molecules/FilterPostsBar/FilterPostsBar';
 import { FilterPostsEmpty } from '@/molecules/FilterPostsEmpty/FilterPostsEmpty';
 import { PostsEmpty } from '@/molecules/PostsEmpty/PostsEmpty';
@@ -198,6 +199,7 @@ function ProfileCollectionsTimelineFeed({ children }: { children?: TimelineFeedP
       variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      emptyState={<CollectionsEmpty />}
     >
       {children}
     </TimelineFeedWithStream>
