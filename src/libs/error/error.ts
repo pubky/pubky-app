@@ -127,3 +127,24 @@ export class AppError extends Error {
 export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError;
 }
+
+/**
+ * True when `cause` is, or wraps (via `Error.cause`), an AppError. Used by the `Err.*` factories and
+ * the Sentry `beforeSend` hook to enforce once-per-error-chain capture: an AppError with another
+ * AppError in its cause chain is a wrapper whose root was already reported.
+ *
+ * Bounded walk with cycle protection; mirrors `findAppError` in error.http.ts, which cannot be
+ * imported here without a circular dependency.
+ */
+export function hasAppErrorInCauseChain(cause: unknown): boolean {
+  const seen = new Set<unknown>();
+  let current = cause;
+
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    if (current instanceof AppError) return true;
+    seen.add(current);
+    current = (current as { cause?: unknown }).cause;
+  }
+
+  return false;
+}

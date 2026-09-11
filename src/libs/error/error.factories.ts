@@ -1,6 +1,6 @@
 import { Logger } from '../logger/logger';
 import { captureAppError } from '../observability/sentry';
-import { AppError, type AppErrorParams } from './error';
+import { AppError, type AppErrorParams, hasAppErrorInCauseChain } from './error';
 import type {
   AuthErrorCode,
   ClientErrorCode,
@@ -55,6 +55,17 @@ function createAppError<C extends ErrorCategory>(
   } as AppErrorParams);
 
   Logger.error(`[${params.service}:${params.operation}]`, error.message, params.context);
+
+  // Once per error chain (ADR-0015 §5.1 Challenge 1): when a caller wraps an AppError
+  // in another Err.* to add its own service/operation, the root was already captured
+  // with the most precise stack and context. Capturing the wrapper too creates a second
+  // Sentry issue (different fingerprint) for the same failure. The Logger line above is
+  // kept so local logs still show the wrapper's operation. The same predicate is enforced in
+  // the Sentry beforeSend hook (sentry.ts) so a wrapper that escapes as an unhandled rejection
+  // is not captured by the SDK's global handlers either.
+  if (hasAppErrorInCauseChain(params.cause)) {
+    return error;
+  }
 
   // Defensive: an AppError factory must ALWAYS return. If Sentry isn't ready (e.g. a
   // circular-dep race during env.ts init) or the SDK throws, we log and move on so

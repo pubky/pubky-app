@@ -5,6 +5,8 @@ import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } 
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
+import { shouldDropAppErrorFromSentry } from '@/libs/observability/sentry.utils';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 // =============================================================================
@@ -1429,6 +1431,55 @@ describe('HomeserverService', () => {
         expect(result.value).toEqual({ cursor: 'cursor-1', eventType: 'PUT' });
         expect(result.value).not.toHaveProperty('free');
         expect(free).toHaveBeenCalledTimes(1);
+      });
+
+      it('maps SDK connect failures to a Server AppError tagged with the subscribe operation and drops it from Sentry', async () => {
+        const path = vi.fn().mockReturnThis();
+        const live = vi.fn().mockReturnThis();
+        const subscribe = vi
+          .fn()
+          .mockRejectedValue(
+            Object.assign(new Error('HTTP transport error: error sending request'), { name: 'RequestError' }),
+          );
+        mockState.eventStreamForUser.mockReturnValue({ path, live, subscribe });
+
+        // beforeEach resets modules, so the service's AppError class is a different instance
+        // from this file's static import: assert structurally, like the rest of this file.
+        const error = (await HomeserverService.subscribeUserEventStreamForPath({
+          userZ32: 'user-pubky',
+          cursor: null,
+          pathPrefix: '/pub/pubky.app/mutes/',
+        }).catch((caught: unknown) => caught)) as AppError;
+
+        expect(error).toMatchObject({
+          service: ErrorService.Homeserver,
+          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+          category: ErrorCategory.Server,
+          code: ServerErrorCode.INTERNAL_ERROR,
+        });
+        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+      });
+
+      it('keeps SDK authentication failures on subscribe reportable', async () => {
+        const path = vi.fn().mockReturnThis();
+        const live = vi.fn().mockReturnThis();
+        const subscribe = vi
+          .fn()
+          .mockRejectedValue(Object.assign(new Error('session expired'), { name: 'AuthenticationError' }));
+        mockState.eventStreamForUser.mockReturnValue({ path, live, subscribe });
+
+        const error = (await HomeserverService.subscribeUserEventStreamForPath({
+          userZ32: 'user-pubky',
+          cursor: null,
+          pathPrefix: '/pub/pubky.app/mutes/',
+        }).catch((caught: unknown) => caught)) as AppError;
+
+        expect(error).toMatchObject({
+          service: ErrorService.Homeserver,
+          operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+          category: ErrorCategory.Auth,
+        });
+        expect(shouldDropAppErrorFromSentry(error)).toBe(false);
       });
     });
 

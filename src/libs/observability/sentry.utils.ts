@@ -1,12 +1,13 @@
 import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import type * as Sentry from '@sentry/nextjs';
-import { AppError } from '@/libs/error/error';
-import { ClientErrorCode } from '@/libs/error/error.codes';
-import { ErrorService } from '@/libs/error/error.types';
+import { AppError, hasAppErrorInCauseChain } from '@/libs/error/error';
+import { ClientErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
+import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import {
   EMAIL_PATTERN,
   EMAIL_REDACTED,
+  HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
   NEXUS_POST_TAGS_PATH_PATTERN,
   PHONE_PATTERN,
   PHONE_REDACTED,
@@ -60,6 +61,17 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
   return endpointPath ? pattern.test(endpointPath) : false;
 }
 
+/**
+ * Expected-error drop rules (ADR-0015 §5.1 Challenge 3).
+ *
+ * `Err.*` captures at construction time, before any `catch` runs, so this list is the ONLY place an
+ * expected `AppError` can be kept out of Sentry. Downgrading a `Logger` level, re-tagging a category,
+ * or `preventDefault()` on an unhandled rejection all happen after the event has been sent.
+ *
+ * Every rule must match on the shape the error pipeline actually emits (`service` / `operation` /
+ * `code` / `context.statusCode`) and be covered by a test that routes a fixture through that pipeline
+ * (`safeFetch`, homeserver `handleError`, ...) rather than a hand-built `new AppError(...)`.
+ */
 const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
   {
     name: 'nexus-post-tags-404',
@@ -71,10 +83,51 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       error.context?.statusCode === HttpStatusCode.NOT_FOUND &&
       matchesEndpointPath(error, NEXUS_POST_TAGS_PATH_PATTERN),
   },
+  {
+    name: 'aborted-requests',
+    reason:
+      'REQUEST_ABORTED is only produced by safeFetch when fetch rejects with an AbortError DOMException. When the ' +
+      "caller's own AbortSignal fired (context.signalAborted) the cancellation is deliberate control flow — " +
+      'navigation, teardown, long-poll reset — and every such caller handles the rejection (PUBKY-APP-3N/4F). ' +
+      'Aborts with no signal (browser-driven) and AbortSignal.timeout() TimeoutErrors (mapped to a Network code) ' +
+      'stay reportable.',
+    matches: (error) => error.code === TimeoutErrorCode.REQUEST_ABORTED && error.context?.signalAborted === true,
+  },
+  {
+    name: 'homeserver-event-stream-connect',
+    reason:
+      'The mute-list SSE subscribe drops routinely (homeserver deploys, idle timeouts, mobile backgrounding) and ' +
+      'MuteListSyncCoordinator reconnects with backoff by design. Connect failures reach here as ' +
+      'handleError → httpStatusCodeToError(500) → Err.server(INTERNAL_ERROR) tagged with the subscribe operation ' +
+      '(PUBKY-APP-11/1Y/6G/CX). Auth/validation failures on the same operation and every other Homeserver ' +
+      'operation stay reportable, and the coordinator reports a persistent outage once via the ' +
+      "'muteListEventStreamExhausted' operation after MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD consecutive failures.",
+    matches: (error) =>
+      error.service === ErrorService.Homeserver &&
+      error.operation === HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION &&
+      error.category === ErrorCategory.Server,
+  },
 ];
 
 export function shouldDropAppErrorFromSentry(error: AppError): boolean {
   return APP_ERROR_DROP_RULES.some((rule) => rule.matches(error));
+}
+
+/**
+ * Whether an exception reaching the SDK outside `captureAppError` must be dropped.
+ *
+ * `Err.*` decides at construction whether an AppError is captured (drop rules) and skips wrappers
+ * whose cause chain already holds a captured AppError (once per chain). That decision only covers
+ * the factory's own `captureException` call: the same object can reach the SDK again through
+ * `globalHandlers` when a caller lets the promise reject unhandled, or through `app/error.tsx`.
+ * Sentry's dedupe works per error object, not per cause chain, and a rule-dropped error was never
+ * captured at all — so `beforeSend` re-applies both predicates to `hint.originalException`.
+ *
+ * Non-AppError exceptions are untouched: the once-per-chain contract only exists for `Err.*`.
+ */
+export function shouldDropCapturedExceptionFromSentry(originalException: unknown): boolean {
+  if (!(originalException instanceof AppError)) return false;
+  return shouldDropAppErrorFromSentry(originalException) || hasAppErrorInCauseChain(originalException.cause);
 }
 
 function isSensitiveFieldValue(parent: Record<string, unknown>, key: string): boolean {
