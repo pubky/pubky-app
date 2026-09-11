@@ -29,6 +29,8 @@ const eslintConfig = [
       'next-env.d.ts',
       // PWA generated files (serwist)
       'public/sw.js',
+      // wasm-pack output, regenerated wholesale (see vendor/locks-sdk/README.md)
+      'vendor/**',
     ],
   },
   {
