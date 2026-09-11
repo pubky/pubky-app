@@ -32,6 +32,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import {
   BITKIT_APP_STORE_URL,
   BITKIT_PLAY_STORE_URL,
+  BITKIT_WEBSITE_URL,
   getAppStoreLink,
   getPlayStoreLink,
   getPubkyRingLink,
@@ -143,7 +144,9 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
     description = (
       <>
         {'Scan this QR with your '}
-        <strong className="font-bold text-foreground">{'Bitkit'}</strong>
+        <Link href={BITKIT_WEBSITE_URL} className="text-base font-bold">
+          {'Bitkit'}
+        </Link>
         {' wallet to enable payments.'}
       </>
     );
