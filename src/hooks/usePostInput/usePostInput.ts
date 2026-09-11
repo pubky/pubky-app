@@ -88,6 +88,7 @@ export function usePostInput({
   postId,
   originalPostId,
   editPostId,
+  editLock,
   editAttachmentUris,
   editContent,
   editIsArticle,
@@ -99,6 +100,8 @@ export function usePostInput({
   onArticleModeChange,
   hasExternalContent,
 }: UsePostInputOptions): UsePostInputReturn {
+  const isLockAnnouncement = editLock != null;
+
   // State
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isExpanded, setIsExpanded] = useState(expanded);
@@ -126,6 +129,8 @@ export function usePostInput({
     setIsArticle,
     articleTitle,
     setArticleTitle,
+    lockTitle,
+    setLockTitle,
     reply,
     post,
     repost,
@@ -388,6 +393,7 @@ export function usePostInput({
       case POST_INPUT_VARIANT.EDIT:
         await edit({
           editPostId: editPostId!,
+          isLockAnnouncement: isLockAnnouncement || undefined,
           originalAttachmentUris: seededAttachmentUris,
           preservedAttachmentUris: editPreservedUris,
           onSuccess: handleSuccess,
@@ -413,6 +419,7 @@ export function usePostInput({
     repost,
     edit,
     editPostId,
+    isLockAnnouncement,
     seededAttachmentUris,
     editPreservedUris,
     isSubmitting,
@@ -701,6 +708,8 @@ export function usePostInput({
     setIsArticle,
     articleTitle,
     setArticleTitle,
+    lockTitle,
+    setLockTitle,
     isDragging,
     isExpanded,
     isSubmitting,

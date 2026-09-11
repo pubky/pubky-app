@@ -2,7 +2,7 @@ import { type MDXEditorMethods, type MDXEditorProps } from '@mdxeditor/editor';
 import type { RefObject } from 'react';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUserDetailsFromIds.types';
-import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
+import type { EditLock, PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 
 export interface UsePostInputOptions {
@@ -14,6 +14,8 @@ export interface UsePostInputOptions {
   originalPostId?: string;
   /** Optional edit post ID (required if variant is 'edit') */
   editPostId?: string;
+  /** Existing lock announcement metadata (edit variant only). */
+  editLock?: EditLock;
   /** The post's current attachment URIs (edit variant only) */
   editAttachmentUris?: string[];
   /** The post's current content (edit variant only) — used to derive the article cover slot */
@@ -68,6 +70,8 @@ export interface UsePostInputReturn {
   setIsArticle: React.Dispatch<React.SetStateAction<boolean>>;
   articleTitle: string;
   setArticleTitle: React.Dispatch<React.SetStateAction<string>>;
+  lockTitle: string;
+  setLockTitle: React.Dispatch<React.SetStateAction<string>>;
   isDragging: boolean;
   isExpanded: boolean;
   isSubmitting: boolean;

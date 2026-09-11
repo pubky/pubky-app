@@ -4,7 +4,7 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
-import { buildLockTeaserContent, isLockTeaserWithinLimit } from './lockTeaser';
+import { buildLockTeaserContent, isLockTeaserWithinLimit, parseLockTeaserContent } from './lockTeaser';
 
 const teaser = (lock_title: string, teaser_description: string) => ({ lock_title, teaser_description });
 
@@ -29,6 +29,44 @@ describe('buildLockTeaserContent', () => {
     const withExtra = { ...teaser('T', 'B'), cover_image: 'x'.repeat(500) };
 
     expect(buildLockTeaserContent(withExtra)).toBe(buildLockTeaserContent(teaser('T', 'B')));
+  });
+});
+
+describe('parseLockTeaserContent', () => {
+  it('returns both fields when the envelope is complete', () => {
+    expect(parseLockTeaserContent('{"lock_title":"Title","teaser_description":"Body"}')).toEqual({
+      lock_title: 'Title',
+      teaser_description: 'Body',
+    });
+    expect(parseLockTeaserContent('{"lock_title":"","teaser_description":""}')).toEqual({
+      lock_title: '',
+      teaser_description: '',
+    });
+  });
+
+  it('ignores fields beyond the envelope', () => {
+    expect(parseLockTeaserContent('{"lock_title":"Title","teaser_description":"Body","extra":1}')).toEqual({
+      lock_title: 'Title',
+      teaser_description: 'Body',
+    });
+  });
+
+  // The read parser coerces each of these to `''`; re-serializing that would overwrite the stored
+  // content with an empty envelope, so the edit path has to reject them instead.
+  it('rejects a partial or mistyped envelope', () => {
+    expect(parseLockTeaserContent('{"lock_title":"Title"}')).toBeNull();
+    expect(parseLockTeaserContent('{"teaser_description":"Body"}')).toBeNull();
+    expect(parseLockTeaserContent('{"lock_title":42,"teaser_description":"Body"}')).toBeNull();
+    expect(parseLockTeaserContent('{"lock_title":"Title","teaser_description":null}')).toBeNull();
+  });
+
+  it('rejects content that is not a JSON object', () => {
+    expect(parseLockTeaserContent('plain text')).toBeNull();
+    expect(parseLockTeaserContent('{"title":"Not a teaser"}')).toBeNull();
+    expect(parseLockTeaserContent('{}')).toBeNull();
+    expect(parseLockTeaserContent('42')).toBeNull();
+    expect(parseLockTeaserContent('null')).toBeNull();
+    expect(parseLockTeaserContent('["lock_title"]')).toBeNull();
   });
 });
 

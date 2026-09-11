@@ -875,6 +875,58 @@ describe('PostNormalizer', () => {
         expect(result.post.toJson().content).toBe(newContent);
       });
 
+      it('preserves the stored lock when editing announcement content', async () => {
+        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/locks.app/LOCK1.json`;
+        const postDetails = createMockPostDetails(compositePostId);
+        postDetails.lock = lockUrl;
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(postDetails);
+        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
+
+        const result = await PostNormalizer.toEdit({
+          compositePostId,
+          content: 'Updated announcement',
+          currentUserPubky: TEST_PUBKY.USER_1,
+        });
+
+        expect(result.post.toJson()).toEqual(
+          expect.objectContaining({ content: 'Updated announcement', lock: lockUrl }),
+        );
+      });
+
+      it('preserves the stored lock when attachments and kind change', async () => {
+        const lockUrl = `pubky://${TEST_PUBKY.USER_1}/pub/locks.app/LOCK1.json`;
+        const nextAttachments = [buildPubkyUri(TEST_PUBKY.USER_1, 'files/NEXT1')];
+        const postDetails = createMockPostDetails(compositePostId);
+        postDetails.lock = lockUrl;
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(postDetails);
+        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
+
+        const result = await PostNormalizer.toEdit({
+          compositePostId,
+          content: 'Updated announcement',
+          currentUserPubky: TEST_PUBKY.USER_1,
+          attachments: nextAttachments,
+          kind: PubkyAppPostKind.Image,
+        });
+
+        expect(result.post.toJson()).toEqual(
+          expect.objectContaining({ lock: lockUrl, attachments: nextAttachments, kind: 'image' }),
+        );
+      });
+
+      it('does not add a lock field to a normal post edit', async () => {
+        vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(compositePostId));
+        vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
+
+        const result = await PostNormalizer.toEdit({
+          compositePostId,
+          content: 'Updated post content',
+          currentUserPubky: TEST_PUBKY.USER_1,
+        });
+
+        expect('lock' in result.post.toJson()).toBe(false);
+      });
+
       it('should reject empty content', async () => {
         vi.spyOn(PostDetailsModel, 'findById').mockResolvedValue(createMockPostDetails(compositePostId));
         vi.spyOn(PostRelationshipsModel, 'findById').mockResolvedValue(createMockPostRelationships());
