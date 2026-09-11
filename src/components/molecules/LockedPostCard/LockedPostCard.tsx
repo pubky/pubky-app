@@ -6,6 +6,7 @@ import type { TLockConfig } from '@/application/locks/locks.types';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Image } from '@/atoms/Image/Image';
 import { DEFAULT_LOCK_TITLE } from '@/libs/post/lockTeaser';
+import { formatSats } from '@/libs/utils/formatSats';
 import { cn } from '@/libs/utils/utils';
 
 interface LockedPostCardProps {
@@ -16,6 +17,12 @@ interface LockedPostCardProps {
   onUnlock?: () => void;
   /** Whether the unlock modal is open. Keeps the slid-over button parked until the modal closes. */
   unlockOpen?: boolean;
+  /**
+   * Whether pressing Unlock opens the unlock modal. False runs `onUnlock` straight away without the
+   * slide-over — only a modal closing snaps the button back, so a click that opens something else
+   * (sign-in) would leave it parked over the price for good.
+   */
+  slideOnUnlock?: boolean;
   /** Force the Unlock control disabled. Defaults to `!onUnlock` (inert without a handler). */
   disabled?: boolean;
   /**
@@ -29,8 +36,6 @@ interface LockedPostCardProps {
 /** Stands in for an unlock requirement the reader can't be shown — a password, or an unresolved lock. */
 const HIDDEN_REQUIREMENT_MASK = '••••••';
 
-const satsFormatter = new Intl.NumberFormat('en-US');
-
 /** Slide-over duration — the single source for both the CSS transition and the deferred modal open.
  *  Exported for tests (they advance fake timers by exactly this). */
 export const SLIDE_MS = 200;
@@ -41,6 +46,7 @@ export function LockedPostCard({
   unlockInfo,
   onUnlock,
   unlockOpen,
+  slideOnUnlock = true,
   disabled,
   editableTitle,
   className,
@@ -48,9 +54,7 @@ export function LockedPostCard({
   const isDisabled = disabled ?? !onUnlock;
   const UnlockInfoIcon = unlockInfo?.method === 'payment' ? Wallet : Shield;
   const unlockInfoLabel =
-    unlockInfo?.method === 'payment'
-      ? `₿${satsFormatter.format(Number(unlockInfo.amountSats))}`
-      : HIDDEN_REQUIREMENT_MASK;
+    unlockInfo?.method === 'payment' ? formatSats(unlockInfo.amountSats) : HIDDEN_REQUIREMENT_MASK;
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const lockInfoRef = useRef<HTMLDivElement>(null);
@@ -74,6 +78,10 @@ export function LockedPostCard({
     event.stopPropagation();
     // The ref guard also blocks a double-click: a second click during the slide is a no-op.
     if (isDisabled || slideTimer.current !== null) return;
+    if (!slideOnUnlock) {
+      onUnlock?.();
+      return;
+    }
 
     const button = buttonRef.current;
     const lockInfo = lockInfoRef.current;

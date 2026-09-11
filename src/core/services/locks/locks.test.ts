@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => {
     addPkarrRelay: vi.fn(),
     setLocalTestnetHomeserver: vi.fn(),
     forServerWithOptions: vi.fn(() => fakeLocks),
+    hasPaykitDataWithOptions: vi.fn(async () => true),
     getTestnet: vi.fn(() => true),
     getLockServer: vi.fn((): string | undefined => 'lockserverpubky'),
     getPaykitServerUrl: vi.fn((): string | undefined => 'https://paykit.server'),
@@ -130,6 +131,7 @@ vi.mock('@pubky/locks-sdk', () => {
     Locks: {
       forServerWithOptions: mocks.forServerWithOptions,
       readContentLockWithOptions: mocks.readContentLockWithOptions,
+      hasPaykitDataWithOptions: mocks.hasPaykitDataWithOptions,
     },
   };
 });
@@ -419,6 +421,49 @@ describe('LocksService (reader unlock)', () => {
       expect.objectContaining({ creator: 'creator-b', bundle_id: 'b1' }),
     );
     expect(task).toEqual({ status: 'completed' });
+  });
+
+  it('submitProof sends the bundle to the viewer without a password', async () => {
+    const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
+    const task = await LocksService.submitProof(bundle);
+
+    expect(mocks.fakeViewer.submitProofBundle).toHaveBeenCalledWith(bundle);
+    expect(task).toEqual({ status: 'pending' });
+  });
+
+  it('lookupVerificationTask resolves to null when the server has no task for the bundle id', async () => {
+    mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(
+      new Error('Lock Server request failed with HTTP 404'),
+    );
+    await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toBeNull();
+  });
+
+  it('lookupVerificationTask rethrows non-404 failures', async () => {
+    mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(
+      new Error('Lock Server request failed with HTTP 500'),
+    );
+
+    const error = await LocksService.lookupVerificationTask('creator-b', 'b1').catch((e: unknown) => e);
+    expect(isAppError(error)).toBe(true);
+    expect(error).toMatchObject({ operation: 'LocksService.lookupVerificationTask' });
+  });
+
+  // The 404 is read from the message text, so a string rejection must count the same as an Error.
+  it('lookupVerificationTask reads the 404 from a non-Error rejection too', async () => {
+    mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce('HTTP 404');
+    await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).resolves.toBeNull();
+  });
+
+  it('lookupVerificationTask does not treat other 4xx as missing', async () => {
+    mocks.fakeViewer.lookupVerificationTask.mockRejectedValueOnce(
+      new Error('Lock Server request failed with HTTP 403'),
+    );
+    await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).rejects.toThrow();
+  });
+
+  it('hasPaykitReceiver asks the SDK with the pubky-prefixed reader', async () => {
+    await expect(LocksService.hasPaykitReceiver('reader123')).resolves.toBe(true);
+    expect(mocks.hasPaykitDataWithOptions).toHaveBeenCalledWith('pubkyreader123', expect.anything());
   });
 
   it('issueAccessCredential returns the bearer credential and expiry', async () => {

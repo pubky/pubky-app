@@ -233,6 +233,9 @@ export const replicatedPostSchema = z.object({
 
 export type ReplicatedPost = z.infer<typeof replicatedPostSchema>;
 
+/** Reader's `/priv/social/purchases/<lockId>.json`: the bundle id a payment was started with. */
+export const purchaseFileSchema = z.object({ bundle_id: z.string().min(1) });
+
 export interface TUnlockedListItem {
   lockId: string;
   post: ReplicatedPost;
@@ -279,6 +282,8 @@ export interface TSubmittedProofBundle {
   bundle_id: string;
   /** Public lock file as `<creator>/pub/locks.app/<lock_id>.json` — no `pubky://` scheme. */
   pubky_lock_resource: string;
+  /** Payment bundles only (`pubky` prefix included): where Paykit delivers the payment request. */
+  reader_public_key?: string;
   proofs: TProof[];
 }
 

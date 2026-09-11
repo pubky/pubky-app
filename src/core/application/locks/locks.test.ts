@@ -3,6 +3,7 @@ import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/er
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
+import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import type { LockFile, ReplicatedPost, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LocksApplication } from './locks';
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   randomUUID: vi.fn(),
   generateBundleId: vi.fn(),
   submitProofBundle: vi.fn(),
+  submitProof: vi.fn(),
   lookupVerificationTask: vi.fn(),
   issueAccessCredential: vi.fn(),
   readContentLock: vi.fn(),
@@ -38,6 +40,7 @@ vi.mock('@/services/locks/locks', () => ({
     createContentLock: mocks.createContentLock,
     generateBundleId: mocks.generateBundleId,
     submitProofBundle: mocks.submitProofBundle,
+    submitProof: mocks.submitProof,
     lookupVerificationTask: mocks.lookupVerificationTask,
     issueAccessCredential: mocks.issueAccessCredential,
     readContentLock: mocks.readContentLock,
@@ -263,6 +266,288 @@ describe('LocksApplication (reader unlock)', () => {
       expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('LocksApplication (payment unlock)', () => {
+  const lockFile = asOpaque<LockFile>({
+    creator: 'pubkybob',
+    criteria: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', params: { amount: '1000' } }],
+  });
+  const lockUrl = 'pubky://pubkybob/pub/locks.app/LOCK1.json';
+  const purchaseUrl = 'pubky://reader1/priv/social/purchases/LOCK1.json';
+  const purchaseBytes = (raw: string) => ({ bytes: new TextEncoder().encode(raw), contentType: 'application/json' });
+  const withPrimary = () =>
+    asOpaque<LockFile>({
+      creator: 'pubkybob',
+      secondary_resources: {},
+      primary_resource: {
+        path: '/priv/locks.app/content/a.json',
+        hash: 'h',
+        content_type: 'application/json',
+        size: 1,
+      },
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('fetchPurchaseBundleId', () => {
+    it('returns null when there is no purchase file', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(null);
+      await expect(LocksApplication.fetchPurchaseBundleId({ lockUrl, readerPubky: 'reader1' })).resolves.toBeNull();
+      expect(mocks.getBytesIfExists).toHaveBeenCalledWith(purchaseUrl);
+    });
+
+    it('returns the stored bundle id', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"bundle-1"}'));
+      await expect(LocksApplication.fetchPurchaseBundleId({ lockUrl, readerPubky: 'reader1' })).resolves.toBe(
+        'bundle-1',
+      );
+    });
+
+    // Fail closed: something was purchased and its handle is gone — minting a fresh id could pay twice.
+    it('throws on an unreadable purchase file instead of pretending there is none', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('garbage'));
+      await expect(LocksApplication.fetchPurchaseBundleId({ lockUrl, readerPubky: 'reader1' })).rejects.toMatchObject({
+        code: ValidationErrorCode.INVALID_INPUT,
+        operation: 'fetchPurchaseBundleId',
+      });
+    });
+  });
+
+  describe('startPayment', () => {
+    const params = { lockFile, lockUrl, readerPubky: 'reader1', rejectBundleId: null };
+
+    beforeEach(() => {
+      mocks.generateBundleId.mockResolvedValue('fresh-1');
+      mocks.putBlob.mockResolvedValue(undefined);
+      mocks.submitProof.mockResolvedValue({ status: 'pending' });
+    });
+
+    it('mints a bundle id, saves it BEFORE submitting, and returns it with the status', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(null);
+
+      await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: 'fresh-1', status: 'pending' });
+
+      // The bytes matter, not just the URL: a file written with the wrong id is money nobody can
+      // reach again.
+      const [{ url, blob }] = mocks.putBlob.mock.calls[0] as [{ url: string; blob: Uint8Array }];
+      expect(url).toBe(purchaseUrl);
+      expect(GuardedContentParser.parsePurchaseFile(blob)).toBe('fresh-1');
+      expect(mocks.putBlob.mock.invocationCallOrder[0]).toBeLessThan(mocks.submitProof.mock.invocationCallOrder[0]);
+      expect(mocks.submitProof).toHaveBeenCalledWith({
+        version: 1,
+        bundle_id: 'fresh-1',
+        pubky_lock_resource: 'pubkybob/pub/locks.app/LOCK1.json',
+        reader_public_key: 'pubkyreader1',
+        proofs: [{ criterion_id: 'criterion-1', verifier_type: 'paykit-payment', payload: {} }],
+      });
+    });
+
+    // Another tab (or an earlier press) already saved an id: submit with THAT one. Minting again
+    // would orphan its purchase and pay a second time.
+    it('reuses the saved bundle id without minting or overwriting', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
+
+      await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: 'saved-1', status: 'pending' });
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: 'saved-1' }));
+    });
+
+    // Only the exact rejected id is replaced: another tab may have saved a newer, live one meanwhile.
+    it('keeps a saved id that differs from the rejected one', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
+
+      await expect(LocksApplication.startPayment({ ...params, rejectBundleId: 'dead-1' })).resolves.toEqual({
+        bundleId: 'saved-1',
+        status: 'pending',
+      });
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: 'saved-1' }));
+    });
+
+    // failed/expired cannot be retried — the dead id is replaced (file overwritten before submit).
+    it('replaces the rejected bundle id with a fresh one', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"dead-1"}'));
+
+      await expect(LocksApplication.startPayment({ ...params, rejectBundleId: 'dead-1' })).resolves.toEqual({
+        bundleId: 'fresh-1',
+        status: 'pending',
+      });
+      expect(mocks.generateBundleId).toHaveBeenCalledTimes(1);
+      expect(mocks.putBlob).toHaveBeenCalledTimes(1);
+      const [{ url, blob }] = mocks.putBlob.mock.calls[0] as [{ url: string; blob: Uint8Array }];
+      expect(url).toBe(purchaseUrl);
+      expect(GuardedContentParser.parsePurchaseFile(blob)).toBe('fresh-1');
+      expect(mocks.putBlob.mock.invocationCallOrder[0]).toBeLessThan(mocks.submitProof.mock.invocationCallOrder[0]);
+      expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: 'fresh-1' }));
+    });
+
+    it('does not submit when saving the fresh id fails', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(null);
+      mocks.putBlob.mockRejectedValue(new Error('offline'));
+
+      await expect(LocksApplication.startPayment(params)).rejects.toThrow();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+
+    // Fail closed: a saved file that cannot be read means a purchase exists and its id is lost.
+    it('does not mint a replacement for an unreadable saved id', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('garbage'));
+
+      await expect(LocksApplication.startPayment(params)).rejects.toMatchObject({
+        code: ValidationErrorCode.INVALID_INPUT,
+        operation: 'fetchPurchaseBundleId',
+      });
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+
+    // A URL with no lock id must fail before any read or write: there is no file path to save an id under.
+    it.each([
+      [
+        'fetchPurchaseBundleId',
+        (lockUrl: string) => LocksApplication.fetchPurchaseBundleId({ lockUrl, readerPubky: 'reader1' }),
+      ],
+      ['startPayment', (lockUrl: string) => LocksApplication.startPayment({ ...params, lockUrl })],
+    ])('%s rejects a lock URL without a lock id before touching the homeserver', async (_name, call) => {
+      await expect(call('pubky://pubkybob/pub/locks.app/')).rejects.toMatchObject({
+        code: ValidationErrorCode.INVALID_INPUT,
+      });
+      expect(mocks.getBytesIfExists).not.toHaveBeenCalled();
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fetchPurchasedLockIds', () => {
+    it('lists the reader purchases with one listing', async () => {
+      mocks.listAll.mockResolvedValue([
+        'pubky://reader1/priv/social/purchases/lock1.json',
+        'pubky://reader1/priv/social/purchases/lock2.json',
+      ]);
+
+      await expect(LocksApplication.fetchPurchasedLockIds({ readerPubky: 'reader1' })).resolves.toEqual([
+        'lock1',
+        'lock2',
+      ]);
+      expect(mocks.listAll).toHaveBeenCalledWith({ baseDirectory: 'pubky://reader1/priv/social/purchases/' });
+    });
+  });
+
+  describe('fetchPaidContent', () => {
+    // A fresh credential on every call is what makes an expired one a non-event: nothing is stored
+    // to invalidate, so calling again IS the recovery.
+    it('mints a credential and reads the guarded content with it', async () => {
+      mocks.issueAccessCredential.mockResolvedValue({ credential: 'cred-abc', expires_at: 'e' });
+      mocks.proxyReadGuardedResource.mockResolvedValue(
+        new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+      );
+
+      const content = await LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+
+      expect(mocks.issueAccessCredential).toHaveBeenCalledWith('pubkybob', 'bundle-1');
+      expect(mocks.proxyReadGuardedResource).toHaveBeenCalledWith('cred-abc', 'a.json');
+      expect(content.post.content).toBe('paid');
+    });
+
+    // Replication belongs to the caller, which owns the single path that writes a replica.
+    it('does not write the replica itself', async () => {
+      mocks.issueAccessCredential.mockResolvedValue({ credential: 'cred-abc', expires_at: 'e' });
+      mocks.proxyReadGuardedResource.mockResolvedValue(
+        new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),
+      );
+
+      await LocksApplication.fetchPaidContent({ lockFile: withPrimary(), bundleId: 'bundle-1' });
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fetchPaymentStatus', () => {
+    it('passes the null through when the submission never reached the server', async () => {
+      mocks.lookupVerificationTask.mockResolvedValue(null);
+      await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).resolves.toBeNull();
+      expect(mocks.lookupVerificationTask).toHaveBeenCalledWith('pubkybob', 'bundle-1');
+    });
+
+    it('returns only the status of the task the server holds', async () => {
+      mocks.lookupVerificationTask.mockResolvedValue({ status: 'in_progress' });
+      await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).resolves.toBe(
+        'in_progress',
+      );
+    });
+
+    // Only a 404 means "no task"; an outage shown as null would offer Pay again for a payment that may exist.
+    it('rethrows a non-404 lookup failure', async () => {
+      mocks.lookupVerificationTask.mockRejectedValue(
+        Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'down', { service: ErrorService.Locks, operation: 'test' }),
+      );
+
+      await expect(LocksApplication.fetchPaymentStatus({ lockFile, bundleId: 'bundle-1' })).rejects.toMatchObject({
+        code: ServerErrorCode.SERVICE_UNAVAILABLE,
+      });
+    });
+  });
+
+  describe('fetchPaidContentIfCompleted', () => {
+    const params = { lockFile: withPrimary(), lockUrl, readerPubky: 'reader1' };
+    const paidBytes = new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}');
+
+    it('returns null when the reader has no saved bundle id', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(null);
+
+      await expect(LocksApplication.fetchPaidContentIfCompleted(params)).resolves.toBeNull();
+      expect(mocks.lookupVerificationTask).not.toHaveBeenCalled();
+    });
+
+    // A null here would read as "never paid" and let the caller offer Pay again for a lost purchase.
+    it('propagates an unreadable saved id instead of returning null', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('garbage'));
+
+      await expect(LocksApplication.fetchPaidContentIfCompleted(params)).rejects.toMatchObject({
+        code: ValidationErrorCode.INVALID_INPUT,
+      });
+      expect(mocks.lookupVerificationTask).not.toHaveBeenCalled();
+    });
+
+    it('returns null when the server has no task for the saved id', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"bundle-1"}'));
+      mocks.lookupVerificationTask.mockResolvedValue(null);
+
+      await expect(LocksApplication.fetchPaidContentIfCompleted(params)).resolves.toBeNull();
+      expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+
+    // Still pending: the modal owns that wait, so recovery has nothing to do.
+    it('returns null while the payment is not completed', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"bundle-1"}'));
+      mocks.lookupVerificationTask.mockResolvedValue({ status: 'pending' });
+
+      await expect(LocksApplication.fetchPaidContentIfCompleted(params)).resolves.toBeNull();
+      expect(mocks.issueAccessCredential).not.toHaveBeenCalled();
+    });
+
+    it('reads the paid content once the payment is completed', async () => {
+      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"bundle-1"}'));
+      mocks.lookupVerificationTask.mockResolvedValue({ status: 'completed' });
+      mocks.issueAccessCredential.mockResolvedValue({ credential: 'cred-abc', expires_at: 'e' });
+      mocks.proxyReadGuardedResource.mockResolvedValue(paidBytes);
+
+      const content = await LocksApplication.fetchPaidContentIfCompleted(params);
+      expect(content?.post.content).toBe('paid');
+      // Recovery reads; it never buys.
+      expect(mocks.generateBundleId).not.toHaveBeenCalled();
+      expect(mocks.putBlob).not.toHaveBeenCalled();
+      expect(mocks.submitProof).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('LocksApplication.fetchUnlockedContent', () => {

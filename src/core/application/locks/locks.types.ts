@@ -1,10 +1,47 @@
-import type { LockFile, ReplicatedPost, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
+import type {
+  LockFile,
+  ReplicatedPost,
+  TGuardedResource,
+  TUnlockedContent,
+  TVerificationStatus,
+} from '@/services/locks/locks.types';
 
 /** Params for the reader unlock flow. `lockUrl` is the post's public `lock.json` URL. */
 export type TUnlockContentParams = {
   lockFile: LockFile;
   lockUrl: string;
   password: string;
+};
+
+/** Params to read or write the bundle id the reader saved for one lock (`/priv/social/purchases/<lockId>.json`). */
+export type TPurchaseBundleIdParams = {
+  lockUrl: string;
+  readerPubky: string;
+};
+
+/** A payment lock as seen by one reader: the lock file, its public URL, and the reader. */
+export type TPaymentLockParams = TPurchaseBundleIdParams & {
+  lockFile: LockFile;
+};
+
+/**
+ * Params to start a payment. `rejectBundleId` is a saved id known to have ended `failed`/`expired`;
+ * it is never reused, a fresh one is minted instead.
+ */
+export type TStartPaymentParams = TPaymentLockParams & {
+  rejectBundleId: string | null;
+};
+
+/** The bundle id the proof was submitted with, and the verification status the server answered. */
+export type TStartPaymentResult = {
+  bundleId: string;
+  status: TVerificationStatus;
+};
+
+/** A submitted payment: the lock file and the bundle id the proof was submitted with. */
+export type TPaymentBundleParams = {
+  lockFile: LockFile;
+  bundleId: string;
 };
 
 /** Params for reading the guarded content after unlock, authorized by `credential`. */

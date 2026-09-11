@@ -27,19 +27,14 @@ import {
   DialogTitle,
 } from '@/atoms/Dialog/Dialog';
 import { Image } from '@/atoms/Image/Image';
-import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import {
-  BITKIT_APP_STORE_URL,
-  BITKIT_PLAY_STORE_URL,
-  getAppStoreLink,
-  getPlayStoreLink,
-} from '@/config/externalLinks';
+import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL, getAppStoreLink, getPlayStoreLink } from '@/config/externalLinks';
 import { useLocksAuthFlow } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow';
 import { LocksAuthFlowStatus } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow.types';
 import { usePaykitSetupFlow } from '@/hooks/usePaykitSetupFlow/usePaykitSetupFlow';
 import { PaykitSetupFlowStatus } from '@/hooks/usePaykitSetupFlow/usePaykitSetupFlow.types';
 import { cn } from '@/libs/utils/utils';
+import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { isLocksAuthenticated as isLocksAuthenticatedState } from '@/stores/locksAuth/locksAuth.selectors';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 
@@ -59,31 +54,6 @@ function StepImage({ src, alt }: { src: string; alt: string }) {
   return (
     <Container className="flex items-center justify-center px-12 py-6">
       <Image src={src} alt={alt} width={192} height={192} className="size-48" />
-    </Container>
-  );
-}
-
-/** Wordmark + store badges under a step's QR. */
-function AppDownload({
-  logo,
-  appStoreUrl,
-  playStoreUrl,
-}: {
-  logo: { src: string; alt: string; width: number };
-  appStoreUrl: string;
-  playStoreUrl: string;
-}) {
-  return (
-    <Container className="flex flex-col items-center gap-4">
-      <Image src={logo.src} alt={logo.alt} width={logo.width} height={32} />
-      <Container className="flex flex-row items-center justify-center gap-3.5">
-        <Link href={appStoreUrl} target="_blank">
-          <Image src="/images/badge-apple.webp" alt="App Store" width={72} height={24} />
-        </Link>
-        <Link href={playStoreUrl} target="_blank">
-          <Image src="/images/badge-android.webp" alt="Google Play" width={81} height={24} />
-        </Link>
-      </Container>
     </Container>
   );
 }

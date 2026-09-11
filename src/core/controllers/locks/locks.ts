@@ -6,7 +6,12 @@ import type {
   TFetchReplicatedContentParams,
   TFetchUnlockedContentParams,
   TFetchUnlockedListParams,
+  TPaymentBundleParams,
+  TPaymentLockParams,
+  TPurchaseBundleIdParams,
   TReplicateUnlockedContentParams,
+  TStartPaymentParams,
+  TStartPaymentResult,
   TUnlockContentParams,
 } from '@/application/locks/locks.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
@@ -25,6 +30,7 @@ import type {
   TUnlockedContent,
   TUnlockedListItem,
   TUnlockResult,
+  TVerificationStatus,
 } from '@/services/locks/locks.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 
@@ -33,7 +39,7 @@ const SIGNOUT_TIMEOUT_MS = 3000;
 
 /**
  * Entry point for the Lock Server: auth (mirrors `AuthController`), publishing locked content
- * (creator), and reading a lock's public `lock.json` (reader).
+ * (creator), reading a lock's public `lock.json` and unlocking it (reader).
  */
 export class LocksController {
   private constructor() {} // Prevent instantiation
@@ -174,9 +180,44 @@ export class LocksController {
     return LockContentParser.parse(content);
   }
 
-  /** Reader unlock: submit the proof for a resolved lock file, verify, and return the access credential. */
+  /** Password unlock (blocking submit+poll). TODO:[Locks] #2369 — deleted with the password UI. */
   static unlock(params: TUnlockContentParams): Promise<TUnlockResult> {
     return LocksApplication.unlockContent(params);
+  }
+
+  /** Whether the reader's wallet has published a Paykit receiver. */
+  static hasPaykitReceiver(readerPubky: string): Promise<boolean> {
+    return LocksApplication.hasPaykitReceiver(readerPubky);
+  }
+
+  /** The bundle id saved on the reader's own homeserver for this lock, or null; an unreadable file throws. */
+  static fetchPurchaseBundleId(params: TPurchaseBundleIdParams): Promise<string | null> {
+    return LocksApplication.fetchPurchaseBundleId(params);
+  }
+
+  /** Saves a bundle id on the reader's homeserver and submits the payment proof to the Lock Server. */
+  static startPayment(params: TStartPaymentParams): Promise<TStartPaymentResult> {
+    return LocksApplication.startPayment(params);
+  }
+
+  /** One read of the payment's verification status, or null when the submission never reached the server. */
+  static fetchPaymentStatus(params: TPaymentBundleParams): Promise<TVerificationStatus | null> {
+    return LocksApplication.fetchPaymentStatus(params);
+  }
+
+  /** Lock ids the reader has started a payment for (pending and failed included) — one listing serves every lock post on screen. */
+  static fetchPurchasedLockIds(params: TFetchUnlockedListParams): Promise<string[]> {
+    return LocksApplication.fetchPurchasedLockIds(params);
+  }
+
+  /** Gets an access credential for a paid bundle id from the Lock Server, then downloads the post + attachments with it. */
+  static fetchPaidContent(params: TPaymentBundleParams): Promise<TUnlockedContent> {
+    return LocksApplication.fetchPaidContent(params);
+  }
+
+  /** `fetchPaidContent` for the background recovery, which knows neither the bundle id nor the status; null unless `completed`. */
+  static fetchPaidContentIfCompleted(params: TPaymentLockParams): Promise<TUnlockedContent | null> {
+    return LocksApplication.fetchPaidContentIfCompleted(params);
   }
 
   /** Reads the guarded post + attachments after unlock, using the access credential. */

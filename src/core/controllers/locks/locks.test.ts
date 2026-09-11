@@ -20,6 +20,13 @@ const mocks = vi.hoisted(() => ({
   setLockServiceConfig: vi.fn(),
   createLockContent: vi.fn(),
   fetchLockFile: vi.fn(),
+  hasPaykitReceiver: vi.fn(),
+  fetchPurchaseBundleId: vi.fn(),
+  fetchPaidContent: vi.fn(),
+  startPayment: vi.fn(),
+  fetchPaidContentIfCompleted: vi.fn(),
+  fetchPurchasedLockIds: vi.fn(),
+  fetchPaymentStatus: vi.fn(),
   unlockContent: vi.fn(),
   fetchUnlockedContent: vi.fn(),
   replicateUnlockedContent: vi.fn(),
@@ -38,6 +45,13 @@ vi.mock('@/application/locks/locks', () => ({
     setLockServiceConfig: mocks.setLockServiceConfig,
     createLockContent: mocks.createLockContent,
     fetchLockFile: mocks.fetchLockFile,
+    hasPaykitReceiver: mocks.hasPaykitReceiver,
+    fetchPurchaseBundleId: mocks.fetchPurchaseBundleId,
+    fetchPaidContent: mocks.fetchPaidContent,
+    startPayment: mocks.startPayment,
+    fetchPaidContentIfCompleted: mocks.fetchPaidContentIfCompleted,
+    fetchPurchasedLockIds: mocks.fetchPurchasedLockIds,
+    fetchPaymentStatus: mocks.fetchPaymentStatus,
     unlockContent: mocks.unlockContent,
     fetchUnlockedContent: mocks.fetchUnlockedContent,
     replicateUnlockedContent: mocks.replicateUnlockedContent,
@@ -366,5 +380,43 @@ describe('LocksController.fetchOwnContent', () => {
 
     await expect(LocksController.fetchOwnContent(params)).resolves.toEqual(content);
     expect(mocks.fetchOwnContent).toHaveBeenCalledWith(params);
+  });
+});
+
+describe('LocksController (payment delegation)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ['hasPaykitReceiver', 'hasPaykitReceiver', 'reader1', true],
+    ['fetchPurchasedLockIds', 'fetchPurchasedLockIds', { readerPubky: 'reader1' }, ['lock1']],
+    ['fetchPurchaseBundleId', 'fetchPurchaseBundleId', { lockUrl: 'u', readerPubky: 'r' }, 'b'],
+    [
+      'startPayment',
+      'startPayment',
+      { lockFile: MOCK_LOCK_FILE, lockUrl: 'u', readerPubky: 'r', rejectBundleId: null },
+      { bundleId: 'b', status: 'pending' },
+    ],
+    [
+      'fetchPaidContentIfCompleted',
+      'fetchPaidContentIfCompleted',
+      { lockFile: MOCK_LOCK_FILE, lockUrl: 'u', readerPubky: 'r' },
+      null,
+    ],
+    ['fetchPaymentStatus', 'fetchPaymentStatus', { lockFile: MOCK_LOCK_FILE, bundleId: 'b' }, null],
+    [
+      'fetchPaidContent',
+      'fetchPaidContent',
+      { lockFile: MOCK_LOCK_FILE, bundleId: 'b' },
+      { post: {}, attachments: [] },
+    ],
+  ])('%s delegates to the application and returns its result', async (method, target, params, result) => {
+    const application = asOpaque<Record<string, ReturnType<typeof vi.fn>>>(LocksApplication);
+    application[target].mockResolvedValue(result);
+    const controller = asOpaque<Record<string, (arg?: unknown) => Promise<unknown>>>(LocksController);
+
+    await expect(controller[method](params)).resolves.toEqual(result);
+    expect(application[target]).toHaveBeenCalledWith(params);
   });
 });

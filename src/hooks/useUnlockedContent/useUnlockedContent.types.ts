@@ -19,4 +19,6 @@ export interface UseUnlockedContentResult {
   media: AttachmentConstructed[];
   /** Whether the signed-in user is the lock's creator (owns the guarded storage). */
   isOwnLock: boolean;
+  /** The replica read has not settled, so an empty `unlockedPost` means "not known yet". */
+  isResolvingReplica: boolean;
 }

@@ -22,6 +22,47 @@ vi.mock('@/stores/auth/auth.store', () => ({
 const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
 const content: TUnlockedContent = { post: { content: 'x', kind: 'short', attachments: null }, attachments: [] };
 
+describe('useUnlockedContent (replica resolution)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authState.currentUserPubky = 'me';
+    authState.session = {};
+  });
+
+  // Callers act on the absence of content (re-downloading a purchase), so "not known yet" has to
+  // be distinguishable from "not there".
+  it('reports resolving until the replica read settles', async () => {
+    let settle: (value: null) => void = () => undefined;
+    vi.mocked(LocksController.fetchReplicatedContent).mockReturnValue(
+      new Promise((resolve) => {
+        settle = resolve;
+      }),
+    );
+
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, authorId: 'other' }));
+    expect(result.current.isResolvingReplica).toBe(true);
+
+    settle(null);
+    await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
+  });
+
+  it('stops resolving when the replica read fails', async () => {
+    vi.mocked(LocksController.fetchReplicatedContent).mockRejectedValue(new Error('offline'));
+
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, authorId: 'other' }));
+
+    await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
+  });
+
+  // An own post has no replica to wait for, so nothing should be gated on one.
+  it('is not resolving for the reader own post', async () => {
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, authorId: 'me' }));
+
+    await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
+    expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
+  });
+});
+
 describe('useUnlockedContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
