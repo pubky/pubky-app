@@ -131,7 +131,7 @@ export function LockedPostCard({
           ) : (
             <>
               <StickyNote className="size-6 shrink-0 text-muted-foreground" aria-hidden />
-              <h4 className="min-w-0 flex-1 text-xl leading-7 font-bold text-foreground">
+              <h4 className="line-clamp-2 min-w-0 flex-1 text-xl leading-7 font-bold wrap-anywhere text-foreground">
                 {title?.trim() || DEFAULT_LOCK_TITLE}
               </h4>
             </>
@@ -141,7 +141,7 @@ export function LockedPostCard({
         <div
           className={cn(
             'relative flex w-fit items-center gap-1 rounded-full bg-card p-1',
-            isDisabled && 'cursor-not-allowed',
+            isDisabled && 'cursor-not-allowed opacity-50',
           )}
         >
           <Button
@@ -151,7 +151,7 @@ export function LockedPostCard({
             disabled={isDisabled}
             onClick={handleUnlock}
             style={{ transform: `translateX(${slideX}px)`, transitionDuration: `${SLIDE_MS}ms` }}
-            className="relative z-10 h-10 gap-2 rounded-full px-4 transition-transform ease-out"
+            className="relative z-10 h-10 gap-2 rounded-full px-4 transition-transform ease-out disabled:opacity-100"
           >
             <LockOpen className="size-4 shrink-0" aria-hidden />
             {'Unlock'}

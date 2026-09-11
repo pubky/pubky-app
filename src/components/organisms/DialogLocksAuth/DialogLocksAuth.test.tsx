@@ -1,7 +1,7 @@
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL } from '@/config/externalLinks';
+import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL, BITKIT_WEBSITE_URL } from '@/config/externalLinks';
 import { LocksAuthFlowStatus } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow.types';
 import { PaykitSetupFlowStatus } from '@/hooks/usePaykitSetupFlow/usePaykitSetupFlow.types';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -118,6 +118,17 @@ describe('DialogLocksAuth', () => {
     expect(screen.getByText('Enable Locks')).toBeInTheDocument();
   });
 
+  it('links Pubky Ring from the Enable step in a new tab', () => {
+    mocks.flow = { status: LocksAuthFlowStatus.CONNECTING, connectUrl: null, session: null, error: null };
+    renderDialog();
+
+    const link = screen.getByRole('link', { name: 'Pubky Ring' });
+    expect(link).toHaveAttribute('href', 'https://pubkyring.app/');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link).toHaveClass('text-base', 'font-bold');
+  });
+
   it.each([LocksAuthFlowStatus.CONNECTING, LocksAuthFlowStatus.EXCHANGING])(
     'shows the loader while the Enable step is %s',
     (status) => {
@@ -136,6 +147,17 @@ describe('DialogLocksAuth', () => {
     expect(screen.getByText('Enable Payments')).toBeInTheDocument();
     expect(mocks.startPaykit).toHaveBeenCalledTimes(1);
     expect(mocks.prepare).not.toHaveBeenCalled();
+  });
+
+  it('links Bitkit from the Enable Payments step in a new tab', () => {
+    signIn();
+    renderDialog();
+
+    const link = screen.getByRole('link', { name: 'Bitkit' });
+    expect(link).toHaveAttribute('href', BITKIT_WEBSITE_URL);
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link).toHaveClass('text-base', 'font-bold');
   });
 
   it('renders the Paykit iframe with the postMessage sandbox on the Bitkit step', () => {

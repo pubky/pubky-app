@@ -27,8 +27,16 @@ import {
   DialogTitle,
 } from '@/atoms/Dialog/Dialog';
 import { Image } from '@/atoms/Image/Image';
+import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
-import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL, getAppStoreLink, getPlayStoreLink } from '@/config/externalLinks';
+import {
+  BITKIT_APP_STORE_URL,
+  BITKIT_PLAY_STORE_URL,
+  BITKIT_WEBSITE_URL,
+  getAppStoreLink,
+  getPlayStoreLink,
+  getPubkyRingLink,
+} from '@/config/externalLinks';
 import { useLocksAuthFlow } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow';
 import { LocksAuthFlowStatus } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow.types';
 import { usePaykitSetupFlow } from '@/hooks/usePaykitSetupFlow/usePaykitSetupFlow';
@@ -115,8 +123,6 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
       locksStatus === LocksAuthFlowStatus.EXCHANGING);
   const isBitkitStep = step === 'bitkit' && !isPaykitError;
 
-  const bold = (chunks: ReactNode) => <strong className="font-bold text-foreground">{chunks}</strong>;
-
   let title = 'Lock Content';
   let description: ReactNode = 'Pubky Locks allows you to lock content with payments.';
   if (isSuccess) {
@@ -127,7 +133,9 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
     description = (
       <>
         {'Use '}
-        {bold('Pubky Ring')}
+        <Link href={getPubkyRingLink()} className="text-base font-bold">
+          {'Pubky Ring'}
+        </Link>
         {' to authorize Locks server to manage your Locks data.'}
       </>
     );
@@ -136,7 +144,9 @@ export function DialogLocksAuth({ open, onOpenChange, onSuccess }: DialogLocksAu
     description = (
       <>
         {'Scan this QR with your '}
-        {bold('Bitkit')}
+        <Link href={BITKIT_WEBSITE_URL} className="text-base font-bold">
+          {'Bitkit'}
+        </Link>
         {' wallet to enable payments.'}
       </>
     );

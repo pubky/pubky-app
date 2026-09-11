@@ -92,6 +92,7 @@ describe('usePost', () => {
       expect(result.current.existingAttachments).toEqual([]);
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
+      expect(result.current.lockTitle).toBe('');
       expect(result.current.isSubmitting).toBe(false);
       expect(typeof result.current.setContent).toBe('function');
       expect(typeof result.current.setExistingAttachments).toBe('function');
@@ -99,6 +100,7 @@ describe('usePost', () => {
       expect(typeof result.current.setAttachments).toBe('function');
       expect(typeof result.current.setIsArticle).toBe('function');
       expect(typeof result.current.setArticleTitle).toBe('function');
+      expect(typeof result.current.setLockTitle).toBe('function');
       expect(typeof result.current.reply).toBe('function');
       expect(typeof result.current.post).toBe('function');
       expect(typeof result.current.repost).toBe('function');
@@ -1368,6 +1370,28 @@ describe('usePost', () => {
         expect(vi.mocked(toast)).toHaveBeenCalledWith({
           title: 'Post updated',
         });
+      });
+
+      it('serializes edited lock title and teaser into the announcement envelope', async () => {
+        const { result } = renderHook(() => usePost());
+
+        act(() => {
+          result.current.setContent('  Updated teaser  ');
+          result.current.setLockTitle('  Updated title  ');
+        });
+
+        await act(async () => {
+          await result.current.edit({ editPostId: 'test-post-123', isLockAnnouncement: true });
+        });
+
+        // Literal, not `buildLockTeaserContent(...)`: computing the expectation with the production
+        // helper would keep passing if the envelope gained a field or changed key order. Whitespace is
+        // kept on purpose — the lock path writes untrimmed, matching the create path.
+        expect(mockPostControllerEdit).toHaveBeenCalledWith({
+          compositePostId: 'test-post-123',
+          content: '{"lock_title":"  Updated title  ","teaser_description":"  Updated teaser  "}',
+        });
+        expect(result.current.lockTitle).toBe('');
       });
 
       it('should commit content-only (no attachments payload) when the attachment set is unchanged', async () => {

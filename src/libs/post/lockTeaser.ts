@@ -10,6 +10,26 @@ export type TLockTeaser = {
   teaser_description: string;
 };
 
+/**
+ * Strict counterpart to the read parser, which coerces anything missing or mistyped to `''`. The edit
+ * composer re-serializes what it parses, so it has to recognise the envelope exactly — otherwise
+ * content it only half understood is written back as two empty strings. Mirrors `parseArticleContent`.
+ */
+export function parseLockTeaserContent(content: string): TLockTeaser | null {
+  let parsed: Partial<TLockTeaser>;
+  try {
+    parsed = JSON.parse(content) as Partial<TLockTeaser>;
+  } catch {
+    return null;
+  }
+
+  if (!parsed || typeof parsed !== 'object') return null;
+  if (typeof parsed.lock_title !== 'string') return null;
+  if (typeof parsed.teaser_description !== 'string') return null;
+
+  return { lock_title: parsed.lock_title, teaser_description: parsed.teaser_description };
+}
+
 /** Picks the two fields by name, so a new field is never published before we count its length. */
 export function buildLockTeaserContent({ lock_title, teaser_description }: TLockTeaser): string {
   return JSON.stringify({ lock_title, teaser_description });

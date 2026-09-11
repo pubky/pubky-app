@@ -6,8 +6,8 @@ exports[`MobileTabBar - Snapshots > matches snapshot for icon-only sticky (defau
   data-testid="mobile-tab-bar"
 >
   <div
-    class="flex w-full"
-    data-testid="container"
+    class="flex w-full overflow-x-auto"
+    data-testid="mobile-tab-bar-scroll-container"
   >
     <div
       class="flex flex-1 justify-center border-b px-0 py-1.5 border-foreground"
@@ -121,8 +121,8 @@ exports[`MobileTabBar - Snapshots > matches snapshot for showLabels + sticky 1`]
   data-testid="mobile-tab-bar"
 >
   <div
-    class="flex w-full"
-    data-testid="container"
+    class="flex w-full overflow-x-auto"
+    data-testid="mobile-tab-bar-scroll-container"
   >
     <div
       class="flex flex-1 justify-center border-b px-0 py-1.5 border-foreground"
