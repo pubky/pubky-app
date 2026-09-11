@@ -7,6 +7,9 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json ./
 
+# @pubky/locks-sdk is a file: dependency, so its directory must exist before npm ci resolves it.
+COPY vendor ./vendor
+
 # Install all dependencies (including devDependencies for build)
 RUN npm ci
 
