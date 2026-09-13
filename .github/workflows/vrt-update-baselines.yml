@@ -83,7 +83,7 @@ jobs:
           done
 
       - name: Upload regenerated baselines
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vrt-baselines-${{ runner.os == 'Linux' && 'linux' || 'darwin' }}
           path: ${{ runner.temp }}/vrt-baselines-${{ runner.os == 'Linux' && 'linux' || 'darwin' }}
