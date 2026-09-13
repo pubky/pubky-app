@@ -1,12 +1,14 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TagKind } from '@/application/tag/tag.types';
 import { COLLECTION_LAYOUT } from '@/config/collections';
+import { getDefaultUrl } from '@/config/metadata';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { CollectionHero } from './CollectionHero';
 import type { CollectionHeroProps } from './CollectionHero.types';
@@ -20,6 +22,8 @@ const mockLocalCollections: Record<string, string | undefined> = {};
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: vi.fn(),
 }));
+
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/hooks/useBookmark/useBookmark', () => ({
   useBookmark: vi.fn(),
@@ -522,6 +526,7 @@ describe('CollectionHero', () => {
 
       expect(screen.getByLabelText('Add Post')).toBeDisabled();
       expect(screen.getByLabelText('Share')).toBeDisabled();
+      expect(screen.getByLabelText('Copy link')).toBeDisabled();
       expect(screen.getByLabelText('Edit')).toBeDisabled();
       expect(screen.getByLabelText('Delete')).toBeDisabled();
     });
@@ -695,6 +700,7 @@ describe('CollectionHero', () => {
 
       expect(screen.getByLabelText('Add Post')).toBeDisabled();
       expect(screen.getByLabelText('Share')).toBeDisabled();
+      expect(screen.getByLabelText('Copy link')).toBeDisabled();
       expect(screen.getByLabelText('Edit')).toBeDisabled();
       expect(screen.getByLabelText('Delete')).toBeDisabled();
       expect(screen.getByLabelText('Tag post (3)')).toBeDisabled();
@@ -807,6 +813,87 @@ describe('CollectionHero', () => {
 
       expect(mockRequireAuth).toHaveBeenCalledTimes(1);
       expect(openRepostDialog).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('CTA — copy link', () => {
+    const clipboardWriteText = vi.fn();
+    const collectionUrl = `${getDefaultUrl()}/collections/${AUTHOR_PUBKY}/${POST_ID}`;
+
+    beforeEach(() => {
+      clipboardWriteText.mockReset().mockResolvedValue(undefined);
+      Object.defineProperty(window.navigator, 'clipboard', {
+        value: { writeText: clipboardWriteText },
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(window.navigator, 'clipboard');
+      Reflect.deleteProperty(window.navigator, 'share');
+      Reflect.deleteProperty(window.navigator, 'canShare');
+    });
+
+    it('sits right after Share for the owner and stays icon-only below lg', () => {
+      setAuthStore(AUTHOR_PUBKY);
+
+      renderHero();
+
+      const copyLink = screen.getByLabelText('Copy link');
+      expect(screen.getByText('Copy link', { selector: 'span' })).toHaveClass('hidden', 'lg:inline');
+      expect(
+        screen.getByLabelText('Share').compareDocumentPosition(copyLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('copies the collection URL and confirms it without opening the repost dialog', async () => {
+      setAuthStore(AUTHOR_PUBKY);
+      const { openRepostDialog } = setRepostDialogs();
+
+      renderHero();
+
+      fireEvent.click(screen.getByLabelText('Copy link'));
+
+      await waitFor(() => expect(clipboardWriteText).toHaveBeenCalledWith(collectionUrl));
+      expect(openRepostDialog).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(expect.objectContaining({ title: 'Link copied to clipboard' }));
+    });
+
+    it('renders for a non-owner viewer and copies the same URL', async () => {
+      setAuthStore('some-other-user');
+
+      renderHero();
+
+      expect(screen.getByLabelText('Follow')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByLabelText('Copy link'));
+
+      await waitFor(() => expect(clipboardWriteText).toHaveBeenCalledWith(collectionUrl));
+    });
+
+    it('copies for a guest without prompting sign-in', async () => {
+      setAuthStore(null);
+
+      renderHero();
+
+      fireEvent.click(screen.getByLabelText('Copy link'));
+
+      await waitFor(() => expect(clipboardWriteText).toHaveBeenCalledWith(collectionUrl));
+      expect(mockRequireAuth).not.toHaveBeenCalled();
+    });
+
+    it('opens the native share sheet instead of the clipboard when the browser offers one', async () => {
+      const share = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(window.navigator, 'share', { value: share, configurable: true });
+      Object.defineProperty(window.navigator, 'canShare', { value: () => true, configurable: true });
+      setAuthStore(AUTHOR_PUBKY);
+
+      renderHero();
+
+      fireEvent.click(screen.getByLabelText('Copy link'));
+
+      await waitFor(() => expect(share).toHaveBeenCalledWith({ url: collectionUrl, title: 'Based Bitcoin' }));
+      expect(clipboardWriteText).not.toHaveBeenCalled();
     });
   });
 
