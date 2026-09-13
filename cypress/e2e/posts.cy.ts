@@ -6,8 +6,12 @@ import {
   latestPostInFeedContentEq,
   createQuickPost,
   createPostFromDialog,
+  createQuickArticle,
+  createArticleFromDialog,
+  articleInFeedEq,
   deletePost,
   editPost,
+  editArticle,
   fastTagPostInFeed,
   replyToPost,
   repostPost,
@@ -692,15 +696,142 @@ describe('posts', () => {
     cy.findFirstPostInFeedFiltered(editedRepostContent).should('be.visible');
   });
 
+  it('can create an article from quick post box', () => {
+    const title = `Quick article ${Date.now()}`;
+    const body = `I can create an article from the quick post box! ${Date.now()}`;
+
+    createQuickArticle(title, body);
+
+    articleInFeedEq(title, body, CheckForNewPosts.No, WaitForNewPosts.Yes);
+
+    cy.reload();
+    waitForFeedToLoad();
+    articleInFeedEq(title, body);
+  });
+
+  it('can create an article from new post', () => {
+    const title = `Dialog article ${Date.now()}`;
+    const body = `I can create an article from new post! ${Date.now()}`;
+
+    createArticleFromDialog(title, body);
+
+    articleInFeedEq(title, body, CheckForNewPosts.Yes);
+
+    cy.reload();
+    waitForFeedToLoad();
+    articleInFeedEq(title, body);
+  });
+
+  // Cover stacking bug: article composer must appear in the same dialog, not behind it
+  it('new article modal is shown infront of new post modal', () => {
+    cy.get('[data-cy="new-post-btn"]').click();
+
+    cy.get('[data-cy="dialog-content"]')
+      .should('be.visible')
+      .and('contain.text', 'New Post')
+      .and(($dialog) => {
+        expect(parseInt(window.getComputedStyle($dialog[0]).zIndex, 10)).to.be.at.least(50);
+      });
+
+    cy.get('[data-cy="new-post-input"]').within(() => {
+      cy.get('[data-cy="post-input-action-bar-add-article"]').should('be.visible').click();
+      cy.get('input[placeholder="Article Title"]').should('be.visible');
+    });
+
+    cy.get('[data-cy="dialog-content"]').should('be.visible').and('contain.text', 'New Article');
+
+    // Title field is interactable, so the article composer is in front of the post modal
+    cy.get('[data-cy="new-post-input"]').within(() => {
+      cy.get('input[placeholder="Article Title"]').should('be.visible').click();
+      cy.get('[data-cy="post-input-action-bar-publish"]').should('be.visible');
+    });
+
+    cy.get('[data-cy="new-post-btn"]').should(($fab) => {
+      expect(parseInt(window.getComputedStyle($fab[0]).zIndex, 10)).to.be.lessThan(50);
+    });
+
+    cy.get('[data-testid="dialog-close"]').filter(':visible').click();
+    cy.get('[data-cy="dialog-content"]').should('not.exist');
+  });
+
+  it('can edit an article', () => {
+    const title = `Editable article ${Date.now()}`;
+    const body = `This article will be edited! ${Date.now()}`;
+    const editedTitle = `Edited article ${Date.now()}`;
+    const editedBody = `This article has been edited! ${Date.now()}`;
+
+    createQuickArticle(title, body);
+    articleInFeedEq(title, body, CheckForNewPosts.No, WaitForNewPosts.Yes);
+
+    editArticle({ newTitle: editedTitle, newBody: editedBody, filterText: title });
+
+    articleInFeedEq(editedTitle, editedBody);
+    cy.reload();
+    waitForFeedToLoad();
+    articleInFeedEq(editedTitle, editedBody);
+  });
+
+  it('can edit an article to change and then remove its image', () => {
+    const title = `Article with cover ${Date.now()}`;
+    const body = `I can edit this article's image! ${Date.now()}`;
+
+    createQuickArticle(title, body, true);
+
+    cy.findFirstPostInFeedFiltered(title, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.contains(title).should('be.visible');
+      cy.get('[data-cy="post-text"]').should('contain.text', body);
+      cy.get('img').should('be.visible');
+    });
+
+    // Local blob URLs stay cached until reload; the unique static URL is only
+    // available after a refresh, so capture that before replacing the image.
+    cy.reload();
+    waitForFeedToLoad();
+    cy.findFirstPostInFeedFiltered(title).within(() => {
+      cy.contains(title).should('be.visible');
+      cy.get('img')
+        .should('be.visible')
+        .and(($img) => {
+          expect($img.attr('src')).to.not.include('blob:');
+        })
+        .invoke('attr', 'src')
+        .as('originalImageSrc');
+    });
+
+    editArticle({ filterText: title, imageAction: { action: 'replace' } });
+
+    cy.reload();
+    waitForFeedToLoad();
+    cy.get('@originalImageSrc').then((originalImageSrc) => {
+      cy.findFirstPostInFeedFiltered(title).within(() => {
+        cy.contains(title).should('be.visible');
+        cy.get('img')
+          .should('be.visible')
+          .and(($img) => {
+            expect($img.attr('src')).to.not.equal(String(originalImageSrc));
+          });
+      });
+    });
+
+    editArticle({ filterText: title, imageAction: { action: 'remove' } });
+
+    cy.findFirstPostInFeedFiltered(title, CheckForNewPosts.No, WaitForNewPosts.Yes).within(() => {
+      cy.contains(title).should('be.visible');
+      cy.get('[data-cy="post-text"]').should('contain.text', body);
+      cy.get('img').should('not.exist');
+    });
+
+    cy.reload();
+    waitForFeedToLoad();
+    cy.findFirstPostInFeedFiltered(title).within(() => {
+      cy.contains(title).should('be.visible');
+      cy.get('[data-cy="post-text"]').should('contain.text', body);
+      cy.get('img').should('not.exist');
+    });
+  });
+
   // todo, covers bug https://github.com/pubky/franky/issues/993
   it('"see new posts" button does not appear after deleting new post that has a reply');
-
-  // todo: implement when articles are implemented, see https://github.com/pubky/franky/issues/756
-  it.skip('can create an article from quick post box');
-  it.skip('can create an article from new post');
-  it.skip('new article modal is shown infront of new post modal'); // cover bug from pubky-app
-  it.skip('can edit an article');
-  it.skip('can edit an article to change and then remove its image');
 
   // todo: check if we want this functionality
   it.skip('signout when 401 response from homeserver when creating new post');
