@@ -2,36 +2,28 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useTagged } from './useTagged';
 
 // Hoist mock functions before vi.mock
 const mockMocks = vi.hoisted(() => {
-  const mockGetTags = vi.fn();
-  const mockFetchTags = vi.fn();
-  const mockUpsertTags = vi.fn();
-  const mockGetCounts = vi.fn();
+  const mockGetOrFetchTags = vi.fn();
   const mockTagCreate = vi.fn();
   const mockTagDelete = vi.fn();
   return {
-    mockGetTags,
-    mockFetchTags,
-    mockUpsertTags,
-    mockGetCounts,
+    mockGetOrFetchTags,
     mockTagCreate,
     mockTagDelete,
   };
 });
 
 // Mock dependencies
-vi.mock('@/controllers/user/user', () => ({
-  UserController: {
-    getTags: mockMocks.mockGetTags,
-    fetchTags: mockMocks.mockFetchTags,
-    upsertTags: mockMocks.mockUpsertTags,
-    getCounts: mockMocks.mockGetCounts,
-  },
+vi.mock('@/controllers/tag/tag-cache', () => ({
+  TagCacheController: { get: vi.fn(), getOrFetch: mockMocks.mockGetOrFetchTags, getOrFetchNext: vi.fn() },
 }));
 vi.mock('@/controllers/tag/tag', () => ({
   TagController: {
@@ -52,10 +44,11 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 // Mock useProfileStats
-const mockUseProfileStats = vi.fn((_userId: string, _options?: unknown) => ({
+const defaultProfileStats = {
   stats: { uniqueTags: 0, posts: 0, replies: 0, followers: 0, following: 0, friends: 0, notifications: 0 },
   isLoading: false,
-}));
+};
+const mockUseProfileStats = vi.fn((_userId: string, _options?: unknown) => defaultProfileStats);
 vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
   useProfileStats: (...args: Parameters<typeof useProfileStats>) => mockUseProfileStats(...args),
 }));
@@ -65,42 +58,90 @@ vi.mock('@/molecules/Toaster/toast');
 // Mock dexie-react-hooks
 let mockLocalTags: NexusTag[] | null = null;
 
-const mockUseLiveQuery = vi.fn(<T,>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
-  // For getTags query
-  if (deps && deps[0] && typeof deps[0] === 'string') {
-    return (mockLocalTags !== null ? mockLocalTags : defaultValue) as T;
-  }
-  // For getCounts query (from useProfileStats)
-  return defaultValue;
-});
-
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: <T,>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T =>
-    mockUseLiveQuery(queryFn, deps, defaultValue) as T,
+  useLiveQuery: (_queryFn: () => unknown, deps: unknown[]) => {
+    const id = deps[0];
+    return typeof id === 'string' && mockLocalTags !== null ? { id, tags: mockLocalTags } : undefined;
+  },
 }));
 
 describe('useTagged', () => {
   const mockUserId = 'test-user-pubky';
 
+  it('rejects an existing viewer tag even when its tagger sample omits the viewer', async () => {
+    mockLocalTags = [{ label: 'bitcoin', taggers: ['other'], taggers_count: 10, relationship: true }];
+    const { result } = renderHook(() => useTagged(mockUserId));
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.handleTagAdd('BITCOIN');
+    });
+    expect(outcome).toEqual({ success: false, error: 'You have already added this tag' });
+    expect(mockMocks.mockTagCreate).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocalTags = null;
-    mockMocks.mockGetTags.mockResolvedValue([]);
-    mockMocks.mockFetchTags.mockResolvedValue([]);
-    mockMocks.mockUpsertTags.mockResolvedValue(undefined);
-    mockMocks.mockGetCounts.mockResolvedValue({
-      tagged: 0,
-      tags: 0,
-      unique_tags: 0,
-      posts: 0,
-      replies: 0,
-      following: 0,
-      followers: 0,
-      friends: 0,
-      bookmarks: 0,
-    });
+    mockUseProfileStats.mockReturnValue(defaultProfileStats);
+    mockMocks.mockGetOrFetchTags.mockResolvedValue(undefined);
     mockMocks.mockTagCreate.mockResolvedValue(undefined);
     mockMocks.mockTagDelete.mockResolvedValue(undefined);
+  });
+
+  it.each([false, true])('ignores an old add completion after revisiting the profile (failed=%s)', async (failed) => {
+    const pending = Promise.withResolvers<void>();
+    mockMocks.mockTagCreate.mockReturnValueOnce(pending.promise);
+    const { result, rerender } = renderHook((id: string) => useTagged(id), { initialProps: mockUserId });
+    let action!: ReturnType<typeof result.current.handleTagAdd>;
+    act(() => {
+      action = result.current.handleTagAdd('bitcoin');
+    });
+    rerender('another-profile');
+    rerender(mockUserId);
+
+    await act(async () => {
+      if (failed)
+        pending.reject(
+          Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Unavailable', {
+            service: ErrorService.Nexus,
+            operation: 'createTag',
+          }),
+        );
+      else pending.resolve();
+      expect(await action).toEqual({ success: false });
+    });
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('does not remove a new profile placeholder when an old removal rolls back', async () => {
+    const pending = Promise.withResolvers<void>();
+    const tag = { label: 'bitcoin', taggers: ['mock-current-user'], taggers_count: 1, relationship: true };
+    mockLocalTags = [tag];
+    mockMocks.mockTagDelete.mockReturnValueOnce(pending.promise);
+    const { result, rerender } = renderHook((id: string) => useTagged(id), { initialProps: mockUserId });
+    let previous!: Promise<void>;
+    act(() => {
+      previous = result.current.handleTagToggle(tag);
+    });
+    rerender('another-profile');
+    await act(() => result.current.handleTagToggle(tag));
+    mockLocalTags = [];
+    rerender('another-profile');
+    expect(result.current.tags).toEqual([expect.objectContaining({ label: 'bitcoin', taggers_count: 0 })]);
+    vi.mocked(toast).mockClear();
+
+    await act(async () => {
+      pending.reject(
+        Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Unavailable', {
+          service: ErrorService.Nexus,
+          operation: 'deleteTag',
+        }),
+      );
+      await previous;
+    });
+    expect(result.current.tags).toEqual([expect.objectContaining({ label: 'bitcoin', taggers_count: 0 })]);
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('returns empty data when userId is null', () => {
@@ -125,18 +166,17 @@ describe('useTagged', () => {
     expect(typeof result.current.loadMore).toBe('function');
   });
 
-  it('calls UserController.fetchTags with correct params', async () => {
+  it('requests local-first initialization with the correct viewer', async () => {
     renderHook(() => useTagged(mockUserId));
 
     await waitFor(() => {
-      expect(mockMocks.mockFetchTags).toHaveBeenCalled();
+      expect(mockMocks.mockGetOrFetchTags).toHaveBeenCalled();
     });
 
-    expect(mockMocks.mockFetchTags).toHaveBeenCalledWith({
-      user_id: mockUserId,
-      viewer_id: 'mock-current-user',
-      limit_tags: 20,
-      skip_tags: 0,
+    expect(mockMocks.mockGetOrFetchTags).toHaveBeenCalledWith({
+      kind: 'user',
+      id: mockUserId,
+      viewerId: 'mock-current-user',
     });
   });
 
@@ -188,7 +228,12 @@ describe('useTagged', () => {
 
   it('shows an error toast when adding a tag fails', async () => {
     mockLocalTags = [];
-    mockMocks.mockTagCreate.mockRejectedValueOnce(new Error('Network error'));
+    mockMocks.mockTagCreate.mockRejectedValueOnce(
+      Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network error', {
+        service: ErrorService.Nexus,
+        operation: 'commitTag',
+      }),
+    );
 
     const { result } = renderHook(() => useTagged(mockUserId));
 
@@ -275,7 +320,12 @@ describe('useTagged', () => {
         relationship: true,
       },
     ];
-    mockMocks.mockTagDelete.mockRejectedValueOnce(new Error('Network error'));
+    mockMocks.mockTagDelete.mockRejectedValueOnce(
+      Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network error', {
+        service: ErrorService.Nexus,
+        operation: 'commitTag',
+      }),
+    );
 
     const { result } = renderHook(() => useTagged(mockUserId));
 
@@ -390,10 +440,10 @@ describe('useTagged', () => {
       expect(result.current.hasMore).toBe(false);
     });
 
-    it('sets hasMore to false when less than TAGS_PER_PAGE tags are loaded', async () => {
-      // User has 10 unique tags (less than TAGS_PER_PAGE of 20)
+    it('allows pagination when less than a full page is cached', async () => {
+      // Only 10 of 30 tags are cached.
       mockUseProfileStats.mockReturnValue({
-        stats: { uniqueTags: 10, posts: 0, replies: 0, followers: 0, following: 0, friends: 0, notifications: 0 },
+        stats: { uniqueTags: 30, posts: 0, replies: 0, followers: 0, following: 0, friends: 0, notifications: 0 },
         isLoading: false,
       });
 
@@ -410,8 +460,8 @@ describe('useTagged', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // All tags are loaded, hasMore should be false
-      expect(result.current.hasMore).toBe(false);
+      // The remaining tags are reachable even from a partial preview.
+      expect(result.current.hasMore).toBe(true);
     });
   });
 });

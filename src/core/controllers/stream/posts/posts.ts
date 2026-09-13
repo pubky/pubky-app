@@ -6,6 +6,7 @@ import type {
   TReadPostStreamChunkResponse,
   TStreamIdParams,
 } from '@/controllers/stream/posts/posts.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -66,6 +67,7 @@ export class StreamPostsController {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile posts)
     const viewerId = useAuthStore.getState().currentUserPubky;
+    const isCurrent = captureViewerSession();
     const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd, lastRawPostId } =
       await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
@@ -74,8 +76,10 @@ export class StreamPostsController {
         streamTail,
         lastPostId,
         viewerId,
+        isCurrent,
         order,
       });
+    if (!isCurrent()) return { nextPageIds: [], nextCursor: undefined, reachedEnd: false };
     let visibleIds = nextPageIds;
     const isAuthorScopedSearch = isAuthorScopedContentSearchStream(streamId);
     // Query nexus to get the cacheMissPostIds
@@ -84,6 +88,7 @@ export class StreamPostsController {
       const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
+        isCurrent,
       });
       // Author-scoped search must not degrade a hydration failure into a false
       // "no results": on a cold cache every id is a miss, and the strict pass below
@@ -126,7 +131,8 @@ export class StreamPostsController {
     // Access currentUserPubky directly (not selectCurrentUserPubky) so
     // unauthenticated viewers get null instead of a thrown error.
     const viewerId = useAuthStore.getState().currentUserPubky;
-    await PostStreamApplication.fetchOriginalPostsByUris({ repostedUris: uris, viewerId });
+    const isCurrent = captureViewerSession();
+    await PostStreamApplication.fetchOriginalPostsByUris({ repostedUris: uris, viewerId, isCurrent });
   }
 
   /**

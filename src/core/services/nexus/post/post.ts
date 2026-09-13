@@ -1,9 +1,9 @@
-import type { TFetchMorePostTagsParams, TFetchPostTaggersParams } from '@/controllers/post/post.types';
+import type { TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { parseCompositeId } from '@/models/models.utils';
 import type { NexusPost, NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { postApi } from '@/services/nexus/post/post.api';
-import type { TCompositeId } from '@/services/nexus/post/post.types';
+import type { TCompositeId, TFetchPostTagsParams } from '@/services/nexus/post/post.types';
 
 export class NexusPostService {
   private constructor() {}
@@ -30,11 +30,17 @@ export class NexusPostService {
    * @returns An array of tags (empty array if post has no tags)
    * @throws {NexusError} When post is not found or request fails
    */
-  static async getPostTags({ compositeId, skip, limit, viewerId }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
+  static async getPostTags({
+    compositeId,
+    skip,
+    limit,
+    viewerId,
+    force = false,
+  }: TFetchPostTagsParams): Promise<NexusTag[]> {
     const { pubky: author_id, id: post_id } = parseCompositeId(compositeId);
 
     const url = postApi.tags({ author_id, post_id, skip_tags: skip, limit_tags: limit, viewer_id: viewerId });
-    return await queryNexus<NexusTag[]>({ url });
+    return await queryNexus<NexusTag[]>({ url, ...(force ? { force: true } : {}) });
   }
 
   /**

@@ -77,10 +77,11 @@ describe('TtlCoordinator', () => {
     useAuthStore.getState().reset();
 
     // Setup spies for TtlController methods
+    vi.spyOn(TtlController, 'refreshStaleTags').mockResolvedValue(undefined);
     findStalePostsSpy = vi.spyOn(TtlController, 'findStalePostsByIds').mockResolvedValue([]);
     findStaleUsersSpy = vi.spyOn(TtlController, 'findStaleUsersByIds').mockResolvedValue([]);
     forceRefreshPostsSpy = vi.spyOn(TtlController, 'forceRefreshPostsByIds').mockResolvedValue(undefined);
-    forceRefreshUsersSpy = vi.spyOn(TtlController, 'forceRefreshUsersByIds').mockResolvedValue(undefined);
+    forceRefreshUsersSpy = vi.spyOn(TtlController, 'forceRefreshUsersByIds').mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -92,6 +93,72 @@ describe('TtlCoordinator', () => {
     });
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it('keeps visible subscriptions refreshing as a guest after logout without a manager remount', async () => {
+    setupAuthenticatedUser();
+    const coordinator = TtlCoordinator.getInstance();
+    coordinator.subscribePost({ compositePostId: 'author:post' });
+    coordinator.start();
+    await waitForTick();
+    vi.mocked(TtlController.refreshStaleTags).mockClear();
+    useAuthStore.getState().reset();
+    await waitForTick();
+    expect(TtlCoordinator.getInstance()).toBe(coordinator);
+    expect(TtlController.refreshStaleTags).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'post', ids: ['author:post'], viewerId: undefined }),
+    );
+  });
+
+  it('contains a failed local tag scan and continues the next tick', async () => {
+    vi.mocked(TtlController.refreshStaleTags).mockRejectedValueOnce(new Error('local read failed'));
+    const coordinator = TtlCoordinator.getInstance();
+    coordinator.subscribePost({ compositePostId: 'author:post' });
+    coordinator.start();
+    await waitForTick();
+    vi.mocked(TtlController.refreshStaleTags).mockClear();
+    await waitForTick();
+    expect(TtlController.refreshStaleTags).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'post', ids: ['author:post'] }),
+    );
+  });
+
+  it('retries a failed author batch without downloading its successfully refreshed posts again', async () => {
+    const coordinator = TtlCoordinator.getInstance();
+    let postFresh = false;
+    findStalePostsSpy.mockImplementation(async () => (postFresh ? [] : ['author:post']));
+    findStaleUsersSpy.mockImplementation(async ({ userIds }: { userIds: string[] }) => userIds);
+    forceRefreshPostsSpy.mockImplementation(async () => {
+      postFresh = true;
+    });
+    forceRefreshUsersSpy.mockRejectedValueOnce(new Error('author endpoint unavailable')).mockResolvedValue(['author']);
+    coordinator.subscribePost({ compositePostId: 'author:post' });
+    coordinator.start();
+    await waitForTick();
+    await waitForTick();
+    expect(forceRefreshPostsSpy).toHaveBeenCalledOnce();
+    expect(forceRefreshUsersSpy).toHaveBeenCalledTimes(2);
+    expect(forceRefreshUsersSpy).toHaveBeenLastCalledWith({ userIds: ['author'], viewerId: undefined });
+    coordinator.unsubscribePost({ compositePostId: 'author:post' });
+    forceRefreshUsersSpy.mockClear();
+    await waitForTick();
+    expect(forceRefreshUsersSpy).not.toHaveBeenCalled();
+  });
+
+  it('checks tag freshness even when subscribed entity details are fresh', async () => {
+    const coordinator = TtlCoordinator.getInstance();
+    coordinator.subscribePost({ compositePostId: 'author:post' });
+    coordinator.subscribeUser({ pubky: 'profile' });
+    coordinator.start();
+    await waitForTick();
+    expect(forceRefreshPostsSpy).not.toHaveBeenCalled();
+    expect(forceRefreshUsersSpy).not.toHaveBeenCalled();
+    expect(TtlController.refreshStaleTags).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'post', ids: ['author:post'] }),
+    );
+    expect(TtlController.refreshStaleTags).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'user', ids: ['author', 'profile'] }),
+    );
   });
 
   // ===========================================================================
@@ -356,7 +423,7 @@ describe('TtlCoordinator', () => {
       expect(findStalePostsSpy).not.toHaveBeenCalled();
     });
 
-    it('start() without authentication does not tick', async () => {
+    it('start() also ticks for public views', async () => {
       // Do NOT authenticate
       const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
@@ -371,7 +438,7 @@ describe('TtlCoordinator', () => {
 
       // Should not tick
       await advanceAndFlush(5_000);
-      expect(findStalePostsSpy).not.toHaveBeenCalled();
+      expect(findStalePostsSpy).toHaveBeenCalled();
     });
   });
 
@@ -709,115 +776,15 @@ describe('TtlCoordinator', () => {
   });
 
   // ===========================================================================
-  // 5. Route Changes
+  // 5. Lifecycle reset
   // ===========================================================================
 
-  describe('Route Changes', () => {
-    it('setRoute on initial mount (empty → route) does NOT reset subscriptions', async () => {
-      setupAuthenticatedUser();
-
-      const coordinator = TtlCoordinator.getInstance();
-      coordinator.configure({ batchIntervalMs: 1_000 });
-
-      // Subscribe a post before setting route
-      const postId = createCompositePostId('author1', 'post1');
-      coordinator.subscribePost({ compositePostId: postId });
-
-      // Set initial route (from empty string)
-      coordinator.setRoute('/home');
-
-      // Start and trigger tick
-      coordinator.start();
-      findStalePostsSpy.mockClear();
-      await waitForTick();
-
-      // Post should still be subscribed (not reset on initial mount)
-      expect(findStalePostsSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          postIds: expect.arrayContaining([postId]),
-        }),
-      );
-    });
-
-    it('setRoute change triggers reset of subscriptions', async () => {
-      setupAuthenticatedUser();
-
-      const coordinator = TtlCoordinator.getInstance();
-      coordinator.configure({ batchIntervalMs: 1_000 });
-
-      // Set initial route
-      coordinator.setRoute('/home');
-
-      // Subscribe posts and users
-      const postId = createCompositePostId('author1', 'post1');
-      const userId = 'user-pubky-1' as Pubky;
-      coordinator.subscribePost({ compositePostId: postId });
-      coordinator.subscribeUser({ pubky: userId });
-
-      // Change route - should trigger reset
-      coordinator.setRoute('/profile');
-
-      // Start and trigger tick
-      coordinator.start();
-      findStalePostsSpy.mockClear();
-      findStaleUsersSpy.mockClear();
-      await waitForTick();
-
-      // Subscriptions should be cleared (empty arrays)
-      const postCalls = findStalePostsSpy.mock.calls;
-      const userCalls = findStaleUsersSpy.mock.calls;
-
-      // If called, should have empty arrays (no subscriptions)
-      if (postCalls.length > 0) {
-        const lastPostCall = postCalls[postCalls.length - 1];
-        const postParams = lastPostCall[0] as { postIds: string[] };
-        expect(postParams.postIds).toHaveLength(0);
-      }
-
-      if (userCalls.length > 0) {
-        const lastUserCall = userCalls[userCalls.length - 1];
-        const userParams = lastUserCall[0] as { userIds: Pubky[] };
-        expect(userParams.userIds).toHaveLength(0);
-      }
-    });
-
-    it('setRoute to same route is a no-op', async () => {
-      setupAuthenticatedUser();
-
-      const coordinator = TtlCoordinator.getInstance();
-      coordinator.configure({ batchIntervalMs: 1_000 });
-
-      // Set initial route
-      coordinator.setRoute('/home');
-
-      // Subscribe a post
-      const postId = createCompositePostId('author1', 'post1');
-      coordinator.subscribePost({ compositePostId: postId });
-
-      // Set same route again - should NOT reset
-      coordinator.setRoute('/home');
-
-      // Start and trigger tick
-      coordinator.start();
-      findStalePostsSpy.mockClear();
-      await waitForTick();
-
-      // Post should still be subscribed
-      expect(findStalePostsSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          postIds: expect.arrayContaining([postId]),
-        }),
-      );
-    });
-
+  describe('Lifecycle reset', () => {
     it('reset clears all subscriptions, ref counts, and queues', async () => {
       setupAuthenticatedUser();
 
       const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
-
-      // Set initial route
-      coordinator.setRoute('/home');
 
       // Subscribe multiple posts and users with ref counts
       const postId1 = createCompositePostId('author1', 'post1');
@@ -830,8 +797,8 @@ describe('TtlCoordinator', () => {
       coordinator.subscribeUser({ pubky: userId }); // ref count = 2
       coordinator.subscribeUser({ pubky: userId }); // ref count = 3
 
-      // Change route to trigger reset
-      coordinator.setRoute('/profile');
+      // Stopping the coordinator releases all subscriptions.
+      coordinator.stop();
 
       // Re-subscribe just one user
       coordinator.subscribeUser({ pubky: userId });
@@ -978,22 +945,38 @@ describe('TtlCoordinator', () => {
   // ===========================================================================
 
   describe('Auth State Changes', () => {
-    it('does not tick when unauthenticated even if started', async () => {
+    it('keeps a visible subscription until its final subscriber leaves', async () => {
+      const coordinator = TtlCoordinator.getInstance();
+      const postId = 'author:shared';
+      coordinator.subscribePost({ compositePostId: postId });
+      coordinator.subscribePost({ compositePostId: postId });
+      coordinator.unsubscribePost({ compositePostId: postId });
+      findStalePostsSpy.mockResolvedValue([postId]);
+      coordinator.start();
+      await waitForTick();
+      expect(forceRefreshPostsSpy).toHaveBeenCalledWith(expect.objectContaining({ postIds: [postId] }));
+      coordinator.unsubscribePost({ compositePostId: postId });
+      forceRefreshPostsSpy.mockClear();
+      await advanceAndFlush(5000);
+      expect(forceRefreshPostsSpy).not.toHaveBeenCalled();
+    });
+    it('refreshes visible public posts without authentication', async () => {
       // Do NOT authenticate
       const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
 
       const postId = createCompositePostId('author1', 'post1');
       coordinator.subscribePost({ compositePostId: postId });
-      findStalePostsSpy.mockClear();
+      findStalePostsSpy.mockResolvedValue([postId]);
 
       coordinator.start();
 
       await advanceAndFlush(5_000);
-      expect(findStalePostsSpy).not.toHaveBeenCalled();
+      expect(findStalePostsSpy).toHaveBeenCalled();
+      expect(forceRefreshPostsSpy).toHaveBeenCalledWith(expect.objectContaining({ viewerId: undefined }));
     });
 
-    it('starts ticking when conditions are met after start()', async () => {
+    it('keeps ticking when a visitor signs in', async () => {
       // Start unauthenticated - coordinator won't tick
       const coordinator = TtlCoordinator.getInstance();
       coordinator.configure({ batchIntervalMs: 1_000 });
@@ -1006,7 +989,7 @@ describe('TtlCoordinator', () => {
 
       // Advance time - should not tick (not authenticated)
       await advanceAndFlush(2_000);
-      expect(findStalePostsSpy).not.toHaveBeenCalled();
+      expect(findStalePostsSpy).toHaveBeenCalled();
 
       // Now authenticate and restart to re-evaluate conditions
       setupAuthenticatedUser();
@@ -1055,7 +1038,7 @@ describe('TtlCoordinator', () => {
       expect(findStalePostsSpy).toHaveBeenCalled();
     });
 
-    it('requires hasProfile to be true to tick', async () => {
+    it('refreshes public data before profile creation is complete', async () => {
       // Authenticate but without profile
       useAuthStore.getState().init({
         session: mockSession(),
@@ -1074,7 +1057,7 @@ describe('TtlCoordinator', () => {
 
       await advanceAndFlush(5_000);
       // Should not tick without profile (shouldTick returns false)
-      expect(findStalePostsSpy).not.toHaveBeenCalled();
+      expect(findStalePostsSpy).toHaveBeenCalled();
 
       // Now set hasProfile to true and restart
       useAuthStore.getState().init({
@@ -1193,8 +1176,8 @@ describe('TtlCoordinator', () => {
 
       const postId = createCompositePostId('author1', 'post1');
 
-      // First tick: post is stale
-      findStalePostsSpy.mockResolvedValueOnce([postId]);
+      // Subscribe and first tick both find the post stale.
+      findStalePostsSpy.mockResolvedValueOnce([postId]).mockResolvedValueOnce([postId]);
       // Second tick: post is no longer stale (was refreshed)
       findStalePostsSpy.mockResolvedValueOnce([]);
 
@@ -1526,7 +1509,7 @@ describe('TtlCoordinator', () => {
       }
     });
 
-    it('findStaleByIds error adds entity to queue (assume stale)', async () => {
+    it('prunes an assumed-stale queued request when a later TTL check proves it fresh', async () => {
       setupAuthenticatedUser();
 
       const coordinator = TtlCoordinator.getInstance();
@@ -1546,8 +1529,8 @@ describe('TtlCoordinator', () => {
       forceRefreshPostsSpy.mockClear();
       await waitForTick();
 
-      // Should have queued for refresh (assumed stale on error)
-      expect(forceRefreshPostsSpy).toHaveBeenCalled();
+      // The successful tick check supersedes the earlier read error.
+      expect(forceRefreshPostsSpy).not.toHaveBeenCalled();
     });
 
     it('forceRefresh error leaves entities in queue for retry', async () => {
@@ -1675,5 +1658,37 @@ describe('TtlCoordinator', () => {
       // Should not crash or cause issues
       coordinator.stop();
     });
+  });
+  it('releases bootstrap indexing ownership after success while retaining viewport ownership', async () => {
+    setupAuthenticatedUser();
+    const coord = TtlCoordinator.getInstance();
+    const pubky = 'indexing-user';
+    findStaleUsersSpy.mockImplementation(async (ids: { userIds: string[] }) => ids.userIds);
+    forceRefreshUsersSpy.mockResolvedValue([pubky]);
+    coord.retryUserIndexing({ pubky });
+    coord.retryUserIndexing({ pubky }); // repeated bootstrap does not leak a reference
+    coord.subscribeUser({ pubky });
+    coord.start();
+    await waitForTick();
+    expect(forceRefreshUsersSpy).toHaveBeenCalledTimes(1);
+    await waitForTick();
+    expect(forceRefreshUsersSpy).toHaveBeenCalledTimes(2); // viewport reference still active
+    coord.unsubscribeUser({ pubky });
+    await waitForTick();
+    expect(forceRefreshUsersSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains bootstrap retry when Nexus still omits the user', async () => {
+    setupAuthenticatedUser();
+    const coord = TtlCoordinator.getInstance();
+    const pubky = 'indexing-user';
+    findStaleUsersSpy.mockImplementation(async (ids: { userIds: string[] }) => ids.userIds);
+    forceRefreshUsersSpy.mockResolvedValueOnce([]).mockResolvedValue([pubky]);
+    coord.retryUserIndexing({ pubky });
+    coord.start();
+    await waitForTick();
+    await waitForTick();
+    await waitForTick();
+    expect(forceRefreshUsersSpy).toHaveBeenCalledTimes(2);
   });
 });

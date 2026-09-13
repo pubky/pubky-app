@@ -25,7 +25,7 @@ export class HotApplication {
    * @param params - Parameters for fetching hot tags (includes reach, timeframe, skip, limit)
    * @returns Array of hot tags
    */
-  static async getOrFetch(params: TTagHotParams): Promise<NexusHotTag[]> {
+  static async getOrFetch(params: TTagHotParams, isCurrent?: () => boolean): Promise<NexusHotTag[]> {
     try {
       // Build composite ID from params: timeframe:reach
       const timeframe = params.timeframe || UserStreamTimeframe.THIS_MONTH;
@@ -39,7 +39,7 @@ export class HotApplication {
         const tags = await NexusHotService.fetch(params);
 
         // Fetch missing tagger users
-        await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id);
+        await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id, isCurrent);
 
         return tags;
       }
@@ -54,10 +54,10 @@ export class HotApplication {
         const tags = params.limit ? cached.tags.slice(0, params.limit) : cached.tags;
 
         // Optionally refresh cache in background (fire and forget)
-        this.refreshCacheInBackground(id, params);
+        this.refreshCacheInBackground(id, params, isCurrent);
 
         // Fetch missing tagger users
-        await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id);
+        await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id, isCurrent);
 
         return tags;
       }
@@ -72,7 +72,8 @@ export class HotApplication {
       if (tags.length > 0) {
         // Fetch and persist users first, then persist hot tags.
         // This prevents excessive rerender where liveQuery triggers before users are cached
-        await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id);
+        await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id, isCurrent);
+        if (isCurrent && !isCurrent()) return [];
         await LocalHotService.upsert(id, tags);
       }
 
@@ -93,7 +94,7 @@ export class HotApplication {
    * @param id - Composite ID (timeframe:reach)
    * @param params - Parameters for fetching hot tags
    */
-  private static async refreshCacheInBackground(id: string, params: TTagHotParams) {
+  private static async refreshCacheInBackground(id: string, params: TTagHotParams, isCurrent?: () => boolean) {
     try {
       // Strip limit so the full tag set is fetched and cached, preventing cache pollution
       // when different consumers request different limits for the same cache entry.
@@ -103,7 +104,8 @@ export class HotApplication {
       // This prevents excessive rerender where liveQuery triggers before users are cached
       const tags = await NexusHotService.fetch(fetchParams);
       if (tags.length > 0) {
-        await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id);
+        await this.fetchUsersForTags(tags.slice(0, TOP_TAGS_TO_FETCH_USERS), params.user_id, isCurrent);
+        if (isCurrent && !isCurrent()) return [];
         await LocalHotService.upsert(id, tags);
       }
     } catch (error) {
@@ -120,7 +122,7 @@ export class HotApplication {
    * @param tags - Array of hot tags containing tagger IDs (sorted by score)
    * @param userId - Optional user ID for relationship data
    */
-  private static async fetchUsersForTags(tags: NexusHotTag[], userId?: string) {
+  private static async fetchUsersForTags(tags: NexusHotTag[], userId?: string, isCurrent?: () => boolean) {
     // Extract all unique tagger IDs from tags
     const allTaggerIds = [...new Set(tags.flatMap((tag) => tag.taggers_id))];
     if (allTaggerIds.length === 0) {
@@ -137,6 +139,7 @@ export class HotApplication {
     await UserStreamApplication.fetchMissingUsersFromNexus({
       cacheMissUserIds,
       viewerId: userId,
+      isCurrent,
     });
   }
 }

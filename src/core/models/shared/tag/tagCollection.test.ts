@@ -1,19 +1,13 @@
 import Dexie, { Table } from 'dexie';
 import { IDBKeyRange, indexedDB } from 'fake-indexeddb';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppError } from '@/libs/error/error';
-import { DatabaseErrorCode } from '@/libs/error/error.codes';
-import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { Pubky } from '@/models/models.types';
-import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { TagModel } from '@/models/shared/tag/tag';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { TagCollection } from './tagCollection';
 
 type TestTagSchema = TagCollectionModelSchema<string>;
-
-type TestTagTuple = NexusModelTuple<NexusTag[]>;
 
 class TestTagCollection extends TagCollection<string, TestTagSchema> implements TestTagSchema {
   static table: Table<TestTagSchema>;
@@ -77,69 +71,89 @@ describe('TagCollection', () => {
     const ids = results.map((r) => r.id).sort();
     expect(ids).toEqual(['a', 'b']);
   });
+});
 
-  it('bulkSave upserts multiple collections from tuples', async () => {
-    const tuples: TestTagTuple[] = [
-      ['x', [makeTag('x1')]],
-      ['y', [makeTag('y1'), makeTag('y2')]],
-    ];
-
-    await TestTagCollection.bulkSave(tuples);
-
-    const all = await TestTagCollection.table.toArray();
-    const byId = new Map(all.map((r) => [r.id, r]));
-
-    expect(byId.get('x')?.tags.map((t) => t.label)).toEqual(['x1']);
-    expect(byId.get('y')?.tags.map((t) => t.label)).toEqual(['y1', 'y2']);
+describe('TagCollection local intent', () => {
+  it('prunes expired local intents while retaining live intents for other viewers', () => {
+    const now = Date.now();
+    const collection = new TestTagCollection({
+      id: 'profile',
+      tags: [],
+      mutations: {
+        expired: { id: 'expired', label: 'expired', synced: true, viewerId: 'old', relationship: true, expiresAt: now },
+        live: {
+          id: 'live',
+          label: 'live',
+          synced: true,
+          viewerId: 'other',
+          relationship: false,
+          expiresAt: now + 60_000,
+        },
+      },
+    });
+    collection.recordMutation('NEW', 'viewer', true, 'new-operation', true);
+    expect(Object.keys(collection.mutations ?? {})).toEqual(['live', 'viewer:new']);
+    expect(collection.mutations?.live).toEqual({
+      id: 'live',
+      label: 'live',
+      synced: true,
+      viewerId: 'other',
+      relationship: false,
+      expiresAt: now + 60_000,
+    });
+    expect(collection.mutations?.['viewer:new']).toMatchObject({ viewerId: 'viewer', relationship: true });
   });
 });
 
-describe('TagCollection error handling', () => {
-  let db: Dexie;
-
-  const makeTag = (label: string, taggers: Pubky[] = []): NexusTag => ({
-    label,
-    taggers,
-    taggers_count: taggers.length,
-    relationship: false,
+describe('TagCollection mutation ownership', () => {
+  it('keeps operations from different viewers on the same label independently', () => {
+    const row = new TestTagCollection({ id: 'profile', tags: [] });
+    row.recordMutation('Bitcoin', 'alice', true, 'a', false);
+    row.recordMutation('bitcoin', 'bob', false, 'b', false);
+    expect(row.ownsMutation('BITCOIN', 'alice', 'a')).toBe(true);
+    expect(row.ownsMutation('bitcoin', 'bob', 'b')).toBe(true);
+    row.recordMutation('bitcoin', 'alice', false, 'newer', false);
+    expect(row.ownsMutation('bitcoin', 'alice', 'a')).toBe(false);
+    expect(row.ownsMutation('bitcoin', 'bob', 'b')).toBe(true);
   });
 
-  beforeEach(async () => {
-    globalThis.indexedDB = indexedDB;
-    globalThis.IDBKeyRange = IDBKeyRange;
-
-    db = new Dexie('tag-collection-error-test');
-    db.version(1).stores({ test_tags: 'id' });
-    await db.open();
-
-    TestTagCollection.table = db.table<TestTagSchema>('test_tags');
-    await TestTagCollection.table.clear();
+  it('can undo an active viewer addition after a guest refresh changes the raw relationship', () => {
+    const row = new TestTagCollection({
+      id: 'profile',
+      tags: [{ label: 'bitcoin', taggers: ['other', 'alice'], taggers_count: 2, relationship: false }],
+      cache: { viewerId: null, cursor: 1, exhausted: true, fetchedAt: 1, revision: 2 },
+      mutations: {
+        bitcoin: {
+          label: 'bitcoin',
+          viewerId: 'alice',
+          relationship: true,
+          expiresAt: Date.now() + 1000,
+          id: 'pending',
+          synced: false,
+        },
+      },
+    });
+    expect(row.ownsMutation('bitcoin', 'alice', 'pending')).toBe(true);
+    expect(row.removeTagger('bitcoin', 'alice')).toBe(false);
+    expect(row.tags[0]).toMatchObject({ taggers: ['other'], taggers_count: 1, relationship: false });
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('bulkSave throws WRITE_FAILED with correct context on failure', async () => {
-    vi.spyOn(TestTagCollection.table, 'bulkPut').mockRejectedValueOnce(new Error('DB error'));
-
-    const tuples: TestTagTuple[] = [
-      ['x', [makeTag('x1')]],
-      ['y', [makeTag('y1')]],
-    ];
-
-    try {
-      await TestTagCollection.bulkSave(tuples);
-      expect.fail('Expected error to be thrown');
-    } catch (error) {
-      expect(error).toBeInstanceOf(AppError);
-      const appError = error as AppError;
-      expect(appError.category).toBe(ErrorCategory.Database);
-      expect(appError.code).toBe(DatabaseErrorCode.WRITE_FAILED);
-      expect(appError.service).toBe(ErrorService.Local);
-      expect(appError.operation).toBe('bulkSave');
-      expect(appError.context).toMatchObject({ table: 'test_tags', count: 2 });
-      expect(appError.cause).toBeInstanceOf(Error);
-    }
+  it('retains expired pending operation identity until it settles', () => {
+    const row = new TestTagCollection({
+      id: 'profile',
+      tags: [],
+      mutations: {
+        bitcoin: {
+          label: 'bitcoin',
+          viewerId: 'alice',
+          relationship: true,
+          expiresAt: 0,
+          id: 'pending',
+          synced: false,
+        },
+      },
+    });
+    row.recordMutation('other', 'bob', true, 'other', true);
+    expect(row.ownsMutation('bitcoin', 'alice', 'pending')).toBe(true);
   });
 });

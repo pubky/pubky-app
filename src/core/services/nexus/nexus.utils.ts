@@ -56,14 +56,23 @@ export function buildUrlWithQuery({ baseRoute, params, excludeKeys = [] }: TBuil
 /**
  * Utility function to create fetch options with common headers.
  * Body must be a string (typically JSON.stringify'd) to ensure safe query key serialization.
+ *
+ * Content-Type is omitted on bodyless GETs: the header makes such requests
+ * non-"simple", forcing a CORS preflight OPTIONS round trip for every call.
+ * GETs have no body, so the header carries no information and only doubles
+ * the request count. All other requests (bodies, non-simple methods) keep it.
  */
 export function createFetchOptions({ method = HttpMethod.GET, body }: TCreateFetchOptionsParams = {}): RequestInit {
   const options: RequestInit = {
     method,
-    headers: JSON_HEADERS,
   };
 
-  if (body) options.body = body;
+  if (body) {
+    options.body = body;
+    options.headers = JSON_HEADERS;
+  } else if (method !== HttpMethod.GET) {
+    options.headers = JSON_HEADERS;
+  }
 
   return options;
 }
@@ -99,6 +108,13 @@ export async function fetchNexusNoContent({ url, method }: Pick<TFetchNexusParam
   }
 }
 
+const responseStartedAt = new WeakMap<object, number>();
+
+/** Conservative snapshot cutoff; unknown/legacy responses carry no freshness proof. */
+export function getNexusResponseStartedAt(response: object): number | undefined {
+  return responseStartedAt.get(response);
+}
+
 /**
  * Queries Nexus API with automatic retry logic via TanStack Query.
  * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
@@ -106,7 +122,8 @@ export async function fetchNexusNoContent({ url, method }: Pick<TFetchNexusParam
  * @param url - Full API endpoint URL
  * @param method - HTTP method (default: 'GET')
  * @param body - JSON string body (use JSON.stringify for objects)
- * @param staleTime - Cache freshness in milliseconds; omit for the shared default, or use 0 to revalidate on each call
+ * @param staleTime - Cache freshness in milliseconds; omit for the shared default
+ * @param force - Revalidate after any request already in flight, overriding staleTime
  * @returns Parsed response data
  * @throws {NexusError} When response is not ok after all retries
  */
@@ -114,11 +131,31 @@ export async function queryNexus<T>({
   url,
   method = HttpMethod.GET,
   body = null,
+  force = false,
   staleTime,
 }: TQueryNexusParams): Promise<T> {
-  return nexusQueryClient.fetchQuery({
-    queryKey: ['nexus', url, method, body],
-    queryFn: () => fetchNexus<T>({ url, method, body }),
-    ...(staleTime !== undefined && { staleTime }),
+  const queryKey = ['nexus', url, method, body];
+  if (force) {
+    // staleTime alone still joins a request started before the invalidating event.
+    // Wait for that request, then let concurrent revalidations share a new one.
+    const pending = nexusQueryClient.getQueryCache().find({ queryKey, exact: true });
+    if (pending?.state.fetchStatus === 'fetching') await pending.promise?.catch(() => {});
+  }
+  let startedAt: number | undefined;
+  const data = await nexusQueryClient.fetchQuery({
+    queryKey,
+    ...(force ? { staleTime: 0 } : staleTime !== undefined ? { staleTime } : {}),
+    queryFn: () => {
+      startedAt = Date.now();
+      return fetchNexus<T>({ url, method, body });
+    },
   });
+  // Record the returned reference after TanStack's structural sharing. Cached
+  // and concurrent callers reuse this evidence rather than stamping a new time.
+  if (startedAt !== undefined) {
+    if (data !== null && typeof data === 'object') responseStartedAt.set(data, startedAt);
+    const cached = nexusQueryClient.getQueryData(queryKey);
+    if (cached !== null && typeof cached === 'object') responseStartedAt.set(cached, startedAt);
+  }
+  return data;
 }

@@ -163,9 +163,6 @@ describe('NexusBootstrapService', () => {
 
       expect(mockFetch).toHaveBeenCalledWith(bootstrapApi.get(pubky), {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
       expect(result).toEqual(mockResponse);
     });

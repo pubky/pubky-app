@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
 import { UserController } from '@/controllers/user/user';
-import { HttpMethod } from '@/libs/http/http.types';
+import { isAppError } from '@/libs/error/error.utils';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
-import type { TLocalTagMutation } from '@/services/local/tag/tag.types';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -97,6 +98,21 @@ async function fetchTaggerPage({
 export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind | null): UseEntityTaggersResult {
   const viewerId = useAuthStore((state) => state.currentUserPubky);
   const entityKey = taggedId && taggedKind ? `${taggedKind}:${taggedId}:${viewerId ?? ''}` : null;
+  const observedMutations = useLiveQuery(async () => {
+    if (!taggedId || !taggedKind || !viewerId) return null;
+    const key = `${taggedKind}:${taggedId}:${viewerId}`;
+    try {
+      return {
+        key,
+        entries: await TagController.getViewerMutations({ taggedId, taggedKind, taggerId: viewerId }),
+      };
+    } catch (error) {
+      if (!isAppError(error)) Logger.warn('Could not read local tag mutations', { error });
+      return { key, entries: null };
+    }
+  }, [taggedId, taggedKind, viewerId]);
+  const mutations = observedMutations?.key === entityKey ? observedMutations.entries : undefined;
+  const waitingForMutations = !!viewerId && observedMutations?.key !== entityKey;
   const [cache, setCache] = useState<{ entityKey: string | null; states: TaggersCache }>({
     entityKey,
     states: EMPTY_STATES,
@@ -122,12 +138,9 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
     setCache(cacheRef.current);
   };
   const readMutation = (label: string) => {
-    const marker =
-      taggedId && viewerId ? TagController.getViewerMutation({ taggedId, taggerId: viewerId, label }) : null;
-    return {
-      mutationKey: marker ? `${marker.ts}:${marker.op}` : undefined,
-      isViewerTagger: marker ? marker.op === HttpMethod.PUT : undefined,
-    };
+    const mutation = mutations?.get(label.toLowerCase());
+    const active = mutation && mutation.expiresAt > Date.now() ? mutation : undefined;
+    return { mutationKey: active?.id, isViewerTagger: active?.relationship };
   };
 
   const fetchWindow = async (key: string, label: string, base: CachedTaggersState, refreshTarget?: number) => {
@@ -189,7 +202,7 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
   };
 
   const loadTaggers = async (label: string, totalCount?: number, mutationCount?: number) => {
-    if (!entityKey) return;
+    if (!entityKey || waitingForMutations) return;
     const existing = statesFor(entityKey).get(label.toLowerCase());
     const mutation = readMutation(label);
     if (existing && existing.totalCount === totalCount && existing.mutationKey === mutation.mutationKey) return;
@@ -224,7 +237,7 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
   };
 
   const loadMoreTaggers = async (label: string) => {
-    if (!entityKey) return;
+    if (!entityKey || waitingForMutations) return;
     const existing = statesFor(entityKey).get(label.toLowerCase());
     if (!existing || existing.isLoading) return;
     const mutation = readMutation(label);
@@ -236,14 +249,18 @@ export function useEntityTaggers(taggedId?: string | null, taggedKind?: TagKind 
     await fetchWindow(entityKey, label, base, refreshTarget);
   };
 
-  const onViewerMutation = useEffectEvent((mutation: TLocalTagMutation) => {
-    if (!entityKey || mutation.taggedId !== taggedId || mutation.taggerId !== viewerId) return;
-    const existing = statesFor(entityKey).get(mutation.label.toLowerCase());
-    // Mutations (including no-op database rollbacks) update an open list even
-    // when its cached count does not change. Unopened tags stay on demand.
-    if (existing) void loadTaggers(mutation.label, existing.totalCount, mutation.taggersCount);
+  const onMutationsChanged = useEffectEvent(() => {
+    if (!entityKey) return;
+    // Dexie observes committed writes from this tab and other open tabs alike.
+    for (const [label, state] of statesFor(entityKey)) {
+      if (state.mutationKey !== readMutation(label).mutationKey) {
+        void loadTaggers(label, state.totalCount, mutations?.get(label)?.taggersCount);
+      }
+    }
   });
-  useEffect(() => TagController.subscribeViewerMutations((mutation) => onViewerMutation(mutation)), []);
+  useEffect(() => {
+    onMutationsChanged();
+  }, [mutations]);
 
   return { taggerStates, loadTaggers, loadMoreTaggers };
 }

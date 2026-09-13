@@ -18,7 +18,6 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import {
   buildAuthorCollectionsStreamId,
   getPostStreamKind,
@@ -127,17 +126,6 @@ export class LocalPostService {
    */
   static async readReplies(postId: string): Promise<PostRelationshipsModelSchema[]> {
     return PostRelationshipsModel.getReplies(postId);
-  }
-
-  /**
-   * Reads tags for a specific post from local database
-   * @param postId - Composite post ID (author:postId)
-   * @returns Array of tag collections or empty array if not found
-   */
-  static async readTags(postId: string): Promise<TagCollectionModelSchema<string>[]> {
-    const tags = await PostTagsModel.findById(postId);
-    if (!tags) return [];
-    return [tags] as unknown as TagCollectionModelSchema<string>[];
   }
 
   static async updatePostCounts({ postCompositeId, countChanges }: TPostCountsParams) {

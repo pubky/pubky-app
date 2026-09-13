@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
 import { PostTagsModel } from '@/models/post/tags/postTags';
-import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { TagModel } from '@/models/shared/tag/tag';
 import { generateTestUserId } from '@/models/user/users.helpers';
 import type { NexusTag } from '@/services/nexus/nexus.types';
@@ -12,7 +11,6 @@ describe('PostTagsModel', () => {
   });
 
   const testPostId1 = 'post-test-1';
-  const testPostId2 = 'post-test-2';
   const testUserId1 = generateTestUserId(1);
   const testUserId2 = generateTestUserId(2);
 
@@ -20,8 +18,6 @@ describe('PostTagsModel', () => {
     { label: 'tech', taggers: [testUserId1], taggers_count: 1, relationship: false },
     { label: 'announcement', taggers: [testUserId2], taggers_count: 1, relationship: false },
   ];
-
-  const MOCK_TAGS_2: NexusTag[] = [{ label: 'news', taggers: [testUserId1], taggers_count: 1, relationship: false }];
 
   describe('Constructor', () => {
     it('should create PostTagsModel instance with id and TagModel array', () => {
@@ -102,29 +98,6 @@ describe('PostTagsModel', () => {
       const nonExistentId = 'non-existent-post-999';
       const result = await PostTagsModel.findById(nonExistentId);
       expect(result).toBeNull();
-    });
-
-    it('should bulk save post tags from tuples', async () => {
-      const tuples: NexusModelTuple<NexusTag[]>[] = [
-        [testPostId1, MOCK_TAGS_1],
-        [testPostId2, MOCK_TAGS_2],
-      ];
-
-      const result = await PostTagsModel.bulkSave(tuples);
-      expect(result).toBeDefined();
-
-      const tags1 = await PostTagsModel.findById(testPostId1);
-      const tags2 = await PostTagsModel.findById(testPostId2);
-
-      expect(tags1).not.toBeNull();
-      expect(tags2).not.toBeNull();
-      expect(tags1!.tags.map((t) => t.label).sort()).toEqual(['announcement', 'tech']);
-      expect(tags2!.tags.map((t) => t.label)).toEqual(['news']);
-    });
-
-    it('should handle empty array in bulk save', async () => {
-      const result = await PostTagsModel.bulkSave([]);
-      expect(result).toBeUndefined();
     });
 
     it('should handle post-specific tagging scenarios', async () => {

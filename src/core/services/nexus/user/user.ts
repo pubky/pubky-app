@@ -33,9 +33,9 @@ export class NexusUserService {
    * @param params - Parameters containing user ID and pagination options
    * @returns Array of tags assigned to the user
    */
-  static async tags(params: TUserTagsParams): Promise<NexusTag[]> {
+  static async tags({ force = false, ...params }: TUserTagsParams & { force?: boolean }): Promise<NexusTag[]> {
     const url = userApi.tags(params);
-    return await queryNexus<NexusTag[]>({ url });
+    return await queryNexus<NexusTag[]>({ url, ...(force ? { force: true } : {}) });
   }
 
   /**

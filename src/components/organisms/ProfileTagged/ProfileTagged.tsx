@@ -4,6 +4,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
 import { useTagged } from '@/hooks/useTagged/useTagged';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { TaggedEmpty } from '@/molecules/TaggedEmpty/TaggedEmpty';
 import { TaggedSection } from '@/molecules/TaggedSection/TaggedSection';
@@ -24,6 +25,7 @@ import { ProfileTaggedSkeleton } from './ProfileTagged.skeleton';
 export function ProfileTagged() {
   // Get the profile pubky from context
   const { pubky } = useProfileContext();
+  const { ref } = useTtlSubscription({ type: 'user', id: pubky });
 
   // Get user profile data for the target user
   const { profile } = useUserProfile(pubky ?? '');
@@ -42,11 +44,15 @@ export function ProfileTagged() {
 
   // Show empty state only after loading is complete and there are no tags
   if (tags.length === 0) {
-    return <TaggedEmpty onTagAdd={handleTagAdd} />;
+    return (
+      <Container ref={ref} overrideDefaults>
+        <TaggedEmpty onTagAdd={handleTagAdd} />
+      </Container>
+    );
   }
 
   return (
-    <Container className="gap-3">
+    <Container ref={ref} className="gap-3">
       <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
         Tagged ({count})
       </Heading>

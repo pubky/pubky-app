@@ -3,7 +3,6 @@ import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
-import { TagApplication } from '@/application/tag/tag';
 import { UserApplication } from '@/application/user/user';
 import { getModerationId } from '@/config/moderation';
 import type {
@@ -11,9 +10,9 @@ import type {
   TLoginWithMnemonicParams,
   TSignUpParams,
 } from '@/controllers/auth/auth.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
-import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
@@ -162,6 +161,7 @@ export class AuthController {
    * @param params.pubky - The user's public key identifier
    */
   private static async hydrateMeImAlive({ pubky }: { pubky: Pubky }) {
+    const isCurrent = captureViewerSession();
     const signInStore = useSignInStore.getState();
     const {
       meta: { url },
@@ -169,6 +169,7 @@ export class AuthController {
 
     // Progress callback to update signInStore from Controller layer (respecting architecture rules)
     const onProgress: BootstrapProgressCallback = (step) => {
+      if (!isCurrent()) return;
       switch (step) {
         case 'bootstrapFetched':
           signInStore.setBootstrapFetched(true); // Step 3 complete (60%)
@@ -191,7 +192,12 @@ export class AuthController {
     const preferences = (remoteSettings ?? localSettings).notifications;
     const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
 
-    const notification = await BootstrapApplication.initialize({ pubky, lastReadUrl: url, allowedTypes }, onProgress);
+    if (!isCurrent()) return;
+    const notification = await BootstrapApplication.initialize(
+      { pubky, lastReadUrl: url, allowedTypes, isCurrent },
+      onProgress,
+    );
+    if (!isCurrent()) return;
     useNotificationStore.getState().setState(notification);
 
     // Apply remote settings to store (store mutation stays in Controller layer)
@@ -356,18 +362,12 @@ export class AuthController {
    */
   private static async cleanupLocalState() {
     this.cancelModerationFollow();
-    // Capture pubky before resetting auth store; used to scope marker cleanup.
-    const pubky = useAuthStore.getState().currentUserPubky;
-    if (pubky) {
-      TagApplication.clearViewerMarkers(pubky);
-    }
-
     // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
 
     // Reset singletons
     PubkySpecsSingleton.reset();
-    TtlCoordinator.resetInstance();
+    // CoordinatorManager owns TTL lifetime; its auth listener clears session work.
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();
 

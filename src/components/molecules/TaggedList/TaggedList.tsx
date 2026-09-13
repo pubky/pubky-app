@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { mergeTaggerIds, useEntityTaggers } from '@/hooks/useEntityTaggers/useEntityTaggers';
@@ -24,12 +25,14 @@ export function TaggedList({
 
   const { taggerStates, loadTaggers, loadMoreTaggers } = useEntityTaggers(taggedId, taggedKind);
 
-  const { sentinelRef } = useInfiniteScroll({
+  const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: onLoadMore || (() => {}),
     hasMore,
     isLoading: isLoadingMore,
     threshold: 200,
     debounceMs: 300,
+    itemCount: tags.length,
+    maxUnproductiveLoads: 1,
   });
 
   const handleExpandToggle = (tagLabel: string) => {
@@ -75,7 +78,12 @@ export function TaggedList({
           />
         );
       })}
-      {hasMore && (
+      {hasMore && isStalled && (
+        <Button variant="secondary" size="sm" onClick={resumeAutoLoad} disabled={isLoadingMore}>
+          Load more
+        </Button>
+      )}
+      {hasMore && !isStalled && (
         <Container overrideDefaults ref={sentinelRef} className="w-full">
           {isLoadingMore && (
             <Container overrideDefaults className="flex items-center gap-2 py-1">

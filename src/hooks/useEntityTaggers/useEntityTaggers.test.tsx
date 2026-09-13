@@ -1,11 +1,16 @@
+import { useEffect } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { PostController } from '@/controllers/post/post';
+import { TagController } from '@/controllers/tag/tag';
 import { UserController } from '@/controllers/user/user';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
-import { ViewerTagMarkerStorage } from '@/services/local/tag/viewerTagMarkerStorage';
-import { nexusQueryClient } from '@/services/nexus/nexus.query-client';
+import type { ViewerTagMutation } from '@/services/local/tag/tag.types';
 import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { mergeTaggerIds, useEntityTaggers } from './useEntityTaggers';
@@ -22,6 +27,51 @@ vi.mock('@/controllers/user/user', () => ({
   },
 }));
 
+const observed = vi.hoisted(
+  (): { entries: Map<string, ViewerTagMutation> | null; loading: boolean; listeners: Set<() => void> } => ({
+    entries: new Map(),
+    loading: false,
+    listeners: new Set(),
+  }),
+);
+vi.mock('dexie-react-hooks', async () => {
+  const { useSyncExternalStore } = await import('react');
+  return {
+    useLiveQuery: vi.fn(function useLiveQuery(_query: unknown, [id, kind, viewer]: string[]) {
+      const entries = useSyncExternalStore(
+        (listener) => {
+          observed.listeners.add(listener);
+          return () => {
+            observed.listeners.delete(listener);
+          };
+        },
+        () => observed.entries,
+      );
+      return observed.loading ? undefined : { key: `${kind}:${id}:${viewer}`, entries };
+    }),
+  };
+});
+vi.mock('@/controllers/tag/tag', () => ({ TagController: { getViewerMutations: vi.fn() } }));
+const publishMutation = ({
+  label,
+  op,
+  taggersCount = 0,
+}: {
+  pubky: string;
+  taggedId: string;
+  label: string;
+  op: HttpMethod;
+  taggersCount?: number;
+}) => {
+  observed.entries = new Map(observed.entries).set(label.toLowerCase(), {
+    id: crypto.randomUUID(),
+    relationship: op === HttpMethod.PUT,
+    expiresAt: Date.now() + 300_000,
+    taggersCount,
+  });
+  observed.listeners.forEach((listener) => listener());
+};
+
 const TAGGERS_PAGE_SIZE = 50;
 const TAGGERS_MAX_SKIP = 10_000;
 
@@ -32,7 +82,80 @@ describe('useEntityTaggers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useAuthStore.setState({ currentUserPubky: null });
-    window.sessionStorage.clear();
+    observed.entries = new Map();
+    observed.loading = false;
+  });
+
+  it('waits for local viewer intent before loading an expanded list', async () => {
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
+    observed.loading = true;
+    vi.mocked(PostController.fetchTaggers).mockResolvedValue(page(['other']));
+    const { result, rerender } = renderHook(() => {
+      const hook = useEntityTaggers('author:post', TagKind.POST);
+      const { loadTaggers } = hook;
+      useEffect(() => {
+        void loadTaggers('bitcoin', 2);
+      }, [loadTaggers]);
+      return hook;
+    });
+    expect(PostController.fetchTaggers).not.toHaveBeenCalled();
+    observed.loading = false;
+    observed.entries = new Map([
+      [
+        'bitcoin',
+        {
+          id: 'pending',
+          relationship: true,
+          expiresAt: Date.now() + 300_000,
+          taggersCount: 2,
+        },
+      ],
+    ]);
+    rerender();
+    await waitFor(() => expect(result.current.taggerStates.get('bitcoin')?.hasFetched).toBe(true));
+    expect(result.current.taggerStates.get('bitcoin')?.isViewerTagger).toBe(true);
+    expect(PostController.fetchTaggers).toHaveBeenCalledOnce();
+  });
+
+  it('opens the server fallback when the initial local mutation read fails', async () => {
+    useAuthStore.setState({ currentUserPubky: 'viewer' });
+    observed.loading = true;
+    vi.mocked(TagController.getViewerMutations).mockRejectedValueOnce(
+      Err.database(DatabaseErrorCode.QUERY_FAILED, 'Local mutations unavailable', {
+        service: ErrorService.Local,
+        operation: 'getViewerMutations',
+      }),
+    );
+    vi.mocked(PostController.fetchTaggers).mockResolvedValue({ users: ['viewer'], relationship: true });
+    const { result, rerender } = renderHook(() => {
+      const hook = useEntityTaggers('author:post', TagKind.POST);
+      const { loadTaggers } = hook;
+      useEffect(() => {
+        void loadTaggers('bitcoin', 1);
+      }, [loadTaggers]);
+      return hook;
+    });
+    expect(PostController.fetchTaggers).not.toHaveBeenCalled();
+
+    const query = vi.mocked(useLiveQuery).mock.calls[0][0];
+    await expect(query()).resolves.toEqual({ key: 'post:author:post:viewer', entries: null });
+    expect(TagController.getViewerMutations).toHaveBeenCalledWith({
+      taggedId: 'author:post',
+      taggedKind: TagKind.POST,
+      taggerId: 'viewer',
+    });
+    observed.loading = false;
+    observed.entries = null;
+    rerender();
+
+    await waitFor(() => expect(result.current.taggerStates.get('bitcoin')?.hasFetched).toBe(true));
+    expect(PostController.fetchTaggers).toHaveBeenCalledOnce();
+    expect(result.current.taggerStates.get('bitcoin')).toMatchObject({
+      ids: ['viewer'],
+      isViewerTagger: true,
+      isLoading: false,
+      hasError: false,
+    });
   });
 
   it('stays disabled without complete entity context', async () => {
@@ -156,50 +279,35 @@ describe('useEntityTaggers', () => {
   });
 
   it.each([TagKind.USER, TagKind.POST])('revalidates cached %s pages when the count changes', async (kind) => {
-    const { UserController: actualUser } =
-      await vi.importActual<typeof import('@/controllers/user/user')>('@/controllers/user/user');
-    const { PostController: actualPost } =
-      await vi.importActual<typeof import('@/controllers/post/post')>('@/controllers/post/post');
-    vi.mocked(UserController.fetchTaggers).mockImplementation(actualUser.fetchTaggers);
-    vi.mocked(PostController.fetchTaggers).mockImplementation(actualPost.fetchTaggers);
     let users = [...fullPage('user'), 'last-user'];
     const offsets: number[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        const params = new URL(url).searchParams;
-        const skip = Number(params.get('skip'));
-        offsets.push(skip);
-        return new Response(JSON.stringify(page(users.slice(skip, skip + Number(params.get('limit'))))));
-      }),
-    );
-    nexusQueryClient.clear();
-    try {
-      const { result } = renderHook(() => useEntityTaggers(kind === TagKind.POST ? 'author:post' : 'profile', kind));
-      await act(async () => {
-        await result.current.loadTaggers('bitcoin', 51);
-      });
-      await act(async () => {
-        await result.current.loadMoreTaggers('bitcoin');
-      });
-      expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(users);
+    const fetchPage = async ({ skip = 0, limit = 50 }: { skip?: number; limit?: number }) => {
+      offsets.push(skip);
+      return page(users.slice(skip, skip + limit));
+    };
+    vi.mocked(PostController.fetchTaggers).mockImplementation(fetchPage);
+    vi.mocked(UserController.fetchTaggers).mockImplementation(fetchPage);
+    const { result } = renderHook(() => useEntityTaggers(kind === TagKind.POST ? 'author:post' : 'profile', kind));
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 51);
+    });
+    await act(async () => {
+      await result.current.loadMoreTaggers('bitcoin');
+    });
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(users);
 
-      users = [...users, 'new-user'];
-      await act(async () => {
-        await result.current.loadTaggers('bitcoin', 52);
-      });
+    users = [...users, 'new-user'];
+    await act(async () => {
+      await result.current.loadTaggers('bitcoin', 52);
+    });
 
-      expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(users);
-      expect(offsets).toEqual([0, 50, 0, 50]);
-    } finally {
-      nexusQueryClient.clear();
-      vi.unstubAllGlobals();
-    }
+    expect(result.current.taggerStates.get('bitcoin')?.ids).toEqual(users);
+    expect(offsets).toEqual([0, 50, 0, 50]);
   });
 
-  it('uses server membership again after a local mutation marker expires', async () => {
+  it('uses server membership again after a local mutation expires', async () => {
     useAuthStore.setState({ currentUserPubky: 'viewer' });
-    ViewerTagMarkerStorage.set({ pubky: 'viewer', taggedId: 'profile', label: 'bitcoin', op: HttpMethod.PUT });
+    publishMutation({ pubky: 'viewer', taggedId: 'profile', label: 'bitcoin', op: HttpMethod.PUT });
     vi.mocked(UserController.fetchTaggers).mockResolvedValue(page(['other']));
     const { result } = renderHook(() => useEntityTaggers('profile', TagKind.USER));
     await act(async () => {
@@ -207,8 +315,11 @@ describe('useEntityTaggers', () => {
     });
     expect(result.current.taggerStates.get('bitcoin')?.isViewerTagger).toBe(true);
 
-    // Simulate the storage no longer returning an expired marker on reopening.
-    sessionStorage.clear();
+    // The live query emits after expired intent is removed from the row.
+    act(() => {
+      observed.entries = new Map();
+      observed.listeners.forEach((listener) => listener());
+    });
     await act(async () => {
       await result.current.loadTaggers('bitcoin', 1);
     });
@@ -216,15 +327,9 @@ describe('useEntityTaggers', () => {
   });
 
   describe.each([TagKind.USER, TagKind.POST])('local count notifications for %s', (kind) => {
-    it.each(['create', 'delete', 'remote change', 'marker-only rollback', 'failed page'] as const)(
+    it.each(['create', 'delete', 'remote change', 'unchanged count rollback', 'failed page'] as const)(
       'does not repeat pages for the same local change: %s',
       async (scenario) => {
-        const { UserController: actualUser } =
-          await vi.importActual<typeof import('@/controllers/user/user')>('@/controllers/user/user');
-        const { PostController: actualPost } =
-          await vi.importActual<typeof import('@/controllers/post/post')>('@/controllers/post/post');
-        vi.mocked(UserController.fetchTaggers).mockImplementation(actualUser.fetchTaggers);
-        vi.mocked(PostController.fetchTaggers).mockImplementation(actualPost.fetchTaggers);
         useAuthStore.setState({ currentUserPubky: 'viewer' });
         const taggedId = kind === TagKind.POST ? 'author:post' : 'profile';
         const deleting = scenario === 'delete';
@@ -234,24 +339,19 @@ describe('useEntityTaggers', () => {
         let refreshing = false;
         let paused = false;
         let resume = () => {};
-        vi.stubGlobal(
-          'fetch',
-          vi.fn(async (url: string) => {
-            const skip = Number(new URL(url).searchParams.get('skip'));
-            offsets.push(skip);
-            if (refreshing && skip === 49 && !paused) {
-              paused = true;
-              await new Promise<void>((resolve) => {
-                resume = resolve;
-              });
-              if (scenario === 'failed page') return new Response('{}', { status: 400 });
-            }
-            return new Response(
-              JSON.stringify({ users: users.slice(skip, skip + 50), relationship: users.includes('viewer') }),
-            );
-          }),
-        );
-        nexusQueryClient.clear();
+        const fetchPage = async ({ skip = 0 }: { skip?: number }): Promise<NexusTaggers> => {
+          offsets.push(skip);
+          if (refreshing && skip === 49 && !paused) {
+            paused = true;
+            await new Promise<void>((resolve) => {
+              resume = resolve;
+            });
+            if (scenario === 'failed page') throw new Error('page unavailable');
+          }
+          return { users: users.slice(skip, skip + 50), relationship: users.includes('viewer') };
+        };
+        vi.mocked(UserController.fetchTaggers).mockImplementation(fetchPage);
+        vi.mocked(PostController.fetchTaggers).mockImplementation(fetchPage);
         const { result, unmount } = renderHook(() => useEntityTaggers(taggedId, kind));
         try {
           await act(async () => {
@@ -265,12 +365,12 @@ describe('useEntityTaggers', () => {
           users = deleting ? users.filter((id) => id !== 'viewer') : [...users, 'viewer'];
           const count = users.length;
           act(() => {
-            ViewerTagMarkerStorage.set({
+            publishMutation({
               pubky: 'viewer',
               taggedId,
               label: 'bitcoin',
               op: deleting ? HttpMethod.DELETE : HttpMethod.PUT,
-              ...(scenario !== 'marker-only rollback' && { taggersCount: count }),
+              ...(scenario !== 'unchanged count rollback' && { taggersCount: count }),
             });
           });
           await waitFor(() => expect(paused).toBe(true));
@@ -285,7 +385,7 @@ describe('useEntityTaggers', () => {
             await update;
           });
           await waitFor(() => expect(result.current.taggerStates.get('bitcoin')?.isLoading).toBe(false));
-          const separateChange = scenario === 'remote change' || scenario === 'marker-only rollback';
+          const separateChange = scenario === 'remote change' || scenario === 'unchanged count rollback';
           expect(offsets).toEqual(separateChange ? [0, 49, 0, 49] : [0, 49]);
           // The completed/failed request must keep the newer count, so rerenders
           // neither restart a successful window nor automatically retry a failure.
@@ -305,8 +405,6 @@ describe('useEntityTaggers', () => {
         } finally {
           resume();
           unmount();
-          nexusQueryClient.clear();
-          vi.unstubAllGlobals();
         }
       },
     );
@@ -458,9 +556,9 @@ describe('useEntityTaggers', () => {
     });
     indexAfterThisRequest = true;
     await act(async () => {
-      ViewerTagMarkerStorage.set({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.DELETE });
+      publishMutation({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.DELETE });
     });
-    // The marker-triggered refresh saw the old prefix; indexing removed the
+    // The mutation-triggered refresh saw the old prefix; indexing removed the
     // viewer before the next request. Its boundary must overlap by one.
     await act(async () => {
       await result.current.loadMoreTaggers('bitcoin');
@@ -490,7 +588,7 @@ describe('useEntityTaggers', () => {
       await result.current.loadTaggers('bitcoin', 1000);
     });
     await act(async () => {
-      ViewerTagMarkerStorage.set({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.DELETE });
+      publishMutation({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.DELETE });
     });
     vi.mocked(UserController.fetchTaggers).mockClear();
     for (let i = 0; i < 30 && result.current.taggerStates.get('bitcoin')?.hasMore; i++) {
@@ -507,7 +605,7 @@ describe('useEntityTaggers', () => {
     expect(vi.mocked(UserController.fetchTaggers).mock.calls.every(([params]) => params.skip! > 0)).toBe(true);
   });
 
-  it('observes rollback markers even when a background refresh already restored the count', async () => {
+  it('observes rollback intents even when a background refresh already restored the count', async () => {
     const viewerId = 'viewer';
     useAuthStore.setState({ currentUserPubky: viewerId });
     vi.mocked(UserController.fetchTaggers).mockResolvedValue(page(['peer']));
@@ -516,7 +614,7 @@ describe('useEntityTaggers', () => {
       await result.current.loadTaggers('bitcoin', 1);
     });
     await act(async () => {
-      ViewerTagMarkerStorage.set({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.PUT });
+      publishMutation({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.PUT });
     });
     await act(async () => {
       await result.current.loadTaggers('bitcoin', 2);
@@ -526,7 +624,7 @@ describe('useEntityTaggers', () => {
     });
     expect(result.current.taggerStates.get('bitcoin')?.isViewerTagger).toBe(true);
     await act(async () => {
-      ViewerTagMarkerStorage.set({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.DELETE });
+      publishMutation({ pubky: viewerId, taggedId: 'profile', label: 'bitcoin', op: HttpMethod.DELETE });
     });
     expect(result.current.taggerStates.get('bitcoin')?.isViewerTagger).toBe(false);
     expect(result.current.taggerStates.get('bitcoin')?.hasMore).toBe(false);

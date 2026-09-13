@@ -1701,7 +1701,7 @@ describe('AuthController', () => {
 
       // Singletons
       expect(resetSpy).toHaveBeenCalledOnce();
-      expect(resetTtlSpy).toHaveBeenCalledOnce();
+      expect(resetTtlSpy).not.toHaveBeenCalled();
       expect(resetStreamSpy).toHaveBeenCalledOnce();
       expect(resetNotifCoordSpy).toHaveBeenCalledOnce();
       expect(postStreamQueueClearSpy).toHaveBeenCalledOnce();

@@ -10,6 +10,7 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
+import { LocalTagCacheService, type TagPreviewGuard } from '@/services/local/tag/tag-cache';
 import type { NexusTag, NexusUserCounts, NexusUserDetails, NexusUserRelationship } from '@/services/nexus/nexus.types';
 
 export class LocalUserService {
@@ -152,16 +153,6 @@ export class LocalUserService {
   }
 
   /**
-   * Reads tags for a single user from local database.
-   * @param userId - User ID to read tags for
-   * @returns Promise resolving to array of tags or empty array if not found
-   */
-  static async readTags({ userId }: TReadProfileParams): Promise<NexusTag[]> {
-    const userTags = await UserTagsModel.findById(userId);
-    return userTags?.tags ?? [];
-  }
-
-  /**
    * Bulk reads multiple user tags from local database.
    * @param userIds - Array of user IDs to read tags for
    * @returns Promise resolving to Map of user ID to user tags
@@ -188,8 +179,8 @@ export class LocalUserService {
    * @param tags - The user tags to upsert
    * @returns Promise resolving to void
    */
-  static async upsertTags(userId: Pubky, tags: NexusTag[]): Promise<void> {
-    await UserTagsModel.upsert({ id: userId, tags });
+  static async upsertTags(userId: Pubky, tags: NexusTag[], tagGuard?: TagPreviewGuard): Promise<void> {
+    await LocalTagCacheService.savePreviews('user', [[userId, tags]], tagGuard);
   }
 
   /**

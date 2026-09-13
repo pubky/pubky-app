@@ -1,27 +1,71 @@
 import { Table } from 'dexie';
-import { DatabaseErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
+import { TAG_MUTATION_TTL_MS } from '@/config/tags';
 import type { Pubky } from '@/models/models.types';
 import { ModelBase } from '@/models/shared/base/baseModel';
-import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { TagModel } from '@/models/shared/tag/tag';
 import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
-import type { NexusTag } from '@/services/nexus/nexus.types';
+import { findTagMutation, getTagMembership, getTagMutationEntries } from '@/models/shared/tag/tag.utils';
 
 export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<Id>> extends ModelBase<Id, Schema> {
   // TODO: Consider adding multiEntry index on tag labels and if so, update Schema to use it
   tags: TagModel[];
+  cache?: TagCollectionModelSchema<Id>['cache'];
+  mutations?: TagCollectionModelSchema<Id>['mutations'];
 
   constructor(data: Schema) {
     super(data);
     this.tags = data.tags.map((t) => new TagModel(t));
+    this.cache = data.cache;
+    this.mutations = data.mutations;
+  }
+
+  ownsMutation(label: string, viewerId: string, expectedId?: string) {
+    return expectedId === undefined || findTagMutation(this, label, viewerId)?.id === expectedId;
+  }
+
+  recordMutation(label: string, viewerId: string, relationship: boolean, id: string, synced: boolean) {
+    const now = Date.now();
+    this.initializeLegacyCursor();
+    this.mutations = {
+      ...Object.fromEntries(
+        getTagMutationEntries(this)
+          .filter(
+            (entry) =>
+              (entry.mutation.expiresAt > now || !entry.mutation.synced) &&
+              !(entry.label === label.toLowerCase() && entry.mutation.viewerId === viewerId),
+          )
+          .map(({ key, mutation }) => [key, mutation]),
+      ),
+      [`${viewerId}:${label.toLowerCase()}`]: {
+        id,
+        label,
+        viewerId,
+        relationship,
+        synced,
+        expiresAt: now + TAG_MUTATION_TTL_MS,
+      },
+    };
+    this.cache!.revision += 1;
+  }
+
+  private viewerRelationship(label: string, viewerId: string): boolean {
+    const mutation = findTagMutation(this, label, viewerId);
+    if (mutation && mutation.expiresAt > Date.now()) return mutation.relationship;
+    const tag = this.findByLabel(label);
+    if (!tag) return false;
+    // Legacy rows predate viewer metadata; preserve their original relationship.
+    if (this.cache?.viewerId === undefined) return tag.relationship;
+    return getTagMembership(tag, viewerId, this.cache.viewerId) ?? false;
+  }
+
+  private initializeLegacyCursor() {
+    this.cache ??= { cursor: this.tags.length, exhausted: false, fetchedAt: 0, revision: 0 };
   }
 
   // -------- Instance helpers (shared) --------
 
   findByLabel(label: string): TagModel | null {
-    const found = this.tags.find((t) => t.label === label);
+    const found = this.tags.find((t) => t.label.toLowerCase() === label.toLowerCase());
     return found ?? null;
   }
 
@@ -32,6 +76,7 @@ export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<
   }
 
   addTagger(label: string, taggerId: Pubky): boolean | null {
+    this.initializeLegacyCursor();
     let tagExists = true;
     let labelTagData = this.findByLabel(label);
     // The label does not exist, create it
@@ -41,43 +86,25 @@ export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<
       tagExists = false;
     }
     // The label exist and the active user put a tag already
-    else if (labelTagData?.relationship) {
+    else if (this.viewerRelationship(label, taggerId)) {
       return null;
     }
     labelTagData.addTagger(taggerId);
-    labelTagData.setRelationship(true);
+    if (this.cache?.viewerId === undefined || this.cache.viewerId === taggerId) labelTagData.setRelationship(true);
     return tagExists;
   }
 
   removeTagger(label: string, taggerId: Pubky): boolean | null {
+    this.initializeLegacyCursor();
     const labelTagData = this.findByLabel(label);
-    if (!labelTagData || !labelTagData?.relationship) {
+    if (!labelTagData || !this.viewerRelationship(label, taggerId)) {
       return null;
     }
 
     labelTagData.removeTagger(taggerId);
-    labelTagData.setRelationship(false);
+    if (this.cache?.viewerId === undefined || this.cache.viewerId === taggerId) labelTagData.setRelationship(false);
     //If there is not taggers, remove the tag
     return this.deleteTagIfNoTaggers();
-  }
-
-  // -------- Static CRUD (inherited from ModelBase) --------
-
-  static async bulkSave<TId, TSchema extends TagCollectionModelSchema<TId>>(
-    this: { table: Table<TSchema> },
-    tuples: NexusModelTuple<NexusTag[]>[],
-  ) {
-    try {
-      const toSave = tuples.map((t) => ({ id: t[0] as TId, tags: t[1] }) as TSchema);
-      return await this.table.bulkPut(toSave);
-    } catch (error) {
-      throw Err.database(DatabaseErrorCode.WRITE_FAILED, `Failed to bulk save tags in ${this.table.name}`, {
-        service: ErrorService.Local,
-        operation: 'bulkSave',
-        context: { table: this.table.name, count: tuples.length },
-        cause: error,
-      });
-    }
   }
 
   /**
@@ -99,6 +126,10 @@ export abstract class TagCollection<Id, Schema extends TagCollectionModelSchema<
     if (tagsData) {
       return tagsData;
     }
-    return new this({ id, tags: [] } as unknown as TSchema);
+    return new this({
+      id,
+      tags: [],
+      cache: { cursor: 0, exhausted: false, fetchedAt: 0, revision: 0, initialized: false },
+    } as unknown as TSchema);
   }
 }

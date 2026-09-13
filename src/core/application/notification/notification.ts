@@ -11,6 +11,8 @@ import type {
 } from '@/application/notification/notification.types';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { UserStreamApplication } from '@/application/stream/users/users';
+import { TagCacheApplication } from '@/application/tag/tag-cache';
+import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
@@ -21,6 +23,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalNotificationService } from '@/services/local/notification/notification';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalTagCacheService, type TagEntity } from '@/services/local/tag/tag-cache';
 import type { NexusNotification } from '@/services/nexus/nexus.types';
 import { NexusUserService } from '@/services/nexus/user/user';
 
@@ -40,14 +43,15 @@ export class NotificationApplication {
    * @returns Promise resolving to filtered unread count and the newest notification timestamp
    */
   static async fetchNotifications({
+    isCurrent,
     userId,
     lastPolledTimestamp,
     lastRead,
     allowedTypes,
   }: TNotificationApplicationNotificationsParams): Promise<TFetchNotificationsResult> {
     const notifications = await NexusUserService.notifications({ user_id: userId, end: lastPolledTimestamp });
-    const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
-    return this.persistAndSummarize({ notifications, lastRead, allowedTypes, flatNotifications });
+    const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId, isCurrent });
+    return this.persistAndSummarize({ notifications, lastRead, allowedTypes, flatNotifications, isCurrent });
   }
   /**
    * Persists the lastRead timestamp on the homeserver to mark all notifications as read.
@@ -103,6 +107,7 @@ export class NotificationApplication {
    * @returns Promise resolving to notifications and next olderThan for pagination
    */
   static async getOrFetchNotifications({
+    isCurrent,
     userId,
     olderThan,
     limit,
@@ -111,14 +116,14 @@ export class NotificationApplication {
     if (allowedTypes === undefined) {
       // No preference constraints are applied (e.g., all notification settings are enabled),
       // so use the normal single-page fetch path.
-      return this.getOrFetchPage({ userId, olderThan, limit });
+      return this.getOrFetchPage({ userId, olderThan, limit, isCurrent });
     }
     if (allowedTypes.length === 0) {
       // All notification types are disabled by user preferences, so skip pagination calls.
       return { flatNotifications: [], olderThan: undefined };
     }
     // Preference filtering - fetch filtered notifications
-    return this.collectPages({ userId, olderThan, limit, allowedTypes });
+    return this.collectPages({ userId, olderThan, limit, allowedTypes, isCurrent });
   }
 
   /**
@@ -126,11 +131,13 @@ export class NotificationApplication {
    * Capped at MAX_FETCH_ROUNDS to prevent runaway requests.
    */
   private static async collectPages({
+    isCurrent,
     userId,
     olderThan,
     limit,
     allowedTypes,
   }: {
+    isCurrent?: () => boolean;
     userId: Pubky;
     olderThan: number;
     limit: number;
@@ -145,7 +152,9 @@ export class NotificationApplication {
     // Decide what users should see in that case.
     for (let attempt = 0; attempt < MAX_FETCH_ROUNDS && collected.length < limit; attempt++) {
       const remaining = limit - collected.length;
+      if (isCurrent && !isCurrent()) return { flatNotifications: [], olderThan: undefined };
       const response = await this.getOrFetchPage({
+        isCurrent,
         userId,
         olderThan: cursor ?? Infinity,
         limit,
@@ -177,10 +186,12 @@ export class NotificationApplication {
    * Fetches a single page of notifications using cache-first strategy.
    */
   private static async getOrFetchPage({
+    isCurrent,
     userId,
     olderThan,
     limit,
   }: {
+    isCurrent?: () => boolean;
     userId: Pubky;
     olderThan: number;
     limit: number;
@@ -196,11 +207,11 @@ export class NotificationApplication {
 
     // Partial cache hit - fetch remaining from Nexus
     if (flatNotifications.length > 0 && flatNotifications.length < limit) {
-      return await this.partialCacheHit({ userId, limit, flatNotifications });
+      return await this.partialCacheHit({ userId, limit, flatNotifications, isCurrent });
     }
 
     // Cache miss - fetch all from Nexus
-    return await this.fetchFromNexus({ userId, olderThan, limit });
+    return await this.fetchFromNexus({ userId, olderThan, limit, isCurrent });
   }
 
   /**
@@ -208,11 +219,13 @@ export class NotificationApplication {
    * and computes the next poll cursor.
    */
   static async persistAndSummarize({
+    isCurrent,
     notifications,
     lastRead,
     allowedTypes,
     flatNotifications: precomputed,
   }: TPersistAndSummarizeParams): Promise<TFetchNotificationsResult> {
+    if (isCurrent && !isCurrent()) return { unread: 0, nextPollCursor: undefined };
     const flatNotifications = precomputed ?? this.toSupportedFlatNotifications(notifications);
     await LocalNotificationService.bulkSave({ flatNotifications });
     const unread = await LocalNotificationService.countFilteredUnreadSince(lastRead, allowedTypes);
@@ -228,6 +241,7 @@ export class NotificationApplication {
    * Handles partial cache hits by fetching remaining notifications from Nexus.
    */
   private static async partialCacheHit({
+    isCurrent,
     userId,
     limit,
     flatNotifications,
@@ -237,6 +251,7 @@ export class NotificationApplication {
 
     // Fetch remaining from Nexus
     const { flatNotifications: nexusFlatNotifications, olderThan: nextOlderThan } = await this.fetchFromNexus({
+      isCurrent,
       userId,
       olderThan: lastCachedTimestamp,
       limit: remainingLimit,
@@ -254,10 +269,12 @@ export class NotificationApplication {
    * Fetches notifications from Nexus and persists them to cache.
    */
   private static async fetchFromNexus({
+    isCurrent,
     userId,
     olderThan,
     limit,
   }: {
+    isCurrent?: () => boolean;
     userId: Pubky;
     olderThan: number;
     limit: number;
@@ -270,17 +287,18 @@ export class NotificationApplication {
         start: olderThan === Infinity ? undefined : olderThan,
       });
 
-      if (notifications.length === 0) {
+      if ((isCurrent && !isCurrent()) || notifications.length === 0) {
         return { flatNotifications: [], olderThan: undefined };
       }
 
-      const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId });
+      const flatNotifications = await this.fetchMissingEntities({ notifications, viewerId: userId, isCurrent });
 
       // IMPORTANT: Save notifications AFTER fetching related entities. If we save notifications first,
       // useLiveQuery will trigger re-renders in components, but referenced posts/users won't be
       // available yet, causing incomplete UI states. By persisting related entities first, everything is
       // ready when the re-render happens.
       try {
+        if (isCurrent && !isCurrent()) return { flatNotifications: [], olderThan: undefined };
         await LocalNotificationService.bulkSave({ flatNotifications });
       } catch (error) {
         Logger.warn('Failed to persist notifications to cache', { error });
@@ -308,9 +326,11 @@ export class NotificationApplication {
    * @param notifications - Array of flat notifications to extract post and user references from
    */
   static async fetchMissingEntities({
+    isCurrent,
     notifications,
     viewerId,
   }: TFetchMissingEntitiesParams): Promise<TFlatNotificationList> {
+    if (isCurrent && !isCurrent()) return [];
     const flatNotifications = this.toSupportedFlatNotifications(notifications);
 
     const { relatedPostIds, relatedUserIds } = LocalNotificationService.parseNotifications({ flatNotifications });
@@ -324,18 +344,76 @@ export class NotificationApplication {
         : [],
     );
 
-    const postIdsToFetch = [...new Set([...notPersistedPostIds, ...editedPostIds])];
+    const tagEvents = new Map<string, { entity: TagEntity; timestamp: number }>();
+    for (const notification of flatNotifications) {
+      const id =
+        notification.type === NotificationType.TagPost
+          ? buildCompositeIdFromPubkyUri({ uri: notification.post_uri, domain: CompositeIdDomain.POSTS })
+          : notification.type === NotificationType.TagProfile
+            ? viewerId
+            : null;
+      if (!id) continue;
+      const kind = notification.type === NotificationType.TagPost ? 'post' : 'user';
+      const key = `${kind}:${id}`;
+      const previous = tagEvents.get(key);
+      if (!previous || notification.timestamp > previous.timestamp) {
+        tagEvents.set(key, { entity: { kind, id }, timestamp: notification.timestamp });
+      }
+    }
+    const taggedEntities: TagEntity[] = [];
+    for (const { entity, timestamp } of tagEvents.values()) {
+      const cached = await LocalTagCacheService.read(entity);
+      // Notification and cache timestamps are epoch milliseconds. Historical
+      // pages do not invalidate a snapshot whose actual request started after the event.
+      if (
+        cached?.cache &&
+        cached.cache.initialized !== false &&
+        cached.cache.fetchedAt > 0 &&
+        cached.cache.validatedAt !== undefined &&
+        cached.cache.validatedAt > timestamp &&
+        cached.cache.viewerId === viewerId
+      )
+        continue;
+      taggedEntities.push(entity);
+    }
+    const taggedPostIds = taggedEntities.filter((entity) => entity.kind === 'post').map((entity) => entity.id);
+    const profileTagged = taggedEntities.some((entity) => entity.kind === 'user');
+    const postIdsToFetch = [...new Set([...notPersistedPostIds, ...editedPostIds, ...taggedPostIds])];
 
+    await Promise.all(taggedEntities.map((entity) => LocalTagCacheService.invalidate(entity, isCurrent)));
+
+    if (isCurrent && !isCurrent()) return [];
     if (postIdsToFetch.length > 0) {
       await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds: postIdsToFetch,
+        force: true,
         viewerId,
+        isCurrent,
       });
     }
 
-    if (notPersistedUserIds.length > 0) {
-      await UserStreamApplication.fetchMissingUsersFromNexus({ cacheMissUserIds: notPersistedUserIds, viewerId });
+    const userIdsToFetch = [...new Set([...notPersistedUserIds, ...(profileTagged ? [viewerId] : [])])];
+    if (userIdsToFetch.length > 0) {
+      await UserStreamApplication.fetchMissingUsersFromNexus({
+        cacheMissUserIds: userIdsToFetch,
+        viewerId,
+        isCurrent,
+        force: true,
+      });
     }
+    await Promise.all(
+      taggedEntities.map(async (entity) => {
+        const cached = await TagCacheApplication.get(entity);
+        // Invalidation above makes this proof specific to hydration after this event.
+        if (cached?.cache?.exhausted && cached.cache.fetchedAt > 0 && cached.cache.viewerId === viewerId) return;
+        try {
+          await TagCacheApplication.forceRefresh({ ...entity, viewerId, isCurrent });
+        } catch (error) {
+          // Keep the notification and the old visible tags. TTL retries invalidated data.
+          if (!isAppError(error)) Logger.warn('Failed to refresh tags referenced by notification', { entity, error });
+        }
+      }),
+    );
     return flatNotifications;
   }
 

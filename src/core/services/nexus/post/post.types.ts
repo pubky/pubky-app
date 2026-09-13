@@ -5,6 +5,13 @@ export type TCompositeId = {
   compositeId: string;
 };
 
+export type TFetchPostTagsParams = TCompositeId & {
+  skip?: number;
+  limit?: number;
+  viewerId?: Pubky;
+  force?: boolean;
+};
+
 export type TPostBasePathParams = {
   author_id: Pubky;
   post_id: string;

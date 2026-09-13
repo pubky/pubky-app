@@ -207,9 +207,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
       .mockImplementation(persistUsersError ? () => Promise.reject(persistUsersError) : () => Promise.resolve([])),
     persistPosts: vi
       .spyOn(LocalStreamPostsService, 'persistPosts')
-      .mockImplementation(
-        persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve({ attachmentMetadata: [] }),
-      ),
+      .mockImplementation(persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve()),
     persistFiles: vi
       .spyOn(FileApplication, 'persistFiles')
       .mockImplementation(
@@ -243,8 +241,14 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
   expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
   expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY);
-  expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
-  expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
+  expect(mocks.persistUsers).toHaveBeenCalledWith(
+    bootstrapData.users,
+    expect.objectContaining({ revisions: expect.any(Map) }),
+  );
+  expect(mocks.persistPosts).toHaveBeenCalledWith({
+    posts: bootstrapData.posts,
+    tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
+  });
   expect(mocks.upsertPostsStream).toHaveBeenCalledWith({
     streamId: PostStreamTypes.TIMELINE_ALL_ALL,
     stream: bootstrapData.ids.stream,
@@ -337,7 +341,10 @@ describe('BootstrapApplication', () => {
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow('Database error');
 
-      expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
+      expect(mocks.persistUsers).toHaveBeenCalledWith(
+        bootstrapData.users,
+        expect.objectContaining({ revisions: expect.any(Map) }),
+      );
     });
 
     it('should handle empty bootstrap data', async () => {
@@ -399,8 +406,14 @@ describe('BootstrapApplication', () => {
         bodyJson: mockLastReadResult.last_read.toJson(),
       });
 
-      expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
-      expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
+      expect(mocks.persistUsers).toHaveBeenCalledWith(
+        bootstrapData.users,
+        expect.objectContaining({ revisions: expect.any(Map) }),
+      );
+      expect(mocks.persistPosts).toHaveBeenCalledWith({
+        posts: bootstrapData.posts,
+        tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
+      });
       expect(result).toEqual({
         unread: 0,
         lastRead: MOCK_NORMALIZED_TIMESTAMP,
@@ -484,7 +497,10 @@ describe('BootstrapApplication', () => {
         'Posts persistence error',
       );
 
-      expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
+      expect(mocks.persistPosts).toHaveBeenCalledWith({
+        posts: bootstrapData.posts,
+        tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
+      });
     });
 
     it('should throw error when upsert operations fail', async () => {
@@ -636,7 +652,7 @@ describe('BootstrapApplication', () => {
       const mockSubscribeUser = vi.fn();
       const mockGetInstance = vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
         asOpaque<TtlCoordinator>({
-          subscribeUser: mockSubscribeUser,
+          retryUserIndexing: mockSubscribeUser,
         }),
       );
       const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
@@ -666,7 +682,7 @@ describe('BootstrapApplication', () => {
       const mockSubscribeUser = vi.fn();
       vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
         asOpaque<TtlCoordinator>({
-          subscribeUser: mockSubscribeUser,
+          retryUserIndexing: mockSubscribeUser,
         }),
       );
       const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
