@@ -90,11 +90,16 @@ export class LocalStreamUsersService {
    * Used to identify missing user data that needs to be fetched
    *
    * @param userIds - Array of user IDs to check
+   * @param viewerId - When set, a missing relationship row is also a cache miss (#1803)
    * @returns Array of user IDs that are not persisted in cache
    */
-  static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
-    const existingUserIds = await UserDetailsModel.findByIdsPreserveOrder(userIds);
-    return userIds.filter((_userId, index) => existingUserIds[index] === undefined);
+  static async getNotPersistedUsersInCache(userIds: Pubky[], viewerId?: Pubky): Promise<Pubky[]> {
+    const [details, relationships] = await Promise.all([
+      UserDetailsModel.findByIdsPreserveOrder(userIds),
+      viewerId ? UserRelationshipsModel.findByIds(userIds) : Promise.resolve([]),
+    ]);
+    const hydratedRelationships = new Set(relationships.map((row) => row.id));
+    return userIds.filter((id, index) => details[index] === undefined || (viewerId && !hydratedRelationships.has(id)));
   }
 
   /**
@@ -102,10 +107,16 @@ export class LocalStreamUsersService {
    * Separates user details, counts, tags, relationships, and TTL records
    * Also detects and persists moderation status for flagged profiles
    *
+   * Relationship rows (`following` / `followed_by`) are only meaningful relative to a viewer.
+   * When the batch was fetched without a `viewerId`, Nexus returns a viewer-agnostic
+   * relationship, so the row is skipped instead of caching "unknown" as "not following".
+   * A missing row reads as a cache miss and triggers a viewer-aware fetch (#1803).
+   *
    * @param users - Array of users from Nexus API
+   * @param viewerId - The signed-in user the batch was fetched for, when available
    * @returns Array of user IDs (Pubky)
    */
-  static async persistUsers(users: NexusUser[]): Promise<Pubky[]> {
+  static async persistUsers(users: NexusUser[], viewerId?: Pubky | null): Promise<Pubky[]> {
     const userCounts: NexusModelTuple<NexusUserCounts>[] = [];
     const userRelationships: NexusModelTuple<NexusUserRelationship>[] = [];
     const userTags: NexusModelTuple<NexusTag[]>[] = [];
@@ -145,7 +156,9 @@ export class LocalStreamUsersService {
       UserDetailsModel.bulkSave(userDetails),
       UserCountsModel.bulkSave(userCounts),
       UserTagsModel.bulkSave(userTags),
-      UserRelationshipsModel.bulkSave(userRelationships),
+      // Guest / viewer-less Nexus payloads are not relative to anyone; skip the row so a later
+      // signed-in read is a cache miss and fetches with viewer_id (#1803).
+      viewerId ? UserRelationshipsModel.bulkSave(userRelationships) : Promise.resolve(),
       UserTtlModel.bulkSave(userTtl),
       // Persist moderation records for flagged profiles
       userModerations.length > 0 ? ModerationModel.bulkSave(userModerations) : Promise.resolve(),

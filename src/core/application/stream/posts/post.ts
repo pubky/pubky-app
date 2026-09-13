@@ -39,7 +39,6 @@ import {
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
-import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalPostService } from '@/services/local/post/post';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
@@ -693,13 +692,16 @@ export class PostStreamApplication {
   }
 
   private static async fetchMissingUsersFromNexus({ posts, viewerId }: TFetchMissingUsersParams) {
-    const cacheMissUserIds = await this.getNotPersistedUsersInCache(posts.map((post) => post.details.author));
+    const cacheMissUserIds = await this.getNotPersistedUsersInCache(
+      posts.map((post) => post.details.author),
+      viewerId ?? undefined,
+    );
     if (cacheMissUserIds.length > 0) {
       const userBatch = await NexusUserStreamService.fetchByIds({
         user_ids: cacheMissUserIds,
         viewer_id: viewerId ?? undefined,
       });
-      await LocalStreamUsersService.persistUsers(userBatch);
+      await LocalStreamUsersService.persistUsers(userBatch, viewerId);
     }
   }
 
@@ -888,10 +890,8 @@ export class PostStreamApplication {
   }
 
   // Delegate to service for cache miss detection
-  private static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
-    const existingUserIds = await UserDetailsModel.findByIdsPreserveOrder(userIds);
-    const missingUserIds = userIds.filter((_userId, index) => existingUserIds[index] === undefined);
-    return Array.from(new Set(missingUserIds));
+  private static async getNotPersistedUsersInCache(userIds: Pubky[], viewerId?: Pubky): Promise<Pubky[]> {
+    return LocalStreamUsersService.getNotPersistedUsersInCache([...new Set(userIds)], viewerId);
   }
 
   private static async getStreamFromCache({ lastPostId, limit, cachedStream }: TCacheStreamParams): Promise<string[]> {

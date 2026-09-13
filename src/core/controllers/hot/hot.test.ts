@@ -44,7 +44,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, viewerId: mockCurrentUserPubky });
       expect(getOrFetchSpy).toHaveBeenCalledOnce();
     });
 
@@ -62,7 +62,11 @@ describe('HotController', () => {
 
       await HotController.getOrFetch(params);
 
-      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, user_id: mockCurrentUserPubky });
+      expect(getOrFetchSpy).toHaveBeenCalledWith({
+        ...params,
+        user_id: mockCurrentUserPubky,
+        viewerId: mockCurrentUserPubky,
+      });
     });
 
     it('should bubble when HotApplication.getOrFetch fails', async () => {
@@ -109,7 +113,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, viewerId: mockCurrentUserPubky });
     });
 
     it('should handle taggers_limit parameter', async () => {
@@ -132,7 +136,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, viewerId: mockCurrentUserPubky });
     });
 
     it('should handle limit: 0', async () => {
@@ -148,7 +152,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, viewerId: mockCurrentUserPubky });
     });
 
     it('should handle skip: 0', async () => {
@@ -164,7 +168,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, viewerId: mockCurrentUserPubky });
     });
 
     it('should handle large limit values', async () => {
@@ -180,7 +184,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, viewerId: mockCurrentUserPubky });
     });
 
     it('should handle all optional parameters together', async () => {
@@ -207,7 +211,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, viewerId: mockCurrentUserPubky });
     });
 
     it('should handle different reach values', async () => {
@@ -230,16 +234,29 @@ describe('HotController', () => {
         reach: UserStreamReach.FOLLOWING,
         timeframe: UserStreamTimeframe.TODAY,
         user_id: mockCurrentUserPubky,
+        viewerId: mockCurrentUserPubky,
       });
       expect(getOrFetchSpy).toHaveBeenNthCalledWith(2, {
         reach: UserStreamReach.FRIENDS,
         timeframe: UserStreamTimeframe.TODAY,
         user_id: mockCurrentUserPubky,
+        viewerId: mockCurrentUserPubky,
       });
-      // No reach → no user_id injection
+      // No reach → no user_id injection, but the viewer is still forwarded for tagger relationships (#1803)
       expect(getOrFetchSpy).toHaveBeenNthCalledWith(3, {
         timeframe: UserStreamTimeframe.TODAY,
+        viewerId: mockCurrentUserPubky,
       });
+    });
+
+    it('should forward the viewer without injecting user_id when reach is absent', async () => {
+      const getOrFetchSpy = vi.spyOn(HotApplication, 'getOrFetch').mockResolvedValue([]);
+
+      await HotController.getOrFetch({ timeframe: UserStreamTimeframe.TODAY, limit: 5 });
+
+      const call = getOrFetchSpy.mock.calls[0][0];
+      expect(call.viewerId).toBe(mockCurrentUserPubky);
+      expect('user_id' in call).toBe(false);
     });
 
     it('should not inject user_id when user is not authenticated', async () => {
@@ -258,7 +275,7 @@ describe('HotController', () => {
 
       await HotController.getOrFetch(params);
 
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, viewerId: null });
     });
 
     it('should not inject user_id when user_id is already provided', async () => {
@@ -274,7 +291,7 @@ describe('HotController', () => {
       await HotController.getOrFetch(params);
 
       // Should use the explicitly provided user_id, not inject from auth store
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, viewerId: mockCurrentUserPubky });
     });
 
     it('should handle different timeframe values', async () => {

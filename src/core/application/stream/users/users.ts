@@ -50,7 +50,12 @@ export class UserStreamApplication {
       const nextPageIds = this.getStreamFromCache({ skip, limit, cachedStream, allowPartial: allowPartialCache });
       if (nextPageIds) {
         // Cache hit - return undefined skip to signal cache source
-        return { nextPageIds, cacheMissUserIds: [], skip: undefined, isExhausted: false };
+        return {
+          nextPageIds,
+          cacheMissUserIds: await this.getNotPersistedUsersInCache(nextPageIds, viewerId),
+          skip: undefined,
+          isExhausted: false,
+        };
       }
     }
 
@@ -103,7 +108,7 @@ export class UserStreamApplication {
         user_ids: cacheMissUserIds,
         viewer_id: viewerId,
       });
-      await LocalStreamUsersService.persistUsers(userBatch);
+      await LocalStreamUsersService.persistUsers(userBatch, viewerId);
     } catch (error) {
       Logger.warn('Failed to fetch missing users from Nexus:', { error });
     }
@@ -149,7 +154,7 @@ export class UserStreamApplication {
     await LocalStreamUsersService.upsert({ streamId, stream });
 
     // Identify users missing from cache that need full details fetched
-    const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds);
+    const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds, viewerId);
 
     // Calculate next skip value for pagination
     const nextSkip = skip + userIds.length;
@@ -193,7 +198,7 @@ export class UserStreamApplication {
   static async getOrFetchUsers({ userIds, viewerId }: TGetOrFetchUsersParams): Promise<void> {
     if (userIds.length === 0) return;
 
-    const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds);
+    const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds, viewerId);
     if (cacheMissUserIds.length === 0) return;
 
     await this.fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId });
@@ -216,7 +221,7 @@ export class UserStreamApplication {
    *
    * @private
    */
-  private static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
-    return await LocalStreamUsersService.getNotPersistedUsersInCache(userIds);
+  private static async getNotPersistedUsersInCache(userIds: Pubky[], viewerId?: Pubky): Promise<Pubky[]> {
+    return await LocalStreamUsersService.getNotPersistedUsersInCache(userIds, viewerId);
   }
 }

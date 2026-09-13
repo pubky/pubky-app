@@ -13,6 +13,7 @@ import {
   type NexusUserDetails,
 } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockAuthStore } from '@/test-utils/stores';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { UserController } from './user';
 
@@ -139,6 +140,29 @@ describe('UserController', () => {
       vi.spyOn(UserApplication, 'getCounts').mockRejectedValue(new Error('Database error'));
 
       await expect(UserController.getCounts({ userId })).rejects.toThrow('Database error');
+    });
+  });
+
+  describe('getOrFetch', () => {
+    it('should delegate to UserApplication.getOrFetch with the authenticated viewer', async () => {
+      const userId = TEST_PUBKY.USER_2;
+      const viewerId = TEST_PUBKY.USER_1;
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ currentUserPubky: viewerId }));
+      const spy = vi.spyOn(UserApplication, 'getOrFetch').mockResolvedValue(null);
+
+      await UserController.getOrFetch({ userId });
+
+      expect(spy.mock.calls[0][0]).toStrictEqual({ userId, viewerId });
+    });
+
+    it('should leave the viewer undefined for guests', async () => {
+      const userId = TEST_PUBKY.USER_2;
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ currentUserPubky: null }));
+      const spy = vi.spyOn(UserApplication, 'getOrFetch').mockResolvedValue(null);
+
+      await UserController.getOrFetch({ userId });
+
+      expect(spy.mock.calls[0][0]).toStrictEqual({ userId, viewerId: undefined });
     });
   });
 
@@ -292,8 +316,9 @@ describe('UserController', () => {
       expect(spy).toHaveBeenCalledWith({ userId: TEST_PUBKY.USER_1, viewerId: undefined });
     });
 
-    it('should delegate to UserApplication.fetch', async () => {
-      const userId = 'test-user-id';
+    it('should delegate to UserApplication.fetch with the authenticated viewer', async () => {
+      const userId = TEST_PUBKY.USER_2;
+      const viewerId = TEST_PUBKY.USER_1;
       const mockUserDetails: NexusUserDetails = {
         id: userId,
         name: 'Test User',
@@ -304,12 +329,13 @@ describe('UserController', () => {
         indexed_at: Date.now(),
       };
 
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ currentUserPubky: viewerId }));
       const spy = vi.spyOn(UserApplication, 'fetch').mockResolvedValue(mockUserDetails);
 
       const result = await UserController.fetch({ userId });
 
       expect(result).toEqual(mockUserDetails);
-      expect(spy).toHaveBeenCalledWith({ userId });
+      expect(spy).toHaveBeenCalledWith({ userId, viewerId });
     });
 
     it('should return null when user not found', async () => {

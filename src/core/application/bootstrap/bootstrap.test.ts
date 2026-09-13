@@ -243,7 +243,7 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
   expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
   expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY);
-  expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
+  expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users, TEST_PUBKY);
   expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
   expect(mocks.upsertPostsStream).toHaveBeenCalledWith({
     streamId: PostStreamTypes.TIMELINE_ALL_ALL,
@@ -337,7 +337,7 @@ describe('BootstrapApplication', () => {
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow('Database error');
 
-      expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
+      expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users, TEST_PUBKY);
     });
 
     it('should handle empty bootstrap data', async () => {
@@ -399,7 +399,7 @@ describe('BootstrapApplication', () => {
         bodyJson: mockLastReadResult.last_read.toJson(),
       });
 
-      expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
+      expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users, TEST_PUBKY);
       expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
       expect(result).toEqual({
         unread: 0,

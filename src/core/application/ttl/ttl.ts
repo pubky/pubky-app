@@ -92,7 +92,7 @@ export class TtlApplication {
       viewer_id: params.viewerId,
     });
 
-    await LocalStreamUsersService.persistUsers(userBatch);
+    await LocalStreamUsersService.persistUsers(userBatch, params.viewerId);
   }
 
   /**
@@ -102,13 +102,13 @@ export class TtlApplication {
     const authors = Array.from(new Set(params.posts.map((post) => post.details.author)));
     if (authors.length === 0) return;
 
-    const cacheMissUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(authors);
+    const cacheMissUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(authors, params.viewerId);
     if (cacheMissUserIds.length === 0) return;
 
     const userBatch = await NexusUserStreamService.fetchByIds({
       user_ids: cacheMissUserIds,
       viewer_id: params.viewerId,
     });
-    await LocalStreamUsersService.persistUsers(userBatch);
+    await LocalStreamUsersService.persistUsers(userBatch, params.viewerId);
   }
 }

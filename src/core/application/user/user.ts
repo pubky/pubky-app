@@ -1,12 +1,13 @@
 import { followUriBuilder } from 'pubky-app-specs';
 import type {
   TEnsureModerationFollowParams,
+  TUserApplicationFetchParams,
   TUserApplicationFollowParams,
   TUserCountsOrFetchResult,
   TUserSocialGraphStatusResult,
 } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
-import type { TFetchUserParams, TPubkyListParams } from '@/controllers/user/user.type';
+import type { TPubkyListParams } from '@/controllers/user/user.type';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -94,34 +95,18 @@ export class UserApplication {
    *
    * Preferred over `getOrFetchDetails` / `getOrFetchCounts` when the caller needs the full entity cached.
    *
-   * @param params - Parameters containing user ID and optional viewer ID (scopes the relationship row)
+   * @param params - Target user ID and the signed-in viewer for relative relationship data
    * @returns Promise resolving to user details or null if not found
    */
-  static async getOrFetch({ userId, viewerId }: TFetchUserParams): Promise<NexusUserDetails | null> {
+  static async getOrFetch({ userId, viewerId }: TUserApplicationFetchParams): Promise<NexusUserDetails | null> {
     // 1. Check local cache first
     const localDetails = await LocalUserService.readDetails({ userId });
     if (localDetails) {
       return localDetails;
     }
 
-    // 2. Fetch full user from Nexus batch endpoint
-    try {
-      const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId], viewer_id: viewerId });
-
-      if (!users || users.length === 0) {
-        Logger.warn('User not found on Nexus', { userId });
-        return null;
-      }
-
-      // 3. Persist full user entity (details, counts, relationships, tags, TTL, moderation)
-      await LocalStreamUsersService.persistUsers(users);
-    } catch (error) {
-      Logger.warn('Failed to fetch user from Nexus', { userId, error });
-      return null;
-    }
-
-    // 4. Return from local cache (now populated)
-    return await LocalUserService.readDetails({ userId });
+    // 2. Fetch and persist the full user entity from the Nexus batch endpoint
+    return await this.fetch({ userId, viewerId });
   }
 
   /**
@@ -131,10 +116,10 @@ export class UserApplication {
    *
    * Concurrent calls for the same user and viewer share a single request and persist.
    *
-   * @param params - Parameters containing user ID and optional viewer ID (scopes the relationship row)
+   * @param params - Target user ID and the signed-in viewer for relative relationship data
    * @returns Promise resolving to user details or null if not found on Nexus
    */
-  static async fetch({ userId, viewerId }: TFetchUserParams): Promise<NexusUserDetails | null> {
+  static async fetch({ userId, viewerId }: TUserApplicationFetchParams): Promise<NexusUserDetails | null> {
     const key = `${userId}:${viewerId ?? ''}`;
     const inFlight = this.inFlightFetches.get(key);
     if (inFlight) return await inFlight;
@@ -144,16 +129,23 @@ export class UserApplication {
     return await request;
   }
 
-  private static async fetchAndPersist({ userId, viewerId }: TFetchUserParams): Promise<NexusUserDetails | null> {
+  private static async fetchAndPersist({
+    userId,
+    viewerId,
+  }: TUserApplicationFetchParams): Promise<NexusUserDetails | null> {
     try {
-      const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId], viewer_id: viewerId });
+      const users = await NexusUserStreamService.fetchByIds({
+        user_ids: [userId],
+        viewer_id: viewerId ?? undefined,
+      });
 
       if (!users || users.length === 0) {
         Logger.warn('User not found on Nexus', { userId });
         return null;
       }
 
-      await LocalStreamUsersService.persistUsers(users);
+      // Persist full user entity (details, counts, relationships, tags, TTL, moderation)
+      await LocalStreamUsersService.persistUsers(users, viewerId);
     } catch (error) {
       Logger.warn('Failed to fetch user from Nexus', { userId, error });
       return null;

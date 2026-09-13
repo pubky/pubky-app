@@ -316,7 +316,7 @@ export class NotificationApplication {
     const { relatedPostIds, relatedUserIds } = LocalNotificationService.parseNotifications({ flatNotifications });
 
     const notPersistedPostIds = await LocalStreamPostsService.getNotPersistedPostsInCache(relatedPostIds);
-    const notPersistedUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(relatedUserIds);
+    const notPersistedUserIds = await LocalStreamUsersService.getNotPersistedUsersInCache(relatedUserIds, viewerId);
 
     const editedPostIds = flatNotifications.flatMap((n) =>
       n.type === NotificationType.PostEdited

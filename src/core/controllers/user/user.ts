@@ -142,7 +142,8 @@ export class UserController {
    * Get full user entity from local database or fetch from Nexus batch API.
    * Persists details, counts, relationships, tags, TTL, and moderation.
    * Preferred over `getOrFetchDetails` when the caller needs the full entity cached.
-   * The fetch is scoped to `viewerId`, defaulting to the signed-in user.
+   * The fetch is scoped to `viewerId`, defaulting to the signed-in user so the relationship
+   * row is viewer-relative.
    */
   static async getOrFetch(params: TFetchUserParams): Promise<NexusUserDetails | null> {
     return await UserApplication.getOrFetch(this.withViewer(params));
