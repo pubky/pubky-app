@@ -9,6 +9,11 @@ export type PostInputVariant =
   | typeof POST_INPUT_VARIANT.REPOST
   | typeof POST_INPUT_VARIANT.EDIT;
 
+export type EditLock = {
+  lockUrl: string;
+  title: string;
+};
+
 interface PostInputBaseProps {
   /** Callback after successful post, receives the created post ID */
   onSuccess?: (createdPostId: string) => void;
@@ -83,6 +88,7 @@ export type PostInputProps =
       editContent?: never;
       editIsArticle?: never;
       editAttachments?: never;
+      editLock?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: repost */
@@ -94,6 +100,7 @@ export type PostInputProps =
       editContent?: never;
       editIsArticle?: never;
       editAttachments?: never;
+      editLock?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: new root post */
@@ -104,6 +111,7 @@ export type PostInputProps =
       editContent?: never;
       editIsArticle?: never;
       editAttachments?: never;
+      editLock?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: edit post */
@@ -123,4 +131,6 @@ export type PostInputProps =
        * attachments, so the type forces every edit surface to provide it.
        */
       editAttachments: string[];
+      /** Existing lock announcement metadata. Omitted for normal post edits. */
+      editLock?: EditLock;
     });

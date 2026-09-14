@@ -24,6 +24,8 @@ export interface UsePostRepostOptions {
 
 export interface UsePostEditOptions {
   editPostId: string;
+  /** Keeps an existing lock announcement in teaser-envelope mode. */
+  isLockAnnouncement?: boolean;
   /**
    * The attachment URIs the edit composer was seeded from (the snapshot taken
    * when the dialog opened — NOT the live post row, which can change underneath
@@ -76,6 +78,8 @@ export interface UsePostReturn {
   setIsArticle: Dispatch<SetStateAction<boolean>>;
   articleTitle: string;
   setArticleTitle: Dispatch<SetStateAction<string>>;
+  lockTitle: string;
+  setLockTitle: Dispatch<SetStateAction<string>>;
   reply: (options: UsePostReplyOptions) => Promise<void>;
   post: (options: UsePostPostOptions) => Promise<void>;
   repost: (options: UsePostRepostOptions) => Promise<void>;

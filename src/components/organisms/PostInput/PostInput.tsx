@@ -18,6 +18,7 @@ import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/u
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
@@ -69,6 +70,7 @@ export function PostInput({
   editContent,
   editIsArticle,
   editAttachments,
+  editLock,
   autoFocusTextarea = false,
   initialContent,
   initialAttachments,
@@ -92,6 +94,8 @@ export function PostInput({
     handleArticleClick,
     articleTitle,
     setArticleTitle,
+    lockTitle: editLockTitle,
+    setLockTitle: setEditLockTitle,
     handleArticleTitleChange,
     handleArticleBodyChange,
     isDragging,
@@ -127,6 +131,7 @@ export function PostInput({
     postId,
     originalPostId,
     editPostId,
+    editLock,
     editAttachmentUris: editAttachments,
     editContent,
     editIsArticle,
@@ -221,6 +226,10 @@ export function PostInput({
     onNormalSubmit: handleSubmitWithAuth,
   });
 
+  const { priceSats: editLockPriceSats } = useLockFile(editLock?.lockUrl);
+  const isLockMode = isLockEnabled || editLock != null;
+  const activeLockTitle = editLock ? editLockTitle : lockTitle;
+
   const isValid = () => {
     // `isPublishingLock` counts as submitting: the action-bar button only disables through this check,
     // so leaving it out lets a second click publish a duplicate lock while the first is in flight.
@@ -234,8 +243,12 @@ export function PostInput({
         articleTitle,
         uploadingCount > 0,
       ) &&
-      // Blocking the click is what prevents an orphaned lock: the publish creates the lock first.
-      (!isLockEnabled || isLockTeaserWithinLimit({ lock_title: lockTitle, teaser_description: content }))
+      // Validate the serialized announcement envelope before publish or edit reaches its write. The
+      // title is required like an article's: the card only shows a placeholder when it is blank, so an
+      // empty one reads as set and would be written as an empty string.
+      (!isLockMode ||
+        (activeLockTitle.trim().length > 0 &&
+          isLockTeaserWithinLimit({ lock_title: activeLockTitle, teaser_description: content })))
     );
   };
 
@@ -308,6 +321,11 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
   }, [variant, editContent, editIsArticle]);
 
+  useEffect(() => {
+    if (isEdit) setEditLockTitle(editLock?.title ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once per edit target; live row changes must not overwrite user input
+  }, [variant, editPostId]);
+
   // Pre-fill content from share target or other external sources
   useEffect(() => {
     if (initialContent && !isEdit) {
@@ -325,7 +343,7 @@ export function PostInput({
   }, []);
 
   // With the lock on the body is the teaser, sharing the post budget with the title in one envelope.
-  const composerMaxLength = isLockEnabled ? LOCK_TEASER_MAX_CHARACTER_LENGTH : POST_MAX_CHARACTER_LENGTH;
+  const composerMaxLength = isLockMode ? LOCK_TEASER_MAX_CHARACTER_LENGTH : POST_MAX_CHARACTER_LENGTH;
   const characterLimit =
     isExpanded && !isArticle ? { count: getCharacterCount(content), max: composerMaxLength } : undefined;
 
@@ -476,7 +494,7 @@ export function PostInput({
                         name="post-input-textarea"
                         ref={textareaRef}
                         placeholder={
-                          isLockEnabled ? 'Write a short announcement to tease your content.' : displayPlaceholder
+                          isLockMode ? 'Write a short announcement to tease your content.' : displayPlaceholder
                         }
                         variant="inline"
                         className={cn(
@@ -570,13 +588,13 @@ export function PostInput({
                       submitIcon={submitIcon}
                       lockSwitch={lockSwitch}
                       lockCard={
-                        isLockConfigured ? (
+                        isLockConfigured || editLock ? (
                           <LockedPostCard
-                            priceSats={lockConfig?.amountSats}
+                            priceSats={editLock ? editLockPriceSats : lockConfig?.amountSats}
                             editableTitle={{
-                              value: lockTitle,
-                              onChange: setLockTitle,
-                              disabled: isPublishingLock,
+                              value: activeLockTitle,
+                              onChange: editLock ? setEditLockTitle : setLockTitle,
+                              disabled: editLock ? isSubmitting : isPublishingLock,
                               maxLength: LOCK_TITLE_MAX_CHARACTER_LENGTH,
                             }}
                           />
