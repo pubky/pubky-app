@@ -234,7 +234,9 @@ function TimelineFeedContent({
   // rows once Nexus catches up. Removals are derived from the loaded ids on
   // every run (an id is removed if the membership ever held it and no longer
   // does); additions are reconciled once the stream has settled: any member
-  // the stream never delivered is prepended once. Both are idempotent.
+  // the stream never delivered is prepended once — except muted authors, whom
+  // the stream filters on purpose. Both are idempotent.
+  const { mutedUserIdSet } = useMutedUsers();
   const seenMembershipRef = useRef<Set<string>>(new Set());
   const everLoadedRef = useRef<Set<string>>(new Set());
   const prependedRef = useRef<Set<string>>(new Set());
@@ -261,12 +263,14 @@ function TimelineFeedContent({
     // Reconcile additions only against a settled stream: while pages are
     // still arriving the missing ids are most likely on the next page.
     if (!streamSettled) return;
-    const missing = [...current].filter((id) => !everLoaded.has(id) && !prepended.has(id));
+    const missing = [...current].filter(
+      (id) => !everLoaded.has(id) && !prepended.has(id) && !MuteFilter.isPostMuted(id, mutedUserIdSet),
+    );
     if (missing.length > 0) {
       missing.forEach((id) => prepended.add(id));
       prependOptimisticPosts(missing);
     }
-  }, [membershipPostIds, rawPostIds, streamSettled, prependOptimisticPosts, removePostsOptimistically]);
+  }, [membershipPostIds, rawPostIds, streamSettled, mutedUserIdSet, prependOptimisticPosts, removePostsOptimistically]);
 
   // Drain optimistic posts the global FAB enqueued for this feed. The FAB lives
   // outside this feed's React tree, so it cannot call `prependOptimisticPosts`
@@ -279,8 +283,6 @@ function TimelineFeedContent({
         ? buildFeedKey({ type: 'bookmarks' })
         : undefined;
   useApplyPendingFeedInsert(optimisticFeedKey, prependOptimisticPosts);
-
-  const { mutedUserIdSet } = useMutedUsers();
 
   const enablePullToRefresh =
     variant === TIMELINE_FEED_VARIANT.HOME ||

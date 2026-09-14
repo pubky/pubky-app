@@ -820,6 +820,15 @@ describe('TimelineFeedContent', () => {
       expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post1']);
     });
 
+    it('does not reconcile members whose author is muted (the stream filters them on purpose)', () => {
+      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, mutedUserIdSet: new Set(['muted-user']) });
+      setLoadedIds([]);
+
+      render(collectionFeed(['muted-user:post9', 'post1']));
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post1']);
+    });
+
     it('does not reconcile while more pages are still loading', () => {
       setLoadedIds(['post1'], { loadingMore: true, hasMore: true });
       const { rerender } = render(collectionFeed(['post1', 'post2']));
