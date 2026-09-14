@@ -256,10 +256,9 @@ describe('SettingsApplication', () => {
         expect(normalizerToSpy).toHaveBeenCalledWith(settings, testPubky);
       });
 
-      it('should still write when the remote read fails', async () => {
+      it('should reject the write without pushing when the remote read fails', async () => {
         const settings = staleSettings();
         const { requestSpy, normalizerToSpy, normalizerBuildUrlSpy } = setupMocks();
-        const loggerWarn = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
         const failure = new Error('read failed');
 
         normalizerBuildUrlSpy.mockReturnValue(settingsUrl);
@@ -268,13 +267,28 @@ describe('SettingsApplication', () => {
           method === HttpMethod.GET ? Promise.reject(failure) : Promise.resolve(undefined),
         );
 
+        await expect(SettingsApplication.commitUpdate(settings, testPubky)).rejects.toBe(failure);
+
+        expect(requestSpy).toHaveBeenCalledOnce();
+        expect(requestSpy).not.toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT }));
+        expect(normalizerToSpy).not.toHaveBeenCalled();
+      });
+
+      it('should write when the remote document does not exist (404)', async () => {
+        const settings = staleSettings();
+        const { requestSpy, normalizerToSpy, normalizerBuildUrlSpy } = setupMocks();
+        const notFound = httpStatusCodeToError(404, 'Not found', ErrorService.Homeserver, 'request', settingsUrl);
+
+        normalizerBuildUrlSpy.mockReturnValue(settingsUrl);
+        normalizerToSpy.mockImplementation((state) => createMockNormalizerResult(state));
+        requestSpy.mockImplementation(({ method }) =>
+          method === HttpMethod.GET ? Promise.reject(notFound) : Promise.resolve(undefined),
+        );
+
         await expect(SettingsApplication.commitUpdate(settings, testPubky)).resolves.toBeUndefined();
 
         expect(requestSpy).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.PUT }));
         expect(normalizerToSpy).toHaveBeenCalledWith(settings, testPubky);
-        expect(loggerWarn).toHaveBeenCalledWith('[Settings] Could not read remote moderation-bot state before write', {
-          error: failure,
-        });
       });
 
       it('should not write when aborted during the remote read', async () => {

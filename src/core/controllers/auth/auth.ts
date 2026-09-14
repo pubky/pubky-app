@@ -142,6 +142,8 @@ export class AuthController {
     await clearDatabase();
     // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
     useMigrationStore.getState().reset();
+    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
+    useSettingsStore.getState().reset();
     const session = await AuthApplication.signIn({ keypair });
     if (!session) {
       Logger.error('Failed to sign in. Please try again.', { keypair });
@@ -277,6 +279,8 @@ export class AuthController {
     await clearDatabase();
     // Skip post-migration resync — new user has no homeserver data to resync
     useMigrationStore.getState().reset();
+    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
+    useSettingsStore.getState().reset();
     const keypair = Identity.keypairFromSecretKey(secretKey);
     const { session } = await AuthApplication.signUp({ keypair, signupToken });
     const authStore = useAuthStore.getState();
@@ -320,6 +324,8 @@ export class AuthController {
     await clearDatabase();
     // Skip post-migration resync — full bootstrap below covers all data
     useMigrationStore.getState().reset();
+    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
+    useSettingsStore.getState().reset();
     const token = Symbol('auth-flow');
     this.cancelActiveAuthFlow();
     this.activeAuthFlow = { token, cancel: null };

@@ -21,6 +21,7 @@ export function SuggestedUserCard({
   user,
   isLoading = false,
   isStatusLoading = false,
+  disabled = false,
   onFollowClick,
   className,
   'data-testid': dataTestId,
@@ -75,6 +76,7 @@ export function SuggestedUserCard({
             isFollowing={isFollowing}
             isLoading={isLoading}
             isStatusLoading={isStatusLoading}
+            disabled={disabled}
             displayName={displayName}
             variant="icon"
             onClick={(e) => {

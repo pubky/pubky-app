@@ -6,6 +6,8 @@ layout/style/responsive/cross-OS regressions — not functional bugs (use unit /
 interaction tests for those).
 
 - Test files: `*.vrt.test.tsx` (the `vrt` Vitest project in `vitest.config.ts`).
+- Setup (once per machine, and after a Playwright bump): `npm run test:vrt:setup`
+  downloads the browsers; on Linux it also installs apt libraries via `sudo`.
 - Run: `npm run test:vrt`. Update baselines: `npm run test:vrt:regenerate-baseline`.
 - Orphan check: `npm run test:vrt:check-baselines` (also in Code Quality CI).
 - Baselines: `__screenshots__/<file>/<name>-<browser>-<platform>.png`, one per
