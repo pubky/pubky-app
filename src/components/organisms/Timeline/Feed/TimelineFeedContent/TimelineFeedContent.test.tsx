@@ -799,12 +799,35 @@ describe('TimelineFeedContent', () => {
       expect(mockRemovePostsOptimistically).not.toHaveBeenCalled();
     });
 
-    it('applies an addition even while the initial load is still in flight', () => {
+    it('defers additions until the initial load has settled', () => {
       setLoadedIds([], { loading: true });
       const { rerender } = render(collectionFeed(['post1']));
       rerender(collectionFeed(['post4', 'post1']));
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
 
+      // The stream lands without post4 (Nexus has not indexed it yet).
+      setLoadedIds(['post1']);
+      rerender(collectionFeed(['post4', 'post1']));
       expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post4']);
+    });
+
+    it('reconciles members the settled initial stream never delivered', () => {
+      // A viewer opens a collection right after the owner added its first post:
+      // the envelope says [post1], the lagging items stream returns nothing.
+      setLoadedIds([]);
+      render(collectionFeed(['post1']));
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post1']);
+    });
+
+    it('does not reconcile while more pages are still loading', () => {
+      setLoadedIds(['post1'], { loadingMore: true, hasMore: true });
+      const { rerender } = render(collectionFeed(['post1', 'post2']));
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+
+      setLoadedIds(['post1']);
+      rerender(collectionFeed(['post1', 'post2']));
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post2']);
     });
 
     it('applies each membership change once, not on every re-render', () => {

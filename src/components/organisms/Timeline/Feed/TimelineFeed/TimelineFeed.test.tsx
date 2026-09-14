@@ -22,6 +22,7 @@ import { ProfileProvider } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { CONTENT, type ContentType, LAYOUT, REACH, SORT } from '@/stores/home/home.types';
+import { mockSession } from '@/test-utils/pubky';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { TimelineFeed, useTimelineFeedContext } from './TimelineFeed';
@@ -818,7 +819,29 @@ describe('TimelineFeed', () => {
         isLoading: false,
       });
 
-    it('renders viewers the envelope items in envelope order, hiding ids the envelope does not contain', () => {
+    it('renders signed-in viewers the envelope items in envelope order, hiding ids the envelope lacks', () => {
+      orderedEnvelope();
+      mockUseStreamPagination.mockReturnValue({
+        ...defaultPaginationResult,
+        postIds: ['author_b:post_b', 'author_a:post_a', 'stranger:post_x'],
+      });
+      useAuthStore.getState().init({ session: mockSession(), currentUserPubky: 'viewer' as Pubky, hasProfile: true });
+
+      try {
+        render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
+
+        // A stream id the envelope lacks is either stale or not yet reflected in
+        // the envelope; hiding it keeps the grid in step with the count badge.
+        expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
+          'data-post-ids',
+          'author_a:post_a,author_b:post_b',
+        );
+      } finally {
+        useAuthStore.getState().reset();
+      }
+    });
+
+    it('keeps ids outside the envelope for a signed-out viewer, whose envelope never refreshes', () => {
       orderedEnvelope();
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
@@ -827,9 +850,10 @@ describe('TimelineFeed', () => {
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
 
-      // A stream id the envelope lacks is either stale or not yet reflected in
-      // the envelope; hiding it keeps the grid in step with the count badge.
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'author_a:post_a,author_b:post_b');
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
+        'data-post-ids',
+        'author_a:post_a,author_b:post_b,stranger:post_x',
+      );
     });
 
     it('keeps ids outside the envelope for the owner, appended after the envelope order', () => {

@@ -16,7 +16,7 @@ import { TimelineFeed } from './TimelineFeed';
 
 const mockUseParams = vi.hoisted(() => vi.fn());
 const mockUseFeedLayoutResolution = vi.hoisted(() => vi.fn());
-const mockAuthState = vi.hoisted(() => ({ currentUserPubky: null as string | null }));
+const mockAuthState = vi.hoisted(() => ({ currentUserPubky: null as string | null, session: null as object | null }));
 const mockUsePostDetails = vi.hoisted(() =>
   vi.fn((): { postDetails: { content: string } | null | undefined; isLoading: boolean } => ({
     postDetails: undefined,
@@ -37,7 +37,8 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
 }));
 
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (state: { currentUserPubky: string | null }) => unknown) => selector(mockAuthState),
+  useAuthStore: (selector: (state: { currentUserPubky: string | null; session: object | null }) => unknown) =>
+    selector(mockAuthState),
 }));
 
 const gridLayoutResolution = (): FeedLayoutResolution => ({
@@ -76,6 +77,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     mockUseFeedLayoutResolution.mockReturnValue(gridLayoutResolution());
     mockUsePostDetails.mockReturnValue({ postDetails: undefined, isLoading: false });
     mockAuthState.currentUserPubky = null;
+    mockAuthState.session = null;
     capturedProps.length = 0;
   });
 
@@ -160,6 +162,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     it('hands viewers the envelope membership as composite ids so the feed can mirror changes in place', () => {
       mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
       mockAuthState.currentUserPubky = 'viewer-1';
+      mockAuthState.session = {};
       mockUsePostDetails.mockReturnValue(envelope([uriFor('author-2', 'item-b'), uriFor('author-1', 'item-a')]));
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
@@ -178,6 +181,16 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     it('does not hand the owner a membership (their own flows already update the feed)', () => {
       mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
       mockAuthState.currentUserPubky = 'author-1';
+      mockAuthState.session = {};
+      mockUsePostDetails.mockReturnValue(envelope([uriFor('author-1', 'item-a')]));
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
+
+      expect(lastProps().membershipPostIds).toBeUndefined();
+    });
+
+    it('does not hand a signed-out viewer a membership (their envelope never refreshes)', () => {
+      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
       mockUsePostDetails.mockReturnValue(envelope([uriFor('author-1', 'item-a')]));
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
@@ -188,6 +201,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     it('maps only well-formed item URIs, dropping duplicates', () => {
       mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
       mockAuthState.currentUserPubky = 'viewer-1';
+      mockAuthState.session = {};
       mockUsePostDetails.mockReturnValue(
         envelope([uriFor('author-1', 'item-a'), 'https://example.com/not-a-post', uriFor('author-1', 'item-a')]),
       );

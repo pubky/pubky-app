@@ -63,16 +63,16 @@ interface TimelineFeedContentProps {
   transformPostIds?: (postIds: string[]) => string[];
   /**
    * Optional local-first membership (composite post ids) the feed mirrors.
-   * Only loaded ids the membership contains are rendered; added ids that are
-   * not loaded are prepended as optimistic posts; loaded ids the membership
-   * once contained but no longer does are committed out, re-evaluated
-   * whenever the loaded ids change so a removal whose post only arrives later
-   * (an in-flight page, a refresh that re-serves it) still applies. Used by
-   * the COLLECTION variant for viewers, whose envelope `items` refresh through
-   * the TTL coordinator while the skip-paginated items stream is fetched once
-   * and never polled. Reorders are handled by `transformPostIds`. The first
-   * non-undefined value is the baseline — the initial load already fetches
-   * that membership.
+   * Only loaded ids the membership contains are rendered; once the stream has
+   * settled, members it never delivered (a lagging Nexus index, or an envelope
+   * change after the load) are prepended once as optimistic posts; loaded ids
+   * the membership once contained but no longer does are committed out,
+   * re-evaluated whenever the loaded ids change so a removal whose post only
+   * arrives later (an in-flight page, a refresh that re-serves it) still
+   * applies. Used by the COLLECTION variant for signed-in viewers, whose
+   * envelope `items` refresh through the TTL coordinator while the
+   * skip-paginated items stream is fetched once and never polled. Reorders
+   * are handled by `transformPostIds`.
    */
   membershipPostIds?: string[];
 }
@@ -227,30 +227,46 @@ function TimelineFeedContent({
 
   // Membership sync (see the `membershipPostIds` prop doc). The items stream is
   // fetched once and never polled while the envelope keeps refreshing, and
-  // Nexus re-indexes that stream asynchronously — a refetch could return the
-  // old membership — so the envelope is mirrored in place. `PostMain` hydrates
-  // a missing row itself, `transformPostIds` puts prepended ids in envelope
-  // order, and they collapse into the stream rows once Nexus catches up.
-  // Additions diff against the previous membership; removals are derived from
-  // the loaded ids on every run (an id is removed if the membership ever held
-  // it and no longer does), so the effect is idempotent and re-runs are free.
-  const previousMembershipRef = useRef<Set<string> | null>(null);
+  // Nexus re-indexes that stream asynchronously — it can lag the envelope on
+  // the initial load as well as after a change — so the envelope is mirrored
+  // in place. `PostMain` hydrates a missing row itself, `transformPostIds`
+  // puts prepended ids in envelope order, and they collapse into the stream
+  // rows once Nexus catches up. Removals are derived from the loaded ids on
+  // every run (an id is removed if the membership ever held it and no longer
+  // does); additions are reconciled once the stream has settled: any member
+  // the stream never delivered is prepended once. Both are idempotent.
   const seenMembershipRef = useRef<Set<string>>(new Set());
+  const everLoadedRef = useRef<Set<string>>(new Set());
+  const prependedRef = useRef<Set<string>>(new Set());
+  const streamSettled = !loading && !loadingMore && !hasMore;
   useEffect(() => {
     if (!membershipPostIds) return;
-    const previous = previousMembershipRef.current;
     const current = new Set(membershipPostIds);
-    previousMembershipRef.current = current;
     const seen = seenMembershipRef.current;
     current.forEach((id) => seen.add(id));
-    // Baseline — the initial load fetches this membership.
-    if (previous === null) return;
-    const loaded = new Set(rawPostIds);
-    const added = [...current].filter((id) => !previous.has(id) && !loaded.has(id));
+    const everLoaded = everLoadedRef.current;
+    rawPostIds.forEach((id) => everLoaded.add(id));
+    const prepended = prependedRef.current;
+
     const removed = rawPostIds.filter((id) => seen.has(id) && !current.has(id));
-    if (removed.length > 0) removePostsOptimistically(removed).commit();
-    if (added.length > 0) prependOptimisticPosts(added);
-  }, [membershipPostIds, rawPostIds, prependOptimisticPosts, removePostsOptimistically]);
+    if (removed.length > 0) {
+      // Forget them so a later re-add is prepended again.
+      removed.forEach((id) => {
+        everLoaded.delete(id);
+        prepended.delete(id);
+      });
+      removePostsOptimistically(removed).commit();
+    }
+
+    // Reconcile additions only against a settled stream: while pages are
+    // still arriving the missing ids are most likely on the next page.
+    if (!streamSettled) return;
+    const missing = [...current].filter((id) => !everLoaded.has(id) && !prepended.has(id));
+    if (missing.length > 0) {
+      missing.forEach((id) => prepended.add(id));
+      prependOptimisticPosts(missing);
+    }
+  }, [membershipPostIds, rawPostIds, streamSettled, prependOptimisticPosts, removePostsOptimistically]);
 
   // Drain optimistic posts the global FAB enqueued for this feed. The FAB lives
   // outside this feed's React tree, so it cannot call `prependOptimisticPosts`
