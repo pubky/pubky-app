@@ -136,7 +136,9 @@ Worked example - "create a collection" (`src/hooks/useCreateCollection/useCreate
 1. The dialog uses the form hook: `form` (RHF + zod schema from `useCreateCollection.types.ts`),
    a cover picker from `useCoverImagePicker`, and `submit(): Promise<string | null>`.
 2. `submit()` calls `PostController.commitCreateCollection({ authorId, name, description, coverImage, layout })`
-   and handles `AppError` itself (`toast({ variant: 'error', ... })` + `Logger.error`).
+   and maps the `AppError` to a toast (`toast({ variant: 'error', ... })`). Do not add a `Logger.error`
+   of your own: `Err.*` factories already log and capture the failure (ADR-0015). The `Logger.error` in
+   today's `useCreateCollection` is debt, not part of the pattern to copy.
 3. The controller uploads the cover through `FileApplication.toFileAttachment`/`commitCreate`, builds
    the payload with `PostNormalizer.toCollection(...)`, derives `compositePostId` with
    `buildCompositeId`, then calls `PostApplication.commitCreate({ compositePostId, post, postUrl })`.
@@ -156,11 +158,13 @@ Worked example - "create a collection" (`src/hooks/useCreateCollection/useCreate
   `TagNormalizer` in `src/core/pipes/tag/tag.normalizer.ts`).
 - Reads: `PostController.getDetails({ compositeId })` for the local read and `PostController.fetch({ compositeId })`
   for the Nexus fetch; `UserController.getManyDetails(params)` / `getOrFetchDetails`;
-  `StreamPostsController.getOrFetchStreamSlice({ streamId, viewerId, cursor, limit })`.
+  `StreamPostsController.getOrFetchStreamSlice({ streamId, streamHead, streamTail, lastPostId, limit, order })`
+  (`viewerId` is derived inside the controller from `useAuthStore`; there is no `viewerId` or `cursor`
+  parameter).
 - Local-first reads in hooks (ADR-0011): use `useLocalFirstQuery` from
   `@/hooks/useLocalFirstQuery/useLocalFirstQuery` - `{ queryFn, fetchFn, deps, enabled }`, where
   `queryFn` is a pure `get*` local read run inside `useLiveQuery` and `fetchFn` is a `fetch*` controller
-  that persists to Dexie. `src/hooks/usePostDetails/usePostDetails.tsx` is the canonical consumer (~19
+  that persists to Dexie. `src/hooks/usePostDetails/usePostDetails.tsx` is the canonical consumer (11
   hooks use it). Never call a network client, TanStack Query or retry logic inside `useLiveQuery`
   (that breaks Dexie's PSD, ADR-0011), and do not hand-roll a `useEffect` + `useLiveQuery` pair.
 - Forms: react-hook-form + zod via `@hookform/resolvers/zod`, wrapped in a hook that returns
@@ -275,9 +279,11 @@ call sites and past issues:
   means for the entity you are rendering.
 - Every hook instance owns its own effect. Mounting the same query twice (list plus expanded row, or a
   nested card) duplicates every request; hoist the query and pass data down (#1986, #1987).
-- `isLoading` stays true while a cache-miss fetch is in flight, so a Nexus 404 with no local row can
-  leave a skeleton with no exit (no Back, no retry) (#2394). Give the consumer an explicit
-  missing/error branch, not just `isLoading` and `data`.
+- `isLoading` is true while a cache-miss fetch is in flight, but `.finally()` clears `isFetching`
+  whether `fetchFn` resolves or rejects (its unit test asserts the settled `{ data: null, isLoading:
+  false }` after a rejection). A Nexus 404 therefore settles at `data === null`, it does not leave a
+  skeleton with no exit, and the hook exposes no error value at all. `usePostMissing` turns that
+  settled `null` into `postMissing`. Branch on the settled value, not on `isLoading` and `data` alone.
 - `isMissing = postDetails === null` is the established "not found" shape (#2081); keep that meaning.
 
 TTL refresh races are the second class:
@@ -315,8 +321,14 @@ There is no separate backend in this repo; the "backend" is the layer stack plus
   caches silently. Mirror existing multi-table patterns and use the dirty registry rather than
   deleting stream rows eagerly.
 - `src/libs/env/env.ts` + `src/libs/runtime-config/**` - the only places allowed to read
-  `process.env`. It is ESLint-enforced: `Env` exposes only `NEXT_PUBLIC_DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION`,
-  everything deployer-facing is a `PUBKY_RUNTIME_*` getter.
+  `process.env`. It is ESLint-enforced. `Env` is the whole validated build-time schema: the
+  build-intrinsic public values (`NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION`,
+  `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`) plus the server-only variables
+  (`HOMESERVER_ADMIN_URL`, `HOMESERVER_ADMIN_PASSWORD`, the Chatwoot `BASE_URL_SUPPORT` /
+  `SUPPORT_API_ACCESS_TOKEN` / `SUPPORT_ACCOUNT_ID`, `NODE_ENV`, `VITEST`). Build-intrinsic or
+  server-only values belong in `env.ts`; a value that has to vary per deployment goes in a
+  `PUBKY_RUNTIME_*` getter instead, and runtime config is injected into the browser as
+  `window.__PUBKY_CONFIG__`, so never put a secret there.
 - Auth, keys, recovery phrase, password, phone and backup modules (`src/libs/{password,identity,phone}`,
   `src/components/organisms/{Backup,DialogBackup*,DialogRestore*}`, `Human*`) - cryptographic and
   identity flows. Trace call sites before changing shared behaviour; no opportunistic refactors.
@@ -343,7 +355,10 @@ npm run test:update-snapshots
 npm run test:vrt                       # vitest --project vrt (chromium+firefox+webkit)
 npm run test:vrt:check-baselines       # every __screenshots__ folder has a sibling test
 npm run build                          # next build --webpack (CI also smoke-tests `next start`)
-npm run start:e2e / test:e2e           # cypress (firefox; mobile config separate)
+npm run start:e2e                      # cypress open, interactive
+npm run test:e2e                       # cypress run, firefox
+npm run start:e2e:mobile               # interactive, mobile cypress config
+npm run test:e2e:mobile                # headless, mobile cypress config
 ```
 
 Cypress e2e needs the full pubky-stack (private `pubky/pubky-stack` at `staging`, homeserver/nexus
@@ -364,12 +379,14 @@ Mock only network/fs/time/boundaries, keep real implementations of pure helpers,
 `@/icons`, `DynamicLucideIcon` and Radix components real, and use fake timers for relative time.
 `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`,
 `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent`, etc. from `src/test-utils`.
-VRT: tests live in `src/test/vrt/<area>/*.vrt.test.tsx` (feed, images, landing, onboarding, post,
-profile, settings) with baselines in the sibling `__screenshots__/` folder - not next to the component, whatever
-`AGENTS.md`'s example path suggests. `npm run test:vrt:check-baselines` enforces that every
-`__screenshots__` folder has sibling tests. PR CI does not run VRT or update baselines (that is
-`vrt-update-baselines.yml` on `master`/`dev`), so a UI change that shifts pixels must be surfaced to the
-user rather than "verified" locally.
+VRT: tests live in `src/test/vrt/<area>/*.vrt.test.tsx` (feed, landing, onboarding, post, profile,
+settings; the `images/` folder holds fixtures only) with baselines in the sibling `__screenshots__/`
+folder - not next to the component. `npm run test:vrt:check-baselines` enforces that every
+`__screenshots__` folder has sibling tests. PR CI does not run VRT or update baselines. Baselines are
+regenerated by hand: `.github/workflows/vrt-update-baselines.yml` is `workflow_dispatch` only and
+refuses to run on `master` - dispatch it on `dev` (it commits to a `vrt-update-baselines` branch and
+opens a PR to `dev`) or on a feature branch (it commits there). So a UI change that shifts pixels must
+be surfaced to the user rather than "verified" locally.
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/
 disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
 
