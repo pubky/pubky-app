@@ -99,13 +99,14 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       'The mute-list SSE subscribe drops routinely (homeserver deploys, idle timeouts, mobile backgrounding) and ' +
       'MuteListSyncCoordinator reconnects with backoff by design. Connect failures reach here as ' +
       'handleError → httpStatusCodeToError(500) → Err.server(INTERNAL_ERROR) tagged with the subscribe operation ' +
-      '(PUBKY-APP-11/1Y/6G/CX). Auth/validation failures on the same operation and every other Homeserver ' +
+      '(PUBKY-APP-11/1Y/6G/CX), or as Err.network(CONNECTION_FAILED) when the SDK cannot resolve the homeserver ' +
+      "from PKARR first ('PkarrError', @synonymdev/pubky >= 0.10). Auth/validation failures on the same operation and every other Homeserver " +
       'operation stay reportable, and the coordinator reports a persistent outage once via the ' +
       "'muteListEventStreamExhausted' operation after MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD consecutive failures.",
     matches: (error) =>
       error.service === ErrorService.Homeserver &&
       error.operation === HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION &&
-      error.category === ErrorCategory.Server,
+      (error.category === ErrorCategory.Server || error.category === ErrorCategory.Network),
   },
 ];
 
