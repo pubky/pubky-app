@@ -2,7 +2,16 @@ import type { SpanJSON, TransactionEvent } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import {
+  AuthErrorCode,
+  ClientErrorCode,
+  DatabaseErrorCode,
+  NetworkErrorCode,
+  ServerErrorCode,
+  TimeoutErrorCode,
+} from '@/libs/error/error.codes';
+import type { Err } from '@/libs/error/error.factories';
+import { safeFetch } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { RUNTIME_CONFIG_WINDOW_KEY } from '@/libs/runtime-config/runtime-config';
@@ -64,7 +73,12 @@ function runBeforeSendSpan(span: SpanJSON): SpanJSON {
 }
 
 async function withEnabledSentryCapture(
-  run: (params: { captureAppError: (error: AppError) => void; captureException: ReturnType<typeof vi.fn> }) => void,
+  run: (params: {
+    captureAppError: (error: AppError) => void;
+    captureException: ReturnType<typeof vi.fn>;
+    /** `Err` factories bound to the same mocked Sentry module as `captureAppError`. */
+    Err: typeof Err;
+  }) => void,
 ) {
   vi.resetModules();
 
@@ -94,8 +108,11 @@ async function withEnabledSentryCapture(
   const removeRuntimeConfig = injectRuntimeConfig();
 
   try {
-    const { captureAppError } = await import('./sentry');
-    run({ captureAppError, captureException });
+    const [{ captureAppError }, { Err: freshErr }] = await Promise.all([
+      import('./sentry'),
+      import('@/libs/error/error.factories'),
+    ]);
+    run({ captureAppError, captureException, Err: freshErr });
   } finally {
     removeRuntimeConfig();
     vi.doUnmock('@sentry/nextjs');
@@ -305,6 +322,268 @@ describe('captureAppError filtering', () => {
     });
 
     expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+});
+
+/**
+ * Drop rules are asserted against errors produced by the real pipeline (`safeFetch`,
+ * homeserver `handleError` via `HomeserverService.subscribeUserEventStreamForPath` in
+ * homeserver.test.ts), not hand-built `new AppError(...)` shapes: a rule that matches a
+ * shape the pipeline never emits is dead code that looks green.
+ */
+describe('expected-error drop rules (pipeline-verified)', () => {
+  async function runSafeFetchRejectingWith(rejection: unknown, options: RequestInit = {}): Promise<AppError> {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(rejection);
+    try {
+      await safeFetch('https://homegate.pubky.app/v0/verify', options, ErrorService.Homegate, 'awaitLnVerification');
+      throw new Error('safeFetch should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      return error as AppError;
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  }
+
+  const abortError = () => new DOMException('The operation was aborted.', 'AbortError');
+
+  it("drops REQUEST_ABORTED when the caller's own AbortSignal fired", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const error = await runSafeFetchRejectingWith(abortError(), { signal: controller.signal });
+
+    expect(error.code).toBe(TimeoutErrorCode.REQUEST_ABORTED);
+    expect(error.context?.signalAborted).toBe(true);
+    expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+  });
+
+  it('keeps REQUEST_ABORTED reportable when no caller signal was aborted (browser-driven abort)', async () => {
+    const error = await runSafeFetchRejectingWith(abortError());
+
+    expect(error.code).toBe(TimeoutErrorCode.REQUEST_ABORTED);
+    expect(error.context?.signalAborted).toBe(false);
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+
+  it('keeps REQUEST_ABORTED reportable when a signal was passed but never fired', async () => {
+    const error = await runSafeFetchRejectingWith(abortError(), { signal: new AbortController().signal });
+
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+
+  it('keeps AbortSignal.timeout() TimeoutError rejections reportable', async () => {
+    const error = await runSafeFetchRejectingWith(new DOMException('The operation timed out.', 'TimeoutError'));
+
+    expect(error.category).toBe(ErrorCategory.Network);
+    expect(error.code).toBe(NetworkErrorCode.CONNECTION_FAILED);
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+
+  it('keeps generic network failures from safeFetch reportable', async () => {
+    const error = await runSafeFetchRejectingWith(new TypeError('Failed to fetch'));
+
+    expect(error.code).toBe(NetworkErrorCode.CONNECTION_FAILED);
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+
+  it('keeps Homeserver server errors from other operations reportable', () => {
+    const error = new AppError({
+      category: ErrorCategory.Server,
+      code: ServerErrorCode.INTERNAL_ERROR,
+      message: 'HTTP transport error: error sending request',
+      service: ErrorService.Homeserver,
+      operation: 'putFile',
+      context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
+    });
+
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+});
+
+describe('once-per-error-chain capture', () => {
+  const localParams = { service: ErrorService.Local, operation: 'findById' } as const;
+  const wrapperParams = { service: ErrorService.Local, operation: 'unblurModeration' } as const;
+
+  it('captures a root AppError exactly once', async () => {
+    await withEnabledSentryCapture(({ Err, captureException }) => {
+      const root = Err.database(DatabaseErrorCode.QUERY_FAILED, 'query failed', localParams);
+
+      expect(captureException).toHaveBeenCalledTimes(1);
+      expect(captureException).toHaveBeenCalledWith(root);
+    });
+  });
+
+  it('does not capture a wrapper whose cause is an already-captured AppError', async () => {
+    await withEnabledSentryCapture(({ Err, captureException }) => {
+      const root = Err.database(DatabaseErrorCode.QUERY_FAILED, 'query failed', localParams);
+      const wrapper = Err.database(DatabaseErrorCode.WRITE_FAILED, 'unblur failed', { ...wrapperParams, cause: root });
+
+      expect(wrapper.cause).toBe(root);
+      expect(captureException).toHaveBeenCalledTimes(1);
+      expect(captureException).toHaveBeenCalledWith(root);
+    });
+  });
+
+  it('walks Error.cause to find an AppError nested inside a native error', async () => {
+    await withEnabledSentryCapture(({ Err, captureException }) => {
+      const root = Err.network(NetworkErrorCode.CONNECTION_REFUSED, 'refused', {
+        service: ErrorService.Nexus,
+        operation: 'fetchNexus',
+      });
+      const native = new TypeError('fetch failed', { cause: root });
+      Err.network(NetworkErrorCode.CONNECTION_FAILED, 'outer', {
+        service: ErrorService.Nexus,
+        operation: 'queryNexus',
+        cause: native,
+      });
+
+      expect(captureException).toHaveBeenCalledTimes(1);
+      expect(captureException).toHaveBeenCalledWith(root);
+    });
+  });
+
+  it('still captures a wrapper whose cause is a plain native error', async () => {
+    await withEnabledSentryCapture(({ Err, captureException }) => {
+      const wrapper = Err.database(DatabaseErrorCode.WRITE_FAILED, 'bulkPut failed', {
+        ...wrapperParams,
+        cause: new DOMException('quota', 'QuotaExceededError'),
+      });
+
+      expect(captureException).toHaveBeenCalledTimes(1);
+      expect(captureException).toHaveBeenCalledWith(wrapper);
+    });
+  });
+
+  it('does not resurrect a dropped root by wrapping it', async () => {
+    await withEnabledSentryCapture(({ Err, captureException }) => {
+      const dropped = Err.timeout(TimeoutErrorCode.REQUEST_ABORTED, 'Request was aborted', {
+        service: ErrorService.Homegate,
+        operation: 'awaitLnVerification',
+        context: { signalAborted: true },
+      });
+      Err.server(ServerErrorCode.UNKNOWN_ERROR, 'verification failed', {
+        service: ErrorService.Homegate,
+        operation: 'listenPaymentConfirmed',
+        cause: dropped,
+      });
+
+      expect(captureException).not.toHaveBeenCalled();
+    });
+  });
+});
+
+/**
+ * Capture paths that bypass `captureAppError`: the SDK's globalHandlers (an AppError rejected without a
+ * handler), `app/error.tsx`, or any direct `captureException`. The factory's decision must hold there too.
+ */
+describe('once-per-chain and drop rules enforced in beforeSend', () => {
+  const rootParams = { service: ErrorService.Local, operation: 'findById' } as const;
+  const wrapperParams = { service: ErrorService.Local, operation: 'unblurModeration' } as const;
+
+  function rootAndWrapper(): { root: AppError; wrapper: AppError } {
+    const root = new AppError({
+      category: ErrorCategory.Database,
+      code: DatabaseErrorCode.QUERY_FAILED,
+      message: 'query failed',
+      ...rootParams,
+    });
+    const wrapper = new AppError({
+      category: ErrorCategory.Database,
+      code: DatabaseErrorCode.WRITE_FAILED,
+      message: 'unblur failed',
+      ...wrapperParams,
+      cause: root,
+    });
+    return { root, wrapper };
+  }
+
+  function ruleDroppedError(): AppError {
+    return new AppError({
+      category: ErrorCategory.Timeout,
+      code: TimeoutErrorCode.REQUEST_ABORTED,
+      message: 'Request was aborted',
+      service: ErrorService.Homegate,
+      operation: 'awaitLnVerification',
+      context: { signalAborted: true },
+    });
+  }
+
+  function runBeforeSendWithException(originalException: unknown): Sentry.ErrorEvent | null {
+    const beforeSend = getSentryInitBase().beforeSend;
+    expect(beforeSend).toBeTypeOf('function');
+    const event = asOpaque<Sentry.ErrorEvent>({ message: 'event' });
+    return beforeSend!(event, { originalException }) as Sentry.ErrorEvent | null;
+  }
+
+  it('drops an AppError wrapper whose cause chain holds an AppError', () => {
+    const { wrapper } = rootAndWrapper();
+
+    expect(runBeforeSendWithException(wrapper)).toBeNull();
+  });
+
+  it('drops an AppError matched by a drop rule', () => {
+    expect(runBeforeSendWithException(ruleDroppedError())).toBeNull();
+  });
+
+  it('keeps a root AppError and non-AppError exceptions', () => {
+    const { root } = rootAndWrapper();
+
+    expect(runBeforeSendWithException(root)).not.toBeNull();
+    expect(runBeforeSendWithException(new TypeError('native'))).not.toBeNull();
+    expect(runBeforeSendWithException(undefined)).not.toBeNull();
+  });
+
+  /**
+   * Same scenario through the real SDK pipeline (scope capture → client → dedupe → beforeSend → transport).
+   * `Scope.captureException` attaches `hint.originalException` the same way the browser globalHandlers
+   * integration does for an unhandled rejection (`captureEvent(event, { originalException: error, ... })`),
+   * so this exercises the hint shape `beforeSend` sees in production. Only the transport is stubbed.
+   */
+  async function captureThroughRealSdk(exceptions: unknown[]): Promise<string[]> {
+    const exceptionValues: string[] = [];
+    const transport = Sentry.createTransport({ recordDroppedEvent: () => {} }, async (request) => {
+      // Envelope: header line, item header line, item payload line.
+      const [, , payload] = String(request.body).split('\n');
+      const event = JSON.parse(payload) as Sentry.ErrorEvent;
+      exceptionValues.push(...(event.exception?.values ?? []).map((exception) => exception.value ?? ''));
+      return { statusCode: 200 };
+    });
+    const client = new Sentry.NodeClient({
+      ...getSentryInitBase(),
+      dsn: TEST_DSN,
+      transport: () => transport,
+      stackParser: Sentry.defaultStackParser,
+      integrations: [Sentry.dedupeIntegration(), Sentry.linkedErrorsIntegration()],
+      sendClientReports: false,
+    });
+    client.init();
+    const scope = new Sentry.Scope();
+    scope.setClient(client);
+
+    for (const exception of exceptions) {
+      scope.captureException(exception);
+    }
+    await client.flush(2000);
+    await client.close(0);
+
+    return exceptionValues;
+  }
+
+  it('delivers exactly one event for a chain when the root is captured twice and the wrapper escapes unhandled', async () => {
+    const { root, wrapper } = rootAndWrapper();
+
+    // Factory capture of the root, then the global handler sees the wrapper AND the root again.
+    const delivered = await captureThroughRealSdk([root, wrapper, root]);
+
+    expect(delivered).toEqual(['query failed']);
+  });
+
+  it('delivers nothing for a rule-dropped AppError that escapes unhandled', async () => {
+    expect(await captureThroughRealSdk([ruleDroppedError()])).toEqual([]);
+  });
+
+  it('still delivers ordinary exceptions through the same pipeline', async () => {
+    expect(await captureThroughRealSdk([new TypeError('native failure')])).toEqual(['native failure']);
   });
 });
 

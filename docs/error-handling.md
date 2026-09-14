@@ -38,7 +38,7 @@ throw 'Something went wrong';
 
 - `Err.*` factories currently **log automatically** (`src/libs/error/error.factories.ts`).
 - Legacy `AppError.type/statusCode/details` still exist in some paths (Phase 2 migration).
-- Sentry + traceId inheritance + log de-duplication are planned but not implemented yet (see ADR-0015 Future Work).
+- Sentry capture is implemented in the factories (`captureAppError`, once per error chain, with expected-error drop rules — see `docs/sentry.md`). traceId inheritance and local-log de-duplication are still planned (see ADR-0015 Future Work).
 
 ## Layer-Specific Patterns
 
@@ -161,6 +161,7 @@ Because `Err.*` factories **log automatically today**:
 - **If you caught an `AppError`**: re-throw it unchanged (`throw error`). Do **not** call `Err.*` again for the same failure.
 - **If you caught an unknown error**: normalize once with `toAppError(error, service, operation)` and throw that.
 - **If you truly need additional context**: prefer adding it at the origin (service/model) where the error is created, not by re-wrapping higher up.
+- **If you do wrap** (`Err.*` with `cause: <AppError>`): the wrapper is logged locally but **not** sent to Sentry — the root was already captured (once-per-chain, see `docs/sentry.md`). Expected errors are kept out of Sentry only by handling them before `Err.*` or by a drop rule in `src/libs/observability/sentry.utils.ts`; changing log levels or categories downstream has no effect on Sentry volume.
 
 ```typescript
 // BAD: Logging in catch + throwing Err.* (double logs)
