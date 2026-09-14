@@ -209,15 +209,11 @@ Worked example - "create a collection" (`src/hooks/useCreateCollection/useCreate
 
 - Styling is Tailwind v4 with CSS variables in `src/app/globals.css` (`@theme` tokens) plus Shadcn
   components; `cn` from `@/libs/utils/utils`; variants via `cva` + `VariantProps`.
-- Tiers: `atoms/` primitives (Button, Input, Textarea, Select, Checkbox, RadioGroup, Switch, Toggle,
-  Dialog, Sheet, Popover, DropdownMenu, Tooltip, Collapsible, Card, Avatar, Badge, Tag, Skeleton,
-  Spinner, Carousel, Typography), `molecules/` atom combinations (InputField, TextareaField,
-  SearchInputBar, PostInputAttachments, PostHeaderUserInfo, Timeline, TagInput, ProgressSteps,
-  SideDrawer, Toaster, MobileFooter/MobileTabBar, Popover* set, `*Empty` empty states), `organisms/`
-  complex features (PostInput, PostContent, PostActionsBar, FeedNavigation,
-  ProfilePageHeader/Layout, NotificationsList, Settings, the Dialog* set),
-  `templates/` page layouts rendered by route files (`Feed`, `Profile`, `Post`, `Collections`,
-  `Collection`, `BookmarksCollection`, `Settings`, `Onboarding`, `Auth`, `Hot`, `Public`).
+- Tiers: `atoms/` primitives, `molecules/` atom combinations, `organisms/` complex features,
+  `templates/` page layouts rendered by route files. `ls src/components/<tier>` is the inventory, read
+  it rather than working from a list here. The split, by example: `@/atoms/Button/Button` is generic and
+  reusable, `@/molecules/ControlledInputField` composes atoms into a form control,
+  `@/organisms/DialogBackup` owns a multi-part feature, and a template is what a route file renders.
 - Theme/tokens: never introduce new colours, spacing, radius or shadows; use semantic tokens
   (`bg-primary`, `bg-muted`, `text-muted-foreground`) and the Tailwind scale.
 - Z-index: only `-z-10`, `z-10`, `z-30`, `z-40`, `z-50`, `z-60` (`docs/z-index.md`). Modals `z-50`,
