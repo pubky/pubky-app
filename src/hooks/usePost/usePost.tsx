@@ -14,6 +14,7 @@ import {
   serializeArticleBody,
   type SerializeArticleBodyError,
 } from '@/libs/post/articleInlineImages';
+import { buildLockTeaserContent } from '@/libs/post/lockTeaser';
 import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -81,6 +82,7 @@ export function usePost(): UsePostReturn {
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [isArticle, setIsArticle] = useState(false);
   const [articleTitle, setArticleTitle] = useState('');
+  const [lockTitle, setLockTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   // selectCurrentUserPubky() throws an error when user is not authenticated;
   // access currentUserPubky directly to get null instead (post actions return early if null)
@@ -327,6 +329,7 @@ export function usePost(): UsePostReturn {
 
   const edit = async ({
     editPostId,
+    isLockAnnouncement,
     originalAttachmentUris,
     preservedAttachmentUris,
     onSuccess,
@@ -426,7 +429,9 @@ export function usePost(): UsePostReturn {
         const keptUris = existingAttachments.map((attachment) => attachment.uri);
         const originalUris = originalAttachmentUris ?? keptUris;
         const attachmentsChanged = attachments.length > 0 || keptUris.length !== originalUris.length;
-        editContentPayload = content.trim();
+        editContentPayload = isLockAnnouncement
+          ? buildLockTeaserContent({ lock_title: lockTitle, teaser_description: content })
+          : content.trim();
         editAttachments = attachmentsChanged
           ? { original: originalUris, kept: keptUris, added: attachments }
           : undefined;
@@ -448,6 +453,7 @@ export function usePost(): UsePostReturn {
       setExistingAttachments([]);
       setIsArticle(false);
       setArticleTitle('');
+      setLockTitle('');
       toast({
         title: 'Post updated',
       });
@@ -494,6 +500,8 @@ export function usePost(): UsePostReturn {
     setIsArticle,
     articleTitle,
     setArticleTitle,
+    lockTitle,
+    setLockTitle,
     reply,
     post,
     repost,

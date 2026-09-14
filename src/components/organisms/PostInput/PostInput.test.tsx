@@ -455,6 +455,7 @@ const mockUsePostReturn = {
   isSubmitting: false,
   isArticle: false,
   articleTitle: '',
+  lockTitle: '',
   isExpanded: true,
 };
 
@@ -478,6 +479,8 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     handleArticleClick: vi.fn(),
     articleTitle: mockUsePostReturn.articleTitle,
     setArticleTitle: mockSetArticleTitle,
+    lockTitle: mockUsePostReturn.lockTitle,
+    setLockTitle: vi.fn(),
     handleArticleTitleChange: vi.fn(),
     handleArticleBodyChange: vi.fn(),
     isDragging: mockUsePostReturn.isDragging,
