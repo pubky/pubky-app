@@ -16,7 +16,8 @@ manual; `docs/` in the repo is the canonical source and wins over anything here.
 1. Read the matching doc before editing: `src/core/**` → `docs/architecture.md`, `docs/local-first.md`,
    `docs/data-patterns.md`, `docs/error-handling.md`; `src/components/**` → `docs/components.md`,
    `docs/z-index.md`, `docs/skeleton-architecture.md`, `docs/component-testing.md`;
-   `src/libs/env|runtime-config` → `docs/environment.md`.
+   `src/test/vrt/**` → `docs/visual-regression-testing.md`; `src/libs/env|runtime-config` →
+   `docs/environment.md`.
 2. Find the closest existing analogue and copy it. Before creating any component, hook, service,
    pipe, util, constant or type, grep the repo for a semantic equivalent first.
 3. Respect the layer chain: `UI/Coordinators → Controllers → Application → Services → Models`
@@ -36,10 +37,14 @@ manual; `docs/` in the repo is the canonical source and wins over anything here.
 10. Change only what the request needs. No drive-by refactors, renames, reformatting, dependency
     swaps or pattern migrations in the same PR.
 11. If you changed a surface covered by a VRT (`src/test/vrt/<area>/*.vrt.test.tsx`), tell the user the
-    pixel baseline under that area's `__screenshots__/` needs regenerating: PR CI does not run VRT and
-    `npm run test:vrt` locally compares against the old baseline rather than blessing a new one.
-12. Never edit generated or externally-owned surfaces by hand: `public/sw.js`, the generated
-    `src/libs/lucide/lucideIcons.*.ts` files, `package-lock.json`, `.github/workflows/*`.
+    baseline under that area's `__screenshots__/` needs regenerating via the **VRT Update Baselines**
+    workflow (dispatched from `dev` or the feature branch). Do not commit baselines produced by
+    `npm run test:vrt:regenerate-baseline`: pixel rendering differs between a dev machine and the CI
+    runners, so CI owns the baselines (`docs/visual-regression-testing.md`). PR CI does not run VRT.
+12. Never edit generated files by hand: `public/sw.js` (built from `src/sw.ts`), the generated
+    `src/libs/lucide/lucideIcons.{aliases,nodes,tags}.ts` (plain `lucideIcons.ts` is hand-written),
+    `package-lock.json` (let npm write it). CI workflows are hand-maintained but high-risk: change
+    them only when the task is CI.
 13. Copy is inline US-English literals at the call site. `next-intl`, `messages/`, `src/i18n/`,
     `useTranslations`, `useFormatter`, `t.rich` were removed (PR #2306 then #2313) and must not come
     back, including as a lookalike "message registry". Duplicated copy across components is accepted.
@@ -158,14 +163,15 @@ Worked example - "create a collection" (`src/hooks/useCreateCollection/useCreate
   `TagNormalizer` in `src/core/pipes/tag/tag.normalizer.ts`).
 - Reads: `PostController.getDetails({ compositeId })` for the local read and `PostController.fetch({ compositeId })`
   for the Nexus fetch; `UserController.getManyDetails(params)` / `getOrFetchDetails`;
-  `StreamPostsController.getOrFetchStreamSlice({ streamId, streamHead, streamTail, lastPostId, limit, order })`
-  (`viewerId` is derived inside the controller from `useAuthStore`; there is no `viewerId` or `cursor`
-  parameter).
+  `StreamPostsController.getOrFetchStreamSlice({ streamId, streamTail, lastPostId, limit })` (the viewer
+  is derived inside the controller from `useAuthStore.getState().currentUserPubky`, and `streamHead` /
+  `order` are optional; there is no `viewerId` or `cursor` parameter).
 - Local-first reads in hooks (ADR-0011): use `useLocalFirstQuery` from
   `@/hooks/useLocalFirstQuery/useLocalFirstQuery` - `{ queryFn, fetchFn, deps, enabled }`, where
   `queryFn` is a pure `get*` local read run inside `useLiveQuery` and `fetchFn` is a `fetch*` controller
-  that persists to Dexie. `src/hooks/usePostDetails/usePostDetails.tsx` is the canonical consumer (11
-  hooks use it). Never call a network client, TanStack Query or retry logic inside `useLiveQuery`
+  that persists to Dexie. `src/hooks/usePostDetails/usePostDetails.tsx` is the canonical consumer
+  (`rg -l useLocalFirstQuery src/hooks --glob '!*.test.*'` lists the consumers). Never call a network
+  client, TanStack Query or retry logic inside `useLiveQuery`
   (that breaks Dexie's PSD, ADR-0011), and do not hand-roll a `useEffect` + `useLiveQuery` pair.
 - Forms: react-hook-form + zod via `@hookform/resolvers/zod`, wrapped in a hook that returns
   `{ form, submit, reset, ... }`; schema, `*_FORM_FIELDS` map, inferred type and defaults live in a
@@ -179,7 +185,7 @@ Worked example - "create a collection" (`src/hooks/useCreateCollection/useCreate
   `isNotFound`, `hasHttpStatus`, `getRetryAfter`, `toAppError`, `getErrorMessage`); HTTP boundary is
   `safeFetch` / `httpResponseToError` / `httpStatusCodeToError` (`src/libs/error/error.http.ts`) and
   `parseResponseOrThrow` (`src/libs/http/response.utils.ts`). Each service wraps them in its own
-  `*-service.utils.ts` (e.g. `src/core/services/nexus/nexus.utils.ts`); call services, not raw `fetch`.
+  `<service>.utils.ts` (e.g. `src/core/services/nexus/nexus.utils.ts`); call services, not raw `fetch`.
 - Toasts: `toast()` from `@/molecules/Toaster/toast` with `variant: default|error|warning|info`.
   Internals (`toast.store`, `useToastState`, `@/atoms/Toast/*`) are ESLint-blocked. Copy is static:
   never interpolate user-entered text (this is the rule from #2475: generic copy such as `'Collection
@@ -208,7 +214,7 @@ Worked example - "create a collection" (`src/hooks/useCreateCollection/useCreate
   Spinner, Carousel, Typography), `molecules/` atom combinations (InputField, TextareaField,
   SearchInputBar, PostInputAttachments, PostHeaderUserInfo, Timeline, TagInput, ProgressSteps,
   SideDrawer, Toaster, MobileFooter/MobileTabBar, Popover* set, `*Empty` empty states), `organisms/`
-  complex features (PostCard, PostInput, PostContent, PostActionsBar, FeedNavigation,
+  complex features (PostInput, PostContent, PostActionsBar, FeedNavigation,
   ProfilePageHeader/Layout, NotificationsList, Settings, the Dialog* set),
   `templates/` page layouts rendered by route files (`Feed`, `Profile`, `Post`, `Collections`,
   `Collection`, `BookmarksCollection`, `Settings`, `Onboarding`, `Auth`, `Hot`, `Public`).
@@ -232,16 +238,17 @@ Worked example - "create a collection" (`src/hooks/useCreateCollection/useCreate
   spacing, dimensions, radius, shadow, active/inactive/hover/focus/disabled states, and the
   desktop/mobile variants. Read the active vs inactive styling from the Shadcn `Button` variant
   (`Selected` vs `Default`), not from the parent frame or a lookalike surface.
-- Naming: `Dialog<Thing>` for dialog organisms (`DialogConfirmDelete`, `DialogBackup*`), `XxxSkeleton`
-  for loaders, `Xxx.types.ts` next to `Xxx.tsx`, `*.store.ts` + `*.selectors.ts` in core stores.
+- Naming: `Dialog<Thing>` for dialogs (`DialogConfirmDelete` is a molecule, `DialogBackup*` are
+  organisms), `XxxSkeleton` for loaders, `Xxx.types.ts` next to `Xxx.tsx`, `*.store.ts` + `*.selectors.ts` in core stores.
 
 ## Data, State, and APIs
 
 - Dexie schema: `src/core/database/franky/franky.ts` (one `DB_VERSION`, recreated rather than migrated);
   access the data only through `src/core/services/local/*`. Tables: `user_details`, `user_counts`,
-  `user_relationships`, `post_details`, `post_counts`, `post_relationships`, `*_ttl`, `post_streams`,
-  `unread_post_streams`, `user_streams`, `tag_streams`, `file_details`, `bookmarks`, `hot_tags`,
-  `feeds`, `moderation`.
+  `user_relationships`, `user_connections`, `user_tags`, `post_details`, `post_counts`,
+  `post_relationships`, `post_tags`, `*_ttl`, `post_streams`, `unread_post_streams`, `user_streams`,
+  `tag_streams`, `file_details`, `bookmarks`, `hot_tags`, `feeds`, `moderation`, `notifications`
+  (`rg 'Table<' src/core/database/franky/franky.ts` is the full list).
 - Streams are caches (ADR-0003) with TTL-driven staleness (ADR-0005): local services update
   `*_ttl.lastUpdatedAt` on every write; forgetting it leaves a cache that never refreshes. TTL values
   are runtime-configurable (`PUBKY_RUNTIME_TTL_*`) via `src/config/sync`.
@@ -278,13 +285,14 @@ call sites and past issues:
   so the network arm never fires and the UI renders the tombstone forever (#1988). Check what "missing"
   means for the entity you are rendering.
 - Every hook instance owns its own effect. Mounting the same query twice (list plus expanded row, or a
-  nested card) duplicates every request; hoist the query and pass data down (#1986, #1987).
+  nested card) duplicates every request; hoist the query and pass data down (#1987).
 - `isLoading` is true while a cache-miss fetch is in flight, but `.finally()` clears `isFetching`
   whether `fetchFn` resolves or rejects (its unit test asserts the settled `{ data: null, isLoading:
   false }` after a rejection). A Nexus 404 therefore settles at `data === null`, it does not leave a
   skeleton with no exit, and the hook exposes no error value at all. `usePostMissing` turns that
   settled `null` into `postMissing`. Branch on the settled value, not on `isLoading` and `data` alone.
-- `isMissing = postDetails === null` is the established "not found" shape (#2081); keep that meaning.
+- `isMissing = postDetails === null` is the established "not found" shape (#2081, #1986); keep that
+  meaning.
 
 TTL refresh races are the second class:
 
@@ -310,10 +318,12 @@ There is no separate backend in this repo; the "backend" is the layer stack plus
 ## Sensitive or High-Risk Areas
 
 - `src/core/database/franky/franky.ts` - one `this.version(DB_VERSION).stores({...})` definition, with
-  `DB_VERSION` a build-intrinsic `NEXT_PUBLIC_DB_VERSION` (`src/config/database`). There is no
-  incremental migration chain: a version mismatch makes the client delete and recreate the local
-  database (`recreateDatabase`), i.e. user-visible local data loss, so bumping the version or editing
-  a table's index map is a deliberate, reviewed change, not a side effect of a feature.
+  `DB_VERSION = Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). There is no incremental
+  migration chain: a version mismatch makes the client delete and recreate the local database
+  (`recreateDatabase`), i.e. user-visible local data loss, so bumping the version or editing a table's
+  index map is a deliberate, reviewed change, not a side effect of a feature. ADR-0007 predates this
+  and is stale - it describes ascending migrations with explicit upgrade paths, which is not what the
+  code does.
 - `src/core/services/homeserver/**` and `src/core/pipes/**` - wire-format boundaries
   (`pubky-app-specs`, composite ids, signup tokens, auth URLs). Preserve payload shapes; do not change
   a format incidentally while adding a feature.
@@ -359,6 +369,7 @@ npm run start:e2e                      # cypress open, interactive
 npm run test:e2e                       # cypress run, firefox
 npm run start:e2e:mobile               # interactive, mobile cypress config
 npm run test:e2e:mobile                # headless, mobile cypress config
+npm run test:vrt:regenerate-baseline   # --update; CI-owned, do not commit the output (see VRT section)
 ```
 
 Cypress e2e needs the full pubky-stack (private `pubky/pubky-stack` at `staging`, homeserver/nexus
@@ -379,14 +390,15 @@ Mock only network/fs/time/boundaries, keep real implementations of pure helpers,
 `@/icons`, `DynamicLucideIcon` and Radix components real, and use fake timers for relative time.
 `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`,
 `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent`, etc. from `src/test-utils`.
-VRT: tests live in `src/test/vrt/<area>/*.vrt.test.tsx` (feed, landing, onboarding, post, profile,
-settings; the `images/` folder holds fixtures only) with baselines in the sibling `__screenshots__/`
-folder - not next to the component. `npm run test:vrt:check-baselines` enforces that every
-`__screenshots__` folder has sibling tests. PR CI does not run VRT or update baselines. Baselines are
-regenerated by hand: `.github/workflows/vrt-update-baselines.yml` is `workflow_dispatch` only and
-refuses to run on `master` - dispatch it on `dev` (it commits to a `vrt-update-baselines` branch and
-opens a PR to `dev`) or on a feature branch (it commits there). So a UI change that shifts pixels must
-be surfaced to the user rather than "verified" locally.
+VRT: `docs/visual-regression-testing.md` is canonical (commands, the CI table, determinism rules).
+Tests live in `src/test/vrt/<area>/*.vrt.test.tsx` (feed, landing, onboarding, post, profile, settings;
+the `images/` folder holds fixtures only) with baselines in the sibling `__screenshots__/` folder - not
+next to the component. `npm run test:vrt:check-baselines` enforces that every `__screenshots__` folder
+has sibling tests. Baselines are owned by CI: `.github/workflows/vrt-update-baselines.yml` is
+`workflow_dispatch` only and refuses `master`, so dispatch it from `dev` (it commits to a
+`vrt-update-baselines` branch and opens a PR to `dev`) or from a feature branch (it commits there). PR
+CI does not run VRT, so a UI change that shifts pixels must be surfaced to the user rather than
+"verified" locally.
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/
 disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
 
