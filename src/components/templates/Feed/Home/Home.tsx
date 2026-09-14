@@ -3,7 +3,6 @@ import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useDefaultHomeReach } from '@/hooks/useDefaultHomeReach/useDefaultHomeReach';
 import { TaggedAsHeadline } from '@/molecules/TaggedAsHeadline/TaggedAsHeadline';
 import { AlertBackup } from '@/organisms/AlertBackup/AlertBackup';
-import { AlertVibes } from '@/organisms/AlertVibes/AlertVibes';
 import { DialogWelcome } from '@/organisms/DialogWelcome/DialogWelcome';
 import { FeedNavigation } from '@/organisms/FeedNavigation/FeedNavigation';
 import { PostInput } from '@/organisms/PostInput/PostInput';
@@ -23,7 +22,6 @@ export function Home() {
       <DialogWelcome />
       {/* First child so the mobile tab bar sits directly under the compact header (Hot pattern). */}
       <FeedNavigation />
-      <AlertVibes />
       <AlertBackup />
       <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} persistentHeader={<TaggedAsHeadline />}>
         <PostInput dataCy="home-post-input" variant={POST_INPUT_VARIANT.POST} />
