@@ -2,11 +2,18 @@ import { AUTH_ROUTES } from '@/app/routes';
 import {
   MUTE_SYNC_CURSOR_STORAGE_PREFIX,
   MUTE_SYNC_DEBOUNCE_MS,
+  MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS,
   MUTE_SYNC_RECONNECT_BACKOFF_MS,
+  MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD,
+  MUTE_SYNC_STREAM_HEALTHY_AFTER_MS,
 } from '@/config/mute-sync';
 import { MuteController } from '@/controllers/mute/mute';
 import type { TMuteDirectoryEvent } from '@/controllers/mute/mute.types';
 import { routeToRegex } from '@/coordinators/base/coordinators.utils';
+import { AppError } from '@/libs/error/error';
+import { ServerErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import { getNotificationRespectPageVisibility } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
@@ -16,6 +23,16 @@ type PendingMuteRefresh = {
   pubky: Pubky;
   cursor: string;
 };
+
+/** One established SSE connection; drives the healthy / failed verdict when it ends. */
+type StreamConnection = {
+  connectedAt: number;
+  receivedEvent: boolean;
+  /** Set once the connection's outcome has been applied to the failure streak. */
+  settled: boolean;
+};
+
+type StreamFailure = { kind: 'exception'; error: unknown } | { kind: 'prematureClose' };
 
 /**
  * Keeps the Dexie-backed mute list aligned with the homeserver when another session mutates users.
@@ -55,6 +72,13 @@ export class MuteListSyncCoordinator {
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private reconnectBackoffTimer: ReturnType<typeof setTimeout> | undefined;
   private reconnectBackoffWake: (() => void) | undefined;
+  /**
+   * Stream iterations that failed (threw, or closed before proving healthy) without a healthy connection in
+   * between; drives backoff and the one-shot outage report. Scoped to {@link failureStreakPubky}: another
+   * user's outage must neither inherit nor be hidden by this one's streak.
+   */
+  private consecutiveStreamFailures = 0;
+  private failureStreakPubky: Pubky | undefined;
 
   private constructor() {
     this.setupListeners();
@@ -83,6 +107,7 @@ export class MuteListSyncCoordinator {
   public stop(): void {
     this.state.isStarted = false;
     this.loopGeneration += 1;
+    this.consecutiveStreamFailures = 0;
     void this.teardownReaderAndTimers();
     Logger.debug('MuteListSyncCoordinator stopped');
   }
@@ -192,10 +217,17 @@ export class MuteListSyncCoordinator {
     return true;
   }
 
+  /** False once this loop was stopped, paused, or replaced by a newer generation. */
+  private isLoopCurrent(generation: number): boolean {
+    return this.state.isStarted && generation === this.loopGeneration && this.shouldSyncMuteStream();
+  }
+
   private async runStreamLoop(generation: number): Promise<void> {
-    while (this.state.isStarted && generation === this.loopGeneration && this.shouldSyncMuteStream()) {
+    while (this.isLoopCurrent(generation)) {
       const pubky = useAuthStore.getState().currentUserPubky as Pubky;
+      this.scopeFailureStreakTo(pubky);
       let reader: ReadableStreamDefaultReader<TMuteDirectoryEvent> | undefined;
+      let connection: StreamConnection | undefined;
 
       try {
         const cursor = this.readStoredCursor(pubky);
@@ -207,23 +239,29 @@ export class MuteListSyncCoordinator {
             .catch(() => {});
           break;
         }
+        connection = { connectedAt: Date.now(), receivedEvent: false, settled: false };
         reader = stream.getReader();
         this.activeReader = reader;
 
         for (;;) {
-          if (!this.state.isStarted || generation !== this.loopGeneration || !this.shouldSyncMuteStream()) {
+          if (!this.isLoopCurrent(generation)) {
             break;
           }
 
           const { done, value } = await reader.read();
 
-          if (!this.state.isStarted || generation !== this.loopGeneration || !this.shouldSyncMuteStream()) {
+          if (!this.isLoopCurrent(generation)) {
             break;
           }
 
           if (done) {
+            this.recordStreamClosed(connection);
             break;
           }
+
+          // An event proves the stream is healthy end to end.
+          connection.receivedEvent = true;
+          this.consecutiveStreamFailures = 0;
 
           if (value.eventType === 'PUT' || value.eventType === 'DEL') {
             this.scheduleDebouncedFetch(pubky, value.cursor, MUTE_SYNC_DEBOUNCE_MS);
@@ -232,7 +270,20 @@ export class MuteListSyncCoordinator {
           }
         }
       } catch (error) {
-        Logger.error('Mute list homeserver event stream failed', { error });
+        // A stale generation (stopped, or replaced while its subscribe was in flight) must not
+        // feed the streak or the outage report of the loop that superseded it.
+        const isCurrentLoop = this.isLoopCurrent(generation);
+        if (isCurrentLoop) {
+          this.recordStreamFailure(connection);
+        }
+        Logger.error('Mute list homeserver event stream failed', {
+          error,
+          consecutiveFailures: this.consecutiveStreamFailures,
+          staleGeneration: !isCurrentLoop,
+        });
+        if (isCurrentLoop) {
+          this.reportStreamOutageIfPersistent({ kind: 'exception', error });
+        }
       } finally {
         if (reader) {
           await reader.cancel().catch(() => {});
@@ -240,14 +291,95 @@ export class MuteListSyncCoordinator {
         if (this.activeReader === reader) {
           this.activeReader = null;
         }
+        // Controlled teardown (stop, pause, route or auth change) ends the connection without a verdict above.
+        // A connection that had proven healthy still clears the streak, so earlier failures do not survive
+        // a hide/show cycle and turn the first blip after it into a false outage.
+        if (connection && !connection.settled && this.isConnectionHealthy(connection)) {
+          this.consecutiveStreamFailures = 0;
+          connection.settled = true;
+        }
       }
 
-      if (!this.state.isStarted || generation !== this.loopGeneration || !this.shouldSyncMuteStream()) {
+      if (!this.isLoopCurrent(generation)) {
         break;
       }
 
       await this.awaitReconnectBackoff();
     }
+  }
+
+  private scopeFailureStreakTo(pubky: Pubky): void {
+    if (this.failureStreakPubky === pubky) return;
+    this.failureStreakPubky = pubky;
+    this.consecutiveStreamFailures = 0;
+  }
+
+  /**
+   * A healthy idle stream never completes a read, so health is proven either by an event or by staying open
+   * for {@link MUTE_SYNC_STREAM_HEALTHY_AFTER_MS}. Immediate connect failures and fast connect→drop cycles
+   * are not healthy.
+   */
+  private isConnectionHealthy(connection: StreamConnection): boolean {
+    return connection.receivedEvent || Date.now() - connection.connectedAt >= MUTE_SYNC_STREAM_HEALTHY_AFTER_MS;
+  }
+
+  /** A failure after a healthy connection starts a fresh streak instead of extending the old one. */
+  private recordStreamFailure(connection: StreamConnection | undefined): void {
+    const afterHealthyConnection = connection !== undefined && this.isConnectionHealthy(connection);
+    this.consecutiveStreamFailures = afterHealthyConnection ? 1 : this.consecutiveStreamFailures + 1;
+    if (connection) {
+      connection.settled = true;
+    }
+  }
+
+  /**
+   * The homeserver may close the stream cleanly (broadcast lag, shutdown). After a healthy connection that is
+   * routine; a connection that closes before proving healthy is a failed iteration, otherwise a homeserver that
+   * accepts and immediately closes every subscribe would reconnect at the base delay forever and never report.
+   */
+  private recordStreamClosed(connection: StreamConnection): void {
+    if (this.isConnectionHealthy(connection)) {
+      this.consecutiveStreamFailures = 0;
+      connection.settled = true;
+      return;
+    }
+    this.recordStreamFailure(connection);
+    Logger.warn('Mute list homeserver event stream closed before delivering an event', {
+      consecutiveFailures: this.consecutiveStreamFailures,
+    });
+    this.reportStreamOutageIfPersistent({ kind: 'prematureClose' });
+  }
+
+  /**
+   * Routine stream failures are dropped from Sentry by the `homeserver-event-stream-connect` rule
+   * (see `sentry.utils.ts`), so a persistent outage must be surfaced explicitly. Reports exactly once
+   * per outage, when the failure streak reaches the threshold; the loop keeps reconnecting regardless.
+   *
+   * Deliberately no `cause`: the last error is an already-captured (or dropped) AppError, and the
+   * factory's once-per-chain guard would swallow this report if it were attached.
+   */
+  private reportStreamOutageIfPersistent(lastFailure: StreamFailure): void {
+    if (this.consecutiveStreamFailures !== MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD) return;
+
+    const lastAppError =
+      lastFailure.kind === 'exception' && lastFailure.error instanceof AppError ? lastFailure.error : undefined;
+    Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'Mute list event stream unavailable after repeated failures', {
+      service: ErrorService.Homeserver,
+      operation: 'muteListEventStreamExhausted',
+      context: {
+        consecutiveFailures: this.consecutiveStreamFailures,
+        lastFailure: lastFailure.kind,
+        lastErrorCategory: lastAppError?.category,
+        lastErrorCode: lastAppError?.code,
+        lastErrorOperation: lastAppError?.operation,
+      },
+    });
+  }
+
+  /** Reconnect delay doubles per consecutive failure, capped, so an outage is not hammered at a fixed 1s. */
+  private currentReconnectBackoffMs(): number {
+    const exponent = Math.max(0, this.consecutiveStreamFailures - 1);
+    return Math.min(MUTE_SYNC_RECONNECT_BACKOFF_MS * 2 ** exponent, MUTE_SYNC_RECONNECT_BACKOFF_MAX_MS);
   }
 
   /** Schedules reconnect delay; {@link teardownReaderAndTimers} clears the timer and completes this await immediately. */
@@ -260,7 +392,7 @@ export class MuteListSyncCoordinator {
         const wake = this.reconnectBackoffWake;
         this.reconnectBackoffWake = undefined;
         wake?.();
-      }, MUTE_SYNC_RECONNECT_BACKOFF_MS);
+      }, this.currentReconnectBackoffMs());
     });
   }
 
