@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { UserController } from '@/controllers/user/user';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
+import { isPubkyIdentifier } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import type { NexusUserRelationship } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -43,7 +44,7 @@ export function useIsFollowing(targetUserId: string): UseIsFollowingResult {
   // The coordinator drops every subscription on route change (CoordinatorsManager applies the route
   // before page effects run), so re-subscribe per pathname for hooks living in route-spanning layouts.
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !isPubkyIdentifier(targetUserId)) return;
 
     const coordinator = TtlCoordinator.getInstance();
     const pubky = targetUserId as Pubky;

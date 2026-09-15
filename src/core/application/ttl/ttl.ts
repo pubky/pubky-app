@@ -153,6 +153,7 @@ export class TtlApplication {
       revisions,
       isCurrent: params.isCurrent,
       viewerId: params.viewerId,
+      fetchStartedAt,
     });
     if (params.isCurrent && !params.isCurrent()) return [];
     const returnedUserIds = userBatch.map((user) => user.details.id);

@@ -728,12 +728,13 @@ export class PostStreamApplication {
     );
     if (cacheMissUserIds.length > 0) {
       if (isCurrent && !isCurrent()) return;
+      const fetchStartedAt = Date.now();
       const revisions = await LocalTagCacheService.captureRevisions('user', cacheMissUserIds);
       const userBatch = await NexusUserStreamService.fetchByIds({
         user_ids: cacheMissUserIds,
         viewer_id: viewerId ?? undefined,
       });
-      await LocalStreamUsersService.persistUsers(userBatch, { revisions, isCurrent, viewerId });
+      await LocalStreamUsersService.persistUsers(userBatch, { revisions, isCurrent, viewerId, fetchStartedAt });
     }
   }
 

@@ -1,4 +1,6 @@
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
+import { db } from '@/database/franky/franky';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
 import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
@@ -19,6 +21,11 @@ import {
   type NexusUserRelationship,
 } from '@/services/nexus/nexus.types';
 import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
+
+/** Tag-cache guard plus the fetch stamp used to keep local follow writes. */
+export type PersistUsersGuard = TagPreviewGuard & {
+  fetchStartedAt?: number;
+};
 
 const KNOWN_SOCIAL_GRAPH_STATUSES = new Set<string>(Object.values(NexusSocialGraphStatus));
 
@@ -113,10 +120,12 @@ export class LocalStreamUsersService {
    * A missing row reads as a cache miss and triggers a viewer-aware fetch (#1803).
    *
    * @param users - Array of users from Nexus API
-   * @param tagGuard - Tag-cache guard; `viewerId` is required to persist relationship rows
+   * @param tagGuard - Tag-cache guard; `viewerId` is required to persist relationship rows.
+   *   `fetchStartedAt` skips relationship rows whose user TTL was written at or after that
+   *   time so a local follow/unfollow during the request is not overwritten.
    * @returns Array of user IDs (Pubky)
    */
-  static async persistUsers(users: NexusUser[], tagGuard: TagPreviewGuard = {}): Promise<Pubky[]> {
+  static async persistUsers(users: NexusUser[], tagGuard: PersistUsersGuard = {}): Promise<Pubky[]> {
     tagGuard = { ...tagGuard, validatedAt: tagGuard.validatedAt ?? getNexusResponseStartedAt(users) };
     if (tagGuard.isCurrent && !tagGuard.isCurrent()) return [];
     const userCounts: NexusModelTuple<NexusUserCounts>[] = [];
@@ -157,14 +166,48 @@ export class LocalStreamUsersService {
     await Promise.all([
       UserDetailsModel.bulkSave(userDetails),
       LocalTagCacheService.savePreviews('user', userTags, tagGuard, userCounts),
-      // Guest / viewer-less Nexus payloads are not relative to anyone; skip the row so a later
-      // signed-in read is a cache miss and fetches with viewer_id (#1803).
-      tagGuard.viewerId ? UserRelationshipsModel.bulkSave(userRelationships) : Promise.resolve(),
-      UserTtlModel.bulkSave(userTtl),
+      this.persistRelationshipsAndTtl(userIds, userRelationships, userTtl, tagGuard),
       // Persist moderation records for flagged profiles
       userModerations.length > 0 ? ModerationModel.bulkSave(userModerations) : Promise.resolve(),
     ]);
 
     return userIds;
+  }
+
+  /**
+   * Guest / viewer-less Nexus payloads skip the relationship row (#1803).
+   * When `fetchStartedAt` is set, a user TTL written at or after that stamp
+   * means a local follow landed during the request — keep that row.
+   */
+  private static async persistRelationshipsAndTtl(
+    userIds: Pubky[],
+    userRelationships: NexusModelTuple<NexusUserRelationship>[],
+    userTtl: NexusModelTuple<{ lastUpdatedAt: number }>[],
+    tagGuard: PersistUsersGuard,
+  ): Promise<void> {
+    if (!tagGuard.viewerId) {
+      await UserTtlModel.bulkSave(userTtl);
+      return;
+    }
+
+    await db.transaction('rw', [UserRelationshipsModel.table, UserTtlModel.table], async () => {
+      let toSave = userRelationships;
+      const fetchStartedAt = tagGuard.fetchStartedAt;
+      if (fetchStartedAt !== undefined) {
+        const existingTtl = await UserTtlModel.findByIds(userIds);
+        const skipIds = new Set(existingTtl.filter((row) => row.lastUpdatedAt >= fetchStartedAt).map((row) => row.id));
+        if (skipIds.size > 0) {
+          Logger.debug('LocalStreamUsersService: Kept local follow state during refresh', {
+            ids: Array.from(skipIds).slice(0, 5),
+            count: skipIds.size,
+          });
+          toSave = userRelationships.filter(([id]) => !skipIds.has(id));
+        }
+      }
+      await Promise.all([
+        toSave.length > 0 ? UserRelationshipsModel.bulkSave(toSave) : Promise.resolve(),
+        UserTtlModel.bulkSave(userTtl),
+      ]);
+    });
   }
 }

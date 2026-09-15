@@ -114,13 +114,14 @@ export class UserStreamApplication {
 
     try {
       if (isCurrent && !isCurrent()) return;
+      const fetchStartedAt = Date.now();
       const revisions = await LocalTagCacheService.captureRevisions('user', cacheMissUserIds);
       const userBatch = await NexusUserStreamService.fetchByIds({
         user_ids: cacheMissUserIds,
         force,
         viewer_id: viewerId,
       });
-      await LocalStreamUsersService.persistUsers(userBatch, { revisions, isCurrent, viewerId });
+      await LocalStreamUsersService.persistUsers(userBatch, { revisions, isCurrent, viewerId, fetchStartedAt });
     } catch (error) {
       Logger.warn('Failed to fetch missing users from Nexus:', { error });
     }

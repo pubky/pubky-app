@@ -842,7 +842,14 @@ describe('UserApplication.getOrFetch', () => {
     expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId], viewer_id: viewerId });
     expect(LocalTagCacheService.captureRevisions).toHaveBeenCalledWith('user', [userId]);
     expect(LocalTagCacheService.captureRevisions).toHaveBeenCalledBefore(fetchByIdsSpy);
-    expect(persistSpy).toHaveBeenCalledWith([mockNexusUser], { revisions: new Map([[userId, 7]]), viewerId });
+    expect(persistSpy).toHaveBeenCalledWith(
+      [mockNexusUser],
+      expect.objectContaining({
+        revisions: new Map([[userId, 7]]),
+        viewerId,
+        fetchStartedAt: expect.any(Number),
+      }),
+    );
   });
 
   it('should return null when Nexus returns empty array (user not indexed)', async () => {
@@ -955,7 +962,14 @@ describe('UserApplication.fetch', () => {
     expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId], viewer_id: viewerId });
     expect(LocalTagCacheService.captureRevisions).toHaveBeenCalledWith('user', [userId]);
     expect(LocalTagCacheService.captureRevisions).toHaveBeenCalledBefore(fetchByIdsSpy);
-    expect(persistSpy).toHaveBeenCalledWith([mockNexusUser], { revisions: new Map([[userId, 7]]), viewerId });
+    expect(persistSpy).toHaveBeenCalledWith(
+      [mockNexusUser],
+      expect.objectContaining({
+        revisions: new Map([[userId, 7]]),
+        viewerId,
+        fetchStartedAt: expect.any(Number),
+      }),
+    );
     expect(localSpy).toHaveBeenCalledTimes(1);
     expect(localSpy).toHaveBeenCalledWith({ userId });
   });

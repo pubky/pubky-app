@@ -406,6 +406,40 @@ describe('LocalStreamUsersService', () => {
         const relationship = await UserRelationshipsModel.findById(userId);
         expect(relationship?.following).toBe(true);
       });
+
+      it('should keep a local follow that landed while a viewer-aware refresh was in flight', async () => {
+        const userId = 'user-1' as Pubky;
+        const fetchStartedAt = Date.now() - 5_000;
+        await LocalStreamUsersService.persistUsers(
+          [createMockNexusUser(userId, { relationship: { following: false, followed_by: false } })],
+          { viewerId: VIEWER_ID },
+        );
+        await UserRelationshipsModel.update(userId, { following: true });
+        await UserTtlModel.upsert({ id: userId, lastUpdatedAt: Date.now() });
+
+        await LocalStreamUsersService.persistUsers(
+          [createMockNexusUser(userId, { relationship: { following: false, followed_by: false } })],
+          { viewerId: VIEWER_ID, fetchStartedAt },
+        );
+
+        expect((await UserRelationshipsModel.findById(userId))?.following).toBe(true);
+      });
+
+      it('should overwrite the relationship when no local write landed after the fetch started', async () => {
+        const userId = 'user-1' as Pubky;
+        await LocalStreamUsersService.persistUsers(
+          [createMockNexusUser(userId, { relationship: { following: false, followed_by: false } })],
+          { viewerId: VIEWER_ID },
+        );
+        await UserTtlModel.upsert({ id: userId, lastUpdatedAt: 1 });
+
+        await LocalStreamUsersService.persistUsers(
+          [createMockNexusUser(userId, { relationship: { following: true, followed_by: false } })],
+          { viewerId: VIEWER_ID, fetchStartedAt: Date.now() },
+        );
+
+        expect((await UserRelationshipsModel.findById(userId))?.following).toBe(true);
+      });
     });
 
     it('should persist user details correctly', async () => {
