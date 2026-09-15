@@ -56,7 +56,7 @@ jobs:
 
       - name: Upload partial coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-shard-${{ matrix.shard }}
           path: coverage/coverage-${{ matrix.shard }}.json
@@ -84,7 +84,7 @@ jobs:
         run: npx nyc report --reporter=lcov --reporter=html --reporter=text-summary
 
       - name: Upload Final Coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-final
           path: coverage/ # Contains your unified lcov.info and html reports

@@ -266,7 +266,7 @@ jobs:
 
       - name: Upload screenshots - ${{ matrix.browser }} - Desktop
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-desktop
           path: pubky-app/cypress/screenshots
@@ -274,7 +274,7 @@ jobs:
 
       - name: Upload video for ${{ matrix.spec }} test - ${{ matrix.browser }} - Desktop
         if: always() && steps.test-desktop.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: video-${{ matrix.browser }}-${{ matrix.spec }}-desktop-onboarding
@@ -301,7 +301,7 @@ jobs:
 
       - name: Upload screenshots - ${{ matrix.browser }} - Mobile
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshots-${{ matrix.browser }}-${{ matrix.spec }}-mobile
           path: pubky-app/cypress/screenshots/mobile
@@ -309,7 +309,7 @@ jobs:
 
       - name: Upload video for ${{ matrix.spec }} test - ${{ matrix.browser }} - Mobile
         if: always() && steps.test-mobile.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: video-${{ matrix.browser }}-${{ matrix.spec }}-mobile-onboarding
@@ -318,7 +318,7 @@ jobs:
 
       - name: Upload cypress.log
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: cypress-log-${{ matrix.browser }}-${{ matrix.spec }}
