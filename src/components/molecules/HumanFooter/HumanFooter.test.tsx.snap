@@ -9,11 +9,7 @@ exports[`HumanFooter > matches snapshot 1`] = `
     data-testid="footer-links"
   >
     By creating a 
-    <span
-      class="text-brand"
-    >
-      Pubky
-    </span>
+    Pubky
      account, you agree to the
      
     <span
