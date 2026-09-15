@@ -55,10 +55,15 @@ type BaseStreamModelSchema<TId, TItem> = {
   stream: TItem[]; // Array of items (composite post IDs, pubkeys, or hot tags)
 };
 
-// Example: PostStreamModelSchema = BaseStreamModelSchema<PostStreamId, string>
+// Example: PostStreamModelSchema = BaseStreamModelSchema<PostStreamId, string> & { tailCursor?: number }
 // Example: UserStreamModelSchema = BaseStreamModelSchema<UserStreamId, string>
 // Example: TagStreamModelSchema  = BaseStreamModelSchema<TagStreamTypes, NexusHotTag>
 ```
+
+Post stream rows also carry `tailCursor`: the Nexus `last_post_score` of the deepest page fetched into the
+stream, which every cache→Nexus seam resumes from. It is a plain row field (not an index), so it needs no
+`DB_VERSION` bump. Never derive a stream cursor from a post's `indexed_at` — Nexus bumps it on edit/delete
+without moving the post in the stream (`docs/local-first.md`, _Stream Pagination Cursors_).
 
 ### Stream Operations
 
