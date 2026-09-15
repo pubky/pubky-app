@@ -68,7 +68,7 @@ export class StreamPostsController {
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile posts)
     const viewerId = useAuthStore.getState().currentUserPubky;
     const isCurrent = captureViewerSession();
-    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd, lastRawPostId } =
+    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd, lastRawPostId, rawScannedCount } =
       await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit,
@@ -117,7 +117,7 @@ export class StreamPostsController {
         strictReplyClassification: true,
       });
     }
-    return { nextPageIds: visibleIds, nextCursor, reachedEnd, lastRawPostId };
+    return { nextPageIds: visibleIds, nextCursor, reachedEnd, lastRawPostId, rawScannedCount };
   }
 
   /**

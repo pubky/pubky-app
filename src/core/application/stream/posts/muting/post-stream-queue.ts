@@ -62,7 +62,7 @@ export class PostStreamQueue {
     // synthesized from the last served post's own timestamp would not be a stream position:
     // Nexus keeps edited/deleted posts at their original score while bumping `indexed_at`.
     if (limit > 0 && posts.length >= limit) {
-      return this.finalize(streamId, posts, limit, cursor, [], cursor, false);
+      return this.finalize(streamId, posts, limit, cursor, [], cursor, false, 0);
     }
 
     // Fetch until we have enough
@@ -70,11 +70,13 @@ export class PostStreamQueue {
     let latestScore: number | undefined;
     let fetchCount = 0;
     let reachedEnd = false;
+    let rawScannedCount = 0;
 
     while (posts.length < limit && fetchCount < maxIterations) {
       fetchCount++;
 
       const result = await fetch(cursor);
+      rawScannedCount += result.nextPageIds.length;
 
       // Filter and dedupe
       const filtered = await filter(result.nextPageIds);
@@ -120,7 +122,16 @@ export class PostStreamQueue {
     // Skip streams resume by raw offset; score streams by the last real score (undefined if
     // none, so the caller keeps its cursor rather than resetting).
     const nextCursor = isSkipPaginatedStream(streamId) ? cursor : latestScore;
-    return this.finalize(streamId, posts, limit, cursor, Array.from(allCacheMissIds), nextCursor, reachedEnd);
+    return this.finalize(
+      streamId,
+      posts,
+      limit,
+      cursor,
+      Array.from(allCacheMissIds),
+      nextCursor,
+      reachedEnd,
+      rawScannedCount,
+    );
   }
 
   private finalize(
@@ -131,6 +142,7 @@ export class PostStreamQueue {
     cacheMissIds: string[],
     nextCursor: number | undefined,
     reachedEnd: boolean,
+    rawScannedCount: number,
   ): CollectResult {
     const toReturn = posts.slice(0, limit);
     const toSave = posts.slice(limit);
@@ -152,6 +164,7 @@ export class PostStreamQueue {
       // "Show more" / dead sentinel. The follow-up load serves the buffer, re-fetches
       // at the end cursor (one cheap short/empty page), and then reachedEnd propagates.
       reachedEnd: reachedEnd && toSave.length === 0,
+      rawScannedCount,
     };
   }
 }

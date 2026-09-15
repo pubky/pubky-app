@@ -148,3 +148,13 @@ are owned by QA: flag an invalidated spec, do not edit or run e2e yourself. `doc
 - Greptile reads `.greptile/config.json` (rules) and `.greptile/files.json` (which docs to attach per path), nothing else.
 - Update `docs/` first (plus an ADR when an architectural rule changes), then the one-line summary here, then Greptile.
   The adapters only point, so they rarely change.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

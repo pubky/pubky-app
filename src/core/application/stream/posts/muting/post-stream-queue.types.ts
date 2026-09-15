@@ -26,4 +26,9 @@ export interface CollectResult {
    * overflow remains buffered — otherwise the caller would hide its load-more affordance
    * while posts are still queued. False if we hit the iteration cap or filled the limit. */
   reachedEnd: boolean;
+  /** Raw ids this call pulled from the cache walk / Nexus before filtering (0 when served
+   * purely from the overflow buffer). Lets callers budget a scan by posts, not by rounds:
+   * a round through an unhydrated region can inspect a single page while a cached one
+   * inspects up to `maxIterations` pages. */
+  rawScannedCount: number;
 }

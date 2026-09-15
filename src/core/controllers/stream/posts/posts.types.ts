@@ -30,4 +30,8 @@ export type TReadPostStreamChunkResponse = {
    * fully-filtered pages instead of restarting at the cache head.
    * May be a filtered-out post id — do not dereference for display. */
   lastRawPostId?: string;
+  /** Raw ids the stream layer scanned this round before filtering. `useStreamPagination`
+   * budgets a load by this sum, so an unhydrated region (one page per round) and a cached
+   * one (up to twenty) are scanned equally deep before the load yields. */
+  rawScannedCount?: number;
 };

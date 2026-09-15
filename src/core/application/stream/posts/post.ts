@@ -418,7 +418,7 @@ export class PostStreamApplication {
 
     let lastReturnedPostId: string | undefined = lastPostId;
 
-    const { posts, cacheMissIds, nextCursor, reachedEnd } = await postStreamQueue.collect(streamId, {
+    const { posts, cacheMissIds, nextCursor, reachedEnd, rawScannedCount } = await postStreamQueue.collect(streamId, {
       limit,
       cursor: streamTail,
       // Discover bounds its per-load scan tighter than the shared default: it is a
@@ -479,6 +479,7 @@ export class PostStreamApplication {
       // The raw cache-walk anchor: last raw id scanned this round (buffer-only rounds
       // scan nothing, so it holds at the caller's own lastPostId).
       lastRawPostId: lastReturnedPostId,
+      rawScannedCount,
     };
   }
 

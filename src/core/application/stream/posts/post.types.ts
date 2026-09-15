@@ -38,6 +38,9 @@ export interface TPostStreamChunkResponse {
    * nothing was scanned or on paths that bypass the cache walk (e.g. ASCENDING order).
    * May be a filtered-out (deleted/collection/muted) post id — do not dereference for display. */
   lastRawPostId?: string;
+  /** Raw ids scanned this round before filtering (see `CollectResult.rawScannedCount`); undefined
+   * on paths that bypass the queue (head polls, ASCENDING order). */
+  rawScannedCount?: number;
 }
 
 export interface TPartialCacheHitParams {

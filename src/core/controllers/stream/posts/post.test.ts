@@ -26,12 +26,14 @@ describe('StreamPostsController', () => {
       const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
       const nextCursor = 1000000;
       const lastRawPostId = 'user-1:post-2';
+      const rawScannedCount = 20;
 
       const getOrFetchStreamSliceSpy = vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
         nextPageIds,
         cacheMissPostIds: [],
         nextCursor,
         lastRawPostId,
+        rawScannedCount,
       });
 
       const fetchMissingPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus');
@@ -55,6 +57,7 @@ describe('StreamPostsController', () => {
         nextPageIds,
         nextCursor,
         lastRawPostId,
+        rawScannedCount,
       });
     });
 
