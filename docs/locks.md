@@ -299,21 +299,26 @@ Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
 
 ## Testing & local demo
 
-**The Lock SDK is not on npm yet** (as of 2026-08). `@pubky/locks-sdk` is deliberately
-missing from `package.json` — you build it from the `pubky/locks` repo and copy it into
-`node_modules` by hand:
-
-Until `pubky/locks#42` lands, build the SDK from that PR branch; the payment wallet gate
-depends on its `Locks.hasPaykitDataWithOptions` API.
+**The Lock SDK is not on npm yet** (as of 2026-09), so it is vendored:
+`package.json` declares `"@pubky/locks-sdk": "file:vendor/locks-sdk"`, and the WASM build
+output is committed under `vendor/locks-sdk/`.
 
 ```bash
 cd <locks repo>/locks-sdk/bindings/js
 npm run build                       # wasm-pack build --target web → ./pkg
-cp pkg/* <pubky-app>/node_modules/@pubky/locks-sdk/
+cp pkg/* <pubky-app>/vendor/locks-sdk/
 ```
 
-Anything that reinstalls `node_modules` (`npm install`, `npm ci`, lockfile changes) wipes
-the copy — if lock imports suddenly fail or behave stale, re-copy first.
+`vendor/locks-sdk/README.md` carries the two steps that are easy to miss — deleting the
+`.gitignore` wasm-pack emits, and keeping the package name scoped.
+
+This replaces the previous instruction to copy the package into `node_modules` by hand.
+That could never work in a container: the Dockerfile's dependency stage runs `npm ci`, which
+erases anything placed in `node_modules` beforehand. A `file:` dependency survives it, and
+the Dockerfile copies `vendor/` in before `npm ci` so the path resolves.
+
+Vendoring is temporary. Once the SDK is published to a registry, the dependency becomes an
+ordinary version pin and `vendor/` is deleted.
 
 - Tests are co-located with each file. Shared sample data (a `LockFile` + an author pubky)
   lives in `src/test-utils/locks.ts` (`mockLockFile()`, `MOCK_LOCK_AUTHOR_PUBKY`).
