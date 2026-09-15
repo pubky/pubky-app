@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { USER_TAGS_PER_PAGE } from '@/config/tags';
 import { AppError } from '@/libs/error/error';
 import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -10,10 +11,11 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalFollowService } from '@/services/local/follow/follow';
 import { LocalProfileService } from '@/services/local/profile/profile';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
+import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
 import { LocalUserService } from '@/services/local/user/user';
 import {
   NexusSocialGraphStatus,
-  type NexusTag,
   type NexusTaggers,
   type NexusUser,
   type NexusUserCounts,
@@ -410,44 +412,43 @@ describe('UserApplication.ensureModerationFollow', () => {
   });
 });
 
-describe('UserApplication.fetchTags', () => {
-  const userId = 'pubky_user' as Pubky;
+describe('UserApplication.getManyTagsOrFetch', () => {
+  const viewerId = 'pubky_viewer' as Pubky;
+  const cached = 'pubky_cached' as Pubky;
+  const missing = 'pubky_missing' as Pubky;
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it('fetches missing tag windows scoped to the viewer and persists them as that viewer', async () => {
+    vi.spyOn(LocalUserTagService, 'getNotPersistedUserTagsInCache').mockResolvedValue([missing]);
+    vi.spyOn(LocalTagCacheService, 'captureRevisions').mockResolvedValue(new Map([[missing, null]]));
+    const tagsSpy = vi.spyOn(NexusUserService, 'tags').mockResolvedValue([]);
+    const upsertSpy = vi.spyOn(LocalUserService, 'upsertTags').mockResolvedValue(undefined);
+    const readSpy = vi.spyOn(LocalUserService, 'readBulkTags').mockResolvedValue(new Map());
+
+    await UserApplication.getManyTagsOrFetch({ userIds: [cached, missing], viewerId });
+
+    expect(tagsSpy).toHaveBeenCalledExactlyOnceWith({
+      user_id: missing,
+      viewer_id: viewerId,
+      skip_tags: 0,
+      limit_tags: USER_TAGS_PER_PAGE,
+    });
+    expect(upsertSpy).toHaveBeenCalledExactlyOnceWith(missing, [], expect.objectContaining({ viewerId }));
+    expect(readSpy).toHaveBeenCalledWith({ userIds: [cached, missing] });
   });
 
-  it('should delegate to NexusUserService with correct params', async () => {
-    const mockTags = [
-      { label: 'developer', taggers: [] as Pubky[], taggers_count: 0, relationship: false },
-    ] as NexusTag[];
+  it('fetches and stores a viewerless window for guests', async () => {
+    vi.spyOn(LocalUserTagService, 'getNotPersistedUserTagsInCache').mockResolvedValue([missing]);
+    vi.spyOn(LocalTagCacheService, 'captureRevisions').mockResolvedValue(new Map([[missing, null]]));
+    const tagsSpy = vi.spyOn(NexusUserService, 'tags').mockResolvedValue([]);
+    const upsertSpy = vi.spyOn(LocalUserService, 'upsertTags').mockResolvedValue(undefined);
+    vi.spyOn(LocalUserService, 'readBulkTags').mockResolvedValue(new Map());
 
-    const nexusSpy = vi.spyOn(NexusUserService, 'tags').mockResolvedValue(mockTags);
+    await UserApplication.getManyTagsOrFetch({ userIds: [missing] });
 
-    const result = await UserApplication.fetchTags({
-      user_id: userId,
-      skip_tags: 5,
-      limit_tags: 20,
-    });
-
-    expect(result).toEqual(mockTags);
-    expect(nexusSpy).toHaveBeenCalledWith({
-      user_id: userId,
-      skip_tags: 5,
-      limit_tags: 20,
-    });
-  });
-
-  it('should propagate errors from service layer', async () => {
-    vi.spyOn(NexusUserService, 'tags').mockRejectedValue(new Error('Service unavailable'));
-
-    await expect(
-      UserApplication.fetchTags({
-        user_id: userId,
-        skip_tags: 0,
-        limit_tags: 10,
-      }),
-    ).rejects.toThrow('Service unavailable');
+    expect(tagsSpy).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ user_id: missing, viewer_id: undefined }),
+    );
+    expect(upsertSpy).toHaveBeenCalledExactlyOnceWith(missing, [], expect.objectContaining({ viewerId: undefined }));
   });
 });
 
@@ -808,6 +809,7 @@ describe('UserApplication.getOrFetch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(LocalTagCacheService, 'captureRevisions').mockResolvedValue(new Map([[userId, 7]]));
   });
 
   it('should return user details from local cache when available (local-first)', async () => {
@@ -824,6 +826,7 @@ describe('UserApplication.getOrFetch', () => {
   });
 
   it('should fetch from Nexus batch endpoint and persist when not in local cache', async () => {
+    const viewerId = 'pubky_viewer' as Pubky;
     const localSpy = vi
       .spyOn(LocalUserService, 'readDetails')
       .mockResolvedValueOnce(null)
@@ -831,12 +834,14 @@ describe('UserApplication.getOrFetch', () => {
     const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([mockNexusUser]);
     const persistSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([userId]);
 
-    const result = await UserApplication.getOrFetch({ userId });
+    const result = await UserApplication.getOrFetch({ userId, viewerId });
 
     expect(result).toEqual(mockUserDetails);
     expect(localSpy).toHaveBeenCalledTimes(2);
-    expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId] });
-    expect(persistSpy).toHaveBeenCalledWith([mockNexusUser]);
+    expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId], viewer_id: viewerId });
+    expect(LocalTagCacheService.captureRevisions).toHaveBeenCalledWith('user', [userId]);
+    expect(LocalTagCacheService.captureRevisions).toHaveBeenCalledBefore(fetchByIdsSpy);
+    expect(persistSpy).toHaveBeenCalledWith([mockNexusUser], { revisions: new Map([[userId, 7]]), viewerId });
   });
 
   it('should return null when Nexus returns empty array (user not indexed)', async () => {
@@ -847,7 +852,7 @@ describe('UserApplication.getOrFetch', () => {
     const result = await UserApplication.getOrFetch({ userId });
 
     expect(result).toBeNull();
-    expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId] });
+    expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId], viewer_id: undefined });
     expect(persistSpy).not.toHaveBeenCalled();
   });
 
@@ -928,18 +933,22 @@ describe('UserApplication.fetch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(LocalTagCacheService, 'captureRevisions').mockResolvedValue(new Map([[userId, 7]]));
   });
 
   it('should fetch from Nexus batch endpoint and persist', async () => {
+    const viewerId = 'pubky_viewer' as Pubky;
     const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([mockNexusUser]);
     const persistSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([userId]);
     const localSpy = vi.spyOn(LocalUserService, 'readDetails').mockResolvedValue(mockUserDetails);
 
-    const result = await UserApplication.fetch({ userId });
+    const result = await UserApplication.fetch({ userId, viewerId });
 
     expect(result).toEqual(mockUserDetails);
-    expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId] });
-    expect(persistSpy).toHaveBeenCalledWith([mockNexusUser]);
+    expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId], viewer_id: viewerId });
+    expect(LocalTagCacheService.captureRevisions).toHaveBeenCalledWith('user', [userId]);
+    expect(LocalTagCacheService.captureRevisions).toHaveBeenCalledBefore(fetchByIdsSpy);
+    expect(persistSpy).toHaveBeenCalledWith([mockNexusUser], { revisions: new Map([[userId, 7]]), viewerId });
     expect(localSpy).toHaveBeenCalledTimes(1);
     expect(localSpy).toHaveBeenCalledWith({ userId });
   });
@@ -951,7 +960,7 @@ describe('UserApplication.fetch', () => {
     const result = await UserApplication.fetch({ userId });
 
     expect(result).toBeNull();
-    expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId] });
+    expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: [userId], viewer_id: undefined });
     expect(persistSpy).not.toHaveBeenCalled();
   });
 
@@ -977,6 +986,10 @@ describe('UserApplication.fetch', () => {
 describe('UserApplication.fetch viewer scoping', () => {
   const userId = 'pubky_user' as Pubky;
   const viewerId = 'pubky_viewer' as Pubky;
+
+  beforeEach(() => {
+    vi.spyOn(LocalTagCacheService, 'captureRevisions').mockResolvedValue(new Map([[userId, 7]]));
+  });
 
   it('forwards the viewer id so the relationship row is scoped to the viewer', async () => {
     const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
@@ -1045,5 +1058,33 @@ describe('UserApplication.getSocialGraphStatus', () => {
     const result = await UserApplication.getSocialGraphStatus({ userId });
 
     expect(result).toBeNull();
+  });
+});
+
+describe('UserApplication session replacement', () => {
+  it('starts a separate fetch after re-login and rejects the old response without deleting the new in-flight task', async () => {
+    vi.spyOn(LocalTagCacheService, 'captureRevisions').mockResolvedValue(new Map());
+    vi.spyOn(LocalUserService, 'readDetails').mockResolvedValue(null);
+    const persist = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+    const older = Promise.withResolvers<NexusUser[]>();
+    const newer = Promise.withResolvers<NexusUser[]>();
+    const fetch = vi
+      .spyOn(NexusUserStreamService, 'fetchByIds')
+      .mockReturnValueOnce(older.promise)
+      .mockReturnValueOnce(newer.promise);
+    let oldSession = true;
+    const first = UserApplication.fetch({ userId: 'target', viewerId: 'same-viewer', isCurrent: () => oldSession });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    oldSession = false;
+    const second = UserApplication.fetch({ userId: 'target', viewerId: 'same-viewer', isCurrent: () => true });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    older.resolve([asOpaque<NexusUser>({ details: { id: 'target' } })]);
+    await first;
+    expect(persist).not.toHaveBeenCalled();
+    const third = UserApplication.fetch({ userId: 'target', viewerId: 'same-viewer', isCurrent: () => true });
+    newer.resolve([asOpaque<NexusUser>({ details: { id: 'target' } })]);
+    await Promise.all([second, third]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(persist).toHaveBeenCalledOnce();
   });
 });

@@ -4,7 +4,7 @@
   "triggerOnUpdates": false,
   "ignorePatterns": "**/__snapshots__/**\n**/*.generated.*\ndist/**\nnode_modules/**\npublic/sw.js\npublic/sw.js.map\n**/*.snap",
   "excludeAuthors": ["dependabot[bot]"],
-  "instructions": "This is a local-first decentralized social app using Dexie (IndexedDB), Zustand, Next.js, Tailwind CSS, Shadcn UI. Architecture enforcement is critical: check layer boundary violations (controllers->application->services->models). Modules must be imported through the tsconfig path aliases (for example @/hooks/*, @/controllers/*, @/services/*, @/models/*, @/stores/*) and point at concrete source modules. Config: @/config/<module> only (no aggregate src/config/index.ts). Routes: @/app/routes for route tables and helpers. Review .greptile/rules.md for recurring patterns and docs/architecture.md for the full architecture reference.",
+  "instructions": "Local-first decentralized social app (Next.js 16, React 19 with the React Compiler, Dexie/IndexedDB, Zustand, TanStack Query, Tailwind v4, Shadcn UI). AGENTS.md (attached for every file via files.json) is the agent entry point and lists the hard constraints and non-negotiables; docs/ is canonical and the per-path docs are attached via files.json. Architecture enforcement is critical: check layer boundary violations (controllers -> application -> services -> models), the ADR-0009 cross-application allow-list, local-first read/write rules and TTL updates. Imports go through the tsconfig path aliases to concrete modules (no index.ts barrels, no src/config/index.ts, @/config/<module>, @/app/routes). Apply the code-quality rules in docs/development-workflow.md (suppressed lints need a reason, no dead code, no unused exports, no manual memoization, scrutinize optional parameters). Verify every finding in source before commenting.",
   "rules": [
     {
       "id": "no-service-from-controller",
@@ -95,6 +95,82 @@
       "rule": "This project uses the React Compiler which auto-memoizes renders and callbacks. Manual useCallback and useMemo are redundant in most cases and add visual noise. Flag them unless the author cites a specific reason the compiler can't handle it (e.g., ref-stable callback for a non-React subscriber, or profiler evidence of a hotspot).",
       "scope": ["src/components/**", "src/hooks/**", "src/providers/**"],
       "severity": "medium"
+    },
+    {
+      "id": "controller-naming",
+      "rule": "Controller method names encode IO: fetch* (network only), get* (local only), getMany* (bulk local, returns Map<Pubky, T>), getOrFetch* and getMany*OrFetch (local first, network fallback), subscribe* (long-lived stream subscription), commitCreate*/commitUpdate*/commitDelete* (local-first write + sync). Flag load*/save*/retrieve*/create*/remove* style names. See docs/local-first.md.",
+      "scope": ["src/core/controllers/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "local-first-reads",
+      "rule": "Local-first reads in hooks must use useLocalFirstQuery (@/hooks/useLocalFirstQuery/useLocalFirstQuery): queryFn is a pure get* controller read run inside useLiveQuery, fetchFn is a fetch* controller that persists to Dexie. Flag network calls, TanStack Query or retry logic inside a useLiveQuery callback (breaks Dexie PSD, ADR-0011), new hand-rolled useEffect + useLiveQuery pairs, and read paths that do not handle a settled null (missing) or a soft-deleted tombstone. See docs/local-first.md.",
+      "scope": ["src/hooks/**", "src/components/**"],
+      "severity": "high"
+    },
+    {
+      "id": "ttl-on-local-writes",
+      "rule": "Every local write must refresh the affected entity's *_ttl row (lastUpdatedAt) and persist dependencies before dependents (author, then post, then tags). Flag writes that skip the TTL update (the cache then never refreshes) and stream invalidation that deletes stream rows eagerly instead of marking the scope dirty in postStreamDirtyRegistry. See docs/data-patterns.md and docs/local-first.md.",
+      "scope": ["src/core/services/local/**", "src/core/application/**"],
+      "severity": "high"
+    },
+    {
+      "id": "dexie-schema-change",
+      "rule": "There is one Dexie schema version and no migration chain: a DB_VERSION mismatch deletes and recreates the local database (ADR-0019, docs/data-patterns.md). Any change to DB_VERSION, a table's index map or the stores() definition must be called out in the PR as a deliberate data-loss decision; flag it when it arrives as a side effect of a feature.",
+      "scope": ["src/core/database/**", "src/config/database.ts", ".env.example"],
+      "severity": "high"
+    },
+    {
+      "id": "error-handling-conventions",
+      "rule": "Re-throw AppError unchanged and normalize unknowns with toAppError(); use safeFetch + httpResponseToError (or the service's *.utils.ts wrapper) for HTTP instead of raw fetch; branch on error.category / error.code, never on message strings; no raw `throw new Error()` in src/core production code. See docs/error-handling.md.",
+      "scope": ["src/core/**", "src/hooks/**", "src/libs/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "sentry-capture-rule",
+      "rule": "Errors reach Sentry through Err.* factories. Flag direct Sentry.captureException calls anywhere except the captureAppError funnel in src/libs/observability/sentry.ts and the two error boundaries src/app/error.tsx and src/app/global-error.tsx (which capture only non-AppError instances); flag Sentry.setUser with PII; flag Err.* context that carries raw user data not covered by the scrubber in src/libs/observability/sentry.ts (the key list lives in docs/sentry.md, Privacy).",
+      "scope": ["src/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "toast-static-copy",
+      "rule": "Toast title and description must be static product copy. Flag any user-entered value (feed or tag names, display names, file names, free text) interpolated into toast() copy; bounded values such as config constants, small counts and authored Err.* messages are fine. See docs/components.md, Toasts.",
+      "scope": ["src/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "forms-pattern",
+      "rule": "Forms use react-hook-form + zod (@hookform/resolvers/zod) behind a use{Action}Form hook that returns { form, submit, reset }; the schema, *_FORM_FIELDS map, types and defaults live in a sibling *.types.ts; fields render Controller via ControlledInputField / ControlledTextareaField; validation messages are literal US-English strings; use z.url() not z.string().url(). Flag form components that call commit* controllers directly instead of going through a use{Action}Form hook, and hand-rolled form state. See docs/components.md, Forms.",
+      "scope": ["src/hooks/**", "src/components/**"],
+      "severity": "medium"
+    },
+    {
+      "id": "design-tokens-only",
+      "rule": "Use semantic design tokens (bg-primary, text-muted-foreground) and the Tailwind scale. Flag hardcoded hex/rgb colours, arbitrary values (bg-[#1a1a1a], p-[13px], h-[37px]) and z-index values outside -z-10, z-10, z-30, z-40, z-50, z-60. See docs/components.md and docs/z-index.md.",
+      "scope": ["src/components/**", "src/app/**/*.tsx"],
+      "severity": "medium"
+    },
+    {
+      "id": "no-i18n-return",
+      "rule": "i18n was removed (#2313): user-facing copy is an inline US-English literal at the call site. Flag any next-intl import, useTranslations / useFormatter / t.rich usage, a messages/ directory, src/i18n, or a lookalike message registry or translation map. See docs/migrations/2305-i18n-conflict-guide.md.",
+      "scope": ["src/**", "cypress/**"],
+      "severity": "high"
+    },
+    {
+      "id": "vrt-baseline-flag",
+      "rule": "A visual change to a surface covered by a VRT (src/test/vrt/<area>/*.vrt.test.tsx) needs its baseline regenerated by the VRT Update Baselines workflow; PR CI does not run VRT and locally generated baselines must not be committed. If the PR changes such a surface without mentioning the baseline impact, ask the author to state it. See docs/visual-regression-testing.md.",
+      "scope": ["src/components/templates/**", "src/components/organisms/**", "src/test/vrt/**"],
+      "severity": "low"
+    },
+    {
+      "id": "no-hand-edited-generated",
+      "rule": "These files are generated (lucideIcons.ts itself is hand-written). Flag any hand edit and ask for the generator to be re-run instead.",
+      "scope": [
+        "src/libs/lucide/lucideIcons.aliases.ts",
+        "src/libs/lucide/lucideIcons.nodes.ts",
+        "src/libs/lucide/lucideIcons.tags.ts"
+      ],
+      "severity": "high"
     }
   ]
 }

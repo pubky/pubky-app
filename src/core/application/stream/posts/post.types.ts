@@ -4,6 +4,7 @@ import type { NexusPost } from '@/services/nexus/nexus.types';
 import type { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 
 export interface TFetchStreamParams {
+  isCurrent?: () => boolean;
   streamId: PostStreamId;
   streamHead: number;
   streamTail: number;
@@ -40,6 +41,7 @@ export interface TPostStreamChunkResponse {
 }
 
 export interface TPartialCacheHitParams {
+  isCurrent?: () => boolean;
   cachedStreamChunk: string[];
   limit: number;
   streamTail: number;
@@ -49,6 +51,8 @@ export interface TPartialCacheHitParams {
 }
 
 export interface TMissingPostsParams {
+  force?: boolean;
+  isCurrent?: () => boolean;
   cacheMissPostIds: string[];
   /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
   viewerId?: Pubky | null;
@@ -61,6 +65,7 @@ export interface TCacheStreamParams {
 }
 
 export interface TFetchMissingUsersParams {
+  isCurrent?: () => boolean;
   posts: NexusPost[];
   /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
   viewerId?: Pubky | null;

@@ -28,8 +28,9 @@ export function Header() {
   const stepConfig = pathname ? pathToStepConfig[pathname] : undefined;
   const currentStep = stepConfig?.step ?? 1;
   const currentTitle = stepConfig?.title;
-  // Onboarding steps reached after authentication (profile setup and the Experience screens).
-  // Step numbers are not unique in the 4-step model, so match on the path instead.
+  // Onboarding steps reached after authentication (profile setup and the Experience screens): the
+  // logo must not link away mid-flow. Step numbers are not unique in the 4-step model, so match on
+  // the path instead.
   const isPostAuthOnboardingStep =
     pathname === ONBOARDING_ROUTES.PROFILE ||
     pathname === ONBOARDING_ROUTES.TAGS ||
@@ -41,9 +42,11 @@ export function Header() {
   // - Authenticated on standard app routes — MobileHeader + MobileFooter
   const shouldHideHeaderOnMobile =
     isCoreExploreRoute || isDynamicPublicRoute || (isAuthenticated && !isOnboarding && !isDynamicPublicRoute);
-  // Show title only for onboarding/logout pages (when stepConfig exists) and user is not authenticated,
-  // or during the post-auth onboarding steps (profile setup, tags of interest, follow matches)
-  const shouldShowTitle = currentTitle && (!isAuthenticated || isPostAuthOnboardingStep);
+  // Show the step title on every onboarding page regardless of auth state: sign-up happens on the
+  // pubky step, so the later key steps (pubky, backup) and the post-auth steps (profile, experience)
+  // are all reached while authenticated. Outside onboarding (i.e. /logout) the title is only for
+  // signed-out users.
+  const shouldShowTitle = currentTitle && (isOnboarding || !isAuthenticated);
 
   // App-shell layout: authenticated app pages and Explore mode (unauthenticated on a
   // public route, e.g. feed/post/profile) both render the feed + sidebars, so the header

@@ -7,6 +7,8 @@ export interface SuggestedUserCardProps {
   isLoading?: boolean;
   /** Whether the follow status is still being resolved */
   isStatusLoading?: boolean;
+  /** Disables the follow toggle without a spinner, e.g. while the step is finishing */
+  disabled?: boolean;
   onFollowClick: (userId: Pubky, isCurrentlyFollowing: boolean) => void;
   className?: string;
   'data-testid'?: string;

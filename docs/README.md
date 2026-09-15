@@ -1,37 +1,43 @@
 # Documentation
 
-Single source of truth for all project standards, conventions, and architectural decisions.
+Single source of truth for all project standards, conventions, and architectural decisions. `AGENTS.md` in the repo root is the entry point for AI coding agents and for humans in a hurry; it indexes this folder and never restates it.
 
 ## Quick Reference
 
-| Working on...           | Read these docs                                                                   |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| `src/core/`             | `architecture.md`, `local-first.md`, `error-handling.md`, `data-patterns.md`      |
-| `src/components/`       | `components.md`, `skeleton-architecture.md`, `z-index.md`, `component-testing.md` |
-| `src/libs/env/`         | `environment.md`                                                                  |
-| Writing tests           | `component-testing.md`                                                            |
-| Making commits          | `commit-message.md`                                                               |
-| Cutting a release       | `release.md`                                                                      |
-| Cutting a hotfix        | `hotfix.md`                                                                       |
-| Architectural decisions | `adr-guidelines.md`, `adr/`                                                       |
+| Working on...                               | Read these docs                                                                   |
+| ------------------------------------------- | --------------------------------------------------------------------------------- |
+| Anything                                    | `../AGENTS.md`, `development-workflow.md`                                         |
+| `src/core/`                                 | `architecture.md`, `local-first.md`, `error-handling.md`, `data-patterns.md`      |
+| `src/hooks/`                                | `local-first.md`, `data-patterns.md`                                              |
+| `src/components/`                           | `components.md`, `skeleton-architecture.md`, `z-index.md`, `component-testing.md` |
+| `src/libs/env/`, `src/libs/runtime-config/` | `environment.md`                                                                  |
+| Sentry / observability                      | `sentry.md`                                                                       |
+| Writing tests                               | `component-testing.md`, `visual-regression-testing.md`                            |
+| Making commits, branches, PRs               | `commit-message.md`                                                               |
+| Cutting a release                           | `release.md`                                                                      |
+| Cutting a hotfix                            | `hotfix.md`                                                                       |
+| Architectural decisions                     | `adr-guidelines.md`, `adr/`                                                       |
 
 ## Documentation Files
 
-| File                       | Description                                                                                           |
-| -------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `architecture.md`          | Core layered architecture, dependency rules, anti-patterns                                            |
-| `local-first.md`           | Local-first write patterns, controller naming, useLiveQuery rules                                     |
-| `data-patterns.md`         | Composite IDs, streams, TTL, pipes normalization                                                      |
-| `error-handling.md`        | Error conventions using AppError and Err.\* factories                                                 |
-| `components.md`            | Component patterns, Shadcn, atomic design, Figma, **icon imports** (`lucide-react`, `@/icons`, utils) |
-| `component-testing.md`     | Unit test and snapshot test rules                                                                     |
-| `skeleton-architecture.md` | Skeleton loader placement, naming, and testing patterns                                               |
-| `z-index.md`               | Z-index layering conventions                                                                          |
-| `commit-message.md`        | Conventional commit format                                                                            |
-| `release.md`               | Cutting a production release from `dev` onto `master`                                                 |
-| `hotfix.md`                | Cutting a production patch without taking `dev` HEAD (see `release.md` for shared steps)              |
-| `environment.md`           | Environment variable configuration                                                                    |
-| `adr-guidelines.md`        | When and how to write ADRs                                                                            |
+| File                           | Description                                                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `development-workflow.md`      | How to approach a change, patterns to reuse, verification ladder, code quality, failure modes, definition of done  |
+| `architecture.md`              | Core layered architecture, dependency rules, anti-patterns, high-risk areas, ADR index                             |
+| `local-first.md`               | Local-first writes, controller naming, `useLocalFirstQuery` reads and their pitfalls, deferred stream invalidation |
+| `data-patterns.md`             | Composite IDs, streams, TTL, pipes normalization, Dexie tables and schema changes                                  |
+| `error-handling.md`            | Error conventions using AppError and Err.\* factories                                                              |
+| `components.md`                | Component patterns, Shadcn, atomic design, Figma, icon imports, toasts, forms                                      |
+| `component-testing.md`         | Unit test and snapshot test rules                                                                                  |
+| `visual-regression-testing.md` | VRT tests, determinism, CI-owned baselines                                                                         |
+| `skeleton-architecture.md`     | Skeleton loader placement, naming, and testing patterns                                                            |
+| `z-index.md`                   | Z-index layering conventions                                                                                       |
+| `sentry.md`                    | What is captured, capture rule, drop rules, privacy scrubbing, source maps                                         |
+| `environment.md`               | Build-time `Env` and runtime `PUBKY_RUNTIME_*` configuration                                                       |
+| `commit-message.md`            | Conventional commit format, branch naming, pull request conventions                                                |
+| `release.md`                   | Cutting a production release from `dev` onto `master`                                                              |
+| `hotfix.md`                    | Cutting a production patch without taking `dev` HEAD (see `release.md` for shared steps)                           |
+| `adr-guidelines.md`            | When and how to write ADRs                                                                                         |
 
 ### Migrations
 
@@ -43,23 +49,36 @@ Single source of truth for all project standards, conventions, and architectural
 
 Stored in `adr/`. See `architecture.md` for the full index.
 
-## AI and Editor Workflows
+## AI Coding Agents
 
-This repository keeps documentation tool-agnostic, but some editor workflows are available for faster feedback loops.
+The repo is set up so that Claude Code, Codex and Cursor all read the same instructions, and so that no rule is written twice:
 
-- Cursor local code review: `/review` (skill definition in `.cursor/skills/code-review/SKILL.md`)
-- Cross-tool AI entry point: see `../AGENTS.md`
-- Commit message format: see `commit-message.md`
+| Layer                | Files                                                                         | Role                                                                                                    |
+| -------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Entry point          | `../AGENTS.md` (Codex and Cursor read it natively; `../CLAUDE.md` imports it) | Commands, hard rules, doc index, verification, definition of done                                       |
+| Conventions          | this folder                                                                   | Canonical long-form rules                                                                               |
+| Path-scoped adapters | `../.cursor/rules/*.mdc`, `../.claude/rules/*.md`                             | Attach the matching doc when a file under the glob is edited; body is a pointer only                    |
+| Skills               | `../.agents/skills/<name>/` (symlinked from `../.claude/skills/`)             | On-demand procedures: `pubky-code-review`, `pubky-staging-invite`, `sentry-nextjs-sdk`                  |
+| PR review            | `../.greptile/config.json`, `../.greptile/files.json`                         | Greptile rules and the docs it reads per path (it does not read `AGENTS.md` or the adapters on its own) |
+| Permissions          | `../.claude/settings.json`                                                    | Claude Code permission allowlist for the verification commands                                          |
+
+The Cursor commit rule (`../.cursor/rules/commit-message.mdc`) is agent-requested rather than path-scoped and intentionally has no Claude twin: Claude Code has no agent-requested rule type, and `../AGENTS.md` already points commits, branches and PRs at `commit-message.md`.
+
+When a convention changes: update the doc here (plus an ADR when the rule is architectural), then `AGENTS.md` if the one-line summary changed, then `.greptile/config.json` if Greptile should enforce it. The adapters only point at docs, so they rarely need a change beyond a new glob.
 
 ## Keeping Documentation Updated
 
 When making significant changes to:
 
 - **Core architecture**: Update `architecture.md` + create ADR
-- **Component patterns** (layout, Shadcn, **icon import conventions**): Update `components.md`
+- **Local-first reads/writes or TTL**: Update `local-first.md`, `data-patterns.md`
+- **Component patterns** (layout, Shadcn, icon imports, toasts, forms): Update `components.md`
 - **Skeleton loaders**: Update `skeleton-architecture.md`
 - **Error handling**: Update `error-handling.md`
-- **Testing patterns**: Update `component-testing.md`
-- **Environment variables**: Update `environment.md`
+- **Testing patterns**: Update `component-testing.md`, `visual-regression-testing.md`
+- **Environment or runtime variables**: Update `environment.md`
+- **Observability**: Update `sentry.md`
+- **Commit, branch or PR conventions**: Update `commit-message.md`
 - **Release process**: Update `release.md`
 - **Hotfix process**: Update `hotfix.md`
+- **Agent workflow, verification, definition of done**: Update `development-workflow.md` and the summary in `AGENTS.md`

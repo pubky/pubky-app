@@ -42,6 +42,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -82,6 +83,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -90,6 +92,7 @@ describe('StreamPostsController', () => {
         viewerId,
       });
       expect(fetchMissingPostsSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         cacheMissPostIds,
         viewerId,
       });
@@ -242,6 +245,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -267,6 +271,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -337,6 +342,7 @@ describe('StreamPostsController', () => {
 
       // Should call with null viewerId (unauthenticated users can still view posts)
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -370,6 +376,7 @@ describe('StreamPostsController', () => {
 
       // Verify getOrFetchStreamSlice was called (error happened during execution)
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -410,6 +417,7 @@ describe('StreamPostsController', () => {
 
       // Verify fetchMissingPostsFromNexus was called
       expect(fetchMissingPostsSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         cacheMissPostIds,
         viewerId,
       });
@@ -433,6 +441,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -462,6 +471,7 @@ describe('StreamPostsController', () => {
       // Note: tags parameter is not currently used in the implementation
       // This test verifies the method accepts it without error
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -488,6 +498,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId: engagementStreamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -511,7 +522,11 @@ describe('StreamPostsController', () => {
 
       await StreamPostsController.fetchMissingPostsByUris({ uris });
 
-      expect(fetchOriginalPostsSpy).toHaveBeenCalledWith({ repostedUris: uris, viewerId });
+      expect(fetchOriginalPostsSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
+        repostedUris: uris,
+        viewerId,
+      });
     });
 
     it('short-circuits without calling the application layer when no URIs are given', async () => {
@@ -694,6 +709,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -719,6 +735,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,

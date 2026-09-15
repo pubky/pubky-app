@@ -34,7 +34,7 @@ See [docs/environment.md](./docs/environment.md) for more details.
 ## Common Workflows
 
 - Check architecture and coding conventions: [docs/README.md](./docs/README.md)
-- Run local code review workflow (Cursor): use `/review` (defined in `.cursor/skills/code-review/SKILL.md`)
+- AI-assisted development (Claude Code, Codex, Cursor): start at [AGENTS.md](./AGENTS.md); local review skill `/pubky-code-review` (`.agents/skills/pubky-code-review/SKILL.md`)
 - Follow commit message format: [docs/commit-message.md](./docs/commit-message.md)
 - Cut a production release: [docs/release.md](./docs/release.md)
 - Cut a production hotfix: [docs/hotfix.md](./docs/hotfix.md)

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import type { VisualPlaceholderKind, VisualRow, VisualTile } from './TimelineFeedVisual.types';
 import { VisualTimelinePosts } from './VisualTimelinePosts';
 
@@ -293,6 +294,30 @@ describe('VisualTimelinePosts', () => {
       hasPendingFiles: false,
       hasPendingPostDetails: false,
     });
+  });
+
+  it('subscribes visible visual tiles for TTL refresh and releases them on unmount', () => {
+    const coordinator = TtlCoordinator.getInstance();
+    const subscribe = vi.spyOn(coordinator, 'subscribePost').mockImplementation(() => {});
+    const unsubscribe = vi.spyOn(coordinator, 'unsubscribePost').mockImplementation(() => {});
+    try {
+      const view = render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={false}
+          loadMore={vi.fn()}
+        />,
+      );
+      expect(subscribe).toHaveBeenCalledWith({ compositePostId: 'author:post1' });
+      view.unmount();
+      expect(unsubscribe).toHaveBeenCalledWith({ compositePostId: 'author:post1' });
+    } finally {
+      subscribe.mockRestore();
+      unsubscribe.mockRestore();
+    }
   });
 
   it('navigates to the parent post when the tile is clicked', () => {

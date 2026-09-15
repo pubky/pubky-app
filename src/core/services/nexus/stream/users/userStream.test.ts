@@ -579,13 +579,15 @@ describe('NexusUserStreamService.fetchByIds', () => {
     });
   });
 
-  it('builds the body through userStreamApi so depth and key order come from the builder', async () => {
+  it.each([undefined, false, true])('canonicalizes the body and forwards force=%s separately', async (force) => {
     const queryNexusSpy = vi.mocked(queryNexus).mockResolvedValue([]);
+    const userIds = ['zuser', 'auser'] as Pubky[];
 
     await NexusUserStreamService.fetchByIds({
       depth: 2,
       viewer_id: 'viewer' as Pubky,
-      user_ids: ['zuser', 'auser'] as Pubky[],
+      user_ids: userIds,
+      force,
     });
 
     // Caller passed keys in a different order; the canonical body order is the builder's.
@@ -593,6 +595,8 @@ describe('NexusUserStreamService.fetchByIds', () => {
       url: expect.stringContaining('/stream/users/by_ids'),
       method: 'POST',
       body: JSON.stringify({ user_ids: ['auser', 'zuser'], viewer_id: 'viewer', depth: 2 }),
+      force,
     });
+    expect(userIds).toEqual(['zuser', 'auser']);
   });
 });

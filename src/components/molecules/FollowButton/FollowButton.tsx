@@ -17,10 +17,12 @@ export function FollowButton({
   isStatusLoading,
   displayName,
   variant,
+  disabled = false,
   onClick,
 }: FollowButtonProps) {
   // Show loading if action is in progress OR if status is still being loaded
   const showLoading = isLoading || isStatusLoading;
+  const isDisabled = disabled || showLoading;
   if (variant === 'icon') {
     return (
       <Button
@@ -28,7 +30,7 @@ export function FollowButton({
         variant="secondary"
         size="icon"
         onClick={onClick}
-        disabled={showLoading}
+        disabled={isDisabled}
         className="group size-8 shrink-0 rounded-full p-1"
         aria-label={isFollowing ? `${'Unfollow'} ${displayName}` : `${'Follow'} ${displayName}`}
       >
@@ -54,7 +56,7 @@ export function FollowButton({
       size="sm"
       className="group w-[110px] justify-center"
       onClick={onClick}
-      disabled={showLoading}
+      disabled={isDisabled}
       aria-label={isFollowing ? 'Unfollow' : 'Follow'}
     >
       {showLoading ? (

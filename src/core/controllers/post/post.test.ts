@@ -1979,7 +1979,11 @@ describe('PostController', () => {
 
       try {
         await PostController.getOrFetch({ compositeId: 'author:post123', viewerId: mockViewerId });
-        expect(getOrFetchSpy).toHaveBeenCalledWith({ compositeId: 'author:post123', viewerId: mockViewerId });
+        expect(getOrFetchSpy).toHaveBeenCalledWith({
+          isCurrent: expect.any(Function),
+          compositeId: 'author:post123',
+          viewerId: mockViewerId,
+        });
       } finally {
         getOrFetchSpy.mockRestore();
       }
@@ -1996,7 +2000,11 @@ describe('PostController', () => {
 
       try {
         await PostController.fetch({ compositeId: 'author:post123', viewerId: mockViewerId });
-        expect(fetchSpy).toHaveBeenCalledWith({ compositeId: 'author:post123', viewerId: mockViewerId });
+        expect(fetchSpy).toHaveBeenCalledWith({
+          isCurrent: expect.any(Function),
+          compositeId: 'author:post123',
+          viewerId: mockViewerId,
+        });
       } finally {
         fetchSpy.mockRestore();
       }

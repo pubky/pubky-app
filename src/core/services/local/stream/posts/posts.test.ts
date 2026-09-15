@@ -16,14 +16,7 @@ import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStr
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
-import type {
-  NexusFileDetails,
-  NexusFileUrls,
-  NexusPost,
-  NexusPostDetails,
-  NexusPostWithAttachmentMetadata,
-  NexusTag,
-} from '@/services/nexus/nexus.types';
+import type { NexusPost, NexusPostDetails, NexusTag } from '@/services/nexus/nexus.types';
 import { asInvalid, asOpaque } from '@/test-utils/type-assertions';
 
 describe('LocalStreamPostsService', () => {
@@ -115,10 +108,7 @@ describe('LocalStreamPostsService', () => {
     const mockPost = createMockNexusPost(postId, author, timestamp, overrides);
     const compositeId = buildCompositeId({ pubky: author, id: postId });
 
-    const result = await LocalStreamPostsService.persistPosts({ posts: [mockPost] });
-
-    const expectedAttachments = mockPost.details.attachments || [];
-    expect(result).toEqual({ attachmentMetadata: expectedAttachments });
+    await LocalStreamPostsService.persistPosts({ posts: [mockPost] });
     return { compositeId, mockPost };
   };
 
@@ -250,12 +240,10 @@ describe('LocalStreamPostsService', () => {
   });
 
   describe('persistPosts', () => {
-    it('should persist posts and return post attachments', async () => {
+    it('should persist posts and their TTL', async () => {
       const mockPosts: NexusPost[] = [createMockNexusPost('post-1', 'user-1'), createMockNexusPost('post-2', 'user-2')];
 
-      const result = await LocalStreamPostsService.persistPosts({ posts: mockPosts });
-
-      expect(result).toEqual({ attachmentMetadata: [] });
+      await LocalStreamPostsService.persistPosts({ posts: mockPosts });
       await verifyPostPersisted(buildCompositeId({ pubky: 'user-1', id: 'post-1' }), 'Post post-1 content');
       await verifyPostPersisted(buildCompositeId({ pubky: 'user-2', id: 'post-2' }), 'Post post-2 content');
     });
@@ -305,9 +293,11 @@ describe('LocalStreamPostsService', () => {
     });
 
     it('should handle empty array', async () => {
-      const result = await LocalStreamPostsService.persistPosts({ posts: [] });
-
-      expect(result).toEqual({ attachmentMetadata: [] });
+      const persistDetails = vi.spyOn(PostDetailsModel, 'bulkSave').mockResolvedValue(undefined);
+      const persistTtl = vi.spyOn(PostTtlModel, 'bulkSave').mockResolvedValue(undefined);
+      await LocalStreamPostsService.persistPosts({ posts: [] });
+      expect(persistDetails).not.toHaveBeenCalled();
+      expect(persistTtl).not.toHaveBeenCalled();
     });
 
     it('should handle posts with empty tags array', async () => {
@@ -382,54 +372,12 @@ describe('LocalStreamPostsService', () => {
         createMockNexusPost('post-3', 'author-1'),
       ];
 
-      const result = await LocalStreamPostsService.persistPosts({ posts: mockPosts });
-
-      expect(result).toEqual({ attachmentMetadata: [] });
+      await LocalStreamPostsService.persistPosts({ posts: mockPosts });
 
       // Verify all posts were persisted
       await verifyPostPersisted(buildCompositeId({ pubky: 'author-1', id: 'post-1' }), 'Post post-1 content');
       await verifyPostPersisted(buildCompositeId({ pubky: 'author-2', id: 'post-2' }), 'Post post-2 content');
       await verifyPostPersisted(buildCompositeId({ pubky: 'author-1', id: 'post-3' }), 'Post post-3 content');
-    });
-
-    it('should collect and return attachments_metadata from posts', async () => {
-      const fileMetadata = (id: string, uri: string): NexusFileDetails => ({
-        id,
-        name: id,
-        src: '',
-        content_type: 'image/png',
-        size: 100,
-        created_at: 0,
-        indexed_at: 0,
-        metadata: {},
-        owner_id: 'user-1',
-        uri,
-        urls: {} as NexusFileUrls,
-      });
-
-      const meta1 = fileMetadata('file-1', 'pubky://user-1/pub/pubky.app/files/file-1');
-      const meta2 = fileMetadata('file-2', 'pubky://user-1/pub/pubky.app/files/file-2');
-      const meta3 = fileMetadata('file-3', 'pubky://user-2/pub/pubky.app/files/file-3');
-
-      const mockPosts: NexusPostWithAttachmentMetadata[] = [
-        { ...createMockNexusPost('post-1', 'user-1'), attachments_metadata: [meta1, meta2] },
-        { ...createMockNexusPost('post-2', 'user-2'), attachments_metadata: [meta3] },
-        { ...createMockNexusPost('post-3', 'user-3') },
-      ];
-
-      const result = await LocalStreamPostsService.persistPosts({ posts: mockPosts });
-
-      expect(result).toEqual({
-        attachmentMetadata: [meta1, meta2, meta3],
-      });
-    });
-
-    it('should handle posts without attachments_metadata', async () => {
-      const mockPosts: NexusPostWithAttachmentMetadata[] = [{ ...createMockNexusPost('post-1', 'user-1') }];
-
-      const result = await LocalStreamPostsService.persistPosts({ posts: mockPosts });
-
-      expect(result).toEqual({ attachmentMetadata: [] });
     });
 
     describe('bookmark persistence', () => {
@@ -502,6 +450,83 @@ describe('LocalStreamPostsService', () => {
         // All rows must have a numeric created_at — the bug guard.
         expect(all.every((row) => typeof row.created_at === 'number')).toBe(true);
       });
+    });
+  });
+
+  describe('persistPosts - refresh guard', () => {
+    // The TTL refresh path passes `refreshGuard`. A local-first edit is newer
+    // than anything Nexus returns until Nexus has re-indexed it, and the
+    // owner's next edit reads the local row — so an older Nexus copy must not
+    // clobber local details. Counts, tags and the TTL still refresh.
+    const fetchStartedAt = BASE_TIMESTAMP + 10_000;
+    const compositeId = buildCompositeId({ pubky: 'author-1', id: 'edited' });
+
+    const seedLocalRow = async ({ indexedAt, ttlWrittenAt }: { indexedAt: number; ttlWrittenAt: number }) => {
+      await PostDetailsModel.table.put({
+        id: compositeId,
+        content: 'local edit',
+        indexed_at: indexedAt,
+        kind: 'collection',
+        uri: 'pubky://author-1/pub/pubky.app/posts/edited',
+        attachments: null,
+      });
+      await PostTtlModel.table.put({ id: compositeId, lastUpdatedAt: ttlWrittenAt });
+    };
+
+    const nexusCopy = (indexedAt: number) => {
+      const post = createMockNexusPost('edited', 'author-1', indexedAt, {
+        counts: { replies: 7 } as NexusPost['counts'],
+      });
+      post.details.content = 'nexus copy';
+      return post;
+    };
+
+    it('keeps details whose TTL row was written at or after the fetch started, still refreshing the rest', async () => {
+      // Equality counts as "written since": the edit and the fetch can share a
+      // millisecond.
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
+        refreshGuard: { fetchStartedAt },
+      });
+
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe('local edit');
+      expect((await PostCountsModel.findById(compositeId))!.replies).toBe(7);
+      expect((await PostTtlModel.findById(compositeId))!.lastUpdatedAt).toBeGreaterThan(fetchStartedAt);
+    });
+
+    it('keeps details when the Nexus copy is not indexed after the local row', async () => {
+      // Nexus has not re-indexed the local edit yet: its copy carries the
+      // pre-edit indexed_at.
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP + 5_000, ttlWrittenAt: BASE_TIMESTAMP });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [nexusCopy(BASE_TIMESTAMP + 5_000)],
+        refreshGuard: { fetchStartedAt },
+      });
+
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe('local edit');
+      expect((await PostCountsModel.findById(compositeId))!.replies).toBe(7);
+    });
+
+    it('replaces details when the Nexus copy is indexed after the local row', async () => {
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [nexusCopy(BASE_TIMESTAMP + 5_000)],
+        refreshGuard: { fetchStartedAt },
+      });
+
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
+    });
+
+    it('applies no guard to ordinary (non-refresh) persistence', async () => {
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP + 5_000, ttlWrittenAt: fetchStartedAt });
+
+      await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP)] });
+
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
     });
   });
 
