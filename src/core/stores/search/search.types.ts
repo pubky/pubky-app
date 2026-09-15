@@ -13,12 +13,19 @@ export interface RecentTagSearch {
   searchedAt: number; // Timestamp
 }
 
+export interface RecentQuerySearch {
+  query: string;
+  searchedAt: number; // Timestamp
+}
+
 /**
  * Search Store State
  */
 export interface SearchState {
   recentUsers: RecentUserSearch[];
   recentTags: RecentTagSearch[];
+  /** Full-text queries submitted via the search input */
+  recentQueries: RecentQuerySearch[];
   /** Active tags for optimistic UI - immediately updated, then synced with URL */
   activeTags: string[];
 }
@@ -30,7 +37,9 @@ export interface SearchActions {
   addUser: (userId: Pubky) => void;
   /** Add a tag to recent searches. Tag should be normalized (lowercase, trimmed) before calling */
   addTag: (tag: string) => void;
-  /** Clear only recent searches (users and tags), keep active tags */
+  /** Add a full-text query to recent searches. Query should be validated (trimmed) before calling */
+  addQuery: (query: string) => void;
+  /** Clear only recent searches (users, tags, and queries), keep active tags */
   clearRecentSearches: () => void;
   /** Set active tags (used for URL → store sync) */
   setActiveTags: (tags: string[]) => void;
@@ -53,6 +62,7 @@ export type SearchStore = SearchState & SearchActions;
 export const searchInitialState: SearchState = {
   recentUsers: [],
   recentTags: [],
+  recentQueries: [],
   activeTags: [],
 };
 
@@ -62,6 +72,7 @@ export const searchInitialState: SearchState = {
 export enum SearchActionTypes {
   ADD_USER = 'ADD_USER',
   ADD_TAG = 'ADD_TAG',
+  ADD_QUERY = 'ADD_QUERY',
   CLEAR_RECENT_SEARCHES = 'CLEAR_RECENT_SEARCHES',
   SET_ACTIVE_TAGS = 'SET_ACTIVE_TAGS',
   ADD_ACTIVE_TAG = 'ADD_ACTIVE_TAG',

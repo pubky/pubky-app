@@ -9,8 +9,8 @@ import { PostCountsModel } from '@/models/post/counts/postCounts';
 import { PostTagsModel, type PostTagsModelSchema } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
-import { ViewerTagMarkerStorage } from '@/services/local/tag/post/viewerTagMarkerStorage';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
+import { ViewerTagMarkerStorage } from '@/services/local/tag/viewerTagMarkerStorage';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
 export class LocalPostTagService {
@@ -42,6 +42,7 @@ export class LocalPostTagService {
     // this tag), there's no local state to protect from stale Nexus responses,
     // so we skip the marker.
     let mutated = false;
+    let taggersCount = 0;
     try {
       mutated = await db.transaction('rw', this.TAG_TABLES, async () => {
         const postTagsModel = await PostTagsModel.getOrCreate<string, PostTagsModelSchema>(postId);
@@ -50,6 +51,7 @@ export class LocalPostTagService {
         if (status === null) {
           return false;
         }
+        taggersCount = postTagsModel.findByLabel(label)?.taggers_count ?? 0;
         await Promise.all([
           this.savePostTagsModel(postId, postTagsModel),
           this.updatePostCounts(postId, postTagsModel),
@@ -70,7 +72,7 @@ export class LocalPostTagService {
     if (mutated) {
       // Record this viewer change so mergeTags ignores stale Nexus responses
       // for the next ~5 minutes (until Nexus catches up).
-      ViewerTagMarkerStorage.set({ pubky: taggerId, postId, label, op: HttpMethod.PUT });
+      ViewerTagMarkerStorage.set({ pubky: taggerId, taggedId: postId, label, op: HttpMethod.PUT, taggersCount });
     }
 
     return mutated;
@@ -123,7 +125,13 @@ export class LocalPostTagService {
 
     // Record this viewer change so mergeTags ignores stale Nexus responses
     // for the next ~5 minutes (until Nexus catches up).
-    ViewerTagMarkerStorage.set({ pubky: taggerId, postId, label, op: HttpMethod.DELETE });
+    ViewerTagMarkerStorage.set({
+      pubky: taggerId,
+      taggedId: postId,
+      label,
+      op: HttpMethod.DELETE,
+      taggersCount: postTagsModel.findByLabel(label)?.taggers_count ?? 0,
+    });
     return true;
   }
 
@@ -209,7 +217,9 @@ export class LocalPostTagService {
           // If the viewer just toggled this tag locally, the marker tells us
           // the intended viewer-state — trust it over a possibly stale Nexus
           // value for the next ~5 minutes.
-          const marker = viewerId ? ViewerTagMarkerStorage.get({ pubky: viewerId, postId, label: newTag.label }) : null;
+          const marker = viewerId
+            ? ViewerTagMarkerStorage.get({ pubky: viewerId, taggedId: postId, label: newTag.label })
+            : null;
           const nexusSaysViewerIsTagger = Boolean(newTag.relationship);
           const viewerIsTagger = marker ? marker.op === HttpMethod.PUT : nexusSaysViewerIsTagger;
 

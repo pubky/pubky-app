@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ScreenshotMatcherOptions } from '@vitest/browser/context';
 import type { ReactNode } from 'react';
+import { expect, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
@@ -12,6 +14,61 @@ export interface RenderForVRTOptions {
 }
 
 export const VRT_ROOT_TESTID = 'vrt-root';
+
+/**
+ * Park the pointer at `(0, 0)` so the screenshot is free of `:hover` styles.
+ *
+ * Playwright leaves the cursor in the centre of the body by default. On a
+ * small mobile viewport that can land on an action button, so the
+ * screenshot captures the `:hover` state (e.g. `bg-brand/30` instead of
+ * `bg-brand/16`). `page.unhover()` is not enough — it moves the cursor to
+ * the body, which can still sit over a centre-screen button.
+ *
+ * Hover a throwaway 8×8 target at the corner, then remove it. Do not click
+ * or move keyboard focus: click-outside handlers (QuickReply) would collapse
+ * the card, and tests that need a focused field (expanded QuickReply) would
+ * lose `:focus-within`.
+ */
+async function moveCursorToTopLeftCorner() {
+  document.querySelectorAll('[data-vrt-cursor-target="true"]').forEach((el) => el.remove());
+  const target = document.createElement('div');
+  target.setAttribute('data-vrt-cursor-target', 'true');
+  target.setAttribute('aria-hidden', 'true');
+  target.style.position = 'fixed';
+  target.style.left = '0';
+  target.style.top = '0';
+  target.style.width = '8px';
+  target.style.height = '8px';
+  target.style.opacity = '0.01';
+  target.style.backgroundColor = 'transparent';
+  target.style.pointerEvents = 'auto';
+  target.style.zIndex = '10000';
+  document.body.appendChild(target);
+  try {
+    await page
+      .elementLocator(target)
+      .hover()
+      .catch(() => undefined);
+  } finally {
+    target.remove();
+  }
+}
+
+/**
+ * Screenshot the iframe document so Radix Dialog portals on `document.body`
+ * are included. Do not reparent those nodes into `vrt-root`: React still
+ * thinks they live on `body`, and `removeChild` then throws NotFoundError
+ * (and can leave the Vitest browser process hanging).
+ *
+ * Do not `vi.mock('radix-ui')` to retarget the portal either —
+ * `importOriginal()` of that barrel can shift `oklch` brand green on
+ * unrelated screenshots.
+ */
+export async function matchVrtFrameScreenshot(name: string, options?: ScreenshotMatcherOptions) {
+  await moveCursorToTopLeftCorner();
+  await waitForImagesReady(document.documentElement);
+  await expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name, options);
+}
 
 interface VRTProvidersProps {
   children: ReactNode;
@@ -43,6 +100,7 @@ function VRTProviders({ children, viewport, queryClient }: VRTProvidersProps) {
 
 export async function renderForVRT(ui: ReactNode, options: RenderForVRTOptions) {
   await page.viewport(options.viewport.width, options.viewport.height);
+  await moveCursorToTopLeftCorner();
   freezeNow();
   mockMathRandom(0xdeadbeef);
   // Fresh QueryClient per test keeps cache state isolated; instantiating here
@@ -196,6 +254,22 @@ export async function preloadImages(urls: readonly string[]) {
       });
       await image.decode();
     }),
+  );
+}
+
+/** `next/dynamic` can take several seconds on CI. */
+const MARKDOWN_EDITOR_READY_TIMEOUT_MS = 15_000;
+
+/** Wait until the article editor chunk has mounted (textarea is in the DOM). */
+export async function waitForMarkdownEditorReady(root: ParentNode = document) {
+  await vi.waitFor(
+    () => {
+      const editor = root.querySelector('[data-testid="markdown-textarea"]');
+      if (!editor) {
+        throw new Error('Markdown editor did not hydrate');
+      }
+    },
+    { timeout: MARKDOWN_EDITOR_READY_TIMEOUT_MS },
   );
 }
 

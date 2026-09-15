@@ -106,3 +106,30 @@ exports[`HomeFeedSidebar - Snapshots > matches snapshot 1`] = `
   </div>
 </div>
 `;
+
+exports[`HomeFeedSidebar - Snapshots > matches snapshot with Sort hidden 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-6"
+    data-testid="container"
+  >
+    <div
+      class="sticky top-[100px] flex w-full flex-col gap-6 self-start"
+      data-testid="container"
+    >
+      <div
+        data-show-visual="true"
+        data-testid="filter-layout"
+      >
+        FilterLayout
+      </div>
+      <div
+        data-selected-tab="all"
+        data-testid="filter-content"
+      >
+        FilterContent
+      </div>
+    </div>
+  </div>
+</div>
+`;

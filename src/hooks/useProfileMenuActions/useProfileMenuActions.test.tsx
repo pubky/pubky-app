@@ -1,13 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { isAppError } from '@/libs/error/error.utils';
+import { toast } from '@/molecules/Toaster/toast';
 import { useProfileMenuActions } from './useProfileMenuActions';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 
 // Hoist mocks
 const {
   mockIsAppError,
-  mockToast,
   mockUseTranslations,
   mockUseUserProfile,
   mockUseIsFollowing,
@@ -17,7 +17,6 @@ const {
   mockUseCopyToClipboard,
 } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
-  mockToast: vi.fn(),
   mockUseTranslations: vi.fn(),
   mockUseUserProfile: vi.fn(),
   mockUseIsFollowing: vi.fn(),
@@ -53,11 +52,7 @@ vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
 }));
 
 // Mock Molecules
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    toast: (props: unknown) => mockToast(props),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/libs/error/error.utils', async () => {
   const actual = await vi.importActual<typeof import('@/libs/error/error.utils')>('@/libs/error/error.utils');
@@ -203,7 +198,7 @@ describe('useProfileMenuActions', () => {
       expect(followItem?.disabled).toBe(true);
     });
 
-    it('calls toggleFollow with full profile name on follow action click', async () => {
+    it('calls toggleFollow with the user id on follow action click', async () => {
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
 
       const followItem = result.current.menuItems.find((item) => item.id === PROFILE_MENU_ACTION_IDS.FOLLOW);
@@ -213,10 +208,10 @@ describe('useProfileMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false, 'Test User');
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, false);
     });
 
-    it('calls toggleFollow with full profile name on unfollow action click', async () => {
+    it('calls toggleFollow with the user id on unfollow action click', async () => {
       mockUseIsFollowing.mockReturnValue({
         isFollowing: true,
         isLoading: false,
@@ -231,7 +226,7 @@ describe('useProfileMenuActions', () => {
         await followItem?.onClick();
       });
 
-      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true, 'Test User');
+      expect(defaultMocks.toggleFollow).toHaveBeenCalledWith(mockUserId, true);
     });
 
     it('does not throw when the follow fails (useFollowUser handles feedback)', async () => {
@@ -296,8 +291,8 @@ describe('useProfileMenuActions', () => {
       });
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, false);
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Test User muted',
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        title: 'User muted',
       });
     });
 
@@ -313,8 +308,8 @@ describe('useProfileMenuActions', () => {
       });
 
       expect(defaultMocks.toggleMute).toHaveBeenCalledWith(mockUserId, true);
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Test User unmuted',
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        title: 'User unmuted',
       });
     });
 
@@ -332,7 +327,7 @@ describe('useProfileMenuActions', () => {
       });
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not update mute status',
         });
@@ -395,7 +390,7 @@ describe('useProfileMenuActions', () => {
       });
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not copy to clipboard',
         });
@@ -416,7 +411,7 @@ describe('useProfileMenuActions', () => {
       });
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: 'Could not copy to clipboard',
         });

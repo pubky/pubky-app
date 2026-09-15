@@ -63,6 +63,7 @@ export class NexusPostService {
       limit,
       viewer_id: viewerId,
     });
-    return await queryNexus<NexusTaggers>({ url });
+    // Tagger lists revalidate after local mutations or count changes.
+    return await queryNexus<NexusTaggers>({ url, staleTime: 0 });
   }
 }

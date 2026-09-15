@@ -7,10 +7,9 @@ import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { SEARCH_PEOPLE_PREVIEW_COUNT } from '@/config/search';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchPeople } from '@/hooks/useSearchPeople/useSearchPeople';
-import { useSearchTags } from '@/hooks/useSearchStreamId/useSearchStreamId';
-import type { Pubky } from '@/models/models.types';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { UserListItem } from '@/organisms/UserListItem/UserListItem';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { SearchPersonCardSkeleton } from './SearchPeople.skeleton';
@@ -21,14 +20,17 @@ import { SearchPersonCardSkeleton } from './SearchPeople.skeleton';
  * "People" section on `/search` — users whose profile is tagged with the
  * searched tags, via `search/users/by_tags`. Collapsed to a preview of
  * `SEARCH_PEOPLE_PREVIEW_COUNT` cards; "See all" expands in place to the
- * paginated grid. Renders nothing without tags or matches.
+ * paginated grid. Renders nothing without a tag search (a full-text query has
+ * no tags to match) or without matches.
  */
 export function SearchPeople() {
-  const tags = useSearchTags();
+  const criteria = useSearchCriteria();
 
-  if (tags.length === 0) {
+  if (criteria.mode !== 'tags') {
     return null;
   }
+
+  const tags = criteria.tags;
 
   // Remount on any tag change so the expansion state resets with the query.
   return <SearchPeopleContent key={tags.join(',')} tags={tags} />;
@@ -36,7 +38,6 @@ export function SearchPeople() {
 
 /** Inner data-driven body — only mounted with a non-empty tag list. */
 function SearchPeopleContent({ tags }: { tags: string[] }) {
-  const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
   const { toggleFollow, isUserLoading } = useFollowUser();
@@ -64,10 +65,6 @@ function SearchPeopleContent({ tags }: { tags: string[] }) {
   // "Show more" directly so the cursor can still advance.
   const showShowMore = !loading && hasMore && (isExpanded || users.length === 0);
 
-  const handleFollow = async (userId: Pubky, isCurrentlyFollowing: boolean, displayName: string) => {
-    await toggleFollow(userId, isCurrentlyFollowing, displayName);
-  };
-
   return (
     <Container overrideDefaults data-cy="search-people-section" className="flex w-full flex-col gap-4">
       <Container overrideDefaults className="flex items-center justify-between gap-3">
@@ -93,7 +90,7 @@ function SearchPeopleContent({ tags }: { tags: string[] }) {
                 variant="card"
                 isLoading={isUserLoading(user.id)}
                 isCurrentUser={currentUserPubky === user.id}
-                onFollowClick={handleFollow}
+                onFollowClick={toggleFollow}
               />
             ))}
       </Container>

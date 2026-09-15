@@ -8,7 +8,7 @@ import { ProfileController } from '@/controllers/profile/profile';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { Logger } from '@/libs/logger/logger';
 import { withPubkyPrefix } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export interface ProfileActions {

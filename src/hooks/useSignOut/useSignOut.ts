@@ -5,12 +5,11 @@ import { useRouter } from 'next/navigation';
 import { AUTH_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import type { UseSignOutResult } from './useSignOut.types';
 
 export function useSignOut(): UseSignOutResult {
   const router = useRouter();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignOut = async () => {

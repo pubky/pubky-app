@@ -6,16 +6,16 @@ import { useTagSuggestions } from './useTagSuggestions';
 import { TAG_SUGGESTIONS_DEFAULT_LIMIT } from './useTagSuggestions.constants';
 
 // Hoist mock functions
-const { mockGetTagsByPrefix } = vi.hoisted(() => {
+const { mockFetchTagsByPrefix } = vi.hoisted(() => {
   return {
-    mockGetTagsByPrefix: vi.fn(),
+    mockFetchTagsByPrefix: vi.fn(),
   };
 });
 
 // Mock dependencies
 vi.mock('@/controllers/search/search', () => ({
   SearchController: {
-    getTagsByPrefix: (...args: unknown[]) => mockGetTagsByPrefix(...args),
+    fetchTagsByPrefix: (...args: unknown[]) => mockFetchTagsByPrefix(...args),
   },
 }));
 
@@ -31,8 +31,8 @@ vi.mock('lodash-es', () => ({
 describe('useTagSuggestions', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    mockGetTagsByPrefix.mockReset();
-    mockGetTagsByPrefix.mockResolvedValue([]);
+    mockFetchTagsByPrefix.mockReset();
+    mockFetchTagsByPrefix.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -54,7 +54,7 @@ describe('useTagSuggestions', () => {
   });
 
   it('fetches tag suggestions when query has minimum length', async () => {
-    mockGetTagsByPrefix.mockResolvedValue(['bitcoin', 'bitconnect', 'bitstamp']);
+    mockFetchTagsByPrefix.mockResolvedValue(['bitcoin', 'bitconnect', 'bitstamp']);
 
     const { result } = renderHook(() => useTagSuggestions({ query: 'bit' }));
 
@@ -65,14 +65,14 @@ describe('useTagSuggestions', () => {
     });
 
     expect(result.current.suggestions).toEqual(['bitcoin', 'bitconnect', 'bitstamp']);
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({
       prefix: 'bit',
       limit: TAG_SUGGESTIONS_DEFAULT_LIMIT,
     });
   });
 
   it('filters out excluded tags from suggestions', async () => {
-    mockGetTagsByPrefix.mockResolvedValue(['bitcoin', 'bitconnect', 'bitstamp']);
+    mockFetchTagsByPrefix.mockResolvedValue(['bitcoin', 'bitconnect', 'bitstamp']);
 
     const { result } = renderHook(() =>
       useTagSuggestions({
@@ -90,7 +90,7 @@ describe('useTagSuggestions', () => {
   });
 
   it('returns empty suggestions when disabled', async () => {
-    mockGetTagsByPrefix.mockResolvedValue(['bitcoin']);
+    mockFetchTagsByPrefix.mockResolvedValue(['bitcoin']);
 
     const { result } = renderHook(() =>
       useTagSuggestions({
@@ -104,11 +104,11 @@ describe('useTagSuggestions', () => {
     });
 
     expect(result.current.suggestions).toEqual([]);
-    expect(mockGetTagsByPrefix).not.toHaveBeenCalled();
+    expect(mockFetchTagsByPrefix).not.toHaveBeenCalled();
   });
 
   it('handles API errors gracefully', async () => {
-    mockGetTagsByPrefix.mockRejectedValue(new Error('Network error'));
+    mockFetchTagsByPrefix.mockRejectedValue(new Error('Network error'));
 
     const { result } = renderHook(() => useTagSuggestions({ query: 'bit' }));
 
@@ -122,7 +122,7 @@ describe('useTagSuggestions', () => {
   });
 
   it('clears suggestions when query becomes empty', async () => {
-    mockGetTagsByPrefix.mockResolvedValue(['bitcoin']);
+    mockFetchTagsByPrefix.mockResolvedValue(['bitcoin']);
 
     const { result, rerender } = renderHook(({ query }) => useTagSuggestions({ query }), {
       initialProps: { query: 'bit' },
@@ -142,7 +142,7 @@ describe('useTagSuggestions', () => {
   });
 
   it('respects custom limit parameter', async () => {
-    mockGetTagsByPrefix.mockResolvedValue(['a', 'b', 'c']);
+    mockFetchTagsByPrefix.mockResolvedValue(['a', 'b', 'c']);
 
     renderHook(() =>
       useTagSuggestions({
@@ -155,14 +155,14 @@ describe('useTagSuggestions', () => {
       await Promise.resolve();
     });
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({
       prefix: 'test',
       limit: 10,
     });
   });
 
   it('filters excluded tags case-insensitively', async () => {
-    mockGetTagsByPrefix.mockResolvedValue(['Bitcoin', 'BITCONNECT', 'bitstamp']);
+    mockFetchTagsByPrefix.mockResolvedValue(['Bitcoin', 'BITCONNECT', 'bitstamp']);
 
     const { result } = renderHook(() =>
       useTagSuggestions({
@@ -185,7 +185,7 @@ describe('useTagSuggestions', () => {
     const controlledPromise = new Promise<string[]>((resolve) => {
       resolvePromise = resolve;
     });
-    mockGetTagsByPrefix.mockReturnValue(controlledPromise);
+    mockFetchTagsByPrefix.mockReturnValue(controlledPromise);
 
     const { result } = renderHook(() => useTagSuggestions({ query: 'bit' }));
 
@@ -210,14 +210,14 @@ describe('useTagSuggestions', () => {
       resolveFirst = resolve;
     });
 
-    mockGetTagsByPrefix.mockReturnValueOnce(firstPromise);
+    mockFetchTagsByPrefix.mockReturnValueOnce(firstPromise);
 
     const { result, rerender } = renderHook(({ query }) => useTagSuggestions({ query }), {
       initialProps: { query: 'old' },
     });
 
     // Change query before first completes - setup mock for new query
-    mockGetTagsByPrefix.mockResolvedValue(['new-results']);
+    mockFetchTagsByPrefix.mockResolvedValue(['new-results']);
     rerender({ query: 'new' });
 
     await act(async () => {
@@ -236,7 +236,7 @@ describe('useTagSuggestions', () => {
   });
 
   it('trims whitespace from query', async () => {
-    mockGetTagsByPrefix.mockResolvedValue(['bitcoin']);
+    mockFetchTagsByPrefix.mockResolvedValue(['bitcoin']);
 
     renderHook(() => useTagSuggestions({ query: '  bit  ' }));
 
@@ -244,7 +244,7 @@ describe('useTagSuggestions', () => {
       await Promise.resolve();
     });
 
-    expect(mockGetTagsByPrefix).toHaveBeenCalledWith({
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({
       prefix: 'bit',
       limit: TAG_SUGGESTIONS_DEFAULT_LIMIT,
     });

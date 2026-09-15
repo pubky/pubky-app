@@ -6,6 +6,7 @@ import { COLLECTION_LAYOUT } from '@/config/collections';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { CollectionHero } from './CollectionHero';
@@ -17,8 +18,13 @@ import type { CollectionHeroProps } from './CollectionHero.types';
 
 const mockUseAuthStore = vi.fn();
 const mockLocalCollections: Record<string, string | undefined> = {};
+const mockTtlRef = vi.fn();
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: vi.fn(),
+}));
+
+vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => ({
+  useTtlSubscription: vi.fn(() => ({ ref: mockTtlRef, isVisible: false })),
 }));
 
 vi.mock('@/hooks/useBookmark/useBookmark', () => ({
@@ -233,6 +239,7 @@ const mockUseUserProfile = vi.mocked(useUserProfile);
 const mockUseBookmark = vi.mocked(useBookmark);
 const mockUsePostCounts = vi.mocked(usePostCounts);
 const mockUsePostReplyRepostDialogs = vi.mocked(usePostReplyRepostDialogs);
+const mockUseTtlSubscription = vi.mocked(useTtlSubscription);
 
 let currentPostDetails: EnrichedPostDetails | null | undefined;
 
@@ -453,6 +460,33 @@ describe('CollectionHero', () => {
     const matches = screen.getAllByText(AUTHOR_PUBKY);
     expect(matches).toHaveLength(1);
     expect(matches[0]).toHaveAttribute('data-testid', 'avatar-with-fallback');
+  });
+
+  describe('TTL subscription', () => {
+    // The page shell's `usePostDetails` never re-fetches a cached envelope, so
+    // the hero is the single-collection page's one viewport TTL subscriber:
+    // once the coordinator refreshes the row, the live query re-renders the
+    // title / description / cover / item count without a sign-out.
+    it('subscribes the hero to post TTL for the composite id and observes the hero card', () => {
+      renderHero();
+
+      expect(mockUseTtlSubscription).toHaveBeenCalledWith({ type: 'post', id: COMPOSITE_ID });
+      expect(mockTtlRef).toHaveBeenCalledWith(document.querySelector('[data-cy="collection-hero"]'));
+    });
+
+    it('keeps the viewport observer detached while the hero is a skeleton', () => {
+      renderHero({ postDetails: undefined });
+
+      expect(mockTtlRef).not.toHaveBeenCalledWith(expect.any(HTMLElement));
+    });
+
+    it('keeps the viewport observer detached while the hero is the blurred placeholder', () => {
+      setPostDetails(COLLECTION_CONTENT, { isBlurred: true });
+
+      renderHero();
+
+      expect(mockTtlRef).not.toHaveBeenCalledWith(expect.any(HTMLElement));
+    });
   });
 
   describe('moderation — blurred state', () => {

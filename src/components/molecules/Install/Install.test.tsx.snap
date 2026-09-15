@@ -75,7 +75,6 @@ exports[`InstallCard - Snapshots > matches snapshot 1`] = `
         </a>
         <img
           alt="App Store"
-          aria-controls="radix-normalized"
           aria-expanded="false"
           aria-haspopup="dialog"
           class="hidden cursor-pointer sm:block"
@@ -103,7 +102,6 @@ exports[`InstallCard - Snapshots > matches snapshot 1`] = `
         </a>
         <img
           alt="Google Play"
-          aria-controls="radix-normalized"
           aria-expanded="false"
           aria-haspopup="dialog"
           class="hidden cursor-pointer sm:block"
@@ -198,7 +196,6 @@ exports[`InstallNavigation - Snapshots > matches snapshot 1`] = `
       Create keys in browser
     </button>
     <button
-      aria-controls="radix-normalized"
       aria-expanded="false"
       aria-haspopup="dialog"
       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 rounded-full"
@@ -316,7 +313,6 @@ exports[`InstallNavigation - Snapshots > matches snapshot when continue button i
       Create keys in browser
     </button>
     <button
-      aria-controls="radix-normalized"
       aria-expanded="false"
       aria-haspopup="dialog"
       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 rounded-full"
@@ -419,7 +415,6 @@ exports[`InstallNavigation - Snapshots > matches snapshot when create button is 
       Create keys in browser
     </button>
     <button
-      aria-controls="radix-normalized"
       aria-expanded="false"
       aria-haspopup="dialog"
       class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 rounded-full"

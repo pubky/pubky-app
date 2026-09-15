@@ -28,7 +28,7 @@ export class SearchController {
   /**
    * Search tags by prefix
    */
-  static async getTagsByPrefix(params: TPrefixSearchParams): Promise<TSearchResult> {
+  static async fetchTagsByPrefix(params: TPrefixSearchParams): Promise<TSearchResult> {
     return await SearchApplication.fetchTagsByPrefix(params);
   }
 

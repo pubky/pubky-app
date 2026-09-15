@@ -48,7 +48,7 @@ UI (stream viewport)
 │  │                             │  │                             │  │
 │  │  subscribedPosts: Set       │  │  subscribedUsers: Set       │  │
 │  │  postBatchQueue: Set        │  │  userBatchQueue: Set        │  │
-│  │                             │  │  userRefCount: Map          │  │
+│  │  postRefCount: Map          │  │  userRefCount: Map          │  │
 │  └─────────────────────────────┘  └─────────────────────────────┘  │
 │                    │                            │                   │
 │                    ▼                            ▼                   │
@@ -134,8 +134,8 @@ class TtlCoordinator {
 ```
 subscribePost(compositePostId)
     │
-    ├──► Add postId to subscribedPosts
-    │    └──► Check post_ttl table
+    ├──► Increment postRefCount[compositePostId]; on the first reference add to subscribedPosts
+    │    └──► Check post_ttl table (first reference only)
     │         ├── Not found → Add to postBatchQueue (cache miss)
     │         ├── Stale (now - lastUpdatedAt > config.POST_TTL_MS) → Add to postBatchQueue
     │         └── Valid → Will be checked on next batch tick
@@ -162,6 +162,7 @@ onBatchTick()
     │
     ├──► If postBatchQueue.size > 0
     │    └──► Take up to config.POST_MAX_BATCH_SIZE posts
+    │         ├──► Re-check post_ttl for the batch; drop ids written locally since they were queued
     │         └──► Fetch posts from Nexus (batch request; post view)
     │              - Use `postStreamApi.postsByIds` (POST) → returns `NexusPost[]`
     │              └──► Persist to IndexedDB
@@ -205,15 +206,17 @@ The TTL Coordinator must be lifecycle-aware like other coordinators:
 - If unauthenticated, skip ticks and do not enqueue refresh work
 - Pause refresh when the page is hidden (unless explicitly configured otherwise)
 - On logout: stop ticking and `reset()` subscriptions
+- Auth changes are detected by comparing store snapshots (`isAuthenticatedState(state)` vs `isAuthenticatedState(prevState)`, plus `hasProfile`), never by calling a store selector on `prevState` — selectors read the live store, so such a comparison can never see a transition. A session restored after `start()` (a reload on a public route mounts the coordinator before restore) therefore starts ticking on its own.
+- A new subscription restarts a stopped tick loop when every condition above is met, as a safety net for any transient stop
 
 ### Idempotency & Refcount Invariants
 
 Viewport signals can be noisy; the coordinator must be safe under repeated calls:
 
-- `subscribePost` is idempotent for the same `compositePostId` (does not double-increment author refcount)
+- `subscribePost` / `unsubscribePost` are reference counted per `compositePostId`: nested surfaces that track the same post (a repost preview inside a feed, a share dialog over a collection hero) each hold a reference, and the post stays tracked until the last one unsubscribes. The subscribe-time staleness check runs once, on the first reference.
 - `unsubscribePost` is safe if called multiple times or for unknown IDs (no negative refcounts)
 - `subscribeUser`/`unsubscribeUser` follow the same rule: refcounts never drop below 0
-- Removing a post also removes it from `postBatchQueue` (and similarly for users when refcount reaches 0)
+- Removing the last reference to a post also removes it from `postBatchQueue` (and similarly for users when refcount reaches 0)
 
 ### Error Handling Notes
 
@@ -227,8 +230,10 @@ Viewport signals can be noisy; the coordinator must be safe under repeated calls
 ```
 unsubscribePost(compositePostId)
     │
-    ├──► Remove postId from subscribedPosts
-    │    └──► Remove from postBatchQueue if present
+    ├──► Decrement postRefCount[compositePostId]
+    └──► If refCount === 0
+         ├──► Remove from subscribedPosts
+         └──► Remove from postBatchQueue if present
 
 unsubscribeUser(pubky)
     │
@@ -247,7 +252,7 @@ reset()
     │
     ├──► Clear subscribedPosts set
     ├──► Clear subscribedUsers set
-    ├──► Clear userRefCount map
+    ├──► Clear postRefCount and userRefCount maps
     ├──► Clear postBatchQueue
     └──► Clear userBatchQueue
 

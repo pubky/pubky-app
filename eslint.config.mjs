@@ -108,6 +108,20 @@ const eslintConfig = [
             'Do not read process.env.PUBKY_RUNTIME_* directly. Resolve runtime config through the getters from @/libs/runtime-config/runtime-config.',
         },
       ],
+      // The toast store, state hook, and Radix renderer atoms are private to the Toaster module.
+      // Application code triggers notifications only through toast() from @/molecules/Toaster/toast.
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/Toaster/toast.store', '**/Toaster/useToastState', '**/atoms/Toast/*'],
+              message:
+                "Toast internals are private to the Toaster module. Import { toast } from '@/molecules/Toaster/toast'.",
+            },
+          ],
+        },
+      ],
     },
     settings: {
       react: {
@@ -121,6 +135,13 @@ const eslintConfig = [
     files: ['src/libs/runtime-config/**/*.{ts,tsx}', 'src/config/test.ts'],
     rules: {
       'no-restricted-syntax': 'off',
+    },
+  },
+  {
+    // The Toaster module and the Toast atoms may import their own internals.
+    files: ['src/components/atoms/Toast/**', 'src/components/molecules/Toaster/**'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
   {

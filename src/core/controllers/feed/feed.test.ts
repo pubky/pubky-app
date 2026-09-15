@@ -5,7 +5,6 @@ import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
-import { asInvalid } from '@/test-utils/type-assertions';
 import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from './feed.types';
 
 const testData = {
@@ -327,7 +326,7 @@ describe('FeedController', () => {
     });
 
     it('should return undefined when not found', async () => {
-      vi.spyOn(FeedApplication, 'get').mockResolvedValue(asInvalid<FeedModelSchema>(undefined));
+      vi.spyOn(FeedApplication, 'get').mockResolvedValue(null);
 
       const result = await FeedController.get({ feedId: 'feed-nonexistent' });
 

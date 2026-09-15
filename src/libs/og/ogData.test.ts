@@ -14,7 +14,7 @@ vi.mock('@/services/nexus/file/file.api', () => ({
   },
 }));
 
-const { buildAvatarUrl, fetchImageAsDataUri, fetchPostTags, fetchProfileForMetadata, resolvePostAttachmentUrl } =
+const { buildAvatarUrl, fetchImageAsDataUri, fetchOgImageBytes, fetchProfileForMetadata, resolvePostAttachmentUrl } =
   await import('./ogData');
 
 const jsonResponse = (body: unknown) =>
@@ -105,39 +105,6 @@ describe('fetchProfileForMetadata', () => {
   });
 });
 
-describe('fetchPostTags', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('returns the tags list, requesting the given post tags endpoint and limit', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(jsonResponse([{ label: 'ai', taggers_count: 21 }]));
-
-    const tags = await fetchPostTags('author', 'post1', 3);
-
-    expect(tags).toEqual([{ label: 'ai', taggers_count: 21 }]);
-    const url = String(fetchSpy.mock.calls[0][0]);
-    // Path asserts author/post order — swapped arguments would silently fetch
-    // a nonexistent post's tags and every card would render without tags.
-    expect(url).toContain('/v0/post/author/post1/tags');
-    expect(url).toContain('limit_tags=3');
-  });
-
-  it('returns an empty list on 404', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Not Found', { status: 404 }));
-
-    expect(await fetchPostTags('author', 'post1', 3)).toEqual([]);
-  });
-
-  it('returns an empty list when the fetch fails (non-fatal)', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'));
-
-    expect(await fetchPostTags('author', 'post1', 3)).toEqual([]);
-  });
-});
-
 describe('fetchImageAsDataUri', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -179,5 +146,53 @@ describe('fetchImageAsDataUri', () => {
     const result = await fetchImageAsDataUri('https://cdn.test/a.png');
 
     expect(result).toMatch(/^data:image\/png;base64,/);
+  });
+});
+
+describe('fetchOgImageBytes', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const pngResponse = (headers: Record<string, string>) =>
+    new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'Content-Type': 'image/png', ...headers } });
+
+  it('bounds the fetch with a timeout signal (a hung CDN must not stall the card past the crawler)', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(pngResponse({}));
+
+    await fetchOgImageBytes('https://cdn.test/a.png');
+
+    const init = fetchSpy.mock.calls[0][1];
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('returns the bytes for an image response, matching the content type case-insensitively', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'Content-Type': 'Image/PNG' } }),
+    );
+
+    const bytes = await fetchOgImageBytes('https://cdn.test/a.png');
+
+    expect(bytes && Array.from(bytes)).toEqual([1, 2, 3]);
+  });
+
+  it('rejects a body larger than OG_IMAGE_MAX_BYTES without downloading it', async () => {
+    const body = { cancel: vi.fn(async () => undefined) };
+    const res = pngResponse({ 'Content-Length': String(5 * 1024 * 1024) });
+    Object.defineProperty(res, 'body', { value: body });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(res);
+
+    expect(await fetchOgImageBytes('https://cdn.test/huge.png')).toBeNull();
+    expect(body.cancel).toHaveBeenCalled();
+  });
+
+  it('returns null (and drains the body) on a non-ok or non-image response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('nope', { status: 404 }));
+    expect(await fetchOgImageBytes('https://cdn.test/a.png')).toBeNull();
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html>', { status: 200, headers: { 'Content-Type': 'text/html' } }),
+    );
+    expect(await fetchOgImageBytes('https://cdn.test/a.png')).toBeNull();
   });
 });

@@ -46,7 +46,10 @@ interface PostPreviewCardProps {
  *
  * **TTL Tracking:**
  * Subscribes the original post to TTL tracking when visible in the viewport.
- * This ensures original posts for reposts get refreshed when stale.
+ * This ensures original posts for reposts get refreshed when stale. For
+ * collection originals this wrapper is the embed's subscriber — the nested
+ * `CollectionCard` skips its own subscription for `presentation="embed"`
+ * since a second one would only add a redundant viewport observer.
  *
  * **Usage:**
  * - Repost previews: original post in `PostContent` (collections use embed `CollectionCard`)

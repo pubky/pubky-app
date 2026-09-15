@@ -41,10 +41,18 @@ export class LocalFeedService {
   }
 
   /**
-   * Read a feed by ID. Throws RECORD_NOT_FOUND if feed doesn't exist.
+   * Read a feed by ID. Returns `null` when the feed does not exist locally.
+   *
+   * History: this used to throw RECORD_NOT_FOUND ("Feed not found",
+   * Sentry PUBKY-APP-7A). The two production callers (`useCustomFeed`,
+   * stream coordinator resolution) both handle a missing feed as a normal
+   * state — a stale `activeFeedId` pointing at a deleted feed — so a throw
+   * produced pure Sentry noise and a caught-error path that returned
+   * `undefined` anyway. `find()`/`get()` semantics are the correct contract.
    */
-  static async read({ feedId }: TFeedIdParam): Promise<FeedModelSchema> {
-    return this.normalize(await FeedModel.findByIdOrThrow(feedId));
+  static async read({ feedId }: TFeedIdParam): Promise<FeedModelSchema | null> {
+    const record = await FeedModel.findById(feedId);
+    return record ? this.normalize(record) : null;
   }
 
   static async readAll(): Promise<FeedModelSchema[]> {

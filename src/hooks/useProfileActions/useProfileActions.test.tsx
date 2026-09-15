@@ -4,7 +4,7 @@ import { ProfileController } from '@/controllers/profile/profile';
 import { ErrorMessages } from '@/libs/error/error.messages';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useProfileActions } from './useProfileActions';
 
@@ -16,9 +16,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: vi.fn(),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock AuthController.logout
 const mockLogout = vi.fn();
@@ -46,7 +44,6 @@ describe('useProfileActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Logger, 'error').mockImplementation(() => {});
-    vi.mocked(toast).mockImplementation(() => ({ id: '1', dismiss: vi.fn(), update: vi.fn() }));
     useAuthStore.setState({ currentUserPubky: null });
   });
 

@@ -2,8 +2,8 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import { describe, it, vi } from 'vitest';
+import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
@@ -43,12 +43,8 @@ vi.mock('next/navigation', () => {
 });
 
 // Toast is only fired from the invite-code verification effect (never hit in the
-// default snapshot), but the hook is called unconditionally at render.
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn(), dismiss: vi.fn(), toasts: [] }),
-  // `showErrorToast` imports the standalone `toast` binding.
-  toast: vi.fn(),
-}));
+// default snapshot); stub it so no real toast timers run.
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/onboarding/onboarding.store', () => ({
   useOnboardingStore: createZustandLikeHook({
@@ -74,12 +70,12 @@ vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
 
 describe('Install (onboarding) — visual regression', () => {
   it('renders the install page at desktop viewport', async () => {
-    const screen = await renderForVRT(<InstallWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-install-desktop');
+    await renderForVRT(<InstallWithHeader />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await matchVrtFrameScreenshot('onboarding-install-desktop');
   });
 
   it('renders the install page at mobile viewport', async () => {
-    const screen = await renderForVRT(<InstallWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('onboarding-install-mobile');
+    await renderForVRT(<InstallWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
+    await matchVrtFrameScreenshot('onboarding-install-mobile');
   });
 });

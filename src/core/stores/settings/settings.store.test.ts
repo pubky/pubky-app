@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Pubky } from '@/models/models.types';
 import { useSettingsStore } from './settings.store';
 import { defaultNotificationPreferences, defaultPrivacyPreferences, settingsInitialState } from './settings.types';
 
@@ -111,6 +112,32 @@ describe('SettingsStore', () => {
   });
 
   describe('Privacy Preferences', () => {
+    it('should set moderation bot state without changing other privacy preferences', () => {
+      const moderationBot = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro' as Pubky;
+      const initialPrivacy = useSettingsStore.getState().privacy;
+      const initialTimestamp = useSettingsStore.getState().updatedAt;
+
+      useSettingsStore.getState().setModerationBot(moderationBot);
+
+      expect(useSettingsStore.getState().privacy).toEqual({ ...initialPrivacy, moderationBot });
+      expect(useSettingsStore.getState().updatedAt).toBeGreaterThanOrEqual(initialTimestamp);
+    });
+
+    it('should retain moderation bot state loaded from the homeserver', () => {
+      const moderationBot = 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro' as Pubky;
+
+      useSettingsStore.getState().loadFromHomeserver({
+        notifications: defaultNotificationPreferences,
+        privacy: { ...defaultPrivacyPreferences, moderationBot },
+        muted: [],
+        updatedAt: 123,
+        version: 1,
+      });
+
+      expect(useSettingsStore.getState().privacy.moderationBot).toBe(moderationBot);
+      expect(useSettingsStore.getState().version).toBe(1);
+    });
+
     it('should set showConfirm preference', () => {
       const store = useSettingsStore.getState();
 
@@ -235,11 +262,13 @@ describe('SettingsStore', () => {
       // Set some state
       store.setNotificationPreference('follow', false);
       store.setShowConfirm(false);
+      store.setModerationBot('euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro' as Pubky);
       store.addMutedUser('user-123');
 
       // Verify state is set
       expect(useSettingsStore.getState().notifications.follow).toBe(false);
       expect(useSettingsStore.getState().privacy.showConfirm).toBe(false);
+      expect(useSettingsStore.getState().privacy.moderationBot).toBeDefined();
       expect(useSettingsStore.getState().muted).toContain('user-123');
 
       // Reset store
@@ -250,6 +279,7 @@ describe('SettingsStore', () => {
       // Verify state is reset to initial
       expect(afterReset.notifications).toEqual(defaultNotificationPreferences);
       expect(afterReset.privacy).toEqual(defaultPrivacyPreferences);
+      expect(afterReset.privacy.moderationBot).toBeUndefined();
       expect(afterReset.muted).toEqual([]);
       expect(afterReset.version).toBe(1); // Reset to initial
       expect(afterReset.updatedAt).toBe(settingsInitialState.updatedAt); // Reset to 0 so remote wins on next login

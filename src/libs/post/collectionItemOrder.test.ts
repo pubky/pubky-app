@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sortPostIdsByCollectionOrder } from './collectionItemOrder';
+import { collectionItemsToPostIds, sortPostIdsByMembership } from './collectionItemOrder';
 
 const uriFor = (pubky: string, postId: string) => `pubky://${pubky}/pub/pubky.app/posts/${postId}`;
 
@@ -11,38 +11,51 @@ const uriA = uriFor('author_a', 'post_a');
 const uriB = uriFor('author_b', 'post_b');
 const uriC = uriFor('author_c', 'post_c');
 
-describe('sortPostIdsByCollectionOrder', () => {
-  it('sorts stream ids to match the envelope order', () => {
-    expect(sortPostIdsByCollectionOrder([idA, idB, idC], [uriC, uriA, uriB])).toEqual([idC, idA, idB]);
+describe('sortPostIdsByMembership', () => {
+  it('sorts stream ids to match the membership order', () => {
+    expect(sortPostIdsByMembership([idA, idB, idC], [idC, idA, idB])).toEqual([idC, idA, idB]);
   });
 
-  it('appends ids not present in the envelope in their original stream order', () => {
-    expect(sortPostIdsByCollectionOrder([idB, idA, idC], [uriC])).toEqual([idC, idB, idA]);
+  it('keeps ids not present in the membership at their original stream position', () => {
+    // Only idC is a member: it stays in its slot; idB and idA are untouched.
+    expect(sortPostIdsByMembership([idB, idA, idC], [idC])).toEqual([idB, idA, idC]);
+    // A post the owner just unlisted (idB) stays put while the others reorder around it.
+    expect(sortPostIdsByMembership([idA, idB, idC], [idC, idA])).toEqual([idC, idB, idA]);
   });
 
-  it('ignores envelope items with no matching stream id', () => {
-    expect(sortPostIdsByCollectionOrder([idB, idA], [uriC, uriA, uriB])).toEqual([idA, idB]);
+  it('ignores membership ids with no matching stream id', () => {
+    expect(sortPostIdsByMembership([idB, idA], [idC, idA, idB])).toEqual([idA, idB]);
   });
 
-  it('returns the input when the envelope is missing or empty', () => {
+  it('returns the input when the membership is missing or empty', () => {
     const postIds = [idB, idA];
 
-    expect(sortPostIdsByCollectionOrder(postIds, undefined)).toBe(postIds);
-    expect(sortPostIdsByCollectionOrder(postIds, [])).toBe(postIds);
+    expect(sortPostIdsByMembership(postIds, undefined)).toBe(postIds);
+    expect(sortPostIdsByMembership(postIds, [])).toBe(postIds);
   });
 
   it('returns the input when there are fewer than two ids', () => {
     const postIds = [idA];
 
-    expect(sortPostIdsByCollectionOrder(postIds, [uriB, uriA])).toBe(postIds);
+    expect(sortPostIdsByMembership(postIds, [idB, idA])).toBe(postIds);
   });
 
-  it('skips envelope URIs that cannot be converted to composite ids', () => {
-    expect(sortPostIdsByCollectionOrder([idB, idA], ['https://example.com/post', uriA, uriB])).toEqual([idA, idB]);
-    expect(sortPostIdsByCollectionOrder([idB, idA], ['https://example.com/post'])).toEqual([idB, idA]);
+  it('uses the first occurrence for duplicate membership ids', () => {
+    expect(sortPostIdsByMembership([idB, idA], [idB, idA, idB])).toEqual([idB, idA]);
+  });
+});
+
+describe('collectionItemsToPostIds', () => {
+  it('maps envelope URIs to composite post ids in envelope order', () => {
+    expect(collectionItemsToPostIds([uriB, uriA, uriC])).toEqual([idB, idA, idC]);
   });
 
-  it('uses the first occurrence for duplicate envelope URIs', () => {
-    expect(sortPostIdsByCollectionOrder([idB, idA], [uriB, uriA, uriB])).toEqual([idB, idA]);
+  it('returns undefined for an unresolved envelope and an empty array for an empty one', () => {
+    expect(collectionItemsToPostIds(undefined)).toBeUndefined();
+    expect(collectionItemsToPostIds([])).toEqual([]);
+  });
+
+  it('drops malformed URIs and duplicates', () => {
+    expect(collectionItemsToPostIds(['https://example.com/post', uriA, uriB, uriA])).toEqual([idA, idB]);
   });
 });

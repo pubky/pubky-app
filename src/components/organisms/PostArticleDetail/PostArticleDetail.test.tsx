@@ -56,8 +56,8 @@ vi.mock('@/atoms/Typography/Typography', () => ({
 }));
 
 vi.mock('@/molecules/PostText/PostText', () => ({
-  PostText: ({ content, isArticle }: { content: string; isArticle?: boolean }) => (
-    <div data-testid="post-text" data-is-article={isArticle}>
+  PostText: ({ content, isArticle, fullArticle }: { content: string; isArticle?: boolean; fullArticle?: boolean }) => (
+    <div data-testid="post-text" data-is-article={isArticle} data-full-article={fullArticle}>
       {content}
     </div>
   ),
@@ -200,6 +200,7 @@ describe('PostArticleDetail', () => {
       title: 'Test Article Title',
       body: 'Test article body content',
       coverImage: null,
+      hasCover: true,
     });
     mockUseLocalFilesStore.mockImplementation((selector) => selector(createMockLocalFilesStore()));
   });
@@ -251,11 +252,12 @@ describe('PostArticleDetail', () => {
     expect(screen.getByTestId('post-header')).toHaveAttribute('data-time-placement', 'bottom-left');
   });
 
-  it('passes body content and article mode to PostText', () => {
+  it('passes body content and full article mode to PostText', () => {
     render(<PostArticleDetail {...defaultProps} />);
 
     expect(screen.getByTestId('post-text')).toHaveTextContent('Test article body content');
     expect(screen.getByTestId('post-text')).toHaveAttribute('data-is-article', 'true');
+    expect(screen.getByTestId('post-text')).toHaveAttribute('data-full-article', 'true');
   });
 
   it('renders dialogs in closed state initially', () => {
@@ -274,6 +276,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/image.jpg',
         alt: 'Cover image',
       },
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -290,6 +293,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/image.jpg',
         alt: 'Cover image',
       },
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -307,6 +311,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/image.jpg',
         alt: 'Cover image',
       },
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -319,6 +324,7 @@ describe('PostArticleDetail', () => {
       title: 'Test Title',
       body: 'Test body',
       coverImage: null,
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} />);
@@ -334,6 +340,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/image.jpg',
         alt: 'Cover image',
       },
+      hasCover: true,
     });
 
     render(<PostArticleDetail {...defaultProps} isBlurred />);
@@ -370,6 +377,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/remote-image.jpg',
         alt: 'Remote cover',
       },
+      hasCover: true,
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
@@ -419,6 +427,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/remote.jpg',
         alt: 'Remote fallback',
       },
+      hasCover: true,
     });
     mockUseLocalFilesStore.mockImplementation((selector) =>
       selector(
@@ -526,6 +535,7 @@ describe('PostArticleDetail', () => {
         src: 'https://example.com/cover.jpg',
         alt: 'Article cover',
       },
+      hasCover: true,
     });
 
     const { container } = render(

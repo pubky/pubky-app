@@ -43,6 +43,7 @@ exports[`PostArticleDetail > matches snapshot in wide layout 1`] = `
       </button>
     </div>
     <div
+      data-full-article="true"
       data-is-article="true"
       data-testid="post-text"
     >
@@ -151,6 +152,7 @@ exports[`PostArticleDetail > matches snapshot with cover image 1`] = `
       src="https://example.com/cover.jpg"
     />
     <div
+      data-full-article="true"
       data-is-article="true"
       data-testid="post-text"
     >
@@ -198,6 +200,7 @@ exports[`PostArticleDetail > matches snapshot with default props 1`] = `
       </button>
     </div>
     <div
+      data-full-article="true"
       data-is-article="true"
       data-testid="post-text"
     >

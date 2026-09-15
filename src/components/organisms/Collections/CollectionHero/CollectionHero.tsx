@@ -12,6 +12,7 @@ import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { resolveCollectionCoverImage } from '@/libs/post/collectionCoverImage';
@@ -45,6 +46,13 @@ import type { CollectionHeroContentProps, CollectionHeroProps } from './Collecti
  * other-user views; only the action buttons differ:
  *   - owner   → Content / Share / Edit / Delete.
  *   - other   → real Follow / Unfollow (via `useBookmark`) + Share placeholder.
+ *
+ * Freshness: the hero subscribes the envelope to the viewport TTL coordinator.
+ * `usePostDetails` (in the `Collection` template) never re-fetches a cached
+ * row, so without this the title / description / cover / item count would stay
+ * frozen at whatever was cached until sign-out. The subscription refreshes the
+ * row (same path as `PostMain`) and the template's live query re-renders every
+ * consumer. See docs/data-patterns.md — "Viewport TTL subscriptions".
  */
 export function CollectionHero({
   authorPubky,
@@ -56,6 +64,7 @@ export function CollectionHero({
   className,
 }: CollectionHeroProps) {
   const compositeId = buildCompositeId({ pubky: authorPubky, id: postId });
+  const { ref: ttlRef } = useTtlSubscription({ type: 'post', id: compositeId });
 
   if (!postDetails) {
     return <CollectionHeroSkeleton className={className} />;
@@ -78,6 +87,7 @@ export function CollectionHero({
       onLayoutChange={onLayoutChange}
       reorder={reorder}
       className={className}
+      ttlRef={ttlRef}
     />
   );
 }
@@ -90,6 +100,7 @@ function CollectionHeroContent({
   onLayoutChange,
   reorder,
   className,
+  ttlRef,
 }: CollectionHeroContentProps) {
   const { profile: ownerProfile } = useUserProfile(authorPubky);
   // Gate the owner name on the resolved profile so the hero doesn't flash the
@@ -193,6 +204,7 @@ function CollectionHeroContent({
 
   return (
     <Card
+      ref={ttlRef}
       data-cy="collection-hero"
       className={cn(
         // `isolate` keeps the -z-10 cover inside this card's stacking context

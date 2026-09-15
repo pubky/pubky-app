@@ -19,7 +19,7 @@ exports[`PostInputActionBar - Mobile Snapshots > matches snapshot on mobile view
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-smile size-4 text-secondary-foreground"
+        class="lucide lucide-face-slightly-smiling size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -30,25 +30,19 @@ exports[`PostInputActionBar - Mobile Snapshots > matches snapshot on mobile view
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <path
+          d="M15 10V9"
+        />
+        <path
+          d="M16.472 15a6 6 0 01-8.943 0"
+        />
+        <path
+          d="M9 10V9"
+        />
         <circle
           cx="12"
           cy="12"
           r="10"
-        />
-        <path
-          d="M8 14s1.5 2 4 2 4-2 4-2"
-        />
-        <line
-          x1="9"
-          x2="9.01"
-          y1="9"
-          y2="9"
-        />
-        <line
-          x1="15"
-          x2="15.01"
-          y1="9"
-          y2="9"
         />
       </svg>
     </button>
@@ -195,7 +189,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with all callbacks 1`
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-smile size-4 text-secondary-foreground"
+        class="lucide lucide-face-slightly-smiling size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -206,25 +200,19 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with all callbacks 1`
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <path
+          d="M15 10V9"
+        />
+        <path
+          d="M16.472 15a6 6 0 01-8.943 0"
+        />
+        <path
+          d="M9 10V9"
+        />
         <circle
           cx="12"
           cy="12"
           r="10"
-        />
-        <path
-          d="M8 14s1.5 2 4 2 4-2 4-2"
-        />
-        <line
-          x1="9"
-          x2="9.01"
-          y1="9"
-          y2="9"
-        />
-        <line
-          x1="15"
-          x2="15.01"
-          y1="9"
-          y2="9"
         />
       </svg>
     </button>
@@ -369,7 +357,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with default props 1`
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-smile size-4 text-secondary-foreground"
+        class="lucide lucide-face-slightly-smiling size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -380,25 +368,19 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with default props 1`
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <path
+          d="M15 10V9"
+        />
+        <path
+          d="M16.472 15a6 6 0 01-8.943 0"
+        />
+        <path
+          d="M9 10V9"
+        />
         <circle
           cx="12"
           cy="12"
           r="10"
-        />
-        <path
-          d="M8 14s1.5 2 4 2 4-2 4-2"
-        />
-        <line
-          x1="9"
-          x2="9.01"
-          y1="9"
-          y2="9"
-        />
-        <line
-          x1="15"
-          x2="15.01"
-          y1="9"
-          y2="9"
         />
       </svg>
     </button>
@@ -546,7 +528,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with disabled post bu
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-smile size-4 text-secondary-foreground"
+        class="lucide lucide-face-slightly-smiling size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -557,25 +539,19 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with disabled post bu
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <path
+          d="M15 10V9"
+        />
+        <path
+          d="M16.472 15a6 6 0 01-8.943 0"
+        />
+        <path
+          d="M9 10V9"
+        />
         <circle
           cx="12"
           cy="12"
           r="10"
-        />
-        <path
-          d="M8 14s1.5 2 4 2 4-2 4-2"
-        />
-        <line
-          x1="9"
-          x2="9.01"
-          y1="9"
-          y2="9"
-        />
-        <line
-          x1="15"
-          x2="15.01"
-          y1="9"
-          y2="9"
         />
       </svg>
     </button>
@@ -723,7 +699,7 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with hideArticleButto
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-smile size-4 text-secondary-foreground"
+        class="lucide lucide-face-slightly-smiling size-4 text-secondary-foreground"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -734,25 +710,19 @@ exports[`PostInputActionBar - Snapshots > matches snapshot with hideArticleButto
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <path
+          d="M15 10V9"
+        />
+        <path
+          d="M16.472 15a6 6 0 01-8.943 0"
+        />
+        <path
+          d="M9 10V9"
+        />
         <circle
           cx="12"
           cy="12"
           r="10"
-        />
-        <path
-          d="M8 14s1.5 2 4 2 4-2 4-2"
-        />
-        <line
-          x1="9"
-          x2="9.01"
-          y1="9"
-          y2="9"
-        />
-        <line
-          x1="15"
-          x2="15.01"
-          y1="9"
-          y2="9"
         />
       </svg>
     </button>

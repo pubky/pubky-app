@@ -106,12 +106,19 @@ export async function fetchNexusNoContent({ url, method }: Pick<TFetchNexusParam
  * @param url - Full API endpoint URL
  * @param method - HTTP method (default: 'GET')
  * @param body - JSON string body (use JSON.stringify for objects)
+ * @param staleTime - Cache freshness in milliseconds; omit for the shared default, or use 0 to revalidate on each call
  * @returns Parsed response data
  * @throws {NexusError} When response is not ok after all retries
  */
-export async function queryNexus<T>({ url, method = HttpMethod.GET, body = null }: TQueryNexusParams): Promise<T> {
+export async function queryNexus<T>({
+  url,
+  method = HttpMethod.GET,
+  body = null,
+  staleTime,
+}: TQueryNexusParams): Promise<T> {
   return nexusQueryClient.fetchQuery({
     queryKey: ['nexus', url, method, body],
     queryFn: () => fetchNexus<T>({ url, method, body }),
+    ...(staleTime !== undefined && { staleTime }),
   });
 }

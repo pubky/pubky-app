@@ -26,11 +26,23 @@ export class LocalProfileService {
 
   /**
    * Upserts user details into local database.
+   *
+   * Details-only payloads (the `/details` endpoint, profile creation) carry no
+   * `social_graph_status`; the tier is only known from a full user view. A whole-row put
+   * would erase a tier persisted earlier, so the existing one is carried over. Read and
+   * write share a transaction so a concurrent full-view persist cannot slip in between.
+   *
    * @param userDetails - The user details to upsert
    * @returns Promise resolving to void
    */
   static async upsertDetails(userDetails: NexusUserDetails): Promise<void> {
-    await UserDetailsModel.upsert(userDetails);
+    await db.transaction('rw', UserDetailsModel.table, async () => {
+      const existing = await UserDetailsModel.findById(userDetails.id);
+      const social_graph_status = existing?.social_graph_status;
+      await UserDetailsModel.upsert(
+        social_graph_status === undefined ? userDetails : { ...userDetails, social_graph_status },
+      );
+    });
   }
 
   /**

@@ -113,6 +113,35 @@ describe('TagInput', () => {
     expect(input).toBeDisabled();
     expect(input).toHaveClass('placeholder:text-destructive', 'disabled:opacity-100');
   });
+
+  it('clears an in-progress value when another selection reaches the cap', async () => {
+    const { rerender } = render(
+      <TagInput
+        onTagAdd={mockOnTagAdd}
+        maxTags={5}
+        currentTagsCount={4}
+        limitReachedPlaceholder="5 tags max"
+        clearOnLimitReached
+      />,
+    );
+    const input = screen.getByPlaceholderText('add tag') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'unfinished' } });
+    expect(input).toHaveValue('unfinished');
+
+    rerender(
+      <TagInput
+        onTagAdd={mockOnTagAdd}
+        maxTags={5}
+        currentTagsCount={5}
+        limitReachedPlaceholder="5 tags max"
+        clearOnLimitReached
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('5 tags max')).toHaveValue('');
+    });
+  });
 });
 
 describe('TagInput - Banned Character Sanitization', () => {
@@ -203,6 +232,28 @@ describe('TagInput - API Suggestions', () => {
           query: 'bit',
           excludeTags: expect.arrayContaining(['existing-tag']),
           enabled: true,
+        }),
+      );
+    });
+  });
+
+  it('passes selected viewer tags through the API exclusion contract', async () => {
+    render(
+      <TagInput
+        onTagAdd={mockOnTagAdd}
+        viewerTags={[{ label: 'bitcoin' }]}
+        enableApiSuggestions
+        excludeFromApiSuggestions={['bitcoin']}
+      />,
+    );
+
+    const input = screen.getByPlaceholderText('add tag') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'bit' } });
+
+    await waitFor(() => {
+      expect(mockUseTagSuggestions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          excludeTags: ['bitcoin'],
         }),
       );
     });

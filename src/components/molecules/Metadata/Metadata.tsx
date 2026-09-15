@@ -75,7 +75,8 @@ export function Metadata({
   const resolvedAuthor = author ?? getAuthor();
   const resolvedKeywords = keywords ?? getKeywords();
   const resolvedCreator = creator ?? getCreator();
-  const resolvedSite = site ?? defaultUrl;
+  // X requires an @handle for twitter:site, not a URL.
+  const resolvedSite = site ?? getCreator();
   const hasDescription = typeof description === 'string' && description.length > 0;
   // Top-level accepts `null` (Next's opt-out of inherited metadata); openGraph /
   // twitter only accept `string`, so they use `''`. Both override — rather than

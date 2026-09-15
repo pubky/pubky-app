@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
+import { toast } from '@/molecules/Toaster/toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useTagged } from './useTagged';
 
@@ -13,7 +14,6 @@ const mockMocks = vi.hoisted(() => {
   const mockGetCounts = vi.fn();
   const mockTagCreate = vi.fn();
   const mockTagDelete = vi.fn();
-  const mockToast = vi.fn();
   return {
     mockGetTags,
     mockFetchTags,
@@ -21,7 +21,6 @@ const mockMocks = vi.hoisted(() => {
     mockGetCounts,
     mockTagCreate,
     mockTagDelete,
-    mockToast,
   };
 });
 
@@ -61,9 +60,7 @@ vi.mock('@/hooks/useProfileStats/useProfileStats', () => ({
   useProfileStats: (...args: Parameters<typeof useProfileStats>) => mockUseProfileStats(...args),
 }));
 // Mock toast
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mockMocks.mockToast,
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock dexie-react-hooks
 let mockLocalTags: NexusTag[] | null = null;
@@ -186,9 +183,7 @@ describe('useTagged', () => {
       taggerId: 'mock-current-user',
       taggedKind: TagKind.USER,
     });
-    expect(mockMocks.mockToast).toHaveBeenCalledWith({
-      title: 'Tag added: ethereum',
-    });
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('shows an error toast when adding a tag fails', async () => {
@@ -207,13 +202,13 @@ describe('useTagged', () => {
     });
 
     expect(addResult!).toEqual({ success: false, error: 'Failed to add tag' });
-    expect(mockMocks.mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not add tag: ethereum',
+      description: 'Could not add tag',
     });
   });
 
-  it('shows a success toast when removing a tag', async () => {
+  it('does not show a success toast when removing a tag', async () => {
     mockLocalTags = [
       {
         label: 'bitcoin',
@@ -239,9 +234,36 @@ describe('useTagged', () => {
       taggerId: 'mock-current-user',
       taggedKind: TagKind.USER,
     });
-    expect(mockMocks.mockToast).toHaveBeenCalledWith({
-      title: 'Tag removed: bitcoin',
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
+  it('does not show a success toast when adding a tag via an existing chip', async () => {
+    mockLocalTags = [
+      {
+        label: 'bitcoin',
+        taggers: ['other-user'],
+        taggers_count: 1,
+        relationship: false,
+      },
+    ];
+
+    const { result } = renderHook(() => useTagged(mockUserId));
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
+
+    await act(async () => {
+      await result.current.handleTagToggle({ label: 'bitcoin', relationship: false });
+    });
+
+    expect(mockMocks.mockTagCreate).toHaveBeenCalledWith({
+      taggedId: mockUserId,
+      label: 'bitcoin',
+      taggerId: 'mock-current-user',
+      taggedKind: TagKind.USER,
+    });
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
   it('shows an error toast when removing a tag fails', async () => {
@@ -265,9 +287,9 @@ describe('useTagged', () => {
       await result.current.handleTagToggle({ label: 'bitcoin', relationship: true });
     });
 
-    expect(mockMocks.mockToast).toHaveBeenCalledWith({
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
       variant: 'error',
-      description: 'Could not remove tag: bitcoin',
+      description: 'Could not remove tag',
     });
   });
 

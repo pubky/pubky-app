@@ -65,12 +65,13 @@ describe('SearchSuggestions', () => {
   const defaultProps = {
     hotTags,
     hasInput: false,
-    inputValue: '',
     onTagClick: vi.fn(),
     onUserClick: vi.fn(),
-    onRecentUserClick: vi.fn(),
-    onRecentTagClick: vi.fn(),
+    onQueryClick: vi.fn(),
+    onShowAllResults: vi.fn(),
   };
+
+  const recentQueries = [{ query: 'bitcoin wallets', searchedAt: Date.now() }];
 
   it('renders hot tags section', () => {
     render(<SearchSuggestions {...defaultProps} />);
@@ -91,6 +92,51 @@ describe('SearchSuggestions', () => {
     fireEvent.click(screen.getByTestId('tag-pubky'));
 
     expect(onTagClick).toHaveBeenCalledWith('pubky');
+  });
+
+  it('shows the full-text search action only for non-empty input and invokes it', () => {
+    const onShowAllResults = vi.fn();
+    const { rerender } = render(<SearchSuggestions {...defaultProps} hasInput onShowAllResults={onShowAllResults} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show all results' }));
+    expect(onShowAllResults).toHaveBeenCalledOnce();
+
+    rerender(<SearchSuggestions {...defaultProps} hasInput={false} onShowAllResults={onShowAllResults} />);
+    expect(screen.queryByRole('button', { name: 'Show all results' })).not.toBeInTheDocument();
+  });
+
+  it('renders recent queries inside the recent section when input is empty', () => {
+    render(<SearchSuggestions {...defaultProps} recentQueries={recentQueries} />);
+
+    expect(screen.getByTestId('recent-query-bitcoin wallets')).toBeInTheDocument();
+  });
+
+  it('hides recent queries when input has content', () => {
+    render(<SearchSuggestions {...defaultProps} hasInput recentQueries={recentQueries} />);
+
+    expect(screen.queryByTestId('recent-query-bitcoin wallets')).not.toBeInTheDocument();
+  });
+
+  it('shows the loading skeleton only before the first autocomplete response', () => {
+    const { rerender } = render(<SearchSuggestions {...defaultProps} hasInput isLoading />);
+
+    expect(screen.getByTestId('search-suggestions-skeleton')).toBeInTheDocument();
+    expect(screen.getByTestId('search-suggestions')).toHaveAttribute('aria-busy', 'true');
+    // The full-text action stays available while suggestions load.
+    expect(screen.getByRole('button', { name: 'Show all results' })).toBeInTheDocument();
+
+    // Stale results from the previous query stay on screen while refreshing.
+    rerender(<SearchSuggestions {...defaultProps} hasInput isLoading autocompleteTags={[{ name: 'pubky' }]} />);
+    expect(screen.queryByTestId('search-suggestions-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('search-suggestions')).not.toHaveAttribute('aria-busy');
+  });
+
+  it('does not show the skeleton without input or after the lookup settles empty', () => {
+    const { rerender } = render(<SearchSuggestions {...defaultProps} isLoading />);
+    expect(screen.queryByTestId('search-suggestions-skeleton')).not.toBeInTheDocument();
+
+    rerender(<SearchSuggestions {...defaultProps} hasInput isLoading={false} />);
+    expect(screen.queryByTestId('search-suggestions-skeleton')).not.toBeInTheDocument();
   });
 
   it('applies dropdown styles', () => {
@@ -118,6 +164,16 @@ describe('SearchSuggestions', () => {
 
     it('matches snapshot with empty hot tags', () => {
       const { container } = render(<SearchSuggestions {...defaultProps} hotTags={[]} />);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+
+    it('matches snapshot with the full-text action', () => {
+      const { container } = render(<SearchSuggestions {...defaultProps} hasInput />);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+
+    it('matches snapshot while suggestions load', () => {
+      const { container } = render(<SearchSuggestions {...defaultProps} hasInput isLoading />);
       expect(container.firstChild).toMatchSnapshot();
     });
   });

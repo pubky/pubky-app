@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { Smile, X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -30,6 +30,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     maxTags,
     currentTagsCount = 0,
     limitReachedPlaceholder,
+    clearOnLimitReached = false,
     onBlur,
     onClick,
     enableApiSuggestions = false,
@@ -51,6 +52,7 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
   const existingTagLabels = existingTags.map((tag) => tag.label);
   const apiExcludeTags = [...new Set([...excludeFromApiSuggestions, ...existingTagLabels])];
   const isAtLimit = maxTags !== undefined && currentTagsCount >= maxTags;
+  const wasAtLimitRef = useRef(isAtLimit);
   const isDisabled = disabled || isAtLimit;
   const isDashedVariant = containerVariant === 'dashed';
 
@@ -75,6 +77,15 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     existingTags: tagsForDuplicateCheck.map((t) => t.label),
     allTags: existingTags,
   });
+
+  useEffect(() => {
+    if (clearOnLimitReached && isAtLimit && !wasAtLimitRef.current) {
+      setInputValue('');
+      setShowSuggestions(false);
+    }
+    wasAtLimitRef.current = isAtLimit;
+  }, [clearOnLimitReached, isAtLimit, setInputValue, setShowSuggestions]);
+
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
   }));

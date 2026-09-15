@@ -14,7 +14,7 @@ import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { isAppError } from '@/libs/error/error.utils';
 import { extractInitials, truncateMiddle } from '@/libs/utils/utils';
 import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { MutedUsersListSkeleton } from './MutedUsersList.skeleton';
 import { mapUserIdsToMutedUsers } from './MutedUsersList.utils';
@@ -27,11 +27,11 @@ export function MutedUsersList() {
   const [isLoadingUnmuteAll, setIsLoadingUnmuteAll] = React.useState(false);
   const mutedUsers = mapUserIdsToMutedUsers(mutedUserIds, usersMap);
   const isLoading = isMutedLoading || isUsersLoading;
-  const handleUnmute = async (userId: string, userName?: string) => {
+  const handleUnmute = async (userId: string) => {
     try {
       await toggleMute(userId, true);
       toast({
-        title: `${userName || userId} unmuted`,
+        title: 'User unmuted',
       });
     } catch (error) {
       toast({
@@ -117,7 +117,7 @@ export function MutedUsersList() {
                 variant="secondary"
                 size="sm"
                 className="rounded-full"
-                onClick={() => handleUnmute(mutedUser.id, mutedUser?.name)}
+                onClick={() => handleUnmute(mutedUser.id)}
                 disabled={isMuteLoading || isMuteUserLoading(mutedUser.id)}
               >
                 <Megaphone size={16} />

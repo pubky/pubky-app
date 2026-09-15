@@ -1,4 +1,5 @@
 import { Container } from '@/atoms/Container/Container';
+import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
 import { cn } from '@/libs/utils/utils';
 import { OnboardingLayoutProps } from './OnboardingLayout.types';
 
@@ -7,11 +8,16 @@ export function OnboardingLayout({
   children,
   navigation,
   pinNavigationToBottom = true,
+  className,
 }: OnboardingLayoutProps) {
   return (
     <Container
       size="container"
-      className="h-screen-without-page-header-onboarding items-stretch gap-0 px-6 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6"
+      className={cn(
+        'h-screen-without-page-header-onboarding items-stretch gap-0 pt-4 pb-0 lg:min-h-0 lg:items-start lg:pb-6',
+        PAGE_GUTTER_CLASS,
+        className,
+      )}
     >
       <div
         data-testid={testId}

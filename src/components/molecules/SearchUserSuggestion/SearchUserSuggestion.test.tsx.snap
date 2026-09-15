@@ -3,19 +3,19 @@
 exports[`SearchUserSuggestion > SearchUserSuggestion - Snapshots > matches snapshot with full user data 1`] = `
 <div
   aria-label="User John Doe (abc1...f456)"
-  class="flex min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-secondary"
+  class="flex min-w-0 cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
   data-cy="search-user-suggestion-pk:abc123def456"
   data-testid="search-user-suggestion-pk:abc123def456"
 >
   <div
     data-name="John Doe"
-    data-size="default"
+    data-size="md"
     data-testid="avatar"
   >
     Avatar
   </div>
   <div
-    class="min-w-0 flex-1 flex-col items-start"
+    class="flex min-w-0 flex-1 flex-col items-start"
   >
     <span
       class="block max-w-full truncate text-sm font-bold text-foreground"
@@ -36,19 +36,19 @@ exports[`SearchUserSuggestion > SearchUserSuggestion - Snapshots > matches snaps
 exports[`SearchUserSuggestion > SearchUserSuggestion - Snapshots > matches snapshot without avatar 1`] = `
 <div
   aria-label="User Jane Doe (xyz789)"
-  class="flex min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-secondary"
+  class="flex min-w-0 cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
   data-cy="search-user-suggestion-pk:xyz789"
   data-testid="search-user-suggestion-pk:xyz789"
 >
   <div
     data-name="Jane Doe"
-    data-size="default"
+    data-size="md"
     data-testid="avatar"
   >
     Avatar
   </div>
   <div
-    class="min-w-0 flex-1 flex-col items-start"
+    class="flex min-w-0 flex-1 flex-col items-start"
   >
     <span
       class="block max-w-full truncate text-sm font-bold text-foreground"

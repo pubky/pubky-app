@@ -131,7 +131,6 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
               Enter invite code
             </h3>
             <button
-              aria-controls="radix-normalized"
               aria-expanded="false"
               aria-haspopup="dialog"
               class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 h-6 w-6 opacity-80"
@@ -214,7 +213,7 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for complete code state 
                 r="10"
               />
               <path
-                d="m9 12 2 2 4-4"
+                d="m16 9-5.5 5.5L8 12"
               />
             </svg>
           </div>
@@ -487,7 +486,6 @@ exports[`HumanInviteCode - Snapshots > matches snapshot for empty state 1`] = `
               Enter invite code
             </h3>
             <button
-              aria-controls="radix-normalized"
               aria-expanded="false"
               aria-haspopup="dialog"
               class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full border shadow-xs hover:text-accent-foreground hover:bg-accent/50 border-none size-9 h-6 w-6 opacity-80"
