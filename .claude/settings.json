@@ -20,5 +20,10 @@
       "Bash(git branch)",
       "Bash(git branch --show-current)"
     ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
   }
 }
