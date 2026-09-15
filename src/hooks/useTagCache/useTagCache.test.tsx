@@ -205,6 +205,30 @@ describe('useTagCache', () => {
       await act(async () => request.resolve());
     });
 
+    it.each(['success', 'failure'])(
+      'keeps optimistic tags visible on remount until and after initialization %s',
+      async (outcome) => {
+        const placeholder = { ...cachedRecord, cache: { ...cachedRecord.cache, initialized: false } };
+        vi.mocked(useLiveQuery).mockReturnValue(placeholder);
+        const firstMount = renderHook(() => useTagCache('user', 'profile', 'viewer'));
+        await act(async () => {});
+        firstMount.unmount();
+
+        const request = deferred();
+        vi.mocked(TagCacheController.getOrFetch).mockReturnValueOnce(request.promise);
+        const { result } = renderHook(() => useTagCache('user', 'profile', 'viewer'));
+        expect(result.current.record?.tags).toEqual(placeholder.tags);
+        expect(result.current.isLoading).toBe(false);
+
+        await act(async () => {
+          if (outcome === 'success') request.resolve();
+          else request.reject(offlineError());
+        });
+        expect(result.current.record?.tags).toEqual(placeholder.tags);
+        expect(result.current.isLoading).toBe(false);
+      },
+    );
+
     it('hides the previous profile while the new local query is unresolved', async () => {
       vi.mocked(useLiveQuery).mockReturnValue({
         ...cachedRecord,

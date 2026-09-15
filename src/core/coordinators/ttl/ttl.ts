@@ -72,6 +72,7 @@ export class TtlCoordinator {
   private authStoreUnsubscribe: (() => void) | null = null;
   private visibilityChangeHandler: (() => void) | null = null;
   private isTickLoopActive = false;
+  private tickGeneration = 0;
   private indexingRetries = new Set<Pubky>();
 
   private constructor() {
@@ -305,6 +306,7 @@ export class TtlCoordinator {
    */
   private stopTicking(): void {
     this.isTickLoopActive = false;
+    this.tickGeneration++;
     if (this.state.intervalId) {
       clearTimeout(this.state.intervalId);
       this.state.intervalId = null;
@@ -328,6 +330,7 @@ export class TtlCoordinator {
 
   private async tickOnceAndReschedule(): Promise<void> {
     if (!this.isTickLoopActive) return;
+    const generation = this.tickGeneration;
 
     // If lifecycle conditions changed, stop the loop and exit.
     if (!this.shouldTick()) {
@@ -340,11 +343,13 @@ export class TtlCoordinator {
     } catch (error) {
       if (!isAppError(error)) Logger.warn('TtlCoordinator: Batch tick failed', { error });
     } finally {
-      // Schedule next tick only after the current one completes.
-      if (this.isTickLoopActive && this.shouldTick()) {
-        this.scheduleNextTick(this.config.batchIntervalMs);
-      } else {
-        this.stopTicking();
+      // A stopped/restarted loop owns its own timer; an old response must not replace it.
+      if (generation === this.tickGeneration) {
+        if (this.isTickLoopActive && this.shouldTick()) {
+          this.scheduleNextTick(this.config.batchIntervalMs);
+        } else {
+          this.stopTicking();
+        }
       }
     }
   }
@@ -588,6 +593,7 @@ export class TtlCoordinator {
 
       // Fetch and persist entities
       await ops.forceRefresh(ids, viewerId);
+      if (!isCurrent()) return;
 
       Logger.debug(`TtlCoordinator: Successfully refreshed ${ops.entityName}s`, { count: ids.length });
 

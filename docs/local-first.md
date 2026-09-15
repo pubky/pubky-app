@@ -262,7 +262,9 @@ The rationale and trade-offs are recorded in [ADR 0020](adr/0020-local-first-tag
 
 ### Loading and pagination
 
-Hooks read tags locally with `TagCacheController.get` inside `useLiveQuery`. Mount calls `getOrFetch` separately to initialize missing data or revalidate a changed viewer. An initialized empty list is a cache hit; locally created collections remain uninitialized until a server response is accepted, and every reader (the hook's loading state, bulk miss filters) treats an uninitialized placeholder as not loaded. A newly created post seeds an initialized, complete window for its author, since it has no tags on Nexus yet. Cache metadata is optional for compatibility with existing records.
+Hooks read tags locally with `TagCacheController.get` inside `useLiveQuery`. Mount calls `getOrFetch` separately to initialize missing data or revalidate a changed viewer. This tag-specific path also fills existing uninitialized records and handles viewer changes, which the `null`-only fallback in `useLocalFirstQuery` does not cover.
+
+An initialized empty list is a cache hit; locally created collections remain uninitialized until a server response is accepted. Such placeholders still need initialization, but any optimistic tags remain visible while it runs. Only an empty placeholder shows loading, and only until the fill settles. A newly created post seeds an initialized, complete window for its author, since it has no tags on Nexus yet. Cache metadata is optional for compatibility with existing records.
 
 Use `getOrFetchNext` for pagination. The persisted server cursor is independent of displayed tags and optimistic edits. Post pages contain three tags and profile pages twenty; a short/empty response marks pagination exhausted. Refresh and pagination are serialized per entity/viewer. Competing writes trigger a retry from the latest revision, with at most three attempts.
 

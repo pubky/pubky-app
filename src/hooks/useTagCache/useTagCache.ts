@@ -86,10 +86,9 @@ export function useTagCache(kind: 'post' | 'user', id: string | null | undefined
       });
   }
 
-  // A placeholder written by invalidation or a local mutation is not loaded data. It counts
-  // as loading only while the mount fill is pending, so a failed fill shows the empty state
-  // rather than a permanent skeleton.
-  const unfilled = !record || record.cache?.initialized === false;
+  // Keep optimistic tags visible while filling a placeholder. An empty placeholder only
+  // shows loading while the fill is pending, so failure cannot leave a permanent skeleton.
+  const unfilled = !record || (record.cache?.initialized === false && record.tags.length === 0);
 
   return {
     record,

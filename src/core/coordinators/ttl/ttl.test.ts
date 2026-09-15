@@ -173,6 +173,81 @@ describe('TtlCoordinator', () => {
     expect(TtlController.refreshStaleTags).not.toHaveBeenCalledWith(expect.objectContaining({ viewerId: 'user-a' }));
   });
 
+  it('does not let a previous account tick postpone the new account immediate refresh', async () => {
+    setupAuthenticatedUser('user-a' as Pubky);
+    const coordinator = TtlCoordinator.getInstance();
+    coordinator.configure({ batchIntervalMs: 1_000 });
+    const postId = createCompositePostId('author', 'post');
+    const previous = Promise.withResolvers<void>();
+    findStalePostsSpy.mockResolvedValue([postId]);
+    forceRefreshPostsSpy.mockReturnValueOnce(previous.promise);
+    coordinator.subscribePost({ compositePostId: postId });
+    coordinator.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(forceRefreshPostsSpy).toHaveBeenCalledExactlyOnceWith({ postIds: [postId], viewerId: 'user-a' });
+
+    setupAuthenticatedUser('user-b' as Pubky);
+    // Settle the old tick before the auth listener's immediate timer runs.
+    previous.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(forceRefreshPostsSpy).toHaveBeenLastCalledWith({ postIds: [postId], viewerId: 'user-b' });
+    expect(forceRefreshPostsSpy).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(forceRefreshPostsSpy).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(forceRefreshPostsSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it.each(['post', 'user'] as const)(
+    'keeps the new account failed %s batch queued when the previous refresh settles',
+    async (kind) => {
+      setupAuthenticatedUser('user-a' as Pubky);
+      const coordinator = TtlCoordinator.getInstance();
+      coordinator.configure({ batchIntervalMs: 1_000 });
+      const id = kind === 'post' ? createCompositePostId('author', 'post') : 'profile';
+      const previous = Promise.withResolvers<void>();
+      const current = Promise.withResolvers<void>();
+      const refreshSpy = kind === 'post' ? forceRefreshPostsSpy : forceRefreshUsersSpy;
+      const staleSpy = kind === 'post' ? findStalePostsSpy : findStaleUsersSpy;
+      staleSpy.mockResolvedValue([id]);
+      refreshSpy
+        .mockImplementationOnce(async () => {
+          await previous.promise;
+          return [];
+        })
+        .mockImplementationOnce(async () => {
+          await current.promise;
+          throw new Error('Refresh failed');
+        });
+      if (kind === 'post') coordinator.subscribePost({ compositePostId: id });
+      else coordinator.subscribeUser({ pubky: id as Pubky });
+      coordinator.start();
+      await vi.advanceTimersByTimeAsync(0);
+
+      setupAuthenticatedUser('user-b' as Pubky);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(refreshSpy).toHaveBeenCalledTimes(2);
+
+      // The new account already owns this queue entry when the old response returns.
+      previous.resolve();
+      await vi.advanceTimersByTimeAsync(0);
+      current.resolve();
+      await vi.advanceTimersByTimeAsync(0);
+
+      // A failed entity batch must retain its place, rather than trigger a tag-only fetch.
+      expect(TtlController.refreshStaleTags).toHaveBeenCalledWith({
+        kind,
+        ids: [],
+        ttlMs: expect.any(Number),
+        viewerId: 'user-b',
+      });
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(refreshSpy).toHaveBeenCalledTimes(3);
+      expect(refreshSpy).toHaveBeenLastCalledWith(expect.objectContaining({ viewerId: 'user-b' }));
+    },
+  );
+
   it('leaves ids still waiting in the entity batch queue out of the tag pass', async () => {
     setupAuthenticatedUser();
     const coordinator = TtlCoordinator.getInstance();
