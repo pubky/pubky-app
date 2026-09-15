@@ -61,6 +61,25 @@ describe('StreamPostsController', () => {
       });
     });
 
+    it('passes the rendered ids through so the application can re-anchor a removed anchor', async () => {
+      const getOrFetchStreamSliceSpy = vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+        nextPageIds: [],
+        cacheMissPostIds: [],
+        nextCursor: undefined,
+      });
+
+      await StreamPostsController.getOrFetchStreamSlice({
+        streamId,
+        streamTail: 0,
+        lastPostId: 'user-1:post-9',
+        visiblePostIds: ['user-1:post-1', 'user-1:post-2'],
+      });
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ lastPostId: 'user-1:post-9', visiblePostIds: ['user-1:post-1', 'user-1:post-2'] }),
+      );
+    });
+
     it('should fetch missing posts and re-filter stream posts when cacheMissPostIds exist', async () => {
       const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
       const cacheMissPostIds = ['user-1:post-3', 'user-1:post-4'];

@@ -62,7 +62,7 @@ export class PostStreamQueue {
     // synthesized from the last served post's own timestamp would not be a stream position:
     // Nexus keeps edited/deleted posts at their original score while bumping `indexed_at`.
     if (limit > 0 && posts.length >= limit) {
-      return this.finalize(streamId, posts, limit, cursor, [], cursor, false, 0);
+      return this.finalize(streamId, posts, limit, cursor, [], cursor, false, limit);
     }
 
     // Fetch until we have enough

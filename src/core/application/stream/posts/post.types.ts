@@ -12,6 +12,10 @@ export interface TFetchStreamParams {
   /** Optional viewer ID for relationship data. Null for unauthenticated views. */
   viewerId: Pubky | null;
   lastPostId?: string;
+  /** Ids the caller has already rendered from this stream, in display order. Used to
+   * re-anchor the cache walk when `lastPostId` was removed from the cached row (the post
+   * was deleted or un-bookmarked): the walk resumes after the deepest one still cached. */
+  visiblePostIds?: string[];
   tags?: string[];
   order?: StreamOrder;
 }
@@ -33,13 +37,15 @@ export interface TPostStreamChunkResponse {
   reachedEnd?: boolean;
   /** Id of the last RAW post scanned this round (visible or filtered) — the resume anchor
    * for the local stream-cache walk. Advances by raw scanned data, never by the post-filter
-   * visible count (the cache-walk twin of `nextCursor`'s invariant). Holds at the caller's
-   * own `lastPostId` when a round is served purely from the overflow buffer; undefined when
-   * nothing was scanned or on paths that bypass the cache walk (e.g. ASCENDING order).
+   * visible count (the cache-walk twin of `nextCursor`'s invariant). After a Nexus page it
+   * is the cached row's tail (the deepest id the walk can reach), so a page the row already
+   * held can never move the anchor back up the row. Holds at the caller's own `lastPostId`
+   * when a round is served purely from the overflow buffer; undefined when nothing was
+   * scanned or on paths that bypass the cache walk (e.g. ASCENDING order).
    * May be a filtered-out (deleted/collection/muted) post id — do not dereference for display. */
   lastRawPostId?: string;
-  /** Raw ids scanned this round before filtering (see `CollectResult.rawScannedCount`); undefined
-   * on paths that bypass the queue (head polls, ASCENDING order). */
+  /** Raw ids this round consumed before filtering (see `CollectResult.rawScannedCount`);
+   * undefined on paths that bypass the queue (head polls, ASCENDING order). */
   rawScannedCount?: number;
 }
 
@@ -64,6 +70,8 @@ export interface TMissingPostsParams {
 
 export interface TCacheStreamParams {
   lastPostId: string | undefined;
+  /** See `TFetchStreamParams.visiblePostIds`. */
+  visiblePostIds?: string[];
   limit: number;
   cachedStream: { stream: string[] };
 }

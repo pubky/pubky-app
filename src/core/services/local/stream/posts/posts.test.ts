@@ -178,6 +178,23 @@ describe('LocalStreamPostsService', () => {
     });
   });
 
+  describe('bulkSave', () => {
+    it('persists each row with its Nexus cursor', async () => {
+      await LocalStreamPostsService.bulkSave({
+        postStreams: [
+          { streamId, stream: [postId('post-1')], tailCursor: BASE_TIMESTAMP + 1 },
+          { streamId: NON_EXISTENT_STREAM_ID, stream: [postId('post-2')] },
+        ],
+      });
+
+      expect(await LocalStreamPostsService.read({ streamId })).toMatchObject({
+        stream: [postId('post-1')],
+        tailCursor: BASE_TIMESTAMP + 1,
+      });
+      expect((await LocalStreamPostsService.read({ streamId: NON_EXISTENT_STREAM_ID }))?.tailCursor).toBeUndefined();
+    });
+  });
+
   describe('findById', () => {
     it('should return stream when it exists', async () => {
       const postIds = [
@@ -817,6 +834,54 @@ describe('LocalStreamPostsService', () => {
       expect(result?.tailCursor).toBe(BASE_TIMESTAMP + 50);
     });
 
+    it('returns the row tail so the caller can resume from the deepest cached id', async () => {
+      await createStream([]);
+      await expect(
+        LocalStreamPostsService.persistNewStreamChunk({ streamId, stream: [postId('post-1'), postId('post-2')] }),
+      ).resolves.toBe(postId('post-2'));
+      await expect(
+        LocalStreamPostsService.persistNewStreamChunk({
+          streamId,
+          stream: [postId('post-2'), postId('post-3')],
+          tailCursor: BASE_TIMESTAMP + 3,
+        }),
+      ).resolves.toBe(postId('post-3'));
+      // A page that only repeats cached ids still answers with the row tail, not the page end.
+      await expect(
+        LocalStreamPostsService.persistNewStreamChunk({
+          streamId,
+          stream: [postId('post-1')],
+          tailCursor: BASE_TIMESTAMP + 3,
+        }),
+      ).resolves.toBe(postId('post-3'));
+    });
+
+    it('does not rewrite or re-sort the row when a page adds no new ids', async () => {
+      await LocalStreamPostsService.persistPosts({
+        posts: [
+          createMockNexusPost('post-1', DEFAULT_AUTHOR, BASE_TIMESTAMP + 1),
+          // Edited after post-1: newer indexed_at, but Nexus keeps it below post-1.
+          createMockNexusPost('edited-2', DEFAULT_AUTHOR, BASE_TIMESTAMP + 500),
+        ],
+      });
+      await LocalStreamPostsService.upsert({
+        streamId,
+        stream: [postId('post-1'), postId('edited-2')],
+        tailCursor: BASE_TIMESTAMP,
+      });
+      const upsertSpy = vi.spyOn(PostStreamModel, 'upsert');
+
+      // A cursor-less all-duplicates page (e.g. the empty end page or a hydration pass) must
+      // not float edited-2 above post-1 by re-sorting the whole row on indexed_at.
+      await LocalStreamPostsService.persistNewStreamChunk({ streamId, stream: [postId('edited-2')] });
+      await LocalStreamPostsService.persistNewStreamChunk({ streamId, stream: [], tailCursor: BASE_TIMESTAMP });
+
+      expect(upsertSpy).not.toHaveBeenCalled();
+      const result = await LocalStreamPostsService.read({ streamId });
+      expect(result?.stream).toEqual([postId('post-1'), postId('edited-2')]);
+      expect(result?.tailCursor).toBe(BASE_TIMESTAMP);
+    });
+
     it('still sorts cursor-less chunks by timestamp and preserves the persisted cursor', async () => {
       await LocalStreamPostsService.persistPosts({
         posts: [
@@ -1099,6 +1164,23 @@ describe('LocalStreamPostsService', () => {
       expect(result?.tailCursor).toBe(BASE_TIMESTAMP + 3);
     });
 
+    it('drops the Nexus cursor when the row empties or is re-seeded from empty', async () => {
+      // A cursor describes the ids below the row; once the row has none it would only make
+      // the next seam skip everything above it (e.g. every bookmark removed, then one re-added).
+      await LocalStreamPostsService.upsert({ streamId, stream: [postId('post-1')], tailCursor: BASE_TIMESTAMP + 3 });
+
+      await LocalStreamPostsService.removeFromStream({ streamId, compositePostId: postId('post-1') });
+      const emptied = await LocalStreamPostsService.read({ streamId });
+      expect(emptied?.stream).toEqual([]);
+      expect(emptied?.tailCursor).toBeUndefined();
+
+      await LocalStreamPostsService.upsert({ streamId, stream: [], tailCursor: BASE_TIMESTAMP + 3 });
+      await LocalStreamPostsService.prependToStream({ streamId, compositePostId: postId('post-0') });
+      const reseeded = await LocalStreamPostsService.read({ streamId });
+      expect(reseeded?.stream).toEqual([postId('post-0')]);
+      expect(reseeded?.tailCursor).toBeUndefined();
+    });
+
     it('should prepend post ID to existing stream', async () => {
       const initialStream = [postId('post-1'), postId('post-2')];
       const newPostId = postId('post-0');
@@ -1209,6 +1291,35 @@ describe('LocalStreamPostsService', () => {
       const result = await LocalStreamPostsService.read({ streamId });
       expect(result?.stream).toEqual([postId('unread-1'), postId('post-1')]);
       expect(result?.tailCursor).toBe(BASE_TIMESTAMP + 3);
+    });
+
+    it('sorts only the unread prefix, leaving the cached pages in stream order', async () => {
+      await LocalStreamPostsService.persistPosts({
+        posts: [
+          createMockNexusPost('unread-old', DEFAULT_AUTHOR, BASE_TIMESTAMP + 10),
+          createMockNexusPost('unread-new', DEFAULT_AUTHOR, BASE_TIMESTAMP + 20),
+          createMockNexusPost('post-1', DEFAULT_AUTHOR, BASE_TIMESTAMP + 1),
+          // Edited after everything else: Nexus keeps it below post-1 regardless.
+          createMockNexusPost('edited-2', DEFAULT_AUTHOR, BASE_TIMESTAMP + 500),
+        ],
+      });
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [postId('unread-old'), postId('unread-new')]);
+      await LocalStreamPostsService.upsert({
+        streamId,
+        stream: [postId('post-1'), postId('edited-2')],
+        tailCursor: BASE_TIMESTAMP,
+      });
+
+      await LocalStreamPostsService.mergeUnreadStreamWithPostStream({ streamId });
+
+      const result = await LocalStreamPostsService.read({ streamId });
+      expect(result?.stream).toEqual([
+        postId('unread-new'),
+        postId('unread-old'),
+        postId('post-1'),
+        postId('edited-2'),
+      ]);
+      expect(result?.tailCursor).toBe(BASE_TIMESTAMP);
     });
 
     it('should do nothing if unread stream does not exist', async () => {

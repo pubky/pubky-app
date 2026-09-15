@@ -6,6 +6,9 @@ export type TReadPostStreamChunkParams = {
   streamHead?: number;
   streamTail?: number;
   lastPostId?: string;
+  /** Ids already rendered from this stream, in display order; re-anchors the cache walk when
+   * `lastPostId` was removed from the cached row (post deleted or un-bookmarked). */
+  visiblePostIds?: string[];
   tags?: string[];
   limit?: number;
   /** Order of results: 'ascending' (oldest first) or 'descending' (newest first, default) */

@@ -150,6 +150,10 @@ export function useStreamPagination({
           cursor = isSkipPaginatedStream(streamId) ? 0 : cachedLastPostTimestamp;
         }
 
+        // Resume positions and `hasMore` are committed once, after the scan: every round
+        // reads the locals, and a state write per round would re-render the feed (and
+        // re-create `loadMore`) once per round while nothing visible changes.
+        let reachedEnd = false;
         let rawScanned = 0;
         for (;;) {
           const committedRemovalsAtRequest = committedRemovalsRef.current;
@@ -157,6 +161,9 @@ export function useStreamPagination({
             streamId,
             lastPostId: anchor,
             streamTail: cursor,
+            // Lets the cache walk re-anchor if `anchor` was removed from the cached row
+            // (its post deleted or un-bookmarked) instead of skipping to the row tail.
+            visiblePostIds: anchor === undefined ? undefined : postIdsRef.current,
             limit,
           });
 
@@ -164,7 +171,7 @@ export function useStreamPagination({
           // every write below belongs to state that no longer exists.
           if (isStale()) return;
 
-          // Advance BOTH resume cursors from the response, even on a fully-filtered (empty)
+          // Advance BOTH resume positions from the response, even on a fully-filtered (empty)
           // page: `streamTail` by the raw backend cursor, `lastPostId` (the local cache-walk
           // anchor) by the raw scan anchor. Both advance by raw scanned data, never by the
           // post-filter visible count — otherwise a fully-filtered round would restart the
@@ -183,24 +190,20 @@ export function useStreamPagination({
               ? Math.max(0, committedRemovalsRef.current - committedRemovalsAtRequest)
               : 0;
             nextCursor = Math.max(0, result.nextCursor - removalsDuringFlight);
-            setStreamTail(nextCursor);
           }
-
           // Never overwrite a defined anchor with undefined.
           const nextAnchor = resolveResumeAnchor(result) ?? anchor;
-          if (nextAnchor !== undefined) {
-            setLastPostId(nextAnchor);
-          }
-
+          const consumed = result.rawScannedCount ?? 0;
+          const progressed = consumed > 0 || nextAnchor !== anchor || nextCursor !== cursor;
+          anchor = nextAnchor;
+          cursor = nextCursor;
           // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
           // keeps hasMore so the advanced cursors are re-requested.
-          const reachedEnd = result.reachedEnd === true;
-          setHasMore(!reachedEnd);
+          reachedEnd = result.reachedEnd === true;
 
           // Deduplicate posts
           const existingIds = new Set(postIdsRef.current);
           const newUniquePostIds = result.nextPageIds.filter((id) => !existingIds.has(id));
-
           if (newUniquePostIds.length > 0) {
             // Update state with unique posts only
             const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
@@ -212,21 +215,21 @@ export function useStreamPagination({
             );
             optimisticPostIdsRef.current = displayedState.optimisticPostIds;
             setPostIds(displayedState.displayedPostIds);
-            return;
+            break;
           }
 
-          if (reachedEnd) return;
-
           // Nothing new to show (fully filtered, or only duplicates). Keep scanning while the
-          // round moved a resume position and the raw-scan budget allows; otherwise yield
-          // with hasMore true — the auto-loading renderer decides whether to keep going
-          // (`TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS`) or hand over to a manual Load more.
-          rawScanned += result.rawScannedCount ?? result.nextPageIds.length;
-          const progressed = nextAnchor !== anchor || nextCursor !== cursor;
-          if (!progressed || rawScanned >= STREAM_LOAD_MAX_RAW_SCAN) return;
-          anchor = nextAnchor;
-          cursor = nextCursor;
+          // round consumed raw ids or moved a resume position and the raw-scan budget allows;
+          // otherwise yield with hasMore true — the auto-loading renderer decides whether to
+          // keep going (`TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS`) or hand over to a manual
+          // Load more.
+          rawScanned += consumed;
+          if (reachedEnd || !progressed || rawScanned >= STREAM_LOAD_MAX_RAW_SCAN) break;
         }
+
+        if (cursor !== streamTail || isInitialLoad) setStreamTail(cursor);
+        if (anchor !== undefined) setLastPostId(anchor);
+        setHasMore(!reachedEnd);
       } catch (err) {
         Logger.error('Failed to fetch stream slice:', err);
         // A stale failure belongs to a discarded request: surfacing it (error banner,

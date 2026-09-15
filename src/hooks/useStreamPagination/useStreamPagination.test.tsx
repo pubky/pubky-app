@@ -323,6 +323,40 @@ describe('useStreamPagination', () => {
       expect(result.current.loadingMore).toBe(false);
     });
 
+    it('keeps scanning after a buffered round that consumed raw posts without moving either position', async () => {
+      const { result } = await mountWithFirstPage();
+      // The stream queue served a page from its overflow buffer: the Nexus cursor is unchanged
+      // and there is no row tail to report, but raw posts were consumed and then hidden by the
+      // strict post-hydration pass. That is progress, not a stall.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce({ nextPageIds: [], reachedEnd: false, nextCursor: 20, rawScannedCount: 10 })
+        .mockResolvedValueOnce({ nextPageIds: ['p2'], nextCursor: 300, lastRawPostId: 'p2' });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      expect(result.current.postIds).toEqual(['p1', 'p2']);
+    });
+
+    it('passes the rendered ids on loadMore so the stream layer can re-anchor a removed anchor', async () => {
+      const { result } = await mountWithFirstPage();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p2'],
+        nextCursor: 300,
+        lastRawPostId: 'p2',
+      });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ lastPostId: 'p1', visiblePostIds: ['p1'] }),
+      );
+    });
+
     it('stops scanning at the end of the stream', async () => {
       const { result } = await mountWithFirstPage();
       vi.mocked(StreamPostsController.getOrFetchStreamSlice)

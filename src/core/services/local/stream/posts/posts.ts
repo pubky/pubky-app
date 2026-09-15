@@ -64,7 +64,7 @@ export class LocalStreamPostsService {
    * @param postStreams - Array of post streams to upsert
    */
   static async bulkSave({ postStreams }: TPostStreamBulkParams): Promise<void> {
-    await Promise.all(postStreams.map(({ streamId, stream }) => this.upsert({ streamId, stream })));
+    await Promise.all(postStreams.map((postStream) => this.upsert(postStream)));
   }
 
   /**
@@ -132,7 +132,10 @@ export class LocalStreamPostsService {
     if (currentStream.includes(compositePostId)) return;
 
     const updatedStream = [compositePostId, ...currentStream];
-    await this.upsert({ streamId, stream: updatedStream, tailCursor: existing?.tailCursor });
+    // A resume cursor only describes the ids it was fetched with: an emptied row must not
+    // hand its old deep cursor to the ids that start it again.
+    const tailCursor = currentStream.length > 0 ? existing?.tailCursor : undefined;
+    await this.upsert({ streamId, stream: updatedStream, tailCursor });
   }
 
   /**
@@ -146,7 +149,9 @@ export class LocalStreamPostsService {
     if (!existing) return;
 
     const updatedStream = existing.stream.filter((id) => id !== compositePostId);
-    await this.upsert({ streamId, stream: updatedStream, tailCursor: existing.tailCursor });
+    // Removing the last id leaves nothing the cursor describes; drop it with the ids.
+    const tailCursor = updatedStream.length > 0 ? existing.tailCursor : undefined;
+    await this.upsert({ streamId, stream: updatedStream, tailCursor });
   }
 
   static async getNotPersistedPostsInCache(postIds: string[]): Promise<string[]> {
@@ -192,13 +197,15 @@ export class LocalStreamPostsService {
     // Deduplicate: unread posts first, then existing posts (excluding duplicates)
     const existingIds = new Set(validUnreadPosts);
     const uniqueExistingPosts = postStream.stream.filter((id) => !existingIds.has(id));
-    const combinedStream = [...validUnreadPosts, ...uniqueExistingPosts];
 
-    // Sort by timestamp (indexed_at) in descending order (most recent first).
-    // Unread posts extend the head; the tail's Nexus resume cursor is untouched.
-    const sortedStream = await sortPostIdsByTimestamp(combinedStream);
+    // Unread posts are newer than the cached head, so only that prefix is sorted (by
+    // indexed_at, descending). The existing ids keep their stream order: re-sorting them
+    // would float edited and deleted posts above their real position (#2523), and the
+    // tail's Nexus resume cursor is untouched.
+    const sortedUnreadPosts = await sortPostIdsByTimestamp(validUnreadPosts);
+    const combinedStream = [...sortedUnreadPosts, ...uniqueExistingPosts];
 
-    await PostStreamModel.upsert(streamId, sortedStream, this.tailCursorFields(postStream.tailCursor));
+    await PostStreamModel.upsert(streamId, combinedStream, this.tailCursorFields(postStream.tailCursor));
   }
 
   /**
@@ -420,8 +427,13 @@ export class LocalStreamPostsService {
    * @param stream - Incoming post IDs to merge into the stream cache
    * @param streamId - Stream identifier to create or update
    * @param tailCursor - Nexus `last_post_score` of a descending page, when persisting one
+   * @returns The id at the tail of the stored stream (undefined when it is empty)
    */
-  static async persistNewStreamChunk({ stream, streamId, tailCursor }: TPostStreamUpsertParams) {
+  static async persistNewStreamChunk({
+    stream,
+    streamId,
+    tailCursor,
+  }: TPostStreamUpsertParams): Promise<string | undefined> {
     const postStream = await PostStreamModel.findById(streamId);
 
     if (!postStream || postStream.stream.length === 0) {
@@ -429,26 +441,37 @@ export class LocalStreamPostsService {
       // its own position is the resume cursor — a stale cursor on an emptied row must not
       // survive, or the next seam would skip everything above it.
       await PostStreamModel.upsert(streamId, stream, this.tailCursorFields(tailCursor));
-      return;
+      return stream[stream.length - 1];
     }
 
     // Check for duplicates before adding
     const existingIds = new Set(postStream.stream);
     const newPostsToAdd = stream.filter((id) => !existingIds.has(id));
+    const deepestCursor = this.deepestTailCursor(postStream.tailCursor, tailCursor);
+    const nextTailCursor = this.tailCursorFields(deepestCursor);
+
+    if (newPostsToAdd.length === 0) {
+      // Nothing to add (an empty end page, or a page the row already holds): never rewrite
+      // the ids — only a deeper cursor is worth persisting.
+      if (deepestCursor !== postStream.tailCursor) {
+        await PostStreamModel.upsert(streamId, postStream.stream, nextTailCursor);
+      }
+      return postStream.stream[postStream.stream.length - 1];
+    }
 
     // Combine existing and new posts
     const combinedStream = [...postStream.stream, ...newPostsToAdd];
-    const nextTailCursor = this.tailCursorFields(this.deepestTailCursor(postStream.tailCursor, tailCursor));
 
     if (tailCursor !== undefined || this.isBookmarkStream(streamId)) {
       await PostStreamModel.upsert(streamId, combinedStream, nextTailCursor);
-      return;
+      return combinedStream[combinedStream.length - 1];
     }
 
     // Sort by timestamp (indexed_at) in descending order (most recent first)
     const sortedStream = await sortPostIdsByTimestamp(combinedStream);
 
     await PostStreamModel.upsert(streamId, sortedStream, nextTailCursor);
+    return sortedStream[sortedStream.length - 1];
   }
 
   /** The deeper (smaller) of two Nexus resume cursors; pages only ever extend a stream downward. */

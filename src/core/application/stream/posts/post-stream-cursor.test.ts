@@ -220,6 +220,60 @@ describe('PostStreamApplication: score cursors come from Nexus, not from local i
     expect(delivered.flat()).toEqual(expect.arrayContaining(ids(older)));
   });
 
+  it('resumes below the deepest rendered id when the raw anchor was removed from the row', async () => {
+    const cached = unedited('cached', 10, 2000);
+    const deeper = unedited('deeper', 10, 1990);
+    await persistDetails([...cached, ...deeper]);
+    await LocalStreamPostsService.persistNewStreamChunk({
+      streamId,
+      stream: ids([...cached, ...deeper]),
+      tailCursor: deeper[deeper.length - 1].score,
+    });
+    const nexusSpy = mockNexusTimeline([...cached, ...deeper]);
+
+    // The reader has rendered the first page; its raw anchor (cached-10) is then deleted.
+    const anchor = cached[cached.length - 1];
+    await LocalStreamPostsService.removeFromStream({ streamId, compositePostId: anchor.id });
+
+    const result = await PostStreamApplication.getOrFetchStreamSlice({
+      streamId,
+      limit: LIMIT,
+      streamHead: 0,
+      streamTail: deeper[deeper.length - 1].score,
+      lastPostId: anchor.id,
+      visiblePostIds: ids(cached),
+      viewerId: VIEWER,
+    });
+
+    // The next page, not the row tail (which would skip every cached id in between).
+    expect(result.nextPageIds).toEqual(ids(deeper));
+    expect(nexusSpy).not.toHaveBeenCalled();
+  });
+
+  it('resumes from the row tail after a Nexus page that only repeated cached posts (legacy row)', async () => {
+    // Legacy row whose tail is an edited post: the one-time indexed_at seed sends the first
+    // Nexus request far above the cache, so the page repeats cached ids and adds nothing.
+    // The anchor must still land on the row tail, not on the last id of that page, or the
+    // next round re-walks the cache from the middle and re-serves the tail.
+    const cached = unedited('cached', 10, 2000);
+    const editedTail = reindexed('edited', 1, 1990, 3000);
+    const older = unedited('older', 10, 1980);
+    await persistDetails([...cached, ...editedTail, ...older]);
+    await PostStreamModel.create(streamId, ids([...cached, ...editedTail]));
+    const nexusSpy = mockNexusTimeline([...cached, ...editedTail, ...older]);
+
+    const seed = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+    expect(seed).toBe(3000);
+    const round1 = await runRound(streamId, { lastPostId: undefined, streamTail: seed });
+    const round2 = await runRound(streamId, nextAnchor(round1, { streamTail: seed }));
+
+    expect(round2.lastRawPostId).toBe(editedTail[0].id);
+    expect(round2.nextCursor).toBe(1992); // Nexus's cursor for the repeated page took over
+    const round3 = await runRound(streamId, nextAnchor(round2, nextAnchor(round1, { streamTail: seed })));
+    expect(round3.nextPageIds).toEqual(expect.arrayContaining(ids(older.slice(0, 8))));
+    expect(nexusSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('pages a profile past a run of re-indexed deleted tombstones (#1569 geometry)', async () => {
     // Deleting bumps indexed_at too, so a run of tombstones sorts above live posts locally
     // while Nexus keeps them at their original position. The author stream filters them out.

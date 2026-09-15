@@ -61,6 +61,7 @@ export class StreamPostsController {
     streamHead = SKIP_FETCH_NEW_POSTS,
     streamTail = NOT_FOUND_CACHED_STREAM,
     lastPostId,
+    visiblePostIds,
     limit = NEXUS_POSTS_PER_PAGE,
     order,
   }: TReadPostStreamChunkParams): Promise<TReadPostStreamChunkResponse> {
@@ -75,6 +76,7 @@ export class StreamPostsController {
         streamHead,
         streamTail,
         lastPostId,
+        visiblePostIds,
         viewerId,
         isCurrent,
         order,

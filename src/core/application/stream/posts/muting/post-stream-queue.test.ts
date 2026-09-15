@@ -705,6 +705,9 @@ describe('PostStreamQueue', () => {
       expect(detailsSpy).not.toHaveBeenCalled();
       expect(second.posts).toEqual(Array.from({ length: 10 }, (_, i) => `author:post-${i + 5}`));
       expect(second.nextCursor).toBe(BASE_TIMESTAMP + 20);
+      // Served from the buffer without moving the cursor, yet raw posts were consumed: the
+      // hook must count the round as progress even if the strict pass hides all of them.
+      expect(second.rawScannedCount).toBe(10);
     });
 
     it('skip streams keep resuming by the saved raw offset', async () => {

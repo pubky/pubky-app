@@ -1169,7 +1169,7 @@ describe('PostStreamApplication', () => {
       expect(persistSpy).not.toHaveBeenCalled();
     });
 
-    it('should fallback to Nexus when cachedStream exists but getStreamFromCache returns empty', async () => {
+    it('re-walks the cache from the head when the anchor left the row and no visible ids are known', async () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
       await createPostDetails(postIds);
@@ -1177,7 +1177,9 @@ describe('PostStreamApplication', () => {
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      // lastPostId not found in cache
+      // The anchor is gone from the row (deleted / un-bookmarked) and the caller passed no
+      // visible ids: jumping to the row tail would skip every cached id, so the walk restarts
+      // at the head (the caller dedupes) and tops the page up from Nexus below the row.
       const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
@@ -1187,10 +1189,34 @@ describe('PostStreamApplication', () => {
         viewerId: DEFAULT_AUTHOR,
       });
 
-      // Should fallback to Nexus fetch
-      expect(nexusFetchSpy).toHaveBeenCalled();
-      expect(result.nextPageIds).toHaveLength(5);
-      expectPostIds(result.nextPageIds, 6, 5);
+      expect(nexusFetchSpy).toHaveBeenCalledTimes(1);
+      expectPostIds(result.nextPageIds, 1, 10);
+    });
+
+    it('resumes after the deepest visible id when the anchor left the row (#2523)', async () => {
+      const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      await createStreamWithPosts(postIds);
+      await createPostDetails(postIds);
+
+      const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      // The caller has rendered post-1..post-3 (in any order) and its raw anchor was removed
+      // from the row: the walk re-anchors on post-3 instead of skipping to the tail.
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: 0,
+        lastPostId: `${DEFAULT_AUTHOR}:post-999`,
+        visiblePostIds: [`${DEFAULT_AUTHOR}:post-3`, `${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`],
+        streamTail: BASE_TIMESTAMP + 999,
+        viewerId: DEFAULT_AUTHOR,
+      });
+
+      expect(nexusFetchSpy).toHaveBeenCalledTimes(1);
+      expectPostIds(result.nextPageIds, 4, 7);
+      // The next round resumes from the row tail after the Nexus page was appended.
+      expect(result.lastRawPostId).toBe(`${DEFAULT_AUTHOR}:post-10`);
     });
 
     it('should deduplicate when fetched posts overlap with cached posts', async () => {
