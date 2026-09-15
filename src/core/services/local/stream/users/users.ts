@@ -90,11 +90,16 @@ export class LocalStreamUsersService {
    * Used to identify missing user data that needs to be fetched
    *
    * @param userIds - Array of user IDs to check
+   * @param viewerId - When set, a missing relationship row is also a cache miss (#1803)
    * @returns Array of user IDs that are not persisted in cache
    */
-  static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
-    const existingUserIds = await UserDetailsModel.findByIdsPreserveOrder(userIds);
-    return userIds.filter((_userId, index) => existingUserIds[index] === undefined);
+  static async getNotPersistedUsersInCache(userIds: Pubky[], viewerId?: Pubky): Promise<Pubky[]> {
+    const [details, relationships] = await Promise.all([
+      UserDetailsModel.findByIdsPreserveOrder(userIds),
+      viewerId ? UserRelationshipsModel.findByIds(userIds) : Promise.resolve([]),
+    ]);
+    const hydratedRelationships = new Set(relationships.map((row) => row.id));
+    return userIds.filter((id, index) => details[index] === undefined || (viewerId && !hydratedRelationships.has(id)));
   }
 
   /**
@@ -102,7 +107,13 @@ export class LocalStreamUsersService {
    * Separates user details, counts, tags, relationships, and TTL records
    * Also detects and persists moderation status for flagged profiles
    *
+   * Relationship rows (`following` / `followed_by`) are only meaningful relative to a viewer.
+   * When the batch was fetched without a `viewerId`, Nexus returns a viewer-agnostic
+   * relationship, so the row is skipped instead of caching "unknown" as "not following".
+   * A missing row reads as a cache miss and triggers a viewer-aware fetch (#1803).
+   *
    * @param users - Array of users from Nexus API
+   * @param tagGuard - Tag-cache guard; `viewerId` is required to persist relationship rows
    * @returns Array of user IDs (Pubky)
    */
   static async persistUsers(users: NexusUser[], tagGuard: TagPreviewGuard = {}): Promise<Pubky[]> {
@@ -146,7 +157,9 @@ export class LocalStreamUsersService {
     await Promise.all([
       UserDetailsModel.bulkSave(userDetails),
       LocalTagCacheService.savePreviews('user', userTags, tagGuard, userCounts),
-      UserRelationshipsModel.bulkSave(userRelationships),
+      // Guest / viewer-less Nexus payloads are not relative to anyone; skip the row so a later
+      // signed-in read is a cache miss and fetches with viewer_id (#1803).
+      tagGuard.viewerId ? UserRelationshipsModel.bulkSave(userRelationships) : Promise.resolve(),
       UserTtlModel.bulkSave(userTtl),
       // Persist moderation records for flagged profiles
       userModerations.length > 0 ? ModerationModel.bulkSave(userModerations) : Promise.resolve(),
