@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Logger } from '@/libs/logger/logger';
+import { resolveMentionsForMetadata } from '@/libs/post/postMetadata';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { resolveDisplayName } from '@/libs/utils/utils';
 import { OgAvatar, OgFrame } from './OgComponents';
@@ -32,9 +33,14 @@ export async function renderProfileOg({ pubky }: { pubky: string }): Promise<Res
     if (!result) return await renderFallbackOg();
 
     const { user, counts } = result;
-    const avatarSrc = await fetchImageAsDataUri(buildAvatarUrl(user));
+    // Raw `pk:` / `pubky` mentions in the bio become display names, as the app
+    // renders them. Resolved alongside the avatar: independent round-trips.
+    const [avatarSrc, bioText] = await Promise.all([
+      fetchImageAsDataUri(buildAvatarUrl(user)),
+      resolveMentionsForMetadata(user.bio ?? ''),
+    ]);
     const name = resolveDisplayName(user);
-    const bio = truncateByGraphemes(user.bio ?? '', OG_TRUNCATE.bio);
+    const bio = truncateByGraphemes(bioText, OG_TRUNCATE.bio);
 
     return await ogImageResponse(
       <OgFrame

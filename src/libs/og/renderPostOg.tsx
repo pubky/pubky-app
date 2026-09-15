@@ -1,7 +1,7 @@
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { markdownToText } from '@/libs/post/markdownToText';
-import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
+import { fetchUserAndPostForMetadata, resolveMentionsForMetadata } from '@/libs/post/postMetadata';
 import { deriveTextPreview } from '@/libs/post/postPreview';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
@@ -37,23 +37,29 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     const isDeleted = isPostDeleted(post.content);
     const preview = deriveTextPreview({ content: post.content, kind: post.kind });
 
-    // Feed variant is sufficient — the image only ever renders in this small
-    // preview card, so the full-res MAIN variant would be wasted bytes. Fetched
-    // alongside the avatar: the two are independent CDN round-trips (plus a
-    // sharp transcode each) and would otherwise serialize on the cold path.
-    const imageUrl =
-      !isDeleted && post.kind === 'image' ? resolvePostAttachmentUrl(post.attachments?.[0], FileVariant.FEED) : null;
-    const [avatarSrc, imageSrc] = await Promise.all([
-      fetchImageAsDataUri(buildAvatarUrl(user)),
-      fetchImageAsDataUri(imageUrl),
-    ]);
-
     // Article variant: newspaper icon + title over a plain-text body excerpt.
     // Deleted posts skip this (their content isn't JSON) and fall through to the
     // text variant, which renders the "deleted" notice.
     const article = !isDeleted && post.kind === 'long' ? parseArticleContent(post.content) : null;
+
+    // Feed variant is sufficient — the image only ever renders in this small
+    // preview card, so the full-res MAIN variant would be wasted bytes. Fetched
+    // alongside the avatar and the mention lookups: all are independent Nexus /
+    // CDN round-trips (plus a sharp transcode per image) and would otherwise
+    // serialize on the cold path.
+    const imageUrl =
+      !isDeleted && post.kind === 'image' ? resolvePostAttachmentUrl(post.attachments?.[0], FileVariant.FEED) : null;
+    const [avatarSrc, imageSrc, text] = await Promise.all([
+      fetchImageAsDataUri(buildAvatarUrl(user)),
+      fetchImageAsDataUri(imageUrl),
+      // The card's body copy with raw `pk:` / `pubky` mentions swapped for display
+      // names, as the app renders them (`PostMentions`). An article's title is
+      // shown verbatim (as in the app); only its body is resolved.
+      resolveMentionsForMetadata(article ? markdownToText(article.body) : preview),
+    ]);
+
     if (article) {
-      const body = truncateByGraphemes(markdownToText(article.body), OG_TRUNCATE.articleBody);
+      const body = truncateByGraphemes(text, OG_TRUNCATE.articleBody);
       return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
@@ -126,7 +132,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     }
 
     if (imageSrc) {
-      const text = truncateByGraphemes(preview, OG_TRUNCATE.postImageText);
+      const imageText = truncateByGraphemes(text, OG_TRUNCATE.postImageText);
       return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
@@ -155,7 +161,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
                 overflow: 'hidden',
               }}
             >
-              {text}
+              {imageText}
             </div>
             <div style={{ display: 'flex', flex: 1, width: '100%', borderRadius: 24, overflow: 'hidden' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -166,7 +172,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
       );
     }
 
-    const text = truncateByGraphemes(preview, OG_TRUNCATE.postText);
+    const postText = truncateByGraphemes(text, OG_TRUNCATE.postText);
     return await ogImageResponse(
       <OgFrame style={{ gap: 48 }}>
         <OgHeader avatarUrl={avatarSrc} name={name} />
@@ -196,7 +202,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
               overflow: 'hidden',
             }}
           >
-            {text}
+            {postText}
           </div>
         </div>
         {/* Brand URL anchored bottom-right per the Figma frames. */}
