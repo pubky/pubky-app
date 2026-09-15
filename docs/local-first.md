@@ -138,30 +138,50 @@ const posts = useLiveQuery(async () => {
 }, [id]);
 ```
 
-### Pattern: Fetch in useEffect, Read in useLiveQuery
+### Pattern: `useLocalFirstQuery` (fetch once when missing, read live)
+
+Hooks that need "local first, fetch when missing" use `useLocalFirstQuery` from `@/hooks/useLocalFirstQuery/useLocalFirstQuery` (the implementation of ADR-0011). Do not hand-roll a `useEffect` + `useLiveQuery` pair.
 
 ```typescript
 // Real: src/hooks/usePostDetails/usePostDetails.tsx
-function usePostDetails(compositeId: string | null | undefined) {
-  useEffect(() => {
-    if (!compositeId) return;
-    PostController.getOrFetchDetails({ compositeId }).catch((error) => {
-      Logger.error('[usePostDetails] Failed to fetch post details:', { compositeId, error });
-    });
-  }, [compositeId]);
+export function usePostDetails(compositeId: string | null | undefined, options?: UsePostDetailsOptions) {
+  const enabled = isLocalFirstQueryEnabled(compositeId, options?.enabled);
 
-  const postDetails = useLiveQuery(
-    async () => {
-      if (!compositeId) return null;
-      return await PostController.getDetails({ compositeId });
-    },
-    [compositeId],
-    undefined,
-  );
+  const { data, isLoading } = useLocalFirstQuery<EnrichedPostDetails>({
+    queryFn: () => PostController.getDetails({ compositeId: compositeId! }), // pure local read, runs inside useLiveQuery
+    fetchFn: () => PostController.fetch({ compositeId: compositeId! }), // network read that persists to Dexie
+    deps: [compositeId, enabled],
+    enabled,
+  });
 
-  return { postDetails, isLoading: postDetails === undefined };
+  return { postDetails: data, isLoading };
 }
 ```
+
+- `queryFn` is a `get*` controller read and runs inside `useLiveQuery`: pure, local, no network.
+- `fetchFn` is a `fetch*` controller call that fetches from Nexus and persists to Dexie; the live query then re-renders on its own.
+- `fetchFn` runs **only when local data is `null`**. A cache hit is never refreshed by this hook (TTL does that).
+- Never call a network client, TanStack Query or retry logic inside `useLiveQuery`: it breaks Dexie's PSD.
+
+`rg -l useLocalFirstQuery src/hooks --glob '!*.test.*'` lists the consumers. Some older hooks still hand-roll the `useEffect` + `useLiveQuery` pair; that is debt to migrate when touched, not a pattern to copy.
+
+### Read pitfalls
+
+Two bug classes account for most regressions on read paths. Check them before touching a hook that reads local data or anything that writes TTL rows.
+
+`useLocalFirstQuery` is deliberately simple; its surprises are documented by its call sites and past issues:
+
+- `fetchFn` runs only when local data is `null`. A stale counter that "never updates" is usually this, not the component (#2384).
+- A tombstone is still local data: soft-deleted rows (`content = [DELETED]`) keep the cache non-null, so the network arm never fires and the UI renders the tombstone forever (#1988). Decide what "missing" means for the entity you render.
+- Every hook instance owns its own effect. Mounting the same query twice (list plus expanded row, or a nested card) duplicates every request; hoist the query and pass data down (#1987).
+- `isLoading` is true while a cache-miss fetch is in flight, and `.finally()` clears it whether `fetchFn` resolves or rejects. A Nexus 404 therefore settles at `data === null`; it does not leave a skeleton without an exit, and the hook exposes no error value. `usePostMissing` turns that settled `null` into `postMissing`. Branch on the settled value, not on `isLoading` and `data` alone.
+- `isMissing = postDetails === null` is the established "not found" shape (#2081, #1986); keep that meaning.
+
+TTL refresh races are the second class (TTL rules: `docs/data-patterns.md`, _TTL Management_):
+
+- A background refresh that lands after a local write reverts the user's action (#1781) or flickers the tag UI (#1452, #1276). A local write must mark every affected row fresh (`*_ttl.lastUpdatedAt`) so the coordinator skips it; a stale Nexus response must never overwrite a fresher local write.
+- TTL refresh also applies to public content for signed-out visitors (#2486). "Logged out" does not mean "no background refresh".
+- Do not force freshness by clearing stream caches: invalidate the affected scope through the dirty registry (see _Deferred Stream Invalidation_ below) and let the TTL/viewport policy refetch (ADR-0003, ADR-0005).
 
 ## Persistence Order
 
@@ -233,4 +253,5 @@ When adding controller methods:
 - [ ] Do write operations write to IndexedDB first?
 - [ ] Is UI updated immediately (optimistic)?
 - [ ] Does background sync handle failures gracefully?
-- [ ] Is `useLiveQuery` used only for local reads?
+- [ ] Is `useLiveQuery` used only for local reads, and do local-first reads go through `useLocalFirstQuery`?
+- [ ] Are cache hits, tombstones and a settled `null` handled on the read path?

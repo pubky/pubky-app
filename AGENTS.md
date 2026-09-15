@@ -1,11 +1,25 @@
 # Pubky App
 
-Decentralized social app. Tech stack in `package.json`.
-Local-first architecture with Dexie (IndexedDB), Zustand, Next.js, Tailwind CSS, Shadcn UI.
+Decentralized social app: Next.js 16 App Router, React 19 with the React Compiler, TypeScript, Tailwind v4 + Shadcn UI, Zustand,
+Dexie (IndexedDB), TanStack Query. Package name `franky`. Local-first: writes go to Dexie first and sync to the homeserver;
+reads come from Dexie and fall back to Nexus. This file is the entry point for every AI agent (Claude Code, Codex, Cursor);
+it indexes `docs/`, which is canonical and wins over anything here (`docs/development-workflow.md` is the long version).
 
-## Architecture
+## Commands
 
-Layered architecture in `src/core/` (see `docs/architecture.md` for full details):
+Node 24 (`.nvmrc`), dependencies via `npm ci`. The pre-commit hook runs `lint-staged` then `npm run typecheck`.
+
+| Task                    | Command                                                                                        |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
+| Dev server (port 3000)  | `npm run dev` (staging defaults are built in, no `.env` needed)                                |
+| Format, lint, types     | `npm run format:check`, `npm run lint`, `npm run typecheck`                                    |
+| Unit tests (jsdom)      | `npm test` (~13k tests, minutes); one file `npm test -- <path>`; one name `npm test -- -t "x"` |
+| Snapshots               | `npm run test:update-snapshots`                                                                |
+| Visual regression (VRT) | `npm run test:vrt` (`npm run test:vrt:setup` once); baselines are CI-owned, never commit local |
+| Production build        | `npm run build` (`next build --webpack`)                                                       |
+| E2E (Cypress)           | `npm run test:e2e`; needs the full pubky-stack, not runnable from a bare checkout              |
+
+## Architecture (`src/core`)
 
 ```
 UI (user actions) → Controllers → Application → Services → Models
@@ -13,67 +27,124 @@ Coordinators (system) ↗            ↓              ↓
                        Stores     Pipes         Database
 ```
 
-Import modules through the path aliases in `tsconfig.json` (for example `@/hooks/*`, `@/controllers/*`, `@/services/*`, `@/models/*`, `@/stores/*`). Keep imports pointed at concrete source modules rather than aggregate re-export files.
+Hard constraints (review-enforced, not compiler-enforced; `docs/architecture.md`):
 
-### Hard constraints
+- Controllers NEVER call Services directly and never do IO; they go through Application.
+- Coordinators NEVER call Application; they go through Controllers.
+- Application NEVER accesses Stores and never calls Controllers; only Controllers manage stores.
+- Pipes are pure: NO IO, NO side effects. Services never call up. Models touch Dexie only.
+- Cross-Application calls (ADR-0009): only PostApplication, NotificationApplication, BootstrapApplication, MigrationApplication,
+  HotApplication, PostStreamApplication and TtlApplication may call other Applications; acyclic; depth 1, with one depth-2
+  exception: PostApplication | NotificationApplication | TtlApplication → PostStreamApplication → FileApplication.
 
-- Controllers NEVER call Services directly — go through Application
-- Coordinators NEVER call Application — go through Controllers
-- Application NEVER accesses Stores — only Controllers manage stores
-- Pipes are pure — NO IO, NO side effects
-- Only PostApplication, NotificationApplication, BootstrapApplication, MigrationApplication, HotApplication, PostStreamApplication, TtlApplication may call other Applications (max depth 1 by default; only PostApplication/NotificationApplication/TtlApplication → PostStreamApplication → FileApplication attachment persistence may reach depth 2; no cycles)
+Imports use the `tsconfig.json` aliases and point at concrete files: `@/atoms/Button/Button`, `@/hooks/*`, `@/controllers/*`,
+`@/application/*`, `@/services/*`, `@/models/*`, `@/pipes/*`, `@/stores/*`, `@/config/<module>`, `@/app/routes`, `@/icons`,
+`@/libs/*`. No re-export `index.ts` barrels, no `src/config/index.ts`.
 
-### Controller naming
+Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany*` bulk local returning `Map<Pubky, T>`,
+`getOrFetch*` local then network, `getMany*OrFetch` bulk variant, `subscribe*` long-lived stream,
+`commitCreate* | commitUpdate* | commitDelete*` local-first write + sync.
 
-- `fetch*` — network only, no cache
-- `get*` — local only
-- `getMany*` — bulk local reads, returns `Map<Pubky, T>`
-- `getOrFetch*` — local first, network fallback
-- `getMany*OrFetch` — bulk local first, fetch missing (e.g., `getManyTagsOrFetch`)
-- `commitCreate*` / `commitUpdate*` / `commitDelete*` — optimistic local write + network sync
-- `subscribe*` — long-lived live stream subscription (e.g., homeserver event streams), not a one-shot fetch
+## Non-negotiables
 
-### Errors
+- Errors: `Err.*` factories (`src/libs/error/error.factories.ts`), never raw `Error`. Factories log and capture, so never
+  log-then-throw. `docs/error-handling.md`
+- Local-first reads in hooks: `useLocalFirstQuery` (`@/hooks/useLocalFirstQuery/useLocalFirstQuery`). Never network, TanStack
+  or retry logic inside `useLiveQuery`; no hand-rolled `useEffect` + `useLiveQuery`. A cache hit is never refreshed by it,
+  a tombstone counts as data, a settled `null` means missing. `docs/local-first.md`
+- Local-first writes: Dexie first, homeserver sync after, roll back on failure, refresh every affected `*_ttl` row, persist
+  dependencies before dependents. `docs/local-first.md`, `docs/data-patterns.md`
+- Composite post ids `author:postId` via `buildCompositeId` / `parseCompositeId`. `docs/data-patterns.md`
+- Shadcn first and design tokens only (`bg-primary`, not `bg-[#1a1a1a]` or `p-[13px]`); atomic tiers atoms → molecules →
+  organisms → templates; z-index only `-z-10, z-10, z-30, z-40, z-50, z-60`. `docs/components.md`, `docs/z-index.md`
+- No `useCallback` / `useMemo` / `React.memo`: the React Compiler handles it. Add one only with profiler evidence.
+- Icons: stock from `lucide-react`, custom from `@/icons`, URL helpers from `@/libs/utils/urlToIcon`. `docs/components.md`
+- Toasts: `toast()` from `@/molecules/Toaster/toast` with `variant`; internals are ESLint-blocked; copy is static, never
+  interpolate user-entered text. `docs/components.md`
+- Forms: react-hook-form + zod inside a `use{Action}Form` hook returning `{ form, submit }`; schema in a sibling `*.types.ts`;
+  form components never call `commit*` controllers directly; Zod v4 (`z.url()`). `docs/components.md`
+- Dexie schema: one `DB_VERSION`; a mismatch recreates the database. Bumping it or changing an index map is a reviewed
+  decision, never a side effect. `docs/data-patterns.md`, ADR-0019
+- Copy: inline US-English literals at the call site. i18n (`next-intl`, `messages/`, `useTranslations`) was removed in #2313
+  and must not come back in any form, including a lookalike message registry.
+- `src/config/*` limits are product-wide policy: never tune one for a local fix, and never reduce visible behaviour
+  (counts, actions, states, routes) to fix a bug.
+- Generated files are hands-off: `public/sw.js`, `src/libs/lucide/lucideIcons.{aliases,nodes,tags}.ts`, `package-lock.json`.
+  CI workflows change only in a CI task.
+- Env: only `src/libs/env/env.ts` and `src/libs/runtime-config/**` read `process.env.NEXT_PUBLIC_*` / `PUBKY_RUNTIME_*`
+  (ESLint-enforced); deploy-time values are `PUBKY_RUNTIME_*` getters, never secrets. `docs/environment.md`
+- Sentry: throw via `Err.*`; `Sentry.captureException` is called only in `app/error.tsx` and `app/global-error.tsx`, for
+  non-`AppError` values; no raw user data in error context. `docs/sentry.md`
+- Tests: colocated `*.test.tsx`, one snapshot per test, mobile snapshot blocks for viewport-aware organisms; no `as any` or
+  `as unknown as T` (use the `src/test-utils` helpers). `docs/component-testing.md`
 
-Use `Err.*` factories (never raw `Error`). Factories log automatically — don't double-log. See `docs/error-handling.md`.
+## Before you edit, read
 
-## Key conventions
+- `src/core/**` → `docs/architecture.md`, `docs/local-first.md`, `docs/data-patterns.md`, `docs/error-handling.md`
+- `src/hooks/**` → `docs/local-first.md`, `docs/data-patterns.md`, `docs/components.md` (Forms)
+- `src/components/**`, `src/app/**` → `docs/components.md`, `docs/z-index.md`, `docs/skeleton-architecture.md`,
+  `docs/component-testing.md`
+- `src/test/vrt/**` → `docs/visual-regression-testing.md`
+- `src/libs/env/**`, `src/libs/runtime-config/**`, `src/config/**` → `docs/environment.md`
+- `src/libs/observability/**`, `src/instrumentation*.ts`, `src/sentry.*.config.ts` → `docs/sentry.md`
+- `src/core/database/**`, `src/core/services/homeserver/**`, `src/core/pipes/**`, `src/libs/network/**` →
+  `docs/architecture.md`, _High-Risk Areas_, first
+- Any change → `docs/development-workflow.md`; the ADRs in `docs/adr/` explain the why
 
-- Composite post IDs: `author:postId` format
-- Local-first writes: Dexie first, homeserver sync in background
-- **Local-first reads**: read through `useLocalFirstQuery` (`@/hooks/useLocalFirstQuery/useLocalFirstQuery`, the implementation of ADR-0011) instead of hand-rolling `useEffect` + `useLiveQuery`: `queryFn` is a pure `get*` local read run inside `useLiveQuery`, `fetchFn` is a `fetch*` controller that fetches from Nexus and persists to Dexie. Never call a network client, TanStack Query or retry logic inside `useLiveQuery` (it breaks Dexie's PSD). `fetchFn` only runs when local data is `null`, so a cache hit is never refreshed and a soft-deleted row still counts as data.
-- Shadcn First: always check for Shadcn equivalent before building custom UI
-- Atomic design: atoms → molecules → organisms → templates
-- Components: do not add `index.ts` / `index.tsx` under `src/components` that only re-export children; import concrete component files via `@/atoms/*`, `@/molecules/*`, `@/organisms/*`, or `@/templates/*` (for example `@/atoms/Button/Button`)
-- Config: import from `@/config/<module>` (concrete files under `src/config/`). There is no aggregate `src/config/index.ts`.
-- App routes: import route enums, maps, and helpers from `@/app/routes` (`src/app/routes.ts`); prefer that over route-only imports through a re-export entrypoint.
-- Z-index scale: -z-10, z-10, z-30, z-40, z-50, z-60 (see `docs/z-index.md`)
-- **Icons**: stock Lucide from `lucide-react`; custom/brand SVG components from `@/icons` (`src/libs/icons/icons.tsx` via `tsconfig` path alias). URL→icon helpers (`getIconFromUrl`, `getLabelFromUrl`, …) live in `@/libs/utils/urlToIcon` — see `docs/components.md` — _Icons (Lucide and custom)_.
-- **Visual regression tests (VRT)**: tests live in `src/test/vrt/<area>/*.vrt.test.tsx` (feed, landing, onboarding, post, profile, settings; the `images/` folder holds fixtures only) with pixel baselines checked in under the sibling `__screenshots__/` folder, not next to the component. When you change a UI surface, check whether a VRT covers it. If yes, the baseline likely needs regenerating: surface that to the user before reporting the task done. PR CI does not run VRT or update baselines; `.github/workflows/vrt-update-baselines.yml` is manual (`workflow_dispatch`) and refuses to run on `master`, so it is dispatched on `dev` or a feature branch. If you're touching a template-level surface that has no VRT yet, mention adding one as an option. The VRT harness lives in `src/test-utils/vrt.tsx`; fixtures in `src/test/fixtures/`; deterministic mocks in `src/test/mocks/`.
-- **Forms (standard)**: build new forms with `react-hook-form` + `zod` (via `@hookform/resolvers/zod`). Wrap field components with `Controller` (use the `ControlledInputField` / `ControlledTextareaField` molecules where applicable). Keep the schema + types + defaults in a sibling `*.types.ts` file next to the hook (see `src/hooks/useCreateCollection/useCreateCollection.types.ts` for the canonical layout). Components must not call controllers directly — wrap the mutation in a hook (`use{Action}Form` or `use{Verb}{Entity}`) that returns `{ form, submit, reset, ... }`, where `submit()` returns `Promise<boolean>` so the caller can decide what to do on success (a form hook may instead return the created entity id as `Promise<string | null>` when the caller needs to navigate to it, e.g. `useCreateCollection`). Non-text inputs (file pickers, rich text, etc.) live in their own dedicated hooks (e.g. `useCoverImagePicker`) and the form hook composes them. Schemas carry their user-facing validation messages as literal US English strings.
-- **Memoization**: do not add `useCallback` / `useMemo` — the React Compiler (`reactCompiler: true` in `next.config.ts`) handles memoization. Reach for them only after profiling proves the compiler missed something.
-- **Toasts**: use `toast()` from `@/molecules/Toaster/toast` with `variant` (`default` | `error` | `warning` | `info`). Never import `useToastState`, `toast.store`, or the `@/atoms/Toast/*` renderer atoms (ESLint-enforced). No `showErrorToast` wrappers or `className` destructive hacks. Toast copy is static: never interpolate user-entered text (names, labels, file names) into `title` / `description` — use generic copy like `'Feed created'`. Bounded values such as config constants and small counts are fine. See `docs/components.md` — _Toasts_.
-- **Dexie schema**: `src/core/database/franky/franky.ts` declares a single `this.version(DB_VERSION).stores({...})` and there is no incremental migration chain. `DB_VERSION` is `Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). A `DB_VERSION` mismatch deletes and recreates the local database (`recreateDatabase`), so bumping the version or changing a table's index map is a deliberate, reviewed change - never a side effect of a feature. See `docs/adr/0019-dexie-recreate-on-version-mismatch.md`, which supersedes ADR-0007: the ascending-migration chain ADR-0007 describes was never implemented.
-- **Copy / i18n**: user-facing copy is an inline US-English literal at the call site. `next-intl`, `messages/`, `src/i18n/`, `useTranslations` and `useFormatter` were removed (#2306, #2313) and must not come back, including as a lookalike message registry. See `docs/migrations/2305-i18n-conflict-guide.md`.
+## How to work here
 
-## Learned User Preferences
+1. Restate the request as behaviour, find the nearest feature that already does it, trace it end to end, and name one file
+   per layer you will touch.
+2. Reuse before creating: search `src/components`, `src/hooks`, `src/libs`, `src/core/utils` and `src/config` for the
+   primitive, hook, helper or constant first.
+3. Make the smallest coherent change. No drive-by refactors, renames, reformatting, dependency swaps or pattern migrations
+   in the same PR.
+4. Verify at the right level: component change → its colocated test + `lint` + `typecheck`; core change → the affected
+   package tests + `typecheck` + `lint`; runtime-config/env change → `npm test -- src/libs/runtime-config`; VRT surface →
+   `npm run test:vrt` and flag the baseline; cross-cutting → full `npm test`, plus `npm run build` when route- or config-wide.
+5. Read your own diff for drift: a stray `useMemo`, a hex colour, a new `index.ts`, an unrelated rename, a raw `Error`,
+   a direct `process.env` read.
+6. Raise, do not decide: a `DB_VERSION` bump, a `src/config` limit change, a new architectural pattern (needs an ADR) or a
+   VRT baseline change are product decisions to surface to the user.
 
-- Bug fixes must not regress existing visible functionality (e.g., reducing displayed item count from 3 to 2)
-- For icon / circular nav matching Figma, confirm active vs inactive from the Shadcn button component variants (Selected vs Default: background, border, shadow), not only the parent frame or another surface’s pattern
+Definition of done: correct layer only; naming conventions; existing primitives reused and no new dependency without a
+reason; `Err.*` everywhere and nothing double-logs; no new colours, spacing, z-index or memo; read pitfalls and TTL refresh
+considered; no visible behaviour reduced; concrete imports and no barrels; tests at the right level including mobile
+snapshots; `lint`, `typecheck` and targeted tests pass; VRT, ADR, `DB_VERSION` and config changes called out; the diff
+reads like the surrounding code.
 
-## Learned Workspace Facts
+Commits and branches: `type(scope): description` (imperative, lower-case, no period, ≤72 chars); branches
+`<type>/<issue>-<kebab-description>` cut from `dev`; PRs target `dev`, draft unless asked, one change per PR. Cypress specs
+are owned by QA: flag an invalidated spec, do not edit or run e2e yourself. `docs/commit-message.md`
 
-- Nav items that link to a default child route (e.g. footer Settings → `SETTINGS_ROUTES.ACCOUNT`) but must stay visually active on sibling routes under the parent (e.g. `/settings/notifications`) need active detection on a broader prefix (e.g. `activePrefix: APP_ROUTES.SETTINGS`), not only `href` or `pathname.startsWith(href + '/')`
-- Config constants in `src/config/` (e.g., `USER_LIST_TAGS_MAX_TOTAL_CHARS`, tag limits) are project-wide hard limits — do not modify them for individual component fixes
-- This project uses Zod v4 — use `z.url()` for URL validation, not the deprecated `z.string().url()`
-- PWA / service worker: Serwist via `@serwist/next` in `next.config` (core package `serwist`), not Workbox or `next-pwa`
+## Common failure modes
 
-## Documentation
+- IO in a component, hook or pipe; a service called from a controller; application called from a coordinator.
+- A new store, a second data-fetching mechanism or a parallel error type instead of Zustand, TanStack or `Err.*`.
+- A new button, dialog, input, empty state or skeleton where an atom, molecule or Shadcn primitive already exists.
+- A `useEffect` where `useLocalFirstQuery` belongs; a cache hit treated as fresh data; a second freshness mechanism beside TTL.
+- User text interpolated into toast copy; toasts styled by `className`.
+- A dependency added for something already in the tree (`dexie`, `zustand`, `@tanstack/react-query`, `react-hook-form`,
+  `zod`, `radix-ui`, `motion`, `lodash-es`, `usehooks-ts`, `jszip`, `@synonymdev/pubky`, `pubky-app-specs`, …).
+- A feature task turned into a refactor, or a route page rewritten with a new layout instead of composing the template.
 
-Consult `docs/` before making changes, and read `.cursor/skills/pubky-app-development/SKILL.md` for the operational workflow (how to approach a change, local-first pitfalls, verification, definition of done):
+## Cursor Cloud specific instructions
 
-- `src/core/` changes → `docs/architecture.md`, `docs/local-first.md`, `docs/error-handling.md`, `docs/data-patterns.md`
-- `src/components/` changes → `docs/components.md`, `docs/z-index.md`, `docs/component-testing.md`, `docs/skeleton-architecture.md`
-- `src/libs/env/` changes → `docs/environment.md`
-- Commits → `docs/commit-message.md`
-- Architecture decisions → `docs/adr/`
+- Nothing external needs to be started: the app uses IndexedDB and the Next.js dev server, with staging defaults for Nexus,
+  Homeserver, CDN, relays and Homegate baked into `src/libs/runtime-config/runtime-config.schema.ts`.
+- Sign in with the staging account: `npm run dev`, open `http://localhost:3000`, **Sign In** → **Use recovery phrase**,
+  enter the 12 words from the `STAGING_RECOVERY_PHRASE` secret, **Restore**.
+- Account creation needs SMS verification or a Bitcoin payment against staging infrastructure; do not try it in the VM.
+- Unit tests need no browser (`fake-indexeddb` + jsdom); `npm run test:e2e` needs external staging services, skip it.
+
+## Tooling map
+
+- `CLAUDE.md` imports this file for Claude Code; Codex and Cursor read it directly. Keep it within 150 lines; details go
+  in `docs/`.
+- `.cursor/rules/*.mdc` and `.claude/rules/*.md` attach the matching doc when a file under their glob is edited; their
+  bodies only point at `docs/`.
+- Skills live in `.agents/skills/<name>/` (read natively by Codex and Cursor, symlinked from `.claude/skills/` for Claude
+  Code): `pubky-code-review`, `pubky-staging-invite`, `sentry-nextjs-sdk`.
+- Greptile reads `.greptile/config.json` (rules) and `.greptile/files.json` (which docs to attach per path), nothing else.
+- Update `docs/` first (plus an ADR when an architectural rule changes), then the one-line summary here, then Greptile.
+  The adapters only point, so they rarely change.

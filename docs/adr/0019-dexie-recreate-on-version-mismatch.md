@@ -2,9 +2,7 @@
 
 ## Status
 
-Proposed — 2026-09-15
-
-> Flip to `Accepted` when this PR merges (`docs/adr-guidelines.md`, Process step 3).
+Accepted — 2026-09-15
 
 ## Context
 
