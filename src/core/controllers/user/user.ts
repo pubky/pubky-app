@@ -183,6 +183,14 @@ export class UserController {
   }
 
   /**
+   * Get multiple user tags from the local cache only (bulk operation).
+   * Safe for live queries: never fires network.
+   */
+  static async getManyTags(params: TPubkyListParams): Promise<Map<Pubky, NexusTag[]>> {
+    return await UserApplication.getManyTags(params);
+  }
+
+  /**
    * Commit a follow action to indexeddb and the homeserver
    * @param eventType - The event type (PUT or DELETE)
    * @param follower - The follower user ID

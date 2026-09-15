@@ -6,6 +6,7 @@ import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { toast } from '@/molecules/Toaster/toast';
+import { useGraphStore } from '@/stores/graph/graph.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { SearchInput } from './SearchInput';
@@ -389,6 +390,36 @@ describe('SearchInput', () => {
       expect(clearInputValue).toHaveBeenCalled();
       expect(setFocus).toHaveBeenCalledWith(false);
       expect(mockPush).toHaveBeenCalledWith('/profile/user123');
+    });
+
+    it('hands user picks to the graph instead of navigating while on the graph page', () => {
+      mockPathname.mockReturnValue('/graph');
+      mockPush.mockClear();
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: 'satoshi',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
+        setFocus: vi.fn(),
+      });
+      vi.mocked(useSearchAutocomplete).mockReturnValue({
+        tags: [],
+        users: [{ id: 'user123', name: 'Satoshi' }],
+        isLoading: false,
+      });
+
+      render(<SearchInput />);
+      fireEvent.click(screen.getByTestId('search-user-suggestion-user123'));
+
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(useGraphStore.getState().searchTarget).toEqual({ kind: 'user', pubky: 'user123' });
+      useGraphStore.getState().clearSearchTarget();
+      mockPathname.mockReturnValue('/home');
     });
   });
 

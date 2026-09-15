@@ -537,7 +537,7 @@ describe('Header Components', () => {
 
       // Home, Hot, and Collections are public explore routes → real navigation links.
       const links = screen.getAllByRole('link');
-      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot', '/collections']);
+      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/hot', '/collections', '/graph']);
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
 
       // All four nav icons are shown.

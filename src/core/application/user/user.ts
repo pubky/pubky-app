@@ -376,6 +376,18 @@ export class UserApplication {
   }
 
   /**
+   * Bulk read user tags from the local cache only, never the network.
+   * The graph canvas reads this from a live query on every recompute; gaps are
+   * filled by the ingestion pipeline, not the reader.
+   * @param userIds - Array of user IDs to read tags for
+   * @returns Promise resolving to a Map of user ID to tags array
+   */
+  static async getManyTags({ userIds }: TPubkyListParams): Promise<Map<Pubky, NexusTag[]>> {
+    if (userIds.length === 0) return new Map();
+    return await LocalUserService.readBulkTags({ userIds });
+  }
+
+  /**
    * Fetch missing user tags from Nexus API and persist to cache.
    * @param cacheMissUserIds - Array of user IDs that need tags fetched
    */

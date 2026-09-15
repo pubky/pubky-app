@@ -54,6 +54,12 @@ export interface TMissingPostsParams {
   viewerId?: Pubky | null;
 }
 
+export interface TGetOrFetchPostsParams {
+  /** Composite post IDs (`author:postId`) to ensure are cached */
+  postIds: string[];
+  viewerId?: Pubky | null;
+}
+
 export interface TCacheStreamParams {
   lastPostId: string | undefined;
   limit: number;

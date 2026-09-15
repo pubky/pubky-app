@@ -27,6 +27,7 @@ vi.mock('@/stores/home/home.types', () => ({
     WIDE: 'wide',
     LIST: 'list',
     VISUAL: 'visual',
+    GRAPH: 'graph',
   },
 }));
 vi.mock('@/utils/pubky-app-spec-feed-mappers', () => ({
@@ -398,6 +399,27 @@ describe('ContentLayout - Custom Feed Layout Override', () => {
     // Sidebars should be hidden in wide layout
     expect(screen.queryByText('Left Sidebar')).not.toBeInTheDocument();
     expect(screen.queryByText('Right Sidebar')).not.toBeInTheDocument();
+  });
+
+  it('hides sidebars when custom feed route layout is graph (wide shell)', () => {
+    mockUseCustomFeed.mockReturnValue({ layout: 'graph' });
+
+    const { container } = render(
+      <ContentLayout
+        feedVariant="custom"
+        showLeftSidebar={true}
+        leftSidebarContent={<div data-testid="left-sidebar-content">Left Sidebar</div>}
+        showRightSidebar={true}
+        rightSidebarContent={<div data-testid="right-sidebar-content">Right Sidebar</div>}
+      >
+        <div>Test Content</div>
+      </ContentLayout>,
+    );
+
+    expect(screen.queryByText('Left Sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Right Sidebar')).not.toBeInTheDocument();
+    // Same 1200px container as the wide layout; the canvas never escapes it
+    expect(container.querySelector('.container')).toHaveClass('max-w-(--container-max-width)');
   });
 
   it('shows ButtonFilters when custom feed route layout is wide and drawer content exists', () => {

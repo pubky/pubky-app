@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Columns3, LayoutGrid, Rows2, Rows4 } from 'lucide-react';
+import { Columns3, LayoutGrid, Rows2, Rows4, Waypoints } from 'lucide-react';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps, FilterListItem } from '../Filters.types';
@@ -16,7 +16,8 @@ export function FilterLayout({
   disabled,
   showVisual = false,
 }: FilterLayoutProps) {
-  const displaySelectedTab = !showVisual && selectedTab === LAYOUT.VISUAL ? LAYOUT.COLUMNS : selectedTab;
+  const displaySelectedTab =
+    !showVisual && (selectedTab === LAYOUT.VISUAL || selectedTab === LAYOUT.GRAPH) ? LAYOUT.COLUMNS : selectedTab;
   const items = React.useMemo(
     () =>
       [
@@ -48,6 +49,15 @@ export function FilterLayout({
               icon: LayoutGrid,
               disabled,
               dataCy: 'visual-layout-toggle',
+            }
+          : null,
+        showVisual
+          ? {
+              key: LAYOUT.GRAPH,
+              label: 'Graph',
+              icon: Waypoints,
+              disabled,
+              dataCy: 'graph-layout-toggle',
             }
           : null,
       ].filter(Boolean) as FilterListItem<LayoutType>[],

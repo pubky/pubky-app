@@ -18,6 +18,7 @@ export interface FeedLayoutResolution {
   effectiveLayout: LayoutType;
   isVisualRequested: boolean;
   isVisualActive: boolean;
+  isGraphActive: boolean;
   /**
    * Whether this variant renders its posts in a fixed card grid (decision D5).
    * Orthogonal to `effectiveLayout` — grid is variant-driven, not a `LayoutType`.
@@ -41,11 +42,14 @@ export function resolveFeedLayout({
   const isCollectionVariant = variant === TIMELINE_FEED_VARIANT.COLLECTION;
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
   const isVisualSupported = !isPhoneViewport && (isRichLayoutSupported || isCollectionVariant);
+  // Graph shares visual's constraints: desktop-only, rich feed variants only
+  const isGraphRequested = requestedLayout === LAYOUT.GRAPH;
   const isWideRequested = requestedLayout === LAYOUT.WIDE;
   const isListRequested = requestedLayout === LAYOUT.LIST;
   const isListSupported = isRichLayoutSupported || isCollectionVariant;
   const effectiveLayout =
     (isVisualRequested && !isVisualSupported) ||
+    (isGraphRequested && !isVisualSupported) ||
     (isWideRequested && !isRichLayoutSupported) ||
     (isListRequested && !isListSupported)
       ? LAYOUT.COLUMNS
@@ -56,6 +60,7 @@ export function resolveFeedLayout({
     effectiveLayout,
     isVisualRequested,
     isVisualActive: effectiveLayout === LAYOUT.VISUAL,
+    isGraphActive: effectiveLayout === LAYOUT.GRAPH,
     isGridActive:
       GRID_LAYOUT_VARIANTS.has(variant) ||
       (variant === TIMELINE_FEED_VARIANT.COLLECTION && effectiveLayout === LAYOUT.COLUMNS),

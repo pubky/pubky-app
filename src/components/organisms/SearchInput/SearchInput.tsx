@@ -12,11 +12,13 @@ import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
 import { useTagSearch } from '@/hooks/useTagSearch/useTagSearch';
 import { validateContentSearchQuery } from '@/libs/search/contentSearch';
+import { isValidTagLabel } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { SearchInputBar } from '@/molecules/SearchInputBar/SearchInputBar';
 import { SearchSuggestions } from '@/molecules/SearchSuggestions/SearchSuggestions';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import { useGraphStore } from '@/stores/graph/graph.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { SearchInputProps } from './SearchInput.types';
 
@@ -30,7 +32,25 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const isMobile = useIsMobile();
   const criteria = useSearchCriteria();
 
+  // On the graph page this bar drives the canvas instead of navigating: picks
+  // are handed to the graph via the store, so desktop needs no second field
+  const isGraphPage = pathname?.startsWith(APP_ROUTES.GRAPH) ?? false;
+
+  const submitGraphSearch = (value: string): void => {
+    const label = value.trim().toLowerCase();
+    if (!isValidTagLabel(label)) {
+      toast({ variant: 'error', description: 'Tags can be max 20 chars and cannot contain special characters' });
+      return;
+    }
+    useGraphStore.getState().requestSearch({ kind: 'tag', label });
+    setFocus(false);
+  };
+
   const submitContentSearch = (value: string): void => {
+    if (isGraphPage) {
+      submitGraphSearch(value);
+      return;
+    }
     const validation = validateContentSearchQuery(value);
     if (!validation.isValid) {
       toast({ variant: 'error', description: validation.message });
@@ -102,10 +122,21 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     addUser(userId);
     clearInputValue();
     setFocus(false);
+    if (isGraphPage) {
+      useGraphStore.getState().requestSearch({ kind: 'user', pubky: userId });
+      return;
+    }
     router.push(getUserProfileUrl(userId, currentUserPubky));
   };
 
   const handleTagClick = (tag: string) => {
+    if (isGraphPage) {
+      useGraphStore.getState().requestSearch({ kind: 'tag', label: tag });
+      clearInputValue();
+      setFocus(false);
+      return;
+    }
+
     addTagToSearch(tag, { addToRecent: true });
     clearInputValue();
 

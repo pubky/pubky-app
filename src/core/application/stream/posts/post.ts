@@ -3,6 +3,7 @@ import type {
   TCacheStreamParams,
   TFetchMissingUsersParams,
   TFetchStreamParams,
+  TGetOrFetchPostsParams,
   TMissingPostsParams,
   TPartialCacheHitParams,
   TPersistUnreadNewStreamChunkParams,
@@ -568,6 +569,21 @@ export class PostStreamApplication {
    * (they render what the cache has), but callers with strict post-hydration
    * filtering (author-scoped content search) must not mistake it for "no results".
    */
+  /**
+   * Checks which posts are missing from IndexedDB and fetches them from Nexus.
+   *
+   * @param postIds - Composite post IDs to ensure are cached
+   * @param viewerId - Optional viewer ID for relationship data
+   */
+  static async getOrFetchPosts({ postIds, viewerId }: TGetOrFetchPostsParams): Promise<void> {
+    if (postIds.length === 0) return;
+
+    const cacheMissPostIds = await this.getNotPersistedPostsInCache(postIds);
+    if (cacheMissPostIds.length === 0) return;
+
+    await this.fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId });
+  }
+
   static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId }: TMissingPostsParams): Promise<boolean> {
     try {
       const postBatch = await NexusPostStreamService.fetchByIds({

@@ -791,6 +791,68 @@ exports[`SearchFeedFilters - Snapshots > matches full-text drawer filters snapsh
               Visual
             </span>
           </button>
+          <button
+            aria-checked="false"
+            aria-label="Graph"
+            aria-pressed="false"
+            class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+            data-cy="graph-layout-toggle"
+            data-selected="false"
+            data-slot="filter-item"
+            data-testid="filter-item"
+            role="radio"
+            tabindex="-1"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-waypoints h-5 w-5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m10.586 5.414-5.172 5.172"
+              />
+              <path
+                d="m18.586 13.414-5.172 5.172"
+              />
+              <path
+                d="M6 12h12"
+              />
+              <circle
+                cx="12"
+                cy="20"
+                r="2"
+              />
+              <circle
+                cx="12"
+                cy="4"
+                r="2"
+              />
+              <circle
+                cx="20"
+                cy="12"
+                r="2"
+              />
+              <circle
+                cx="4"
+                cy="12"
+                r="2"
+              />
+            </svg>
+            <span
+              class=""
+            >
+              Graph
+            </span>
+          </button>
         </div>
       </div>
     </div>
@@ -1405,6 +1467,68 @@ exports[`SearchFeedFilters - Snapshots > matches full-text filters snapshot with
                 class=""
               >
                 Visual
+              </span>
+            </button>
+            <button
+              aria-checked="false"
+              aria-label="Graph"
+              aria-pressed="false"
+              class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+              data-cy="graph-layout-toggle"
+              data-selected="false"
+              data-slot="filter-item"
+              data-testid="filter-item"
+              role="radio"
+              tabindex="-1"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-waypoints h-5 w-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m10.586 5.414-5.172 5.172"
+                />
+                <path
+                  d="m18.586 13.414-5.172 5.172"
+                />
+                <path
+                  d="M6 12h12"
+                />
+                <circle
+                  cx="12"
+                  cy="20"
+                  r="2"
+                />
+                <circle
+                  cx="12"
+                  cy="4"
+                  r="2"
+                />
+                <circle
+                  cx="20"
+                  cy="12"
+                  r="2"
+                />
+                <circle
+                  cx="4"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
+              <span
+                class=""
+              >
+                Graph
               </span>
             </button>
           </div>
@@ -2520,6 +2644,68 @@ exports[`SearchFeedFilters - Snapshots > matches tag-search filters snapshot 1`]
                 class=""
               >
                 Visual
+              </span>
+            </button>
+            <button
+              aria-checked="false"
+              aria-label="Graph"
+              aria-pressed="false"
+              class="flex cursor-pointer gap-2 text-base font-medium transition-colors border-0 bg-transparent p-0 text-left items-center justify-normal text-muted-foreground hover:text-foreground/80 m-0 h-full px-0 py-1"
+              data-cy="graph-layout-toggle"
+              data-selected="false"
+              data-slot="filter-item"
+              data-testid="filter-item"
+              role="radio"
+              tabindex="-1"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-waypoints h-5 w-5"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="m10.586 5.414-5.172 5.172"
+                />
+                <path
+                  d="m18.586 13.414-5.172 5.172"
+                />
+                <path
+                  d="M6 12h12"
+                />
+                <circle
+                  cx="12"
+                  cy="20"
+                  r="2"
+                />
+                <circle
+                  cx="12"
+                  cy="4"
+                  r="2"
+                />
+                <circle
+                  cx="20"
+                  cy="12"
+                  r="2"
+                />
+                <circle
+                  cx="4"
+                  cy="12"
+                  r="2"
+                />
+              </svg>
+              <span
+                class=""
+              >
+                Graph
               </span>
             </button>
           </div>

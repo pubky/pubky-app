@@ -26,6 +26,10 @@ const {
   mockUseCopyToClipboard: vi.fn(),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 // Mock Hooks
 vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: mockUseUserProfile,
@@ -479,6 +483,7 @@ describe('useProfileMenuActions', () => {
         PROFILE_MENU_ACTION_IDS.FOLLOW,
         PROFILE_MENU_ACTION_IDS.COPY_PUBKY,
         PROFILE_MENU_ACTION_IDS.COPY_LINK,
+        PROFILE_MENU_ACTION_IDS.OPEN_IN_GRAPH,
         PROFILE_MENU_ACTION_IDS.MUTE,
       ]);
     });

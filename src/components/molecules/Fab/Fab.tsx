@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
+import { APP_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
 import { useFabAction } from '@/hooks/useFabAction/useFabAction';
@@ -53,8 +54,11 @@ export function Fab() {
   const isReorderActive = useCollectionReorderStore((state) => state.activeCollectionId !== null);
 
   const isOnboardingRoute = pathname?.startsWith('/onboarding') ?? false;
+  // The graph explorer is a full-bleed canvas, not a composer surface: the FAB
+  // would float over its inspector sheet and controls.
+  const isGraphRoute = pathname?.startsWith(APP_ROUTES.GRAPH) ?? false;
   // Show FAB for authenticated users OR unauthenticated users on public explore routes
-  const shouldShow = isFullyAuthenticated || isPublicExploreRoute;
+  const shouldShow = (isFullyAuthenticated || isPublicExploreRoute) && !isGraphRoute;
   if (isLoading || !shouldShow || isReorderActive || isOnboardingRoute) {
     return null;
   }

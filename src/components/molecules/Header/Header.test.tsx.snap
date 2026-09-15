@@ -292,6 +292,63 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
   </a>
   <a
     class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-graph-btn"
+    href="/graph"
+  >
+    <button
+      aria-label="Graph"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full shadow-xs text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md border bg-white/5"
+      data-size="icon"
+      data-slot="button"
+      data-variant="secondary"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-waypoints size-6"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m10.586 5.414-5.172 5.172"
+        />
+        <path
+          d="m18.586 13.414-5.172 5.172"
+        />
+        <path
+          d="M6 12h12"
+        />
+        <circle
+          cx="12"
+          cy="20"
+          r="2"
+        />
+        <circle
+          cx="12"
+          cy="4"
+          r="2"
+        />
+        <circle
+          cx="20"
+          cy="12"
+          r="2"
+        />
+        <circle
+          cx="4"
+          cy="12"
+          r="2"
+        />
+      </svg>
+    </button>
+  </a>
+  <a
+    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
     data-cy="header-settings-btn"
     href="/settings/account"
   >
@@ -449,6 +506,63 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderNavigationBu
         />
         <path
           d="M4 4v16"
+        />
+      </svg>
+    </button>
+  </a>
+  <a
+    class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+    data-cy="header-graph-btn"
+    href="/graph"
+  >
+    <button
+      aria-label="Graph"
+      class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full shadow-xs text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md border bg-white/5"
+      data-size="icon"
+      data-slot="button"
+      data-variant="secondary"
+    >
+      <svg
+        aria-hidden="true"
+        class="lucide lucide-waypoints size-6"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="m10.586 5.414-5.172 5.172"
+        />
+        <path
+          d="m18.586 13.414-5.172 5.172"
+        />
+        <path
+          d="M6 12h12"
+        />
+        <circle
+          cx="12"
+          cy="20"
+          r="2"
+        />
+        <circle
+          cx="12"
+          cy="4"
+          r="2"
+        />
+        <circle
+          cx="20"
+          cy="12"
+          r="2"
+        />
+        <circle
+          cx="4"
+          cy="12"
+          r="2"
         />
       </svg>
     </button>
@@ -644,6 +758,63 @@ exports[`Header Components - Snapshots > matches snapshot for HeaderSignIn 1`] =
           />
           <path
             d="M4 4v16"
+          />
+        </svg>
+      </button>
+    </a>
+    <a
+      class="cursor-pointer hover:text-brand/80 transition-colors text-brand text-sm"
+      data-cy="header-graph-btn"
+      href="/graph"
+    >
+      <button
+        aria-label="Graph"
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive font-semibold cursor-pointer rounded-full shadow-xs text-secondary-foreground hover:bg-accent size-9 h-12 w-12 backdrop-blur-md border bg-white/5"
+        data-size="icon"
+        data-slot="button"
+        data-variant="secondary"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-waypoints size-6"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m10.586 5.414-5.172 5.172"
+          />
+          <path
+            d="m18.586 13.414-5.172 5.172"
+          />
+          <path
+            d="M6 12h12"
+          />
+          <circle
+            cx="12"
+            cy="20"
+            r="2"
+          />
+          <circle
+            cx="12"
+            cy="4"
+            r="2"
+          />
+          <circle
+            cx="20"
+            cy="12"
+            r="2"
+          />
+          <circle
+            cx="4"
+            cy="12"
+            r="2"
           />
         </svg>
       </button>

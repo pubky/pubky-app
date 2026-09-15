@@ -6,6 +6,7 @@ export const LAYOUT = {
   WIDE: 'wide',
   LIST: 'list',
   VISUAL: 'visual',
+  GRAPH: 'graph',
 } as const;
 
 export const SORT = {

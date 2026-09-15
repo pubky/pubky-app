@@ -1,7 +1,8 @@
 'use client';
 
-import { Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus } from 'lucide-react';
-import { PROFILE_ROUTES } from '@/app/routes';
+import { useRouter } from 'next/navigation';
+import { Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus, Waypoints } from 'lucide-react';
+import { APP_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
@@ -41,6 +42,7 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
   const username = truncateString(rawUsername, 15);
   const isLoading = isProfileLoading || isFollowingLoading;
   const profileUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${PROFILE_ROUTES.PROFILE}/${userId}`;
+  const router = useRouter();
   const menuItems: ProfileMenuActionItem[] = [];
 
   // Follow/Unfollow
@@ -86,6 +88,16 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
           description: isAppError(error) ? error.message : 'Could not copy to clipboard',
         });
       }
+    },
+  });
+
+  // Open in graph explorer
+  menuItems.push({
+    id: PROFILE_MENU_ACTION_IDS.OPEN_IN_GRAPH,
+    label: 'Open in graph',
+    icon: Waypoints,
+    onClick: async () => {
+      router.push(`${APP_ROUTES.GRAPH}?user=${userId}`);
     },
   });
 
