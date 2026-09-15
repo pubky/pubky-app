@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { truncateByGraphemes } from './truncate';
+import { splitGraphemes, truncateByGraphemes } from './truncate';
+
+describe('splitGraphemes', () => {
+  it('splits into grapheme clusters, keeping emoji and ZWJ sequences whole', () => {
+    expect(splitGraphemes('a👍👨‍👩‍👧b')).toEqual(['a', '👍', '👨‍👩‍👧', 'b']);
+    expect(splitGraphemes('')).toEqual([]);
+  });
+});
 
 describe('truncateByGraphemes', () => {
   it('returns the text unchanged when shorter than the limit', () => {

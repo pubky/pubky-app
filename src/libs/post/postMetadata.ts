@@ -6,7 +6,7 @@ import { Logger } from '@/libs/logger/logger';
 import type { NexusPostDetails, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
-import { extractMentionedPubkys, formatMentionLabel, replaceMentions } from './postMentions';
+import { extractMentionedPubkys, formatMentionLabel, type MentionSegment, splitMentions } from './postMentions';
 
 /**
  * Server-side fetch with Next.js caching and proper error handling.
@@ -59,34 +59,48 @@ export async function fetchUserAndPostForMetadata(
 const MENTION_LOOKUP_LIMIT = 10;
 
 /**
- * Replaces raw `pk:<key>` / `pubky<key>` mentions in `content` with the label
- * the app renders for them (`PostMentions`): `@name`, or the shortened key when
- * the profile is missing, has no name, or fails to load. Shared by the `<meta>`
- * description and the OG image text so a link shared elsewhere never shows a
- * 52-character key.
+ * Splits `content` into plain runs and mentions, with each raw `pk:<key>` /
+ * `pubky<key>` mention resolved to the label the app renders for it
+ * (`PostMentions`): `@name`, or the shortened key when the profile is missing,
+ * has no name, or fails to load. The OG image renders the mention runs in the
+ * brand colour; `resolveMentionsForMetadata` flattens them for the `<meta>`
+ * description. One code path, so the two never disagree on a name.
  *
  * Lookups run concurrently through the same cached Nexus fetch as the other
  * metadata reads. A failed lookup degrades that one mention, not the preview:
  * the caller's fallback paths are reserved for the post / profile itself.
  */
-export async function resolveMentionsForMetadata(content: string): Promise<string> {
+export async function resolveMentionSegmentsForMetadata(content: string): Promise<MentionSegment[]> {
   const pubkys = extractMentionedPubkys(content).slice(0, MENTION_LOOKUP_LIMIT);
-  if (pubkys.length === 0) return content;
-
   const names = new Map<string, string>();
-  await Promise.all(
-    pubkys.map(async (pubky) => {
-      try {
-        const user = await fetchWithValidation<NexusUserDetails>(
-          userApi.details({ user_id: pubky }),
-          'fetchMentionedUserDetails',
-        );
-        if (user?.name) names.set(pubky, user.name);
-      } catch (error) {
-        Logger.warn('[postMetadata] Failed to resolve a mentioned user; showing the shortened key', { pubky, error });
-      }
-    }),
-  );
 
-  return replaceMentions(content, (pubky) => formatMentionLabel({ pubky, name: names.get(pubky) }));
+  if (pubkys.length > 0) {
+    await Promise.all(
+      pubkys.map(async (pubky) => {
+        try {
+          const user = await fetchWithValidation<NexusUserDetails>(
+            userApi.details({ user_id: pubky }),
+            'fetchMentionedUserDetails',
+          );
+          if (user?.name) names.set(pubky, user.name);
+        } catch (error) {
+          Logger.warn('[postMetadata] Failed to resolve a mentioned user; showing the shortened key', {
+            pubky,
+            error,
+          });
+        }
+      }),
+    );
+  }
+
+  return splitMentions(content, (pubky) => formatMentionLabel({ pubky, name: names.get(pubky) }));
+}
+
+/**
+ * `resolveMentionSegmentsForMetadata` flattened to a string, for the `<meta>`
+ * description, so a link shared elsewhere never shows a 52-character key.
+ */
+export async function resolveMentionsForMetadata(content: string): Promise<string> {
+  const segments = await resolveMentionSegmentsForMetadata(content);
+  return segments.map((segment) => segment.text).join('');
 }

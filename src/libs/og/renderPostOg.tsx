@@ -1,16 +1,16 @@
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { markdownToText } from '@/libs/post/markdownToText';
-import { fetchUserAndPostForMetadata, resolveMentionsForMetadata } from '@/libs/post/postMetadata';
+import { fetchUserAndPostForMetadata, resolveMentionSegmentsForMetadata } from '@/libs/post/postMetadata';
 import { deriveTextPreview } from '@/libs/post/postPreview';
-import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { FileVariant } from '@/services/nexus/file/file.types';
-import { OgFrame, OgHeader } from './OgComponents';
+import { OgFrame, OgHeader, OgText } from './OgComponents';
 import { OG_TOKENS, OG_TRUNCATE } from './ogConstants';
 import { buildAvatarUrl, fetchImageAsDataUri, resolvePostAttachmentUrl } from './ogData';
 import { NewspaperIcon } from './OgIcons';
 import { ogImageResponse } from './ogImageResponse';
+import { prepareOgText, prepareOgTextSegments } from './ogText';
 import { renderCollectionOg } from './renderCollectionOg';
 import { renderFallbackOg } from './renderFallbackOg';
 
@@ -33,7 +33,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     const { user, post } = result;
     if (post.kind === 'collection') return await renderCollectionOg({ userId, postId });
 
-    const name = resolveDisplayName(user);
+    const name = prepareOgText(resolveDisplayName(user));
     const isDeleted = isPostDeleted(post.content);
     const preview = deriveTextPreview({ content: post.content, kind: post.kind });
 
@@ -52,14 +52,15 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     const [avatarSrc, imageSrc, text] = await Promise.all([
       fetchImageAsDataUri(buildAvatarUrl(user)),
       fetchImageAsDataUri(imageUrl),
-      // The card's body copy with raw `pk:` / `pubky` mentions swapped for display
-      // names, as the app renders them (`PostMentions`). An article's title is
-      // shown verbatim (as in the app); only its body is resolved.
-      resolveMentionsForMetadata(article ? markdownToText(article.body) : preview),
+      // The card's body copy split into plain runs and mentions, each raw `pk:` /
+      // `pubky` mention resolved to a display name and drawn in the brand colour
+      // by `OgText`, as the app renders them (`PostMentions`). An article's title
+      // is shown verbatim (as in the app); only its body is resolved.
+      resolveMentionSegmentsForMetadata(article ? markdownToText(article.body) : preview),
     ]);
 
     if (article) {
-      const body = truncateByGraphemes(text, OG_TRUNCATE.articleBody);
+      const body = prepareOgTextSegments(text, OG_TRUNCATE.articleBody);
       return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
@@ -90,15 +91,13 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
                   textOverflow: 'ellipsis',
                 }}
               >
-                {article.title}
+                {prepareOgText(article.title)}
               </div>
             </div>
-            {body ? (
-              <div
+            {body.length > 0 ? (
+              <OgText
+                segments={body}
                 style={{
-                  display: '-webkit-box',
-                  WebkitBoxOrient: 'vertical',
-                  WebkitLineClamp: 2,
                   overflow: 'hidden',
                   // Hard cap at two 60px lines so an unclamped 3rd line can't
                   // bleed into the footer (satori's line-clamp is not reliable).
@@ -109,9 +108,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
                   lineHeight: '60px',
                   wordBreak: 'break-word',
                 }}
-              >
-                {body}
-              </div>
+              />
             ) : null}
           </div>
           {/* Brand URL anchored bottom-right per the Figma frames. */}
@@ -132,7 +129,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     }
 
     if (imageSrc) {
-      const imageText = truncateByGraphemes(text, OG_TRUNCATE.postImageText);
+      const imageText = prepareOgTextSegments(text, OG_TRUNCATE.postImageText);
       return await ogImageResponse(
         <OgFrame style={{ gap: 48 }}>
           <OgHeader avatarUrl={avatarSrc} name={name} />
@@ -147,9 +144,9 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
               width: '100%',
             }}
           >
-            <div
+            <OgText
+              segments={imageText}
               style={{
-                display: 'flex',
                 fontSize: 48,
                 fontWeight: 500,
                 color: OG_TOKENS.secondaryForeground,
@@ -160,9 +157,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
                 maxHeight: 120,
                 overflow: 'hidden',
               }}
-            >
-              {imageText}
-            </div>
+            />
             <div style={{ display: 'flex', flex: 1, width: '100%', borderRadius: 24, overflow: 'hidden' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imageSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -172,7 +167,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
       );
     }
 
-    const postText = truncateByGraphemes(text, OG_TRUNCATE.postText);
+    const postText = prepareOgTextSegments(text, OG_TRUNCATE.postText);
     return await ogImageResponse(
       <OgFrame style={{ gap: 48 }}>
         <OgHeader avatarUrl={avatarSrc} name={name} />
@@ -187,9 +182,9 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
             overflow: 'hidden',
           }}
         >
-          <div
+          <OgText
+            segments={postText}
             style={{
-              display: 'flex',
               fontSize: 60,
               fontWeight: 500,
               color: OG_TOKENS.secondaryForeground,
@@ -201,9 +196,7 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
               maxHeight: 216,
               overflow: 'hidden',
             }}
-          >
-            {postText}
-          </div>
+          />
         </div>
         {/* Brand URL anchored bottom-right per the Figma frames. */}
         <div

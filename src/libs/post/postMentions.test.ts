@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { extractMentionedPubkys, formatMentionLabel, replaceMentions } from './postMentions';
+import { extractMentionedPubkys, formatMentionLabel, replaceMentions, splitMentions } from './postMentions';
 
 // Valid 52-char lowercase alphanumeric keys for testing
 const PUBKY_A = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
@@ -48,6 +48,30 @@ describe('formatMentionLabel', () => {
     expect(shortened).toBe('abcd...mnop');
     expect(formatMentionLabel({ pubky: PUBKY_A, name: null })).toBe(shortened);
     expect(formatMentionLabel({ pubky: PUBKY_A })).toBe(shortened);
+  });
+});
+
+describe('splitMentions', () => {
+  const labelFor = (pubky: string) => (pubky === PUBKY_A ? '@Alice' : '@Bob');
+
+  it('returns a single plain run (or nothing for empty text) when there are no mentions', () => {
+    expect(splitMentions('Hello world', labelFor)).toEqual([{ text: 'Hello world', isMention: false }]);
+    expect(splitMentions('', labelFor)).toEqual([]);
+  });
+
+  it('splits into plain runs and labelled mention runs, keeping the leading boundary in the plain run', () => {
+    expect(splitMentions(`pk:${PUBKY_A} met\npubky${PUBKY_B} and pk:${PUBKY_A}`, labelFor)).toEqual([
+      { text: '@Alice', isMention: true },
+      { text: ' met\n', isMention: false },
+      { text: '@Bob', isMention: true },
+      { text: ' and ', isMention: false },
+      { text: '@Alice', isMention: true },
+    ]);
+  });
+
+  it('keeps keys embedded in other text as plain runs', () => {
+    const text = `see https://x.test/pk:${PUBKY_A} now`;
+    expect(splitMentions(text, labelFor)).toEqual([{ text, isMention: false }]);
   });
 });
 

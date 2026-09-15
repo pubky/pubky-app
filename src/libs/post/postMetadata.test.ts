@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
-import { fetchWithValidation, resolveMentionsForMetadata } from './postMetadata';
+import { fetchWithValidation, resolveMentionSegmentsForMetadata, resolveMentionsForMetadata } from './postMetadata';
 
 describe('fetchWithValidation', () => {
   afterEach(() => {
@@ -103,6 +103,27 @@ describe('resolveMentionsForMetadata', () => {
 
     expect(text).toBe(`${SHORT_A} and @Bob`);
     expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes the same resolution as runs flagged for styling', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ id: PUBKY_A, name: 'Alice' }))
+      .mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
+
+    expect(await resolveMentionSegmentsForMetadata(`hi pk:${PUBKY_A} and pk:${PUBKY_B}!`)).toEqual([
+      { text: 'hi ', isMention: false },
+      { text: '@Alice', isMention: true },
+      { text: ' and ', isMention: false },
+      { text: 'zyxw...nmlk', isMention: true },
+      { text: '!', isMention: false },
+    ]);
+  });
+
+  it('returns a single plain run without any Nexus request when there are no mentions', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    expect(await resolveMentionSegmentsForMetadata('hello world')).toEqual([{ text: 'hello world', isMention: false }]);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('bounds the Nexus fan-out: mentions past the lookup limit render as shortened keys', async () => {

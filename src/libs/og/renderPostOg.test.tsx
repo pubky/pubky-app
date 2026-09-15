@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { OG_TOKENS } from './ogConstants';
 import { renderPostOg } from './renderPostOg';
 
 // The real `ImageResponse` needs satori's wasm binaries, which do not load
@@ -36,6 +37,7 @@ const jsonResponse = (body: unknown) =>
 const author = { id: AUTHOR, name: 'Alice', bio: '', image: null, indexed_at: 1, links: null, status: null };
 
 const renderedMarkup = () => renderToStaticMarkup(captured.element as ReactElement);
+const brandSpan = (text: string) => `<span style="white-space:pre-wrap;color:${OG_TOKENS.brand}">${text}</span>`;
 
 describe('renderPostOg', () => {
   afterEach(() => {
@@ -54,7 +56,9 @@ describe('renderPostOg', () => {
 
     expect(res.headers.get('content-type')).toBe('image/png');
     const html = renderedMarkup();
-    expect(html).toContain('gm @Bob, welcome aboard');
+    // The mention is its own run in the brand colour, like the app's mention links.
+    expect(html).toContain(brandSpan('@Bob'));
+    expect(html).toContain('welcome ');
     expect(html).not.toContain(MENTIONED);
     expect(fetchSpy.mock.calls.at(-1)?.[0]).toBe(MENTIONED_DETAILS_URL);
   });
@@ -71,7 +75,8 @@ describe('renderPostOg', () => {
 
     const html = renderedMarkup();
     expect(html).toContain('Release notes');
-    expect(html).toContain('Thanks @Bob for the review.');
+    expect(html).toContain(brandSpan('@Bob '));
+    expect(html).toContain('review.');
     expect(html).not.toContain(MENTIONED);
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
@@ -85,8 +90,25 @@ describe('renderPostOg', () => {
     await renderPostOg({ userId: AUTHOR, postId: 'post-1' });
 
     const html = renderedMarkup();
-    expect(html).toContain('cc abcd...mnop');
+    expect(html).toContain(brandSpan('abcd...mnop'));
     expect(html).not.toContain(MENTIONED);
+  });
+
+  it('draws an invalid emoji ZWJ sequence as its component emoji, in the header and the mention', async () => {
+    // MAGE + ZWJ + TROLL is not an RGI sequence: the emoji provider has no joined glyph.
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ ...author, name: 'Miguel 🧙‍🧌' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: `hi pk:${MENTIONED} 👨‍👩‍👧` }))
+      .mockResolvedValueOnce(jsonResponse({ id: MENTIONED, name: 'Bob 🧙‍🧌' }));
+
+    await renderPostOg({ userId: AUTHOR, postId: 'post-1' });
+
+    const html = renderedMarkup();
+    expect(html).toContain('Miguel 🧙🧌');
+    expect(html).toContain(brandSpan('@Bob '));
+    expect(html).toContain(brandSpan('🧙🧌 '));
+    expect(html).toContain('👨‍👩‍👧');
+    expect(html).not.toContain('🧙‍🧌');
   });
 
   it('makes no mention lookups for a post without mentions', async () => {
@@ -97,7 +119,8 @@ describe('renderPostOg', () => {
 
     await renderPostOg({ userId: AUTHOR, postId: 'post-1' });
 
-    expect(renderedMarkup()).toContain('hello world');
+    expect(renderedMarkup()).toContain('hello </span>');
+    expect(renderedMarkup()).toContain('world</span>');
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

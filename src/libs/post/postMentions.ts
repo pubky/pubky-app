@@ -30,14 +30,37 @@ export function formatMentionLabel({ pubky, name }: { pubky: string; name?: stri
   return name ? `@${name}` : formatPublicKey({ key: pubky });
 }
 
+/** A run of text: plain copy, or a mention already resolved to its label. */
+export type MentionSegment = { text: string; isMention: boolean };
+
 /**
- * Replaces every standalone mention in `content` with `labelFor(pubky)`,
- * keeping the captured leading boundary (start of text or whitespace) intact.
- * Pure — callers decide how a key maps to a label.
+ * Splits `content` into plain runs and mentions, each standalone mention
+ * replaced by `labelFor(pubky)` and flagged so renderers can style it (the OG
+ * image draws mentions in the brand colour, as the app does). The captured
+ * leading boundary (start of text or whitespace) stays in the plain run before
+ * the mention. Pure — callers decide how a key maps to a label.
  */
+export function splitMentions(content: string, labelFor: (pubky: string) => string): MentionSegment[] {
+  const segments: MentionSegment[] = [];
+  let lastIndex = 0;
+
+  for (const match of content.matchAll(MENTION_IN_TEXT_REGEX)) {
+    const [, leading, mention] = match;
+    const mentionStart = (match.index ?? 0) + leading.length;
+    const before = content.slice(lastIndex, mentionStart);
+    if (before) segments.push({ text: before, isMention: false });
+    segments.push({ text: labelFor(stripPubkyPrefix(mention)), isMention: true });
+    lastIndex = mentionStart + mention.length;
+  }
+
+  const rest = content.slice(lastIndex);
+  if (rest) segments.push({ text: rest, isMention: false });
+  return segments;
+}
+
+/** `splitMentions` flattened back to a string, for plain-text surfaces (`<meta>` descriptions). */
 export function replaceMentions(content: string, labelFor: (pubky: string) => string): string {
-  return content.replace(
-    MENTION_IN_TEXT_REGEX,
-    (_match, leading: string, mention: string) => leading + labelFor(stripPubkyPrefix(mention)),
-  );
+  return splitMentions(content, labelFor)
+    .map((segment) => segment.text)
+    .join('');
 }

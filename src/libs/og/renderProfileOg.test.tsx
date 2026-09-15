@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { OG_TOKENS } from './ogConstants';
 import { renderProfileOg } from './renderProfileOg';
 
 // See renderPostOg.test.tsx: satori cannot run under vitest, so the element
@@ -51,7 +52,8 @@ describe('renderProfileOg', () => {
 
     expect(res.headers.get('content-type')).toBe('image/png');
     const html = renderedMarkup();
-    expect(html).toContain('Building with @Bob');
+    expect(html).toContain(`<span style="white-space:pre-wrap;color:${OG_TOKENS.brand}">@Bob</span>`);
+    expect(html).toContain('Building ');
     expect(html).not.toContain(MENTIONED);
     expect(fetchSpy.mock.calls.at(-1)?.[0]).toBe(`https://nexus.staging.pubky.app/v0/user/${MENTIONED}/details`);
   });
@@ -64,7 +66,8 @@ describe('renderProfileOg', () => {
 
     await renderProfileOg({ pubky: PUBKY });
 
-    expect(renderedMarkup()).toContain('hello world');
+    expect(renderedMarkup()).toContain('hello </span>');
+    expect(renderedMarkup()).toContain('world</span>');
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });
