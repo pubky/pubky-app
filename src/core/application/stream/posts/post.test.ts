@@ -207,6 +207,9 @@ describe('PostStreamApplication', () => {
     persistPosts: vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined),
     persistFiles: vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined),
     getUserDetails: vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder'),
+    getUserRelationships: vi
+      .spyOn(UserRelationshipsModel, 'findByIds')
+      .mockImplementation(async (ids) => ids.map((id) => ({ id, following: false, followed_by: false }))),
   });
 
   const mockAllUsersCached = (count = 1, author = DEFAULT_AUTHOR) => {
@@ -1648,7 +1651,7 @@ describe('PostStreamApplication', () => {
       });
       expect(persistUsersSpy).toHaveBeenCalledWith(
         mockNexusUsers,
-        expect.objectContaining({ revisions: expect.any(Map) }),
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
       );
     });
 
@@ -1667,7 +1670,10 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(persistUsersSpy).toHaveBeenCalledWith(undefined, expect.objectContaining({ revisions: expect.any(Map) }));
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        undefined,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
     });
 
     it('should not fetch users when all users are already cached', async () => {
@@ -1739,7 +1745,10 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(persistUsersSpy).toHaveBeenCalledWith([], expect.objectContaining({ revisions: expect.any(Map) }));
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
     });
 
     it('should handle error gracefully when NexusPostStreamService.fetchByIds fails', async () => {
@@ -1901,7 +1910,7 @@ describe('PostStreamApplication', () => {
       expect(fetchUsersByIdsSpy).toHaveBeenCalled();
       expect(persistUsersSpy).toHaveBeenCalledWith(
         mockNexusUsers,
-        expect.objectContaining({ revisions: expect.any(Map) }),
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
       );
     });
 
@@ -1931,7 +1940,7 @@ describe('PostStreamApplication', () => {
       });
       expect(persistUsersSpy).toHaveBeenCalledWith(
         mockNexusUsers,
-        expect.objectContaining({ revisions: expect.any(Map) }),
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
       );
     });
 
