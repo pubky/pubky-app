@@ -1,6 +1,7 @@
 ---
 name: pubky-staging-invite
 description: Mints a single-use signup token for the Pubky staging homeserver. Use when the user explicitly asks for a new staging invite code or signup token; do not mint a token for informational questions about signup.
+disable-model-invocation: true
 compatibility: Requires Bash, curl, and outbound HTTPS access to admin.homeserver.staging.pubky.app. Credential caching supports macOS Keychain and Linux Secret Service; the permission-restricted XDG file fallback on Linux also requires Git for its worktree safety check.
 ---
 

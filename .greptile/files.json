@@ -1,34 +1,61 @@
 {
   "files": [
     {
+      "path": "AGENTS.md",
+      "description": "Agent entry point: commands, hard constraints, non-negotiables, doc index, definition of done",
+      "scope": ["**"]
+    },
+    {
+      "path": "docs/development-workflow.md",
+      "description": "How to approach a change, patterns to reuse, verification ladder, code-quality rules, failure modes",
+      "scope": ["**"]
+    },
+    {
       "path": "docs/architecture.md",
-      "description": "Layered architecture rules, dependency constraints, import path conventions, and anti-patterns for src/core/",
-      "scope": ["src/core/**"]
+      "description": "Layered architecture rules, dependency constraints, ADR-0009 allow-list, high-risk areas, import conventions",
+      "scope": ["src/core/**", "src/libs/env/**", "src/libs/runtime-config/**", "src/libs/network/**"]
     },
     {
       "path": "docs/local-first.md",
-      "description": "Local-first write patterns and controller naming conventions",
-      "scope": ["src/core/**"]
+      "description": "Local-first writes, controller naming, useLocalFirstQuery reads and their pitfalls, deferred stream invalidation",
+      "scope": ["src/core/**", "src/hooks/**"]
     },
     {
       "path": "docs/data-patterns.md",
-      "description": "Composite IDs, streams, TTL policies, and pipe normalization rules",
-      "scope": ["src/core/**"]
+      "description": "Composite IDs, streams, TTL policies, pipe normalization, Dexie tables and schema changes",
+      "scope": ["src/core/**", "src/hooks/**", "src/config/database.ts"]
     },
     {
       "path": "docs/error-handling.md",
       "description": "Error handling conventions using Err.* factories across all layers",
-      "scope": ["src/core/**"]
+      "scope": ["src/core/**", "src/hooks/**", "src/libs/**"]
+    },
+    {
+      "path": "docs/sentry.md",
+      "description": "What Sentry captures, the capture rule, drop rules, privacy scrubbing, source maps",
+      "scope": [
+        "src/libs/observability/**",
+        "src/libs/error/**",
+        "src/instrumentation*.ts",
+        "src/sentry.*.config.ts",
+        "src/app/error.tsx",
+        "src/app/global-error.tsx"
+      ]
     },
     {
       "path": "docs/components.md",
-      "description": "Component development patterns — Shadcn first, atomic design, Figma parity",
-      "scope": ["src/components/**"]
+      "description": "Component development patterns: Shadcn first, atomic design, Figma parity, icons, toasts, forms",
+      "scope": ["src/components/**", "src/app/**", "src/hooks/**"]
     },
     {
       "path": "docs/component-testing.md",
       "description": "Unit test and snapshot test rules for UI components",
       "scope": ["src/components/**", "**/*.test.*"]
+    },
+    {
+      "path": "docs/visual-regression-testing.md",
+      "description": "VRT tests, determinism rules, CI-owned baselines",
+      "scope": ["src/test/vrt/**", "src/test-utils/vrt*", ".github/workflows/vrt*.yml"]
     },
     {
       "path": "docs/skeleton-architecture.md",
@@ -42,8 +69,8 @@
     },
     {
       "path": "docs/environment.md",
-      "description": "Environment variable configuration and Zod validation rules",
-      "scope": ["src/libs/env/**"]
+      "description": "Build-time Env and runtime PUBKY_RUNTIME_* configuration, Zod validation, docker run recipe",
+      "scope": ["src/libs/env/**", "src/libs/runtime-config/**", "src/config/**", ".env.example", "Dockerfile"]
     },
     {
       "path": "docs/adr-guidelines.md",
@@ -52,8 +79,18 @@
     },
     {
       "path": "docs/commit-message.md",
-      "description": "Conventional commit message format and examples",
+      "description": "Conventional commit format, branch naming, pull request conventions",
       "scope": ["**"]
+    },
+    {
+      "path": "docs/release.md",
+      "description": "Cutting a production release from dev onto master",
+      "scope": ["package.json", ".github/workflows/**"]
+    },
+    {
+      "path": "docs/hotfix.md",
+      "description": "Cutting a production patch without taking dev HEAD",
+      "scope": ["package.json", ".github/workflows/**"]
     }
   ]
 }

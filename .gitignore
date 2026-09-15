@@ -58,28 +58,15 @@ cypress/cypress.log
 public/sw.js
 public/sw.js.map
 
-# Cursor
+# Claude Code: team config is committed, local state is not
+.claude/*
+!.claude/settings.json
+!.claude/rules/
+!.claude/skills/
+.claude/settings.local.json
+
+# Cursor: plans saved to the workspace are personal
 /.cursor/plans
-/.cursor/commands
-/.cursor/hooks
-
-# Claude
-.claude
-
-# AI generated reviews
-.ai-reviews/
 
 # Development Containers
 .devcontainer
-
-# AI Context Plans
-.plans
-
-# Screenshots
-.screenshots
-
-# Serena
-.serena
-
-# AI PR Descriptions
-.prs
