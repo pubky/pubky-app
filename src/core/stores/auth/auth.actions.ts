@@ -1,4 +1,5 @@
 import { Session } from '@synonymdev/pubky';
+import { clearVibeSessionAutoRestoreSuppressed } from '@/libs/vibe-session/auto-restore';
 import type { Pubky } from '@/models/models.types';
 import { ZustandSet } from '../stores.types';
 import { AuthActions, AuthActionTypes, authInitialState, AuthInitParams, AuthStore } from './auth.types';
@@ -18,6 +19,7 @@ const safeSessionExport = (session: Session | null): string | null => {
 // Actions/Mutators - State modification functions
 export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
   init: ({ session, currentUserPubky, hasProfile }: AuthInitParams) => {
+    clearVibeSessionAutoRestoreSuppressed();
     set(
       (state) => ({
         ...state,
@@ -25,6 +27,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
         sessionExport: safeSessionExport(session),
         currentUserPubky,
         hasProfile,
+        sessionRestoreDeferred: false,
       }),
       false,
       AuthActionTypes.INIT,
@@ -37,6 +40,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
         ...authInitialState,
         hasHydrated: state.hasHydrated, // Preserve hydration state
         isLoggingOut: state.isLoggingOut, // Preserve logout state to prevent UI flash
+        isRestoringSession: state.isRestoringSession, // Hold restore loading through account cleanup
       }),
       false,
       AuthActionTypes.RESET,
@@ -69,5 +73,9 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
 
   setIsLoggingOut: (isLoggingOut: boolean) => {
     set({ isLoggingOut }, false, AuthActionTypes.SET_IS_LOGGING_OUT);
+  },
+
+  setSessionRestoreDeferred: (sessionRestoreDeferred: boolean) => {
+    set({ sessionRestoreDeferred }, false, AuthActionTypes.SET_SESSION_RESTORE_DEFERRED);
   },
 });

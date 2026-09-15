@@ -1,5 +1,4 @@
-import { Keypair } from '@synonymdev/pubky';
-import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
+import { Keypair, type Session } from '@synonymdev/pubky';
 import type { AuthStore } from '@/stores/auth/auth.types';
 
 export type TKeypairParams = {
@@ -16,4 +15,11 @@ export interface TRestoreSessionParams {
   authStore: AuthStore;
 }
 
-export type TRestoreSessionResult = Promise<THomeserverSessionResult | null>;
+export type TRestoreSessionOutcome =
+  | { status: 'restored'; session: Session }
+  | { status: 'signed-out' }
+  | { status: 'deferred' };
+
+export type TRestoreSessionResult = Promise<TRestoreSessionOutcome>;
+
+export type TRestorePersistedSessionResult = { status: TRestoreSessionOutcome['status'] };

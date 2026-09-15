@@ -19,6 +19,7 @@ const mockAuthStore = {
   session: null as Session | null,
   sessionExport: null as string | null,
   isRestoringSession: false,
+  sessionRestoreDeferred: false,
   hasProfile: null as boolean | null,
   hasHydrated: true,
   selectIsAuthenticated: vi.fn(() => false),
@@ -45,6 +46,7 @@ describe('useAuthStatus', () => {
     mockAuthStore.session = null;
     mockAuthStore.sessionExport = null;
     mockAuthStore.isRestoringSession = false;
+    mockAuthStore.sessionRestoreDeferred = false;
     mockAuthStore.hasProfile = null;
     mockAuthStore.hasHydrated = true;
     mockAuthStore.selectIsAuthenticated = vi.fn(() => false);
@@ -99,6 +101,35 @@ describe('useAuthStatus', () => {
 
     // Should be loading because we have credentials to restore
     expect(result.current.isLoading).toBe(true);
+  });
+
+  it('is not loading after a suppressed consumer rehydrate with no sessionExport', () => {
+    mockOnboardingStore.hasHydrated = true;
+    mockAuthStore.hasHydrated = true;
+    mockAuthStore.sessionExport = null;
+    mockAuthStore.session = null;
+    mockAuthStore.isRestoringSession = false;
+    mockAuthStore.hasProfile = null;
+
+    const { result } = renderHook(() => useAuthStatus());
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.status).toBe('UNAUTHENTICATED');
+  });
+
+  it('is not loading and is unauthenticated when persist restore is deferred', () => {
+    mockOnboardingStore.hasHydrated = true;
+    mockAuthStore.hasHydrated = true;
+    mockAuthStore.sessionExport = 'some-exported-session';
+    mockAuthStore.session = null;
+    mockAuthStore.sessionRestoreDeferred = true;
+
+    const { result } = renderHook(() => useAuthStatus());
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.status).toBe('UNAUTHENTICATED');
+    expect(result.current.isFullyAuthenticated).toBe(false);
+    expect(result.current.hasKeypair).toBe(false);
   });
 
   it('should return UNAUTHENTICATED status when no session and hasProfile is null', () => {

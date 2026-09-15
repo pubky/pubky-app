@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as vibeSessionAutoRestore from '@/libs/vibe-session/auto-restore';
+import * as vibeSessionConfig from '@/libs/vibe-session/config';
 import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from './auth.store';
 
@@ -16,6 +18,7 @@ describe('AuthStore', () => {
   beforeEach(() => {
     // Reset the real store to initial state before each test
     useAuthStore.getState().reset();
+    vibeSessionAutoRestore.clearVibeSessionAutoRestoreSuppressed();
     vi.clearAllMocks();
   });
 
@@ -39,6 +42,37 @@ describe('AuthStore', () => {
         expect(useAuthStore.getState().isRestoringSession).toBe(false);
       } finally {
         useAuthStore.persist.setOptions({ storage: originalStorage });
+      }
+    });
+
+    it('sets isRestoringSession on rehydrate when consumer mode is on and no sessionExport', async () => {
+      const consumerSpy = vi.spyOn(vibeSessionConfig, 'isVibeSessionConsumerEnabled').mockReturnValue(true);
+      useAuthStore.getState().setHasHydrated(false);
+      useAuthStore.getState().setIsRestoringSession(false);
+
+      try {
+        await useAuthStore.persist.rehydrate();
+        expect(useAuthStore.getState().hasHydrated).toBe(true);
+        expect(useAuthStore.getState().isRestoringSession).toBe(true);
+        expect(useAuthStore.getState().sessionExport).toBeNull();
+      } finally {
+        consumerSpy.mockRestore();
+      }
+    });
+
+    it('does not set isRestoringSession on rehydrate when logout suppression is set and nothing is persisted', async () => {
+      const consumerSpy = vi.spyOn(vibeSessionConfig, 'isVibeSessionConsumerEnabled').mockReturnValue(true);
+      vibeSessionAutoRestore.suppressVibeSessionAutoRestore();
+      useAuthStore.getState().setHasHydrated(false);
+      useAuthStore.getState().setIsRestoringSession(false);
+
+      try {
+        await useAuthStore.persist.rehydrate();
+        expect(useAuthStore.getState().hasHydrated).toBe(true);
+        expect(useAuthStore.getState().isRestoringSession).toBe(false);
+        expect(useAuthStore.getState().sessionExport).toBeNull();
+      } finally {
+        consumerSpy.mockRestore();
       }
     });
   });
@@ -109,6 +143,32 @@ describe('AuthStore', () => {
     });
   });
 
+  describe('Init and deferred restore', () => {
+    it('clears vibe auto-restore suppression and sessionRestoreDeferred on init', () => {
+      vibeSessionAutoRestore.suppressVibeSessionAutoRestore();
+      useAuthStore.getState().setSessionRestoreDeferred(true);
+      const mockSession = {} as THomeserverSessionResult['session'];
+
+      useAuthStore.getState().init({
+        session: mockSession,
+        currentUserPubky: 'test-pubky',
+        hasProfile: true,
+      });
+
+      expect(vibeSessionAutoRestore.isVibeSessionAutoRestoreSuppressed()).toBe(false);
+      expect(useAuthStore.getState().sessionRestoreDeferred).toBe(false);
+      expect(useAuthStore.getState().session).toBe(mockSession);
+    });
+
+    it('does not persist sessionRestoreDeferred', () => {
+      expect(useAuthStore.getState().sessionRestoreDeferred).toBe(false);
+      useAuthStore.getState().setSessionRestoreDeferred(true);
+      expect(useAuthStore.getState().sessionRestoreDeferred).toBe(true);
+      const persisted = useAuthStore.persist.getOptions().partialize?.(useAuthStore.getState());
+      expect(persisted).not.toHaveProperty('sessionRestoreDeferred');
+    });
+  });
+
   describe('Store Reset', () => {
     it('should reset store to default state', () => {
       const store = useAuthStore.getState();
@@ -122,6 +182,7 @@ describe('AuthStore', () => {
       expect(useAuthStore.getState().currentUserPubky).toBe('test-pubky');
       expect(useAuthStore.getState().session).toBe(mockSession);
       expect(store.selectIsAuthenticated()).toBe(true);
+      useAuthStore.getState().setSessionRestoreDeferred(true);
 
       // Reset store
       store.reset();
@@ -129,7 +190,18 @@ describe('AuthStore', () => {
       // Verify state is reset
       expect(useAuthStore.getState().currentUserPubky).toBeNull();
       expect(useAuthStore.getState().session).toBeNull();
+      expect(useAuthStore.getState().sessionRestoreDeferred).toBe(false);
       expect(store.selectIsAuthenticated()).toBe(false);
+    });
+
+    it('preserves isRestoringSession across reset so restore cleanup cannot drop the loading flag', () => {
+      const store = useAuthStore.getState();
+      store.setIsRestoringSession(true);
+      store.reset();
+      expect(useAuthStore.getState().isRestoringSession).toBe(true);
+      store.setIsRestoringSession(false);
+      store.reset();
+      expect(useAuthStore.getState().isRestoringSession).toBe(false);
     });
   });
 

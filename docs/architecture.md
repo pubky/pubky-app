@@ -291,24 +291,27 @@ src/core/
 
 ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`.
 
-| ADR  | Title                                  |
-| ---- | -------------------------------------- |
-| 0001 | Local-first writes                     |
-| 0002 | Composite post IDs                     |
-| 0003 | Streams as caches                      |
-| 0004 | Layering and dependency rules          |
-| 0005 | TTL refresh policy                     |
-| 0006 | Pipes normalization                    |
-| 0007 | Dexie version normalization            |
-| 0008 | Coordinators layer                     |
-| 0009 | Application cross-domain orchestration |
-| 0010 | Notification application orchestration |
-| 0011 | Dexie PSD and TanStack Query           |
-| 0012 | TTL coordinator                        |
-| 0013 | Post stream queue                      |
-| 0014 | Muting system                          |
-| 0015 | Error handling                         |
-| 0016 | Service worker local file cache        |
+| ADR  | Title                                    |
+| ---- | ---------------------------------------- |
+| 0001 | Local-first writes                       |
+| 0002 | Composite post IDs                       |
+| 0003 | Streams as caches                        |
+| 0004 | Layering and dependency rules            |
+| 0005 | TTL refresh policy                       |
+| 0006 | Pipes normalization                      |
+| 0007 | Dexie version normalization              |
+| 0008 | Coordinators layer                       |
+| 0009 | Application cross-domain orchestration   |
+| 0010 | Notification application orchestration   |
+| 0011 | Dexie PSD and TanStack Query             |
+| 0012 | TTL coordinator                          |
+| 0013 | Post stream queue                        |
+| 0014 | Muting system                            |
+| 0015 | Error handling                           |
+| 0016 | Service worker local file cache          |
+| 0017 | Runtime config injection                 |
+| 0018 | Runtime Sentry and decoupled source maps |
+| 0019 | Vibe session consumer                    |
 
 ## Quick Checklist
 

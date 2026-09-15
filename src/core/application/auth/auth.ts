@@ -1,11 +1,17 @@
 import type { Session } from '@synonymdev/pubky';
 import { userUriBuilder } from 'pubky-app-specs';
-import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
+import type {
+  TKeypairParams,
+  TRestoreSessionOutcome,
+  TRestoreSessionParams,
+  TRestoreSessionResult,
+} from '@/application/auth/auth.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import {
   isAppError,
+  isAuthError,
   isNotFound,
   isRetryable,
   isWrongEnvironmentHomeserverError,
@@ -14,6 +20,12 @@ import {
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { sleep } from '@/libs/utils/utils';
+import { isVibeSessionAutoRestoreSuppressed } from '@/libs/vibe-session/auto-restore';
+import { requestFromBridge } from '@/libs/vibe-session/bridge';
+import { getVibeId, getVibeSessionBridgeOrigin } from '@/libs/vibe-session/config';
+import { isPubkyExpiredError } from '@/libs/vibe-session/expired';
+import { takeFragmentSessionExport } from '@/libs/vibe-session/fragment';
+import { VIBE_SESSION_LOAD_TIMEOUT_MS, VIBE_SESSION_REPLY_TIMEOUT_MS } from '@/libs/vibe-session/types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type {
@@ -23,10 +35,26 @@ import type {
   THomeserverSignUpParams,
 } from '@/services/homeserver/homeserver.types';
 
+export function isDefinitiveSessionAuthFailure(error: unknown): boolean {
+  if (isWrongEnvironmentHomeserverError(error)) {
+    return false;
+  }
+  if (isAppError(error) && isAuthError(error)) {
+    return true;
+  }
+  return isPubkyExpiredError(error);
+}
+
 export class AuthApplication {
   private constructor() {} // Prevent instantiation
 
   private static restoreSessionPromise: TRestoreSessionResult | null = null;
+  private static bridgeAbortController: AbortController | null = null;
+
+  static abortInFlightBridgeRequest(): void {
+    this.bridgeAbortController?.abort();
+    this.bridgeAbortController = null;
+  }
 
   /** Max attempts before falling back to sign-out (~30 s with a 3 s delay between each) */
   private static readonly RESTORE_MAX_ATTEMPTS = 10;
@@ -52,10 +80,13 @@ export class AuthApplication {
       return await this.restoreSessionPromise;
     }
 
-    // Safety check: if sessionExport is missing, return null
-    if (!authStore.sessionExport) {
+    const consumerOrigin = getVibeSessionBridgeOrigin();
+    const persistedExport = authStore.sessionExport;
+
+    // Safety check: if sessionExport is missing and consumer mode is off, return null
+    if (!persistedExport && !consumerOrigin) {
       if (authStore.isRestoringSession) authStore.setIsRestoringSession(false);
-      return null;
+      return { status: 'signed-out' };
     }
 
     // Start restoration and store the promise so concurrent calls can await the same one
@@ -63,48 +94,7 @@ export class AuthApplication {
       authStore.setIsRestoringSession(true);
 
       try {
-        // The restored session is kept across attempts so a transient
-        // environment-check failure retries only the PKARR lookup instead of
-        // re-running the whole restore round-trip.
-        let session: Session | null = null;
-        for (let attempt = 1; attempt <= this.RESTORE_MAX_ATTEMPTS; attempt++) {
-          try {
-            session ??= await HomeserverService.restoreSession({
-              sessionExport: authStore.sessionExport!,
-            });
-            // Transient lookup failures fall through to the shared retry-or-cleanup
-            // policy below — keeping the store in a half-restored state would
-            // strand useAuthStatus in its loading branch with no retry trigger.
-            await HomeserverService.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
-            Logger.info('Session restored successfully');
-            return { session };
-          } catch (error) {
-            if (isWrongEnvironmentHomeserverError(error)) {
-              // The session is about to be discarded and its persisted export
-              // erased — sign it out on its own homeserver so it is not left
-              // dangling there. Best-effort: the rejection surfaces anyway.
-              if (session) {
-                await HomeserverService.logout({ session }).catch((logoutError) => {
-                  Logger.warn('Failed to sign out wrong-environment session', { logoutError });
-                });
-              }
-              throw error;
-            }
-
-            const canRetry = isAppError(error) && isRetryable(error) && attempt < this.RESTORE_MAX_ATTEMPTS;
-            if (!canRetry) {
-              Logger.error('Failed to restore session from persisted export', error);
-              break;
-            }
-
-            Logger.warn(
-              `Session restore attempt ${attempt}/${this.RESTORE_MAX_ATTEMPTS} failed with transient error, retrying in ${this.RESTORE_RETRY_DELAY_MS}ms`,
-              { error },
-            );
-            await sleep(this.RESTORE_RETRY_DELAY_MS);
-          }
-        }
-        return null;
+        return await this.runSessionRestore({ persistedExport, consumerOrigin });
       } finally {
         authStore.setIsRestoringSession(false);
         this.restoreSessionPromise = null;
@@ -112,6 +102,141 @@ export class AuthApplication {
     })();
 
     return await this.restoreSessionPromise;
+  }
+
+  private static async runSessionRestore({
+    persistedExport,
+    consumerOrigin,
+  }: {
+    persistedExport: string | null;
+    consumerOrigin: string | undefined;
+  }): TRestoreSessionResult {
+    let keepPersistedExport = false;
+
+    if (persistedExport) {
+      const persisted = await this.restoreSessionFromExport(persistedExport);
+      if (persisted.session) {
+        return { status: 'restored', session: persisted.session };
+      }
+      if (isDefinitiveSessionAuthFailure(persisted.lastError)) {
+        keepPersistedExport = false;
+      } else if (consumerOrigin) {
+        // Transient / unknown persist failure: try fragment → bridge, but never erase the export.
+        keepPersistedExport = true;
+      } else {
+        return { status: 'signed-out' };
+      }
+    }
+
+    if (!consumerOrigin) {
+      return { status: 'signed-out' };
+    }
+
+    const fragmentExport = takeFragmentSessionExport();
+    if (fragmentExport) {
+      const fromFragment = await this.restoreSessionFromExport(fragmentExport);
+      if (fromFragment.session) {
+        return { status: 'restored', session: fromFragment.session };
+      }
+    }
+
+    if (isVibeSessionAutoRestoreSuppressed()) {
+      return this.unresolvedConsumerRestore(keepPersistedExport);
+    }
+
+    const bridgeExport = await this.obtainBridgeSessionExport(consumerOrigin);
+    if (!bridgeExport) {
+      return this.unresolvedConsumerRestore(keepPersistedExport);
+    }
+
+    const fromBridge = await this.restoreSessionFromExport(bridgeExport);
+    if (fromBridge.session) {
+      return { status: 'restored', session: fromBridge.session };
+    }
+    return this.unresolvedConsumerRestore(keepPersistedExport);
+  }
+
+  private static unresolvedConsumerRestore(keepPersistedExport: boolean): TRestoreSessionOutcome {
+    return keepPersistedExport ? { status: 'deferred' } : { status: 'signed-out' };
+  }
+
+  private static async restoreSessionFromExport(
+    sessionExport: string,
+  ): Promise<{ session: Session; lastError?: undefined } | { session: null; lastError: unknown }> {
+    // The restored session is kept across attempts so a transient
+    // environment-check failure retries only the PKARR lookup instead of
+    // re-running the whole restore round-trip.
+    let session: Session | null = null;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= this.RESTORE_MAX_ATTEMPTS; attempt++) {
+      try {
+        session ??= await HomeserverService.restoreSession({ sessionExport });
+        // Transient lookup failures fall through to the shared retry-or-cleanup
+        // policy below — keeping the store in a half-restored state would
+        // strand useAuthStatus in its loading branch with no retry trigger.
+        await HomeserverService.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
+        Logger.info('Session restored successfully');
+        return { session };
+      } catch (error) {
+        if (isWrongEnvironmentHomeserverError(error)) {
+          // The session is about to be discarded and its persisted export
+          // erased — sign it out on its own homeserver so it is not left
+          // dangling there. Best-effort: the rejection surfaces anyway.
+          if (session) {
+            await HomeserverService.logout({ session }).catch((logoutError) => {
+              Logger.warn('Failed to sign out wrong-environment session', { logoutError });
+            });
+          }
+          throw error;
+        }
+
+        lastError = error;
+        const canRetry = isAppError(error) && isRetryable(error) && attempt < this.RESTORE_MAX_ATTEMPTS;
+        if (!canRetry) {
+          Logger.error('Failed to restore session from persisted export', error);
+          break;
+        }
+
+        Logger.warn(
+          `Session restore attempt ${attempt}/${this.RESTORE_MAX_ATTEMPTS} failed with transient error, retrying in ${this.RESTORE_RETRY_DELAY_MS}ms`,
+          { error },
+        );
+        await sleep(this.RESTORE_RETRY_DELAY_MS);
+      }
+    }
+    return { session: null, lastError };
+  }
+
+  private static async obtainBridgeSessionExport(bridgeOrigin: string): Promise<string | null> {
+    if (isVibeSessionAutoRestoreSuppressed()) {
+      return null;
+    }
+    const win = (globalThis as { window?: Window }).window;
+    if (!win) {
+      return null;
+    }
+    const vibeId = getVibeId();
+    Logger.info('Requesting vibe session from bridge', { vibeId });
+    this.abortInFlightBridgeRequest();
+    const controller = new AbortController();
+    this.bridgeAbortController = controller;
+    try {
+      const result = await requestFromBridge(
+        win,
+        bridgeOrigin,
+        VIBE_SESSION_LOAD_TIMEOUT_MS,
+        VIBE_SESSION_REPLY_TIMEOUT_MS,
+        controller.signal,
+      );
+      if (result.kind === 'export') {
+        return result.sessionExport;
+      }
+      return null;
+    } finally {
+      if (this.bridgeAbortController === controller) {
+        this.bridgeAbortController = null;
+      }
+    }
   }
 
   /**

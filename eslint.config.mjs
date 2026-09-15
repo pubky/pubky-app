@@ -12,6 +12,7 @@ const eslintConfig = [
   {
     ignores: [
       '**/node_modules/**',
+      '**/._*',
       // Local tooling worktrees checked out under .claude/ are not part of the app
       '**/.claude/**',
       '**/.next/**',
@@ -83,23 +84,23 @@ const eslintConfig = [
           varsIgnorePattern: '^_',
         },
       ],
-      // Deployer-facing public values are runtime-configurable (PUBKY_RUNTIME_*). Only the four
-      // build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) may be
-      // read directly; everything else must go through the getters in @/libs/runtime-config, and
-      // only the runtime-config resolver may touch process.env.PUBKY_RUNTIME_*.
+      // Deployer-facing public values are runtime-configurable (PUBKY_RUNTIME_*). Only
+      // build-intrinsic NEXT_PUBLIC_* values may be read directly; everything else must go
+      // through the getters in @/libs/runtime-config, and only the runtime-config resolver
+      // may touch process.env.PUBKY_RUNTIME_*. Vibe-fork consumer origins are baked per artifact.
       'no-restricted-syntax': [
         'error',
         {
           selector:
-            'MemberExpression[object.name="Env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION)$)/]',
+            'MemberExpression[object.name="Env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION|VIBE_SESSION_BRIDGE_ORIGIN|VIBE_ID)$)/]',
           message:
-            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) exist on Env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
+            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION, VIBE_SESSION_BRIDGE_ORIGIN, VIBE_ID) exist on Env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
         },
         {
           selector:
-            'MemberExpression[object.type="MemberExpression"][object.object.name="process"][object.property.name="env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION)$)/]',
+            'MemberExpression[object.type="MemberExpression"][object.object.name="process"][object.property.name="env"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION|VIBE_SESSION_BRIDGE_ORIGIN|VIBE_ID)$)/]',
           message:
-            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) may be read from process.env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
+            'Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION, VIBE_SESSION_BRIDGE_ORIGIN, VIBE_ID) may be read from process.env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config.',
         },
         {
           selector:
