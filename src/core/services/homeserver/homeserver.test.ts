@@ -316,6 +316,7 @@ describe('HomeserverService', () => {
         await expect(HomeserverService.signUp({ keypair, signupToken })).rejects.toMatchObject({
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
+          operation: 'signUp',
         });
       });
 
@@ -328,6 +329,7 @@ describe('HomeserverService', () => {
         await expect(HomeserverService.signUp({ keypair, signupToken })).rejects.toMatchObject({
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
+          operation: 'signUp',
         });
       });
 
@@ -498,6 +500,7 @@ describe('HomeserverService', () => {
         await expect(HomeserverService.signIn({ keypair })).rejects.toMatchObject({
           category: ErrorCategory.Auth,
           code: AuthErrorCode.SESSION_EXPIRED,
+          operation: 'republishConfiguredHomeserver',
         });
       });
 
@@ -633,7 +636,24 @@ describe('HomeserverService', () => {
           category: ErrorCategory.Auth,
           code: AuthErrorCode.SESSION_EXPIRED,
           service: ErrorService.Homeserver,
+          operation: 'restoreSession',
         });
+      });
+
+      it('should map an SDK PkarrError to a retryable Network error tagged restoreSession', async () => {
+        mockState.restoreSession.mockRejectedValue({ name: 'PkarrError', message: 'relay unreachable' });
+
+        const error = await HomeserverService.restoreSession({ sessionExport: 'exported-session' }).catch(
+          (caught: unknown) => caught,
+        );
+
+        expect(error).toMatchObject({
+          category: ErrorCategory.Network,
+          code: NetworkErrorCode.CONNECTION_FAILED,
+          service: ErrorService.Homeserver,
+          operation: 'restoreSession',
+        });
+        expect(isRetryable(error as AppError)).toBe(true);
       });
 
       it('should map a plain Error to a Server error', async () => {
@@ -642,6 +662,7 @@ describe('HomeserverService', () => {
         await expect(HomeserverService.restoreSession({ sessionExport: 'exported-session' })).rejects.toMatchObject({
           category: ErrorCategory.Server,
           code: ServerErrorCode.INTERNAL_ERROR,
+          operation: 'restoreSession',
         });
       });
     });
