@@ -148,7 +148,7 @@ jobs:
           credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
 
       - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Delete Cloud Run service
         run: |
