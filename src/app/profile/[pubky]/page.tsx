@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { fetchProfileForMetadata } from '@/libs/og/ogData';
 import { normalizeProfileId } from '@/libs/og/routeIds';
+import { resolveMentionsForMetadata } from '@/libs/post/postMetadata';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { resolveDisplayName } from '@/libs/utils/utils';
 import { Metadata as buildMetadata } from '@/molecules/Metadata/Metadata';
@@ -42,7 +43,9 @@ export async function generateMetadata({ params }: DynamicProfilePageProps): Pro
 
     const { user } = result;
     const title = `${resolveDisplayName(user)} on Pubky`;
-    const description = truncateByGraphemes(user.bio ?? '', 200);
+    // Raw `pk:` / `pubky` mentions in the bio become display names, as the app
+    // renders them (`ProfilePageHeader` → `PostText`).
+    const description = truncateByGraphemes(await resolveMentionsForMetadata(user.bio ?? ''), 200);
 
     const { openGraph, twitter } = buildMetadata({ title, description, url: canonical, omitImages: true });
 

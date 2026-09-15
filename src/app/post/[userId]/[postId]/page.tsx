@@ -2,7 +2,7 @@ import { permanentRedirect } from 'next/navigation';
 import type { Metadata as NextMetadata } from 'next';
 import { getCollectionRoute, POST_ROUTES } from '@/app/routes';
 import { normalizePostIds } from '@/libs/og/routeIds';
-import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
+import { fetchUserAndPostForMetadata, resolveMentionsForMetadata } from '@/libs/post/postMetadata';
 import { deriveTextPreview } from '@/libs/post/postPreview';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { resolveDisplayName } from '@/libs/utils/utils';
@@ -39,7 +39,15 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     }
 
     const username = resolveDisplayName(user);
-    const description = truncateByGraphemes(deriveTextPreview({ content: post.content, kind: post.kind }), 200);
+    const preview = deriveTextPreview({ content: post.content, kind: post.kind });
+    // Raw `pk:` / `pubky` mentions become display names, as the app renders them
+    // (`PostMentions`), so a shared link never captions the post with a
+    // 52-character key. An article's preview is its title, which the app shows
+    // verbatim, so it is left as-is.
+    const description = truncateByGraphemes(
+      post.kind === 'long' ? preview : await resolveMentionsForMetadata(preview),
+      200,
+    );
     const title = `${username} on Pubky`;
 
     // Static OG/Twitter images are omitted so the dynamic `opengraph-image` /
