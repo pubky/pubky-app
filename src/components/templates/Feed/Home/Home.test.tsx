@@ -3,10 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Home } from './Home';
 
 // Mock Organisms
-vi.mock('@/organisms/AlertVibes/AlertVibes', () => ({
-  AlertVibes: () => <div data-testid="alert-vibes">AlertVibes</div>,
-}));
-
 vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
   return {
     AlertBackup: () => <div data-testid="alert-backup">AlertBackup</div>,
@@ -100,13 +96,6 @@ describe('Home', () => {
   it('renders AlertBackup', () => {
     render(<Home />);
     expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
-  });
-
-  it('places the Vibes alert between navigation and the composer', () => {
-    render(<Home />);
-    const alert = screen.getByTestId('alert-vibes');
-    expect(screen.getByTestId('feed-navigation').nextElementSibling).toBe(alert);
-    expect(alert.compareDocumentPosition(screen.getByTestId('post-input'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it('renders FeedNavigation in main content', () => {

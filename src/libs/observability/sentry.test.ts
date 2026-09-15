@@ -108,10 +108,14 @@ async function withEnabledSentryCapture(
   const removeRuntimeConfig = injectRuntimeConfig();
 
   try {
-    const [{ captureAppError }, { Err: freshErr }] = await Promise.all([
-      import('./sentry'),
-      import('@/libs/error/error.factories'),
-    ]);
+    // Import sequentially: `sentry` ⇄ `error.factories` ⇄ `env` form an import
+    // cycle, and evaluating it from two concurrent dynamic imports can hand the
+    // capture funnel a half-initialised graph (seen as a CI-only flake where
+    // `captureException` was never called).
+    const { captureAppError, shouldEnableSentry } = await import('./sentry');
+    const { Err: freshErr } = await import('@/libs/error/error.factories');
+    // Fail loudly on the gate itself rather than as a silent "0 calls" downstream.
+    expect(shouldEnableSentry()).toBe(true);
     run({ captureAppError, captureException, Err: freshErr });
   } finally {
     removeRuntimeConfig();
