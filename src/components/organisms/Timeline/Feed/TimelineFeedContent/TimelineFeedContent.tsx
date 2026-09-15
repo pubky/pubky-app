@@ -61,6 +61,20 @@ interface TimelineFeedContentProps {
    * stream by the local-first envelope order. Must be pure.
    */
   transformPostIds?: (postIds: string[]) => string[];
+  /**
+   * Optional local-first membership (composite post ids) the feed mirrors.
+   * Only loaded ids the membership contains are rendered; once the stream has
+   * settled, members it never delivered (a lagging Nexus index, or an envelope
+   * change after the load) are prepended once as optimistic posts; loaded ids
+   * the membership once contained but no longer does are committed out,
+   * re-evaluated whenever the loaded ids change so a removal whose post only
+   * arrives later (an in-flight page, a refresh that re-serves it) still
+   * applies. Used by the COLLECTION variant for signed-in viewers, whose
+   * envelope `items` refresh through the TTL coordinator while the
+   * skip-paginated items stream is fetched once and never polled. Reorders
+   * are handled by `transformPostIds`.
+   */
+  membershipPostIds?: string[];
 }
 
 interface TimelineFeedWithStreamProps {
@@ -76,6 +90,7 @@ interface TimelineFeedWithStreamProps {
   trailingSlot?: TimelineFeedTrailingSlot;
   visualHiddenItemsNotice?: TimelineFeedVisualHiddenItemsNotice;
   transformPostIds?: TimelineFeedContentProps['transformPostIds'];
+  membershipPostIds?: TimelineFeedContentProps['membershipPostIds'];
 }
 
 /**
@@ -97,6 +112,7 @@ export function TimelineFeedWithStream({
   trailingSlot,
   visualHiddenItemsNotice,
   transformPostIds,
+  membershipPostIds,
 }: TimelineFeedWithStreamProps) {
   if (!streamId) {
     return <TimelineLoading />;
@@ -115,6 +131,7 @@ export function TimelineFeedWithStream({
       persistentHeader={persistentHeader}
       visualHiddenItemsNotice={visualHiddenItemsNotice}
       transformPostIds={transformPostIds}
+      membershipPostIds={membershipPostIds}
     >
       {children}
     </TimelineFeedContent>
@@ -147,6 +164,7 @@ function TimelineFeedContent({
   trailingSlot,
   visualHiddenItemsNotice,
   transformPostIds,
+  membershipPostIds,
 }: TimelineFeedContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const refreshContainerRef = pullToRefreshContainerRef ?? containerRef;
@@ -198,7 +216,61 @@ function TimelineFeedContent({
   }, [isCollectionFeed, loading, loadingMore, hasMore, loadMore]);
 
   const dedupedPostIds = [...new Set(rawPostIds)];
-  const postIds = transformPostIds ? transformPostIds(dedupedPostIds) : dedupedPostIds;
+  const orderedPostIds = transformPostIds ? transformPostIds(dedupedPostIds) : dedupedPostIds;
+  // Mirror the membership in the render as well: a loaded id the membership
+  // does not contain is hidden in the same render, so a removal never flashes
+  // to the end of the grid (the sort appends unlisted ids) before the effect
+  // below commits it, and a stale envelope keeps grid and badge in step until
+  // the TTL refresh brings the newer items into view.
+  const membershipSet = membershipPostIds ? new Set(membershipPostIds) : null;
+  const postIds = membershipSet ? orderedPostIds.filter((id) => membershipSet.has(id)) : orderedPostIds;
+
+  // Membership sync (see the `membershipPostIds` prop doc). The items stream is
+  // fetched once and never polled while the envelope keeps refreshing, and
+  // Nexus re-indexes that stream asynchronously — it can lag the envelope on
+  // the initial load as well as after a change — so the envelope is mirrored
+  // in place. `PostMain` hydrates a missing row itself, `transformPostIds`
+  // puts prepended ids in envelope order, and they collapse into the stream
+  // rows once Nexus catches up. Removals are derived from the loaded ids on
+  // every run (an id is removed if the membership ever held it and no longer
+  // does); additions are reconciled once the stream has settled: any member
+  // the stream never delivered is prepended once — except muted authors, whom
+  // the stream filters on purpose. Both are idempotent.
+  const { mutedUserIdSet } = useMutedUsers();
+  const seenMembershipRef = useRef<Set<string>>(new Set());
+  const everLoadedRef = useRef<Set<string>>(new Set());
+  const prependedRef = useRef<Set<string>>(new Set());
+  const streamSettled = !loading && !loadingMore && !hasMore;
+  useEffect(() => {
+    if (!membershipPostIds) return;
+    const current = new Set(membershipPostIds);
+    const seen = seenMembershipRef.current;
+    current.forEach((id) => seen.add(id));
+    const everLoaded = everLoadedRef.current;
+    rawPostIds.forEach((id) => everLoaded.add(id));
+    const prepended = prependedRef.current;
+
+    const removed = rawPostIds.filter((id) => seen.has(id) && !current.has(id));
+    if (removed.length > 0) {
+      // Forget them so a later re-add is prepended again.
+      removed.forEach((id) => {
+        everLoaded.delete(id);
+        prepended.delete(id);
+      });
+      removePostsOptimistically(removed).commit();
+    }
+
+    // Reconcile additions only against a settled stream: while pages are
+    // still arriving the missing ids are most likely on the next page.
+    if (!streamSettled) return;
+    const missing = [...current].filter(
+      (id) => !everLoaded.has(id) && !prepended.has(id) && !MuteFilter.isPostMuted(id, mutedUserIdSet),
+    );
+    if (missing.length > 0) {
+      missing.forEach((id) => prepended.add(id));
+      prependOptimisticPosts(missing);
+    }
+  }, [membershipPostIds, rawPostIds, streamSettled, mutedUserIdSet, prependOptimisticPosts, removePostsOptimistically]);
 
   // Drain optimistic posts the global FAB enqueued for this feed. The FAB lives
   // outside this feed's React tree, so it cannot call `prependOptimisticPosts`
@@ -211,8 +283,6 @@ function TimelineFeedContent({
         ? buildFeedKey({ type: 'bookmarks' })
         : undefined;
   useApplyPendingFeedInsert(optimisticFeedKey, prependOptimisticPosts);
-
-  const { mutedUserIdSet } = useMutedUsers();
 
   const enablePullToRefresh =
     variant === TIMELINE_FEED_VARIANT.HOME ||

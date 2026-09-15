@@ -11,7 +11,7 @@ import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamIdFromFilters } from '@/hooks/useStreamIdFromFilters/useStreamIdFromFilters';
 import { useSyncInteractiveVisualContent } from '@/hooks/useSyncInteractiveVisualContent/useSyncInteractiveVisualContent';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
-import { sortPostIdsByCollectionOrder } from '@/libs/post/collectionItemOrder';
+import { collectionItemsToPostIds, sortPostIdsByMembership } from '@/libs/post/collectionItemOrder';
 import { buildCompositeId } from '@/models/models.utils';
 import {
   type AuthorStreamCompositeId,
@@ -20,6 +20,7 @@ import {
   buildContentSearchStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
+import { CollectionsEmpty } from '@/molecules/CollectionsEmpty/CollectionsEmpty';
 import { FilterPostsBar } from '@/molecules/FilterPostsBar/FilterPostsBar';
 import { FilterPostsEmpty } from '@/molecules/FilterPostsEmpty/FilterPostsEmpty';
 import { PostsEmpty } from '@/molecules/PostsEmpty/PostsEmpty';
@@ -27,6 +28,8 @@ import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import { isAuthenticatedState } from '@/stores/auth/auth.selectors';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import { TimelineFeedWithStream } from '../TimelineFeedContent/TimelineFeedContent';
@@ -198,6 +201,7 @@ function ProfileCollectionsTimelineFeed({ children }: { children?: TimelineFeedP
       variant={TIMELINE_FEED_VARIANT.PROFILE_COLLECTIONS}
       tagsLayout={tagsLayout}
       layoutResolution={layoutResolution}
+      emptyState={<CollectionsEmpty />}
     >
       {children}
     </TimelineFeedWithStream>
@@ -241,6 +245,23 @@ function CollectionTimelineFeed({
   // Sorting the stream's ids by the envelope makes commits render instantly.
   const { postDetails } = usePostDetails(collectionId);
   const envelopeItems = postDetails ? parseCollectionContent(postDetails.content)?.items : undefined;
+  const membershipPostIds = collectionItemsToPostIds(envelopeItems);
+
+  // Signed-in viewers also hand the membership to the feed: the items stream
+  // is fetched once and never polled, so when the TTL coordinator refreshes
+  // the envelope (the owner added or removed posts elsewhere) the feed applies
+  // the delta in place and the grid tracks the count badge. Two exclusions:
+  // - Owners: their own flows already update this feed (optimistic inserts
+  //   from the add dialog / FAB, the save picker's close-gated removal,
+  //   deleted-post removal), and mirroring their local envelope writes would
+  //   race those flows — e.g. yank a card out from under the open save picker.
+  // - Guests: the TTL coordinator only runs for a signed-in session, so a
+  //   guest's cached envelope never refreshes and must not filter the (fresh)
+  //   stream. They keep the pre-existing behaviour: live grid, cached count.
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const isAuthenticated = useAuthStore(isAuthenticatedState);
+  const isOwn = !!userId && currentUserPubky === userId;
+  const mirrorsMembership = isAuthenticated && !isOwn;
 
   return (
     <TimelineFeedWithStream
@@ -253,7 +274,8 @@ function CollectionTimelineFeed({
       pullToRefreshContainerRef={pullToRefreshContainerRef}
       trailingSlot={trailingSlot}
       visualHiddenItemsNotice={visualHiddenItemsNotice}
-      transformPostIds={(postIds) => sortPostIdsByCollectionOrder(postIds, envelopeItems)}
+      transformPostIds={(postIds) => sortPostIdsByMembership(postIds, membershipPostIds)}
+      membershipPostIds={mirrorsMembership ? membershipPostIds : undefined}
     >
       {children}
     </TimelineFeedWithStream>

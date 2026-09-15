@@ -39,6 +39,14 @@ export interface THandleNotCommonStreamParamsParams {
 
 export interface TPersistPostsParams {
   posts: NexusPostWithAttachmentMetadata[];
+  /**
+   * Set by the TTL refresh path. A post's details are kept (counts, tags,
+   * relationships and TTL still refresh) when the local row is newer than the
+   * Nexus copy: its TTL row was written at or after `fetchStartedAt`, or the
+   * Nexus copy is not indexed after the local one. The check and the writes
+   * run in one transaction so a local-first edit cannot slip in between.
+   */
+  refreshGuard?: { fetchStartedAt: number };
 }
 
 export interface TPostStreamPersistResult {

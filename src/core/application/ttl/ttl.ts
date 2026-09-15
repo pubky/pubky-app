@@ -58,6 +58,7 @@ export class TtlApplication {
     const uniqueIds = Array.from(new Set(params.postIds));
     if (uniqueIds.length === 0) return;
 
+    const fetchStartedAt = Date.now();
     const postBatch = await NexusPostStreamService.fetchByIds({
       post_ids: uniqueIds,
       viewer_id: params.viewerId,
@@ -67,7 +68,12 @@ export class TtlApplication {
       postCount: postBatch.length,
     });
 
-    const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({ posts: postBatch });
+    // The refresh guard keeps rows edited locally since the fetch started (or
+    // not yet re-indexed by Nexus) from being clobbered; see persistPosts.
+    const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({
+      posts: postBatch,
+      refreshGuard: { fetchStartedAt },
+    });
     await FileApplication.persistFiles(attachmentMetadata);
 
     // Opportunistic cache warm: fetch missing authors
