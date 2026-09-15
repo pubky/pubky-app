@@ -1,7 +1,8 @@
 import { useRouter } from 'next/navigation';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { TimelineGridPosts } from './GridPosts';
 import { GridPostsSkeleton } from './GridPosts.skeleton';
@@ -46,6 +47,16 @@ vi.mock('@/molecules/Timeline/TimelineLoading', () => {
 vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
   return {
     TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoadMore', () => {
+  return {
+    TimelineLoadMore: ({ onLoadMore }: { onLoadMore: () => void }) => (
+      <button data-testid="timeline-load-more" onClick={onLoadMore}>
+        Load more
+      </button>
+    ),
   };
 });
 
@@ -431,8 +442,34 @@ describe('TimelineGridPosts', () => {
           isLoading: expect.any(Boolean),
           threshold: 3000,
           debounceMs: 20,
+          itemCount: mockPostIds.length,
+          maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
         });
       });
+    });
+
+    it('replaces the sentinel with a manual Load more once auto-loading stalls', () => {
+      const resumeAutoLoad = vi.fn();
+      mockUseInfiniteScroll.mockReturnValue({
+        sentinelRef: vi.fn(),
+        isStalled: true,
+        resumeAutoLoad,
+      });
+
+      const { container } = render(
+        <TimelineGridPosts
+          postIds={mockPostIds}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      expect(container.querySelector('.h-5')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('timeline-load-more'));
+      expect(resumeAutoLoad).toHaveBeenCalledTimes(1);
     });
 
     it('should call loadMore when infinite scroll triggers', async () => {

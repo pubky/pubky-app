@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import type { VisualPlaceholderKind, VisualRow, VisualTile } from './TimelineFeedVisual.types';
 import { VisualTimelinePosts } from './VisualTimelinePosts';
@@ -647,6 +648,8 @@ describe('VisualTimelinePosts', () => {
       isLoading: true,
       threshold: 3000,
       debounceMs: 20,
+      itemCount: 1,
+      maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
     });
 
     await waitFor(() => {
@@ -942,8 +945,37 @@ describe('VisualTimelinePosts', () => {
           isLoading: false,
           threshold: 3000,
           debounceMs: 20,
+          itemCount: 1,
+          maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
         });
       });
+    });
+
+    it('replaces the sentinel with a manual Load more once auto-loading stalls', async () => {
+      const resumeAutoLoad = vi.fn();
+      mockUseInfiniteScroll.mockReturnValue({
+        sentinelRef: vi.fn(),
+        isStalled: true,
+        resumeAutoLoad,
+      });
+
+      const { container } = render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+      });
+      expect(container.querySelector('.h-5')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+      expect(resumeAutoLoad).toHaveBeenCalledTimes(1);
     });
 
     it('arms the observer when postIds is empty but hasMore (filtered stream region)', () => {

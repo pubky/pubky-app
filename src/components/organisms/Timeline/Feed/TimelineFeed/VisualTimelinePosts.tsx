@@ -7,6 +7,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Video } from '@/atoms/Video/Video';
+import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
@@ -26,6 +27,7 @@ import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
+import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
 import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
@@ -410,13 +412,16 @@ export function VisualTimelinePosts({
   // `hasRows` keeps the observer quiet while the tile pipeline resolves rows for
   // existing postIds (the backfill effect owns that case). A fully-filtered stream
   // region leaves postIds itself empty — there the sentinel must stay armed so
-  // load rounds keep chaining toward the first visible posts.
-  const { sentinelRef } = useInfiniteScroll({
+  // load rounds keep chaining toward the first visible posts, within the budget of
+  // rounds that grow nothing; past it the manual Load more below takes over (#2523).
+  const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore: hasMore && (hasRows || postIds.length === 0),
     isLoading: loadingMore || isInitialLoading,
     threshold: 3000,
     debounceMs: 20,
+    itemCount: postIds.length,
+    maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 
   const showFilteredEmptyState =
@@ -444,6 +449,7 @@ export function VisualTimelinePosts({
       error={error}
       hasItems={(hasRows && !showFilteredEmptyState) || hasExtras}
       hasMore={hasMore}
+      stalled={isStalled}
       loadingComponent={<VisualTimelinePostsSkeleton />}
       emptyComponent={emptyState}
     >
@@ -475,11 +481,13 @@ export function VisualTimelinePosts({
 
             {showEndMessage && !hasMore && !loadingMore && rows.length > 0 && <TimelineEndMessage />}
 
+            {hasMore && isStalled && !loadingMore && <TimelineLoadMore onLoadMore={resumeAutoLoad} />}
+
             {/* Infinite-scroll sentinel — only mounted (and given height) while there are
-                more posts to observe for, mirroring TimelineGridPosts. Once the feed is
-                fully loaded the observer detaches, so rendering it would just leave dead
-                space below the mosaic. */}
-            {hasMore && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
+                more posts to observe for and auto-loading is not stalled, mirroring
+                TimelineGridPosts. Once the feed is fully loaded the observer detaches, so
+                rendering it would just leave dead space below the mosaic. */}
+            {hasMore && !isStalled && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
           </Container>
         </Container>
       ) : null}

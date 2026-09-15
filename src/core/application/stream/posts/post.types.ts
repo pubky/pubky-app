@@ -44,6 +44,7 @@ export interface TPartialCacheHitParams {
   isCurrent?: () => boolean;
   cachedStreamChunk: string[];
   limit: number;
+  /** The cached stream's Nexus resume cursor: the position the remaining posts are fetched from. */
   streamTail: number;
   streamId: PostStreamId;
   /** Optional viewer ID for relationship data. Null for unauthenticated views. */

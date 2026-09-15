@@ -160,7 +160,10 @@ export function useStreamPagination({
         // page: `streamTail` by the raw backend cursor, `lastPostId` (the local cache-walk
         // anchor) by the raw scan anchor. Both advance by raw scanned data, never by the
         // post-filter visible count — otherwise a fully-filtered round would restart the
-        // cache walk at the head and spin in place on long filtered runs.
+        // cache walk at the head and spin in place on long filtered runs. A score cursor
+        // is always Nexus's own position (persisted on the cached stream row), never a
+        // post's local `indexed_at`, which Nexus bumps on edit/delete without moving the
+        // post in the stream (#2523).
         if (result.nextCursor != null) {
           // Skip streams: `nextCursor` extends the offset this request captured
           // at start, so removals committed during the flight are not in it —
@@ -181,10 +184,9 @@ export function useStreamPagination({
 
         // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
         // keeps hasMore so the advanced cursors are re-requested. An auto-loading caller
-        // (useInfiniteScroll) still chains bounded rounds through a filtered region until the
-        // true stream end, with no per-user-action feedback. Known limitation, deliberately
-        // unchanged here — any remedy (toast + backoff, manual load-more) is a
-        // product-visible UX change tracked as follow-up.
+        // (useInfiniteScroll) chains bounded rounds through a filtered region; the timeline
+        // renderers budget the rounds that grow nothing (`TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS`)
+        // and hand over to a manual Load more once it is spent (#2523).
         if (result.nextPageIds.length === 0) {
           setHasMore(!result.reachedEnd);
           setLoadingState(isInitialLoad, false);

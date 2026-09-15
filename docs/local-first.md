@@ -245,6 +245,22 @@ Instead, invalidation is deferred through an in-memory dirty registry (`src/core
 
 The mounted feed's React state is never touched — the reader keeps their position, the "N new posts" pill keeps polling against the intact cache head, and fresh membership appears when they navigate back or pull to refresh. Being in-memory, a dirty flag does not survive a hard reload; that staleness window is bounded by the `getStreamCacheMaxAgeMs()` cache max-age check on initial load.
 
+## Stream Pagination Cursors
+
+Score-paginated post streams (timelines, profiles, bookmarks, reply threads) keep two resume positions per feed, both owned by `useStreamPagination` and threaded back on every round:
+
+- **`lastPostId`** — the id of the last _raw_ post scanned (`lastRawPostId`, visible or filtered), the anchor for walking the local stream cache by id (`getStreamFromCache`).
+- **`streamTail` / `nextCursor`** — the Nexus position to continue from once the cache is exhausted: a raw `skip` offset for skip-paginated streams, Nexus's own `last_post_score` for score streams.
+
+Both advance by raw scanned data, never by the post-filter visible count (#2251, #2290): a fully-filtered round still moves the anchor and the cursor, otherwise a long muted / deleted / collection-only run spins in place.
+
+**A score cursor comes only from Nexus.** Nexus keeps an edited or deleted post at its original stream position (its sorted-set score) while bumping `details.indexed_at`, and `last_post_score` is the score. A cursor derived from a post's local `indexed_at` therefore lands above posts that are already cached, the seam re-serves them, and with the raw anchor sitting on one of them the feed never advances (#2523, #1569). The rules that follow from this:
+
+- `post_streams` rows persist the `last_post_score` of the deepest page fetched into them as `tailCursor` (`PostStreamModelSchema`); every cache→Nexus seam (`getCachedLastPostTimestamp`, the full-hit `nextCursor`, `partialCacheHit`, the exhausted-cache fallback) resumes from it. Rows without one (written before it was tracked, or seeded by bootstrap) seed once from the tail entry's timestamp — bookmark time for bookmark streams — and their first Nexus page persists the real cursor.
+- A descending Nexus page is appended to the cached stream in stream order (`persistNewStreamChunk` with `tailCursor`), never re-sorted by `indexed_at`, so the raw anchor always sits at the tail. Cursor-less chunks (hydration-discovered replies, ascending reply pages, unread merges at the head) keep sorting by timestamp.
+- `PostStreamQueue` never synthesizes a cursor from a served post: a round served from the overflow buffer resumes by the buffered raw position, and a round whose page is empty without moving the cursor stops instead of re-issuing the same request.
+- Auto-loading renderers (`TimelinePosts`, `TimelineGridPosts`, `VisualTimelinePosts`) budget consecutive rounds that grow nothing (`TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS`, via `useInfiniteScroll`'s `itemCount` / `maxUnproductiveLoads`) and hand over to a manual "Load more" (`TimelineLoadMore`) once it is spent, so a filtered region can never chain loads to the end of the stream with the loading block pulsing.
+
 ## Quick Checklist
 
 When adding controller methods:
@@ -255,6 +271,7 @@ When adding controller methods:
 - [ ] Does background sync handle failures gracefully?
 - [ ] Is `useLiveQuery` used only for local reads, and do local-first reads go through `useLocalFirstQuery`?
 - [ ] Are cache hits, tombstones and a settled `null` handled on the read path?
+- [ ] Does every stream cursor come from Nexus (`last_post_score` / raw offset), never from a post's `indexed_at`?
 
 ## Tag previews, pagination, and freshness
 

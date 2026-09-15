@@ -64,6 +64,11 @@ export class PostStreamApplication {
     return await LocalStreamPostsService.readUnreadStream({ streamId });
   }
 
+  /**
+   * The Nexus position a fresh pagination session resumes from once the cached ids are
+   * exhausted (see `resolveCachedStreamTailCursor`), or `NOT_FOUND_CACHED_STREAM` when
+   * there is no usable cache.
+   */
   static async getCachedLastPostTimestamp({ streamId }: TStreamIdParams): Promise<number> {
     try {
       const postStream = await LocalStreamPostsService.read({ streamId });
@@ -72,24 +77,47 @@ export class PostStreamApplication {
         return NOT_FOUND_CACHED_STREAM;
       }
 
-      // Iterate backwards through the stream to find the last entry we can resolve
-      // a pagination cursor for. This handles cases where the last PostDetails (or
-      // bookmark row) might be missing.
-      for (let i = postStream.stream.length - 1; i >= 0; i--) {
-        const cursor = await this.getStreamCursorTimestamp(streamId, postStream.stream[i]);
-
-        if (cursor !== undefined) {
-          return cursor;
-        }
-      }
-
-      // No stream entry yielded a cursor, cache is not useful
-      Logger.warn('No cursor found in cached stream', { streamId, streamLength: postStream.stream.length });
-      return NOT_FOUND_CACHED_STREAM;
+      return (await this.resolveCachedStreamTailCursor(streamId, postStream)) ?? NOT_FOUND_CACHED_STREAM;
     } catch (error) {
       Logger.warn('Failed to get timeline initial cursor', { streamId, error });
       return NOT_FOUND_CACHED_STREAM;
     }
+  }
+
+  /**
+   * Resolve the Nexus cursor a cached stream resumes from at the cache→Nexus seam.
+   *
+   * Nexus keeps a post at its original stream position (its score) but bumps the post's
+   * `indexed_at` when it is edited or deleted, so a cursor derived from `indexed_at` can
+   * land above posts that are already cached; the seam then re-serves them and, with the
+   * raw anchor sitting on one of them, never advances (#2523, #1569). The only exact
+   * cursor is the `last_post_score` Nexus returned for the deepest page, persisted on the
+   * row as `tailCursor`. Rows without one (written before it was tracked, or seeded by
+   * bootstrap) fall back once to the last resolvable post timestamp — bookmark time for
+   * bookmark streams — and their first Nexus page persists the real cursor.
+   */
+  private static async resolveCachedStreamTailCursor(
+    streamId: PostStreamId,
+    cachedStream: TStreamResult,
+  ): Promise<number | undefined> {
+    if (cachedStream.tailCursor !== undefined) {
+      return cachedStream.tailCursor;
+    }
+
+    // Iterate backwards through the stream to find the last entry we can resolve
+    // a pagination cursor for. This handles cases where the last PostDetails (or
+    // bookmark row) might be missing.
+    for (let i = cachedStream.stream.length - 1; i >= 0; i--) {
+      const cursor = await this.getStreamCursorTimestamp(streamId, cachedStream.stream[i]);
+
+      if (cursor !== undefined) {
+        return cursor;
+      }
+    }
+
+    // No stream entry yielded a cursor, cache is not useful
+    Logger.warn('No cursor found in cached stream', { streamId, streamLength: cachedStream.stream.length });
+    return undefined;
   }
 
   /**
@@ -406,10 +434,6 @@ export class PostStreamApplication {
           ? PostStreamApplication.filterDiscoverOwnAndBookmarked(standard, viewerId, bookmarkedIds)
           : standard;
       },
-      // Overflow-buffer early returns resolve score cursors stream-aware: bookmark
-      // streams resume by bookmark time, everything else by the post's `indexed_at`.
-      // Without this, the buffered path re-introduces the #2100 pagination seam.
-      cursorForPost: (postId) => PostStreamApplication.getStreamCursorTimestamp(streamId, postId),
       fetch: async (cursor) => {
         // Continue reading from cache using lastReturnedPostId to track position
         // This ensures we exhaust cache before going to Nexus
@@ -536,19 +560,34 @@ export class PostStreamApplication {
     if (!isSkipPaginatedStream(streamId) && !streamHead) {
       const cachedStream = await LocalStreamPostsService.read({ streamId });
 
-      if (cachedStream) {
+      if (cachedStream && cachedStream.stream.length > 0) {
         const cachedStreamChunk = await this.getStreamFromCache({ lastPostId, limit, cachedStream });
+        // Every cache→Nexus seam resumes from the row's own Nexus cursor — never from the
+        // timestamp of a post in the chunk (see `resolveCachedStreamTailCursor`).
+        const tailCursor = await this.resolveCachedStreamTailCursor(streamId, cachedStream);
 
-        // Full cache hit, return with proper cursor for pagination
+        // Full cache hit: the caller keeps walking the cache by id; the cursor it carries is
+        // the position Nexus continues from once the cache runs out.
         if (cachedStreamChunk.length === limit) {
-          const lastCachedPostId = cachedStreamChunk[cachedStreamChunk.length - 1];
-          const nextCursor = await this.getStreamCursorTimestamp(streamId, lastCachedPostId);
-          return { nextPageIds: cachedStreamChunk, cacheMissPostIds: [], nextCursor, reachedEnd: false };
+          return { nextPageIds: cachedStreamChunk, cacheMissPostIds: [], nextCursor: tailCursor, reachedEnd: false };
         }
 
         // Partial cache hit, fetch missing posts from Nexus and combine
-        if (cachedStreamChunk.length > 0 && cachedStreamChunk.length < limit) {
-          return await this.partialCacheHit({ cachedStreamChunk, limit, streamTail, streamId, viewerId, isCurrent });
+        if (cachedStreamChunk.length > 0) {
+          return await this.partialCacheHit({
+            cachedStreamChunk,
+            limit,
+            streamTail: tailCursor ?? streamTail,
+            streamId,
+            viewerId,
+            isCurrent,
+          });
+        }
+
+        // Cache exhausted (or the anchor is no longer in the row): continue below the
+        // deepest page fetched into it.
+        if (lastPostId && tailCursor !== undefined) {
+          streamTail = tailCursor;
         }
       }
 
@@ -681,7 +720,7 @@ export class PostStreamApplication {
    *
    * @param cachedStreamChunk - Array of post IDs from cache that need to be combined with fetched posts
    * @param limit - Maximum number of posts to return
-   * @param streamTail - Timestamp or skip count for pagination
+   * @param streamTail - The cached stream's Nexus resume cursor (`resolveCachedStreamTailCursor`)
    * @param streamId - ID of the post stream
    * @param viewerId - ID of the viewer
    **/
@@ -696,14 +735,11 @@ export class PostStreamApplication {
     const lastCachedPostId = cachedStreamChunk[cachedStreamChunk.length - 1];
     const remainingLimit = limit - cachedStreamChunk.length;
 
-    // Get cursor from last cached post for pagination (bookmark-time for bookmark streams)
-    const nextStreamTail = (await this.getStreamCursorTimestamp(streamId, lastCachedPostId)) ?? streamTail;
-
-    // Fetch remaining posts from Nexus
+    // Fetch remaining posts from Nexus, resuming below the deepest page already cached
     const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd } = await this.fetchStreamFromNexus({
       streamId,
       limit: remainingLimit,
-      streamTail: nextStreamTail,
+      streamTail,
       streamHead: SKIP_FETCH_NEW_POSTS,
       viewerId,
       isCurrent,
@@ -778,7 +814,14 @@ export class PostStreamApplication {
     // Do not persist skip-paginated streams (engagement + single-collection items) to the
     // timestamp-keyed local stream cache; they always page from Nexus by offset.
     if (!isSkipPaginatedStream(streamId) && streamHead === SKIP_FETCH_NEW_POSTS) {
-      await LocalStreamPostsService.persistNewStreamChunk({ stream: compositePostIds, streamId });
+      await LocalStreamPostsService.persistNewStreamChunk({
+        stream: compositePostIds,
+        streamId,
+        // A descending page extends the cached stream downward: record Nexus's own position
+        // as the row's resume cursor. Ascending pages read a reply thread upward from its
+        // oldest cached reply and carry no tail position.
+        tailCursor: order === StreamOrder.ASCENDING ? undefined : (rawScore ?? undefined),
+      });
     }
 
     // When streamHead is greater than 0, it means that it is a streamCoordinator calling this method.

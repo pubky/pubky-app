@@ -98,3 +98,15 @@ export const GRID_FEED_GAP_CLASS = 'gap-3 lg:gap-6';
  * scroll restoration. Centralized here so all call sites cannot drift.
  */
 export const FORCE_FEED_SCROLL_TOP_KEY = 'pubky:force-feed-scroll-top';
+
+/**
+ * Consecutive automatic infinite-scroll loads a timeline tolerates without a single new
+ * post reaching the list before it stops auto-loading and offers a manual "Load more"
+ * (`useInfiniteScroll`'s unproductive-load budget). Each load already scans up to the
+ * stream layer's per-round page budget (about 200 raw posts at the default page size),
+ * so this only trips deep inside a fully-filtered region (a muted author's run, deleted
+ * posts, collections) and never on an ordinary feed. Filtering is client-side by design,
+ * so the region can be arbitrarily long; handing the next scan to the user keeps the feed
+ * from chaining rounds to the end of the stream with the loading block pulsing (#2523).
+ */
+export const TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS = 3;

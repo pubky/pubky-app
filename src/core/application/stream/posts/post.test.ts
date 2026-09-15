@@ -705,8 +705,9 @@ describe('PostStreamApplication', () => {
       expect(result.nextCursor).toBeUndefined();
     });
 
-    it('returns the bookmark-time cursor on a full cache hit for bookmark streams', async () => {
-      // The cache→Nexus seam must page by bookmark time, not post indexed_at.
+    it('returns the bookmark-time resume cursor on a full cache hit for legacy bookmark rows', async () => {
+      // A row without a persisted Nexus cursor seeds its seam once from the tail entry's
+      // bookmark time (#2100), never from a post's indexed_at.
       const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
       const postIds = Array.from({ length: 12 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await PostStreamModel.create(bookmarkStreamId, postIds);
@@ -725,15 +726,39 @@ describe('PostStreamApplication', () => {
       });
 
       expect(result.nextPageIds).toHaveLength(10);
-      // 10th entry (index 9) → its bookmark time, NOT its post indexed_at (BASE + 9).
-      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 9);
+      // The row tail (post-12) → its bookmark time, NOT its post indexed_at (BASE + 11).
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 11);
     });
 
-    it('overflow early-return on a bookmark stream resumes by bookmark time, not post indexed_at', async () => {
-      // The queue's buffered path is the fourth cursor-synthesis site missed by #2100:
-      // filtering (collections are dropped from the :all bookmarks feed) makes the queue
-      // over-fetch and buffer the surplus; a later smaller-limit call is then served
-      // entirely from that buffer and must still resume by bookmark time.
+    it('prefers the persisted Nexus cursor over bookmark time on a full cache hit', async () => {
+      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+      const postIds = Array.from({ length: 12 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      for (let i = 0; i < postIds.length; i++) {
+        await createPostDetailWithTimestamp(postIds[i], BASE_TIMESTAMP + i);
+        await BookmarkModel.create({ id: postIds[i], created_at: BASE_TIMESTAMP + 5000 + i });
+      }
+      await LocalStreamPostsService.persistNewStreamChunk({
+        streamId: bookmarkStreamId,
+        stream: postIds,
+        tailCursor: BASE_TIMESTAMP + 7777,
+      });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: bookmarkStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 7777);
+    });
+
+    it('overflow early-return on a bookmark stream resumes by the raw backend position', async () => {
+      // The queue's buffered path must not synthesize a cursor from a served post: filtering
+      // (collections are dropped from the :all bookmarks feed) makes the queue over-fetch
+      // and buffer the surplus; a later smaller-limit call is then served entirely from
+      // that buffer and resumes where the raw scan stopped (the row's resume cursor).
       const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
       const collectionIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:coll-${i + 1}`);
       const postIds = Array.from({ length: 30 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
@@ -770,8 +795,9 @@ describe('PostStreamApplication', () => {
         viewerId: 'user-viewer' as Pubky,
       });
       expect(result2.nextPageIds).toEqual(postIds.slice(20, 30));
-      // post-30 was bookmarked at BASE + 5000 + 29 but created at BASE + 29 — the resume
-      // cursor must be its bookmark time or the next Nexus fetch skips the seam.
+      // The scan stopped at the legacy row's seam — the tail's bookmark time (BASE + 5000 +
+      // 29), never post-30's created-at (BASE + 29) — and the buffered round keeps it.
+      expect(result2.nextCursor).toBe(result1.nextCursor);
       expect(result2.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 29);
     });
 
@@ -1398,6 +1424,16 @@ describe('PostStreamApplication', () => {
       expect(result).toBe(0);
     });
 
+    it('returns the persisted Nexus cursor when the row carries one, ignoring post timestamps', async () => {
+      const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      await createPostDetails(postIds);
+      await LocalStreamPostsService.persistNewStreamChunk({ streamId, stream: postIds, tailCursor: 4242 });
+
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+
+      expect(result).toBe(4242);
+    });
+
     it('should return 0 when stream is empty', async () => {
       await createStreamWithPosts([]);
 
@@ -1451,9 +1487,24 @@ describe('PostStreamApplication', () => {
   });
 
   describe('getCachedLastPostTimestamp — bookmark streams', () => {
-    // Bookmark streams are ordered by bookmark time, so their pagination cursor must
-    // come from the bookmark's `created_at`, not the post's `indexed_at`.
+    // Bookmark streams are ordered by bookmark time, so a legacy row (no persisted Nexus
+    // cursor) seeds from the bookmark's `created_at`, not the post's `indexed_at`.
     const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+
+    it('prefers the persisted Nexus cursor over bookmark time', async () => {
+      const postOne = `${DEFAULT_AUTHOR}:post-1`;
+      await createPostDetailWithTimestamp(postOne, BASE_TIMESTAMP);
+      await BookmarkModel.create({ id: postOne, created_at: BASE_TIMESTAMP + 5000 });
+      await LocalStreamPostsService.persistNewStreamChunk({
+        streamId: bookmarkStreamId,
+        stream: [postOne],
+        tailCursor: BASE_TIMESTAMP + 4200,
+      });
+
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId });
+
+      expect(result).toBe(BASE_TIMESTAMP + 4200);
+    });
 
     it('uses the bookmark time (created_at), not the post indexed_at', async () => {
       const postOne = `${DEFAULT_AUTHOR}:post-1`;
