@@ -28,7 +28,7 @@
     {
       "path": "docs/error-handling.md",
       "description": "Error handling conventions using Err.* factories across all layers",
-      "scope": ["src/**"]
+      "scope": ["src/core/**", "src/hooks/**", "src/libs/**"]
     },
     {
       "path": "docs/sentry.md",

@@ -62,7 +62,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Toasts: `toast()` from `@/molecules/Toaster/toast` with `variant`; internals are ESLint-blocked; copy is static, never
   interpolate user-entered text. `docs/components.md`
 - Forms: react-hook-form + zod inside a `use{Action}Form` hook returning `{ form, submit }`; schema in a sibling `*.types.ts`;
-  components never call controllers; Zod v4 (`z.url()`). `docs/components.md`
+  form components never call `commit*` controllers directly; Zod v4 (`z.url()`). `docs/components.md`
 - Dexie schema: one `DB_VERSION`; a mismatch recreates the database. Bumping it or changing an index map is a reviewed
   decision, never a side effect. `docs/data-patterns.md`, ADR-0019
 - Copy: inline US-English literals at the call site. i18n (`next-intl`, `messages/`, `useTranslations`) was removed in #2313

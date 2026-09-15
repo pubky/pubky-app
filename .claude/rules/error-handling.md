@@ -1,6 +1,8 @@
 ---
 paths:
   - "src/core/**/*"
+  - "src/hooks/**/*"
+  - "src/libs/**/*"
 ---
 # Error Handling Rules
 

@@ -41,20 +41,21 @@ case "$SCOPE" in
     git diff --name-status "$RANGE" -- . "${EXCLUDE[@]}"              # changed-file list
     ;;
   pr)      # N = the PR number; works for same-repo and fork PRs
-    BASE=$(gh pr view "$N" --json baseRefName --jq .baseRefName)
+    BASE=$(gh pr view "$N" --json baseRefName --jq .baseRefName 2>/dev/null || echo dev)   # PRs target dev; gh may be absent
     git fetch -q origin "$BASE" "+pull/$N/head:refs/remotes/origin/pr-$N"   # + so a force-pushed PR head still updates
     RANGE="origin/$BASE...origin/pr-$N"
     git diff "$RANGE" -- . "${EXCLUDE[@]}" > "$OUT"
     git diff --name-status "$RANGE" -- . "${EXCLUDE[@]}"              # changed-file list
     ;;
-  paths)   # PATHS = the files or directories named by the user
-    git diff HEAD -- "${PATHS[@]}" > "$OUT"                            # a path with no diff is reviewed as it is
-    git status --porcelain -- "${PATHS[@]}"
+  paths)   # PATHS = the files or directories named by the user; tracked changes plus untracked files under them
+    git diff HEAD -- "${PATHS[@]}" "${EXCLUDE[@]}" > "$OUT"
+    git ls-files --others --exclude-standard -- "${PATHS[@]}" "${EXCLUDE[@]}" | while read -r f; do git diff --no-index -- /dev/null "$f" >> "$OUT" || true; done
+    git status --porcelain -- "${PATHS[@]}" "${EXCLUDE[@]}"           # changed-file list
     ;;
 esac
 ```
 
-If the diff is empty, say so and stop.
+If the diff is empty, say so and stop; the one exception is a named path with no diff, which is reviewed as it is.
 
 ## Step 3 — Callouts (deterministic, no judgement)
 

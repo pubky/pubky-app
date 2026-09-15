@@ -65,5 +65,8 @@ public/sw.js.map
 !.claude/skills/
 .claude/settings.local.json
 
+# Cursor: plans saved to the workspace are personal
+/.cursor/plans
+
 # Development Containers
 .devcontainer

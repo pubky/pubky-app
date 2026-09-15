@@ -123,12 +123,12 @@
     {
       "id": "error-handling-conventions",
       "rule": "Re-throw AppError unchanged and normalize unknowns with toAppError(); use safeFetch + httpResponseToError (or the service's *.utils.ts wrapper) for HTTP instead of raw fetch; branch on error.category / error.code, never on message strings; no raw `throw new Error()` in src/core production code. See docs/error-handling.md.",
-      "scope": ["src/**"],
+      "scope": ["src/core/**", "src/hooks/**", "src/libs/**"],
       "severity": "medium"
     },
     {
       "id": "sentry-capture-rule",
-      "rule": "Errors reach Sentry through Err.* factories. Flag direct Sentry.captureException calls outside src/app/error.tsx and src/app/global-error.tsx (and there only for non-AppError instances), any Sentry.setUser with PII, and Err.* context that carries raw user data (email, phone, name, username, bio, file, user, raw pubky keys or pubky URLs) unless the scrubber in src/libs/observability/sentry.ts covers the key. See docs/sentry.md.",
+      "rule": "Errors reach Sentry through Err.* factories. Flag direct Sentry.captureException calls anywhere except the captureAppError funnel in src/libs/observability/sentry.ts and the two error boundaries src/app/error.tsx and src/app/global-error.tsx (which capture only non-AppError instances); flag Sentry.setUser with PII; flag Err.* context that carries raw user data not covered by the scrubber in src/libs/observability/sentry.ts (the key list lives in docs/sentry.md, Privacy).",
       "scope": ["src/**"],
       "severity": "medium"
     },
@@ -140,14 +140,14 @@
     },
     {
       "id": "forms-pattern",
-      "rule": "Forms use react-hook-form + zod (@hookform/resolvers/zod) behind a use{Action}Form hook that returns { form, submit, reset }; the schema, *_FORM_FIELDS map, types and defaults live in a sibling *.types.ts; fields render Controller via ControlledInputField / ControlledTextareaField; validation messages are literal US-English strings; use z.url() not z.string().url(). Flag components that call controllers directly and hand-rolled form state. See docs/components.md, Forms.",
+      "rule": "Forms use react-hook-form + zod (@hookform/resolvers/zod) behind a use{Action}Form hook that returns { form, submit, reset }; the schema, *_FORM_FIELDS map, types and defaults live in a sibling *.types.ts; fields render Controller via ControlledInputField / ControlledTextareaField; validation messages are literal US-English strings; use z.url() not z.string().url(). Flag form components that call commit* controllers directly instead of going through a use{Action}Form hook, and hand-rolled form state. See docs/components.md, Forms.",
       "scope": ["src/hooks/**", "src/components/**"],
       "severity": "medium"
     },
     {
       "id": "design-tokens-only",
       "rule": "Use semantic design tokens (bg-primary, text-muted-foreground) and the Tailwind scale. Flag hardcoded hex/rgb colours, arbitrary values (bg-[#1a1a1a], p-[13px], h-[37px]) and z-index values outside -z-10, z-10, z-30, z-40, z-50, z-60. See docs/components.md and docs/z-index.md.",
-      "scope": ["src/components/**", "src/app/**"],
+      "scope": ["src/components/**", "src/app/**/*.tsx"],
       "severity": "medium"
     },
     {

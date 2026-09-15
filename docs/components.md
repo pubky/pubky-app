@@ -266,7 +266,7 @@ Mock `@/molecules/Toaster/toast` in unit tests (`vi.mock('@/molecules/Toaster/to
 
 Build forms with `react-hook-form` + `zod` (via `@hookform/resolvers/zod`). Canonical example: `src/hooks/useCreateCollection/useCreateCollection.ts` with its sibling `useCreateCollection.types.ts`.
 
-- **The hook owns the form.** Components never call controllers directly: wrap the mutation in a hook named `use{Action}Form` or `use{Verb}{Entity}` that returns `{ form, submit, reset, ... }`.
+- **The hook owns the form.** Form components never call `commit*` controllers directly: wrap the mutation in a hook named `use{Action}Form` or `use{Verb}{Entity}` that returns `{ form, submit, reset, ... }`.
 - **`submit()` returns `Promise<boolean>`** so the caller decides what to do on success. A form hook may instead return the created entity id as `Promise<string | null>` when the caller needs to navigate to it (`useCreateCollection`).
 - **Schema, types and defaults live in the sibling `*.types.ts`**: the zod schema, a `*_FORM_FIELDS` map, the inferred type and the default values.
 - **Fields render `Controller`**, using the `ControlledInputField` / `ControlledTextareaField` molecules where applicable.
