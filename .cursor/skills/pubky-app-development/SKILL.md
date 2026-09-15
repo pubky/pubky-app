@@ -66,7 +66,7 @@ Tailwind v4, Zustand, Dexie + `dexie-react-hooks`, TanStack Query 5, react-hook-
 | Core | `src/core/` | The layered domain: controllers, coordinators, application, services, models, pipes, stores, database, utils |
 | Libs | `src/libs/` | Framework-adjacent, layer-agnostic infrastructure: `api`, `http`, `network`, `error`, `logger`, `env`, `runtime-config`, `identity`, `password`, `phone`, `image`, `file`, `post`, `icons`, `lucide`, `svg`, `og`, `html`, `motion`, `search`, `share`, `status`, `deeplink`, `observability`, `query-client`, `mute-sync`, `utils`, `vibes` |
 | Config | `src/config/*` | Concrete config modules (`app`, `network`, `nexus`, `posts`, `collections`, `feed`, `tags`, `sync`, `search`, `ui`, `theme`, `layoutClasses`, `layoutDimensions`, `forms`, `images`, `moderation`, `metadata`, `urls`, `user`, `logs`, …) |
-| Docs | `docs/`, `docs/adr/0001..0018` | Canonical conventions; ADRs hold the *why*, and `docs/README.md` maps topic → doc |
+| Docs | `docs/`, `docs/adr/0001..0019` | Canonical conventions; ADRs hold the *why*, and `docs/README.md` maps topic → doc |
 | Tests | colocated `*.test.ts(x)`, `src/test/vrt/<area>/*.vrt.test.tsx` + `__screenshots__/`, `src/test-utils/`, `src/test/fixtures|mocks/`, `cypress/` | Unit, snapshot, VRT, e2e |
 
 Responsibilities by layer (`src/core/`):
@@ -105,9 +105,10 @@ Cross-domain calls (ADR-0009) are restricted to `PostApplication`, `Notification
 `TtlApplication`; acyclic, depth 1, with a single depth-2 exception
 (`PostApplication | NotificationApplication | TtlApplication → PostStreamApplication → FileApplication`).
 Static classes mean this is *not* compiler-enforced: it is on you. ESLint enforces only a narrow set
-(`eslint.config.mjs`): no direct `process.env`/`NEXT_PUBLIC_*` reads outside `src/libs/env` and the
-runtime-config resolver, no importing Toaster internals, no `as any` / `as unknown as T` in tests,
-plus import sorting and padding conventions. Nothing fails the build when you skip a layer.
+(`eslint.config.mjs`): `NEXT_PUBLIC_*` reads limited to the four build-intrinsic names and no direct
+`process.env.PUBKY_RUNTIME_*` read outside `src/libs/env` and the runtime-config resolver, no
+importing Toaster internals, no `as any` / `as unknown as T` in tests, plus import sorting and
+padding conventions. Nothing fails the build when you skip a layer.
 
 Import conventions: `@/atoms|molecules|organisms|templates/*` for components (concrete file, e.g.
 `@/atoms/Button/Button`), `@/hooks/*`, `@/controllers/*`, `@/application/*`, `@/services/*`,
@@ -317,9 +318,9 @@ There is no separate backend in this repo; the "backend" is the layer stack plus
   `DB_VERSION = Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). There is no incremental
   migration chain: a version mismatch makes the client delete and recreate the local database
   (`recreateDatabase`), i.e. user-visible local data loss, so bumping the version or editing a table's
-  index map is a deliberate, reviewed change, not a side effect of a feature. ADR-0007 predates this
-  and is stale - it describes ascending migrations with explicit upgrade paths, which is not what the
-  code does.
+  index map is a deliberate, reviewed change, not a side effect of a feature. ADR-0019 supersedes
+  ADR-0007, which describes an ascending-migration chain the code never had
+  (`docs/adr/0019-dexie-recreate-on-version-mismatch.md`).
 - `src/core/services/homeserver/**` and `src/core/pipes/**` - wire-format boundaries
   (`pubky-app-specs`, composite ids, signup tokens, auth URLs). Preserve payload shapes; do not change
   a format incidentally while adding a feature.
@@ -327,7 +328,8 @@ There is no separate backend in this repo; the "backend" is the layer stack plus
   caches silently. Mirror existing multi-table patterns and use the dirty registry rather than
   deleting stream rows eagerly.
 - `src/libs/env/env.ts` + `src/libs/runtime-config/**` - the only places allowed to read
-  `process.env`. It is ESLint-enforced. `Env` is the whole validated build-time schema: the
+  `process.env.NEXT_PUBLIC_*` / `process.env.PUBKY_RUNTIME_*`, and ESLint enforces exactly those two
+  families rather than `process.env` at large. `Env` is the whole validated build-time schema: the
   build-intrinsic public values (`NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION`,
   `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`) plus the server-only variables
   (`HOMESERVER_ADMIN_URL`, `HOMESERVER_ADMIN_PASSWORD`, the Chatwoot `BASE_URL_SUPPORT` /
@@ -430,7 +432,8 @@ Commits and PRs: `type(scope): description`, imperative, no capital, no trailing
 - Adding `useMemo`/`useCallback` (compiler handles it) or `useEffect` where a `useLiveQuery` read plus
   a controller call belongs.
 - Interpolating user text into toast copy; styling toasts by `className`.
-- Editing generated files (`public/sw.js`, `lucideIcons.*.ts`), `package-lock.json`, or workflows.
+- Editing generated files (`public/sw.js`, `lucideIcons.{aliases,nodes,tags}.ts`), `package-lock.json`,
+  or changing CI workflows outside a CI task.
 - Coercing types in tests with `as any` / `as unknown as T` instead of `src/test-utils` helpers.
 - Treating a local cache hit as proof the data is current, or writing a new freshness mechanism beside
   TTL (see *Local-First Read and TTL Pitfalls*).
