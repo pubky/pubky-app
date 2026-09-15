@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted — 2026-09-15
+Proposed — 2026-09-15
+
+> Flip to `Accepted` when this PR merges (`docs/adr-guidelines.md`, Process step 3).
 
 ## Context
 
@@ -13,8 +15,11 @@ registered in ascending order and validated by snapshot tests. The database laye
 
 That is deliberate, not unfinished. The local Dexie store is a cache
 ([ADR-0003](./0003-streams-as-caches.md), [ADR-0005](./0005-ttl-refresh-policy.md)): rows are
-rebuilt from nexus reads and homeserver writes, and per-entity TTLs drive refreshes, so the local
-schema holds nothing that cannot be refetched. The cost of that position is that a version mismatch
+rebuilt from nexus reads and homeserver writes, and per-entity TTLs drive refreshes. One piece of
+local state is not derived from the network: a user's explicit unblur choice is stored only as
+`moderation.is_blurred = false` (`LocalModerationService.setUnBlur`, reached from
+`ModerationController.unBlur`) and is never written to the homeserver. Everything else can be
+refetched. The cost of that position is that a version mismatch
 has to be resolved without a per-version upgrade path, and the app must never read a database whose
 key or index map no longer matches the code.
 
@@ -42,6 +47,8 @@ Local schema evolution is destructive and explicit.
   unreadable version self-heals by recreating.
 - Callers that care that the database was emptied read `wasDbReset`. `RouteGuardProvider` uses it to
   re-run `MigrationController.resync` and to hold routing until that resync finishes.
+- Local-only choices that the network cannot restore, today only the unblur flag, are accepted as
+  lost by a recreate. Growing that set is a reason to revisit this ADR.
 
 ## Consequences
 
@@ -50,7 +57,8 @@ Local schema evolution is destructive and explicit.
 - No migration code to write, review, or keep backward compatible, and no way for a schema change
   to leave a partially upgraded database behind.
 - One code path for desktop, mobile and tests, so schema state cannot diverge between targets.
-- Local data is treated as what it is: losing it costs a refetch, not user data.
+- Local data is treated as what it is: for everything except the unblur flag, losing it costs a
+  refetch rather than user data.
 
 ### Negative ❌
 
@@ -61,10 +69,14 @@ Local schema evolution is destructive and explicit.
 - Deletion only completes once other tabs and connections release the database; the delete request
   can sit `onblocked`, which the layer reports as a warning.
 - Nothing checks that an index-map edit actually came with a version bump. The review has to.
+- A recreate discards local-only user choices. An explicit unblur is not synced, so after a bump the
+  item is moderated again and blurred: the next nexus persistence pass upserts the record with
+  `is_blurred: true` (`ModerationModel.bulkSave` in `src/core/services/local/stream/{posts,users}`).
 
 ### Neutral ⚠️
 
-- Local-only state that cannot be refetched would require revisiting this decision.
+- Every local-only choice that is not refetched (today: the unblur flag) works against this decision
+  and would eventually force a migration path.
 
 ## Alternatives Considered
 
