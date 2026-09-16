@@ -274,10 +274,9 @@ describe('DialogEditPost', () => {
     );
   });
 
-  // The read parser is lenient (every field has a zod `.catch('')`), so unrelated JSON still PARSES
-  // and only the stricter editable-content guard keeps it out of teaser mode. Non-JSON never reaches
-  // that guard, so this case is what pins it.
-  it('treats JSON without any envelope field as a plain post edit', () => {
+  // Saving a lock post as plain text would store content the reader cannot parse, so every lock post
+  // opens in teaser mode, with the fields the reader would show.
+  it('opens unrelated JSON in teaser mode with empty fields', () => {
     const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
     const unrelatedContent = JSON.stringify({ title: 'Not a teaser', body: 'No envelope field' });
     vi.mocked(usePostDetails).mockReturnValue({
@@ -294,12 +293,12 @@ describe('DialogEditPost', () => {
     render(<DialogEditPost postId="test-lock-post-123" open onOpenChangeAction={vi.fn()} />);
 
     expect(PostInput).toHaveBeenCalledWith(
-      expect.objectContaining({ editContent: unrelatedContent, editLock: undefined }),
+      expect.objectContaining({ editContent: '', editLock: { lockUrl, title: '' } }),
       undefined,
     );
   });
 
-  it('preserves raw content when the announcement content is not JSON', () => {
+  it('seeds the teaser with the raw content when the announcement is not JSON', () => {
     const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
@@ -317,7 +316,7 @@ describe('DialogEditPost', () => {
     expect(PostInput).toHaveBeenCalledWith(
       expect.objectContaining({
         editContent: 'plain announcement text',
-        editLock: undefined,
+        editLock: { lockUrl, title: '' },
       }),
       undefined,
     );
@@ -344,9 +343,7 @@ describe('DialogEditPost', () => {
     );
   });
 
-  // A half-envelope is content we only partly understand; re-serializing it would drop the missing
-  // field, so it edits as plain text instead.
-  it('treats a partial envelope as a plain post edit', () => {
+  it('opens a partial envelope in teaser mode, filling the missing field', () => {
     const lockUrl = 'pubky://author/pub/locks.app/LOCK1.json';
     const partialContent = '{"lock_title":"Private note"}';
     vi.mocked(usePostDetails).mockReturnValue({
@@ -363,7 +360,7 @@ describe('DialogEditPost', () => {
     render(<DialogEditPost postId="test-lock-post-123" open onOpenChangeAction={vi.fn()} />);
 
     expect(PostInput).toHaveBeenCalledWith(
-      expect.objectContaining({ editContent: partialContent, editLock: undefined }),
+      expect.objectContaining({ editContent: '', editLock: { lockUrl, title: 'Private note' } }),
       undefined,
     );
   });

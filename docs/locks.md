@@ -107,7 +107,7 @@ honoring the specs contract and returning this field.
 ## Editing an announcement
 
 Lock announcements use the existing `DialogEditPost` composer. The dialog detects the top-level
-`lock`, parses the public envelope with `parseLockTeaserContent`, and exposes only the teaser
+`lock`, parses the public envelope with the reader's parse, and exposes only the teaser
 description and editable lock title. Saving rebuilds the envelope with
 `buildLockTeaserContent`; `PostNormalizer.toEdit` reconstructs the original post with
 `PubkyAppPost.new_with_lock` so the stored lock URL survives content, kind, and attachment edits.
@@ -116,21 +116,19 @@ or guarded content.
 
 ### When the content is not a teaser envelope
 
-`parseLockTeaserContent` accepts the envelope only when **both** `lock_title` and
-`teaser_description` are present and are strings; extra fields are ignored. It is deliberately
-stricter than the read parser used for rendering, where every field has a Zod `.catch('')` — under
-those rules unrelated JSON such as `{"title":"…"}` parses successfully into two empty strings, and
-saving would overwrite the stored content with a blank envelope. A half-envelope is rejected for the
-same reason: filling the missing field with `''` would write a value the creator never authored.
+The dialog parses the envelope with the same lenient reader parse, where every field has a Zod
+`.catch('')`. A lock post therefore always opens in teaser mode, showing the two fields the reader
+would show:
 
-When the parse is rejected, the dialog falls back to a plain post edit:
+| stored content                   | composer body                  | lock title |
+| -------------------------------- | ------------------------------ | ---------- |
+| complete envelope                | `teaser_description`           | stored one |
+| half envelope, or unrelated JSON | the parsed field, or empty     | as parsed  |
+| not JSON at all                  | the stored `content`, verbatim | empty      |
 
-|                  | teaser mode                            | fallback                       |
-| ---------------- | -------------------------------------- | ------------------------------ |
-| composer body    | `teaser_description`                   | the stored `content`, verbatim |
-| lock card        | shown, title editable, price read-only | not rendered                   |
-| character budget | `LOCK_TEASER_MAX_CHARACTER_LENGTH`     | `POST_MAX_CHARACTER_LENGTH`    |
-| saved as         | re-serialized envelope                 | plain text                     |
+Saving always re-serializes the envelope. Editing a lock post as plain text is not offered: the
+stored content would no longer parse, and the reader renders nothing for a lock post it cannot
+parse, so one edit would blank the post for everyone.
 
 The `lock` URL survives either way — `toEdit` reads it from the stored row, not from the content.
 
@@ -145,9 +143,8 @@ The `lock` URL survives either way — `toEdit` reads it from the stored row, no
 
 - `content` is FE-owned (pubky-app-specs does not manage it) and validated at runtime
   with Zod (`lockPostContentSchema`, `core/services/locks/locks.types.ts`). Bad / missing
-  fields degrade to empty strings so the teaser still renders. **Editing applies a stricter
-  rule than reading**: `isEditableLockTeaserContent` requires at least one pubky.app envelope
-  field before the edit composer will re-serialize the content (see
+  fields degrade to empty strings so the teaser still renders. The edit composer reads it with
+  the same parse, so what the creator edits is what the reader sees (see
   [Editing an announcement](#editing-an-announcement)).
 - `LockFile` mirrors the Lock server's public `lock.json` (`version`, `creator`,
   `primary_resource`, `secondary_resources`, `criteria`, `lock_logic`, `access_policy`,
@@ -181,7 +178,7 @@ and swaps in the guarded post once it becomes readable.
 | `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                    |
 | `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction            |
 | `components/organisms/DialogEditPost/DialogEditPost.tsx`       | routes an announcement into teaser mode, or falls back to a plain post edit         |
-| `libs/post/lockTeaser.ts`                                      | the envelope: builder, length guard, and the stricter edit-eligibility check        |
+| `libs/post/lockTeaser.ts`                                      | the envelope: builder and length guard                                              |
 
 ## Reading a lock post
 

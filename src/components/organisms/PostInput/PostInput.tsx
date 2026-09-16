@@ -317,14 +317,12 @@ export function PostInput({
       } else {
         setContent(editContent);
       }
+      // Seeded with the body: a failed save rolls the stored row back, and reverting only one of the
+      // two would let the next save write the new title over the old body.
+      setEditLockTitle(editLock?.title ?? '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
-  }, [variant, editContent, editIsArticle]);
-
-  useEffect(() => {
-    if (isEdit) setEditLockTitle(editLock?.title ?? '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once per edit target; live row changes must not overwrite user input
-  }, [variant, editPostId]);
+  }, [variant, editContent, editIsArticle, editLock?.title]);
 
   // Pre-fill content from share target or other external sources
   useEffect(() => {

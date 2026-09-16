@@ -279,9 +279,9 @@ describe('PostInput lock wiring', () => {
     expect(screen.queryByTestId('lock-switch')).not.toBeInTheDocument();
   });
 
-  // Scoped to the title: the teaser body is seeded by a separate effect keyed on `editContent`, which
-  // this rerender deliberately leaves unchanged.
-  it('keeps an edited lock title when live lock metadata changes', () => {
+  // Both fields come from the same stored row, so a live change to either one reseeds both. Reverting
+  // only one would let the next save write the new title over the old body.
+  it('reseeds the teaser and the title together when the stored row changes', () => {
     const view = renderEditLock();
 
     fireEvent.change(screen.getByPlaceholderText('Write a short announcement to tease your content.'), {
@@ -302,9 +302,41 @@ describe('PostInput lock wiring', () => {
     );
 
     expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveValue(
-      'Draft teaser',
+      'Public teaser',
     );
-    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Draft title');
+    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Remote title');
+  });
+
+  // A failed save writes the draft locally first and rolls it back after the homeserver rejects it.
+  // Both versions reach the composer through the live row, so the title has to follow the teaser.
+  it('reverts the title with the teaser when a failed save rolls the row back', () => {
+    const view = renderEditLock();
+    const teaserInput = screen.getByPlaceholderText('Write a short announcement to tease your content.');
+    const titleInput = screen.getByRole('textbox', { name: 'Lock title' });
+
+    fireEvent.change(teaserInput, { target: { value: 'Draft teaser' } });
+    fireEvent.change(titleInput, { target: { value: 'Draft title' } });
+
+    const rerenderRow = (content: string, title: string) =>
+      view.rerender(
+        <PostInput
+          variant={POST_INPUT_VARIANT.EDIT}
+          editPostId="alice:POST1"
+          editContent={content}
+          editIsArticle={false}
+          editAttachments={[]}
+          editLock={{ lockUrl: 'pubky://alice/pub/locks.app/LOCK1.json', title }}
+          expanded
+        />,
+      );
+
+    rerenderRow('Draft teaser', 'Draft title');
+    rerenderRow('Public teaser', 'Private note');
+
+    expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveValue(
+      'Public teaser',
+    );
+    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Private note');
   });
 
   it('disables save when the edit lock title is cleared', () => {
