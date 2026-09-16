@@ -61,6 +61,7 @@ public/sw.js.map
 # Claude Code: team config is committed, local state is not
 .claude/*
 !.claude/settings.json
+!.claude/launch.json
 !.claude/rules/
 !.claude/skills/
 .claude/settings.local.json
