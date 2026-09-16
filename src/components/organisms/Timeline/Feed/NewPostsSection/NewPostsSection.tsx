@@ -63,7 +63,8 @@ export function NewPostsSection({
   const handleNewPostsClick = async () => {
     try {
       await StreamPostsController.mergeUnreadStreamWithPostStream({ streamId });
-      await StreamPostsController.clearUnreadStream({ streamId });
+      // Pending details and posts arriving after this render remain unread.
+      await StreamPostsController.clearUnreadStream({ streamId, postIds: actualNewPostIds });
 
       const existingPosts = await StreamPostsController.filterDeletedPosts(actualNewPostIds);
       const displayedPostIdsSet = new Set(postIds);

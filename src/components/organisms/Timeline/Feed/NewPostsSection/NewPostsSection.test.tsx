@@ -159,6 +159,7 @@ describe('NewPostsSection', () => {
       });
       expect(StreamPostsController.clearUnreadStream).toHaveBeenCalledWith({
         streamId: 'timeline:all:all',
+        postIds: ['new1'],
       });
       expect(prependPosts).toHaveBeenCalledWith(['new1']);
     });

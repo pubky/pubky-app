@@ -1,6 +1,6 @@
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
-import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import type { TClearUnreadStreamParams, TStreamIdParams } from '@/controllers/stream/posts/posts.types';
 import { db } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
@@ -201,16 +201,25 @@ export class LocalStreamPostsService {
   }
 
   /**
-   * Clear the unread stream and return the post IDs that were in it
+   * Acknowledge selected unread IDs, or clear the entire stream when omitted.
+   * The transaction preserves other IDs that arrived while the UI was loading.
    * @param streamId - The stream ID to clear the unread stream for
-   * @returns Array of post IDs that were in the unread stream
+   * @returns Array of unread IDs that were cleared
    */
-  static async clearUnreadStream({ streamId }: TStreamIdParams): Promise<string[]> {
-    const unreadStream = await UnreadPostStreamModel.findById(streamId);
-    if (!unreadStream) return [];
-    const postIds = unreadStream.stream;
-    await UnreadPostStreamModel.deleteById(streamId);
-    return postIds;
+  static async clearUnreadStream({ streamId, postIds }: TClearUnreadStreamParams): Promise<string[]> {
+    return db.transaction('rw', UnreadPostStreamModel.table, async () => {
+      const unreadStream = await UnreadPostStreamModel.findById(streamId);
+      if (!unreadStream) return [];
+      const selectedIds = postIds === undefined ? new Set(unreadStream.stream) : new Set(postIds);
+      const clearedIds = unreadStream.stream.filter((id) => selectedIds.has(id));
+      const remainingIds = unreadStream.stream.filter((id) => !selectedIds.has(id));
+      if (remainingIds.length > 0) {
+        await UnreadPostStreamModel.upsert(streamId, remainingIds);
+      } else {
+        await UnreadPostStreamModel.deleteById(streamId);
+      }
+      return clearedIds;
+    });
   }
 
   /**

@@ -16,6 +16,11 @@ export type TStreamIdParams = {
   streamId: PostStreamId;
 };
 
+export type TClearUnreadStreamParams = TStreamIdParams & {
+  /** Only acknowledge these IDs; omitted when resetting the entire stream. */
+  postIds?: string[];
+};
+
 export type TReadPostStreamChunkResponse = {
   nextPageIds: string[];
   /** Opaque resume cursor (raw `skip` offset for skip streams, score for score streams).

@@ -3,6 +3,7 @@ import type {
   TCacheStreamParams,
   TFetchMissingUsersParams,
   TFetchStreamParams,
+  TGetOrFetchStreamHeadParams,
   TMissingPostsParams,
   TPartialCacheHitParams,
   TPersistUnreadNewStreamChunkParams,
@@ -16,7 +17,7 @@ import {
   NOT_FOUND_CACHED_STREAM,
   SKIP_FETCH_NEW_POSTS,
 } from '@/controllers/stream/posts/post.constants';
-import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import type { TClearUnreadStreamParams, TStreamIdParams } from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
@@ -100,6 +101,26 @@ export class PostStreamApplication {
     return await LocalStreamPostsService.getStreamHead(params);
   }
 
+  /** Retry unresolved unread details on the existing poll before advancing its cursor. */
+  static async getOrFetchStreamHead({ streamId, viewerId, isCurrent }: TGetOrFetchStreamHeadParams): Promise<number> {
+    const unreadStream = await this.getUnreadStream({ streamId });
+    if (unreadStream && unreadStream.stream.length > 0) {
+      const cacheMissPostIds = await this.getNotPersistedPostsInCache(unreadStream.stream);
+      if (cacheMissPostIds.length > 0) {
+        await this.fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId, isCurrent });
+      }
+    }
+    if (!isCurrent()) return SKIP_FETCH_NEW_POSTS;
+    let streamHead = await this.getStreamHead({ streamId });
+    if (streamHead === SKIP_FETCH_NEW_POSTS) {
+      // Nexus may omit a deleted or not-yet-indexed unread ID. Keep it pending
+      // for hydration, but let newer keys arrive from the known main-stream cursor.
+      const mainStreamHead = await this.getMainStreamHeadTimestamp({ streamId });
+      streamHead = mainStreamHead === SKIP_FETCH_NEW_POSTS ? FORCE_FETCH_NEW_POSTS : mainStreamHead;
+    }
+    return isCurrent() ? streamHead : SKIP_FETCH_NEW_POSTS;
+  }
+
   /**
    * Get local stream data from cache
    * @param streamId - The ID of the stream
@@ -113,7 +134,7 @@ export class PostStreamApplication {
     return await LocalStreamPostsService.mergeUnreadStreamWithPostStream(params);
   }
 
-  static async clearUnreadStream(params: TStreamIdParams): Promise<string[]> {
+  static async clearUnreadStream(params: TClearUnreadStreamParams): Promise<string[]> {
     return await LocalStreamPostsService.clearUnreadStream(params);
   }
 

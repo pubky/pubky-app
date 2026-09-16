@@ -3,6 +3,12 @@ import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import type { NexusPost } from '@/services/nexus/nexus.types';
 import type { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 
+export interface TGetOrFetchStreamHeadParams {
+  streamId: PostStreamId;
+  viewerId: Pubky | null;
+  isCurrent: () => boolean;
+}
+
 export interface TFetchStreamParams {
   isCurrent?: () => boolean;
   streamId: PostStreamId;

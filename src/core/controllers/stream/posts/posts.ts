@@ -2,6 +2,7 @@ import { PostStreamApplication } from '@/application/stream/posts/post';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type {
+  TClearUnreadStreamParams,
   TReadPostStreamChunkParams,
   TReadPostStreamChunkResponse,
   TStreamIdParams,
@@ -161,6 +162,15 @@ export class StreamPostsController {
     return await PostStreamApplication.getStreamHead(params);
   }
 
+  /** Resolve the poll cursor, retrying unread details left missing by an earlier poll. */
+  static async getOrFetchStreamHead(params: TStreamIdParams): Promise<number> {
+    return PostStreamApplication.getOrFetchStreamHead({
+      ...params,
+      viewerId: useAuthStore.getState().currentUserPubky,
+      isCurrent: captureViewerSession(),
+    });
+  }
+
   /**
    * Get local stream data from cache
    * @param streamId - The ID of the stream
@@ -188,11 +198,11 @@ export class StreamPostsController {
   }
 
   /**
-   * Clear the unread stream and return the post IDs that were in it
+   * Clear the selected unread IDs, or the entire stream when no IDs are supplied.
    * @param params - The stream ID to clear the unread stream for
-   * @returns Array of post IDs that were in the unread stream
+   * @returns Array of unread IDs that were cleared
    */
-  static async clearUnreadStream(params: TStreamIdParams): Promise<string[]> {
+  static async clearUnreadStream(params: TClearUnreadStreamParams): Promise<string[]> {
     return await PostStreamApplication.clearUnreadStream(params);
   }
 

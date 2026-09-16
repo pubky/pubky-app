@@ -1384,6 +1384,27 @@ describe('LocalStreamPostsService', () => {
   });
 
   describe('clearUnreadStream', () => {
+    it('acknowledges only the selected IDs and preserves later arrivals', async () => {
+      const selectedId = postId('selected');
+      const laterId = postId('later');
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [selectedId]);
+      const selected = (await LocalStreamPostsService.readUnreadStream({ streamId }))!.stream;
+      await LocalStreamPostsService.persistUnreadNewStreamChunk({ streamId, stream: [laterId] });
+
+      const cleared = await LocalStreamPostsService.clearUnreadStream({ streamId, postIds: selected });
+
+      expect(cleared).toEqual([selectedId]);
+      expect((await LocalStreamPostsService.readUnreadStream({ streamId }))?.stream).toEqual([laterId]);
+    });
+
+    it('leaves the unread stream intact when no IDs were selected', async () => {
+      const unreadIds = [postId('pending')];
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, unreadIds);
+
+      expect(await LocalStreamPostsService.clearUnreadStream({ streamId, postIds: [] })).toEqual([]);
+      expect((await LocalStreamPostsService.readUnreadStream({ streamId }))?.stream).toEqual(unreadIds);
+    });
+
     it('should clear unread stream and return post IDs', async () => {
       const unreadPostIds = [postId('unread-1'), postId('unread-2'), postId('unread-3')];
       await UnreadPostStreamModel.upsert(streamId as PostStreamId, unreadPostIds);
