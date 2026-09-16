@@ -50,7 +50,7 @@
     },
     {
       "id": "icons-import-conventions",
-      "rule": "Stock Lucide icons: import from 'lucide-react' only. Custom/brand SVG components: import from '@/icons' (tsconfig alias → src/libs/icons/icons.tsx). Do not re-export lucide-react from @/libs or add export * from 'lucide-react' through aggregate index files. URL→icon helpers (getIconFromUrl, getLabelFromUrl) belong in @/libs/utils (urlToIcon). See docs/components.md — Icons.",
+      "rule": "Stock Lucide icons: import from 'lucide-react' only. Custom/brand SVG components: import from '@/icons' (tsconfig alias \u2192 src/libs/icons/icons.tsx). Do not re-export lucide-react from @/libs or add export * from 'lucide-react' through aggregate index files. URL\u2192icon helpers (getIconFromUrl, getLabelFromUrl) belong in @/libs/utils (urlToIcon). See docs/components.md \u2014 Icons.",
       "scope": ["src/components/**", "src/app/**", "src/hooks/**", "src/providers/**", "src/libs/**"],
       "severity": "medium"
     },
@@ -74,13 +74,13 @@
     },
     {
       "id": "no-dead-code",
-      "rule": "Remove unreachable branches, unused variables, commented-out blocks, and code guarded by conditions that are always true or false. Dead code misleads readers and inflates bundle size. Don't comment code out 'for later' — git preserves history. If a feature flag is permanently on/off, collapse the branch.",
+      "rule": "Remove unreachable branches, unused variables, commented-out blocks, and code guarded by conditions that are always true or false. Dead code misleads readers and inflates bundle size. Don't comment code out 'for later' \u2014 git preserves history. If a feature flag is permanently on/off, collapse the branch.",
       "scope": ["src/**"],
       "severity": "medium"
     },
     {
       "id": "no-unused-exports",
-      "rule": "If a function, const, type, or class is exported but never imported by any other file, remove the export or demote to a local. Stale exports clutter the public API surface. Only exception: symbols consumed by external packages or test harnesses — add a comment like '// exported for integration tests'.",
+      "rule": "If a function, const, type, or class is exported but never imported by any other file, remove the export or demote to a local. Stale exports clutter the public API surface. Only exception: symbols consumed by external packages or test harnesses \u2014 add a comment like '// exported for integration tests'.",
       "scope": ["src/**"],
       "severity": "medium"
     },
@@ -170,6 +170,12 @@
         "src/libs/lucide/lucideIcons.nodes.ts",
         "src/libs/lucide/lucideIcons.tags.ts"
       ],
+      "severity": "high"
+    },
+    {
+      "id": "sw-shell-only",
+      "rule": "The service worker owns the app shell only: precache, the share target and the static offline fallback. Do not add runtime caching for homeserver, pkarr, httprelay, Nexus, CDN or any data (Dexie is the only data cache; TTL is the only freshness mechanism), no defaultCache, and keep skipWaiting false (updates are user-consented via useServiceWorkerUpdate). Public precache entries are an allow-list in globPublicPatterns. See docs/pwa.md and ADR-0021.",
+      "scope": ["src/sw.ts", "next.config.ts", "src/hooks/useServiceWorkerUpdate/**"],
       "severity": "high"
     }
   ]
