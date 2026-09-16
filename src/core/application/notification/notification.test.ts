@@ -603,12 +603,15 @@ describe('NotificationApplication.fetchMissingEntities', () => {
       relatedUserIds: [relatedUserId],
     });
     vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
-    vi.spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache').mockResolvedValue([relatedUserId]);
+    const getNotPersistedSpy = vi
+      .spyOn(LocalStreamUsersService, 'getNotPersistedUsersInCache')
+      .mockResolvedValue([relatedUserId]);
     vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
     const fetchUsersSpy = vi.spyOn(UserStreamApplication, 'fetchMissingUsersFromNexus').mockResolvedValue(undefined);
 
     await NotificationApplication.fetchMissingEntities({ notifications, viewerId });
 
+    expect(getNotPersistedSpy).toHaveBeenCalledWith([relatedUserId], viewerId);
     // CRITICAL: viewerId must be passed to get correct relationship data
     expect(fetchUsersSpy).toHaveBeenCalledWith({
       force: true,

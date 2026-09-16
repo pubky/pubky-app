@@ -145,7 +145,15 @@ describe('OgMetadataApplication (integration)', () => {
       mockResolve4.mockResolvedValueOnce(['1.1.1.1']);
       mockIsIpSafe.mockReturnValueOnce(true).mockReturnValueOnce(false);
 
-      await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).rejects.toThrow('Blocked IP range');
+      // The guard still refuses the connection (the redirect target is never fetched); the private
+      // target is expected input, so it degrades to fallback metadata instead of throwing.
+      await expect(OgMetadataApplication.fetch(new URL('https://example.com'))).resolves.toEqual({
+        url: 'http://169.254.169.254/metadata',
+        title: null,
+        image: null,
+        type: 'website',
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(redirectResponse._cancel).toHaveBeenCalled();
     });
 

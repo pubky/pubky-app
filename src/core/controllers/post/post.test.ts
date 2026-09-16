@@ -1972,6 +1972,26 @@ describe('PostController', () => {
       }
     });
 
+    it('should inject the signed-in viewer when none is supplied (#1803)', async () => {
+      const { PostController } = await import('./post');
+      const authSpy = vi
+        .spyOn(useAuthStore, 'getState')
+        .mockReturnValue({ ...useAuthStore.getState(), currentUserPubky: testData.authorPubky });
+      const getOrFetchSpy = vi.spyOn(PostApplication, 'getOrFetch').mockResolvedValue(null);
+
+      try {
+        await PostController.getOrFetch({ compositeId: 'author:post123' });
+        expect(getOrFetchSpy).toHaveBeenCalledWith({
+          compositeId: 'author:post123',
+          viewerId: testData.authorPubky,
+          isCurrent: expect.any(Function),
+        });
+      } finally {
+        getOrFetchSpy.mockRestore();
+        authSpy.mockRestore();
+      }
+    });
+
     it('should call PostApplication.getOrFetch with correct postId', async () => {
       const { PostController } = await import('./post');
 
@@ -2007,6 +2027,46 @@ describe('PostController', () => {
         });
       } finally {
         fetchSpy.mockRestore();
+      }
+    });
+
+    it('should inject the signed-in viewer when none is supplied (#1803)', async () => {
+      const { PostController } = await import('./post');
+      const authSpy = vi
+        .spyOn(useAuthStore, 'getState')
+        .mockReturnValue({ ...useAuthStore.getState(), currentUserPubky: testData.authorPubky });
+      const fetchSpy = vi.spyOn(PostApplication, 'fetch').mockResolvedValue(null);
+
+      try {
+        await PostController.fetch({ compositeId: 'author:post123' });
+        expect(fetchSpy).toHaveBeenCalledWith({
+          compositeId: 'author:post123',
+          viewerId: testData.authorPubky,
+          isCurrent: expect.any(Function),
+        });
+      } finally {
+        fetchSpy.mockRestore();
+        authSpy.mockRestore();
+      }
+    });
+
+    it('should pass a null viewer for guests', async () => {
+      const { PostController } = await import('./post');
+      const authSpy = vi
+        .spyOn(useAuthStore, 'getState')
+        .mockReturnValue({ ...useAuthStore.getState(), currentUserPubky: null });
+      const fetchSpy = vi.spyOn(PostApplication, 'fetch').mockResolvedValue(null);
+
+      try {
+        await PostController.fetch({ compositeId: 'author:post123' });
+        expect(fetchSpy).toHaveBeenCalledWith({
+          compositeId: 'author:post123',
+          viewerId: null,
+          isCurrent: expect.any(Function),
+        });
+      } finally {
+        fetchSpy.mockRestore();
+        authSpy.mockRestore();
       }
     });
 

@@ -84,6 +84,19 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       matchesEndpointPath(error, NEXUS_POST_TAGS_PATH_PATTERN),
   },
   {
+    name: 'rate-limit-repeat-reports',
+    reason:
+      'A 429 is one server-side throttling window, not one failure per request: a throttled client keeps issuing queries and the ' +
+      'query client retries a 429 once after the 429 backoff, so reporting every attempt produced ~8.7k events for a handful of ' +
+      'windows (PUBKY-APP-B3 on /hot, PUBKY-APP-9X on /home). httpStatusCodeToError reports the first 429 per service/operation per ' +
+      'window and tags the repeats with context.reportSuppressed, so throttling stays visible while the repeat events are dropped. ' +
+      'Non-429 rate-limit errors carry no flag and stay reportable.',
+    matches: (error) =>
+      error.category === ErrorCategory.RateLimit &&
+      error.context?.statusCode === HttpStatusCode.TOO_MANY_REQUESTS &&
+      error.context?.reportSuppressed === true,
+  },
+  {
     name: 'aborted-requests',
     reason:
       'REQUEST_ABORTED is only produced by safeFetch when fetch rejects with an AbortError DOMException. When the ' +
