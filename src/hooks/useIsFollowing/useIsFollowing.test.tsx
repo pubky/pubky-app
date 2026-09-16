@@ -20,11 +20,6 @@ vi.mock('@/controllers/user/user', () => ({
     fetch: (params: { userId: string }) => mockFetch(params),
   },
 }));
-const mockPathname = vi.hoisted(() => ({ value: '/profile/target-user' }));
-vi.mock('next/navigation', () => ({
-  usePathname: () => mockPathname.value,
-}));
-
 const mockSubscribeUser = vi.fn();
 const mockUnsubscribeUser = vi.fn();
 vi.mock('@/coordinators/ttl/ttl', () => ({
@@ -55,7 +50,6 @@ describe('useIsFollowing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.currentUserPubky = 'current-user-pubky';
-    mockPathname.value = '/profile/target-user';
     mockGetRelationships.mockReturnValue(null);
   });
 
@@ -223,19 +217,6 @@ describe('useIsFollowing', () => {
 
       expect(mockUnsubscribeUser).toHaveBeenCalledWith({ pubky: VALID_TARGET });
       expect(mockSubscribeUser).toHaveBeenLastCalledWith({ pubky: OTHER_VALID_TARGET });
-    });
-
-    it('re-subscribes on route change so layout-mounted buttons survive coordinator reset', () => {
-      mockGetRelationships.mockReturnValue({ following: false });
-
-      const { rerender } = renderHook(() => useIsFollowing(VALID_TARGET));
-
-      mockPathname.value = `/profile/${VALID_TARGET}/followers`;
-      rerender();
-
-      expect(mockUnsubscribeUser).toHaveBeenCalledWith({ pubky: VALID_TARGET });
-      expect(mockSubscribeUser).toHaveBeenCalledTimes(2);
-      expect(mockSubscribeUser).toHaveBeenLastCalledWith({ pubky: VALID_TARGET });
     });
   });
 });

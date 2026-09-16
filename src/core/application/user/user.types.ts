@@ -1,4 +1,3 @@
-import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TFollowParams } from '@/controllers/user/user.type';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { Pubky } from '@/models/models.types';
@@ -7,11 +6,6 @@ import type { NexusSocialGraphStatus, NexusUserCounts } from '@/services/nexus/n
 
 /** Cached Dexie row (includes `id`) or Nexus API payload (counters only). */
 export type TUserCountsOrFetchResult = UserCountsModel | NexusUserCounts;
-
-/** Target user plus the signed-in viewer (null for guests) so the persisted relationship is viewer-relative. */
-export type TUserApplicationFetchParams = TReadProfileParams & {
-  viewerId?: Pubky | null;
-};
 
 /**
  * Local read of a user's social graph badge tier.

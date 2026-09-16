@@ -428,6 +428,15 @@ describe('LocalFollowService.delete', () => {
     expect(aConn?.following ?? []).not.toContain(userB);
     expect(bConn?.followers ?? []).not.toContain(userA);
   });
+
+  it('stamps the followee user TTL so an in-flight refresh can keep the local unfollow', async () => {
+    await UserTtlModel.upsert({ id: userB, lastUpdatedAt: 1 });
+
+    await LocalFollowService.delete({ follower: userA, followee: userB });
+
+    const ttl = await UserTtlModel.findById(userB);
+    expect(ttl?.lastUpdatedAt).toBeGreaterThan(1);
+  });
 });
 
 describe('LocalFollowService - Stream Updates', () => {

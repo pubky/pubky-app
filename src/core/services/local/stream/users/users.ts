@@ -197,7 +197,7 @@ export class LocalStreamUsersService {
         const existingTtl = await UserTtlModel.findByIds(userIds);
         const skipIds = new Set(existingTtl.filter((row) => row.lastUpdatedAt >= fetchStartedAt).map((row) => row.id));
         if (skipIds.size > 0) {
-          Logger.debug('LocalStreamUsersService: Kept local follow state during refresh', {
+          Logger.debug('LocalStreamUsersService: Skipped relationship rows written since the fetch started', {
             ids: Array.from(skipIds).slice(0, 5),
             count: skipIds.size,
           });

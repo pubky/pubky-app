@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 import { UserController } from '@/controllers/user/user';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
@@ -28,7 +27,6 @@ import type { UseIsFollowingResult } from './useIsFollowing.types';
  */
 export function useIsFollowing(targetUserId: string): UseIsFollowingResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const pathname = usePathname();
 
   // Don't fetch or query if targeting yourself or if either ID is missing
   const enabled = !!targetUserId && !!currentUserPubky && targetUserId !== currentUserPubky;
@@ -41,8 +39,6 @@ export function useIsFollowing(targetUserId: string): UseIsFollowingResult {
   });
 
   // Keep a cached relationship fresh: the coordinator re-fetches the user (viewer-aware) once stale.
-  // The coordinator drops every subscription on route change (CoordinatorsManager applies the route
-  // before page effects run), so re-subscribe per pathname for hooks living in route-spanning layouts.
   useEffect(() => {
     if (!enabled || !isPubkyIdentifier(targetUserId)) return;
 
@@ -53,7 +49,7 @@ export function useIsFollowing(targetUserId: string): UseIsFollowingResult {
     return () => {
       coordinator.unsubscribeUser({ pubky });
     };
-  }, [enabled, targetUserId, pathname]);
+  }, [enabled, targetUserId]);
 
   // If no relationship record exists, default to not following
   const isFollowing = relationship?.following ?? false;

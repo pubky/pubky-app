@@ -13,7 +13,6 @@ let mockTaggerStates = new Map<string, TaggersState>();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
-  usePathname: () => '/',
 }));
 
 vi.mock('@/hooks/useIsTouchDevice/useIsTouchDevice', () => ({

@@ -1692,6 +1692,32 @@ describe('PostStreamApplication', () => {
       expect(fetchUsersByIdsSpy).not.toHaveBeenCalled();
     });
 
+    it('should refetch an author who has details cached but no relationship when a viewer is present', async () => {
+      const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
+      const mockNexusUsers = [createMockNexusUser(DEFAULT_AUTHOR)];
+      const mocks = setupDefaultMocks();
+      mocks.getUserDetails.mockResolvedValue(mockAllUsersCached(1));
+      mocks.getUserRelationships.mockResolvedValue([]);
+
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      const fetchUsersByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+
+      await PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds,
+        viewerId,
+      });
+
+      expect(fetchUsersByIdsSpy).toHaveBeenCalledWith({
+        user_ids: [DEFAULT_AUTHOR],
+        viewer_id: viewerId,
+      });
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        mockNexusUsers,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
+    });
+
     it('should handle when cacheMissPostIds is empty array', async () => {
       const cacheMissPostIds: string[] = [];
       const mocks = setupDefaultMocks();

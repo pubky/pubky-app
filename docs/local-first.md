@@ -179,7 +179,7 @@ Two bug classes account for most regressions on read paths. Check them before to
 
 TTL refresh races are the second class (TTL rules: `docs/data-patterns.md`, _TTL Management_):
 
-- A background refresh that lands after a local write reverts the user's action (#1781) or flickers the tag UI (#1452, #1276). A local write must mark every affected row fresh (`*_ttl.lastUpdatedAt`) so the coordinator skips it; a stale Nexus response must never overwrite a fresher local write.
+- A background refresh that lands after a local write reverts the user's action (#1781) or flickers the tag UI (#1452, #1276). A local write must mark every affected row fresh (`*_ttl.lastUpdatedAt`) so the coordinator skips it; a stale Nexus response must never overwrite a fresher local write. `persistUsers` skips the relationship row for any user whose `user_ttl.lastUpdatedAt >= fetchStartedAt`, and `LocalFollowService.create`/`delete` stamp the followee TTL so a follow that lands mid-request wins (#1803).
 - TTL refresh also applies to public content for signed-out visitors (#2486). "Logged out" does not mean "no background refresh".
 - Do not force freshness by clearing stream caches: invalidate the affected scope through the dirty registry (see _Deferred Stream Invalidation_ below) and let the TTL/viewport policy refetch (ADR-0003, ADR-0005).
 
