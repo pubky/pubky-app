@@ -101,6 +101,9 @@ export class BootstrapApplication {
         streamId: PostStreamTypes.TIMELINE_ALL_ALL,
         stream: bootstrapData.ids.stream,
       }),
+      // The bootstrap page is the stream head now; ids an earlier head poll collected are
+      // at or below it, and merging them on top would put them above newer posts.
+      LocalStreamPostsService.clearUnreadStream({ streamId: PostStreamTypes.TIMELINE_ALL_ALL }),
       LocalStreamUsersService.upsert({
         streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL,
         stream: bootstrapData.ids.influencers,

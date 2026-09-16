@@ -178,6 +178,76 @@ describe('LocalStreamPostsService', () => {
     });
   });
 
+  describe('keepIdsBelowRow', () => {
+    const row = [postId('post-3'), postId('post-2'), postId('post-1')];
+
+    it('keeps the page as it is when there is no cached row', async () => {
+      const page = [postId('post-9'), postId('post-8')];
+      await expect(LocalStreamPostsService.keepIdsBelowRow({ streamId, stream: page, lastScore: 8 })).resolves.toEqual(
+        page,
+      );
+    });
+
+    it('keeps only the ids the page lists after the last id the row already holds', async () => {
+      await createStream(row);
+      // An edited tail seeded the seam above the row: post-5 and post-4 are above its head,
+      // post-3 and post-2 are cached already; only post-0 lies below the tail.
+      const page = [postId('post-5'), postId('post-4'), postId('post-3'), postId('post-2'), postId('post-0')];
+
+      await expect(
+        LocalStreamPostsService.keepIdsBelowRow({ streamId, stream: page, lastScore: BASE_TIMESTAMP }),
+      ).resolves.toEqual([postId('post-0')]);
+    });
+
+    it('keeps nothing from a page that ends inside the row', async () => {
+      await createStream(row);
+
+      await expect(
+        LocalStreamPostsService.keepIdsBelowRow({
+          streamId,
+          stream: [postId('post-4'), postId('post-3'), postId('post-2')],
+          lastScore: BASE_TIMESTAMP + 2,
+        }),
+      ).resolves.toEqual([]);
+    });
+
+    it('skips a page that shares no id with the row and ends above the row head', async () => {
+      await createStream(row);
+
+      await expect(
+        LocalStreamPostsService.keepIdsBelowRow({
+          streamId,
+          stream: [postId('post-9'), postId('post-8')],
+          lastScore: BASE_TIMESTAMP + 8,
+          headTimestamp: BASE_TIMESTAMP + 3,
+        }),
+      ).resolves.toEqual([]);
+    });
+
+    it('keeps a page that shares no id with the row when it is not above the head', async () => {
+      await createStream(row);
+      const below = [postId('post-0'), postId('post--1')];
+
+      await expect(
+        LocalStreamPostsService.keepIdsBelowRow({
+          streamId,
+          stream: below,
+          lastScore: BASE_TIMESTAMP - 1,
+          headTimestamp: BASE_TIMESTAMP + 3,
+        }),
+      ).resolves.toEqual(below);
+    });
+
+    it('keeps a page that shares no id with the row when no head timestamp is known', async () => {
+      await createStream(row);
+      const page = [postId('post-9'), postId('post-8')];
+
+      await expect(
+        LocalStreamPostsService.keepIdsBelowRow({ streamId, stream: page, lastScore: BASE_TIMESTAMP + 8 }),
+      ).resolves.toEqual(page);
+    });
+  });
+
   describe('bulkSave', () => {
     it('persists each row with its Nexus cursor', async () => {
       await LocalStreamPostsService.bulkSave({
@@ -1293,17 +1363,34 @@ describe('LocalStreamPostsService', () => {
       expect(result?.tailCursor).toBe(BASE_TIMESTAMP + 3);
     });
 
-    it('sorts only the unread prefix, leaving the cached pages in stream order', async () => {
+    it('keeps an id the row already holds at the row position', async () => {
+      // A bootstrap replaced the row with a newer head page that already contains an id an
+      // earlier head poll collected: the row's position wins, the newer head stays on top.
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [postId('polled-x'), postId('post-a')]);
+      await LocalStreamPostsService.upsert({
+        streamId,
+        stream: [postId('post-b'), postId('post-a'), postId('post-c')],
+        tailCursor: BASE_TIMESTAMP,
+      });
+
+      await LocalStreamPostsService.mergeUnreadStreamWithPostStream({ streamId });
+
+      const result = await LocalStreamPostsService.read({ streamId });
+      expect(result?.stream).toEqual([postId('polled-x'), postId('post-b'), postId('post-a'), postId('post-c')]);
+    });
+
+    it('keeps both the unread row and the cached pages in stream order, never re-sorting by indexed_at', async () => {
       await LocalStreamPostsService.persistPosts({
         posts: [
-          createMockNexusPost('unread-old', DEFAULT_AUTHOR, BASE_TIMESTAMP + 10),
-          createMockNexusPost('unread-new', DEFAULT_AUTHOR, BASE_TIMESTAMP + 20),
+          createMockNexusPost('unread-newest', DEFAULT_AUTHOR, BASE_TIMESTAMP + 20),
+          // Polled below unread-newest, then edited: its indexed_at is now the highest of all.
+          createMockNexusPost('unread-edited', DEFAULT_AUTHOR, BASE_TIMESTAMP + 900),
           createMockNexusPost('post-1', DEFAULT_AUTHOR, BASE_TIMESTAMP + 1),
           // Edited after everything else: Nexus keeps it below post-1 regardless.
           createMockNexusPost('edited-2', DEFAULT_AUTHOR, BASE_TIMESTAMP + 500),
         ],
       });
-      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [postId('unread-old'), postId('unread-new')]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [postId('unread-newest'), postId('unread-edited')]);
       await LocalStreamPostsService.upsert({
         streamId,
         stream: [postId('post-1'), postId('edited-2')],
@@ -1314,8 +1401,8 @@ describe('LocalStreamPostsService', () => {
 
       const result = await LocalStreamPostsService.read({ streamId });
       expect(result?.stream).toEqual([
-        postId('unread-new'),
-        postId('unread-old'),
+        postId('unread-newest'),
+        postId('unread-edited'),
         postId('post-1'),
         postId('edited-2'),
       ]);

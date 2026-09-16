@@ -827,7 +827,7 @@ describe('PostStreamApplication', () => {
     it('should paginate using cursor (post_id and timestamp)', async () => {
       const initialPostIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(initialPostIds);
-      await createPostDetails(initialPostIds);
+      await createPostDetails(initialPostIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
@@ -875,7 +875,7 @@ describe('PostStreamApplication', () => {
       // Create cache with only 3 posts (less than limit of 10)
       const cachedPostIds = Array.from({ length: 3 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(cachedPostIds);
-      await createPostDetails(cachedPostIds);
+      await createPostDetails(cachedPostIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       // Mock more posts from Nexus
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 4, DEFAULT_AUTHOR, BASE_TIMESTAMP + 3);
@@ -945,7 +945,7 @@ describe('PostStreamApplication', () => {
     it('should handle when cache has posts but not enough after post_id', async () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
-      await createPostDetails(postIds);
+      await createPostDetails(postIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
@@ -1172,7 +1172,7 @@ describe('PostStreamApplication', () => {
     it('re-walks the cache from the head when the anchor left the row and no visible ids are known', async () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
-      await createPostDetails(postIds);
+      await createPostDetails(postIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
@@ -1196,7 +1196,7 @@ describe('PostStreamApplication', () => {
     it('resumes after the deepest visible id when the anchor left the row (#2523)', async () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
-      await createPostDetails(postIds);
+      await createPostDetails(postIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
@@ -1263,7 +1263,7 @@ describe('PostStreamApplication', () => {
       // Cache has 3 posts: [post-1, post-2, post-3]
       const cachedPostIds = Array.from({ length: 3 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(cachedPostIds);
-      await createPostDetails(cachedPostIds);
+      await createPostDetails(cachedPostIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       // Mock error when getting last post details
       vi.spyOn(PostDetailsModel, 'findById').mockRejectedValueOnce(new Error('Database error'));
@@ -1326,7 +1326,7 @@ describe('PostStreamApplication', () => {
       // Cache has 5 posts: [post-1, post-2, post-3, post-4, post-5]
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
-      await createPostDetails(postIds);
+      await createPostDetails(postIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
@@ -3511,7 +3511,7 @@ describe('PostStreamApplication', () => {
         id: 'author-1:post-1',
         content: DELETED, // DELETED
         kind: 'short',
-        indexed_at: BASE_TIMESTAMP,
+        indexed_at: BASE_TIMESTAMP + 100, // cached row is newer than the page fetched below it
         uri: 'https://pubky.app/author-1/pub/pubky.app/posts/post-1',
         attachments: null,
       });

@@ -564,6 +564,7 @@ export class PostStreamApplication {
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
     // Avoid the indexdb query for skip-paginated streams (engagement + single-collection items):
     // their local cache is timestamp-keyed and incompatible with offset pagination.
+    let rowAlignment: TFetchStreamParams['rowAlignment'];
     if (!isSkipPaginatedStream(streamId) && !streamHead) {
       const cachedStream = await LocalStreamPostsService.read({ streamId });
 
@@ -572,6 +573,11 @@ export class PostStreamApplication {
         // Every cache→Nexus seam resumes from the row's own Nexus cursor — never from the
         // timestamp of a post in the chunk (see `resolveCachedStreamTailCursor`).
         const tailCursor = await this.resolveCachedStreamTailCursor(streamId, cachedStream);
+        // A row without a cursor seeds once from a post timestamp, which can overshoot the
+        // row if that post was edited; the seam page is then trimmed to the ids below the row.
+        if (cachedStream.tailCursor === undefined) {
+          rowAlignment = { headTimestamp: await this.getStreamCursorTimestamp(streamId, cachedStream.stream[0]) };
+        }
 
         // Full cache hit: the caller keeps walking the cache by id; the cursor it carries is
         // the position Nexus continues from once the cache runs out.
@@ -585,6 +591,7 @@ export class PostStreamApplication {
             cachedStreamChunk,
             limit,
             streamTail: tailCursor ?? streamTail,
+            rowAlignment,
             streamId,
             viewerId,
             isCurrent,
@@ -606,7 +613,16 @@ export class PostStreamApplication {
         streamTail = NOT_FOUND_CACHED_STREAM;
       }
     }
-    return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, isCurrent, order });
+    return await this.fetchStreamFromNexus({
+      streamId,
+      limit,
+      streamTail,
+      streamHead,
+      rowAlignment,
+      viewerId,
+      isCurrent,
+      order,
+    });
   }
 
   /**
@@ -736,6 +752,7 @@ export class PostStreamApplication {
     cachedStreamChunk,
     limit,
     streamTail,
+    rowAlignment,
     streamId,
     viewerId,
     isCurrent,
@@ -749,6 +766,7 @@ export class PostStreamApplication {
       limit: remainingLimit,
       streamTail,
       streamHead: SKIP_FETCH_NEW_POSTS,
+      rowAlignment,
       viewerId,
       isCurrent,
       lastPostId: lastCachedPostId,
@@ -787,6 +805,7 @@ export class PostStreamApplication {
     limit,
     streamHead,
     streamTail,
+    rowAlignment,
     viewerId,
     isCurrent,
     order,
@@ -811,7 +830,21 @@ export class PostStreamApplication {
       return { nextPageIds: [], cacheMissPostIds: [], nextCursor: undefined, reachedEnd: false };
     // `last_post_score` is null for skip streams; normalize to undefined (advanceCursor derives
     // their offset from the raw page instead).
-    const { last_post_score: rawScore, post_keys: compositePostIds } = postStreamChunk;
+    const { last_post_score: rawScore, post_keys: rawPageIds } = postStreamChunk;
+    // A cursor seeded from a post timestamp can start inside or above the cached row (the
+    // post was edited after newer posts arrived). Only the part of the page below the row is
+    // served or cached; the rest is cached already or belongs to a head poll. The page's own
+    // cursor still moves the walk on, so such a page is skipped rather than re-requested.
+    const alignsWithRow =
+      rowAlignment !== undefined && !isSkipPaginatedStream(streamId) && order !== StreamOrder.ASCENDING;
+    const compositePostIds = alignsWithRow
+      ? await LocalStreamPostsService.keepIdsBelowRow({
+          streamId,
+          stream: rawPageIds,
+          lastScore: rawScore ?? undefined,
+          headTimestamp: rowAlignment.headTimestamp,
+        })
+      : rawPageIds;
     let cacheMissPostIds = await this.getCacheMissPostIds(streamId, compositePostIds);
     // Reply hooks observe stream IDs directly. Hydrate first so newly mounted cards
     // find details/counts/tags locally instead of racing the batch with individual fetches.
@@ -851,13 +884,13 @@ export class PostStreamApplication {
     // overflow Nexus's inclusive skip bound: this valid page is still consumed, only the
     // follow-up request is suppressed. A next offset landing exactly on the bound stays valid.
     const overflowsContentSearchSkip =
-      isContentSearchStream(streamId) && streamTail + compositePostIds.length > CONTENT_SEARCH_MAX_SKIP;
+      isContentSearchStream(streamId) && streamTail + rawPageIds.length > CONTENT_SEARCH_MAX_SKIP;
 
     return {
       nextPageIds: compositePostIds,
       cacheMissPostIds,
       nextCursor: rawScore ?? undefined,
-      reachedEnd: compositePostIds.length < limit || overflowsContentSearchSkip,
+      reachedEnd: rawPageIds.length < limit || overflowsContentSearchSkip,
       // The cache walk resumes from the row tail: a page the row already held (a legacy row
       // seeded above its true tail) must not drag the anchor back up the row, or the walk
       // re-serves the whole cached region before every Nexus page.

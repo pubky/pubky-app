@@ -26,6 +26,7 @@ import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import type {
   TAddReplyToStreamParams,
+  TAlignPageParams,
   TPersistPostsParams,
   TPostDetailsTimestampParams,
   TPostStreamBulkParams,
@@ -194,16 +195,16 @@ export class LocalStreamPostsService {
     // Filter out deleted posts from unread stream before merging
     const validUnreadPosts = await PostDetailsModel.filterDeleted(unreadPostStream.stream);
 
-    // Deduplicate: unread posts first, then existing posts (excluding duplicates)
-    const existingIds = new Set(validUnreadPosts);
-    const uniqueExistingPosts = postStream.stream.filter((id) => !existingIds.has(id));
+    // An id the row already holds keeps the row's position: the row is the authority on
+    // stream order, and a poll can only have seen it at or above where the row has it.
+    const rowIds = new Set(postStream.stream);
+    const newUnreadPosts = validUnreadPosts.filter((id) => !rowIds.has(id));
 
-    // Unread posts are newer than the cached head, so only that prefix is sorted (by
-    // indexed_at, descending). The existing ids keep their stream order: re-sorting them
-    // would float edited and deleted posts above their real position (#2523), and the
-    // tail's Nexus resume cursor is untouched.
-    const sortedUnreadPosts = await sortPostIdsByTimestamp(validUnreadPosts);
-    const combinedStream = [...sortedUnreadPosts, ...uniqueExistingPosts];
+    // Both parts are already in stream order: every head poll prepends a Nexus page that is
+    // newer than the previous one, and the cached row keeps the order its pages arrived in.
+    // Nothing is re-sorted by indexed_at — that would float an edited or deleted post above
+    // its real position (#2523) — and the tail's Nexus resume cursor is untouched.
+    const combinedStream = [...newUnreadPosts, ...postStream.stream];
 
     await PostStreamModel.upsert(streamId, combinedStream, this.tailCursorFields(postStream.tailCursor));
   }
@@ -472,6 +473,32 @@ export class LocalStreamPostsService {
 
     await PostStreamModel.upsert(streamId, sortedStream, nextTailCursor);
     return sortedStream[sortedStream.length - 1];
+  }
+
+  /**
+   * The part of a Nexus page that lies below the cached row.
+   *
+   * A row without a persisted cursor (bootstrap-seeded, or written before cursors were
+   * tracked) resumes once from its tail post's timestamp. That is the post's score only
+   * while the post is unedited: an edit bumps it, and the seam page then starts somewhere
+   * inside or above the row. Only the ids the page lists after the last id the row already
+   * holds are below the tail; everything before is either cached already or above the row
+   * (a head poll's business, and possibly above the head the current walk started from),
+   * so it is neither served by the walk nor appended below the tail. A page sharing no id
+   * with the row is entirely above it when its last score is newer than `headTimestamp`;
+   * otherwise it lies below the tail, as a page beyond the cached region normally does.
+   */
+  static async keepIdsBelowRow({ streamId, stream, lastScore, headTimestamp }: TAlignPageParams): Promise<string[]> {
+    if (stream.length === 0) return stream;
+    const row = await PostStreamModel.findById(streamId);
+    if (!row || row.stream.length === 0) return stream;
+
+    const rowIds = new Set(row.stream);
+    for (let index = stream.length - 1; index >= 0; index -= 1) {
+      if (rowIds.has(stream[index])) return stream.slice(index + 1);
+    }
+
+    return lastScore !== undefined && headTimestamp !== undefined && lastScore > headTimestamp ? [] : stream;
   }
 
   /** The deeper (smaller) of two Nexus resume cursors; pages only ever extend a stream downward. */

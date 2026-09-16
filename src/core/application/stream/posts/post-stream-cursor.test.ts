@@ -250,11 +250,11 @@ describe('PostStreamApplication: score cursors come from Nexus, not from local i
     expect(nexusSpy).not.toHaveBeenCalled();
   });
 
-  it('resumes from the row tail after a Nexus page that only repeated cached posts (legacy row)', async () => {
+  it('skips a seed page that only repeats cached posts and continues below the tail in the same round', async () => {
     // Legacy row whose tail is an edited post: the one-time indexed_at seed sends the first
-    // Nexus request far above the cache, so the page repeats cached ids and adds nothing.
-    // The anchor must still land on the row tail, not on the last id of that page, or the
-    // next round re-walks the cache from the middle and re-serves the tail.
+    // Nexus request far above the cache, so that page holds nothing below the row. None of
+    // it is served again, its cursor takes over, and the round keeps going: the anchor lands
+    // on the row tail after the pages that were appended, never on a mid-row id.
     const cached = unedited('cached', 10, 2000);
     const editedTail = reindexed('edited', 1, 1990, 3000);
     const older = unedited('older', 10, 1980);
@@ -267,11 +267,40 @@ describe('PostStreamApplication: score cursors come from Nexus, not from local i
     const round1 = await runRound(streamId, { lastPostId: undefined, streamTail: seed });
     const round2 = await runRound(streamId, nextAnchor(round1, { streamTail: seed }));
 
-    expect(round2.lastRawPostId).toBe(editedTail[0].id);
-    expect(round2.nextCursor).toBe(1992); // Nexus's cursor for the repeated page took over
-    const round3 = await runRound(streamId, nextAnchor(round2, nextAnchor(round1, { streamTail: seed })));
-    expect(round3.nextPageIds).toEqual(expect.arrayContaining(ids(older.slice(0, 8))));
+    expect(round1.nextPageIds).toEqual(ids(cached));
+    // The seed page (cached-1..9) is dropped; the page below its cursor overlaps the row by
+    // the two ids at the seam (the hook dedupes those) and then delivers older posts.
+    expect(round2.nextPageIds).toEqual([...ids(editedTail), cached[9].id, ...ids(older.slice(0, 8))]);
+    const row = await LocalStreamPostsService.read({ streamId });
+    expect(row?.stream).toEqual(ids([...cached, ...editedTail, ...older.slice(0, 8)]));
+    expect(round2.lastRawPostId).toBe(older[7].id);
+    expect(round2.nextCursor).toBe(older[7].score);
     expect(nexusSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('aligns the seam page of a cursor-less row on the row when its edited tail seeds above the head', async () => {
+    // A bootstrap-seeded row: the newest ten posts, no cursor. Three newer posts are published,
+    // then the row's tail is edited, so the one-time indexed_at seed (3000) points above the
+    // row head. The seam page must neither serve the newer posts mid-walk nor append them
+    // below the tail; the head poll owns them.
+    const newer = unedited('newer', 3, 2500);
+    const cached = [...unedited('cached', 9, 2000), ...reindexed('edited', 1, 1991, 3000)];
+    const older = unedited('older', 10, 1980);
+    await persistDetails([...newer, ...cached, ...older]);
+    await LocalStreamPostsService.upsert({ streamId, stream: ids(cached) });
+    const nexusSpy = mockNexusTimeline([...newer, ...cached, ...older]);
+
+    const { delivered, reachedEnd } = await paginateToEnd(streamId, 8);
+
+    expect(reachedEnd).toBe(true);
+    const flat = delivered.flat();
+    ids(newer).forEach((id) => expect(flat).not.toContain(id));
+    expect(flat).toEqual(expect.arrayContaining(ids(older)));
+    const row = await LocalStreamPostsService.read({ streamId });
+    expect(row?.stream).toEqual(ids([...cached, ...older]));
+    expect(row?.tailCursor).toBe(older[older.length - 1].score);
+    // The aligned seed page, the page below the tail, and the empty end page.
+    expect(nexusSpy).toHaveBeenCalledTimes(3);
   });
 
   it('pages a profile past a run of re-indexed deleted tombstones (#1569 geometry)', async () => {
