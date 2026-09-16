@@ -894,6 +894,34 @@ describe('LocalStreamPostsService', () => {
       ).resolves.toEqual([postId('post-1'), postId('post-2'), postId('post-3')]);
     });
 
+    it('stores a cursor-less reply row newest-first from creation and keeps it so on a repeated page', async () => {
+      // Hydration creates a reply row in the by-ids response order (oldest first for an
+      // ascending page); `useReplyStream` reverses the row for display, so it must be
+      // newest-first from the start, and the ascending page that then repeats every id
+      // must not leave it unsorted.
+      const replyStreamId = 'post_replies:user-1:parent' as PostStreamId;
+      await LocalStreamPostsService.persistPosts({
+        posts: [
+          createMockNexusPost('reply-old', DEFAULT_AUTHOR, BASE_TIMESTAMP + 1),
+          createMockNexusPost('reply-mid', DEFAULT_AUTHOR, BASE_TIMESTAMP + 2),
+          createMockNexusPost('reply-new', DEFAULT_AUTHOR, BASE_TIMESTAMP + 3),
+        ],
+      });
+      const oldestFirst = [postId('reply-old'), postId('reply-mid'), postId('reply-new')];
+      const newestFirst = [postId('reply-new'), postId('reply-mid'), postId('reply-old')];
+
+      await expect(
+        LocalStreamPostsService.persistNewStreamChunk({ streamId: replyStreamId, stream: oldestFirst }),
+      ).resolves.toEqual(newestFirst);
+
+      // A row an older client left in response order is normalized by the repeated page.
+      await LocalStreamPostsService.upsert({ streamId: replyStreamId, stream: oldestFirst });
+      await expect(
+        LocalStreamPostsService.persistNewStreamChunk({ streamId: replyStreamId, stream: oldestFirst }),
+      ).resolves.toEqual(newestFirst);
+      expect((await LocalStreamPostsService.read({ streamId: replyStreamId }))?.stream).toEqual(newestFirst);
+    });
+
     it('does not rewrite or re-sort the row when a page adds no new ids', async () => {
       await LocalStreamPostsService.persistPosts({
         posts: [
@@ -1528,6 +1556,40 @@ describe('LocalStreamPostsService', () => {
   });
 
   describe('persistUnreadNewStreamChunk', () => {
+    it('places a late, older poll response below the newer ids it overlaps', async () => {
+      // Two tabs poll the head; the newer response lands first. The older one holds one id
+      // the row does not have yet, and it is older than everything in the row.
+      const newer = Array.from({ length: 10 }, (_, i) => postId(`post-${11 - i}`)); // 11..2
+      const older = Array.from({ length: 10 }, (_, i) => postId(`post-${10 - i}`)); // 10..1
+      await LocalStreamPostsService.persistUnreadNewStreamChunk({ streamId, stream: newer });
+
+      await expect(LocalStreamPostsService.persistUnreadNewStreamChunk({ streamId, stream: older })).resolves.toEqual([
+        postId('post-1'),
+      ]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([
+        ...newer,
+        postId('post-1'),
+      ]);
+    });
+
+    it('puts the newer ids of a later overlapping poll on top, in page order', async () => {
+      const first = [postId('post-11'), postId('post-10'), postId('post-9')];
+      await LocalStreamPostsService.persistUnreadNewStreamChunk({ streamId, stream: first });
+
+      await LocalStreamPostsService.persistUnreadNewStreamChunk({
+        streamId,
+        stream: [postId('post-13'), postId('post-12'), postId('post-11'), postId('post-10')],
+      });
+
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([
+        postId('post-13'),
+        postId('post-12'),
+        postId('post-11'),
+        postId('post-10'),
+        postId('post-9'),
+      ]);
+    });
+
     it('should create new unread stream if it does not exist', async () => {
       const newChunk = [postId('post-1'), postId('post-2')];
 
@@ -1554,8 +1616,9 @@ describe('LocalStreamPostsService', () => {
       expect(result?.stream).toEqual([...newChunk, ...initialStream]);
     });
 
-    it('should filter duplicates when appending', async () => {
+    it('filters duplicates and places an id the page lists after a cached one below it', async () => {
       const initialStream = [postId('post-1'), postId('post-2')];
+      // The page is in Nexus order: post-3 comes after post-2, so it is older than post-2.
       const newChunk = [postId('post-2'), postId('post-3')];
 
       await UnreadPostStreamModel.upsert(streamId as PostStreamId, initialStream);
@@ -1565,7 +1628,7 @@ describe('LocalStreamPostsService', () => {
       });
 
       const result = await UnreadPostStreamModel.findById(streamId as PostStreamId);
-      expect(result?.stream).toEqual([postId('post-3'), ...initialStream]);
+      expect(result?.stream).toEqual([...initialStream, postId('post-3')]);
     });
 
     it('should do nothing if all new posts are duplicates', async () => {

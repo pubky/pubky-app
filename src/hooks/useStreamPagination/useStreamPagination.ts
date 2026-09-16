@@ -227,7 +227,10 @@ export function useStreamPagination({
           if (reachedEnd || !progressed || rawScanned >= STREAM_LOAD_MAX_RAW_SCAN) break;
         }
 
-        if (cursor !== streamTail || isInitialLoad) setStreamTail(cursor);
+        // Written unconditionally: a removal committed while this call awaited a page may
+        // have moved the live offset, so equality with the captured value does not mean the
+        // state still holds it (React skips the render for an unchanged primitive anyway).
+        setStreamTail(cursor);
         if (anchor !== undefined) setLastPostId(anchor);
         setHasMore(!reachedEnd);
       } catch (err) {

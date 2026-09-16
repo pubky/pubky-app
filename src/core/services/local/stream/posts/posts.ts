@@ -425,8 +425,9 @@ export class LocalStreamPostsService {
    * Nexus keeps them at their original position — and the next round would re-walk
    * ids it already delivered (#2523). Bookmark streams likewise preserve membership
    * order (bookmark time, not post time). Chunks that carry no Nexus position
-   * (hydration-discovered replies, ascending reply pages) are still re-sorted by
-   * post timestamp.
+   * (hydration-discovered replies, ascending reply pages) keep their row newest-first by
+   * post timestamp, at creation and whenever such a chunk arrives, because `useReplyStream`
+   * reverses that row for chronological display.
    *
    * @param stream - Incoming post IDs to merge into the stream cache
    * @param streamId - Stream identifier to create or update
@@ -435,13 +436,16 @@ export class LocalStreamPostsService {
    */
   static async persistNewStreamChunk({ stream, streamId, tailCursor }: TPostStreamUpsertParams): Promise<string[]> {
     const postStream = await PostStreamModel.findById(streamId);
+    const normalizesByTimestamp = tailCursor === undefined && !this.isBookmarkStream(streamId);
 
     if (!postStream || postStream.stream.length === 0) {
       // No cached ids to extend (e.g., database was deleted): the chunk is the stream and
       // its own position is the resume cursor — a stale cursor on an emptied row must not
-      // survive, or the next seam would skip everything above it.
-      await PostStreamModel.upsert(streamId, stream, this.tailCursorFields(tailCursor));
-      return stream;
+      // survive, or the next seam would skip everything above it. A cursor-less chunk (a
+      // reply row seeded from a hydration response) is stored newest-first from the start.
+      const initialStream = normalizesByTimestamp && stream.length > 1 ? await sortPostIdsByTimestamp(stream) : stream;
+      await PostStreamModel.upsert(streamId, initialStream, this.tailCursorFields(tailCursor));
+      return initialStream;
     }
 
     // Check for duplicates before adding
@@ -451,8 +455,19 @@ export class LocalStreamPostsService {
     const nextTailCursor = this.tailCursorFields(deepestCursor);
 
     if (newPostsToAdd.length === 0) {
-      // Nothing to add (an empty end page, or a page the row already holds): never rewrite
-      // the ids — only a deeper cursor is worth persisting.
+      // A cursor-less page that repeats ids a cursor-less row already holds (an ascending
+      // reply page after hydration created the row) still normalizes the row's order. A
+      // score-backed row is never re-sorted.
+      if (normalizesByTimestamp && postStream.tailCursor === undefined && stream.length > 0) {
+        const sortedStream = await sortPostIdsByTimestamp(postStream.stream);
+        if (sortedStream.some((id, index) => id !== postStream.stream[index])) {
+          await PostStreamModel.upsert(streamId, sortedStream, nextTailCursor);
+          return sortedStream;
+        }
+        return postStream.stream;
+      }
+      // Nothing to add to a score-backed row (an empty end page, or a page the row already
+      // holds): never rewrite the ids — only a deeper cursor is worth persisting.
       if (deepestCursor !== postStream.tailCursor) {
         await PostStreamModel.upsert(streamId, postStream.stream, nextTailCursor);
       }
@@ -531,7 +546,23 @@ export class LocalStreamPostsService {
     const existingIds = new Set(unreadPostStream.stream);
     const newPostsToAdd = stream.filter((id) => !existingIds.has(id));
     if (newPostsToAdd.length === 0) return [];
-    const combinedStream = [...newPostsToAdd, ...unreadPostStream.stream];
+
+    // Head polls can complete out of order (two tabs share this row), so a late, older page
+    // must not land its unique ids above newer ones. The page is in Nexus order: each new id
+    // goes right after the nearest id before it that the row already holds, and an id no
+    // cached id precedes is newer than the row head and goes on top. A page sharing no id
+    // with the row is taken as newer, which is what a poll above the head returns.
+    const combinedStream = [...unreadPostStream.stream];
+    let insertAt = 0;
+    for (const id of stream) {
+      const cachedIndex = combinedStream.indexOf(id);
+      if (cachedIndex !== -1) {
+        insertAt = cachedIndex + 1;
+        continue;
+      }
+      combinedStream.splice(insertAt, 0, id);
+      insertAt += 1;
+    }
     await UnreadPostStreamModel.upsert(streamId, combinedStream);
     return newPostsToAdd;
   }

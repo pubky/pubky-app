@@ -565,7 +565,7 @@ describe('RepliesWithParent', () => {
 
       const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
 
-      expect(container.querySelector('.h-\\[20px\\]')).not.toBeInTheDocument();
+      expect(container.querySelector('.h-5')).not.toBeInTheDocument();
       fireEvent.click(screen.getByTestId('timeline-load-more'));
       expect(resumeAutoLoad).toHaveBeenCalledTimes(1);
     });

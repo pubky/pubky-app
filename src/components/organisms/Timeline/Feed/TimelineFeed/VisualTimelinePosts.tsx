@@ -414,13 +414,18 @@ export function VisualTimelinePosts({
   // region leaves postIds itself empty — there the sentinel must stay armed so
   // load rounds keep chaining toward the first visible posts, within the budget of
   // rounds that grow nothing; past it the manual Load more below takes over (#2523).
+  // The budget measures mosaic progress, not ids: with content set to All a page of
+  // text-only posts grows `postIds` while the tile pipeline drops every one of them, and a
+  // budget keyed on ids would keep resetting (#2523). Tiles still resolving count as loading
+  // so an unsettled page is not judged unproductive before its tiles can appear.
+  const tileCount = rows.reduce((count, row) => count + row.cells.length, 0);
   const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore: hasMore && (hasRows || postIds.length === 0),
-    isLoading: loadingMore || isInitialLoading,
+    isLoading: loadingMore || isInitialLoading || hasPendingTiles || hasPendingFiles || hasPendingPostDetails,
     threshold: 3000,
     debounceMs: 20,
-    itemCount: postIds.length,
+    itemCount: tileCount,
     maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 

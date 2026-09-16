@@ -1863,6 +1863,56 @@ describe('useStreamPagination', () => {
       expect(result.current.postIds).toEqual(['c1', 'c3', 'c4', 'c5', 'c6']);
     });
 
+    it('writes the corrected skip offset even when it equals the offset captured at request time', async () => {
+      // Two rows are removed and committed while a page is in flight, so the live offset
+      // drops to 0. The page's corrected cursor (4 - 2) equals the captured offset (2); the
+      // write must still happen, or the next request starts at 0 and re-fetches the page.
+      const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2'],
+        nextCursor: 2,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['c1', 'c2']);
+      });
+
+      let resolveSlice: ((value: { nextPageIds: string[]; nextCursor: number }) => void) | undefined;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValue(
+        new Promise((resolve) => {
+          resolveSlice = resolve;
+        }),
+      );
+      let loadMorePromise: Promise<void> | undefined;
+      act(() => {
+        loadMorePromise = result.current.loadMore();
+      });
+
+      act(() => {
+        result.current.removePostsOptimistically('c1').commit();
+      });
+      act(() => {
+        result.current.removePostsOptimistically('c2').commit();
+      });
+
+      await act(async () => {
+        resolveSlice?.({ nextPageIds: ['c3', 'c4'], nextCursor: 4 });
+        await loadMorePromise;
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({ nextPageIds: ['c5'], nextCursor: 3 });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: collectionStreamId, streamTail: 2 }),
+      );
+      expect(result.current.postIds).toEqual(['c3', 'c4', 'c5']);
+    });
+
     it('should not double-apply a commit that settled before the next fetch started', async () => {
       const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
       vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);

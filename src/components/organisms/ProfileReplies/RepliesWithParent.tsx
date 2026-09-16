@@ -93,7 +93,7 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
 
           {/* Infinite scroll sentinel — only while there is more to observe for and
               auto-loading is not stalled, mirroring TimelinePosts. */}
-          {hasMore && !isStalled && <Container overrideDefaults className="h-[20px]" ref={sentinelRef} />}
+          {hasMore && !isStalled && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
         </Container>
       </Container>
     </TimelineStateWrapper>

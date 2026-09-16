@@ -138,13 +138,14 @@ export class StreamPostsController {
   }
 
   /**
-   * Gets the timestamp of the last cached post in a stream.
-   *
-   * Extracts the indexed_at timestamp from the oldest post in the cached stream.
-   * Returns 0 if no cached stream exists or if the last post's details cannot be found.
+   * The Nexus position a fresh pagination session resumes from once the cached ids are
+   * exhausted: the row's persisted `tailCursor` (the `last_post_score` of the deepest page
+   * fetched into it) or, for a row without one (bootstrap-seeded or written before cursors
+   * were tracked), a one-time seed from the tail entry's timestamp (bookmark time for
+   * bookmark streams).
    *
    * @param streamId - The ID of the post stream to query
-   * @returns Promise resolving to the timestamp (number) or 0 if not found
+   * @returns The resume cursor, or `NOT_FOUND_CACHED_STREAM` (0) when there is no usable cache
    */
   static async getCachedLastPostTimestamp(params: TStreamIdParams): Promise<number> {
     return await PostStreamApplication.getCachedLastPostTimestamp(params);
