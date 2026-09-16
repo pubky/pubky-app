@@ -276,14 +276,16 @@ export function isWotStream(streamId: string): streamId is WotStreamId {
 }
 
 /**
- * Web-of-Trust-sourced streams ('My network' `wot`, 'Tagged as' `wot_domain`)
- * never contain the viewer's own posts: Nexus filters them out server-side
- * (`author.id <> observer_id`) and the local create path never writes into
- * these streams. Consumers must not optimistically insert the viewer's own
- * new posts into them (#2308).
+ * 'Tagged as' (`wot_domain`) streams carry the viewer's own posts only when the
+ * observer's trust set endorsed them, which the local create path cannot know,
+ * so consumers must not optimistically insert a new post into them (#2308).
+ *
+ * 'My network' (`wot`) streams are not excluded: the reach is the observer plus
+ * their network, so the viewer's own posts belong there and are safe to
+ * prepend.
  */
-export function isViewerExcludedWotStream(streamId: string): boolean {
-  return isWotStream(streamId) || isWotDomainStream(streamId);
+export function isViewerExcludedWotDomainStream(streamId: string): boolean {
+  return isWotDomainStream(streamId);
 }
 
 const POST_STREAM_KIND_SEGMENTS: ReadonlySet<string> = new Set(['all', ...Object.values<string>(StreamKind)]);

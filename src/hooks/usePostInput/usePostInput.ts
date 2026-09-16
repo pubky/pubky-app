@@ -27,7 +27,7 @@ import { usePost } from '@/hooks/usePost/usePost';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineImages';
-import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
+import { isViewerExcludedWotDomainStream } from '@/models/stream/post/postStream.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_PLACEHOLDER, POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
@@ -329,14 +329,16 @@ export function usePostInput({
             }
 
             /*
-              WoT-sourced streams ('My network', 'Tagged as') never contain the
-              viewer's own posts (Nexus excludes them and the local create path
-              never writes into them), so prepending would flash the post and
-              lose it on the next stream reset (#2308). Unlike the kind gate
-              below, this check is NOT mirrored in `NewPostsSection`: unread ids
-              there come from polling the WoT stream itself, so they belong.
+              'Tagged as' (wot_domain) streams carry the viewer's own posts only
+              when the observer's trust set endorsed them, which the local create
+              path cannot know, so prepending would flash the post and lose it on
+              the next stream reset (#2308). 'My network' (wot) includes the
+              viewer's own posts server-side, so it prepends like any other
+              reach. Unlike the kind gate below, this check is NOT mirrored in
+              `NewPostsSection`: unread ids there come from polling the stream
+              itself, so they belong.
             */
-            if (isViewerExcludedWotStream(streamId)) {
+            if (isViewerExcludedWotDomainStream(streamId)) {
               return;
             }
 
