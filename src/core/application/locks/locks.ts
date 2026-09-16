@@ -6,8 +6,10 @@ import { isAppError, isNotFound, isValidationError } from '@/libs/error/error.ut
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { LocalLocksService } from '@/services/local/locks/locks';
 import { LocksService } from '@/services/locks/locks';
 import type {
+  GuardedPost,
   LockFile,
   ReplicatedPost,
   TCreateContentLockResult,
@@ -298,12 +300,19 @@ export class LocksApplication {
       });
     }
 
+    const post = GuardedContentParser.buildReplicatedPost(content.post, readerPubky, lockId, content.attachments);
     await HomeserverService.putBlob({
       url: GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
-      blob: new TextEncoder().encode(
-        GuardedContentParser.buildUnlockedPost(content.post, readerPubky, lockId, content.attachments),
-      ),
+      blob: new TextEncoder().encode(JSON.stringify(post)),
     });
+
+    // Cache failure must not turn a completed unlock into a failure.
+    await LocalLocksService.upsertPost({
+      lockId,
+      creator: LockContentParser.creatorFromUrl(lockUrl) ?? undefined,
+      post,
+      unlockedAt: Date.now(),
+    }).catch(() => undefined);
   }
 
   /**
@@ -311,9 +320,6 @@ export class LocksApplication {
    * Only locks whose `post.json` marker exists count — a partial replica has none. A corrupt or
    * concurrently-deleted marker drops that one item so the rest still renders; any other failure
    * rejects the whole list so the caller can retry.
-   *
-   * TODO:[Locks] #2296 — uncached, so every profile visit re-lists the root and re-GETs each marker.
-   * The reader's unlocked content moves to IndexedDB there, which replaces this with a local read.
    */
   static async fetchUnlockedList({ readerPubky }: TFetchUnlockedListParams): Promise<TUnlockedListItem[]> {
     const files = await HomeserverService.listAll({
@@ -334,7 +340,19 @@ export class LocksApplication {
       }),
     );
 
-    return items.filter((item): item is TUnlockedListItem => item !== null).sort((a, b) => b.unlockedAt - a.unlockedAt);
+    const result = items
+      .filter((item): item is TUnlockedListItem => item !== null)
+      .sort((a, b) => b.unlockedAt - a.unlockedAt);
+    await Promise.all(
+      result.map(({ lockId, post, unlockedAt }) =>
+        LocalLocksService.upsertPost({
+          lockId,
+          post,
+          unlockedAt,
+        }),
+      ),
+    ).catch(() => undefined);
+    return result;
   }
 
   /**
@@ -377,9 +395,16 @@ export class LocksApplication {
 
     const { post } = replicatedPost;
     const refs = post.attachments ?? [];
+    const attachments = await this.fetchReplicatedAttachments({ post });
+    await LocalLocksService.upsertPost({
+      lockId,
+      creator: LockContentParser.creatorFromUrl(lockUrl) ?? undefined,
+      post,
+      unlockedAt: replicatedPost.unlockedAt,
+    }).catch(() => undefined);
     return {
       post: { content: post.content, kind: post.kind, attachments: refs.map((ref) => ref.url) },
-      attachments: await this.fetchReplicatedAttachments({ post }),
+      attachments,
     };
   }
 
@@ -415,7 +440,7 @@ export class LocksApplication {
    * Only valid when the lock owner is the signed-in account (a == b); the caller
    * verifies that before calling.
    */
-  static async fetchOwnContent({ lockFile }: TFetchOwnContentParams): Promise<TUnlockedContent> {
+  static async fetchOwnContent({ lockUrl, lockFile }: TFetchOwnContentParams): Promise<TUnlockedContent> {
     const primaryPath = lockFile.primary_resource?.path;
     if (!primaryPath) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'lock file has no readable primary resource', {
@@ -440,6 +465,15 @@ export class LocksApplication {
     const attachments = await this.readAttachments(lockFile, post.attachments ?? [], 'fetchOwnContent', (_path, uri) =>
       HomeserverService.getBytes(uri),
     );
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    if (lockId) {
+      await this.cacheGuardedOriginal({
+        lockId,
+        creator: lockFile.creator,
+        post,
+        resources: lockFile.secondary_resources,
+      });
+    }
     return { post, attachments };
   }
 
@@ -490,7 +524,8 @@ export class LocksApplication {
       owner = uploaded.creator;
       attachmentResources.push(uploaded.resource);
     }
-    const post = await this.upload(buildPost(attachmentResources, owner));
+    const postFile = buildPost(attachmentResources, owner);
+    const post = await this.upload(postFile);
 
     // The payout recipient has to equal the lock's creator, and the upload response names that
     // account — so the criterion can only be built here, once the primary resource is up.
@@ -500,13 +535,41 @@ export class LocksApplication {
       params: { recipient_pubky: post.creator, amount: lockConfig.amountSats, asset: PAYMENT_ASSET },
     };
 
-    return LocksService.createContentLock({
+    const result = await LocksService.createContentLock({
       primaryResource: post.resource,
       secondaryResources: attachmentResources,
       criteria: [criterion],
       lockLogic: { type: 'all', criteria: [CRITERION_ID] },
       accessPolicy: { requested_credential_ttl_seconds: CREDENTIAL_TTL_SECONDS },
     });
+    const lockUrl = `pubky://${stripPubkyPrefix(result.creator)}${result.content_lock_path}`;
+    const parsedPost = GuardedContentParser.parsePost(postFile.bytes);
+    if (parsedPost) {
+      await this.cacheGuardedOriginal({
+        lockId: result.lock_id,
+        creator: result.creator,
+        post: parsedPost,
+        resources: Object.fromEntries(attachmentResources.map((resource) => [resource.path, resource])),
+      });
+    }
+    // Publishing must not wait for a second homeserver read before the announcement can be posted.
+    void this.fetchLockFile({ lockUrl }).catch(() => undefined);
+    return result;
+  }
+
+  private static async cacheGuardedOriginal({
+    lockId,
+    creator,
+    post,
+    resources,
+  }: {
+    lockId: string;
+    creator: string;
+    post: GuardedPost;
+    resources?: Record<string, { content_type: string }>;
+  }): Promise<void> {
+    const cached = GuardedContentParser.toCachedPost(post, resources);
+    if (cached) await LocalLocksService.upsertPost({ lockId, creator, post: cached }).catch(() => undefined);
   }
 
   /**
@@ -535,6 +598,40 @@ export class LocksApplication {
       });
     }
 
-    return (await LocksService.readContentLock(lockUrl)) as LockFile;
+    // TODO:[Locks] locks#22 — replace this cast when the SDK exports its lock-file reader type.
+    const descriptor = (await LocksService.readContentLock(lockUrl)) as LockFile;
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    if (lockId) {
+      await LocalLocksService.upsertDescriptor({ lockId, descriptor }).catch(() => undefined);
+    }
+    return descriptor;
+  }
+
+  static async getLockFile({ lockUrl }: TFetchLockFileParams): Promise<LockFile | null> {
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    return lockId ? ((await LocalLocksService.get(lockId))?.descriptor ?? null) : null;
+  }
+
+  static async getOrFetchLockFile(params: TFetchLockFileParams): Promise<LockFile | null> {
+    // A broken cache must not prevent a public lock from loading from its source.
+    const cached = await this.getLockFile(params).catch(() => null);
+    return cached ?? this.fetchLockFile(params);
+  }
+
+  static async getUnlockedPost({ lockUrl }: TFetchLockFileParams): Promise<ReplicatedPost | null> {
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    const record = lockId ? await LocalLocksService.get(lockId) : null;
+    // A creator's cached original has no unlock marker. Exposing it on the reader path would let
+    // someone link my public lock.json under their teaser and render my private post there.
+    return record?.unlockedAt !== undefined ? (record.post ?? null) : null;
+  }
+
+  static async getOwnPost({ lockUrl }: TFetchLockFileParams): Promise<ReplicatedPost | null> {
+    const lockId = LockContentParser.lockIdFromUrl(lockUrl);
+    return lockId ? ((await LocalLocksService.get(lockId))?.post ?? null) : null;
+  }
+
+  static getUnlockedList(): Promise<TUnlockedListItem[]> {
+    return LocalLocksService.getUnlockedList();
   }
 }

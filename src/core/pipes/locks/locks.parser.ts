@@ -56,11 +56,12 @@ export class LockContentParser {
    * a `.json` file. Guards against malformed `lock` values before any fetch.
    */
   static isValidLockUrl(lockUrl: string): boolean {
-    const PUBKY_URL_PREFIX = 'pubky://';
-    const LOCK_FILE_EXTENSION = '.json';
-    if (!lockUrl.startsWith(PUBKY_URL_PREFIX) || !lockUrl.endsWith(LOCK_FILE_EXTENSION)) return false;
-    const host = lockUrl.slice(PUBKY_URL_PREFIX.length).split('/')[0] ?? '';
-    return isPubkyIdentifier(host);
+    return lockUrl.endsWith('.json') && (this.creatorFromUrl(lockUrl) ?? '') !== '';
+  }
+
+  static creatorFromUrl(lockUrl: string): string | null {
+    const host = lockUrl.match(/^pubky:\/\/([^/]+)/)?.[1];
+    return host && isPubkyIdentifier(host) ? host : null;
   }
 
   /** `pubky://<creator>/pub/locks.app/<lock_id>.json` → `<lock_id>`. Null when there is no `.json` tail. */
@@ -133,6 +134,17 @@ export class GuardedContentParser {
   /** `pubky://<owner>/priv/locks.app/content/img1` → `/priv/locks.app/content/img1`. */
   static attachmentUriToPath(uri: string): string {
     return uri.replace(/^pubky:\/\/[^/]+/, '');
+  }
+
+  /** Keep only attachment references in IndexedDB; media bytes stay on the homeserver. */
+  static toCachedPost(post: GuardedPost, resources?: Record<string, { content_type: string }>): ReplicatedPost | null {
+    const refs: NonNullable<ReplicatedPost['attachments']> = [];
+    for (const url of post.attachments ?? []) {
+      const contentType = resources?.[this.attachmentUriToPath(url)]?.content_type;
+      if (!contentType) return null;
+      refs.push({ url, content_type: contentType });
+    }
+    return { content: post.content, kind: post.kind, attachments: refs.length ? refs : null };
   }
 
   /** Relative path for `proxyReadGuardedResource`, or null when outside the guarded namespace. */
@@ -230,21 +242,21 @@ export class GuardedContentParser {
    * The post to store as the completion marker: the unlocked post with each attachment repointed to
    * the reader's own copy, its `content_type` stored inline so rendering never needs the lock file.
    */
-  static buildUnlockedPost(
+  static buildReplicatedPost(
     post: GuardedPost,
     readerPubky: string,
     lockId: string,
     attachments: Array<{ id: string; contentType: string }>,
-  ): string {
+  ): ReplicatedPost {
     const rewritten = attachments.map(({ id, contentType }) => ({
       url: this.unlockedUrl(readerPubky, lockId, id),
       content_type: contentType,
     }));
-    return JSON.stringify({
+    return {
       content: post.content,
       kind: post.kind,
       attachments: rewritten.length > 0 ? rewritten : null,
-    });
+    };
   }
 
   /** Parses the reader's replicated `post.json` bytes. Returns null on bad JSON. */

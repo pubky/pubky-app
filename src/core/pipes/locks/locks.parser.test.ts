@@ -55,6 +55,19 @@ describe('LockContentParser', () => {
     });
   });
 
+  describe('creatorFromUrl', () => {
+    it('returns the valid pubky homeserver from a lock URL', () => {
+      expect(LockContentParser.creatorFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks/lock.json`)).toBe(
+        MOCK_LOCK_AUTHOR_PUBKY,
+      );
+    });
+
+    it('returns null for a URL without a valid pubky homeserver', () => {
+      expect(LockContentParser.creatorFromUrl('https://example.com/lock.json')).toBeNull();
+      expect(LockContentParser.creatorFromUrl('pubky://short/lock.json')).toBeNull();
+    });
+  });
+
   describe('lockIdFromUrl', () => {
     it('takes the lock id from the .json filename', () => {
       expect(LockContentParser.lockIdFromUrl(`pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/locks.app/LOCK1.json`)).toBe(
@@ -186,6 +199,36 @@ describe('GuardedContentParser', () => {
     });
   });
 
+  describe('toCachedPost', () => {
+    const url = 'pubky://owner/priv/locks.app/content/img1';
+    const post: GuardedPost = { content: 'secret', kind: 'image', attachments: [url] };
+
+    it('keeps post text and typed attachment references without media bytes', () => {
+      expect(
+        GuardedContentParser.toCachedPost(post, {
+          '/priv/locks.app/content/img1': { content_type: 'image/png' },
+        }),
+      ).toEqual({
+        content: 'secret',
+        kind: 'image',
+        attachments: [{ url, content_type: 'image/png' }],
+      });
+    });
+
+    it('skips caching a post if an attachment has no descriptor', () => {
+      expect(GuardedContentParser.toCachedPost(post, {})).toBeNull();
+      expect(GuardedContentParser.toCachedPost(post)).toBeNull();
+    });
+
+    it('keeps text-only posts when the lock file omits secondary resources', () => {
+      expect(GuardedContentParser.toCachedPost({ ...post, attachments: null })).toEqual({
+        content: 'secret',
+        kind: 'image',
+        attachments: null,
+      });
+    });
+  });
+
   describe('unlockedUrl', () => {
     it('builds the reader-owned copy path for one unlocked file', () => {
       expect(GuardedContentParser.unlockedUrl('readerpubky', 'LOCK1', 'img1')).toBe(
@@ -242,7 +285,7 @@ describe('GuardedContentParser', () => {
     });
   });
 
-  describe('buildUnlockedPost', () => {
+  describe('buildReplicatedPost', () => {
     const post: GuardedPost = {
       content: 'secret',
       kind: 'image',
@@ -250,10 +293,10 @@ describe('GuardedContentParser', () => {
     };
 
     it('repoints attachments at the reader copy with inline content types', () => {
-      const json = GuardedContentParser.buildUnlockedPost(post, 'readerpubky', 'LOCK1', [
+      const replicated = GuardedContentParser.buildReplicatedPost(post, 'readerpubky', 'LOCK1', [
         { id: 'img1', contentType: 'image/png' },
       ]);
-      expect(JSON.parse(json)).toEqual({
+      expect(replicated).toEqual({
         content: 'secret',
         kind: 'image',
         attachments: [{ url: 'pubky://readerpubky/priv/social/unlocked/LOCK1/img1', content_type: 'image/png' }],
@@ -261,8 +304,13 @@ describe('GuardedContentParser', () => {
     });
 
     it('keeps attachments null when the post has none', () => {
-      const json = GuardedContentParser.buildUnlockedPost({ ...post, attachments: null }, 'readerpubky', 'LOCK1', []);
-      expect(JSON.parse(json).attachments).toBeNull();
+      const replicated = GuardedContentParser.buildReplicatedPost(
+        { ...post, attachments: null },
+        'readerpubky',
+        'LOCK1',
+        [],
+      );
+      expect(replicated.attachments).toBeNull();
     });
   });
 

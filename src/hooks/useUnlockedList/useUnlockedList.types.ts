@@ -11,6 +11,6 @@ export interface UseUnlockedListResult {
   /** `items.length` — the sidebar count and the list come from this one read. */
   count: number;
   isLoading: boolean;
-  /** Separates "the read failed" from "nothing unlocked yet" — both render as an empty `items`. */
+  /** The homeserver list fetch failed; cached items may still be present. */
   isError: boolean;
 }

@@ -16,11 +16,11 @@ export function ProfileUnlocked() {
 
   if (isLoading) return <ProfileUnlockedSkeleton />;
 
-  if (isError || items.length === 0) {
+  if (items.length === 0) {
     return (
       <Container overrideDefaults data-cy="profile-unlocked-empty" className="w-full">
         <Typography overrideDefaults className="text-center text-base font-medium text-muted-foreground">
-          {isError ? 'Couldn\'t load your unlocked content. Try again later.' : 'You haven\'t unlocked any content yet.'}
+          {isError ? "Couldn't load your unlocked content. Try again later." : "You haven't unlocked any content yet."}
         </Typography>
       </Container>
     );
