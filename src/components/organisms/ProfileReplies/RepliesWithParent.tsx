@@ -6,6 +6,8 @@ import { Container } from '@/atoms/Container/Container';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
 import { PostController } from '@/controllers/post/post';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
@@ -167,6 +169,9 @@ function ReplyWithParent({ replyPostId }: ReplyWithParentProps) {
     };
   }, [parentPostId, parentPost]);
 
+  const parentVisibility = usePostHeaderVisibility(parentPostId ?? '');
+  const displayedParentPostId = getDisplayedPostId(parentPostId ?? '', parentVisibility);
+
   // Always show parent if it exists
   const shouldShowParent = !!parentPostId;
 
@@ -181,7 +186,7 @@ function ReplyWithParent({ replyPostId }: ReplyWithParentProps) {
             overrideDefaults
             role="article"
             tabIndex={0}
-            onKeyDown={(e) => handlePostKeyDown(parentPostId, e)}
+            onKeyDown={(e) => handlePostKeyDown(displayedParentPostId, e)}
             className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <PostMain postId={parentPostId} isReply={false} />

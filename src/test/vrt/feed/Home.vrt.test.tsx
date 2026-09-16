@@ -15,6 +15,8 @@ import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { tryResolveFeedsShellConfig } from '@/app/(feeds)/_shell/configs';
 import { Home } from '@/templates/Feed/Home/Home';
 import { Fab } from '@/molecules/Fab/Fab';
+import { PostMain } from '@/organisms/PostMain/PostMain';
+import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -29,21 +31,28 @@ const feedState = vi.hoisted(() => ({
 }));
 
 const fixtures = vi.hoisted(async () => {
-  const [postsModule, articleModule, profilesModule, whoToFollowModule, navModule, mockApp] = await Promise.all([
-    import('@/test/fixtures/feed/posts'),
-    import('@/test/fixtures/post/article'),
-    import('@/test/fixtures/feed/profiles'),
-    import('@/test/fixtures/feed/whoToFollow'),
-    import('@/test/fixtures/feed/feedNavigation'),
-    import('@/test/mocks/feedApplication'),
-  ]);
+  const [postsModule, articleModule, profilesModule, whoToFollowModule, navModule, mockApp, repostsModule] =
+    await Promise.all([
+      import('@/test/fixtures/feed/posts'),
+      import('@/test/fixtures/post/article'),
+      import('@/test/fixtures/feed/profiles'),
+      import('@/test/fixtures/feed/whoToFollow'),
+      import('@/test/fixtures/feed/feedNavigation'),
+      import('@/test/mocks/feedApplication'),
+      import('@/test/fixtures/feed/reposts'),
+    ]);
   const postsByCompositeId = new Map(postsModule.VRT_FEED_POSTS.map((post) => [post.compositeId, post]));
   postsByCompositeId.set(articleModule.VRT_ARTICLE.compositeId, articleModule.VRT_ARTICLE);
+  postsByCompositeId.set(repostsModule.VRT_PLAIN_REPOST.compositeId, repostsModule.VRT_PLAIN_REPOST);
+  postsByCompositeId.set(repostsModule.VRT_QUOTE_REPOST.compositeId, repostsModule.VRT_QUOTE_REPOST);
   const orderedCompositeIds = postsModule.VRT_FEED_POSTS.map((post) => post.compositeId);
   const articleFeedPostIds = [articleModule.VRT_ARTICLE.compositeId, ...orderedCompositeIds];
   const viewerPubky = profilesModule.VRT_AUTHOR_PUBKYS.alice;
   return {
     postsByCompositeId,
+    plainRepostId: repostsModule.VRT_PLAIN_REPOST.compositeId,
+    quoteRepostId: repostsModule.VRT_QUOTE_REPOST.compositeId,
+    repostOriginal: postsModule.VRT_SINGLE_POST,
     orderedCompositeIds,
     articleFeedPostIds,
     articleTitle: articleModule.VRT_ARTICLE_TITLE,
@@ -324,16 +333,27 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => {
 // hardcoded connector height stretches the card to match (e.g., the
 // `QuickReply` "Do you agree?" card visibly oversized at >200px).
 
-vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
+// Keep the real header-visibility logic and PostContent/preview composition.
+// Mock only repost data so these screenshots catch accidental nested cards.
+vi.mock('@/hooks/useRepostInfo/useRepostInfo', async () => {
   const f = await fixtures;
-  const cache = new Map<string, { showRepostHeader: boolean; shouldShowPostHeader: boolean }>();
+  const { buildCompositeIdFromPubkyUri } = await import('@/models/models.utils');
+  const { CompositeIdDomain } = await import('@/models/models.types');
+  const cache = new Map();
   return {
-    usePostHeaderVisibility: (compositeId: string) => {
+    useRepostInfo: (compositeId: string) => {
       const cached = cache.get(compositeId);
       if (cached) return cached;
+      const fixture = f.postsByCompositeId.get(compositeId);
+      const uri = fixture?.relationships.reposted;
       const result = {
-        showRepostHeader: !!f.postsByCompositeId.get(compositeId)?.relationships.reposted,
-        shouldShowPostHeader: true,
+        isRepost: !!uri,
+        isReply: false,
+        isCurrentUserRepost: !!uri && fixture?.details.author === f.viewerPubky,
+        repostAuthorId: uri ? fixture?.details.author : null,
+        originalPostId: uri ? buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.POSTS }) : null,
+        isLoading: false,
+        hasError: false,
       };
       cache.set(compositeId, result);
       return result;
@@ -362,6 +382,38 @@ vi.mock('@/hooks/useEntityTags/useEntityTags', async () => {
         handleTagAdd: noopAdd,
       };
       cache.set(taggedId, result);
+      return result;
+    },
+  };
+});
+
+vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
+  useEnrichedTags: (tags: unknown[]) => ({ enrichedTags: tags, isLoading: false }),
+}));
+
+vi.mock('@/hooks/usePostTags/usePostTags', async () => {
+  const f = await fixtures;
+  const empty = {
+    tags: [] as unknown[],
+    count: 0,
+    isLoading: false,
+    isLoadingMore: false,
+    hasMore: false,
+    loadMore: async () => {},
+    handleTagAdd: async () => ({ success: true }),
+    handleTagToggle: async () => {},
+  };
+  const cache = new Map<string, typeof empty>();
+  return {
+    usePostTags: (postId: string) => {
+      const cached = cache.get(postId);
+      if (cached) return cached;
+      const tags = (f.postsByCompositeId.get(postId)?.tags ?? []).map((tag) => ({
+        ...tag,
+        taggers: (tag.taggers ?? []).map((id) => ({ id, name: f.profiles[id]?.name, avatarUrl: undefined })),
+      }));
+      const result = { ...empty, tags, count: tags.length };
+      cache.set(postId, result);
       return result;
     },
   };
@@ -528,6 +580,46 @@ describe('Home (global feed) — visual regression', () => {
     const screen = await renderForVRT(<HomeWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
     await expandFirstQuickReply(screen);
     await matchVrtFrameScreenshot('home-feed-quick-reply-expanded-mobile');
+  });
+});
+
+describe('Repost cards — visual regression', () => {
+  const cases = [
+    { layout: 'inline', viewport: VRT_VIEWPORT_DESKTOP, name: 'inline-desktop' },
+    { layout: 'side', viewport: VRT_VIEWPORT_DESKTOP, name: 'side-desktop' },
+    { layout: 'list', viewport: VRT_VIEWPORT_DESKTOP, name: 'list-desktop' },
+    { layout: 'inline', viewport: VRT_VIEWPORT_MOBILE, name: 'inline-mobile' },
+  ] as const;
+
+  it.each(cases)('keeps simple reposts flat and quote context intact ($name)', async ({ layout, viewport, name }) => {
+    const f = await fixtures;
+    await renderForVRT(
+      <PostMainLayoutProvider tagsLayout={layout}>
+        <div className={`mx-auto space-y-6 p-4 ${layout === 'side' ? 'max-w-7xl' : 'max-w-[840px]'}`}>
+          <div data-testid="plain-repost">
+            <PostMain postId={f.plainRepostId} />
+          </div>
+          <div data-testid="quote-repost">
+            <PostMain postId={f.quoteRepostId} />
+          </div>
+        </div>
+      </PostMainLayoutProvider>,
+      { viewport },
+    );
+    const plain = page.getByTestId('plain-repost');
+    const quote = page.getByTestId('quote-repost');
+    await expect.element(plain.getByText('You reposted', { exact: true })).toBeVisible();
+    await expect.element(plain.getByRole('button', { name: 'Undo', exact: true })).toBeVisible();
+    await expect
+      .element(plain.getByRole('button', { name: `Reply to post (${f.repostOriginal.counts.replies})` }))
+      .toBeVisible();
+    expect(plain.element().querySelector('[data-cy="post-preview-card"]')).toBeNull();
+    expect(quote.element().querySelector('[data-testid="repost-header"]')).toBeNull();
+    if (layout !== 'list') {
+      await expect.element(plain.getByText(f.repostOriginal.details.content)).toBeVisible();
+      await expect.element(quote.getByRole('link', { name: 'View original post' })).toBeVisible();
+    }
+    await matchVrtFrameScreenshot(`repost-cards-${name}`);
   });
 });
 

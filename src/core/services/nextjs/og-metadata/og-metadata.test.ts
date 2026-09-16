@@ -38,7 +38,12 @@ vi.mock('../nextjs.utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../nextjs.utils')>();
   return {
     ...actual,
-    readResponseBody: mockReadResponseBody,
+    // Tests stub the body text; the service consumes the reader's result shape, so a string stub
+    // is wrapped as a successful read. Result objects and rejections pass through unchanged.
+    readResponseBody: async (response: Response) => {
+      const stubbed = await mockReadResponseBody(response);
+      return typeof stubbed === 'string' ? { ok: true, body: stubbed } : stubbed;
+    },
   };
 });
 
@@ -515,19 +520,25 @@ describe('NextJsOgMetadataService', () => {
     });
   });
 
-  it('should block redirects to unsafe IP literals', async () => {
+  it('should fall back for redirects to unsafe IP literals without following them', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: 'http://127.0.0.2/' } }));
     mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
 
-    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
-      context: { hostname: '127.0.0.2', statusCode: HttpStatusCode.FORBIDDEN },
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toEqual({
+      url: 'http://127.0.0.2/',
+      title: null,
+      image: null,
+      type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({ outcome: 'fallback', reason: 'blocked_ip', hostname: '127.0.0.2' }),
+    );
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
-  it('should block a redirect hostname with an unsafe AAAA answer at connection time', async () => {
+  it('should fall back for a redirect hostname with an unsafe AAAA answer at connection time', async () => {
     mockFetch
       .mockResolvedValueOnce(
         new Response(null, { status: 302, headers: { location: 'http://redirect-rebind.example.test/' } }),
@@ -542,10 +553,11 @@ describe('NextJsOgMetadataService', () => {
     mockResolve6.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce(['fd00::1']);
     mockIsIpSafe.mockImplementation((ip) => ip !== 'fd00::1');
 
-    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
-      context: { hostname: 'redirect-rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toEqual({
+      url: 'http://redirect-rebind.example.test/',
+      title: null,
+      image: null,
+      type: 'website',
     });
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
@@ -600,59 +612,84 @@ describe('NextJsOgMetadataService', () => {
   });
 
   it.each(['http://127.0.0.2/', 'http://127.1.1.1/', 'http://169.254.169.254/', 'http://[::1]/'])(
-    'should reject unsafe main URL IP %s before fetching',
+    'should fall back for unsafe main URL IP %s before fetching',
     async (url) => {
+      const loggerWarnSpy = await spyOnLoggerWarn();
       mockIsIpSafe.mockReturnValue(false);
 
-      await expect(NextJsOgMetadataService.fetch(new URL(url))).rejects.toMatchObject({
-        category: ErrorCategory.Auth,
-        code: AuthErrorCode.FORBIDDEN,
-        context: { statusCode: HttpStatusCode.FORBIDDEN },
+      await expect(NextJsOgMetadataService.fetch(new URL(url))).resolves.toMatchObject({
+        url,
+        title: null,
+        image: null,
+        type: 'website',
       });
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        '[og-metadata:fetch]',
+        expect.objectContaining({ outcome: 'fallback', reason: 'blocked_ip' }),
+      );
       expect(mockFetch).not.toHaveBeenCalled();
     },
   );
 
-  it('should reject hostnames when any resolved address is unsafe', async () => {
+  it('should fall back when any resolved address is unsafe', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockResolve4.mockResolvedValueOnce(['1.1.1.1', '127.0.0.2']);
     mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
 
-    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
-      context: { hostname: 'example.com', statusCode: HttpStatusCode.FORBIDDEN },
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toMatchObject({
+      url: 'https://example.com/',
+      title: null,
+      image: null,
+      type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({ outcome: 'fallback', reason: 'blocked_ip', hostname: 'example.com' }),
+    );
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('should reject hostnames when an AAAA answer is unsafe', async () => {
+  it('should fall back when an AAAA answer is unsafe', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     mockResolve6.mockResolvedValueOnce(['fd00::1']);
     mockIsIpSafe.mockImplementation((ip) => ip !== 'fd00::1');
 
-    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
-      context: { hostname: 'example.com', statusCode: HttpStatusCode.FORBIDDEN },
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toMatchObject({
+      url: 'https://example.com/',
+      title: null,
+      image: null,
+      type: 'website',
     });
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({ outcome: 'fallback', reason: 'blocked_ip', hostname: 'example.com' }),
+    );
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('should block when any connection-time DNS answer is unsafe', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
     const loggerErrorSpy = await spyOnLoggerError();
     global.fetch = asOpaque<typeof global.fetch>(undiciFetch);
     mockResolve4.mockResolvedValueOnce(['1.1.1.1']).mockResolvedValueOnce(['1.1.1.1', '127.0.0.2']);
     mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
 
-    await expect(NextJsOgMetadataService.fetch(new URL('http://rebind.example.test/'))).rejects.toMatchObject({
-      category: ErrorCategory.Auth,
-      code: AuthErrorCode.FORBIDDEN,
-      context: { hostname: 'rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
+    await expect(NextJsOgMetadataService.fetch(new URL('http://rebind.example.test/'))).resolves.toEqual({
+      url: 'http://rebind.example.test/',
+      title: null,
+      image: null,
+      type: 'website',
     });
-    expect(loggerErrorSpy).toHaveBeenCalledWith(
-      '[nextjs-server:safeOgMetadataLookup]',
-      'Blocked IP range. Cannot fetch from private networks.',
-      { hostname: 'rebind.example.test', statusCode: HttpStatusCode.FORBIDDEN },
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'fallback',
+        reason: 'blocked_ip',
+        hostname: 'rebind.example.test',
+        errorName: 'OgMetadataBlockedIpError',
+      }),
     );
+    expect(loggerErrorSpy).not.toHaveBeenCalled();
   });
 
   it('should connect to the vetted address returned by the connection-time lookup', async () => {
@@ -734,4 +771,24 @@ describe('NextJsOgMetadataService', () => {
       context: { url: 'https://example.com/', statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
     });
   });
+
+  it.each(['body_too_large', 'body_timeout', 'body_unreadable'] as const)(
+    'should return fallback metadata when the body read ends in %s',
+    async (reason) => {
+      const loggerWarnSpy = await spyOnLoggerWarn();
+      mockFetch.mockResolvedValue(createOkResponse('text/html'));
+      mockReadResponseBody.mockResolvedValue({ ok: false, reason });
+
+      await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/'))).resolves.toEqual({
+        url: 'https://example.com/',
+        title: null,
+        image: null,
+        type: 'website',
+      });
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        '[og-metadata:fetch]',
+        expect.objectContaining({ outcome: 'fallback', reason, hostname: 'example.com' }),
+      );
+    },
+  );
 });

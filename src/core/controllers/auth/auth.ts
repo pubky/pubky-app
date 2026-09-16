@@ -38,6 +38,13 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { SettingsState } from '@/stores/settings/settings.types';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 
+/**
+ * How long logout waits for the homeserver to end the session. The SDK's `session.signout()`
+ * accepts no timeout or AbortSignal, so a homeserver that connects but never replies would
+ * otherwise hold logout open for the OS-level TCP timeout. Local cleanup runs either way.
+ */
+const LOGOUT_TIMEOUT_MS = 5_000;
+
 export class AuthController {
   private constructor() {} // Prevent instantiation
 
@@ -448,10 +455,36 @@ export class AuthController {
     }
 
     if (session) {
+      // Bound the sign-out. The SDK's session.signout() takes no timeout or AbortSignal, so a
+      // homeserver that accepts the connection and then never replies would hold logout open
+      // until the OS-level TCP timeout, leaving cookies and the local database in place.
+      // Local cleanup must always run; ending the server session is best-effort.
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       try {
-        await AuthApplication.logout({ session });
-      } catch (error) {
-        Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
+        const timeoutPromise = new Promise<boolean>((resolve) => {
+          timeoutId = setTimeout(() => resolve(true), LOGOUT_TIMEOUT_MS);
+        });
+
+        const timedOut = await Promise.race([
+          AuthApplication.logout({ session }).then(
+            () => false,
+            (error) => {
+              Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
+              return false;
+            },
+          ),
+          timeoutPromise,
+        ]);
+
+        if (timedOut) {
+          Logger.warn('Homeserver sign-out did not answer in time, clearing local state anyway', {
+            timeoutMs: LOGOUT_TIMEOUT_MS,
+          });
+        }
+      } finally {
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
       }
     }
 

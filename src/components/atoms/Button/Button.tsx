@@ -30,7 +30,7 @@ const buttonVariants = cva(
         ghost: 'hover:bg-accent hover:text-accent-foreground hover:bg-accent/50 border-none',
         brand: 'bg-brand text-background border-brand hover:bg-brand/90',
         link: 'text-primary underline-offset-4 hover:underline',
-        dark: 'bg-neutral-900 text-white hover:bg-neutral-800 border-neutral-900 hover:border-neutral-800',
+        dark: 'bg-card text-foreground hover:bg-muted border-card',
         'dark-outline':
           'bg-transparent hover:bg-neutral-900 hover:text-white bg-transparent border-neutral-700 hover:bg-neutral-800',
       },

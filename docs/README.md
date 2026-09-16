@@ -61,6 +61,7 @@ The repo is set up so that Claude Code, Codex and Cursor all read the same instr
 | Skills               | `../.agents/skills/<name>/` (symlinked from `../.claude/skills/`)             | On-demand procedures: `pubky-code-review`, `pubky-staging-invite`, `sentry-nextjs-sdk`                  |
 | PR review            | `../.greptile/config.json`, `../.greptile/files.json`                         | Greptile rules and the docs it reads per path (it does not read `AGENTS.md` or the adapters on its own) |
 | Permissions          | `../.claude/settings.json`                                                    | Claude Code permission allowlist for the verification commands                                          |
+| Dev server           | `../.claude/launch.json`                                                      | Claude Code launch config: `npm run dev` on port 3000, `autoPort` picks a free port on conflict         |
 
 The Cursor commit rule (`../.cursor/rules/commit-message.mdc`) is agent-requested rather than path-scoped and intentionally has no Claude twin: Claude Code has no agent-requested rule type, and `../AGENTS.md` already points commits, branches and PRs at `commit-message.md`.
 

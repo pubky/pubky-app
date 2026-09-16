@@ -42,7 +42,7 @@ export function LandingFinalSection() {
         <Logo noLink width={151} height={50} />
         <FooterLinks className="max-w-xl text-center">
           {'By creating a '}
-          <span className="text-brand">Pubky</span>
+          {'Pubky'}
           {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
           {', and confirm you are'} <DialogAge />{' '}
           {'Pubky is powered by '}
