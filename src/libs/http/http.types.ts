@@ -36,6 +36,7 @@ export const enum HttpStatusCode {
   BAD_GATEWAY = 502,
   SERVICE_UNAVAILABLE = 503,
   GATEWAY_TIMEOUT = 504,
+  INSUFFICIENT_STORAGE = 507,
 }
 
 /**
