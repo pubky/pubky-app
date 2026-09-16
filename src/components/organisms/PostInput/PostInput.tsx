@@ -19,7 +19,7 @@ import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePo
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
-import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
+import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
@@ -259,7 +259,9 @@ export function PostInput({
   }, []);
 
   const characterLimit =
-    isExpanded && !isArticle ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
+    isExpanded && !isArticle
+      ? { count: getEnforcedCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH }
+      : undefined;
   useCharacterLimitWarning(characterLimit);
 
   const inheritedTagsLayout = useEffectiveTagsLayout();

@@ -14,7 +14,7 @@ import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
-import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
+import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { QUICK_REPLY_CONNECTOR_HEIGHT_OFFSET, QUICK_REPLY_PROMPTS } from './QuickReply.constants';
 import type { QuickReplyContentProps, QuickReplyProps } from './QuickReply.types';
@@ -119,7 +119,9 @@ export function QuickReply({
   const connectorHeight = cardHeight ? cardHeight + QUICK_REPLY_CONNECTOR_HEIGHT_OFFSET : undefined;
 
   const effectiveTagsLayout = useEffectiveTagsLayout();
-  const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
+  const characterLimit = isExpanded
+    ? { count: getEnforcedCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH }
+    : undefined;
   useCharacterLimitWarning(characterLimit);
 
   const contentProps: QuickReplyContentProps = {
