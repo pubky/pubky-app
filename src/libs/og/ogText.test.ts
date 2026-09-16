@@ -1,94 +1,52 @@
 import { describe, expect, it } from 'vitest';
 import type { MentionSegment } from '@/libs/post/postMentions';
-import { truncateByGraphemes } from '@/libs/utils/truncate';
-import {
-  prepareOgText,
-  prepareOgTextSegments,
-  splitUnsupportedEmojiSequences,
-  truncateSegmentsByGraphemes,
-} from './ogText';
+import { prepareOgText, prepareOgTextSegments } from './ogText';
 
 const plain = (text: string): MentionSegment => ({ text, isMention: false });
-const mention = (text: string): MentionSegment => ({ text, isMention: true });
-const flatten = (segments: MentionSegment[]) => segments.map((segment) => segment.text).join('');
+const mention = (text: string): MentionSegment => ({ text, isMention: true, pubky: 'x' });
 
-describe('splitUnsupportedEmojiSequences', () => {
+describe('prepareOgText (emoji repair)', () => {
   it('returns text without a zero-width joiner unchanged', () => {
-    expect(splitUnsupportedEmojiSequences('Miguel Medeiros💯🌱🐸')).toBe('Miguel Medeiros💯🌱🐸');
-    expect(splitUnsupportedEmojiSequences('')).toBe('');
+    expect(prepareOgText('Miguel Medeiros💯🌱🐸')).toBe('Miguel Medeiros💯🌱🐸');
+    expect(prepareOgText('')).toBe('');
   });
 
-  it('keeps valid RGI ZWJ sequences whole', () => {
+  it('keeps valid, fully-qualified ZWJ sequences whole', () => {
     for (const sequence of ['👨‍👩‍👧', '🏳️‍🌈', '🧙‍♂️', '👩🏽‍💻']) {
-      expect(splitUnsupportedEmojiSequences(`a ${sequence} b`)).toBe(`a ${sequence} b`);
+      expect(prepareOgText(`a ${sequence} b`)).toBe(`a ${sequence} b`);
     }
   });
 
-  it('splits an invalid ZWJ sequence into its component emoji, as browsers draw it', () => {
-    // MAGE + ZWJ + TROLL (seen in a real display name) is not an RGI sequence.
-    expect(splitUnsupportedEmojiSequences('Miguel Medeiros💯🌱🐸🧙‍🧌')).toBe('Miguel Medeiros💯🌱🐸🧙🧌');
+  it('fully qualifies an under-qualified sequence so the provider has an asset for it', () => {
+    // Without VS16 these are not RGI, but their qualified forms are (and twemoji serves them).
+    expect(prepareOgText('❤‍🔥')).toBe('❤️‍🔥');
+    expect(prepareOgText('🏳‍🌈')).toBe('🏳️‍🌈');
+    expect(prepareOgText('🧙‍♂')).toBe('🧙‍♂️');
   });
 
-  it('handles valid and invalid sequences side by side', () => {
-    expect(splitUnsupportedEmojiSequences('🧙‍🧌 and 👨‍👩‍👧')).toBe('🧙🧌 and 👨‍👩‍👧');
+  it('splits a sequence that is not a valid emoji even when qualified, as browsers draw it', () => {
+    // MAGE + ZWJ + TROLL (seen in a real display name) is not an RGI sequence.
+    expect(prepareOgText('Miguel Medeiros💯🌱🐸🧙‍🧌')).toBe('Miguel Medeiros💯🌱🐸🧙🧌');
+    expect(prepareOgText('🧙‍🧌 and 👨‍👩‍👧')).toBe('🧙🧌 and 👨‍👩‍👧');
   });
 
   it('leaves non-emoji clusters that use the joiner for text shaping untouched', () => {
     // Malayalam chillu (NA + VIRAMA + ZWJ), Sinhala yansaya, Devanagari half-form,
     // Arabic forced joining: the joiner is part of the spelling, not an emoji glue.
-    for (const text of [
-      '\u0d28\u0d4d\u200d',
-      '\u0d9a\u0dca\u200d\u0dc2',
-      '\u0915\u094d\u200d\u0916',
-      '\u0628\u200d\u062a',
-    ]) {
-      expect(splitUnsupportedEmojiSequences(`name ${text}`)).toBe(`name ${text}`);
+    for (const text of ['ന്‍', 'ක්‍ෂ', 'क्‍ख', 'ب‍ت']) {
+      expect(prepareOgText(`name ${text}`)).toBe(`name ${text}`);
     }
   });
-});
 
-describe('prepareOgText', () => {
-  it('normalises emoji and leaves length alone without a limit', () => {
-    expect(prepareOgText('hi 🧙‍🧌 there')).toBe('hi 🧙🧌 there');
-  });
-
-  it('normalises emoji before truncating by graphemes', () => {
+  it('truncates by graphemes after repairing when a limit is given', () => {
     // The split cluster counts as two graphemes, so the cut lands after the mage.
     expect(prepareOgText('a🧙‍🧌b', 2)).toBe('a🧙...');
-  });
-});
-
-describe('truncateSegmentsByGraphemes', () => {
-  it('returns the segments unchanged at or under the limit (no ellipsis)', () => {
-    const segments = [plain('Hi '), mention('@Talos'), plain('!')];
-    expect(truncateSegmentsByGraphemes(segments, 10)).toEqual(segments);
-    expect(truncateSegmentsByGraphemes(segments, 20)).toEqual(segments);
-  });
-
-  it('cuts the run that crosses the limit and appends a plain ellipsis', () => {
-    const segments = [plain('Hi '), mention('@Talos'), plain(' and friends')];
-    expect(truncateSegmentsByGraphemes(segments, 6)).toEqual([plain('Hi '), mention('@Ta'), plain('...')]);
-  });
-
-  it('drops a run that starts past the limit instead of emitting an empty one', () => {
-    const segments = [plain('Hi '), mention('@Talos'), plain(' and friends')];
-    expect(truncateSegmentsByGraphemes(segments, 9)).toEqual([plain('Hi '), mention('@Talos'), plain('...')]);
-  });
-
-  it('counts emoji as single graphemes and never splits a ZWJ cluster', () => {
-    expect(truncateSegmentsByGraphemes([plain('a👨‍👩‍👧'), mention('@x')], 1)).toEqual([plain('a'), plain('...')]);
-  });
-
-  it('flattens to exactly what truncateByGraphemes produces for the joined text', () => {
-    const segments = [plain('Hey '), mention('@JeanlChristophe'), plain(' check out this Luffy tattoo! 🐸🐸')];
-    for (const max of [0, 1, 4, 5, 12, 20, 30, 45, 100]) {
-      expect(flatten(truncateSegmentsByGraphemes(segments, max))).toBe(truncateByGraphemes(flatten(segments), max));
-    }
+    expect(prepareOgText('hello world', 5)).toBe('hello...');
   });
 });
 
 describe('prepareOgTextSegments', () => {
-  it('normalises emoji in every run, then truncates', () => {
+  it('repairs emoji in every run, then truncates', () => {
     const segments = [plain('by '), mention('@Miguel Medeiros💯🌱🐸🧙‍🧌'), plain(' 👋')];
     expect(prepareOgTextSegments(segments, 100)).toEqual([
       plain('by '),
@@ -96,5 +54,12 @@ describe('prepareOgTextSegments', () => {
       plain(' 👋'),
     ]);
     expect(prepareOgTextSegments(segments, 5)).toEqual([plain('by '), mention('@M'), plain('...')]);
+  });
+
+  it('gives the same result as repairing before truncating when a repaired cluster straddles the cut', () => {
+    // 'a' + split cluster (2 graphemes) + 'b': a cut at 2 keeps the mage only, whichever order applies.
+    expect(prepareOgTextSegments([plain('a🧙‍🧌b')], 2)).toEqual([plain('a🧙'), plain('...')]);
+    expect(prepareOgTextSegments([plain('a🧙‍🧌b')], 3)).toEqual([plain('a🧙🧌'), plain('...')]);
+    expect(prepareOgTextSegments([plain('a🧙‍🧌b')], 4)).toEqual([plain('a🧙🧌b')]);
   });
 });

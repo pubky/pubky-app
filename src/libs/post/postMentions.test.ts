@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { extractMentionedPubkys, formatMentionLabel, replaceMentions, splitMentions } from './postMentions';
+import { truncateByGraphemes } from '@/libs/utils/truncate';
+import { formatMentionLabel, type MentionSegment, splitMentions, truncateSegmentsByGraphemes } from './postMentions';
 
 // Valid 52-char lowercase alphanumeric keys for testing
 const PUBKY_A = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
@@ -7,45 +8,18 @@ const PUBKY_B = 'zyxwvutsrqponmlkjihgfedcba9876543210zyxwvutsrqponmlk';
 // A raw key can itself start with "pubky"; the prefix must still be stripped exactly once.
 const PUBKY_STARTING_WITH_PUBKY = `pubky${'o'.repeat(47)}`;
 
-describe('extractMentionedPubkys', () => {
-  it('returns no keys when the text has no mentions', () => {
-    expect(extractMentionedPubkys('Hello world')).toEqual([]);
-    expect(extractMentionedPubkys('')).toEqual([]);
-  });
-
-  it('extracts pk: and pubky prefixed mentions without their prefix', () => {
-    expect(extractMentionedPubkys(`pk:${PUBKY_A} and pubky${PUBKY_B}`)).toEqual([PUBKY_A, PUBKY_B]);
-  });
-
-  it('deduplicates repeated mentions, keeping first-appearance order', () => {
-    expect(extractMentionedPubkys(`pk:${PUBKY_B} then pubky${PUBKY_A} then pk:${PUBKY_B}`)).toEqual([PUBKY_B, PUBKY_A]);
-  });
-
-  it('only matches standalone tokens (start of text or after whitespace), like remarkMentions', () => {
-    expect(extractMentionedPubkys(`https://x.test/pk:${PUBKY_A}`)).toEqual([]);
-    expect(extractMentionedPubkys(`foopubky${PUBKY_A}`)).toEqual([]);
-    expect(extractMentionedPubkys(`line one\npk:${PUBKY_A}`)).toEqual([PUBKY_A]);
-  });
-
-  it('ignores tokens whose key is not exactly 52 lowercase alphanumerics', () => {
-    expect(extractMentionedPubkys(`pk:${PUBKY_A.slice(0, 51)} short`)).toEqual([]);
-    expect(extractMentionedPubkys(`pk:${PUBKY_A.toUpperCase()} upper`)).toEqual([]);
-  });
-
-  it('keeps a raw key that itself starts with pubky intact', () => {
-    expect(extractMentionedPubkys(`pubky${PUBKY_STARTING_WITH_PUBKY} hi`)).toEqual([PUBKY_STARTING_WITH_PUBKY]);
-    expect(extractMentionedPubkys(`pk:${PUBKY_STARTING_WITH_PUBKY} hi`)).toEqual([PUBKY_STARTING_WITH_PUBKY]);
-  });
-});
+const plain = (text: string): MentionSegment => ({ text, isMention: false });
+const mention = (text: string, pubky = PUBKY_A): MentionSegment => ({ text, isMention: true, pubky });
+const flatten = (segments: MentionSegment[]) => segments.map((segment) => segment.text).join('');
 
 describe('formatMentionLabel', () => {
   it('prefixes a resolved name with @, like PostMentions', () => {
     expect(formatMentionLabel({ pubky: PUBKY_A, name: 'Alice' })).toBe('@Alice');
   });
 
-  it('falls back to the shortened key when the profile has no name', () => {
+  it('falls back to the shortened key, upper-cased as the app renders it', () => {
     const shortened = formatMentionLabel({ pubky: PUBKY_A, name: '' });
-    expect(shortened).toBe('abcd...mnop');
+    expect(shortened).toBe('ABCD...MNOP');
     expect(formatMentionLabel({ pubky: PUBKY_A, name: null })).toBe(shortened);
     expect(formatMentionLabel({ pubky: PUBKY_A })).toBe(shortened);
   });
@@ -55,48 +29,60 @@ describe('splitMentions', () => {
   const labelFor = (pubky: string) => (pubky === PUBKY_A ? '@Alice' : '@Bob');
 
   it('returns a single plain run (or nothing for empty text) when there are no mentions', () => {
-    expect(splitMentions('Hello world', labelFor)).toEqual([{ text: 'Hello world', isMention: false }]);
-    expect(splitMentions('', labelFor)).toEqual([]);
+    const labelSpy = vi.fn(labelFor);
+    expect(splitMentions('Hello world', labelSpy)).toEqual([plain('Hello world')]);
+    expect(splitMentions('', labelSpy)).toEqual([]);
+    expect(labelSpy).not.toHaveBeenCalled();
   });
 
-  it('splits into plain runs and labelled mention runs, keeping the leading boundary in the plain run', () => {
+  it('splits into plain runs and labelled mention runs carrying their key, boundary kept in the plain run', () => {
     expect(splitMentions(`pk:${PUBKY_A} met\npubky${PUBKY_B} and pk:${PUBKY_A}`, labelFor)).toEqual([
-      { text: '@Alice', isMention: true },
-      { text: ' met\n', isMention: false },
-      { text: '@Bob', isMention: true },
-      { text: ' and ', isMention: false },
-      { text: '@Alice', isMention: true },
+      mention('@Alice'),
+      plain(' met\n'),
+      mention('@Bob', PUBKY_B),
+      plain(' and '),
+      mention('@Alice'),
     ]);
   });
 
-  it('keeps keys embedded in other text as plain runs', () => {
-    const text = `see https://x.test/pk:${PUBKY_A} now`;
-    expect(splitMentions(text, labelFor)).toEqual([{ text, isMention: false }]);
+  it('hands the resolver the key without its prefix, including a key that itself starts with pubky', () => {
+    const labelSpy = vi.fn<(pubky: string) => string>(() => 'x');
+    splitMentions(`pk:${PUBKY_A} pubky${PUBKY_B} pubky${PUBKY_STARTING_WITH_PUBKY}`, labelSpy);
+    expect(labelSpy.mock.calls.map(([pubky]) => pubky)).toEqual([PUBKY_A, PUBKY_B, PUBKY_STARTING_WITH_PUBKY]);
+  });
+
+  it('only matches standalone tokens (start of text or after whitespace), like remarkMentions', () => {
+    for (const text of [`https://x.test/pk:${PUBKY_A}`, `foopubky${PUBKY_A}`, `pk:${PUBKY_A.slice(0, 51)}`]) {
+      expect(splitMentions(text, labelFor)).toEqual([plain(text)]);
+    }
   });
 });
 
-describe('replaceMentions', () => {
-  it('returns the text unchanged and never calls the resolver when there are no mentions', () => {
-    const labelFor = vi.fn(() => 'unused');
-    expect(replaceMentions('Hello world', labelFor)).toBe('Hello world');
-    expect(labelFor).not.toHaveBeenCalled();
+describe('truncateSegmentsByGraphemes', () => {
+  it('returns the segments unchanged at or under the limit (no ellipsis)', () => {
+    const segments = [plain('Hi '), mention('@Talos'), plain('!')];
+    expect(truncateSegmentsByGraphemes(segments, 10)).toEqual(segments);
+    expect(truncateSegmentsByGraphemes(segments, 20)).toEqual(segments);
   });
 
-  it('replaces each standalone mention with its label, preserving the leading boundary', () => {
-    const labelFor = (pubky: string) => (pubky === PUBKY_A ? '@Alice' : '@Bob');
-    expect(replaceMentions(`pk:${PUBKY_A} met\npubky${PUBKY_B} and pk:${PUBKY_A} again`, labelFor)).toBe(
-      '@Alice met\n@Bob and @Alice again',
-    );
+  it('cuts the run that crosses the limit and appends a plain ellipsis', () => {
+    const segments = [plain('Hi '), mention('@Talos'), plain(' and friends')];
+    expect(truncateSegmentsByGraphemes(segments, 6)).toEqual([plain('Hi '), mention('@Ta'), plain('...')]);
   });
 
-  it('hands the resolver the key without its prefix', () => {
-    const labelFor = vi.fn<(pubky: string) => string>(() => 'x');
-    replaceMentions(`pk:${PUBKY_A} pubky${PUBKY_B}`, labelFor);
-    expect(labelFor.mock.calls.map(([pubky]) => pubky)).toEqual([PUBKY_A, PUBKY_B]);
+  it('drops a run that starts past the limit instead of emitting an empty one', () => {
+    const segments = [plain('Hi '), mention('@Talos'), plain(' and friends')];
+    expect(truncateSegmentsByGraphemes(segments, 9)).toEqual([plain('Hi '), mention('@Talos'), plain('...')]);
   });
 
-  it('leaves keys embedded in other text alone', () => {
-    const text = `see https://x.test/pk:${PUBKY_A} or foopubky${PUBKY_B}`;
-    expect(replaceMentions(text, () => 'REPLACED')).toBe(text);
+  it('counts emoji as single graphemes and never splits a ZWJ cluster', () => {
+    expect(truncateSegmentsByGraphemes([plain('a👨‍👩‍👧'), mention('@x')], 1)).toEqual([plain('a'), plain('...')]);
+  });
+
+  it('flattens to exactly what truncateByGraphemes produces for the joined text', () => {
+    const segments = [plain('Hey '), mention('@JeanlChristophe'), plain(' check out this Luffy tattoo! 🐸🐸')];
+    for (const max of [0, 1, 4, 5, 12, 20, 30, 45, 100]) {
+      expect(flatten(truncateSegmentsByGraphemes(segments, max))).toBe(truncateByGraphemes(flatten(segments), max));
+    }
   });
 });

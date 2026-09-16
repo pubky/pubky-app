@@ -3,12 +3,15 @@ import type { Metadata as NextMetadata } from 'next';
 import { getCollectionRoute, POST_ROUTES } from '@/app/routes';
 import { normalizePostIds } from '@/libs/og/routeIds';
 import { fetchUserAndPostForMetadata, resolveMentionsForMetadata } from '@/libs/post/postMetadata';
-import { deriveTextPreview } from '@/libs/post/postPreview';
+import { deriveTextPreview, isMentionResolvablePreview } from '@/libs/post/postPreview';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { resolveDisplayName } from '@/libs/utils/utils';
 import { buildCompositeId } from '@/models/models.utils';
 import { Metadata } from '@/molecules/Metadata/Metadata';
 import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
+
+/** Grapheme cap for the `<meta>` description. */
+const DESCRIPTION_MAX_GRAPHEMES = 200;
 
 export interface PostPageProps {
   params: Promise<{
@@ -42,11 +45,10 @@ export async function generateMetadata({ params }: PostPageProps): Promise<NextM
     const preview = deriveTextPreview({ content: post.content, kind: post.kind });
     // Raw `pk:` / `pubky` mentions become display names, as the app renders them
     // (`PostMentions`), so a shared link never captions the post with a
-    // 52-character key. An article's preview is its title, which the app shows
-    // verbatim, so it is left as-is.
+    // 52-character key. Article titles stay verbatim, as in the app.
     const description = truncateByGraphemes(
-      post.kind === 'long' ? preview : await resolveMentionsForMetadata(preview),
-      200,
+      isMentionResolvablePreview(post) ? await resolveMentionsForMetadata(preview, DESCRIPTION_MAX_GRAPHEMES) : preview,
+      DESCRIPTION_MAX_GRAPHEMES,
     );
     const title = `${username} on Pubky`;
 

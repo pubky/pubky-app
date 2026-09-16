@@ -1,37 +1,18 @@
-import { PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE } from '@/libs/identity/identity.constants';
+import { MENTION_IN_TEXT_REGEX } from '@/libs/identity/identity.constants';
+import { sliceGraphemes } from '@/libs/utils/truncate';
 import { formatPublicKey, stripPubkyPrefix } from '@/libs/utils/utils';
 
-/**
- * Standalone `pk:<key>` / `pubky<key>` tokens: at the start of the text or after
- * whitespace, the same boundary rule `remarkMentions` uses to linkify them in
- * the app, so a key glued to other text (a URL path, a word) is left alone.
- *
- * Capture groups: (leading boundary)(mention token).
- */
-const MENTION_IN_TEXT_REGEX = new RegExp(`(^|\\s)(${PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE})`, 'g');
-
-/**
- * Unique public keys (prefix stripped) mentioned in `content`, in order of
- * first appearance. Pure.
- */
-export function extractMentionedPubkys(content: string): string[] {
-  const pubkys = new Set<string>();
-  for (const match of content.matchAll(MENTION_IN_TEXT_REGEX)) {
-    pubkys.add(stripPubkyPrefix(match[2]));
-  }
-  return [...pubkys];
-}
+/** A run of text: plain copy, or a mention already resolved to its label. */
+export type MentionSegment = { text: string; isMention: false } | { text: string; isMention: true; pubky: string };
 
 /**
  * Display label for a mentioned user, mirroring what `PostMentions` renders in
- * the app: `@name` when the profile has a name, otherwise the shortened key.
+ * the app: `@name` when the profile has a name, otherwise the shortened key,
+ * upper-cased as the app's `uppercase` class does.
  */
 export function formatMentionLabel({ pubky, name }: { pubky: string; name?: string | null }): string {
-  return name ? `@${name}` : formatPublicKey({ key: pubky });
+  return name ? `@${name}` : formatPublicKey({ key: pubky }).toUpperCase();
 }
-
-/** A run of text: plain copy, or a mention already resolved to its label. */
-export type MentionSegment = { text: string; isMention: boolean };
 
 /**
  * Splits `content` into plain runs and mentions, each standalone mention
@@ -49,7 +30,8 @@ export function splitMentions(content: string, labelFor: (pubky: string) => stri
     const mentionStart = (match.index ?? 0) + leading.length;
     const before = content.slice(lastIndex, mentionStart);
     if (before) segments.push({ text: before, isMention: false });
-    segments.push({ text: labelFor(stripPubkyPrefix(mention)), isMention: true });
+    const pubky = stripPubkyPrefix(mention);
+    segments.push({ text: labelFor(pubky), isMention: true, pubky });
     lastIndex = mentionStart + mention.length;
   }
 
@@ -58,9 +40,32 @@ export function splitMentions(content: string, labelFor: (pubky: string) => stri
   return segments;
 }
 
-/** `splitMentions` flattened back to a string, for plain-text surfaces (`<meta>` descriptions). */
-export function replaceMentions(content: string, labelFor: (pubky: string) => string): string {
-  return splitMentions(content, labelFor)
-    .map((segment) => segment.text)
-    .join('');
+/** Ellipsis appended by truncation: a plain run, so it never inherits a mention's colour. */
+const ELLIPSIS_SEGMENT: MentionSegment = { text: '...', isMention: false };
+
+/**
+ * Segment-aware `truncateByGraphemes`: keeps the first `max` grapheme clusters
+ * across `segments`, cutting the run that crosses the limit, and appends the
+ * ellipsis as its own plain run. Flattened, the result equals
+ * `truncateByGraphemes(flattened input, max)` unless a grapheme cluster
+ * straddles two runs (a combining mark typed right after a key), where the
+ * count differs by one. Segments past the cut are not scanned.
+ */
+export function truncateSegmentsByGraphemes(segments: MentionSegment[], max: number): MentionSegment[] {
+  const kept: MentionSegment[] = [];
+  let remaining = max;
+
+  for (const segment of segments) {
+    const { text, count, truncated } = sliceGraphemes(segment.text, remaining);
+    if (!truncated) {
+      kept.push(segment);
+      remaining -= count;
+      continue;
+    }
+    if (text) kept.push({ ...segment, text });
+    kept.push(ELLIPSIS_SEGMENT);
+    return kept;
+  }
+
+  return kept;
 }

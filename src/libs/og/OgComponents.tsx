@@ -65,80 +65,71 @@ export function OgAvatar({ src, size }: { src: string | null; size: number }) {
   );
 }
 
-/** One unbreakable run of non-whitespace characters and its styling. */
-type OgTextRun = { text: string; isMention: boolean };
-/** A whitespace-delimited word: several runs when a mention is glued to punctuation (`@Jeb,`). */
-type OgTextWord = { runs: OgTextRun[]; spaceAfter: boolean };
+/** One flex item of mention-aware text: a word, or a piece of one, and its styling. */
+type OgTextPiece = { text: string; isMention: boolean };
+
+/** The whitespace satori collapses under `white-space: normal`; NBSP and other Unicode spaces stay glue. */
+const WHITESPACE_RUN_REGEX = /([ \t\n\r]+)/;
+const WHITESPACE_ONLY_REGEX = /^[ \t\n\r]+$/;
+/** Break opportunities inside a word, as a text node would break: after `/` or `-` when more of the word follows. */
+const BREAK_AFTER_REGEX = /(?<=[/-])(?=[^/-])/;
 
 /**
- * Groups segment text into words for satori's wrapping flex row. Whitespace
- * runs (newlines included) collapse to a single space after the preceding
- * word, as `white-space: normal` did on the single text node this replaces,
- * and runs from adjacent segments with no whitespace between them share one
- * word so a mention never parts from its trailing punctuation across rows.
+ * Cuts segment text into the items of satori's wrapping flex row: words, and
+ * within a word the pieces a text node could break between (`https://`,
+ * `example.com/`, `rock-`, `paper-`), so long URLs and hyphenated words flow
+ * across rows instead of claiming whole ones. Whitespace runs collapse to one
+ * space carried by the preceding piece, as `white-space: normal` does. Runs of
+ * adjacent segments with no whitespace between them (`@Jeb,`) become adjacent
+ * pieces, which only part at a row end when the whole word would not fit.
  */
-function toWords(segments: MentionSegment[]): OgTextWord[] {
-  const words: OgTextWord[] = [];
-  let current: OgTextWord | null = null;
+function toPieces(segments: MentionSegment[]): OgTextPiece[] {
+  const pieces: OgTextPiece[] = [];
 
   for (const segment of segments) {
-    for (const part of segment.text.split(/(\s+)/)) {
+    for (const part of segment.text.split(WHITESPACE_RUN_REGEX)) {
       if (!part) continue;
-      if (/^\s+$/.test(part)) {
-        if (current) current.spaceAfter = true;
-        current = null;
+      if (WHITESPACE_ONLY_REGEX.test(part)) {
+        const last = pieces.at(-1);
+        if (last && !last.text.endsWith(' ')) last.text += ' ';
         continue;
       }
-      if (!current) {
-        current = { runs: [], spaceAfter: false };
-        words.push(current);
+      for (const piece of part.split(BREAK_AFTER_REGEX)) {
+        pieces.push({ text: piece, isMention: segment.isMention });
       }
-      current.runs.push({ text: part, isMention: segment.isMention });
     }
   }
 
-  return words;
-}
-
-function OgTextRunSpan({ run, spaceAfter }: { run: OgTextRun; spaceAfter: boolean }) {
-  // pre-wrap keeps the word's trailing space (normal would trim it) while still
-  // breaking an overlong word such as a URL across rows.
-  return (
-    <span style={{ whiteSpace: 'pre-wrap', ...(run.isMention ? { color: OG_TOKENS.brand } : {}) }}>
-      {spaceAfter ? `${run.text} ` : run.text}
-    </span>
-  );
+  return pieces;
 }
 
 /**
  * Flowing text whose mention runs are drawn in the brand colour, as the app's
- * mention links are. satori (0.25) cannot style part of a text run: nested
- * inline spans are painted over each other, and with `wordBreak` set their
- * layout never terminates. So the copy becomes word items in a wrapping flex
- * row — the standard satori idiom — which wraps at word boundaries like a
- * paragraph and still honours the caller's height cap. Block styling (size,
- * weight, colour, line height, `maxHeight` / `overflow`, `wordBreak`) is
- * passed as `style` and inherited by the items.
+ * mention links are. Block styling (size, weight, colour, line height,
+ * `maxHeight` / `overflow`, `wordBreak`) is passed as `style`.
+ *
+ * Without mentions the copy is one text node, so satori's own line breaking
+ * applies exactly as before mentions were coloured. With mentions it has to be
+ * word pieces in a wrapping flex row: satori (0.25) cannot style part of a
+ * text run — nested inline spans are painted over each other, and with
+ * `wordBreak` set their layout never terminates. Each piece keeps its trailing
+ * space (`pre-wrap`; `normal` would trim it) and still breaks an overlong
+ * piece across rows; the row honours the caller's height cap. Residual
+ * difference from a text node: after a piece wider than a row (an unbroken
+ * 60+ character token with no slash or hyphen) wraps internally, the next
+ * word starts a new row rather than sharing the token's last line.
  */
 export function OgText({ segments, style }: { segments: MentionSegment[]; style?: CSSProperties }) {
+  if (!segments.some((segment) => segment.isMention)) {
+    return <div style={{ display: 'flex', ...style }}>{segments.map((segment) => segment.text).join('')}</div>;
+  }
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', ...style }}>
-      {toWords(segments).map((word, index) =>
-        word.runs.length === 1 ? (
-          <OgTextRunSpan key={index} run={word.runs[0]} spaceAfter={word.spaceAfter} />
-        ) : (
-          // Glued runs (mention + punctuation) share a non-wrapping row so they stay together.
-          <div key={index} style={{ display: 'flex' }}>
-            {word.runs.map((run, runIndex) => (
-              <OgTextRunSpan
-                key={runIndex}
-                run={run}
-                spaceAfter={word.spaceAfter && runIndex === word.runs.length - 1}
-              />
-            ))}
-          </div>
-        ),
-      )}
+      {toPieces(segments).map((piece, index) => (
+        <span key={index} style={{ whiteSpace: 'pre-wrap', ...(piece.isMention ? { color: OG_TOKENS.brand } : {}) }}>
+          {piece.text}
+        </span>
+      ))}
     </div>
   );
 }

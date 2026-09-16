@@ -90,7 +90,7 @@ describe('renderPostOg', () => {
     await renderPostOg({ userId: AUTHOR, postId: 'post-1' });
 
     const html = renderedMarkup();
-    expect(html).toContain(brandSpan('abcd...mnop'));
+    expect(html).toContain(brandSpan('ABCD...MNOP'));
     expect(html).not.toContain(MENTIONED);
   });
 
@@ -119,8 +119,8 @@ describe('renderPostOg', () => {
 
     await renderPostOg({ userId: AUTHOR, postId: 'post-1' });
 
-    expect(renderedMarkup()).toContain('hello </span>');
-    expect(renderedMarkup()).toContain('world</span>');
+    // No mention to colour: one text node, so satori's own line breaking applies.
+    expect(renderedMarkup()).toContain('>hello world</div>');
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

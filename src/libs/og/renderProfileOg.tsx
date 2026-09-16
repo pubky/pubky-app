@@ -38,7 +38,7 @@ export async function renderProfileOg({ pubky }: { pubky: string }): Promise<Res
     // round-trips.
     const [avatarSrc, bioSegments] = await Promise.all([
       fetchImageAsDataUri(buildAvatarUrl(user)),
-      resolveMentionSegmentsForMetadata(user.bio ?? ''),
+      resolveMentionSegmentsForMetadata(user.bio ?? '', OG_TRUNCATE.bio),
     ]);
     const name = prepareOgText(resolveDisplayName(user));
     const bio = prepareOgTextSegments(bioSegments, OG_TRUNCATE.bio);

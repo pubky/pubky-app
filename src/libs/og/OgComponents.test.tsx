@@ -37,15 +37,29 @@ describe('OgHeader', () => {
 describe('OgText', () => {
   const plain = (text: string) => `<span style="white-space:pre-wrap">${text}</span>`;
   const brand = (text: string) => `<span style="white-space:pre-wrap;color:${OG_TOKENS.brand}">${text}</span>`;
+  const mention = (text: string) => ({ text, isMention: true as const, pubky: 'x' });
 
-  it('renders words as items of a wrapping flex row, mentions in the brand colour, glued punctuation kept together', () => {
+  it('renders copy without mentions as one text node, so satori breaks lines as it always did', () => {
+    const html = renderToStaticMarkup(
+      <OgText
+        segments={[{ text: 'see https://example.com/a/b then more', isMention: false }]}
+        style={{ fontSize: 60, maxHeight: 216 }}
+      />,
+    );
+
+    expect(html).toBe(
+      '<div style="display:flex;font-size:60px;max-height:216px">see https://example.com/a/b then more</div>',
+    );
+  });
+
+  it('renders mention-bearing copy as word pieces in a wrapping row, mentions in the brand colour', () => {
     const html = renderToStaticMarkup(
       <OgText
         segments={[
           { text: 'Hi ', isMention: false },
-          { text: '@Talos', isMention: true },
+          mention('@Talos'),
           { text: ' and ', isMention: false },
-          { text: '@Jeb', isMention: true },
+          mention('@Jeb'),
           { text: ', play rock-paper-scissors', isMention: false },
         ]}
       />,
@@ -56,25 +70,46 @@ describe('OgText', () => {
         plain('Hi ') +
         brand('@Talos ') +
         plain('and ') +
-        `<div style="display:flex">${brand('@Jeb')}${plain(', ')}</div>` +
+        brand('@Jeb') +
+        plain(', ') +
         plain('play ') +
-        plain('rock-paper-scissors') +
+        plain('rock-') +
+        plain('paper-') +
+        plain('scissors') +
         '</div>',
     );
   });
 
-  it('collapses whitespace runs (newlines included) to one space and drops leading whitespace', () => {
-    const html = renderToStaticMarkup(<OgText segments={[{ text: '  hello\n\nworld  ', isMention: false }]} />);
-
-    expect(html).toBe(`<div style="display:flex;flex-wrap:wrap">${plain('hello ')}${plain('world ')}</div>`);
-  });
-
-  it('applies the block style to the row and matches the snapshot', () => {
+  it('splits a URL after its slashes so it can flow across rows, but never at a run of slashes', () => {
     const html = renderToStaticMarkup(
-      <OgText segments={[{ text: 'hello world', isMention: false }]} style={{ fontSize: 60, maxHeight: 216 }} />,
+      <OgText segments={[mention('@Bob'), { text: ' https://pubky.app/post/abc', isMention: false }]} />,
     );
 
-    expect(html).toContain('<div style="display:flex;flex-wrap:wrap;font-size:60px;max-height:216px">');
+    expect(html).toContain(brand('@Bob ') + plain('https://') + plain('pubky.app/') + plain('post/') + plain('abc'));
+  });
+
+  it('collapses ASCII whitespace runs (newlines included) to one space and keeps NBSP glued', () => {
+    const html = renderToStaticMarkup(
+      <OgText segments={[mention('@Bob'), { text: '  10\u00a0000\n\nsats  ', isMention: false }]} />,
+    );
+
+    expect(html).toContain(brand('@Bob ') + plain('10\u00a0000 ') + plain('sats '));
+  });
+});
+
+describe('OgText - Snapshots', () => {
+  it('matches snapshot for mention-bearing copy', () => {
+    const html = renderToStaticMarkup(
+      <OgText
+        segments={[
+          { text: 'gm ', isMention: false },
+          { text: '@Bob', isMention: true, pubky: 'x' },
+          { text: ', welcome', isMention: false },
+        ]}
+        style={{ fontSize: 60 }}
+      />,
+    );
+
     expect(html).toMatchSnapshot();
   });
 });

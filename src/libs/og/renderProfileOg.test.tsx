@@ -66,8 +66,7 @@ describe('renderProfileOg', () => {
 
     await renderProfileOg({ pubky: PUBKY });
 
-    expect(renderedMarkup()).toContain('hello </span>');
-    expect(renderedMarkup()).toContain('world</span>');
+    expect(renderedMarkup()).toContain('>hello world</div>');
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

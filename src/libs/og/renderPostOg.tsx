@@ -2,7 +2,7 @@ import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { markdownToText } from '@/libs/post/markdownToText';
 import { fetchUserAndPostForMetadata, resolveMentionSegmentsForMetadata } from '@/libs/post/postMetadata';
-import { deriveTextPreview } from '@/libs/post/postPreview';
+import { deriveTextPreview, isMentionResolvablePreview } from '@/libs/post/postPreview';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { OgFrame, OgHeader, OgText } from './OgComponents';
@@ -49,14 +49,19 @@ export async function renderPostOg({ userId, postId }: { userId: string; postId:
     // serialize on the cold path.
     const imageUrl =
       !isDeleted && post.kind === 'image' ? resolvePostAttachmentUrl(post.attachments?.[0], FileVariant.FEED) : null;
+    // The card's body copy: an article's body excerpt, otherwise the preview.
+    // Raw `pk:` / `pubky` mentions in it resolve to display names drawn in the
+    // brand colour by `OgText`, as the app renders them (`PostMentions`), on the
+    // previews the app links mentions in (article bodies, post copy; titles stay
+    // verbatim). Looked up only as far as the widest variant can show.
+    const cardText = article ? markdownToText(article.body) : preview;
+    const resolveMentions = article !== null || isMentionResolvablePreview(post);
     const [avatarSrc, imageSrc, text] = await Promise.all([
       fetchImageAsDataUri(buildAvatarUrl(user)),
       fetchImageAsDataUri(imageUrl),
-      // The card's body copy split into plain runs and mentions, each raw `pk:` /
-      // `pubky` mention resolved to a display name and drawn in the brand colour
-      // by `OgText`, as the app renders them (`PostMentions`). An article's title
-      // is shown verbatim (as in the app); only its body is resolved.
-      resolveMentionSegmentsForMetadata(article ? markdownToText(article.body) : preview),
+      resolveMentions
+        ? resolveMentionSegmentsForMetadata(cardText, OG_TRUNCATE.postText)
+        : [{ text: cardText, isMention: false as const }],
     ]);
 
     if (article) {

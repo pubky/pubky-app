@@ -6,13 +6,9 @@ import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import type { THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
 import type { TOnboardingSecrets } from '@/stores/onboarding/onboarding.types';
-import { PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE } from './identity.constants';
 import type { TCreateRecoveryFileParams, TDecryptRecoveryFileParams, TMnemonicWords } from './identity.types';
 
 export class Identity {
-  // Mention pattern: pk: or pubky followed by exactly 52 lowercase alphanumeric characters
-  static readonly PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE = PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE;
-
   /**
    * Creates and downloads a recovery file for the keypair
    * @param keypair - The keypair to create the recovery file for
