@@ -8,6 +8,7 @@ import { type BookmarkModelSchema, bookmarkTableSchema } from '@/models/bookmark
 import { type FeedModelSchema, feedTableSchema } from '@/models/feed/feed.schema';
 import { type FileDetailsModelSchema, fileDetailsTableSchema } from '@/models/file/fileDetails.schema';
 import { type HotTagsModelSchema, hotTagsTableSchema } from '@/models/hot/hot.schema';
+import { type LockModelSchema, lockTableSchema } from '@/models/locks/locks.schema';
 import type { Pubky } from '@/models/models.types';
 import { type ModerationModelSchema, moderationTableSchema } from '@/models/moderation/moderation.schema';
 import { notificationTableSchema } from '@/models/notification/notification.schema';
@@ -110,6 +111,7 @@ export class AppDatabase extends Dexie {
   feeds!: Dexie.Table<FeedModelSchema>;
   // Moderation
   moderation!: Dexie.Table<ModerationModelSchema>;
+  locks!: Dexie.Table<LockModelSchema>;
 
   constructor(databaseName: string = DB_NAME) {
     super(databaseName);
@@ -145,6 +147,7 @@ export class AppDatabase extends Dexie {
         feeds: feedTableSchema,
         // Moderation
         moderation: moderationTableSchema,
+        locks: lockTableSchema,
       });
     } catch (error) {
       throw Err.database(DatabaseErrorCode.SCHEMA_ERROR, 'Failed to initialize database schema of indexedDB', {

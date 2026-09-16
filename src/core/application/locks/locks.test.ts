@@ -5,6 +5,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
 import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import type { LockFile, ReplicatedPost, TGuardedResource, TUnlockedContent } from '@/services/locks/locks.types';
+import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LocksApplication } from './locks';
 
@@ -22,6 +23,17 @@ const mocks = vi.hoisted(() => ({
   getBytes: vi.fn(),
   getBytesIfExists: vi.fn(),
   listAll: vi.fn(),
+  cacheGet: vi.fn().mockResolvedValue(null),
+  cacheDescriptor: vi.fn().mockResolvedValue(undefined),
+  cachePost: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/services/local/locks/locks', () => ({
+  LocalLocksService: {
+    get: mocks.cacheGet,
+    upsertDescriptor: mocks.cacheDescriptor,
+    upsertPost: mocks.cachePost,
+  },
 }));
 
 vi.mock('@/services/homeserver/homeserver', () => ({
@@ -45,6 +57,12 @@ vi.mock('@/services/locks/locks', () => ({
     proxyReadGuardedResource: mocks.proxyReadGuardedResource,
   },
 }));
+
+beforeEach(() => {
+  mocks.cacheGet.mockReset().mockResolvedValue(null);
+  mocks.cacheDescriptor.mockReset().mockResolvedValue(undefined);
+  mocks.cachePost.mockReset().mockResolvedValue(undefined);
+});
 
 const file = (contentType = 'application/json') => ({ contentType, bytes: new Uint8Array([1]) });
 const descriptor = (path: string) => ({ path, hash: 'HASH', content_type: 'application/json', size: 1 });
@@ -151,6 +169,70 @@ describe('LocksApplication (content)', () => {
     expect(builder).not.toHaveBeenCalled();
     expect(mocks.createContentLock).not.toHaveBeenCalled();
   });
+
+  it('keeps a successful publication successful if the immediate descriptor read fails', async () => {
+    mocks.createContentLock.mockResolvedValue({
+      lock_id: 'LOCK1',
+      content_lock_path: '/pub/locks.app/LOCK1.json',
+      creator: `pubky${MOCK_LOCK_AUTHOR_PUBKY}`,
+    });
+    mocks.readContentLock.mockRejectedValue(new Error('homeserver not ready'));
+    await expect(LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig })).resolves.toMatchObject({
+      lock_id: 'LOCK1',
+    });
+    expect(mocks.createContentLock).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(mocks.readContentLock).toHaveBeenCalledOnce());
+  });
+
+  it('caches the published descriptor and post without re-reading the guarded original', async () => {
+    const creator = `pubky${MOCK_LOCK_AUTHOR_PUBKY}`;
+    const publicFile = mockLockFile({ creator });
+    mocks.createContentLock.mockResolvedValue({
+      lock_id: 'LOCK1',
+      content_lock_path: '/pub/locks.app/LOCK1.json',
+      creator,
+    });
+    mocks.readContentLock.mockResolvedValue(publicFile);
+    const buildPost = () => ({
+      contentType: 'application/json',
+      bytes: new TextEncoder().encode(JSON.stringify({ content: 'my secret', kind: 'short', attachments: null })),
+    });
+
+    await LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig });
+
+    await vi.waitFor(() =>
+      expect(mocks.cacheDescriptor).toHaveBeenCalledWith({ lockId: 'LOCK1', descriptor: publicFile }),
+    );
+    expect(mocks.cachePost).toHaveBeenCalledWith({
+      lockId: 'LOCK1',
+      creator,
+      post: { content: 'my secret', kind: 'short', attachments: null },
+    });
+    expect(mocks.getBytes).not.toHaveBeenCalled();
+  });
+
+  it('does not wait for the descriptor read before finishing publication', async () => {
+    const creator = `pubky${MOCK_LOCK_AUTHOR_PUBKY}`;
+    mocks.createContentLock.mockResolvedValue({
+      lock_id: 'LOCK1',
+      content_lock_path: '/pub/locks.app/LOCK1.json',
+      creator,
+    });
+    let resolveRead: (value: LockFile) => void = () => undefined;
+    mocks.readContentLock.mockReturnValue(
+      new Promise<LockFile>((resolve) => {
+        resolveRead = resolve;
+      }),
+    );
+
+    await expect(LocksApplication.createLockContent({ buildPost, lockConfig: paymentConfig })).resolves.toMatchObject({
+      lock_id: 'LOCK1',
+    });
+    expect(mocks.cacheDescriptor).not.toHaveBeenCalled();
+
+    resolveRead(mockLockFile({ creator }));
+    await vi.waitFor(() => expect(mocks.cacheDescriptor).toHaveBeenCalledOnce());
+  });
 });
 const VALID_LOCK_URL = 'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo/pub/locks.app/lock1.json';
 
@@ -179,7 +261,61 @@ describe('LocksApplication.fetchLockFile', () => {
     const result = await LocksApplication.fetchLockFile({ lockUrl: VALID_LOCK_URL });
 
     expect(mocks.readContentLock).toHaveBeenCalledWith(VALID_LOCK_URL);
-    expect(result).toBe(lockFile);
+    expect(result).toEqual(lockFile);
+    expect(mocks.cacheDescriptor).toHaveBeenCalledWith({ lockId: 'lock1', descriptor: lockFile });
+  });
+
+  it('does not change the cache when the lock file read fails', async () => {
+    mocks.readContentLock.mockRejectedValue(new Error('offline'));
+    await expect(LocksApplication.fetchLockFile({ lockUrl: VALID_LOCK_URL })).rejects.toThrow('offline');
+    expect(mocks.cacheDescriptor).not.toHaveBeenCalled();
+  });
+
+  it('returns a valid lock file even when caching fails', async () => {
+    mocks.readContentLock.mockResolvedValue(lockFile);
+    mocks.cacheDescriptor.mockRejectedValueOnce(new Error('cache unavailable'));
+
+    await expect(LocksApplication.fetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual(lockFile);
+  });
+});
+
+describe('LocksApplication.getOrFetchLockFile', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('uses the local descriptor without a network read', async () => {
+    mocks.cacheGet.mockResolvedValueOnce({ id: 'lock1', creator: lockFile.creator, descriptor: lockFile });
+
+    await expect(LocksApplication.getOrFetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual(lockFile);
+    expect(mocks.readContentLock).not.toHaveBeenCalled();
+  });
+
+  it('fetches on a cache miss or local read failure', async () => {
+    mocks.readContentLock.mockResolvedValue(lockFile);
+
+    await expect(LocksApplication.getOrFetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual(lockFile);
+    mocks.cacheGet.mockRejectedValueOnce(new Error('IndexedDB unavailable'));
+    await expect(LocksApplication.getOrFetchLockFile({ lockUrl: VALID_LOCK_URL })).resolves.toEqual(lockFile);
+
+    expect(mocks.readContentLock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('LocksApplication cached post ownership', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('never serves the creator original as a reader unlock', async () => {
+    const post = { content: 'private original', kind: 'short', attachments: null };
+    mocks.cacheGet.mockResolvedValueOnce({ id: 'lock1', creator: 'pubkyme', post });
+    await expect(LocksApplication.getUnlockedPost({ lockUrl: VALID_LOCK_URL })).resolves.toBeNull();
+
+    mocks.cacheGet.mockResolvedValueOnce({ id: 'lock1', creator: 'pubkyme', post });
+    await expect(LocksApplication.getOwnPost({ lockUrl: VALID_LOCK_URL })).resolves.toEqual(post);
+  });
+
+  it('serves a completed reader unlock, including a marker timestamp of zero', async () => {
+    const post = { content: 'paid', kind: 'short', attachments: null };
+    mocks.cacheGet.mockResolvedValue({ id: 'lock1', creator: 'pubkyother', post, unlockedAt: 0 });
+    await expect(LocksApplication.getUnlockedPost({ lockUrl: VALID_LOCK_URL })).resolves.toEqual(post);
   });
 });
 
@@ -578,6 +714,22 @@ describe('LocksApplication.replicateUnlockedContent', () => {
       `pubky://${READER}/priv/social/unlocked/LOCK1/img2`,
       `pubky://${READER}/priv/social/unlocked/LOCK1/post.json`,
     ]);
+    expect(mocks.cachePost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lockId: 'LOCK1',
+        post: expect.any(Object),
+        unlockedAt: expect.any(Number),
+      }),
+    );
+  });
+
+  it('keeps a completed replication successful when the local cache write fails', async () => {
+    mocks.cachePost.mockRejectedValueOnce(new Error('cache unavailable'));
+
+    await expect(
+      LocksApplication.replicateUnlockedContent({ lockUrl: LOCK_URL, readerPubky: READER, content }),
+    ).resolves.toBeUndefined();
+    expect(mocks.putBlob).toHaveBeenCalledTimes(3);
   });
 
   it('repoints attachments in post.json at the reader copy with inline content types', async () => {
@@ -603,6 +755,7 @@ describe('LocksApplication.replicateUnlockedContent', () => {
       }),
     ).rejects.toThrow();
     expect(mocks.putBlob).not.toHaveBeenCalled();
+    expect(mocks.cachePost).not.toHaveBeenCalled();
   });
 });
 
@@ -618,6 +771,15 @@ describe('LocksApplication.fetchReplicatedAttachments', () => {
     });
 
   beforeEach(() => vi.clearAllMocks());
+
+  it('does not read from the homeserver when the cached post has no attachments', async () => {
+    const result = await LocksApplication.fetchReplicatedAttachments({
+      post: { content: 'body', kind: 'short', attachments: null },
+    });
+
+    expect(result).toEqual([]);
+    expect(mocks.getBytes).not.toHaveBeenCalled();
+  });
 
   it('drops an attachment the replica no longer has and keeps the rest renderable', async () => {
     mocks.getBytes
@@ -663,6 +825,7 @@ describe('LocksApplication.fetchReplicatedContent', () => {
 
     expect(result).toBeNull();
     expect(mocks.getBytesIfExists).toHaveBeenCalledWith(`pubky://${READER}/priv/social/unlocked/LOCK1/post.json`);
+    expect(mocks.cachePost).not.toHaveBeenCalled();
   });
 
   it('loads the replicated post and its attachments from the reader priv (no lock file needed)', async () => {
@@ -677,12 +840,25 @@ describe('LocksApplication.fetchReplicatedContent', () => {
     expect(result?.post).toEqual({ content: 'secret', kind: 'image', attachments: [attachmentUrl] });
     expect(result?.attachments).toEqual([{ id: 'img1', contentType: 'image/png', bytes: new Uint8Array([7, 7]) }]);
     expect(mocks.getBytes).toHaveBeenCalledWith(attachmentUrl);
+    expect(mocks.cachePost).toHaveBeenCalledWith(expect.objectContaining({ lockId: 'LOCK1', unlockedAt: 1 }));
   });
 
   it('throws when the marker exists but is not a parseable post (data corruption, not "not unlocked")', async () => {
     mocks.getBytesIfExists.mockResolvedValueOnce({ bytes: new TextEncoder().encode('not json'), modifiedAt: 1 });
 
     await expect(LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER })).rejects.toThrow();
+    expect(mocks.cachePost).not.toHaveBeenCalled();
+  });
+
+  it('leaves the cache unchanged when a replicated attachment read fails', async () => {
+    const attachmentUrl = `pubky://${READER}/priv/social/unlocked/LOCK1/img1`;
+    mocks.getBytesIfExists.mockResolvedValueOnce(
+      marker({ content: 'secret', kind: 'image', attachments: [{ url: attachmentUrl, content_type: 'image/png' }] }),
+    );
+    mocks.getBytes.mockRejectedValueOnce(new Error('offline'));
+
+    await expect(LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER })).rejects.toThrow();
+    expect(mocks.cachePost).not.toHaveBeenCalled();
   });
 });
 
@@ -718,6 +894,18 @@ describe('LocksApplication.fetchUnlockedList', () => {
       ['NEW', 900],
       ['OLD', 100],
     ]);
+    expect(mocks.cachePost).toHaveBeenCalledTimes(2);
+    expect(mocks.cachePost).toHaveBeenCalledWith(expect.objectContaining({ lockId: 'OLD', unlockedAt: 100 }));
+  });
+
+  it('returns the homeserver list when the local cache write fails', async () => {
+    mocks.listAll.mockResolvedValueOnce([markerUrl('LOCK1')]);
+    mocks.getBytesIfExists.mockResolvedValueOnce(marker('content', 5));
+    mocks.cachePost.mockRejectedValueOnce(new Error('IndexedDB unavailable'));
+
+    await expect(LocksApplication.fetchUnlockedList({ readerPubky: READER })).resolves.toMatchObject([
+      { lockId: 'LOCK1', unlockedAt: 5 },
+    ]);
   });
 
   it('sorts a marker with no Last-Modified header oldest instead of dropping it', async () => {
@@ -752,18 +940,37 @@ describe('LocksApplication.fetchOwnContent', () => {
       .mockResolvedValueOnce(encode({ content: 'my secret', kind: 'image', attachments: [attachmentUri] }))
       .mockResolvedValueOnce(new Uint8Array([5, 5]));
 
-    const result = await LocksApplication.fetchOwnContent({ lockFile: ownLockFile });
+    const result = await LocksApplication.fetchOwnContent({ lockUrl: VALID_LOCK_URL, lockFile: ownLockFile });
 
     expect(mocks.getBytes).toHaveBeenNthCalledWith(1, 'pubky://owner/priv/locks.app/content/post');
     expect(mocks.getBytes).toHaveBeenNthCalledWith(2, attachmentUri);
     expect(result?.post).toEqual({ content: 'my secret', kind: 'image', attachments: [attachmentUri] });
     expect(result?.attachments).toEqual([{ id: 'img1', contentType: 'image/png', bytes: new Uint8Array([5, 5]) }]);
     expect(mocks.proxyReadGuardedResource).not.toHaveBeenCalled();
+    expect(mocks.cachePost).toHaveBeenCalledWith(
+      expect.objectContaining({ lockId: 'lock1', post: expect.any(Object) }),
+    );
+    expect(mocks.cachePost.mock.calls[0]?.[0]).not.toHaveProperty('unlockedAt');
+  });
+
+  it('returns a mismatched original without caching it when secondary resources are absent', async () => {
+    const attachmentUri = 'pubky://owner/priv/locks.app/content/img1';
+    mocks.getBytes.mockResolvedValueOnce(encode({ content: 'my secret', kind: 'image', attachments: [attachmentUri] }));
+
+    const result = await LocksApplication.fetchOwnContent({
+      lockUrl: VALID_LOCK_URL,
+      lockFile: { ...ownLockFile, secondary_resources: undefined },
+    });
+
+    expect(result.post.attachments).toEqual([attachmentUri]);
+    expect(result.attachments).toEqual([]);
+    expect(mocks.cachePost).not.toHaveBeenCalled();
   });
 
   it('throws (data error, reported) when the lock file has no primary resource', async () => {
     await expect(
       LocksApplication.fetchOwnContent({
+        lockUrl: VALID_LOCK_URL,
         lockFile: asOpaque<LockFile>({ creator: 'pubkyowner', primary_resource: undefined, secondary_resources: {} }),
       }),
     ).rejects.toThrow();
@@ -773,7 +980,9 @@ describe('LocksApplication.fetchOwnContent', () => {
   it('throws (data error) when the guarded original is not a parseable post', async () => {
     mocks.getBytes.mockResolvedValueOnce(new TextEncoder().encode('not json'));
 
-    await expect(LocksApplication.fetchOwnContent({ lockFile: ownLockFile })).rejects.toThrow();
+    await expect(
+      LocksApplication.fetchOwnContent({ lockUrl: VALID_LOCK_URL, lockFile: ownLockFile }),
+    ).rejects.toThrow();
   });
 
   it('rejects the whole fetch when an attachment direct read fails', async () => {
@@ -782,6 +991,8 @@ describe('LocksApplication.fetchOwnContent', () => {
       .mockResolvedValueOnce(encode({ content: 'my secret', kind: 'image', attachments: [attachmentUri] }))
       .mockRejectedValueOnce(new Error('network down'));
 
-    await expect(LocksApplication.fetchOwnContent({ lockFile: ownLockFile })).rejects.toThrow();
+    await expect(
+      LocksApplication.fetchOwnContent({ lockUrl: VALID_LOCK_URL, lockFile: ownLockFile }),
+    ).rejects.toThrow();
   });
 });
