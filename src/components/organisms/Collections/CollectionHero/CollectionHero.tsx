@@ -2,16 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Loader2, Minus, Move, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
-import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
+import { Check, Link, Loader2, Minus, Move, Pencil, Plus, StickyNote, Trash2, X } from 'lucide-react';
+import { APP_ROUTES, getCollectionRoute, getUserProfileUrl } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { getDefaultUrl } from '@/config/metadata';
 import { useBookmark } from '@/hooks/useBookmark/useBookmark';
 import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
@@ -44,8 +46,15 @@ import type { CollectionHeroContentProps, CollectionHeroProps } from './Collecti
  *
  * The Hero → feed → Sections structure is identical for both owner and
  * other-user views; only the action buttons differ:
- *   - owner   → Content / Share / Edit / Delete.
- *   - other   → real Follow / Unfollow (via `useBookmark`) + Share placeholder.
+ *   - owner   → Content / Share / Copy link / Edit / Delete.
+ *   - other   → real Follow / Unfollow (via `useBookmark`) + Share placeholder
+ *     + Copy link.
+ *
+ * `Share` reposts the collection and stays what it always was; `Copy link` is
+ * the one that hands the collection URL over, so the URL is reachable without
+ * an address bar. It copies to the clipboard by default, because that is what
+ * its label promises and the Web Share API is not mobile-only; the native sheet
+ * is used only on touch devices (see `useShareUrl`).
  *
  * Freshness: the hero subscribes the envelope to the viewport TTL coordinator.
  * `usePostDetails` (in the `Collection` template) never re-fetches a cached
@@ -94,6 +103,7 @@ export function CollectionHero({
 
 function CollectionHeroContent({
   authorPubky,
+  postId,
   compositeId,
   postDetails,
   layout,
@@ -160,6 +170,15 @@ function CollectionHeroContent({
   });
   const handleShare = () => {
     requireAuth(openRepostDialog);
+  };
+
+  // Collection URL, built from the runtime default URL rather than
+  // `window.location.origin` so the copied link is the canonical one for the
+  // deployment (same source the profile links use) and stays SSR-safe.
+  const collectionUrl = `${getDefaultUrl()}${getCollectionRoute(authorPubky, postId)}`;
+  const { shareUrl } = useShareUrl({ title: title || 'Collection' });
+  const handleCopyLink = () => {
+    void shareUrl(collectionUrl);
   };
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -296,6 +315,20 @@ function CollectionHeroContent({
                   {'Share'}
                 </Typography>
               </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleCopyLink}
+                disabled={isDeleting || isReorderActive}
+                aria-label="Copy link"
+                data-cy="collection-hero-copy-link-btn"
+                className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+              >
+                <Link className="size-4" />
+                <Typography as="span" overrideDefaults className="hidden lg:inline">
+                  {'Copy link'}
+                </Typography>
+              </Button>
               {reorder &&
                 (isReorderActive ? (
                   <>
@@ -398,6 +431,19 @@ function CollectionHeroContent({
                 <StickyNote className="size-4" />
                 <Typography as="span" overrideDefaults className="hidden lg:inline">
                   {'Share'}
+                </Typography>
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleCopyLink}
+                aria-label="Copy link"
+                data-cy="collection-hero-copy-link-btn"
+                className="lg:h-8 lg:w-auto lg:gap-1.5 lg:px-3.5 lg:text-xs"
+              >
+                <Link className="size-4" />
+                <Typography as="span" overrideDefaults className="hidden lg:inline">
+                  {'Copy link'}
                 </Typography>
               </Button>
             </>
