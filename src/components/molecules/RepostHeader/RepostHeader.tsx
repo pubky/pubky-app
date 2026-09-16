@@ -48,7 +48,7 @@ export function RepostHeader({
 
   return (
     <Container
-      className={cn('flex items-center gap-3 rounded-t-md bg-muted px-4 py-3', children && 'flex-wrap')}
+      className={cn('flex items-center gap-3 rounded-t-md bg-muted px-6 py-3', children && 'flex-wrap')}
       overrideDefaults
       data-testid="repost-header"
     >

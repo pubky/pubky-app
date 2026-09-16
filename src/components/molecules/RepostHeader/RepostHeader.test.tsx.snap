@@ -2,7 +2,7 @@
 
 exports[`RepostHeader - Snapshots > matches snapshot 1`] = `
 <div
-  class="flex items-center gap-3 rounded-t-md bg-muted px-4 py-3"
+  class="flex items-center gap-3 rounded-t-md bg-muted px-6 py-3"
   data-override-defaults="true"
   data-testid="repost-header"
 >
@@ -54,7 +54,7 @@ exports[`RepostHeader - Snapshots > matches snapshot 1`] = `
 
 exports[`RepostHeader - Snapshots > matches snapshot for collection share 1`] = `
 <div
-  class="flex items-center gap-3 rounded-t-md bg-muted px-4 py-3"
+  class="flex items-center gap-3 rounded-t-md bg-muted px-6 py-3"
   data-override-defaults="true"
   data-testid="repost-header"
 >
@@ -106,7 +106,7 @@ exports[`RepostHeader - Snapshots > matches snapshot for collection share 1`] = 
 
 exports[`RepostHeader - Snapshots > matches snapshot while undoing 1`] = `
 <div
-  class="flex items-center gap-3 rounded-t-md bg-muted px-4 py-3"
+  class="flex items-center gap-3 rounded-t-md bg-muted px-6 py-3"
   data-override-defaults="true"
   data-testid="repost-header"
 >
@@ -176,7 +176,7 @@ exports[`RepostHeader - Snapshots > matches snapshot while undoing 1`] = `
 
 exports[`RepostHeader - Snapshots > matches snapshot with timestamp 1`] = `
 <div
-  class="flex items-center gap-3 rounded-t-md bg-muted px-4 py-3"
+  class="flex items-center gap-3 rounded-t-md bg-muted px-6 py-3"
   data-override-defaults="true"
   data-testid="repost-header"
 >
