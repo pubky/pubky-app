@@ -1,5 +1,5 @@
 import type { Pubky } from '@/models/models.types';
-import type { RecentTagSearch, RecentUserSearch } from '@/stores/search/search.types';
+import type { RecentQuerySearch, RecentTagSearch, RecentUserSearch } from '@/stores/search/search.types';
 
 /**
  * Recent user search item data
@@ -12,6 +12,12 @@ export type RecentUserSearchItem = RecentUserSearch;
  * Matches RecentTagSearch from search store
  */
 export type RecentTagSearchItem = RecentTagSearch;
+
+/**
+ * Recent full-text query search item data
+ * Matches RecentQuerySearch from search store
+ */
+export type RecentQuerySearchItem = RecentQuerySearch;
 
 /**
  * Props for SearchRecentUserItem component

@@ -23,6 +23,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
           mnemonic: state.mnemonic,
           showWelcomeDialog: state.showWelcomeDialog,
           inviteCode: state.inviteCode,
+          interestTags: state.interestTags,
+          experienceCompletedByPubky: state.experienceCompletedByPubky,
           hasHydrated: false, // Will be set by rehydration handler
         }),
 

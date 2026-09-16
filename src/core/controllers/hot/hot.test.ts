@@ -44,7 +44,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params, expect.any(Function));
       expect(getOrFetchSpy).toHaveBeenCalledOnce();
     });
 
@@ -62,7 +62,7 @@ describe('HotController', () => {
 
       await HotController.getOrFetch(params);
 
-      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, user_id: mockCurrentUserPubky });
+      expect(getOrFetchSpy).toHaveBeenCalledWith({ ...params, user_id: mockCurrentUserPubky }, expect.any(Function));
     });
 
     it('should bubble when HotApplication.getOrFetch fails', async () => {
@@ -109,7 +109,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params, expect.any(Function));
     });
 
     it('should handle taggers_limit parameter', async () => {
@@ -132,7 +132,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params, expect.any(Function));
     });
 
     it('should handle limit: 0', async () => {
@@ -148,7 +148,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params, expect.any(Function));
     });
 
     it('should handle skip: 0', async () => {
@@ -164,7 +164,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params, expect.any(Function));
     });
 
     it('should handle large limit values', async () => {
@@ -180,7 +180,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params, expect.any(Function));
     });
 
     it('should handle all optional parameters together', async () => {
@@ -207,7 +207,7 @@ describe('HotController', () => {
       const result = await HotController.getOrFetch(params);
 
       expect(result).toEqual(mockHotTags);
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params, expect.any(Function));
     });
 
     it('should handle different reach values', async () => {
@@ -226,20 +226,32 @@ describe('HotController', () => {
 
       expect(getOrFetchSpy).toHaveBeenCalledTimes(3);
       // reach calls should have user_id injected
-      expect(getOrFetchSpy).toHaveBeenNthCalledWith(1, {
-        reach: UserStreamReach.FOLLOWING,
-        timeframe: UserStreamTimeframe.TODAY,
-        user_id: mockCurrentUserPubky,
-      });
-      expect(getOrFetchSpy).toHaveBeenNthCalledWith(2, {
-        reach: UserStreamReach.FRIENDS,
-        timeframe: UserStreamTimeframe.TODAY,
-        user_id: mockCurrentUserPubky,
-      });
+      expect(getOrFetchSpy).toHaveBeenNthCalledWith(
+        1,
+        {
+          reach: UserStreamReach.FOLLOWING,
+          timeframe: UserStreamTimeframe.TODAY,
+          user_id: mockCurrentUserPubky,
+        },
+        expect.any(Function),
+      );
+      expect(getOrFetchSpy).toHaveBeenNthCalledWith(
+        2,
+        {
+          reach: UserStreamReach.FRIENDS,
+          timeframe: UserStreamTimeframe.TODAY,
+          user_id: mockCurrentUserPubky,
+        },
+        expect.any(Function),
+      );
       // No reach → no user_id injection
-      expect(getOrFetchSpy).toHaveBeenNthCalledWith(3, {
-        timeframe: UserStreamTimeframe.TODAY,
-      });
+      expect(getOrFetchSpy).toHaveBeenNthCalledWith(
+        3,
+        {
+          timeframe: UserStreamTimeframe.TODAY,
+        },
+        expect.any(Function),
+      );
     });
 
     it('should not inject user_id when user is not authenticated', async () => {
@@ -258,7 +270,7 @@ describe('HotController', () => {
 
       await HotController.getOrFetch(params);
 
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params, expect.any(Function));
     });
 
     it('should not inject user_id when user_id is already provided', async () => {
@@ -274,7 +286,7 @@ describe('HotController', () => {
       await HotController.getOrFetch(params);
 
       // Should use the explicitly provided user_id, not inject from auth store
-      expect(getOrFetchSpy).toHaveBeenCalledWith(params);
+      expect(getOrFetchSpy).toHaveBeenCalledWith(params, expect.any(Function));
     });
 
     it('should handle different timeframe values', async () => {

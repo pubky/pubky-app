@@ -24,6 +24,20 @@ import type {
 } from './useUserStream.types';
 
 const EMPTY_PRESERVED_FOLLOWED_USER_IDS: Pubky[] = [];
+const EMPTY_DETAILS_MAP = new Map<Pubky, NexusUserDetails>();
+const EMPTY_RELATIONSHIPS_MAP = new Map<Pubky, UserRelationshipsModelSchema>();
+
+/**
+ * A live-query result tagged with the `userIds` it was computed for. `useLiveQuery` yields
+ * `undefined` before the first resolve and keeps returning the previous result while deps change,
+ * so the tag is the only reliable way to tell "settled for these ids" apart from both "not yet"
+ * and "stale from the previous ids" — including when the settled result is legitimately empty
+ * (nothing cached, or the read failed).
+ */
+interface LiveQuerySnapshot<T> {
+  forIds: Pubky[];
+  map: Map<Pubky, T>;
+}
 
 /**
  * useUserStream
@@ -85,19 +99,17 @@ export function useUserStream({
   // Reactive Data Queries
   // ============================================================================
 
-  const userDetailsMap = useLiveQuery(
-    async () => {
-      if (userIds.length === 0) return new Map<Pubky, NexusUserDetails>();
-      try {
-        return await UserController.getManyDetails({ userIds });
-      } catch (err) {
-        Logger.error('[useUserStream] Failed to query user details', { error: err });
-        return new Map<Pubky, NexusUserDetails>();
-      }
-    },
-    [userIds],
-    new Map<Pubky, NexusUserDetails>(),
-  );
+  const userDetailsSnapshot = useLiveQuery<LiveQuerySnapshot<NexusUserDetails> | undefined>(async () => {
+    if (userIds.length === 0) return { forIds: userIds, map: EMPTY_DETAILS_MAP };
+    try {
+      return { forIds: userIds, map: await UserController.getManyDetails({ userIds }) };
+    } catch (err) {
+      Logger.error('[useUserStream] Failed to query user details', { error: err });
+      // Settled-but-empty: consumers must fall through to their empty/error state, not spin forever
+      return { forIds: userIds, map: EMPTY_DETAILS_MAP };
+    }
+  }, [userIds]);
+  const userDetailsMap = userDetailsSnapshot?.map ?? EMPTY_DETAILS_MAP;
 
   const userCountsMap = useLiveQuery(
     async () => {
@@ -113,19 +125,18 @@ export function useUserStream({
     new Map<Pubky, NexusUserCounts>(),
   );
 
-  const userRelationshipsMap = useLiveQuery(
-    async () => {
-      if (!includeRelationships || userIds.length === 0) return new Map<Pubky, UserRelationshipsModelSchema>();
-      try {
-        return await UserController.getManyRelationships({ userIds });
-      } catch (err) {
-        Logger.error('[useUserStream] Failed to query user relationships', { error: err });
-        return new Map<Pubky, UserRelationshipsModelSchema>();
-      }
-    },
-    [userIds, includeRelationships],
-    new Map<Pubky, UserRelationshipsModelSchema>(),
-  );
+  const userRelationshipsSnapshot = useLiveQuery<
+    LiveQuerySnapshot<UserRelationshipsModelSchema> | undefined
+  >(async () => {
+    if (!includeRelationships || userIds.length === 0) return { forIds: userIds, map: EMPTY_RELATIONSHIPS_MAP };
+    try {
+      return { forIds: userIds, map: await UserController.getManyRelationships({ userIds }) };
+    } catch (err) {
+      Logger.error('[useUserStream] Failed to query user relationships', { error: err });
+      return { forIds: userIds, map: EMPTY_RELATIONSHIPS_MAP };
+    }
+  }, [userIds, includeRelationships]);
+  const userRelationshipsMap = userRelationshipsSnapshot?.map ?? EMPTY_RELATIONSHIPS_MAP;
 
   // Fetch tags when userIds change (requires API call, not just DB query)
   useEffect(() => {
@@ -187,15 +198,17 @@ export function useUserStream({
   const eligibleCount = eligible.length;
   const users = excludeFollowing && !paginated ? eligible.slice(0, effectiveLimit) : eligible;
 
-  // Track whether the live queries that feed eligibility have hydrated for the current `userIds`.
-  // `useLiveQuery` returns its default empty Map synchronously and only fills it on the next tick,
-  // so we use these flags to avoid two visible UX issues:
+  // Track whether the live queries that feed eligibility have settled for the current `userIds`.
+  // `useLiveQuery` yields `undefined` synchronously and only resolves on the next tick, so we use
+  // these flags to avoid two visible UX issues:
   //   1. an unnecessary force-network refill while `eligibleCount` is transiently 0 (refill effect),
   //   2. a "first three users blink to a different three" when `excludeFollowing` is on and the
   //      relationships map hydrates a tick after the details map (consumer-facing `isLoading`).
-  const detailsHydrated = userIds.length === 0 || userIds.some((id) => userDetailsMap.has(id));
+  // A settled-but-empty snapshot (nothing cached, or the read failed) counts as hydrated so the
+  // consumer falls through to its empty/error state instead of showing a skeleton forever.
+  const detailsHydrated = userIds.length === 0 || userDetailsSnapshot?.forIds === userIds;
   const relationshipsHydrated =
-    !includeRelationships || userIds.length === 0 || userIds.some((id) => userRelationshipsMap.has(id));
+    !includeRelationships || userIds.length === 0 || userRelationshipsSnapshot?.forIds === userIds;
 
   // ============================================================================
   // Fetch Logic

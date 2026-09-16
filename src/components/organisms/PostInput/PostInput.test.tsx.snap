@@ -1120,7 +1120,7 @@ exports[`PostInput - Snapshots > matches snapshot for post variant when dragging
   data-testid="container"
 >
   <div
-    class="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
+    class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md bg-brand/10"
     data-override-defaults="true"
     data-testid="container"
   >

@@ -41,10 +41,7 @@ vi.mock('next/navigation', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn(), dismiss: vi.fn(), toasts: [] }),
-  toast: vi.fn(),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 // Header reads auth + public-route state. Onboarding step 1 is pre-auth.
 vi.mock('@/stores/auth/auth.store', () => ({

@@ -10,7 +10,7 @@ import { useSearchStreamId } from '@/hooks/useSearchStreamId/useSearchStreamId';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { CollectionCardSkeleton } from '@/organisms/Collections/CollectionCard/CollectionCard.skeleton';
 import { CONTENT } from '@/stores/home/home.types';
@@ -39,7 +39,6 @@ export function SearchCollections() {
  * `useStreamPagination` always receives a real `PostStreamId`.
  */
 function SearchCollectionsStream({ streamId }: { streamId: PostStreamId }) {
-  const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const { postIds, hasMore, loadMore, loading, loadingMore } = useStreamPagination({

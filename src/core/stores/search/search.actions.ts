@@ -2,6 +2,7 @@ import type { Pubky } from '@/models/models.types';
 import { ZustandSet } from '../stores.types';
 import { MAX_ACTIVE_SEARCH_TAGS, MAX_RECENT_SEARCHES } from './search.constants';
 import {
+  RecentQuerySearch,
   RecentTagSearch,
   RecentUserSearch,
   SearchActions,
@@ -53,13 +54,33 @@ export const createSearchActions = (set: ZustandSet<SearchStore>): SearchActions
   },
 
   /**
-   * Clear only recent searches (users and tags), keep active tags
+   * Add a full-text query to recent searches
+   * Moves existing query to top if already present
+   * Removes oldest if at max capacity
+   * Note: Query should be validated (trimmed) before calling
+   */
+  addQuery: (query: string) => {
+    set(
+      (state) => {
+        const now = Date.now();
+        const newQuery: RecentQuerySearch = { query, searchedAt: now };
+        const newQueries = addItemToTop(state.recentQueries, newQuery, (q) => q.query === query, MAX_RECENT_SEARCHES);
+        return { recentQueries: newQueries };
+      },
+      false,
+      SearchActionTypes.ADD_QUERY,
+    );
+  },
+
+  /**
+   * Clear only recent searches (users, tags, and queries), keep active tags
    */
   clearRecentSearches: () => {
     set(
       (_state) => ({
         recentUsers: [],
         recentTags: [],
+        recentQueries: [],
       }),
       false,
       SearchActionTypes.CLEAR_RECENT_SEARCHES,

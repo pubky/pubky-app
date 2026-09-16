@@ -17,13 +17,11 @@ import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.sche
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
-import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
-import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
+import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
 import { asOpaque } from '@/test-utils/type-assertions';
 
@@ -38,7 +36,6 @@ vi.mock('@/services/local/post/post', () => ({
     readDetails: vi.fn(),
     readDetailsByIds: vi.fn(),
     readCounts: vi.fn(),
-    readTags: vi.fn(),
     readRelationships: vi.fn(),
   },
 }));
@@ -50,9 +47,7 @@ vi.mock('@/services/local/stream/posts/posts', () => ({
 }));
 
 vi.mock('@/services/local/tag/post/tag.post', () => ({
-  LocalPostTagService: {
-    mergeTags: vi.fn(),
-  },
+  LocalPostTagService: {},
 }));
 
 // Mock the HomeserverService
@@ -1014,9 +1009,7 @@ describe('Post Application', () => {
     it('should fetch post from Nexus using stream posts logic', async () => {
       const mockViewerId = 'test-viewer-id' as Pubky;
       const readSpyFirst = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(null);
-      const fetchMissingSpy = vi
-        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
-        .mockResolvedValue(undefined);
+      const fetchMissingSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
       const readSpySecond = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(mockPostDetails);
 
       const result = await PostApplication.getOrFetch({
@@ -1036,9 +1029,7 @@ describe('Post Application', () => {
     it('should return null when post not found in Nexus', async () => {
       const mockViewerId = 'test-viewer-id' as Pubky;
       const readSpyFirst = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(null);
-      const fetchMissingSpy = vi
-        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
-        .mockResolvedValue(undefined);
+      const fetchMissingSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
       const readSpySecond = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(null);
 
       const result = await PostApplication.getOrFetch({
@@ -1068,9 +1059,7 @@ describe('Post Application', () => {
 
     it('should fetch post from Nexus and return persisted data', async () => {
       const mockViewerId = 'test-viewer-id' as Pubky;
-      const fetchMissingSpy = vi
-        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
-        .mockResolvedValue(undefined);
+      const fetchMissingSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
       const readSpy = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(mockPostDetails);
 
       const result = await PostApplication.fetch({
@@ -1089,9 +1078,7 @@ describe('Post Application', () => {
 
     it('should return null when post not found on Nexus', async () => {
       const mockViewerId = 'test-viewer-id' as Pubky;
-      const fetchMissingSpy = vi
-        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
-        .mockResolvedValue(undefined);
+      const fetchMissingSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
       const readSpy = vi.spyOn(LocalPostService, 'readDetails').mockResolvedValueOnce(null);
 
       const result = await PostApplication.fetch({
@@ -1201,62 +1188,6 @@ describe('Post Application', () => {
 
       expect(getCountsSpy).toHaveBeenCalledWith('author:post123');
       expect(result).toEqual(mockCounts);
-    });
-  });
-
-  describe('getTags', () => {
-    it('should call LocalPostService.readTags', async () => {
-      const mockTags: TagCollectionModelSchema<string>[] = [
-        {
-          id: 'author:post123',
-          tags: [{ label: 'tag1', taggers: ['test-viewer-id'] as Pubky[], taggers_count: 0, relationship: false }],
-        },
-      ];
-
-      const getTagsSpy = vi.spyOn(LocalPostService, 'readTags').mockResolvedValue(mockTags);
-
-      const result = await PostApplication.getTags({ compositeId: 'author:post123' });
-
-      expect(getTagsSpy).toHaveBeenCalledWith('author:post123');
-      expect(result).toEqual(mockTags);
-    });
-  });
-
-  describe('fetchTags', () => {
-    const params = {
-      compositeId: 'author:post123',
-      skip: 0,
-      limit: 3,
-      viewerId: 'viewer123' as Pubky,
-    };
-
-    it('should return empty tags without merging local state', async () => {
-      const nexusSpy = vi.spyOn(NexusPostService, 'getPostTags').mockResolvedValue([]);
-      const mergeSpy = vi.spyOn(LocalPostTagService, 'mergeTags').mockResolvedValue(undefined);
-
-      const result = await PostApplication.fetchTags(params);
-
-      expect(result).toEqual([]);
-      expect(nexusSpy).toHaveBeenCalledWith(params);
-      expect(mergeSpy).not.toHaveBeenCalled();
-    });
-
-    it('should merge non-empty Nexus tags into local state', async () => {
-      const tags: NexusTag[] = [
-        { label: 'bitcoin', taggers: ['viewer123' as Pubky], taggers_count: 1, relationship: true },
-      ];
-      const nexusSpy = vi.spyOn(NexusPostService, 'getPostTags').mockResolvedValue(tags);
-      const mergeSpy = vi.spyOn(LocalPostTagService, 'mergeTags').mockResolvedValue(undefined);
-
-      const result = await PostApplication.fetchTags(params);
-
-      expect(result).toEqual(tags);
-      expect(nexusSpy).toHaveBeenCalledWith(params);
-      expect(mergeSpy).toHaveBeenCalledWith({
-        postId: params.compositeId,
-        tags,
-        viewerId: params.viewerId,
-      });
     });
   });
 

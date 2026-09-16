@@ -14,6 +14,7 @@ import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import { cn } from '@/libs/utils/utils';
@@ -228,6 +229,7 @@ function VisualTimelineTileOverlay({ tile, size, onReplyClick, onRepostClick }: 
 }
 
 function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps) {
+  const { ref } = useTtlSubscription({ type: 'post', id: tile.postId });
   const isTouchDevice = useIsTouchDevice();
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(tile.postId);
 
@@ -250,6 +252,7 @@ function VisualTimelineTile({ tile, size, onNavigate }: VisualTimelineTileProps)
   return (
     <>
       <Container
+        ref={ref}
         overrideDefaults
         role="button"
         tabIndex={0}

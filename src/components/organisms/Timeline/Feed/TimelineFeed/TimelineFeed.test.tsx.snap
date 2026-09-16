@@ -3,7 +3,7 @@
 exports[`TimelineFeed - Mobile Snapshots > matches snapshot on mobile viewport 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-4 lg:overflow-hidden"
     data-testid="container"
   >
     <div
@@ -44,7 +44,7 @@ exports[`TimelineFeed - Mobile Snapshots > matches snapshot on mobile viewport 1
 exports[`TimelineFeed - Snapshots > matches snapshot for home visual layout 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-4 lg:overflow-hidden"
     data-testid="container"
   >
     <div
@@ -84,7 +84,7 @@ exports[`TimelineFeed - Snapshots > matches snapshot for home visual layout 1`] 
 exports[`TimelineFeed - Snapshots > matches snapshot for home with feed children 1`] = `
 <div>
   <div
-    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-6 lg:overflow-hidden"
+    class="mx-auto w-full flex-col flex min-w-0 flex-1 gap-4 lg:overflow-hidden"
     data-testid="container"
   >
     <aside

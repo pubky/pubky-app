@@ -17,6 +17,7 @@ export enum UserStreamSource {
   RECOMMENDED = 'recommended',
   POST_REPLIES = 'post_replies',
   MOST_FOLLOWED = 'most_followed',
+  STARTER_PACK = 'starter_pack',
 }
 
 export type TUserStreamBase = TPaginationParams & {
@@ -47,6 +48,13 @@ export type TUserStreamUsernameParams = Omit<TUserStreamBase, 'preview'> & {
   username: string;
 };
 
+// tags: comma-joined ordered interest labels (1-5); Nexus rejects `tags` on any other source.
+// viewer_id (from TUserStreamBase) doubles as the excluded subject: Nexus drops that user and
+// everyone they already follow when user_id is absent.
+export type TUserStreamStarterPackParams = TUserStreamBase & {
+  tags: string;
+};
+
 export type TUserStreamUsersByIdsParams = {
   user_ids: Pubky[];
   viewer_id?: Pubky;
@@ -73,4 +81,5 @@ export type TUserStreamQueryParams =
   | TUserStreamPostRepliesParams
   | TUserStreamWithDepthParams
   | TUserStreamBase
-  | TUserStreamUsernameParams;
+  | TUserStreamUsernameParams
+  | TUserStreamStarterPackParams;

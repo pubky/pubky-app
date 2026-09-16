@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HomegateController } from '@/controllers/homegate/homegate';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { HumanLightningPayment } from './HumanLightningPayment';
 import { VerificationHandler } from './HumanLightningPayment.utils';
 
 const mockCopyToClipboard = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const mockToast = vi.hoisted(() => vi.fn());
 const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
@@ -26,11 +26,7 @@ vi.mock('@/libs/utils/utils', async (importOriginal) => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/controllers/homegate/homegate', () => ({
   HomegateController: {
@@ -147,7 +143,7 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-invoice' });
-      expect(mockToast).toHaveBeenCalledWith({ variant: 'info', title: 'Invoice copied to clipboard' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'info', title: 'Invoice copied to clipboard' });
     });
   });
 
@@ -163,7 +159,7 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith({ text: 'mock-invoice' });
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not copy invoice.',
       });
@@ -175,7 +171,7 @@ describe('HumanLightningPayment', () => {
     render(<HumanLightningPayment onBack={() => {}} onSuccess={() => {}} />);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not request Lightning invoice. Try again later.',
       });
@@ -195,7 +191,7 @@ describe('HumanLightningPayment', () => {
 
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalledWith('signup-code-123', 'homeserver-pubky-456');
-      expect(mockToast).toHaveBeenCalledWith({ title: 'Payment successful' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Payment successful' });
     });
 
     createSpy.mockRestore();
@@ -211,7 +207,7 @@ describe('HumanLightningPayment', () => {
     render(<HumanLightningPayment onBack={() => {}} onSuccess={onSuccess} />);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not request Lightning invoice. Try again later.',
       });
@@ -231,7 +227,7 @@ describe('HumanLightningPayment', () => {
     render(<HumanLightningPayment onBack={() => {}} onSuccess={() => {}} />);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'Could not request Lightning invoice. Try again later.',
       });

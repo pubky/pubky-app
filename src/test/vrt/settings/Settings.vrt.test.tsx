@@ -68,10 +68,7 @@ vi.mock('next/navigation', () => {
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn(), dismiss: vi.fn(), toasts: [] }),
-  toast: vi.fn(),
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/stores/home/home.store', () => {
   return {
@@ -159,8 +156,8 @@ vi.mock('@/stores/settings/settings.store', async () => {
   };
 });
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => false,
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({

@@ -254,7 +254,6 @@ exports[`PostTagsExpandableRow - Snapshots > matches the collapsed snapshot with
         data-testid="container"
       >
         <button
-          aria-controls="radix-normalized"
           aria-expanded="false"
           aria-haspopup="dialog"
           aria-label="bitcoin tag (5 posts)"
@@ -303,7 +302,6 @@ exports[`PostTagsExpandableRow - Snapshots > matches the collapsed snapshot with
           />
         </button>
         <button
-          aria-controls="radix-normalized"
           aria-expanded="false"
           aria-haspopup="dialog"
           aria-label="ethereum tag (3 posts)"
@@ -347,7 +345,6 @@ exports[`PostTagsExpandableRow - Snapshots > matches the collapsed snapshot with
           />
         </button>
         <button
-          aria-controls="radix-normalized"
           aria-expanded="false"
           aria-haspopup="dialog"
           aria-label="web3 tag (10 posts)"

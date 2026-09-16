@@ -8,8 +8,10 @@ import type {
 import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import type { TCacheUserStreamParams } from '@/services/local/stream/users/users.types';
+import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 
 /**
@@ -41,6 +43,7 @@ export class UserStreamApplication {
     skip,
     limit,
     viewerId,
+    isCurrent,
     allowPartialCache,
   }: TFetchUserStreamChunkParams): Promise<TUserStreamChunkResponse> {
     // Try cache first
@@ -54,7 +57,7 @@ export class UserStreamApplication {
     }
 
     // Cache miss - fetch from Nexus
-    return await this.fetchStreamFromNexus({ streamId, skip, limit, viewerId, cachedStream });
+    return await this.fetchStreamFromNexus({ streamId, skip, limit, viewerId, cachedStream, isCurrent });
   }
 
   /**
@@ -72,6 +75,7 @@ export class UserStreamApplication {
     skip,
     limit,
     viewerId,
+    isCurrent,
   }: TFetchUserStreamChunkParams): Promise<TUserStreamChunkResponse> {
     const cachedStream = await LocalStreamUsersService.findById(streamId);
 
@@ -80,6 +84,7 @@ export class UserStreamApplication {
       skip,
       limit,
       viewerId,
+      isCurrent,
       cachedStream,
       replaceCache: skip === 0,
     });
@@ -92,17 +97,25 @@ export class UserStreamApplication {
    * @param cacheMissUserIds - Array of user IDs that need to be fetched
    * @param viewerId - Optional viewer ID for relationship data
    */
-  static async fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId }: TMissingUsersParams): Promise<void> {
+  static async fetchMissingUsersFromNexus({
+    cacheMissUserIds,
+    viewerId,
+    isCurrent,
+    force,
+  }: TMissingUsersParams): Promise<void> {
     if (cacheMissUserIds.length === 0) {
       return;
     }
 
     try {
+      if (isCurrent && !isCurrent()) return;
+      const revisions = await LocalTagCacheService.captureRevisions('user', cacheMissUserIds);
       const userBatch = await NexusUserStreamService.fetchByIds({
         user_ids: cacheMissUserIds,
+        force,
         viewer_id: viewerId,
       });
-      await LocalStreamUsersService.persistUsers(userBatch);
+      await LocalStreamUsersService.persistUsers(userBatch, { revisions, isCurrent, viewerId });
     } catch (error) {
       Logger.warn('Failed to fetch missing users from Nexus:', { error });
     }
@@ -119,6 +132,7 @@ export class UserStreamApplication {
     skip = 0,
     limit = NEXUS_USERS_PER_PAGE,
     viewerId,
+    isCurrent,
     cachedStream,
     replaceCache = false,
   }: TFetchStreamFromNexusParams): Promise<TUserStreamChunkResponse> {
@@ -128,6 +142,8 @@ export class UserStreamApplication {
       params: { skip, limit, viewer_id: viewerId },
     });
 
+    if (isCurrent && !isCurrent())
+      return { nextPageIds: [], cacheMissUserIds: [], skip: undefined, isExhausted: false };
     const isExhausted = userIds.length < limit;
 
     // Handle empty response
@@ -189,13 +205,24 @@ export class UserStreamApplication {
    * @param userIds - Array of user IDs to ensure are cached
    * @param viewerId - Optional viewer ID for relationship data
    */
-  static async getOrFetchUsers({ userIds, viewerId }: TGetOrFetchUsersParams): Promise<void> {
+  static async getOrFetchUsers({ userIds, viewerId, isCurrent }: TGetOrFetchUsersParams): Promise<void> {
     if (userIds.length === 0) return;
 
     const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds);
     if (cacheMissUserIds.length === 0) return;
 
-    await this.fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId });
+    await this.fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId, isCurrent });
+  }
+
+  /**
+   * Read the cached user IDs of a stream from local database only (no network).
+   * Resolves to an empty array when the stream has never been cached.
+   *
+   * @param streamId - User stream identifier (e.g., 'user123:following')
+   */
+  static async getStreamUserIds(streamId: UserStreamId): Promise<Pubky[]> {
+    const cached = await LocalStreamUsersService.findById(streamId);
+    return cached?.stream ?? [];
   }
 
   /**

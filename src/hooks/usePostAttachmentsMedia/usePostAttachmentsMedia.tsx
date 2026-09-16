@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { FileController } from '@/controllers/file/file';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { parseArticleContent } from '@/libs/post/articleContent';
+import { articleHasInlineSlotZero } from '@/libs/post/articleInlineImages';
 import {
   categorizeAttachments,
   splitAttachmentsByMediaType,
@@ -35,15 +37,40 @@ export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMedia
   useEffect(() => {
     let cancelled = false;
 
+    // Articles carry inline body images in `attachments`, but only the cover
+    // (slot-0 rule) is post-level media — inline images render inside the
+    // article body, never as thumbnails or gallery items.
+    const isArticle = postDetails?.kind === 'long';
+    const articleHasCover =
+      isArticle &&
+      Boolean(postDetails.attachments?.length) &&
+      !articleHasInlineSlotZero(parseArticleContent(postDetails.content)?.body ?? '');
+    const mediaSlotCount = articleHasCover ? 1 : 0;
+
     const resolveMedia = async () => {
-      if (localAttachments) {
+      // Wait for the details row before resolving anything: right after a
+      // publish the store is already seeded while details are still loading,
+      // and treating not-yet-loaded as not-an-article would leak inline
+      // images into post-level media for that interim render
+      if (!postDetails) {
         if (!cancelled) {
-          setMediaItems(categorizeAttachments(localAttachments).imagesAndVideos);
+          setMediaItems([]);
         }
         return;
       }
 
-      if (!postDetails?.attachments?.length) {
+      if (localAttachments) {
+        const localMedia = isArticle ? localAttachments.slice(0, mediaSlotCount) : localAttachments;
+        if (!cancelled) {
+          setMediaItems(categorizeAttachments(localMedia).imagesAndVideos);
+        }
+        return;
+      }
+
+      const attachmentUris = isArticle
+        ? (postDetails?.attachments ?? []).slice(0, mediaSlotCount)
+        : (postDetails?.attachments ?? []);
+      if (attachmentUris.length === 0) {
         if (!cancelled) {
           setMediaItems([]);
         }
@@ -51,7 +78,7 @@ export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMedia
       }
 
       try {
-        const metadata = await FileController.getMetadata({ fileAttachments: postDetails.attachments });
+        const metadata = await FileController.getMetadata({ fileAttachments: attachmentUris });
         if (cancelled) return;
 
         setMediaItems(splitAttachmentsByMediaType(metadata).imagesAndVideos);
@@ -67,7 +94,7 @@ export function usePostAttachmentsMedia(postId: string): UsePostAttachmentsMedia
     return () => {
       cancelled = true;
     };
-  }, [localAttachments, postDetails?.attachments]);
+  }, [localAttachments, postDetails]);
 
   return { mediaItems };
 }

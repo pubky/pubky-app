@@ -5,9 +5,8 @@ import { AuthController } from '@/controllers/auth/auth';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { DialogRestoreEncryptedFile } from './DialogRestoreEncryptedFile';
-
-const mockToast = vi.fn();
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
   return {
@@ -74,9 +73,7 @@ vi.mock('@/controllers/auth/auth', () => ({
     loginWithEncryptedFile: vi.fn(),
   },
 }));
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: (...args: unknown[]) => mockToast(...args),
-}));
+vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: {
     getState: vi.fn().mockReturnValue({
@@ -509,7 +506,7 @@ describe('DialogRestoreEncryptedFile', () => {
     fireEvent.click(screen.getByText('Restore').closest('button')!);
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: 'This key is linked to a different homeserver. Use a staging account on this site.',
       });

@@ -298,6 +298,7 @@ describe('NexusPostService', () => {
       expect(result).toEqual(mockTaggers);
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: `${getNexusUrl()}/v0/post/${pubky}/${postId}/taggers/rust%20%26%20wasm?skip=10&limit=5&viewer_id=${testViewerId}`,
+        staleTime: 0,
       });
     });
   });

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
-import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { buildContentSearchStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { StreamOrder } from '@/services/nexus/stream/posts/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { StreamPostsController } from './posts';
@@ -42,6 +42,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -70,7 +71,9 @@ describe('StreamPostsController', () => {
         lastRawPostId,
       });
 
-      const fetchMissingPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
+      const fetchMissingPostsSpy = vi
+        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
+        .mockResolvedValue(true);
 
       const filterStreamPostsSpy = vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue(nextPageIds);
 
@@ -80,6 +83,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -88,14 +92,87 @@ describe('StreamPostsController', () => {
         viewerId,
       });
       expect(fetchMissingPostsSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         cacheMissPostIds,
         viewerId,
       });
-      expect(filterStreamPostsSpy).toHaveBeenCalledWith({ streamId, postIds: nextPageIds });
+      // The post-hydration second pass classifies strictly: ids still lacking a
+      // relationships row on author-scoped content search are dropped, not risked.
+      expect(filterStreamPostsSpy).toHaveBeenCalledWith({
+        streamId,
+        postIds: nextPageIds,
+        strictReplyClassification: true,
+      });
       expect(result).toEqual({
         nextPageIds,
         nextCursor,
         lastRawPostId,
+      });
+    });
+
+    describe('author-scoped content search (profile "Filter posts")', () => {
+      const scopedStreamId = buildContentSearchStreamId('bitcoin', 'all', 'user-1' as Pubky);
+
+      it('rejects when hydration fails, instead of strict-dropping into a false "no results"', async () => {
+        // Cold cache: every result is a miss. If by_ids fails, no relationships rows
+        // exist and the strict pass would empty the page — masking a fetch failure
+        // as a successful zero-hit search.
+        const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
+        vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+          nextPageIds,
+          cacheMissPostIds: nextPageIds,
+          nextCursor: 2,
+        });
+        vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(false);
+        const filterStreamPostsSpy = vi.spyOn(PostStreamApplication, 'filterStreamPosts');
+
+        await expect(
+          StreamPostsController.getOrFetchStreamSlice({ streamId: scopedStreamId, streamTail: 0 }),
+        ).rejects.toMatchObject({ category: 'network' });
+        expect(filterStreamPostsSpy).not.toHaveBeenCalled();
+      });
+
+      it('keeps fail-open behavior on hydration failure for ordinary streams', async () => {
+        const nextPageIds = ['user-1:post-1', 'user-1:post-2'];
+        vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+          nextPageIds,
+          cacheMissPostIds: ['user-1:post-2'],
+          nextCursor: 1000000,
+        });
+        vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(false);
+        vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue(nextPageIds);
+
+        const result = await StreamPostsController.getOrFetchStreamSlice({ streamId, streamTail: 0 });
+
+        expect(result.nextPageIds).toEqual(nextPageIds);
+      });
+
+      it('runs the strict pass even when the page reports no cache misses (buffered pages)', async () => {
+        // Pages served from the overflow buffer report no misses, but can hold ids
+        // that were kept fail-open before their relationships rows were hydrated.
+        const nextPageIds = ['user-1:post-1', 'user-1:reply-1'];
+        vi.spyOn(PostStreamApplication, 'getOrFetchStreamSlice').mockResolvedValue({
+          nextPageIds,
+          cacheMissPostIds: [],
+          nextCursor: 2,
+        });
+        const fetchMissingPostsSpy = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus');
+        const filterStreamPostsSpy = vi
+          .spyOn(PostStreamApplication, 'filterStreamPosts')
+          .mockResolvedValue(['user-1:post-1']);
+
+        const result = await StreamPostsController.getOrFetchStreamSlice({
+          streamId: scopedStreamId,
+          streamTail: 0,
+        });
+
+        expect(fetchMissingPostsSpy).not.toHaveBeenCalled();
+        expect(filterStreamPostsSpy).toHaveBeenCalledWith({
+          streamId: scopedStreamId,
+          postIds: nextPageIds,
+          strictReplyClassification: true,
+        });
+        expect(result.nextPageIds).toEqual(['user-1:post-1']);
       });
     });
 
@@ -111,7 +188,7 @@ describe('StreamPostsController', () => {
         nextCursor: 2000000,
         lastRawPostId: 'user-1:coll-2',
       });
-      vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
+      vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
       vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue([]);
 
       const result = await StreamPostsController.getOrFetchStreamSlice({
@@ -137,7 +214,7 @@ describe('StreamPostsController', () => {
         nextCursor,
       });
 
-      vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue();
+      vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
 
       vi.spyOn(PostStreamApplication, 'filterStreamPosts').mockResolvedValue(['user-1:post-1', 'user-1:post-3']);
 
@@ -168,6 +245,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -193,6 +271,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -263,6 +342,7 @@ describe('StreamPostsController', () => {
 
       // Should call with null viewerId (unauthenticated users can still view posts)
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -296,6 +376,7 @@ describe('StreamPostsController', () => {
 
       // Verify getOrFetchStreamSlice was called (error happened during execution)
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -336,6 +417,7 @@ describe('StreamPostsController', () => {
 
       // Verify fetchMissingPostsFromNexus was called
       expect(fetchMissingPostsSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         cacheMissPostIds,
         viewerId,
       });
@@ -359,6 +441,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -388,6 +471,7 @@ describe('StreamPostsController', () => {
       // Note: tags parameter is not currently used in the implementation
       // This test verifies the method accepts it without error
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -414,6 +498,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId: engagementStreamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -437,7 +522,11 @@ describe('StreamPostsController', () => {
 
       await StreamPostsController.fetchMissingPostsByUris({ uris });
 
-      expect(fetchOriginalPostsSpy).toHaveBeenCalledWith({ repostedUris: uris, viewerId });
+      expect(fetchOriginalPostsSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
+        repostedUris: uris,
+        viewerId,
+      });
     });
 
     it('short-circuits without calling the application layer when no URIs are given', async () => {
@@ -620,6 +709,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,
@@ -645,6 +735,7 @@ describe('StreamPostsController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         limit: NEXUS_POSTS_PER_PAGE,
         streamHead: 0,

@@ -3,6 +3,7 @@ import { PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { CONTENT, ContentType, REACH, ReachType, SORT, SortType } from './home.types';
 import {
   getHomeStreamIdFromFilters,
+  getKindFromContent,
   getStreamId,
   getStreamIdFromFilters,
   matchesFilters,
@@ -11,6 +12,38 @@ import {
 } from './home.utils';
 
 describe('filters.utils', () => {
+  describe('getKindFromContent', () => {
+    // Content-search stream ids embed this kind segment directly
+    // (`content_search:q~…:{kind}`), so every CONTENT filter must map — an
+    // unmapped filter would produce an `undefined` segment in the id.
+    it.each([
+      [CONTENT.ALL, 'all'],
+      [CONTENT.SHORT, 'short'],
+      [CONTENT.LONG, 'long'],
+      [CONTENT.COLLECTIONS, 'collection'],
+      [CONTENT.IMAGES, 'image'],
+      [CONTENT.VIDEOS, 'video'],
+      [CONTENT.LINKS, 'link'],
+      [CONTENT.FILES, 'file'],
+    ] as const)('maps CONTENT %s to kind segment %s', (content, kind) => {
+      expect(getKindFromContent(content)).toBe(kind);
+    });
+
+    it('covers every CONTENT filter', () => {
+      const covered = new Set([
+        CONTENT.ALL,
+        CONTENT.SHORT,
+        CONTENT.LONG,
+        CONTENT.COLLECTIONS,
+        CONTENT.IMAGES,
+        CONTENT.VIDEOS,
+        CONTENT.LINKS,
+        CONTENT.FILES,
+      ]);
+      expect([...covered].sort()).toEqual(Object.values(CONTENT).sort());
+    });
+  });
+
   describe('getStreamIdFromFilters', () => {
     describe('SORT mapping', () => {
       it('should map "recent" to "timeline"', () => {

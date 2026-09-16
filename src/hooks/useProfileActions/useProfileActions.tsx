@@ -8,7 +8,7 @@ import { ProfileController } from '@/controllers/profile/profile';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { Logger } from '@/libs/logger/logger';
 import { withPubkyPrefix } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export interface ProfileActions {
@@ -36,6 +36,9 @@ export interface UseProfileActionsProps {
 export function useProfileActions({ publicKey, link }: UseProfileActionsProps): ProfileActions {
   const router = useRouter();
   const { copyToClipboard } = useCopyToClipboard();
+  const { copyToClipboard: copyProfileLinkToClipboard } = useCopyToClipboard({
+    successTitle: 'Profile link copied to clipboard',
+  });
   const authStore = useAuthStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -48,8 +51,8 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
   }, [publicKey, copyToClipboard]);
 
   const onCopyLink = useCallback(() => {
-    void copyToClipboard(link);
-  }, [link, copyToClipboard]);
+    void copyProfileLinkToClipboard(link);
+  }, [link, copyProfileLinkToClipboard]);
 
   const onSignOut = useCallback(async () => {
     setIsLoggingOut(true);

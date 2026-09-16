@@ -10,7 +10,6 @@ import type {
   TDeletePostParams,
   TEditCollectionParams,
   TEditPostParams,
-  TFetchMorePostTagsParams,
   TFetchPostTaggersParams,
   TFileAttachmentsParams,
   TNormalizeTagsParams,
@@ -18,19 +17,20 @@ import type {
   TUpdateCollectionItemParams,
 } from '@/controllers/post/post.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
 import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
+import { isAuthorFileUri } from '@/libs/post/articleInlineImages';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
 import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.schema';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import type { TFileAttachmentResult } from '@/pipes/file/file.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import {
@@ -41,7 +41,7 @@ import {
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { PostValidators } from '@/pipes/post/post.validators';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
-import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
+import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import type { TCompositeId } from '@/services/nexus/post/post.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -81,16 +81,6 @@ export class PostController {
   }
 
   /**
-   * Read post tags for a specific post from local database
-   * @param params - Parameters object
-   * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @returns Post tags
-   */
-  static async getTags({ compositeId }: TCompositeId): Promise<TagCollectionModelSchema<string>[]> {
-    return await PostApplication.getTags({ compositeId });
-  }
-
-  /**
    * Read post relationships for a specific post
    * @param params - Parameters object
    * @param params.compositeId - Composite post ID in format "authorId:postId"
@@ -119,7 +109,7 @@ export class PostController {
    * @returns Post details or null if not found
    */
   static async getOrFetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
-    return await PostApplication.getOrFetch(params);
+    return await PostApplication.getOrFetch({ ...params, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -131,7 +121,7 @@ export class PostController {
    * @returns Post details or null if not found
    */
   static async fetch(params: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
-    return await PostApplication.fetch(params);
+    return await PostApplication.fetch({ ...params, isCurrent: captureViewerSession() });
   }
 
   static async getAuthoredCollections(params: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
@@ -139,19 +129,7 @@ export class PostController {
   }
 
   static async fetchAuthoredCollections(params: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
-    return await PostApplication.fetchAuthoredCollections(params);
-  }
-
-  /**
-   * Fetch more post tags from Nexus with pagination
-   * @param params - Parameters object
-   * @param params.compositeId - Composite post ID in format "authorId:postId"
-   * @param params.skip - Number of tags to skip
-   * @param params.limit - Maximum number of tags to return
-   * @returns Array of tags from Nexus
-   */
-  static async fetchTags({ compositeId, skip, limit, viewerId }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
-    return await PostApplication.fetchTags({ compositeId, skip, limit, viewerId });
+    return await PostApplication.fetchAuthoredCollections({ ...params, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -181,9 +159,11 @@ export class PostController {
     isArticle,
     tags,
     attachments,
+    attachmentUris,
     parentPostId,
     originalPostId,
   }: TCreatePostParams): Promise<string> {
+    const isCurrent = captureViewerSession();
     let parentUri: string | undefined = undefined;
     let repostedUri: string | undefined = undefined;
     let tagList: TCreateTagInput[] = [];
@@ -194,6 +174,21 @@ export class PostController {
     }
     if (originalPostId) {
       repostedUri = await PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
+    }
+
+    // Ownership invariant: pre-uploaded attachment URIs must be homeserver
+    // files owned by the author. These URIs are not uploaded or rolled back
+    // here — the composer session that uploaded them owns their cleanup.
+    if (attachmentUris && !attachmentUris.every((uri) => isAuthorFileUri(uri, authorId))) {
+      throw Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
+        'Attachment URIs must be homeserver files owned by the author',
+        {
+          service: ErrorService.Local,
+          operation: 'commitCreate',
+          context: { authorId },
+        },
+      );
     }
 
     const postKind = inferPostKindForCreate({ content, attachments, isArticle });
@@ -208,6 +203,7 @@ export class PostController {
         parentUri,
         embed: repostedUri,
         attachments: fileAttachments,
+        attachmentUris,
       },
       authorId,
     );
@@ -241,6 +237,7 @@ export class PostController {
       postUrl: meta.url,
       fileAttachments,
       tags: tagList,
+      isCurrent,
     });
 
     return compositePostId;
@@ -575,7 +572,7 @@ export class PostController {
       });
     }
 
-    const { original, kept, added } = attachments;
+    const { original, kept, added, addedUris, nextOrder } = attachments;
     const keptSet = new Set(kept);
     if (keptSet.size !== kept.length || !kept.every((uri) => original.includes(uri))) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Kept attachments must be original post attachments', {
@@ -583,6 +580,62 @@ export class PostController {
         operation: 'commitEdit',
         context: { compositePostId },
       });
+    }
+
+    // Article inline-image path: every attachment is an already-uploaded URI
+    // and `nextOrder` is the exact slot-ordered list to persist.
+    if (nextOrder) {
+      if (added.length > 0) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'nextOrder edits must not include File uploads', {
+          service: ErrorService.Local,
+          operation: 'commitEdit',
+          context: { compositePostId },
+        });
+      }
+      if (addedUris && !addedUris.every((uri) => isAuthorFileUri(uri, authorId))) {
+        throw Err.validation(
+          ValidationErrorCode.INVALID_INPUT,
+          'Added attachment URIs must be homeserver files owned by the author',
+          {
+            service: ErrorService.Local,
+            operation: 'commitEdit',
+            context: { compositePostId },
+          },
+        );
+      }
+      const allowedUris = new Set([...kept, ...(addedUris ?? [])]);
+      if (!nextOrder.every((uri) => allowedUris.has(uri))) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'nextOrder entries must come from kept or addedUris', {
+          service: ErrorService.Local,
+          operation: 'commitEdit',
+          context: { compositePostId },
+        });
+      }
+
+      // Removals are diffed against the seeded snapshot (`original`), never
+      // the live row — only files the user actually saw and removed get
+      // deleted. Session uploads dropped before saving are not our concern
+      // here; the composer session cleans those up itself.
+      const nextOrderSet = new Set(nextOrder);
+      const orderRemovedUris = original.filter((uri) => !nextOrderSet.has(uri));
+
+      const kind = await this.inferKindForEdit({ content, currentKind: current.kind, kept, added: [] });
+
+      const { post, meta } = await PostNormalizer.toEdit({
+        compositePostId,
+        content,
+        currentUserPubky,
+        attachments: nextOrder.length > 0 ? nextOrder : null,
+        kind,
+      });
+
+      await PostApplication.commitEdit({
+        compositePostId,
+        post,
+        postUrl: meta.url,
+        removedUris: orderRemovedUris.length > 0 ? orderRemovedUris : undefined,
+      });
+      return;
     }
 
     // Removals are diffed against the seeded snapshot (`original`), never the

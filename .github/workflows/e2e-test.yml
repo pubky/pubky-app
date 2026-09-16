@@ -44,7 +44,7 @@ jobs:
 
       - name: Set HEAD commit hash
         id: sha_tag
-        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@main
+        uses: pubky/ci-workflows/.github/actions/docker/get_head_commit_hash@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           path: ${{ matrix.submodule_dir }}
 
@@ -54,13 +54,13 @@ jobs:
           echo ${{ matrix.image }}_tag=${{ steps.sha_tag.outputs.hash }} >> $GITHUB_OUTPUT
 
       - name: Login to registry
-        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
 
       - name: Check if image needs to be rebuild
-        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@main
+        uses: pubky/ci-workflows/.github/actions/docker/check_if_image_exists@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         id: check_image
         with:
           image: ${{ env.registry }}/${{ matrix.image }}
@@ -68,7 +68,7 @@ jobs:
           arch: ${{ env.platforms }}
 
       - name: Rebuild the images if needed
-        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
+        uses: pubky/ci-workflows/.github/actions/docker/build_and_push@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           registry: ${{ env.registry }}
           image: ${{ matrix.image }}
@@ -169,7 +169,7 @@ jobs:
         run: npm ci
 
       - name: Login to registry
-        uses: pubky/ci-workflows/.github/actions/docker/registry_login@main
+        uses: pubky/ci-workflows/.github/actions/docker/registry_login@e6d3b38b5ebfa97b86595cb44f3a86695e473b09 # v1.0.0
         with:
           registry: ${{ env.registry }}
           gcp_service_account_key: ${{ secrets.GCR_JSON_KEY }}
@@ -215,6 +215,38 @@ jobs:
           done
 
           echo "Service is ready."
+
+      # TEMP WORKAROUND: nexusd does not create the RediSearch `postContentIdx` index at
+      # startup (only via `nexusd db migration run`), so full-text post search returns 500
+      # ("No such index postContentIdx") on a fresh stack. Run the migrations once after the
+      # stack is up. The migration CLI ignores `--config-dir` and reads
+      # ~/.pubky-nexus/migrations/config.toml, which defaults to localhost, so write a config
+      # pointing at the compose service hostnames first. Remove once Nexus creates the index
+      # on startup.
+      - name: Run Nexus DB migrations (create postContentIdx)
+        run: |
+          docker exec nexusd sh -c 'mkdir -p /root/.pubky-nexus/migrations && cat > /root/.pubky-nexus/migrations/config.toml <<EOF
+          backfill_ready = []
+
+          [stack]
+          log_level = "info"
+          files_path = "/static/files/"
+
+          [stack.otlp]
+          name = "nexusd.migration"
+
+          [stack.db]
+          redis = "redis://nexus-redis:6379"
+
+          [stack.db.neo4j]
+          uri = "bolt://nexus-neo4j:7687"
+          password = "12345678"
+          EOF'
+          docker exec nexusd nexusd db migration run
+          docker exec nexus-redis redis-cli FT._LIST | grep -q postContentIdx || {
+            echo "Error: postContentIdx was not created by Nexus migrations"
+            exit 1
+          }
 
       - name: Run e2e tests - Desktop (${{ matrix.browser }}) - Spec (${{matrix.spec}})
         id: test-desktop

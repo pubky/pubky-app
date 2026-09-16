@@ -8,13 +8,12 @@ import { AuthController } from '@/controllers/auth/auth';
 import { formatInviteCode } from '@/libs/utils/utils';
 import { InstallCard, InstallFooter, InstallHeader, InstallNavigation } from '@/molecules/Install/Install';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 export function Install() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
   const hasInitialisedFromUrlRef = useRef(false);
   const inviteCodeFromUrl = formatInviteCode(searchParams.get('inviteCode') ?? '');
   const hasInviteCodeFromUrl = inviteCodeFromUrl.length === 14;
@@ -63,7 +62,7 @@ export function Install() {
       // Keep the verifying state to avoid flashing the install page before the redirect.
       router.replace(ROOT_ROUTES);
     })();
-  }, [hasInviteCodeFromUrl, inviteCodeFromUrl, router, toast]);
+  }, [hasInviteCodeFromUrl, inviteCodeFromUrl, router]);
 
   if (isVerifying) {
     return (

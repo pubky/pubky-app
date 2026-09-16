@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import { PostAttachmentsImagesAndVideos } from './PostAttachmentsImagesAndVideos';
 
@@ -82,8 +83,6 @@ vi.mock('@/atoms/Dialog/Dialog', () => {
   };
 });
 
-// Mock useToast
-const mockToast = vi.fn();
 vi.mock('@/molecules/PostAttachmentsCarouselImage/PostAttachmentsCarouselImage', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('@/molecules/PostAttachmentsCarouselImage/PostAttachmentsCarouselImage')>();
@@ -105,11 +104,7 @@ vi.mock('@/molecules/PostAttachmentsCarouselImage/PostAttachmentsCarouselImage',
   };
 });
 
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: () => ({ toast: mockToast }),
-  };
-});
+vi.mock('@/molecules/Toaster/toast');
 
 // Track dialog open state for conditional rendering
 // When set to true by a test, it won't be overridden by the component
@@ -748,7 +743,7 @@ describe('PostAttachmentsImagesAndVideos', () => {
 
       // Wait for the promise rejection to be handled
       await vi.waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           variant: 'error',
           description: mockError.message,
         });

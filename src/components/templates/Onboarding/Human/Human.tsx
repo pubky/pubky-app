@@ -5,7 +5,7 @@ import { ONBOARDING_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { Logger } from '@/libs/logger/logger';
 import { OnboardingLayout } from '@/molecules/OnboardingLayout/OnboardingLayout';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { HumanInviteCode } from '@/organisms/HumanInviteCode/HumanInviteCode';
 import type { InviteCodeVerificationResult } from '@/organisms/HumanInviteCode/HumanInviteCode.types';
 import { HumanLightningPayment } from '@/organisms/HumanLightningPayment/HumanLightningPayment';
@@ -27,7 +27,6 @@ export function Human() {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const { setInviteCode, reset } = useOnboardingStore();
   const router = useRouter();
-  const { toast } = useToast();
   useEffect(() => {
     reset();
   }, [reset]);

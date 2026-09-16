@@ -33,20 +33,21 @@ export class NexusUserService {
    * @param params - Parameters containing user ID and pagination options
    * @returns Array of tags assigned to the user
    */
-  static async tags(params: TUserTagsParams): Promise<NexusTag[]> {
+  static async tags({ force = false, ...params }: TUserTagsParams & { force?: boolean }): Promise<NexusTag[]> {
     const url = userApi.tags(params);
-    return await queryNexus<NexusTag[]>({ url });
+    return await queryNexus<NexusTag[]>({ url, ...(force ? { force: true } : {}) });
   }
 
   /**
    * Retrieves taggers for a specific tag label on a user from Nexus API
    *
    * @param params - Parameters containing user ID, label, and pagination options
-   * @returns Array of users who tagged the user with the specified label
+   * @returns Users who tagged the user with the specified label (`{ users, relationship }`)
    */
-  static async taggers(params: TUserTaggersParams): Promise<NexusTaggers[]> {
+  static async taggers(params: TUserTaggersParams): Promise<NexusTaggers> {
     const url = userApi.taggers(params);
-    return await queryNexus<NexusTaggers[]>({ url });
+    // Tagger lists revalidate after local mutations or count changes.
+    return await queryNexus<NexusTaggers>({ url, staleTime: 0 });
   }
 
   /**

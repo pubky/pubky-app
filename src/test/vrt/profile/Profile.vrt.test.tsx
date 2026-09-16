@@ -2,7 +2,8 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
+import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -24,6 +25,24 @@ const routeState = vi.hoisted(() => ({
   pathname: '/profile',
   params: {} as Record<string, string>,
 }));
+
+// Per-test feed overrides. `emptyCollections` swaps the collections stream
+// fixture for an empty page (and zeroes the tab badge) so the Collections tab
+// renders its empty state.
+const feedState = vi.hoisted(() => ({
+  emptyCollections: false,
+}));
+
+/** Registers describe-scoped hooks that empty the collections stream for every test inside. */
+function withEmptyCollections() {
+  beforeEach(() => {
+    feedState.emptyCollections = true;
+  });
+
+  afterEach(() => {
+    feedState.emptyCollections = false;
+  });
+}
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -263,8 +282,8 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => false,
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
@@ -304,13 +323,19 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
     useStreamPagination: ({ streamId }: { streamId: string }) => {
       const id = String(streamId);
       if (id.startsWith('author_replies:')) return buildResult(f.replyIds);
-      if (id.endsWith(':author:collection')) return buildResult(f.collectionIds);
+      if (id.endsWith(':author:collection')) return buildResult(feedState.emptyCollections ? [] : f.collectionIds);
       if (id === `author:${f.otherPubky}`) return buildResult(f.otherPostIds);
       if (id.startsWith('author:')) return buildResult(f.postIds);
       return buildResult([]);
     },
   };
 });
+
+// `CollectionsEmpty` mounts `DialogNewCollection` (closed) on own profile; its
+// first-collection intro gate reads authored collections through this hook.
+vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
+  useAuthoredCollections: () => ({ collections: [], isLoading: false }),
+}));
 
 vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => {
   const result = {
@@ -338,6 +363,13 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => {
 vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => {
   const result = { isFollowing: false, isLoading: false };
   return { useIsFollowing: () => result };
+});
+
+// No social graph tier: the real hook would fetch the full user view from Nexus on the
+// fixture's cache miss, and the sidebar section stays hidden while no tier is known.
+vi.mock('@/hooks/useSocialGraphStatus/useSocialGraphStatus', () => {
+  const result = { status: null, isLoading: false };
+  return { useSocialGraphStatus: () => result };
 });
 
 vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => {
@@ -465,8 +497,7 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
       const cached = cache.get(compositeId);
       if (cached) return cached;
       const fixture = f.entitiesByCompositeId.get(compositeId) as
-        | { relationships?: { reposted?: string | null } }
-        | undefined;
+        { relationships?: { reposted?: string | null } } | undefined;
       const result = {
         showRepostHeader: !!fixture?.relationships?.reposted,
         shouldShowPostHeader: true,
@@ -511,13 +542,14 @@ vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
   useEnrichedTags: (tags: unknown[]) => ({ enrichedTags: tags, isLoading: false }),
 }));
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => {
-  const result = {
-    taggersByLabel: new Map<string, string[]>(),
-    taggerStates: new Map<string, { isLoading: boolean; error: string | null }>(),
-    fetchAllTaggers: async () => {},
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  const result: UseEntityTaggersResult = {
+    taggerStates: new Map(),
+    loadTaggers: async () => {},
+    loadMoreTaggers: async () => {},
   };
-  return { usePostTaggers: () => result };
+  return { ...actual, useEntityTaggers: () => result };
 });
 
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', async () => {
@@ -671,11 +703,21 @@ vi.mock('@/hooks/useProfileStats/useProfileStats', async () => {
     friends: 4,
     uniqueTags: f.otherTaggedTags.length,
   };
+  // Stable variants so the badge count agrees with the emptied stream.
+  const ownEmptyCollectionsStats = { ...ownStats, collections: 0 };
+  const otherEmptyCollectionsStats = { ...otherStats, collections: 0 };
   return {
-    useProfileStats: (userId?: string) => ({
-      stats: userId === f.otherPubky ? otherStats : ownStats,
-      isLoading: false,
-    }),
+    useProfileStats: (userId?: string) => {
+      const isOther = userId === f.otherPubky;
+      const stats = feedState.emptyCollections
+        ? isOther
+          ? otherEmptyCollectionsStats
+          : ownEmptyCollectionsStats
+        : isOther
+          ? otherStats
+          : ownStats;
+      return { stats, isLoading: false };
+    },
   };
 });
 
@@ -998,6 +1040,24 @@ describe('Own profile — collections — visual regression', () => {
   });
 });
 
+describe('Own profile — collections empty — visual regression', () => {
+  withEmptyCollections();
+
+  it('renders empty collections at desktop viewport', async () => {
+    const screen = await renderOwnProfileTab('/profile/collections', <ProfileCollectionsPage />, VRT_VIEWPORT_DESKTOP);
+    await expect.element(screen.getByText('No collections yet')).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Create Collection' })).toBeVisible();
+    await matchVrtFrameScreenshot('own-profile-collections-empty-desktop');
+  });
+
+  it('renders empty collections at mobile viewport', async () => {
+    const screen = await renderOwnProfileTab('/profile/collections', <ProfileCollectionsPage />, VRT_VIEWPORT_MOBILE);
+    await expect.element(screen.getByText('No collections yet')).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Create Collection' })).toBeVisible();
+    await matchVrtFrameScreenshot('own-profile-collections-empty-mobile');
+  });
+});
+
 describe('Other profile — posts — visual regression', () => {
   // Default `/profile/[pubky]` tab. Chrome differs from own profile (Follow CTA,
   // no notifications tab / status picker). Other tabs reuse the same shells.
@@ -1024,5 +1084,33 @@ describe('Other profile — posts — visual regression', () => {
   it("renders another user's posts at mobile viewport", async () => {
     await renderOtherProfilePosts(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('other-profile-posts-mobile');
+  });
+});
+
+describe('Other profile — collections empty — visual regression', () => {
+  // Visitor variant: read-only copy, no Create Collection CTA.
+  withEmptyCollections();
+
+  async function renderOtherProfileCollectionsEmpty(viewport: { width: number; height: number }) {
+    const f = await fixtures;
+    const screen = await renderProfileTab(
+      `/profile/${f.otherPubky}/collections`,
+      <ProfileCollectionsPage />,
+      viewport,
+      f.otherPubky,
+    );
+    await expect.element(screen.getByText('No collections yet')).toBeVisible();
+    await expect.element(screen.getByText("This user hasn't created any collections yet.")).toBeVisible();
+    return screen;
+  }
+
+  it("renders another user's empty collections at desktop viewport", async () => {
+    await renderOtherProfileCollectionsEmpty(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('other-profile-collections-empty-desktop');
+  });
+
+  it("renders another user's empty collections at mobile viewport", async () => {
+    await renderOtherProfileCollectionsEmpty(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('other-profile-collections-empty-mobile');
   });
 });

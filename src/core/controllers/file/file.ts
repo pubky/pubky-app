@@ -1,5 +1,6 @@
 import { FileApplication } from '@/application/file/file';
 import type {
+  TDeleteFilesParams,
   TFetchFilesParams,
   TGetFileUrlParams,
   TGetMetadataParams,
@@ -31,6 +32,19 @@ export class FileController {
     // 2. Upload to homeserver
     await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
     return fileAttachment.fileResult.meta.url;
+  }
+
+  /**
+   * Deletes files (blob first, then record) from the homeserver and the local
+   * cache. Shared blobs and already-deleted resources are handled by the
+   * application layer, so callers may treat this as idempotent best-effort
+   * cleanup (e.g. discarding uploads of an unpublished article draft).
+   *
+   * @param params - Parameters for file deletion
+   * @param params.fileUris - Homeserver file URIs (`pubky://…/files/{id}`) to delete
+   */
+  static async commitDelete({ fileUris }: TDeleteFilesParams): Promise<void> {
+    await FileApplication.commitDelete(fileUris);
   }
 
   /**

@@ -20,6 +20,7 @@ export enum StreamSource {
   AUTHOR = 'author',
   AUTHOR_REPLIES = 'author_replies',
   COLLECTION = 'collection',
+  CONTENT_SEARCH = 'content_search',
 }
 
 export enum StreamKind {
@@ -102,6 +103,8 @@ export type TStreamQueryParams =
 export type TStreamExtraParams = {
   author_id?: string;
   post_id?: string;
+  // Full-text query; populated only for StreamSource.CONTENT_SEARCH.
+  q?: string;
 };
 
 export type TPostStreamFetchParams = {
@@ -121,4 +124,6 @@ export type TStreamIdBreakdown = {
   tags?: string;
   wotDepth?: WotDomainDepth;
   domainTags?: string;
+  // Decoded full-text query; only for CONTENT_SEARCH breakdowns (undefined when the id is malformed).
+  searchQuery?: string;
 };

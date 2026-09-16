@@ -16,9 +16,9 @@ import { extractInitials } from '@/libs/utils/utils';
 import { FacehashAvatar } from '@/molecules/FacehashAvatar/FacehashAvatar';
 import { InputField } from '@/molecules/InputField/InputField';
 import { TextareaField } from '@/molecules/TextareaField/TextareaField';
+import { ProfileFormSkeleton } from '@/organisms/ProfileFormSkeleton/ProfileFormSkeleton';
 import { DialogAddLink } from '../../DialogAddLink/DialogAddLink';
 import { DialogCropImage } from '../../DialogCropImage/DialogCropImage';
-import { EditProfileFormSkeleton } from './EditProfileForm.skeleton';
 
 export const EditProfileForm = () => {
   const { userDetails, currentUserPubky } = useCurrentUserProfile();
@@ -36,7 +36,7 @@ export const EditProfileForm = () => {
     avatarFallbackSeed.charAt(0).toUpperCase() ||
     'U';
   if (state.isLoading) {
-    return <EditProfileFormSkeleton />;
+    return <ProfileFormSkeleton />;
   }
   return (
     <>

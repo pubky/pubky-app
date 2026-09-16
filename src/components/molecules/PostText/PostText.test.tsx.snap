@@ -185,7 +185,7 @@ exports[`PostText - Snapshots > matches snapshot for blockquote 1`] = `
   data-testid="container"
 >
   <blockquote
-    class="border-l-4 border-foreground pl-4 whitespace-normal"
+    class="border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]"
   >
     
 
@@ -307,7 +307,7 @@ exports[`PostText - Snapshots > matches snapshot for combined markdown elements 
   
 
   <blockquote
-    class="border-l-4 border-foreground pl-4 whitespace-normal"
+    class="border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]"
   >
     
 
@@ -320,7 +320,7 @@ exports[`PostText - Snapshots > matches snapshot for combined markdown elements 
   
 
   <ul
-    class="list-inside list-disc whitespace-normal"
+    class="list-inside whitespace-normal [&>li>p:first-child]:inline list-disc"
   >
     
 
@@ -823,7 +823,7 @@ exports[`PostText - Snapshots > matches snapshot for nested blockquote 1`] = `
   data-testid="container"
 >
   <blockquote
-    class="border-l-4 border-foreground pl-4 whitespace-normal"
+    class="border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]"
   >
     
 
@@ -833,7 +833,7 @@ exports[`PostText - Snapshots > matches snapshot for nested blockquote 1`] = `
     
 
     <blockquote
-      class="border-l-4 border-foreground pl-4 whitespace-normal"
+      class="border-l-4 border-foreground pl-4 whitespace-normal text-secondary-foreground not-italic [quotes:none]"
     >
       
 
@@ -868,7 +868,7 @@ exports[`PostText - Snapshots > matches snapshot for ordered list 1`] = `
   data-testid="container"
 >
   <ol
-    class="list-inside list-decimal whitespace-normal"
+    class="list-inside whitespace-normal [&>li>p:first-child]:inline list-decimal"
   >
     
 
@@ -1038,7 +1038,7 @@ exports[`PostText - Snapshots > matches snapshot for unordered list 1`] = `
   data-testid="container"
 >
   <ul
-    class="list-inside list-disc whitespace-normal"
+    class="list-inside whitespace-normal [&>li>p:first-child]:inline list-disc"
   >
     
 

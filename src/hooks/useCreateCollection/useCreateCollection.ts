@@ -7,7 +7,7 @@ import { useCoverImagePicker, type UseCoverImagePickerResult } from '@/hooks/use
 import { isAppError } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import {
@@ -49,7 +49,6 @@ type UseCreateCollectionResult = {
  */
 export function useCreateCollection(): UseCreateCollectionResult {
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const { toast } = useToast();
   const cover = useCoverImagePicker();
 
   const form = useForm<CreateCollectionFormData>({

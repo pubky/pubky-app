@@ -11,7 +11,6 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with add button 1`] = 
       data-testid="container"
     >
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="bitcoin tag (5 posts)"
@@ -56,7 +55,6 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with add button 1`] = 
         />
       </button>
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="ethereum tag (3 posts)"
@@ -96,7 +94,6 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with add button 1`] = 
         />
       </button>
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="web3 tag (10 posts)"
@@ -161,7 +158,6 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with close buttons 1`]
       data-testid="container"
     >
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="bitcoin tag (5 posts)"
@@ -233,7 +229,6 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with close buttons 1`]
         />
       </button>
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="ethereum tag (3 posts)"
@@ -300,7 +295,6 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with close buttons 1`]
         />
       </button>
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="web3 tag (10 posts)"
@@ -382,7 +376,6 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with input visible 1`]
       data-testid="container"
     >
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="bitcoin tag (5 posts)"
@@ -427,7 +420,6 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with input visible 1`]
         />
       </button>
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="ethereum tag (3 posts)"
@@ -467,7 +459,6 @@ exports[`ClickableTagsList > Snapshots > matches snapshot with input visible 1`]
         />
       </button>
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="web3 tag (10 posts)"
@@ -651,7 +642,6 @@ exports[`ClickableTagsList - Snapshots > matches snapshot with tags and count 1`
       data-testid="container"
     >
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="bitcoin tag (5 posts)"
@@ -696,7 +686,6 @@ exports[`ClickableTagsList - Snapshots > matches snapshot with tags and count 1`
         />
       </button>
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="ethereum tag (3 posts)"
@@ -736,7 +725,6 @@ exports[`ClickableTagsList - Snapshots > matches snapshot with tags and count 1`
         />
       </button>
       <button
-        aria-controls="radix-normalized"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-label="web3 tag (10 posts)"

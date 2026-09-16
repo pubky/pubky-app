@@ -9,7 +9,7 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { NewPostsButton } from '@/molecules/NewPostsButton/NewPostsButton';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { postKindBelongsToStream } from '@/stores/home/home.utils';
 
 interface NewPostsSectionProps {

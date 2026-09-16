@@ -16,7 +16,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -24,7 +24,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -35,30 +35,24 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
           />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
-          />
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -99,8 +93,12 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
     />
   </div>
   <div
+    class="absolute"
+    data-testid="mdx-editor-overlay-container"
+  />
+  <div
     class="dark-theme cursor-auto hidden"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="10"
     data-testid="mdx-editor"
@@ -160,7 +158,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -171,25 +169,19 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot in markdown mode 1`
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
-          />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
           />
         </svg>
       </button>
@@ -244,7 +236,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
         role="toolbar"
       >
         <button
-          class="size-7 cursor-default rounded"
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
           data-size="icon"
           data-testid="markdown-emoji-button"
           data-variant="ghost"
@@ -252,7 +244,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-smile size-6"
+            class="lucide lucide-face-slightly-smiling size-6"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -263,30 +255,24 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
             width="24"
             xmlns="http://www.w3.org/2000/svg"
           >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
             <circle
               cx="12"
               cy="12"
               r="10"
             />
-            <path
-              d="M8 14s1.5 2 4 2 4-2 4-2"
-            />
-            <line
-              x1="9"
-              x2="9.01"
-              y1="9"
-              y2="9"
-            />
-            <line
-              x1="15"
-              x2="15.01"
-              y1="9"
-              y2="9"
-            />
           </svg>
         </button>
         <button
-          class="size-7 cursor-default rounded"
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
           data-size="icon"
           data-testid="markdown-richtext-button"
           data-variant="ghost"
@@ -327,8 +313,12 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
       />
     </div>
     <div
+      class="absolute"
+      data-testid="mdx-editor-overlay-container"
+    />
+    <div
       class="dark-theme cursor-auto"
-      data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+      data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
       data-placeholder="Start writing your masterpiece"
       data-plugins-count="10"
       data-testid="mdx-editor"
@@ -388,7 +378,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-smile size-6"
+            class="lucide lucide-face-slightly-smiling size-6"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -399,25 +389,19 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with approaching ma
             width="24"
             xmlns="http://www.w3.org/2000/svg"
           >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
             <circle
               cx="12"
               cy="12"
               r="10"
-            />
-            <path
-              d="M8 14s1.5 2 4 2 4-2 4-2"
-            />
-            <line
-              x1="9"
-              x2="9.01"
-              y1="9"
-              y2="9"
-            />
-            <line
-              x1="15"
-              x2="15.01"
-              y1="9"
-              y2="9"
             />
           </svg>
         </button>
@@ -506,7 +490,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -514,7 +498,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -525,30 +509,24 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
           />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
-          />
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -589,8 +567,12 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
     />
   </div>
   <div
+    class="absolute"
+    data-testid="mdx-editor-overlay-container"
+  />
+  <div
     class="custom-editor-class"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="10"
     data-testid="mdx-editor"
@@ -650,7 +632,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -661,25 +643,19 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with custom classNa
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
-          />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
           />
         </svg>
       </button>
@@ -733,7 +709,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -741,7 +717,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -752,30 +728,24 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
           />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
-          />
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -816,8 +786,12 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
     />
   </div>
   <div
+    class="absolute"
+    data-testid="mdx-editor-overlay-container"
+  />
+  <div
     class="dark-theme cursor-auto"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="10"
     data-testid="mdx-editor"
@@ -877,7 +851,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -888,25 +862,19 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with default props 
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
-          />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
           />
         </svg>
       </button>
@@ -960,7 +928,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -968,7 +936,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -979,30 +947,24 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
           />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
-          />
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -1043,8 +1005,12 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
     />
   </div>
   <div
+    class="absolute"
+    data-testid="mdx-editor-overlay-container"
+  />
+  <div
     class="dark-theme cursor-auto"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="10"
     data-testid="mdx-editor"
@@ -1104,7 +1070,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -1115,25 +1081,19 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with emoji picker o
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
-          />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
           />
         </svg>
       </button>
@@ -1196,7 +1156,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -1204,7 +1164,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -1215,30 +1175,24 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
           />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
-          />
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -1279,8 +1233,12 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
     />
   </div>
   <div
+    class="absolute"
+    data-testid="mdx-editor-overlay-container"
+  />
+  <div
     class="dark-theme cursor-auto"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="10"
     data-testid="mdx-editor"
@@ -1340,7 +1298,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -1351,25 +1309,19 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with markdown conte
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
-          />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
           />
         </svg>
       </button>
@@ -1424,7 +1376,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
         role="toolbar"
       >
         <button
-          class="size-7 cursor-default rounded"
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
           data-size="icon"
           data-testid="markdown-emoji-button"
           data-variant="ghost"
@@ -1432,7 +1384,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-smile size-6"
+            class="lucide lucide-face-slightly-smiling size-6"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -1443,30 +1395,24 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
             width="24"
             xmlns="http://www.w3.org/2000/svg"
           >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
             <circle
               cx="12"
               cy="12"
               r="10"
             />
-            <path
-              d="M8 14s1.5 2 4 2 4-2 4-2"
-            />
-            <line
-              x1="9"
-              x2="9.01"
-              y1="9"
-              y2="9"
-            />
-            <line
-              x1="15"
-              x2="15.01"
-              y1="9"
-              y2="9"
-            />
           </svg>
         </button>
         <button
-          class="size-7 cursor-default rounded"
+          class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
           data-size="icon"
           data-testid="markdown-richtext-button"
           data-variant="ghost"
@@ -1507,8 +1453,12 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
       />
     </div>
     <div
+      class="absolute"
+      data-testid="mdx-editor-overlay-container"
+    />
+    <div
       class="dark-theme cursor-auto"
-      data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+      data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
       data-placeholder="Start writing your masterpiece"
       data-plugins-count="10"
       data-testid="mdx-editor"
@@ -1568,7 +1518,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-smile size-6"
+            class="lucide lucide-face-slightly-smiling size-6"
             fill="none"
             height="24"
             stroke="currentColor"
@@ -1579,25 +1529,19 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with reached max le
             width="24"
             xmlns="http://www.w3.org/2000/svg"
           >
+            <path
+              d="M15 10V9"
+            />
+            <path
+              d="M16.472 15a6 6 0 01-8.943 0"
+            />
+            <path
+              d="M9 10V9"
+            />
             <circle
               cx="12"
               cy="12"
               r="10"
-            />
-            <path
-              d="M8 14s1.5 2 4 2 4-2 4-2"
-            />
-            <line
-              x1="9"
-              x2="9.01"
-              y1="9"
-              y2="9"
-            />
-            <line
-              x1="15"
-              x2="15.01"
-              y1="9"
-              y2="9"
             />
           </svg>
         </button>
@@ -1686,7 +1630,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
       role="toolbar"
     >
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-emoji-button"
         data-variant="ghost"
@@ -1695,7 +1639,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -1706,30 +1650,24 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
           />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
-          />
         </svg>
       </button>
       <button
-        class="size-7 cursor-default rounded"
+        class="size-7 cursor-default rounded disabled:pointer-events-auto disabled:opacity-100"
         data-size="icon"
         data-testid="markdown-richtext-button"
         data-variant="ghost"
@@ -1772,8 +1710,12 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
     />
   </div>
   <div
+    class="absolute"
+    data-testid="mdx-editor-overlay-container"
+  />
+  <div
     class="dark-theme cursor-auto"
-    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
+    data-content-editable-class="prose prose-neutral prose-invert prose-code:before:content-none prose-code:after:content-none max-w-none leading-6 font-medium text-secondary-foreground px-0! pb-0! pt-4! max-h-[60dvh] overflow-y-auto"
     data-placeholder="Start writing your masterpiece"
     data-plugins-count="10"
     data-readonly="true"
@@ -1834,7 +1776,7 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-smile size-6"
+          class="lucide lucide-face-slightly-smiling size-6"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -1845,25 +1787,19 @@ exports[`InitializedMDXEditor - Snapshots > matches snapshot with readOnly prop 
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <path
+            d="M15 10V9"
+          />
+          <path
+            d="M16.472 15a6 6 0 01-8.943 0"
+          />
+          <path
+            d="M9 10V9"
+          />
           <circle
             cx="12"
             cy="12"
             r="10"
-          />
-          <path
-            d="M8 14s1.5 2 4 2 4-2 4-2"
-          />
-          <line
-            x1="9"
-            x2="9.01"
-            y1="9"
-            y2="9"
-          />
-          <line
-            x1="15"
-            x2="15.01"
-            y1="9"
-            y2="9"
           />
         </svg>
       </button>

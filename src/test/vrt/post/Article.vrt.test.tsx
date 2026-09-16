@@ -4,7 +4,13 @@
 /* eslint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
-import { matchVrtFrameScreenshot, preloadImages, renderForVRT, waitForMarkdownEditorReady } from '@/test-utils/vrt';
+import {
+  matchVrtFrameScreenshot,
+  preloadImages,
+  renderForVRT,
+  VRT_ROOT_TESTID,
+  waitForMarkdownEditorReady,
+} from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -562,6 +568,33 @@ describe('Article — editing — visual regression', () => {
   it('renders the edit article dialog at mobile viewport', async () => {
     await renderEditArticle(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('article-editing-mobile');
+  });
+});
+
+// The default frame shows the article page from the top, where the body sits
+// below the fold. Scroll the clipped VRT root so the body typography (paragraph
+// spacing, loose numbered list, soft line breaks — issue #1762) is what the
+// frame captures.
+function scrollArticleBodyIntoView() {
+  const root = document.querySelector(`[data-testid="${VRT_ROOT_TESTID}"]`);
+  const body = document.querySelector('[data-cy="post-text"]');
+  if (!(root instanceof HTMLElement) || !(body instanceof HTMLElement)) {
+    throw new Error('VRT root or article body not found');
+  }
+  root.scrollTop += body.getBoundingClientRect().top - root.getBoundingClientRect().top - 24;
+}
+
+describe('Article — published page — body typography — visual regression', () => {
+  it('renders the article body at desktop viewport', async () => {
+    await renderPublishedArticle('columns', VRT_VIEWPORT_DESKTOP);
+    scrollArticleBodyIntoView();
+    await matchVrtFrameScreenshot('article-page-body-desktop');
+  });
+
+  it('renders the article body at mobile viewport', async () => {
+    await renderPublishedArticle('columns', VRT_VIEWPORT_MOBILE);
+    scrollArticleBodyIntoView();
+    await matchVrtFrameScreenshot('article-page-body-mobile');
   });
 });
 
