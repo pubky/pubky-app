@@ -63,7 +63,7 @@ export function FollowedCollections() {
 
   const [pagesShown, setPagesShown] = useState(1);
   const cursorRef = useRef<SeedCursor>(EMPTY_CURSOR);
-  // Raw ids the seed walk has scanned, so the cache walk can re-anchor after the anchor
+  // Visible ids the seed walk has served, so the cache walk can re-anchor after the anchor
   // collection is un-bookmarked (its id leaves the cached row) instead of restarting at the head.
   const walkedIdsRef = useRef<string[]>([]);
   const [reachedEnd, setReachedEnd] = useState(false);

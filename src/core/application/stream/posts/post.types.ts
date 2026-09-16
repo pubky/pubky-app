@@ -44,10 +44,11 @@ export interface TPostStreamChunkResponse {
   /** Id of the last RAW post scanned this round (visible or filtered) — the resume anchor
    * for the local stream-cache walk. Advances by raw scanned data, never by the post-filter
    * visible count (the cache-walk twin of `nextCursor`'s invariant). After a Nexus page it
-   * is the cached row's tail (the deepest id the walk can reach), so a page the row already
-   * held can never move the anchor back up the row. Holds at the caller's own `lastPostId`
-   * when a round is served purely from the overflow buffer; undefined when nothing was
-   * scanned or on paths that bypass the cache walk (e.g. ASCENDING order).
+   * is the deepest of that page's ids and the previous anchor as positioned in the persisted
+   * row, so a page the row already held can never move the anchor back up the row and a row
+   * another walker extended cannot make it jump over unserved ids. Holds at the caller's own
+   * `lastPostId` when a round is served purely from the overflow buffer; undefined when
+   * nothing was scanned or on paths that bypass the cache walk (e.g. ASCENDING order).
    * May be a filtered-out (deleted/collection/muted) post id — do not dereference for display. */
   lastRawPostId?: string;
   /** Raw ids this round consumed before filtering (see `CollectResult.rawScannedCount`);

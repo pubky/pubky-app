@@ -251,6 +251,9 @@ export abstract class BaseStreamModel<TId, TItem, TSchema extends BaseStreamMode
             const newItems = items.filter((item) => !stream.stream.includes(item));
 
             if (newItems.length > 0) {
+              // A resume cursor describes the ids it was fetched with: a row that is empty
+              // when new ids seed it must not hand them its old, deeper position.
+              if (stream.stream.length === 0) delete (stream as { tailCursor?: number }).tailCursor;
               // Add new items to the beginning of the stream
               stream.stream.unshift(...newItems);
             }
@@ -301,6 +304,8 @@ export abstract class BaseStreamModel<TId, TItem, TSchema extends BaseStreamMode
           .modify((stream) => {
             // Filter out the items that need to be removed
             stream.stream = stream.stream.filter((item) => !items.includes(item));
+            // Removing the last id leaves nothing the resume cursor describes; drop it with the ids.
+            if (stream.stream.length === 0) delete (stream as { tailCursor?: number }).tailCursor;
           });
       }
       // Stream doesn't exist, nothing to remove - silently succeed

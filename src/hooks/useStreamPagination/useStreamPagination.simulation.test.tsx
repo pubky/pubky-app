@@ -180,11 +180,15 @@ const ttlRefresh = async (sim: SimNexus, ids: string[]) => {
   });
 };
 
-/** `BootstrapApplication`: replace the All timeline row with the head page, no cursor. */
+/**
+ * `BootstrapApplication`: replace the All timeline row with the head page (no cursor) and
+ * clear the unread row it supersedes.
+ */
 const bootstrap = async (sim: SimNexus) => {
   const head = sim.stream().slice(0, LIMIT);
   await LocalStreamPostsService.persistPosts({ posts: sim.byIds(head.map((post) => post.id)) });
   await LocalStreamPostsService.upsert({ streamId: TIMELINE, stream: head.map((post) => post.id) });
+  await LocalStreamPostsService.clearUnreadStream({ streamId: TIMELINE });
 };
 
 /** `StreamCoordinator.poll`: fetch above the cached head into the unread row. */

@@ -452,8 +452,8 @@ export class PostStreamApplication {
           order,
         });
 
-        // Track the raw position for cache continuation: the row tail after a Nexus page
-        // (reported by the fetch), else the last id of a cache chunk.
+        // Track the raw position for cache continuation: the anchor the fetch positioned in
+        // the row after a Nexus page, else the last id of a cache chunk.
         if (result.lastRawPostId !== undefined) {
           lastReturnedPostId = result.lastRawPostId;
         } else if (result.nextPageIds.length > 0) {
@@ -780,8 +780,8 @@ export class PostStreamApplication {
       nextCursor,
       // Propagate reachedEnd from Nexus - don't recalculate from deduped length
       reachedEnd: reachedEnd ?? false,
-      // The walk resumes from the row tail after the page was appended (the last cached id
-      // when the page was empty), never from the chunk end.
+      // The walk resumes from the anchor the fetch positioned in the row after the page was
+      // appended (the last cached id when the page was empty), never from the chunk end.
       lastRawPostId: lastRawPostId ?? lastCachedPostId,
     };
   }

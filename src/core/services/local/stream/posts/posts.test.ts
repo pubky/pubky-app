@@ -1202,6 +1202,31 @@ describe('LocalStreamPostsService', () => {
       expect(result?.tailCursor).toBe(BASE_TIMESTAMP + 3);
     });
 
+    it('drops the Nexus cursor when a post deletion empties the row or a local prepend re-seeds it', async () => {
+      // `LocalPostService` mutates rows through the model directly; the same rule applies.
+      // The base model's static `this` generic does not narrow for PostStreamModel here (TS2684,
+      // as in mute-pagination.test.ts); the runtime call matches production usage.
+      const model = PostStreamModel as {
+        removeItems: (id: PostStreamId, items: string[]) => Promise<void>;
+        prependItems: (id: PostStreamId, items: string[]) => Promise<void>;
+      };
+      await LocalStreamPostsService.upsert({ streamId, stream: [postId('post-1')], tailCursor: BASE_TIMESTAMP + 3 });
+
+      await model.removeItems(streamId, [postId('post-1')]);
+      expect((await LocalStreamPostsService.read({ streamId }))?.tailCursor).toBeUndefined();
+
+      await LocalStreamPostsService.upsert({ streamId, stream: [], tailCursor: BASE_TIMESTAMP + 3 });
+      await model.prependItems(streamId, [postId('post-0')]);
+      const reseeded = await LocalStreamPostsService.read({ streamId });
+      expect(reseeded?.stream).toEqual([postId('post-0')]);
+      expect(reseeded?.tailCursor).toBeUndefined();
+
+      // A prepend onto a non-empty row keeps the cursor its ids were fetched with.
+      await LocalStreamPostsService.upsert({ streamId, stream: [postId('post-1')], tailCursor: BASE_TIMESTAMP + 3 });
+      await model.prependItems(streamId, [postId('post-0')]);
+      expect((await LocalStreamPostsService.read({ streamId }))?.tailCursor).toBe(BASE_TIMESTAMP + 3);
+    });
+
     it('drops the Nexus cursor when the row empties or is re-seeded from empty', async () => {
       // A cursor describes the ids below the row; once the row has none it would only make
       // the next seam skip everything above it (e.g. every bookmark removed, then one re-added).
@@ -1331,35 +1356,36 @@ describe('LocalStreamPostsService', () => {
       expect(result?.tailCursor).toBe(BASE_TIMESTAMP + 3);
     });
 
-    it('keeps a post the user created after the poll above the older polled posts', async () => {
+    it('keeps the polled order above the row even when the row head is an own post written after the poll', async () => {
+      // Re-sorting by indexed_at would put the own post on top, but it would also promote an
+      // edited row head above newer polled posts and hand its bumped indexed_at to the next
+      // head poll. The own post sits below the polled ones until the next poll returns it.
       await LocalStreamPostsService.persistPosts({
         posts: [
           createMockNexusPost('polled-1', DEFAULT_AUTHOR, BASE_TIMESTAMP + 10),
-          createMockNexusPost('polled-2', DEFAULT_AUTHOR, BASE_TIMESTAMP + 9),
           createMockNexusPost('own-new', DEFAULT_AUTHOR, BASE_TIMESTAMP + 20),
-          createMockNexusPost('own-old', DEFAULT_AUTHOR, BASE_TIMESTAMP + 9.5),
           createMockNexusPost('post-1', DEFAULT_AUTHOR, BASE_TIMESTAMP + 1),
         ],
       });
-      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [postId('polled-1'), postId('polled-2')]);
-      // Two own posts were prepended to the row after the poll: one newer than every polled
-      // post, one between them.
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [postId('polled-1')]);
       await LocalStreamPostsService.upsert({
         streamId,
-        stream: [postId('own-new'), postId('own-old'), postId('post-1')],
+        stream: [postId('own-new'), postId('post-1')],
         tailCursor: BASE_TIMESTAMP,
       });
 
       await LocalStreamPostsService.mergeUnreadStreamWithPostStream({ streamId });
-
-      const result = await LocalStreamPostsService.read({ streamId });
-      expect(result?.stream).toEqual([
-        postId('own-new'),
+      expect((await LocalStreamPostsService.read({ streamId }))?.stream).toEqual([
         postId('polled-1'),
-        postId('own-old'),
-        postId('polled-2'),
+        postId('own-new'),
         postId('post-1'),
       ]);
+
+      // The next poll returns the own post above the polled head; the merge puts it on top.
+      await LocalStreamPostsService.persistUnreadNewStreamChunk({ streamId, stream: [postId('own-new')] });
+      await LocalStreamPostsService.mergeUnreadStreamWithPostStream({ streamId });
+      const result = await LocalStreamPostsService.read({ streamId });
+      expect(result?.stream).toEqual([postId('own-new'), postId('polled-1'), postId('post-1')]);
       expect(result?.tailCursor).toBe(BASE_TIMESTAMP);
     });
 

@@ -202,56 +202,14 @@ export class LocalStreamPostsService {
 
     // Both parts are already in stream order: every head poll prepends a Nexus page that is
     // newer than the previous one, and the cached row keeps the order its pages arrived in.
-    // Nothing fetched from Nexus is re-sorted by indexed_at — that would float an edited or
-    // deleted post above its real position (#2523) — and the tail's resume cursor is untouched.
-    // The one thing newer than the polled posts the row can hold is a local prepend (an own
-    // post or bookmark written after the poll) at its head; those are merged into the polled
-    // prefix by timestamp so the user's newest post is not shown below older polled ones.
-    const leading = await this.leadingPostsNewerThan(rest, validUnreadPosts);
-    const prefix = await this.mergeByTimestamp(validUnreadPosts, leading);
-    const combinedStream = [...prefix, ...rest.slice(leading.length)];
+    // Nothing is re-sorted by indexed_at — that would float an edited or deleted post above
+    // its real position (#2523), and an edited row head promoted above the polled posts
+    // would then feed its bumped indexed_at to the next head poll. The one cost is an own
+    // post written after the poll: it sits below the polled posts until the next poll returns
+    // it, at which point it takes the unread slot. The tail's resume cursor is untouched.
+    const combinedStream = [...validUnreadPosts, ...rest];
 
     await PostStreamModel.upsert(streamId, combinedStream, this.tailCursorFields(postStream.tailCursor));
-  }
-
-  /** The ids at the head of `row` whose `indexed_at` is newer than every id in `reference`. */
-  private static async leadingPostsNewerThan(row: string[], reference: string[]): Promise<string[]> {
-    if (row.length === 0 || reference.length === 0) return [];
-    const referenceTimestamps = await this.readTimestamps(reference);
-    // A polled id without details cannot be placed; keep the plain prepend in that case.
-    if (referenceTimestamps.some((timestamp) => timestamp === undefined)) return [];
-    const oldestReference = Math.min(...(referenceTimestamps as number[]));
-
-    const leading: string[] = [];
-    for (const id of row) {
-      const [timestamp] = await this.readTimestamps([id]);
-      if (timestamp === undefined || timestamp <= oldestReference) break;
-      leading.push(id);
-    }
-    return leading;
-  }
-
-  /** Merges two lists that are each newest-first into one, newest first; `first` wins ties. */
-  private static async mergeByTimestamp(first: string[], second: string[]): Promise<string[]> {
-    if (second.length === 0) return first;
-    const [firstTimestamps, secondTimestamps] = await Promise.all([
-      this.readTimestamps(first),
-      this.readTimestamps(second),
-    ]);
-    const merged: string[] = [];
-    let i = 0;
-    let j = 0;
-    while (i < first.length || j < second.length) {
-      const takeSecond =
-        i >= first.length || (j < second.length && (secondTimestamps[j] ?? 0) > (firstTimestamps[i] ?? 0));
-      merged.push(takeSecond ? second[j++] : first[i++]);
-    }
-    return merged;
-  }
-
-  private static async readTimestamps(ids: string[]): Promise<(number | undefined)[]> {
-    const details = await PostDetailsModel.findByIdsPreserveOrder(ids);
-    return details.map((detail) => detail?.indexed_at);
   }
 
   /**
