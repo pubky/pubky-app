@@ -18,12 +18,12 @@ import {
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEditAttachments } from '@/hooks/useEditAttachments/useEditAttachments';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
 import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
 import { usePost } from '@/hooks/usePost/usePost';
+import { useUndoRepost } from '@/hooks/useUndoRepost/useUndoRepost';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineImages';
@@ -94,6 +94,7 @@ export function usePostInput({
   onSuccess,
   placeholder,
   successToastTitle,
+  isCollectionShare = false,
   expanded = false,
   onContentChange,
   onArticleModeChange,
@@ -134,7 +135,7 @@ export function usePostInput({
     uploadingCount,
   } = usePost();
   const timelineFeed = useTimelineFeedContext();
-  const { deletePost } = useDeletePost();
+  const { undoRepost } = useUndoRepost(isCollectionShare);
 
   // Article edits show only the cover in the attachment strip — inline images
   // live in the body. The cover is attachments[0] unless the published body
@@ -370,7 +371,7 @@ export function usePostInput({
           originalPostId: originalPostId!,
           successToastTitle,
           onSuccess: handleSuccess,
-          onUndo: deletePost,
+          onUndo: undoRepost,
         });
         break;
       case POST_INPUT_VARIANT.EDIT:
@@ -407,7 +408,7 @@ export function usePostInput({
     uploadingCount,
     onSuccess,
     timelineFeed,
-    deletePost,
+    undoRepost,
   ]);
 
   // Handle textarea change with validation

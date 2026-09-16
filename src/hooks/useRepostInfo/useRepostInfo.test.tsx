@@ -1,7 +1,16 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { useRepostInfo } from './useRepostInfo';
+
+vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
+  usePostDetails: vi.fn(() => ({
+    postDetails: { content: '', attachments: null },
+    isLoading: false,
+  })),
+}));
 
 // Hoist mock data
 const { mockRelationships, setMockRelationships } = vi.hoisted(() => {
@@ -168,4 +177,21 @@ describe('useRepostInfo', () => {
 
     expect(result.current.isLoading).toBe(false);
   });
+
+  it.each([null, 'pubky://parent-author/pub/pubky.app/posts/parent-post'])(
+    'preserves thread identity when an empty repost has parent %s',
+    (replied) => {
+      const postId = `${mockCurrentUserPubky}:post-123`;
+      setMockRelationships({ id: postId, reposted: mockRepostedUri, replied, mentioned: [] });
+
+      const { result } = renderHook(() => usePostHeaderVisibility(postId));
+
+      expect(result.current.originalPostId).toBe('original-author:original-post');
+      expect(result.current.showRepostHeader).toBe(replied === null);
+      expect(result.current.shouldShowPostHeader).toBe(replied !== null);
+      expect(getDisplayedPostId(postId, result.current)).toBe(
+        replied === null ? 'original-author:original-post' : postId,
+      );
+    },
+  );
 });

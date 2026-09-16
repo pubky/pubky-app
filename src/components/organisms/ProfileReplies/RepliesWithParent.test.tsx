@@ -4,12 +4,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import type { Pubky } from '@/models/models.types';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { RepliesWithParent } from './RepliesWithParent';
+
+const mockNavigate = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
+  usePostHeaderVisibility: vi.fn(() => ({ showRepostHeader: false, shouldShowPostHeader: true, originalPostId: null })),
+}));
 
 // Mock dependencies
 vi.mock('dexie-react-hooks');
@@ -22,7 +28,7 @@ vi.mock('@/hooks/useInfiniteScroll/useInfiniteScroll', () => ({
 }));
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ push: mockNavigate, replace: vi.fn(), back: vi.fn(), forward: vi.fn(), prefetch: vi.fn() }),
 }));
 
 // Mock components
@@ -135,6 +141,11 @@ describe('RepliesWithParent', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: false,
+      shouldShowPostHeader: true,
+      originalPostId: null,
+    });
 
     // Mock auth store to provide viewerId
     vi.spyOn(useAuthStore, 'getState').mockReturnValue({
@@ -168,6 +179,26 @@ describe('RepliesWithParent', () => {
   });
 
   describe('Loading States', () => {
+    it.each(['Enter', ' '])('opens the displayed original from a repost parent using %s', async (key) => {
+      mockUseStreamPagination.mockReturnValue({
+        ...mockUseStreamPagination({ streamId: mockStreamId }),
+        postIds: ['me:reply'],
+        hasMore: false,
+      });
+      mockUseLiveQuery
+        .mockReturnValueOnce('me:repost')
+        .mockReturnValueOnce({ id: 'me:repost', content: '', kind: 'short' });
+      vi.mocked(usePostHeaderVisibility).mockReturnValue({
+        showRepostHeader: true,
+        shouldShowPostHeader: false,
+        originalPostId: 'author:original',
+      });
+      render(<RepliesWithParent streamId={mockStreamId} />);
+      const parent = await screen.findByTestId('post-me:repost');
+      fireEvent.keyDown(parent.parentElement!, { key });
+      expect(mockNavigate).toHaveBeenCalledWith('/post/author/original');
+    });
+
     it('should render loading state initially', () => {
       mockUseStreamPagination.mockReturnValue({
         postIds: [],

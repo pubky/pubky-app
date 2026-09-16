@@ -5,17 +5,24 @@ import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import { useUndoRepost } from '@/hooks/useUndoRepost/useUndoRepost';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
+import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
+import { PostSavePicker } from '@/organisms/PostSavePicker/PostSavePicker';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContent } from '../PostContent/PostContent';
 import { PostHeader } from '../PostHeader/PostHeader';
@@ -51,6 +58,43 @@ function RemovablePostUnavailable({
   );
 }
 
+// Wires the contentless-repost header: deletes the repost itself on Undo and
+// formats the share time. Mounted only when `showRepostHeader` is true so the
+// extra hooks don't run for every card in the feed.
+function UndoableRepostHeader({
+  postId,
+  isCollectionShare,
+  indexedAt,
+  hasBodyActions,
+}: {
+  postId: string;
+  isCollectionShare: boolean;
+  indexedAt: Date | null;
+  hasBodyActions: boolean;
+}) {
+  const { formatRelativeTime } = useRelativeTime();
+  const { undoRepost, isUndoing } = useUndoRepost(isCollectionShare);
+  const feed = useTimelineFeedContext();
+  const isLibraryFeed =
+    feed?.variant === TIMELINE_FEED_VARIANT.BOOKMARKS || feed?.variant === TIMELINE_FEED_VARIANT.COLLECTION;
+
+  return (
+    <RepostHeader
+      isCollectionShare={isCollectionShare}
+      onUndo={() => void undoRepost(postId)}
+      isUndoing={isUndoing}
+      timeAgo={indexedAt ? formatRelativeTime(indexedAt) : null}
+      indexedAt={indexedAt}
+    >
+      {!hasBodyActions && isLibraryFeed && (
+        <Container overrideDefaults onClick={stopCardPropagation} onAuxClick={stopCardPropagation}>
+          <PostSavePicker postId={postId} buttonClassName="border-none shadow-xs" />
+        </Container>
+      )}
+    </RepostHeader>
+  );
+}
+
 export function PostMain({
   postId,
   className,
@@ -72,8 +116,21 @@ export function PostMain({
 
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
-  const { showRepostHeader, shouldShowPostHeader } = usePostHeaderVisibility(postId);
-  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
+  const headerVisibility = usePostHeaderVisibility(postId);
+  const { showRepostHeader, shouldShowPostHeader, originalPostId } = headerVisibility;
+  // A contentless repost adds a bar above the original post, not another card
+  // around it. Undo and saved membership retain the repost's identity.
+  const repostedPostId = showRepostHeader ? originalPostId : null;
+  const displayedPostId = getDisplayedPostId(postId, headerVisibility);
+  const showDisplayedPostHeader = repostedPostId !== null || shouldShowPostHeader;
+  // Contentless collection shares get a distinct full-bleed treatment (#2121):
+  // repost header + flush CollectionCard, no post chrome (header, actions, tags).
+  // The original's details query stays disabled unless the header is showing.
+  const { postDetails: originalPostDetails, isLoading: isOriginalLoading } = usePostDetails(repostedPostId);
+  const isOriginalMissing = repostedPostId !== null && originalPostDetails === null && !isOriginalLoading;
+  const isOriginalDeleted = repostedPostId !== null && isPostDeleted(originalPostDetails?.content);
+  const isCollectionShare = repostedPostId !== null && originalPostDetails?.kind === 'collection';
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(displayedPostId);
 
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
@@ -86,6 +143,12 @@ export function PostMain({
     type: 'post',
     id: postId,
   });
+  // PostPreviewCard owns collection freshness; flattened ordinary reposts must
+  // keep refreshing the original even though its preview wrapper is gone.
+  const { ref: originalTtlRef } = useTtlSubscription({
+    type: 'post',
+    id: isCollectionShare && !isOriginalDeleted ? null : repostedPostId,
+  });
 
   // Determine thread connector variant based on reply status
   const connectorVariant = isLastReply ? POST_THREAD_CONNECTOR_VARIANTS.LAST : POST_THREAD_CONNECTOR_VARIANTS.REGULAR;
@@ -93,10 +156,13 @@ export function PostMain({
   return (
     <>
       <Container
-        ref={ttlRef}
+        ref={(node) => {
+          ttlRef(node);
+          originalTtlRef(node);
+        }}
         overrideDefaults
-        onClick={isNavigable ? (e) => handlePostClick(postId, e) : undefined}
-        onAuxClick={isNavigable ? (e) => handlePostAuxClick(postId, e) : undefined}
+        onClick={isNavigable ? (e) => handlePostClick(displayedPostId, e) : undefined}
+        onAuxClick={isNavigable ? (e) => handlePostAuxClick(displayedPostId, e) : undefined}
         className={cn('relative flex min-w-0 @max-xl/grid:h-full', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
@@ -119,74 +185,101 @@ export function PostMain({
             />
           ) : (
             <>
-              {showRepostHeader && <RepostHeader />}
-              <CardContent
-                className={cn(
-                  'flex min-w-0 flex-col @max-xl/grid:flex-1',
-                  isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6',
-                )}
-              >
-                {isListLayout ? (
-                  <PostMainListRow
-                    postId={postId}
-                    showFullContent={!isReply && showFullContentInListLayout}
-                    shouldShowPostHeader={shouldShowPostHeader}
-                    onReplyClick={openReplyDialog}
-                    onRepostClick={openRepostDialog}
-                  />
-                ) : isWideLayout ? (
-                  <Container className="flex min-w-0 flex-col lg:flex-row">
-                    <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
-                      {shouldShowPostHeader && (
-                        <PostHeader postId={postId} size="extraLarge" timeAgoPlacement="bottom-left" />
-                      )}
-                      <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
-                      {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
+              {showRepostHeader && (
+                <UndoableRepostHeader
+                  postId={postId}
+                  hasBodyActions={!isCollectionShare && !isOriginalMissing && !isOriginalDeleted}
+                  isCollectionShare={isCollectionShare}
+                  indexedAt={postDetails ? new Date(postDetails.indexed_at) : null}
+                />
+              )}
+              {isOriginalMissing ? (
+                <PostUnavailable message={'Post not found.'} />
+              ) : isOriginalDeleted ? (
+                <PostUnavailable message={'This post has been deleted by its author.'} />
+              ) : isCollectionShare ? (
+                // Full-bleed collection share: the CollectionCard is the whole
+                // body — flush under the header, no padding, no actions/tags.
+                <CardContent className="flex min-w-0 flex-col p-0 @max-xl/grid:flex-1">
+                  <PostPreviewCard postId={displayedPostId} flush />
+                </CardContent>
+              ) : (
+                <CardContent
+                  className={cn(
+                    'flex min-w-0 flex-col @max-xl/grid:flex-1',
+                    isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6',
+                  )}
+                >
+                  {isListLayout ? (
+                    <PostMainListRow
+                      postId={displayedPostId}
+                      savePostId={postId}
+                      showFullContent={!isReply && showFullContentInListLayout}
+                      shouldShowPostHeader={showDisplayedPostHeader}
+                      onReplyClick={openReplyDialog}
+                      onRepostClick={openRepostDialog}
+                    />
+                  ) : isWideLayout ? (
+                    <Container className="flex min-w-0 flex-col lg:flex-row">
+                      <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
+                        {showDisplayedPostHeader && (
+                          <PostHeader postId={displayedPostId} size="extraLarge" timeAgoPlacement="bottom-left" />
+                        )}
+                        <PostContent postId={displayedPostId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
+                        {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
+                        <Container
+                          overrideDefaults
+                          onClick={stopCardPropagation}
+                          onAuxClick={stopCardPropagation}
+                          className="flex flex-col gap-4"
+                        >
+                          <PostTagsPanel
+                            ref={mobileTagsPanelRef}
+                            postId={displayedPostId}
+                            widthMode="full"
+                            className="lg:hidden"
+                          />
+                          <PostActionsBar
+                            postId={displayedPostId}
+                            savePostId={postId}
+                            onTagClick={() => {
+                              mobileTagsPanelRef.current?.focus();
+                              desktopTagsPanelRef.current?.focus();
+                            }}
+                            onReplyClick={openReplyDialog}
+                            onRepostClick={openRepostDialog}
+                          />
+                        </Container>
+                      </Container>
                       <Container
                         overrideDefaults
                         onClick={stopCardPropagation}
                         onAuxClick={stopCardPropagation}
-                        className="flex flex-col gap-4"
+                        className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
                       >
                         <PostTagsPanel
-                          ref={mobileTagsPanelRef}
-                          postId={postId}
+                          ref={desktopTagsPanelRef}
+                          postId={displayedPostId}
                           widthMode="full"
-                          className="lg:hidden"
-                        />
-                        <PostActionsBar
-                          postId={postId}
-                          onTagClick={() => {
-                            mobileTagsPanelRef.current?.focus();
-                            desktopTagsPanelRef.current?.focus();
-                          }}
-                          onReplyClick={openReplyDialog}
-                          onRepostClick={openRepostDialog}
+                          className="w-full"
                         />
                       </Container>
                     </Container>
-                    <Container
-                      overrideDefaults
-                      onClick={stopCardPropagation}
-                      onAuxClick={stopCardPropagation}
-                      className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
-                    >
-                      <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
-                    </Container>
-                  </Container>
-                ) : (
-                  <>
-                    {shouldShowPostHeader && <PostHeader postId={postId} />}
-                    <PostContent postId={postId} />
-                    <PostInlineTagsActions
-                      postId={postId}
-                      onReplyClick={openReplyDialog}
-                      onRepostClick={openRepostDialog}
-                      actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
-                    />
-                  </>
-                )}
-              </CardContent>
+                  ) : (
+                    <>
+                      {showDisplayedPostHeader && <PostHeader postId={displayedPostId} />}
+                      <PostContent postId={displayedPostId} />
+                      <PostInlineTagsActions
+                        postId={displayedPostId}
+                        savePostId={postId}
+                        onReplyClick={openReplyDialog}
+                        onRepostClick={openRepostDialog}
+                        actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"
+                      />
+                    </>
+                  )}
+                </CardContent>
+              )}
             </>
           )}
         </Card>

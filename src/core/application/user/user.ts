@@ -118,6 +118,7 @@ export class UserApplication {
 
     // 2. Fetch full user from Nexus batch endpoint
     try {
+      const fetchStartedAt = Date.now();
       const revisions = await LocalTagCacheService.captureRevisions('user', [userId]);
       const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId], viewer_id: viewerId });
 
@@ -128,7 +129,7 @@ export class UserApplication {
       }
 
       // 3. Persist full user entity (details, counts, relationships, tags, TTL, moderation)
-      await LocalStreamUsersService.persistUsers(users, { revisions, viewerId, isCurrent });
+      await LocalStreamUsersService.persistUsers(users, { revisions, viewerId, isCurrent, fetchStartedAt });
     } catch (error) {
       Logger.warn('Failed to fetch user from Nexus', { userId, error });
       return null;
@@ -170,6 +171,7 @@ export class UserApplication {
     isCurrent,
   }: TFetchUserParams & { isCurrent?: () => boolean }): Promise<NexusUserDetails | null> {
     try {
+      const fetchStartedAt = Date.now();
       const revisions = await LocalTagCacheService.captureRevisions('user', [userId]);
       const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId], viewer_id: viewerId });
 
@@ -179,7 +181,7 @@ export class UserApplication {
         return null;
       }
 
-      await LocalStreamUsersService.persistUsers(users, { revisions, viewerId, isCurrent });
+      await LocalStreamUsersService.persistUsers(users, { revisions, viewerId, isCurrent, fetchStartedAt });
     } catch (error) {
       Logger.warn('Failed to fetch user from Nexus', { userId, error });
       return null;

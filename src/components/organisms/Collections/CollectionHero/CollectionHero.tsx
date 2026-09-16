@@ -167,6 +167,7 @@ function CollectionHeroContent({
     submitLabel: 'Share',
     submitIcon: StickyNote,
     successToastTitle: "You've shared this collection",
+    isCollectionShare: true,
   });
   const handleShare = () => {
     requireAuth(openRepostDialog);
@@ -268,7 +269,7 @@ function CollectionHeroContent({
             className="min-w-0 flex-1 gap-3 lg:flex-none"
             profileHref={ownerProfileHref}
           />
-          <CollectionCountBadge count={itemCount} showLabelOnMobile />
+          <CollectionCountBadge count={itemCount} showLabelOnMobile tone={coverImage ? 'on-cover' : 'on-card'} />
         </Container>
 
         {/* Description */}
@@ -409,7 +410,7 @@ function CollectionHeroContent({
           ) : (
             <>
               <Button
-                variant="secondary"
+                variant={coverImage ? 'dark' : 'secondary'}
                 size="sm"
                 onClick={handleFollowToggle}
                 disabled={isBookmarkLoading || isToggling}

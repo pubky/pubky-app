@@ -11,6 +11,7 @@ import { PostTagsPanel } from '../PostTagsPanel/PostTagsPanel';
 
 interface PostInlineTagsActionsProps {
   postId: string;
+  savePostId?: string;
   onReplyClick: () => void;
   onRepostClick: () => void;
   className?: string;
@@ -19,6 +20,7 @@ interface PostInlineTagsActionsProps {
 
 export function PostInlineTagsActions({
   postId,
+  savePostId = postId,
   onReplyClick,
   onRepostClick,
   className,
@@ -60,6 +62,7 @@ export function PostInlineTagsActions({
       )}
       <PostActionsBar
         postId={postId}
+        savePostId={savePostId}
         onTagClick={() => setTagsExpanded((prev) => !prev)}
         onReplyClick={onReplyClick}
         onRepostClick={onRepostClick}

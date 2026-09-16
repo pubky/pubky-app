@@ -245,7 +245,7 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.persistUsers).toHaveBeenCalledWith(
     bootstrapData.users,
-    expect.objectContaining({ revisions: expect.any(Map) }),
+    expect.objectContaining({ revisions: expect.any(Map), viewerId: TEST_PUBKY }),
   );
   expect(mocks.persistPosts).toHaveBeenCalledWith({
     posts: bootstrapData.posts,
@@ -347,7 +347,7 @@ describe('BootstrapApplication', () => {
 
       expect(mocks.persistUsers).toHaveBeenCalledWith(
         bootstrapData.users,
-        expect.objectContaining({ revisions: expect.any(Map) }),
+        expect.objectContaining({ revisions: expect.any(Map), viewerId: TEST_PUBKY }),
       );
     });
 
@@ -412,7 +412,7 @@ describe('BootstrapApplication', () => {
 
       expect(mocks.persistUsers).toHaveBeenCalledWith(
         bootstrapData.users,
-        expect.objectContaining({ revisions: expect.any(Map) }),
+        expect.objectContaining({ revisions: expect.any(Map), viewerId: TEST_PUBKY }),
       );
       expect(mocks.persistPosts).toHaveBeenCalledWith({
         posts: bootstrapData.posts,

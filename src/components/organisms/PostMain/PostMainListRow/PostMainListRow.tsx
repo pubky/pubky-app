@@ -67,6 +67,7 @@ function getListPostSnippet(content: string, kind: string): string {
 
 interface PostMainListRowProps {
   postId: string;
+  savePostId?: string;
   showFullContent: boolean;
   shouldShowPostHeader: boolean;
   onReplyClick: (postId: string) => void;
@@ -75,6 +76,7 @@ interface PostMainListRowProps {
 
 export function PostMainListRow({
   postId,
+  savePostId = postId,
   showFullContent,
   shouldShowPostHeader,
   onReplyClick,
@@ -82,17 +84,21 @@ export function PostMainListRow({
 }: PostMainListRowProps) {
   const { postDetails } = usePostDetails(postId);
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const { isRepost, originalPostId } = useRepostInfo(postId);
+  const { isRepost, isReply, originalPostId } = useRepostInfo(postId);
   const { postDetails: originalPostDetails } = usePostDetails(originalPostId);
   const ownContentSnippet = getListPostSnippet(postDetails?.content ?? '', postDetails?.kind ?? '');
   const hasOwnAttachments = (postDetails?.attachments?.length ?? 0) > 0;
-  const shouldUseOriginalPost =
+  const shouldPreviewOriginal =
     !showFullContent &&
     isRepost &&
     !ownContentSnippet &&
     !hasOwnAttachments &&
     !!originalPostId &&
     !!originalPostDetails;
+  // An embedded reply keeps its own author/actions while previewing the embed.
+  const shouldUseOriginalPost = shouldPreviewOriginal && !isReply;
+  const previewPostId = shouldPreviewOriginal ? originalPostId : postId;
+  const previewPostDetails = shouldPreviewOriginal ? originalPostDetails : postDetails;
   const displayPostId = shouldUseOriginalPost ? originalPostId : postId;
   const displayUserId = displayPostId.split(':')[0];
   const { userDetails } = useUserDetails(displayUserId);
@@ -103,11 +109,11 @@ export function PostMainListRow({
 
   const displayPostDetails = shouldUseOriginalPost ? originalPostDetails : postDetails;
 
-  if (!postDetails || !displayPostDetails) {
+  if (!postDetails || !displayPostDetails || !previewPostDetails) {
     return <PostMainListRowSkeleton />;
   }
 
-  if (isPostDeleted(displayPostDetails.content)) {
+  if (isPostDeleted(displayPostDetails.content) || isPostDeleted(previewPostDetails.content)) {
     return <PostUnavailable message={'This post has been deleted by its author.'} />;
   }
 
@@ -118,11 +124,11 @@ export function PostMainListRow({
   const indexedAt = new Date(displayPostDetails.indexed_at);
   const timeAgo = formatRelativeTime(indexedAt);
   const formattedPublicKey = formatPublicKey({ key: displayUserId });
-  const contentSnippet = getListPostSnippet(displayPostDetails.content, displayPostDetails.kind);
+  const contentSnippet = getListPostSnippet(previewPostDetails.content, previewPostDetails.kind);
   const snippet = showFullContent ? '' : truncateAtWordBoundary(contentSnippet, LIST_SNIPPET_MAX_CHARS);
   const profileUrl = getUserProfileUrl(displayUserId, currentUserPubky);
   const shouldShowDisplayHeader = shouldShowPostHeader || shouldUseOriginalPost;
-  const shouldShowCompactBlur = !showFullContent && displayPostDetails.is_blurred;
+  const shouldShowCompactBlur = !showFullContent && (displayPostDetails.is_blurred || previewPostDetails.is_blurred);
 
   const handleTagClick = () => {
     setTagsExpanded((previousValue) => !previousValue);
@@ -164,7 +170,11 @@ export function PostMainListRow({
               </Link>
             ) : null}
             {shouldShowCompactBlur ? (
-              <PostContentBlurred postId={displayPostId} variant="compact" className="min-w-0 flex-1" />
+              <PostContentBlurred
+                postId={displayPostDetails.is_blurred ? displayPostId : previewPostId}
+                variant="compact"
+                className="min-w-0 flex-1"
+              />
             ) : snippet ? (
               <Typography
                 className={cn('min-w-0 flex-1 truncate text-secondary-foreground', LIST_POST_BODY_TEXT_CLASS)}
@@ -208,6 +218,7 @@ export function PostMainListRow({
           ) : null}
           <PostActionsBar
             postId={displayPostId}
+            savePostId={savePostId}
             onTagClick={handleTagClick}
             onReplyClick={() => onReplyClick(displayPostId)}
             onRepostClick={() => onRepostClick(displayPostId)}
@@ -215,7 +226,7 @@ export function PostMainListRow({
           />
         </Container>
 
-        {!showFullContent && !shouldShowCompactBlur ? <PostListMediaThumbnail postId={displayPostId} /> : null}
+        {!showFullContent && !shouldShowCompactBlur ? <PostListMediaThumbnail postId={previewPostId} /> : null}
       </Container>
 
       {showFullContent ? (

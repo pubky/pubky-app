@@ -52,7 +52,12 @@ export class UserStreamApplication {
       const nextPageIds = this.getStreamFromCache({ skip, limit, cachedStream, allowPartial: allowPartialCache });
       if (nextPageIds) {
         // Cache hit - return undefined skip to signal cache source
-        return { nextPageIds, cacheMissUserIds: [], skip: undefined, isExhausted: false };
+        return {
+          nextPageIds,
+          cacheMissUserIds: await this.getNotPersistedUsersInCache(nextPageIds, viewerId),
+          skip: undefined,
+          isExhausted: false,
+        };
       }
     }
 
@@ -109,13 +114,14 @@ export class UserStreamApplication {
 
     try {
       if (isCurrent && !isCurrent()) return;
+      const fetchStartedAt = Date.now();
       const revisions = await LocalTagCacheService.captureRevisions('user', cacheMissUserIds);
       const userBatch = await NexusUserStreamService.fetchByIds({
         user_ids: cacheMissUserIds,
         force,
         viewer_id: viewerId,
       });
-      await LocalStreamUsersService.persistUsers(userBatch, { revisions, isCurrent, viewerId });
+      await LocalStreamUsersService.persistUsers(userBatch, { revisions, isCurrent, viewerId, fetchStartedAt });
     } catch (error) {
       Logger.warn('Failed to fetch missing users from Nexus:', { error });
     }
@@ -164,7 +170,7 @@ export class UserStreamApplication {
     await LocalStreamUsersService.upsert({ streamId, stream });
 
     // Identify users missing from cache that need full details fetched
-    const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds);
+    const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds, viewerId);
 
     // Calculate next skip value for pagination
     const nextSkip = skip + userIds.length;
@@ -208,7 +214,7 @@ export class UserStreamApplication {
   static async getOrFetchUsers({ userIds, viewerId, isCurrent }: TGetOrFetchUsersParams): Promise<void> {
     if (userIds.length === 0) return;
 
-    const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds);
+    const cacheMissUserIds = await this.getNotPersistedUsersInCache(userIds, viewerId);
     if (cacheMissUserIds.length === 0) return;
 
     await this.fetchMissingUsersFromNexus({ cacheMissUserIds, viewerId, isCurrent });
@@ -231,7 +237,7 @@ export class UserStreamApplication {
    *
    * @private
    */
-  private static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
-    return await LocalStreamUsersService.getNotPersistedUsersInCache(userIds);
+  private static async getNotPersistedUsersInCache(userIds: Pubky[], viewerId?: Pubky): Promise<Pubky[]> {
+    return await LocalStreamUsersService.getNotPersistedUsersInCache(userIds, viewerId);
   }
 }

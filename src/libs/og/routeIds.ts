@@ -12,6 +12,13 @@ import { isPubkyIdentifier, stripPubkyPrefix } from '@/libs/utils/utils';
  * strict z-base-32 (52 lowercase alphanumerics), so malformed variants are
  * rejected here instead of being passed downstream: callers treat `null` as
  * the fallback path, which costs zero Nexus round-trips and zero Sentry events.
+ *
+ * One crawler artefact is stripped rather than rejected: literal escape
+ * sequences. A scraper that resolved its own JSON/HTML copy of a URL hands the
+ * route the two characters `\` + `n` (`%5Cn%5Cn`), so the id ends in text that
+ * survives `trim()` and still starts and ends alphanumeric — it slipped past
+ * the shape checks and Nexus 400'd on it. Removing the sequence recovers the
+ * real id for the legitimate request.
  */
 
 /** `decodeURIComponent` without throwing on malformed input (`'abc%'`). */
@@ -24,13 +31,35 @@ export function safeDecode(value: string): string | null {
 }
 
 /**
+ * Removes crawler-appended literal escape sequences (`\n`, `\r`, `\t`) and
+ * their double-escaped forms (`\\n`): one or more backslashes followed by the
+ * letter of the sequence. Ids are bare z-base-32 strings, so a backslash is
+ * never part of one.
+ */
+export function stripEscapeSequences(value: string): string {
+  return value.replace(/\\+[nrt]/g, '');
+}
+
+/**
+ * Decodes a raw route segment, strips escape sequences and trims it.
+ * Returns `null` when the segment cannot be decoded at all.
+ */
+function normalizeSegment(raw: string): string | null {
+  const decoded = safeDecode(raw);
+  if (decoded === null) return null;
+  // Strip before trimming: a crawler can append an escape sequence after the
+  // whitespace (`id\n `), and only stripping exposes that trailing space.
+  return stripEscapeSequences(decoded).trim();
+}
+
+/**
  * Normalizes a profile id route param.
  * Returns `null` when the id cannot decode or is not a valid pubky identifier.
  */
 export function normalizeProfileId(raw: string): string | null {
-  const decoded = safeDecode(raw);
-  if (decoded === null) return null;
-  const id = stripPubkyPrefix(decoded.trim());
+  const segment = normalizeSegment(raw);
+  if (segment === null) return null;
+  const id = stripPubkyPrefix(segment);
   return isPubkyIdentifier(id) ? id : null;
 }
 
@@ -41,14 +70,13 @@ export function normalizeProfileId(raw: string): string | null {
  * alphanumeric character.
  */
 export function normalizePostIds(rawUserId: string, rawPostId: string): { userId: string; postId: string } | null {
-  const decodedUserId = safeDecode(rawUserId);
-  const decodedPostId = safeDecode(rawPostId);
-  if (decodedUserId === null || decodedPostId === null) return null;
+  const userSegment = normalizeSegment(rawUserId);
+  const postId = normalizeSegment(rawPostId);
+  if (userSegment === null || postId === null) return null;
 
-  const userId = stripPubkyPrefix(decodedUserId.trim());
+  const userId = stripPubkyPrefix(userSegment);
   if (!isPubkyIdentifier(userId)) return null;
 
-  const postId = decodedPostId.trim();
   // A post id is opaque to this layer (short id), but punctuation glued to it
   // by crawlers is never part of one. Mid-id characters stay untouched.
   if (postId.length === 0 || /^[^a-z0-9]|[^a-z0-9]$/i.test(postId)) return null;
