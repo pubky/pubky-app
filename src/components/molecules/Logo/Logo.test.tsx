@@ -69,6 +69,21 @@ describe('Logo', () => {
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
   });
 
+  it('scrolls to top when clicking logo on a custom feed', () => {
+    vi.mocked(usePathname).mockReturnValue('/feed/feed-abc123');
+
+    Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
+    const setItemSpy = vi.spyOn(window.sessionStorage, 'setItem');
+
+    render(<Logo />);
+    const link = screen.getByTestId('logo-image').closest('a');
+    expect(link).toBeTruthy();
+
+    fireEvent.click(link!);
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    expect(setItemSpy).not.toHaveBeenCalled();
+  });
+
   it('does not scroll to top when clicking logo on other pages', () => {
     vi.mocked(usePathname).mockReturnValue('/hot');
 
