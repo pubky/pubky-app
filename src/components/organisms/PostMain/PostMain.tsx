@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
-import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -15,6 +14,7 @@ import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/use
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import { useUndoRepost } from '@/hooks/useUndoRepost/useUndoRepost';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
@@ -67,17 +67,13 @@ function UndoableRepostHeader({
   indexedAt: Date | null;
 }) {
   const { formatRelativeTime } = useRelativeTime();
-  const { deletePost, isDeleting } = useDeletePost({
-    toastMessages: isCollectionShare
-      ? { deleted: 'Share removed', deleteFailed: 'Could not remove share. Try again.' }
-      : { deleted: 'Repost removed', deleteFailed: 'Could not remove repost. Try again.' },
-  });
+  const { undoRepost, isUndoing } = useUndoRepost(isCollectionShare);
 
   return (
     <RepostHeader
       isCollectionShare={isCollectionShare}
-      onUndo={() => void deletePost(postId)}
-      isUndoing={isDeleting}
+      onUndo={() => void undoRepost(postId)}
+      isUndoing={isUndoing}
       timeAgo={indexedAt ? formatRelativeTime(indexedAt) : null}
       indexedAt={indexedAt}
     />

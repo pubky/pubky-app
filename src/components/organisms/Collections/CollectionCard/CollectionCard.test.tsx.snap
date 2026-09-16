@@ -74,7 +74,7 @@ exports[`CollectionCard - Mobile Snapshots > matches the mobile snapshot with up
         >
           <div
             aria-label="2 posts"
-            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-card"
             data-cy="collection-count-badge"
             data-testid="container"
           >
@@ -394,7 +394,7 @@ exports[`CollectionCard - Snapshots > matches the default card snapshot 1`] = `
         >
           <div
             aria-label="2 posts"
-            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-card"
             data-cy="collection-count-badge"
             data-testid="container"
           >
@@ -729,7 +729,7 @@ exports[`CollectionCard - Snapshots > matches the snapshot for the wide timeline
         >
           <div
             aria-label="2 posts"
-            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-background"
+            class="flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 py-1 text-muted-foreground bg-card"
             data-cy="collection-count-badge"
             data-testid="container"
           >

@@ -54,14 +54,14 @@ export function RepostHeader({
       </Typography>
       <Button
         type="button"
-        variant="secondary"
+        variant="dark"
         size="sm"
         disabled={isUndoing}
         aria-busy={isUndoing}
         onClick={handleUndo}
         onAuxClick={(event) => event.stopPropagation()}
         data-cy="repost-undo-btn"
-        className="gap-2 border-card bg-card text-xs text-foreground hover:bg-card/90"
+        className="gap-2 px-3.5 text-xs font-bold"
       >
         {isUndoing ? <Loader2 aria-hidden="true" className="animate-spin" /> : null}
         {'Undo'}
