@@ -116,6 +116,20 @@ export function getNexusResponseStartedAt(response: object): number | undefined 
 }
 
 /**
+ * Forced revalidations currently in flight, keyed by serialized query key.
+ *
+ * TanStack coalesces concurrent fetchQuery calls that share a key, but only through its
+ * cache slot. A `force` call deliberately steps around that slot (it waits for an earlier
+ * request, then fetches with staleTime 0), so two forced callers hitting the same endpoint
+ * with the same ids each open their own request. That is the shape of the rate-limited
+ * by_ids bursts: several subscribers revalidating the same ids at once (a notification
+ * refresh landing on a TTL tick). Joining the first forced request preserves the freshness
+ * intent — the data still comes from a network revalidation started at or after the
+ * caller's own call — while halving the requests Nexus sees (PUBKY-APP-B3).
+ */
+const inFlightForcedQueries = new Map<string, Promise<unknown>>();
+
+/**
  * Queries Nexus API with automatic retry logic via TanStack Query.
  * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
  *
@@ -135,27 +149,47 @@ export async function queryNexus<T>({
   staleTime,
 }: TQueryNexusParams): Promise<T> {
   const queryKey = ['nexus', url, method, body];
-  if (force) {
-    // staleTime alone still joins a request started before the invalidating event.
-    // Wait for that request, then let concurrent revalidations share a new one.
-    const pending = nexusQueryClient.getQueryCache().find({ queryKey, exact: true });
-    if (pending?.state.fetchStatus === 'fetching') await pending.promise?.catch(() => {});
-  }
-  let startedAt: number | undefined;
-  const data = await nexusQueryClient.fetchQuery({
-    queryKey,
-    ...(force ? { staleTime: 0 } : staleTime !== undefined ? { staleTime } : {}),
-    queryFn: () => {
-      startedAt = Date.now();
-      return fetchNexus<T>({ url, method, body });
-    },
-  });
-  // Record the returned reference after TanStack's structural sharing. Cached
-  // and concurrent callers reuse this evidence rather than stamping a new time.
-  if (startedAt !== undefined) {
-    if (data !== null && typeof data === 'object') responseStartedAt.set(data, startedAt);
-    const cached = nexusQueryClient.getQueryData(queryKey);
-    if (cached !== null && typeof cached === 'object') responseStartedAt.set(cached, startedAt);
-  }
-  return data;
+
+  const execute = async (): Promise<T> => {
+    let startedAt: number | undefined;
+    const data = await nexusQueryClient.fetchQuery({
+      queryKey,
+      ...(force ? { staleTime: 0 } : staleTime !== undefined ? { staleTime } : {}),
+      queryFn: () => {
+        startedAt = Date.now();
+        return fetchNexus<T>({ url, method, body });
+      },
+    });
+    // Record the returned reference after TanStack's structural sharing. Cached
+    // and concurrent callers reuse this evidence rather than stamping a new time.
+    if (startedAt !== undefined) {
+      if (data !== null && typeof data === 'object') responseStartedAt.set(data, startedAt);
+      const cached = nexusQueryClient.getQueryData(queryKey);
+      if (cached !== null && typeof cached === 'object') responseStartedAt.set(cached, startedAt);
+    }
+    return data;
+  };
+
+  if (!force) return await execute();
+
+  const forceKey = JSON.stringify(queryKey);
+  const joined = inFlightForcedQueries.get(forceKey) as Promise<T> | undefined;
+  if (joined) return await joined;
+
+  // staleTime alone still joins a request started before the invalidating event.
+  // Wait for that request, then let concurrent revalidations share a new one.
+  const pending = nexusQueryClient.getQueryCache().find({ queryKey, exact: true });
+  if (pending?.state.fetchStatus === 'fetching') await pending.promise?.catch(() => {});
+
+  // Re-check after the await: a sibling forced call may have started while we waited.
+  const raced = inFlightForcedQueries.get(forceKey) as Promise<T> | undefined;
+  if (raced) return await raced;
+
+  const run = execute();
+  inFlightForcedQueries.set(forceKey, run);
+  const clear = () => {
+    if (inFlightForcedQueries.get(forceKey) === run) inFlightForcedQueries.delete(forceKey);
+  };
+  run.then(clear, clear);
+  return await run;
 }

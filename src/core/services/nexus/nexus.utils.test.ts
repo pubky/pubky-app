@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCdnUrl, getNexusUrl } from '@/config/nexus';
-import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode, RateLimitErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
+import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { mockResponse } from '@/test-utils/dom';
 import { asOpaque } from '@/test-utils/type-assertions';
 import {
@@ -267,6 +269,177 @@ describe('nexus.utils', () => {
         category: ErrorCategory.Client,
         code: ClientErrorCode.BAD_REQUEST,
       });
+    });
+  });
+
+  describe('429 pressure on the rate-limited by_ids endpoints', () => {
+    const mockFetch = vi.fn();
+    const originalFetch = globalThis.fetch;
+
+    const nexusResponse = (body: unknown) => new Response(JSON.stringify(body));
+    const tooManyRequests = (retryAfter?: string) =>
+      new Response('Too Many Requests', {
+        status: 429,
+        ...(retryAfter === undefined ? {} : { headers: { 'retry-after': retryAfter } }),
+      });
+
+    beforeEach(async () => {
+      vi.clearAllMocks();
+      globalThis.fetch = mockFetch;
+      const { nexusQueryClient } = await import('./nexus.query-client');
+      nexusQueryClient.clear();
+    });
+
+    afterEach(() => {
+      globalThis.fetch = originalFetch;
+      vi.useRealTimers();
+    });
+
+    it('collapses two concurrent identical posts/by_ids calls into one request', async () => {
+      const posts = [{ details: { author: 'author1', id: 'post1' } }];
+      mockFetch.mockResolvedValueOnce(nexusResponse(posts));
+
+      const [first, second] = await Promise.all([
+        NexusPostStreamService.fetchByIds({ post_ids: ['author1:post2', 'author1:post1'] }),
+        NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1', 'author1:post2'] }),
+      ]);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(first).toEqual(posts);
+      expect(second).toEqual(posts);
+    });
+
+    it('collapses two concurrent identical users/by_ids calls into one request', async () => {
+      const users = [{ details: { id: 'user1' } }];
+      mockFetch.mockResolvedValueOnce(nexusResponse(users));
+
+      await Promise.all([
+        NexusUserStreamService.fetchByIds({ user_ids: ['user2', 'user1'] }),
+        NexusUserStreamService.fetchByIds({ user_ids: ['user1', 'user2'] }),
+      ]);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('collapses two concurrent forced revalidations of the same ids into one request', async () => {
+      const posts = [{ details: { author: 'author1', id: 'post1' } }];
+      mockFetch.mockResolvedValueOnce(nexusResponse(posts));
+
+      const [first, second] = await Promise.all([
+        NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'], force: true }),
+        NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'], force: true }),
+      ]);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(first).toEqual(posts);
+      expect(second).toEqual(posts);
+    });
+
+    it('does not retry a 429 before the server Retry-After (delta-seconds) has elapsed', async () => {
+      vi.useFakeTimers();
+      mockFetch.mockResolvedValueOnce(tooManyRequests('5')).mockResolvedValueOnce(nexusResponse([]));
+
+      const pending = NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'] });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(4_900);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(200);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      await expect(pending).resolves.toEqual([]);
+    });
+
+    it('does not retry a 429 before the server Retry-After (HTTP-date) has elapsed', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-09-16T00:00:00Z'));
+      mockFetch
+        .mockResolvedValueOnce(tooManyRequests(new Date(Date.now() + 4_000).toUTCString()))
+        .mockResolvedValueOnce(nexusResponse([]));
+
+      const pending = NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'] });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(3_900);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(200);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      await expect(pending).resolves.toEqual([]);
+    });
+
+    it('clamps a long Retry-After so the caller is not parked for the server-dictated hour', async () => {
+      vi.useFakeTimers();
+      mockFetch.mockResolvedValueOnce(tooManyRequests('3600')).mockResolvedValueOnce(nexusResponse([]));
+
+      const pending = NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'] });
+      await vi.advanceTimersByTimeAsync(0);
+
+      await vi.advanceTimersByTimeAsync(29_900);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(200);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      await expect(pending).resolves.toEqual([]);
+    });
+
+    it('keeps the 2s floor when the 429 carries no Retry-After', async () => {
+      vi.useFakeTimers();
+      mockFetch.mockResolvedValueOnce(tooManyRequests()).mockResolvedValueOnce(nexusResponse([]));
+
+      const pending = NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'] });
+      await vi.advanceTimersByTimeAsync(0);
+
+      await vi.advanceTimersByTimeAsync(1_900);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(200);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      await expect(pending).resolves.toEqual([]);
+    });
+
+    it('still surfaces the rate-limit error when the retry is rejected too', async () => {
+      vi.useFakeTimers();
+      mockFetch.mockImplementation(() => Promise.resolve(tooManyRequests('3')));
+
+      const pending = NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'] });
+      const rejection = expect(pending).rejects.toMatchObject({
+        category: ErrorCategory.RateLimit,
+        code: RateLimitErrorCode.RATE_LIMITED,
+      });
+      await vi.advanceTimersByTimeAsync(3_500);
+      await rejection;
+      // Initial attempt plus the single rateLimited retry — no storm.
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves the non-429 retry path unchanged', async () => {
+      vi.useFakeTimers();
+      mockFetch.mockImplementation(() => Promise.resolve(new Response('Bad Request', { status: 400 })));
+
+      await expect(queryNexus({ url: `${getNexusUrl()}/probe-client-error` })).rejects.toMatchObject({
+        category: ErrorCategory.Client,
+        code: ClientErrorCode.BAD_REQUEST,
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+
+      mockFetch.mockClear();
+      mockFetch.mockImplementation(() => Promise.resolve(new Response('Unavailable', { status: 503 })));
+      const pending = queryNexus({ url: `${getNexusUrl()}/probe-server-error` });
+      const rejection = expect(pending).rejects.toMatchObject({ category: ErrorCategory.Server });
+
+      // serverError backoff is 1s/2s/4s (1000 * 2^attemptIndex) — unchanged, and the
+      // rate-limit floor must not leak into this path.
+      await vi.advanceTimersByTimeAsync(900);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(20_000);
+      await rejection;
+      expect(mockFetch).toHaveBeenCalledTimes(4);
     });
   });
 });
