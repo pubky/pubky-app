@@ -55,6 +55,7 @@ describe('usePostHeaderVisibility', () => {
 
     expect(result.current.showRepostHeader).toBe(false);
     expect(result.current.shouldShowPostHeader).toBe(true);
+    expect(result.current.originalPostId).toBeNull();
   });
 
   it('hides PostHeader for simple repost (no content) by current user', () => {
@@ -75,6 +76,7 @@ describe('usePostHeaderVisibility', () => {
 
     expect(result.current.showRepostHeader).toBe(true);
     expect(result.current.shouldShowPostHeader).toBe(false);
+    expect(result.current.originalPostId).toBe('orig');
   });
 
   it('hides RepostHeader for quote repost (with text content) by current user', () => {

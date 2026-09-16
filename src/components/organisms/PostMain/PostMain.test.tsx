@@ -8,7 +8,6 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
-import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayoutContext';
@@ -315,17 +314,6 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   })),
 }));
 
-vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
-  useRepostInfo: vi.fn(() => ({
-    isRepost: false,
-    repostAuthorId: null,
-    isCurrentUserRepost: false,
-    originalPostId: null,
-    isLoading: false,
-    hasError: false,
-  })),
-}));
-
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
   useDeletePost: vi.fn(() => ({
     isDeleting: false,
@@ -337,6 +325,7 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
   usePostHeaderVisibility: vi.fn(() => ({
     showRepostHeader: false,
     shouldShowPostHeader: true,
+    originalPostId: null,
   })),
 }));
 
@@ -398,14 +387,7 @@ describe('PostMain', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
-    });
-    vi.mocked(useRepostInfo).mockReturnValue({
-      isRepost: false,
-      repostAuthorId: null,
-      isCurrentUserRepost: false,
       originalPostId: null,
-      isLoading: false,
-      hasError: false,
     });
     vi.mocked(useDeletePost).mockReturnValue({
       isDeleting: false,
@@ -648,6 +630,7 @@ describe('PostMain', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:repost-1" />);
@@ -660,6 +643,7 @@ describe('PostMain', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:simple-repost-1" />);
@@ -674,6 +658,7 @@ describe('PostMain', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:quote-repost-1" />);
@@ -688,6 +673,7 @@ describe('PostMain', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
 
     render(<PostMain postId="other-user:repost-1" />);
@@ -717,6 +703,7 @@ describe('PostMain', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:repost-with-attachments-1" />);
@@ -731,6 +718,7 @@ describe('PostMain', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:loading-repost-1" />);
@@ -746,6 +734,7 @@ describe('PostMain', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:null-repost-1" />);
@@ -760,6 +749,7 @@ describe('PostMain', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:simple-repost-1" />);
@@ -774,6 +764,7 @@ describe('PostMain', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:simple-repost-1" />);
@@ -784,20 +775,13 @@ describe('PostMain', () => {
     });
   });
 
-  // Seeds useRepostInfo + usePostDetails so `me:share-1` reads as a contentless
+  // Seeds usePostHeaderVisibility + usePostDetails so `me:share-1` reads as a contentless
   // share whose original `author:collection-post-1` is a collection.
   const mockCollectionShare = () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
-    });
-    vi.mocked(useRepostInfo).mockReturnValue({
-      isRepost: true,
-      repostAuthorId: 'me',
-      isCurrentUserRepost: true,
       originalPostId: 'author:collection-post-1',
-      isLoading: false,
-      hasError: false,
     });
     vi.mocked(usePostDetails).mockImplementation((compositeId) => ({
       postDetails: {
@@ -830,14 +814,7 @@ describe('PostMain', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
-    });
-    vi.mocked(useRepostInfo).mockReturnValue({
-      isRepost: true,
-      repostAuthorId: 'me',
-      isCurrentUserRepost: true,
       originalPostId: 'author:collection-post-1',
-      isLoading: false,
-      hasError: false,
     });
     vi.mocked(usePostDetails).mockImplementation((compositeId) =>
       compositeId === 'author:collection-post-1'
@@ -867,6 +844,7 @@ describe('PostMain', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
+      originalPostId: null,
     });
     vi.mocked(useDeletePost).mockReturnValue({
       isDeleting: true,
@@ -882,6 +860,7 @@ describe('PostMain', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:simple-repost-1" />);
@@ -934,6 +913,7 @@ describe('PostMain', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
+      originalPostId: null,
     });
 
     render(<PostMain postId="me:simple-repost-1" />);
@@ -994,6 +974,7 @@ describe('PostMain', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
 
     render(
@@ -1196,6 +1177,7 @@ describe('PostMain - Snapshots', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
@@ -1209,14 +1191,6 @@ describe('PostMain - Snapshots', () => {
         is_blurred: false,
       },
       isLoading: false,
-    });
-    vi.mocked(useRepostInfo).mockReturnValue({
-      isRepost: false,
-      repostAuthorId: null,
-      isCurrentUserRepost: false,
-      originalPostId: null,
-      isLoading: false,
-      hasError: false,
     });
     vi.mocked(useDeletePost).mockReturnValue({
       isDeleting: false,
@@ -1290,6 +1264,7 @@ describe('PostMain - Snapshots', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
+      originalPostId: null,
     });
 
     const { container } = render(<PostMain postId="me:simple-repost-1" />);
@@ -1301,6 +1276,7 @@ describe('PostMain - Snapshots', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
 
     const { container } = render(<PostMain postId="me:quote-repost-1" />);
@@ -1312,6 +1288,7 @@ describe('PostMain - Snapshots', () => {
     mockUsePostHeaderVisibility.mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
 
     const { container } = render(<PostMain postId="other-user:repost-1" />);
@@ -1341,6 +1318,7 @@ describe('PostMain - Mobile Snapshots', () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: false,
       shouldShowPostHeader: true,
+      originalPostId: null,
     });
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
@@ -1354,14 +1332,6 @@ describe('PostMain - Mobile Snapshots', () => {
         is_blurred: false,
       },
       isLoading: false,
-    });
-    vi.mocked(useRepostInfo).mockReturnValue({
-      isRepost: false,
-      repostAuthorId: null,
-      isCurrentUserRepost: false,
-      originalPostId: null,
-      isLoading: false,
-      hasError: false,
     });
     vi.mocked(useDeletePost).mockReturnValue({
       isDeleting: false,

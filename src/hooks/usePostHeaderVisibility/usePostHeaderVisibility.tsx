@@ -18,7 +18,7 @@ import type { UsePostHeaderVisibilityResult } from './usePostHeaderVisibility.ty
  *   - Shown during loading state (to avoid layout shift)
  *
  * @param postId - Composite post ID in format "authorId:postId"
- * @returns Object with showRepostHeader and shouldShowPostHeader flags
+ * @returns Header visibility flags and the original post ID from the shared repost query
  *
  * @example
  * ```tsx
@@ -34,7 +34,7 @@ import type { UsePostHeaderVisibilityResult } from './usePostHeaderVisibility.ty
  */
 export function usePostHeaderVisibility(postId: string): UsePostHeaderVisibilityResult {
   const { postDetails } = usePostDetails(postId);
-  const { isRepost, isCurrentUserRepost } = useRepostInfo(postId);
+  const { isRepost, isCurrentUserRepost, originalPostId } = useRepostInfo(postId);
 
   // Determine if post has any content (text or attachments)
   // A repost with attachments but no text should still show the PostHeader
@@ -59,5 +59,6 @@ export function usePostHeaderVisibility(postId: string): UsePostHeaderVisibility
   return {
     showRepostHeader,
     shouldShowPostHeader,
+    originalPostId,
   };
 }

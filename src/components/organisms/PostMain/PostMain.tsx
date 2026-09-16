@@ -14,7 +14,6 @@ import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
-import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
@@ -106,11 +105,10 @@ export function PostMain({
 
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
-  const { showRepostHeader, shouldShowPostHeader } = usePostHeaderVisibility(postId);
+  const { showRepostHeader, shouldShowPostHeader, originalPostId } = usePostHeaderVisibility(postId);
   // Contentless collection shares get a distinct full-bleed treatment (#2121):
   // repost header + flush CollectionCard, no post chrome (header, actions, tags).
   // The original's details query stays disabled unless the header is showing.
-  const { originalPostId } = useRepostInfo(postId);
   const { postDetails: originalPostDetails } = usePostDetails(showRepostHeader ? originalPostId : null);
   const collectionShareOriginalId =
     showRepostHeader && originalPostDetails?.kind === 'collection' ? originalPostId : null;

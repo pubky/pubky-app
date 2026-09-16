@@ -350,7 +350,7 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => {
 });
 
 vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => {
-  const result = { showRepostHeader: false, shouldShowPostHeader: true };
+  const result = { showRepostHeader: false, shouldShowPostHeader: true, originalPostId: null };
   return { usePostHeaderVisibility: () => result };
 });
 
