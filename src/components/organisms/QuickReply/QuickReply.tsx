@@ -7,6 +7,7 @@ import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConne
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { Typography } from '@/atoms/Typography/Typography';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useCharacterLimitWarning } from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
 import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/useComposerHeightAnimation';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
@@ -119,6 +120,7 @@ export function QuickReply({
 
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const characterLimit = isExpanded ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
+  useCharacterLimitWarning(characterLimit);
 
   const contentProps: QuickReplyContentProps = {
     currentUserPubky,
