@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getUserProfileUrl } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { CardContent } from '@/atoms/Card/Card';
@@ -103,6 +103,12 @@ export function PostMainListRow({
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const isMobile = useIsMobile();
 
+  // The panel mounts on expand. On mobile its reveal must not focus the input, so the scroll that
+  // `focus()` used to perform has to happen here, after the panel exists.
+  useEffect(() => {
+    if (isMobile && tagsExpanded) tagsPanelRef.current?.reveal();
+  }, [isMobile, tagsExpanded]);
+
   const displayPostDetails = shouldUseOriginalPost ? originalPostDetails : postDetails;
 
   if (!postDetails || !displayPostDetails) {
@@ -129,7 +135,8 @@ export function PostMainListRow({
   const handleTagClick = () => {
     setTagsExpanded((previousValue) => !previousValue);
     // The tag button only reveals the tags. On mobile that reveal must not focus the input and pop
-    // the soft keyboard: the `[+]` add control owns autofocus.
+    // the soft keyboard: the `[+]` add control owns autofocus. The reveal still scrolls the panel
+    // into view, from the effect below, once it has mounted.
     if (!isMobile) tagsPanelRef.current?.focus();
   };
 

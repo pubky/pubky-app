@@ -160,9 +160,13 @@ export function PostMain({
                           postId={postId}
                           onTagClick={() => {
                             // The tag button only reveals the tags. On mobile that reveal must not
-                            // focus the input and pop the soft keyboard: the `[+]` add control owns
-                            // autofocus.
-                            if (isMobile) return;
+                            // focus the input and pop the soft keyboard: the `[+]` add control
+                            // owns autofocus. It still has to bring the panel into view, which the
+                            // desktop path gets from `focus()` as a side effect.
+                            if (isMobile) {
+                              mobileTagsPanelRef.current?.reveal();
+                              return;
+                            }
                             mobileTagsPanelRef.current?.focus();
                             desktopTagsPanelRef.current?.focus();
                           }}

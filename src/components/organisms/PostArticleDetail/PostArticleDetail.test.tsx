@@ -1,10 +1,11 @@
+import React, { type ElementType, forwardRef, type ReactNode, useImperativeHandle } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { ElementType, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import type { AttachmentConstructed } from '../PostAttachments/PostAttachments.types';
 import { PostArticleDetail } from './PostArticleDetail';
 
@@ -143,11 +144,28 @@ vi.mock('@/organisms/DialogRepost/DialogRepost', () => ({
   ),
 }));
 
-vi.mock('../PostTagsPanel/PostTagsPanel', () => ({
-  PostTagsPanel: ({ postId, className }: { postId: string; className?: string }) => (
-    <div data-testid="post-tags-panel" data-post-id={postId} className={className} />
-  ),
+const { mockPanelFocus, mockPanelReveal } = vi.hoisted(() => ({
+  mockPanelFocus: vi.fn(),
+  mockPanelReveal: vi.fn(),
 }));
+
+vi.mock('../PostTagsPanel/PostTagsPanel', () => {
+  const PostTagsPanel = forwardRef<unknown, { postId: string; className?: string }>(({ postId, className }, ref) => {
+    // `lg:hidden` marks the mobile copy of the panel, so the revealed one can be identified.
+    const variant = className?.includes('lg:hidden') ? 'mobile' : 'desktop';
+    useImperativeHandle(
+      ref,
+      () => ({
+        focus: () => mockPanelFocus(variant),
+        reveal: () => mockPanelReveal(variant),
+      }),
+      [variant],
+    );
+    return <div data-testid="post-tags-panel" data-post-id={postId} className={className} />;
+  });
+  PostTagsPanel.displayName = 'PostTagsPanel';
+  return { PostTagsPanel };
+});
 
 vi.mock('../PostInlineTagsActions/PostInlineTagsActions', () => ({
   PostInlineTagsActions: ({
@@ -236,6 +254,34 @@ describe('PostArticleDetail', () => {
     expect(screen.getAllByTestId('post-tags-panel')).toHaveLength(2);
     expect(screen.getByTestId('post-actions-bar')).toBeInTheDocument();
     expect(screen.queryByTestId('post-inline-tags-actions')).not.toBeInTheDocument();
+  });
+
+  it('scrolls the mobile tags panel into view without focusing its input on mobile (issue #1650)', () => {
+    useHomeStore.getState().setLayout(LAYOUT.WIDE);
+    setMobileViewport();
+
+    try {
+      render(<PostArticleDetail {...defaultProps} />);
+
+      fireEvent.click(screen.getByTestId('tag-button'));
+
+      expect(mockPanelReveal).toHaveBeenCalledWith('mobile');
+      expect(mockPanelFocus).not.toHaveBeenCalled();
+    } finally {
+      resetViewport();
+    }
+  });
+
+  it('focuses the tags input from the tag button on desktop (issue #1650)', () => {
+    useHomeStore.getState().setLayout(LAYOUT.WIDE);
+
+    render(<PostArticleDetail {...defaultProps} />);
+
+    fireEvent.click(screen.getByTestId('tag-button'));
+
+    expect(mockPanelFocus).toHaveBeenCalledWith('mobile');
+    expect(mockPanelFocus).toHaveBeenCalledWith('desktop');
+    expect(mockPanelReveal).not.toHaveBeenCalled();
   });
 
   it('renders the article title as h1', () => {
