@@ -116,7 +116,8 @@ export function getNexusResponseStartedAt(response: object): number | undefined 
 }
 
 /**
- * Forced revalidations currently in flight, keyed by serialized query key.
+ * Forced revalidations whose network request has already started, keyed by serialized query
+ * key.
  *
  * A forced caller must not receive data fetched before the event that forced it: that is
  * the shape of the rate-limited by_ids bursts (a notification refresh landing on a TTL
@@ -127,11 +128,14 @@ export function getNexusResponseStartedAt(response: object): number | undefined 
 const inFlightForcedQueries = new Map<string, Promise<unknown>>();
 
 /**
- * The one follow-up revalidation shared by the forced callers waiting behind the running
- * request, keyed by serialized query key. Without it each waiter would open its own
- * request; with it a burst of subscribers behind one running request still costs a single
- * extra request (PUBKY-APP-B3). It is dropped the moment the follow-up starts, because a
- * caller arriving after that needs a request started after its own call, not this one.
+ * The forced revalidations that have not opened their network request yet -- one scheduled
+ * per key, plus the single follow-up shared by the callers behind a running request.
+ *
+ * A scheduled revalidation starts its request after any caller that arrived before it did,
+ * so those callers can share it: a burst of subscribers behind one pending request then
+ * costs one request instead of one per caller (PUBKY-APP-B3). The moment the request
+ * starts, the entry moves to `inFlightForcedQueries` and the run is no longer shareable --
+ * a caller arriving after that needs a request started after its own call, not this one.
  */
 const queuedForcedQueries = new Map<string, Promise<unknown>>();
 
@@ -181,29 +185,44 @@ export async function queryNexus<T>({
   const forceKey = JSON.stringify(queryKey);
 
   const startRun = (): Promise<T> => {
-    const run = (async () => {
+    const waitForPending = (async () => {
       // staleTime alone still joins a request started before the invalidating event.
-      // Wait for it, then let concurrent revalidations share a new one.
+      // Wait for it, then revalidate behind it.
       const pending = nexusQueryClient.getQueryCache().find({ queryKey, exact: true });
       if (pending?.state.fetchStatus === 'fetching') await pending.promise?.catch(() => {});
-      return await execute();
     })();
-    inFlightForcedQueries.set(forceKey, run);
+
+    const run: Promise<T> = waitForPending
+      .then(() => {
+        // The network request begins here, and from now on this run is not shareable: a
+        // caller arriving after this point needs a request started after its own call.
+        if (queuedForcedQueries.get(forceKey) === run) queuedForcedQueries.delete(forceKey);
+        inFlightForcedQueries.set(forceKey, run);
+      })
+      .then(() => execute());
+
+    // Shareable until the request starts: every caller that arrives before it does is
+    // still served by a request that begins after its own call.
+    queuedForcedQueries.set(forceKey, run);
     const clear = () => {
+      if (queuedForcedQueries.get(forceKey) === run) queuedForcedQueries.delete(forceKey);
       if (inFlightForcedQueries.get(forceKey) === run) inFlightForcedQueries.delete(forceKey);
     };
     run.then(clear, clear);
     return run;
   };
 
+  // A revalidation that has not started yet is shared: its request will begin after this
+  // caller's own event, so the data comes back fresh for this caller too, and callers that
+  // arrive behind one pending ordinary request cost a single revalidation between them.
+  const scheduled = queuedForcedQueries.get(forceKey) as Promise<T> | undefined;
+  if (scheduled) return await scheduled;
+
   if (!inFlightForcedQueries.has(forceKey)) return await startRun();
 
-  // A revalidation is already in flight, and it began before this caller's event. Share
-  // one follow-up behind it with the other waiters instead of handing back that older
+  // A revalidation has started, and it began before this caller's event. Share one
+  // follow-up behind it with the other waiters instead of handing back that older
   // response (which would come back stamped as fresh) or opening a request each.
-  const shared = queuedForcedQueries.get(forceKey) as Promise<T> | undefined;
-  if (shared) return await shared;
-
   const followUp = inFlightForcedQueries
     .get(forceKey)!
     .catch(() => {})

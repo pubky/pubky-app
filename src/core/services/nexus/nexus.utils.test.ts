@@ -321,20 +321,51 @@ describe('nexus.utils', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
-    it('does not reuse a forced revalidation already in flight, and starts the follow-up after it settles', async () => {
+    it('does not reuse a forced revalidation that is already fetching, and starts the follow-up after it settles', async () => {
       const posts = [{ details: { author: 'author1', id: 'post1' } }];
-      mockFetch
-        .mockImplementationOnce(() => Promise.resolve(nexusResponse([])))
-        .mockImplementationOnce(() => Promise.resolve(nexusResponse(posts)));
+      const inFlight = Promise.withResolvers<Response>();
+      const url = `${getNexusUrl()}/forced-follow-up-after-start-test`;
+      mockFetch.mockReturnValueOnce(inFlight.promise).mockImplementation(() => Promise.resolve(nexusResponse(posts)));
 
-      const [older, fresh] = await Promise.all([
-        NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'], force: true }),
-        NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'], force: true }),
-      ]);
+      const older = queryNexus<object>({ url, force: true });
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+      const fresh = queryNexus<object>({ url, force: true });
+      inFlight.resolve(nexusResponse([]));
 
+      expect(await older).toEqual([]);
+      expect(await fresh).toEqual(posts);
       expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(older).toEqual([]);
-      expect(fresh).toEqual(posts);
+    });
+
+    it('shares one revalidation among the forced callers that arrive before it starts, behind a pending ordinary request', async () => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+      const ordinary = Promise.withResolvers<Response>();
+      const url = `${getNexusUrl()}/pending-ordinary-forced-waiters-test`;
+      mockFetch
+        .mockReturnValueOnce(ordinary.promise)
+        .mockImplementation(() => Promise.resolve(nexusResponse([{ details: { id: 'user1' } }])));
+      try {
+        // A profile cache-miss fetch, still running when a TTL tick and a notification
+        // hydration both force the same user batch.
+        const miss = queryNexus<object>({ url });
+        await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+        now.mockReturnValue(2_000);
+        const ttl = queryNexus<object>({ url, force: true });
+        const notification = queryNexus<object>({ url, force: true });
+        ordinary.resolve(nexusResponse([]));
+
+        expect(await miss).toEqual([]);
+        const [fromTtl, fromNotification] = await Promise.all([ttl, notification]);
+        // Two requests: the ordinary fetch, then one revalidation shared by both forced
+        // callers, because it starts after both of them. A third request would load the
+        // rate-limited endpoint without buying the later caller any freshness.
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(fromTtl).toBe(fromNotification);
+        expect(fromTtl).toEqual([{ details: { id: 'user1' } }]);
+        expect(getNexusResponseStartedAt(fromTtl)).toBe(2_000);
+      } finally {
+        now.mockRestore();
+      }
     });
 
     it('gives a forced caller a response started after its own call, never the older in-flight one', async () => {
