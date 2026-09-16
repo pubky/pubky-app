@@ -17,7 +17,7 @@ export function SearchTagSection({ title, tags, onTagClick }: SearchTagSectionPr
       <Typography size="xs" className="tracking-widest text-muted-foreground uppercase">
         {title}
       </Typography>
-      <Container overrideDefaults className="flex flex-wrap gap-3">
+      <Container overrideDefaults className="flex flex-wrap gap-2">
         {tags.map((tag) => (
           <PostTag key={tag.name} label={tag.name} onClick={() => onTagClick(tag.name)} />
         ))}

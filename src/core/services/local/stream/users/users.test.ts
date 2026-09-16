@@ -12,7 +12,8 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
-import type { NexusTag, NexusUser } from '@/services/nexus/nexus.types';
+import { NexusSocialGraphStatus, type NexusTag, type NexusUser } from '@/services/nexus/nexus.types';
+import { asInvalid } from '@/test-utils/type-assertions';
 
 describe('LocalStreamUsersService', () => {
   const targetUserId = 'user-target' as Pubky;
@@ -228,6 +229,47 @@ describe('LocalStreamUsersService', () => {
       const result = await LocalStreamUsersService.persistUsers(mockUsers);
 
       expect(result).toEqual(userIds);
+    });
+
+    it('should fold the social graph status into the details row', async () => {
+      const userId = 'user-1' as Pubky;
+
+      await persistAndVerifyUser(userId, { social_graph_status: NexusSocialGraphStatus.ESTABLISHED });
+
+      const details = await UserDetailsModel.findById(userId);
+      expect(details?.social_graph_status).toBe(NexusSocialGraphStatus.ESTABLISHED);
+    });
+
+    it('should store a null social graph status when Nexus has no ranking', async () => {
+      const userId = 'user-1' as Pubky;
+
+      await persistAndVerifyUser(userId, { social_graph_status: null });
+
+      const details = await UserDetailsModel.findById(userId);
+      expect(details?.social_graph_status).toBeNull();
+    });
+
+    it('should normalize a social graph status this build does not know to null', async () => {
+      const userId = 'user-1' as Pubky;
+      const mockUser = createMockNexusUser(userId, {
+        social_graph_status: asInvalid<NexusSocialGraphStatus>('trusted'),
+      });
+
+      await LocalStreamUsersService.persistUsers([mockUser]);
+
+      const details = await UserDetailsModel.findById(userId);
+      expect(details?.social_graph_status).toBeNull();
+    });
+
+    it('should normalize an absent social graph status (older Nexus) to null', async () => {
+      const userId = 'user-1' as Pubky;
+      const mockUser = createMockNexusUser(userId);
+      expect(mockUser.social_graph_status).toBeUndefined();
+
+      await LocalStreamUsersService.persistUsers([mockUser]);
+
+      const details = await UserDetailsModel.findById(userId);
+      expect(details?.social_graph_status).toBeNull();
     });
 
     it('should handle users with tags', async () => {

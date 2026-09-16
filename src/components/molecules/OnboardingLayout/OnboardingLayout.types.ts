@@ -16,4 +16,10 @@ export interface OnboardingLayoutProps {
    * Disable when navigation should keep a fixed distance from the content.
    */
   pinNavigationToBottom?: boolean;
+  /**
+   * Overrides for the root container, merged last. Lets non-onboarding
+   * consumers (e.g. /settings/edit) align the gutter with their own shell
+   * without changing the onboarding flows.
+   */
+  className?: string;
 }

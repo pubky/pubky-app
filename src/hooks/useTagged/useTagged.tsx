@@ -9,7 +9,7 @@ import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { TAGS_PER_PAGE } from './useTagged.constants';
@@ -174,14 +174,11 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           return next;
         });
 
-        toast({
-          title: `Tag added: ${label}`,
-        });
         return { success: true };
       } catch {
         toast({
           variant: 'error',
-          description: `Could not add tag: ${label}`,
+          description: 'Could not add tag',
         });
         return { success: false, error: 'Failed to add tag' };
       }
@@ -227,10 +224,6 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
           // TagController.commitDelete updates IndexedDB first and rolls back on homeserver failure.
           await TagController.commitDelete(params);
-
-          toast({
-            title: `Tag removed: ${tag.label}`,
-          });
         } else {
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
           await TagController.commitCreate(params);
@@ -240,10 +233,6 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
             const next = new Map(prev);
             next.delete(labelLower);
             return next;
-          });
-
-          toast({
-            title: `Tag added: ${tag.label}`,
           });
         }
       } catch {
@@ -257,7 +246,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
         }
         toast({
           variant: 'error',
-          description: userIsTagger ? `Could not remove tag: ${tag.label}` : `Could not add tag: ${tag.label}`,
+          description: userIsTagger ? 'Could not remove tag' : 'Could not add tag',
         });
       }
     },

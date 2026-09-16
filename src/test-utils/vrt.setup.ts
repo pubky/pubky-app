@@ -28,7 +28,9 @@ import { vi } from 'vitest';
 // Applied once per test file at setup time.
 
 // 1. Disable animations, transitions, and caret blinking — these are the
-//    most common causes of flaky pixel diffs.
+//    most common causes of flaky pixel diffs. `*` does not match
+//    pseudo-elements; list `::placeholder` so the 150ms composer prompt
+//    fade cannot race a focused capture.
 // 2. Hide the and document scrollbars (OS-dependent gutter)
 // 3. Freeze facehash avatars — disable 3D tilt, blink, and hover transitions
 //    (see FacehashAvatar `__VRT__` props) so GPU rasterisation is identical
@@ -38,6 +40,11 @@ const stabilizerCss = `
     transition: none !important;
     animation: none !important;
     caret-color: transparent !important;
+  }
+
+  *::placeholder {
+    transition: none !important;
+    animation: none !important;
   }
 
   [data-facehash],
@@ -95,10 +102,11 @@ vi.mock('next/image', () => ({
   default: ({ src, alt, width, height, fill, className, style }: Record<string, unknown>) => {
     // Static imports resolve to `{ src, width, height }`; string srcs pass through.
     const resolvedSrc = typeof src === 'object' && src !== null ? (src as { src: string }).src : src;
-    // `fill` makes next/image absolutely cover its positioned parent.
-    const fillStyle = fill
-      ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }
-      : undefined;
+    // `fill` makes next/image absolutely cover its positioned parent. Like the
+    // real component, set only position/size here: object-fit stays with the
+    // component's className (`object-contain` / `object-cover`) so VRT renders
+    // what the app renders.
+    const fillStyle = fill ? { position: 'absolute', inset: 0, width: '100%', height: '100%' } : undefined;
     return createElement('img', {
       src: resolvedSrc,
       alt: alt ?? '',

@@ -7,7 +7,7 @@ import { BookmarkController } from '@/controllers/bookmark/bookmark';
 import { PostController } from '@/controllers/post/post';
 import { Logger } from '@/libs/logger/logger';
 import { isPostDeleted, readFromClipboard } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { parsePostReference } from '@/pipes/post/post.reference';
 import { useAuthStore } from '@/stores/auth/auth.store';

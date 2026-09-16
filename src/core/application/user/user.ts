@@ -1,12 +1,12 @@
-import { baseUriBuilder, followUriBuilder } from 'pubky-app-specs';
+import { followUriBuilder } from 'pubky-app-specs';
 import type {
   TEnsureModerationFollowParams,
   TUserApplicationFollowParams,
   TUserCountsOrFetchResult,
+  TUserSocialGraphStatusResult,
 } from '@/application/user/user.types';
-import { getModerationId } from '@/config/moderation';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
-import type { TPubkyListParams } from '@/controllers/user/user.type';
+import type { TFetchUserParams, TPubkyListParams } from '@/controllers/user/user.type';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -34,17 +34,13 @@ import { NexusUserService } from '@/services/nexus/user/user';
 import type { TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
 
 export class UserApplication {
-  private static moderationFollowMarkerUrl(follower: Pubky, moderationId: Pubky): string {
-    return `${baseUriBuilder(follower)}migrations/moderation-follow/v1/${moderationId}.json`;
-  }
-
-  private static async writeModerationFollowMarker(follower: Pubky, moderationId: Pubky): Promise<void> {
-    await HomeserverService.request({
-      method: HttpMethod.PUT,
-      url: this.moderationFollowMarkerUrl(follower, moderationId),
-      bodyJson: { moderationId, completedAt: Date.now() },
-    });
-  }
+  /**
+   * Full-user fetches in flight, keyed by user and viewer. Responsive profile surfaces
+   * (desktop sidebar, mobile overview) stay mounted together, so several local-first hooks
+   * can miss the cache for the same user at once; sharing one promise keeps the Nexus
+   * request and the multi-table persist to a single run.
+   */
+  private static readonly inFlightFetches = new Map<string, Promise<NexusUserDetails | null>>();
 
   /**
    * Get user details from local database
@@ -98,10 +94,10 @@ export class UserApplication {
    *
    * Preferred over `getOrFetchDetails` / `getOrFetchCounts` when the caller needs the full entity cached.
    *
-   * @param params - Parameters containing user ID
+   * @param params - Parameters containing user ID and optional viewer ID (scopes the relationship row)
    * @returns Promise resolving to user details or null if not found
    */
-  static async getOrFetch({ userId }: TReadProfileParams): Promise<NexusUserDetails | null> {
+  static async getOrFetch({ userId, viewerId }: TFetchUserParams): Promise<NexusUserDetails | null> {
     // 1. Check local cache first
     const localDetails = await LocalUserService.readDetails({ userId });
     if (localDetails) {
@@ -110,7 +106,7 @@ export class UserApplication {
 
     // 2. Fetch full user from Nexus batch endpoint
     try {
-      const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId] });
+      const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId], viewer_id: viewerId });
 
       if (!users || users.length === 0) {
         Logger.warn('User not found on Nexus', { userId });
@@ -133,12 +129,24 @@ export class UserApplication {
    * Use instead of `getOrFetch` when the caller already knows the user is not cached
    * (e.g. `useLocalFirstQuery` hook where `useLiveQuery` handles the local read).
    *
-   * @param params - Parameters containing user ID
+   * Concurrent calls for the same user and viewer share a single request and persist.
+   *
+   * @param params - Parameters containing user ID and optional viewer ID (scopes the relationship row)
    * @returns Promise resolving to user details or null if not found on Nexus
    */
-  static async fetch({ userId }: TReadProfileParams): Promise<NexusUserDetails | null> {
+  static async fetch({ userId, viewerId }: TFetchUserParams): Promise<NexusUserDetails | null> {
+    const key = `${userId}:${viewerId ?? ''}`;
+    const inFlight = this.inFlightFetches.get(key);
+    if (inFlight) return await inFlight;
+
+    const request = this.fetchAndPersist({ userId, viewerId }).finally(() => this.inFlightFetches.delete(key));
+    this.inFlightFetches.set(key, request);
+    return await request;
+  }
+
+  private static async fetchAndPersist({ userId, viewerId }: TFetchUserParams): Promise<NexusUserDetails | null> {
     try {
-      const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId] });
+      const users = await NexusUserStreamService.fetchByIds({ user_ids: [userId], viewer_id: viewerId });
 
       if (!users || users.length === 0) {
         Logger.warn('User not found on Nexus', { userId });
@@ -152,6 +160,16 @@ export class UserApplication {
     }
 
     return await LocalUserService.readDetails({ userId });
+  }
+
+  /**
+   * Reads a user's social graph badge tier from local database.
+   * Local-only read per ADR 0001 (get* methods don't call Nexus).
+   * @param params - Parameters containing user ID
+   * @returns `{ status }` once a full user view was cached, or null when the tier is still unknown
+   */
+  static async getSocialGraphStatus(params: TReadProfileParams): Promise<TUserSocialGraphStatusResult | null> {
+    return await LocalUserService.readSocialGraphStatus(params);
   }
 
   /**
@@ -272,15 +290,6 @@ export class UserApplication {
   }: TUserApplicationFollowParams) {
     if (signal?.aborted) return;
 
-    const moderationId = eventType === HttpMethod.DELETE ? getModerationId() : undefined;
-    if (moderationId && followee === moderationId) {
-      // A durable opt-out must exist before removing the follow. If this network write fails,
-      // leave both local and remote follow state unchanged instead of risking a later re-follow.
-      await this.writeModerationFollowMarker(follower, moderationId);
-    }
-
-    if (signal?.aborted) return;
-
     if (eventType === HttpMethod.PUT) {
       await LocalFollowService.create({ follower, followee });
     } else if (eventType === HttpMethod.DELETE) {
@@ -293,20 +302,20 @@ export class UserApplication {
   }
 
   /**
-   * Applies the moderation-bot default follow once per account. The homeserver marker preserves
-   * explicit unfollows, while the canonical follow resource makes retries idempotent.
+   * Applies the moderation-bot default follow once per account and bot: skipped when settings already
+   * record the configured bot, so a later manual unfollow is never undone. The canonical follow
+   * resource makes retries idempotent.
+   * @returns The processed bot Pubky when the caller should persist it, otherwise undefined
    */
   static async ensureModerationFollow({
     follower,
     moderationId,
+    moderationBot,
     signal,
-  }: TEnsureModerationFollowParams): Promise<void> {
-    if (!moderationId || follower === moderationId || signal?.aborted) return;
-
-    const markerUrl = this.moderationFollowMarkerUrl(follower, moderationId);
-
-    const markerExists = await HomeserverService.exists(markerUrl);
-    if (signal?.aborted || markerExists) return;
+  }: TEnsureModerationFollowParams): Promise<Pubky | undefined> {
+    if (!moderationId || follower === moderationId || signal?.aborted || moderationBot === moderationId) {
+      return undefined;
+    }
 
     const { meta, follow } = FollowNormalizer.to({ follower, followee: moderationId });
     const expectedFollowUrl = followUriBuilder(follower, moderationId);
@@ -319,7 +328,7 @@ export class UserApplication {
     }
 
     const followExists = await HomeserverService.exists(meta.url);
-    if (signal?.aborted) return;
+    if (signal?.aborted) return undefined;
 
     if (!followExists) {
       await this.commitFollow({
@@ -332,16 +341,16 @@ export class UserApplication {
       });
     }
 
-    if (signal?.aborted) return;
-    await this.writeModerationFollowMarker(follower, moderationId);
+    if (signal?.aborted) return undefined;
+    return moderationId;
   }
 
   /**
    * Retrieves taggers for a specific tag label on a user from the nexus service.
    * @param params - Parameters containing user ID, label, and pagination options
-   * @returns Promise resolving to an array of users who tagged the user with the specified label
+   * @returns Promise resolving to the users who tagged the user with the specified label
    */
-  static async fetchTaggers(params: TUserTaggersParams): Promise<NexusTaggers[]> {
+  static async fetchTaggers(params: TUserTaggersParams): Promise<NexusTaggers> {
     return await NexusUserService.taggers(params);
   }
 

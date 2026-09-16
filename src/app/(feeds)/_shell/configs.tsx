@@ -4,6 +4,7 @@ import type { ContentLayoutProps } from '@/organisms/ContentLayout/ContentLayout
 import { CustomFeedFilters } from '@/organisms/CustomFeedFilters/CustomFeedFilters';
 import { HomeFeedRightDrawer, HomeFeedRightSidebar } from '@/organisms/FeedRightSidebar/FeedRightSidebar';
 import { HomeFeedDrawer, HomeFeedDrawerMobile, HomeFeedSidebar } from '@/organisms/HomeFeedSidebar/HomeFeedSidebar';
+import { SearchFeedFilters } from '@/organisms/SearchFeedFilters/SearchFeedFilters';
 
 /**
  * Props for `ContentLayout` that are derived per feed route. Children are not
@@ -61,15 +62,11 @@ const configs: Record<FeedsRouteKey, FeedsShellConfig> = {
   search: {
     feedVariant: TIMELINE_FEED_VARIANT.SEARCH,
     showRightMobileButton: false,
-    leftSidebarContent: (
-      <HomeFeedSidebar hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
-    ),
+    leftSidebarContent: <SearchFeedFilters variant="sidebar" />,
     rightSidebarContent: <HomeFeedRightSidebar />,
-    leftDrawerContent: <HomeFeedDrawer hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />,
+    leftDrawerContent: <SearchFeedFilters variant="drawer" />,
     rightDrawerContent: <HomeFeedRightDrawer />,
-    leftDrawerContentMobile: (
-      <HomeFeedDrawerMobile hideReachFilter allowVisualLayout feedVariant={TIMELINE_FEED_VARIANT.SEARCH} />
-    ),
+    leftDrawerContentMobile: <SearchFeedFilters variant="mobile" />,
   },
 };
 

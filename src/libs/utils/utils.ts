@@ -1,6 +1,5 @@
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import type { SnapshotSerializer } from 'vitest';
+import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
 import { parseCompositeId } from '@/models/models.utils';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
@@ -13,9 +12,7 @@ import type {
   GetDisplayTagsOptions,
 } from './utils.types';
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export { cn } from 'cn';
 
 const PUBKY_PREFIX = 'pubky';
 const LEGACY_PUBKY_PREFIX = 'pk:';
@@ -31,6 +28,8 @@ export function withPubkyPrefix(key: string): string {
 
 export function stripPubkyPrefix(key: string): string {
   if (!key) return '';
+  // A raw key can itself start with "pubky"; only strip a display prefix.
+  if (isPubkyIdentifier(key)) return key;
   if (key.startsWith(PUBKY_PREFIX)) return key.slice(PUBKY_PREFIX.length);
   if (key.startsWith(LEGACY_PUBKY_PREFIX)) return key.slice(LEGACY_PUBKY_PREFIX.length);
   return key;
@@ -597,6 +596,22 @@ export function sanitizeTagInput(value: string): string {
 }
 
 /**
+ * Convert a tag label to the canonical form used by local storage and Nexus.
+ *
+ * @param value - The raw tag label
+ * @returns The trimmed, lowercase tag label
+ */
+export function canonicalizeTagLabel(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/** Whether Nexus reserves this label from starter-pack interest streams. */
+export function isStarterPackReservedTag(value: string): boolean {
+  const canonical = canonicalizeTagLabel(value);
+  return STARTER_PACK_RESERVED_TAGS.some((label) => label === canonical);
+}
+
+/**
  * Checks whether a string is a valid tag label (correct length, no banned characters).
  *
  * @param value - The candidate tag label (should already be trimmed/lowercased)
@@ -616,13 +631,14 @@ export function isValidTagLabel(value: string): boolean {
  * @param isSubmitting - Whether a submission is currently in progress
  * @param isArticle - Whether the post is an article (optional)
  * @param articleTitle - The title of the article (optional)
+ * @param hasBlockingUploads - Whether inline image uploads are still in flight (optional)
  * @returns true if the post can be submitted, false otherwise
  *
  * @remarks
  * - Reposts allow empty content
  * - Posts and replies require either content or attachments
  * - Articles require both content and title
- * - Cannot submit if already submitting
+ * - Cannot submit if already submitting or while inline image uploads are in flight
  *
  * @example
  * canSubmitPost('post', 'Hello world', [], false) // true
@@ -639,8 +655,9 @@ export function canSubmitPost(
   isSubmitting: boolean,
   isArticle?: boolean,
   articleTitle?: string,
+  hasBlockingUploads?: boolean,
 ): boolean {
-  if (isSubmitting) return false;
+  if (isSubmitting || hasBlockingUploads) return false;
 
   // Reposts allow empty content, posts and replies require content or attachments
   if (variant === 'repost') return true;

@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
-import { HOME_ROUTES, PROFILE_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
+import { ONBOARDING_ROUTES, PROFILE_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { USER_BIO_MAX_LENGTH, USER_NAME_MAX_LENGTH, USER_NAME_MIN_LENGTH } from '@/config/user';
 import { AuthController } from '@/controllers/auth/auth';
 import { FileController } from '@/controllers/file/file';
@@ -14,8 +14,9 @@ import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSiz
 import { Logger } from '@/libs/logger/logger';
 import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
 import { generateRandomUsername } from '@/libs/utils/utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { UserValidator } from '@/pipes/user/user.validator';
+import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import {
   PROFILE_SUBMIT_TEXT,
@@ -40,14 +41,31 @@ const bioSchema = z
   .trim()
   .max(USER_BIO_MAX_LENGTH, `Bio must be no more than ${USER_BIO_MAX_LENGTH} characters`);
 
+function getProfileFormLinks(userDetails: NexusUserDetails): ProfileLink[] {
+  const formattedLinks = (userDetails.links ?? []).map((link) => ({
+    label: link.title.toUpperCase(),
+    url: link.url,
+  }));
+  return formattedLinks.length > 0 ? formattedLinks : DEFAULT_LINKS;
+}
+
+function areProfileLinksEqual(left: ProfileLink[], right: ProfileLink[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((link, index) => link.label === right[index]?.label && link.url === right[index]?.url)
+  );
+}
+
 export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn {
   const { mode, pubky } = props;
   // Extract userDetails for edit mode to avoid object reference issues in useEffect
   const userDetails = props.mode === 'edit' ? props.userDetails : undefined;
+  const editRedirectTo = props.mode === 'edit' ? props.redirectTo : undefined;
   const setShowWelcomeDialog = props.mode === 'create' ? props.setShowWelcomeDialog : undefined;
+  const idleSubmitText =
+    mode === 'create' || editRedirectTo ? PROFILE_SUBMIT_TEXT.continue : PROFILE_SUBMIT_TEXT.saveProfile;
 
   const router = useRouter();
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Generate a stable initial username for create mode (only generated once)
@@ -60,10 +78,12 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // The post-save redirect fetches its route on click (nothing prefetches it), so it runs as a
+  // transition: the submit button keeps its loading state until the next screen renders instead
+  // of dropping it the moment the save completes.
+  const [isNavigating, startNavigation] = useTransition();
   const [isLoading, setIsLoading] = useState(mode === 'edit');
-  const [submitText, setSubmitText] = useState<SubmitText>(
-    mode === 'create' ? PROFILE_SUBMIT_TEXT.finish : PROFILE_SUBMIT_TEXT.saveProfile,
-  );
+  const [submitText, setSubmitText] = useState<SubmitText>(idleSubmitText);
 
   // Edit mode specific state
   const [originalAvatarUrl, setOriginalAvatarUrl] = useState<string | null>(null);
@@ -87,12 +107,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       setBio(userDetails.bio || '');
 
       // Convert links from NexusUserLink format to form format
-      const formattedLinks = (userDetails.links ?? []).map((link) => ({
-        label: link.title.toUpperCase(),
-        url: link.url,
-      }));
-
-      setLinks(formattedLinks.length > 0 ? formattedLinks : DEFAULT_LINKS);
+      setLinks(getProfileFormLinks(userDetails));
 
       // Set avatar if exists
       // Note: We intentionally don't use the local store's blob URL here because:
@@ -111,6 +126,15 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       setIsLoading(false);
     }
   }, [mode, userDetails, pubky]);
+
+  const isEditProfileDirty =
+    mode === 'edit' &&
+    userDetails !== undefined &&
+    userDetails !== null &&
+    (name !== (userDetails.name || '') ||
+      bio !== (userDetails.bio || '') ||
+      !areProfileLinksEqual(links, getProfileFormLinks(userDetails)) ||
+      avatarChanged);
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
@@ -276,13 +300,18 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
   const handleSubmit = useCallback(async () => {
     if (!pubky) return;
 
+    if (mode === 'edit' && editRedirectTo && !isEditProfileDirty) {
+      router.push(editRedirectTo);
+      return;
+    }
+
     setIsSaving(true);
     setSubmitText(PROFILE_SUBMIT_TEXT.saving);
 
     try {
       const user = validateUser();
       if (!user) {
-        setSubmitText(mode === 'create' ? PROFILE_SUBMIT_TEXT.finish : PROFILE_SUBMIT_TEXT.saveProfile);
+        setSubmitText(idleSubmitText);
         return;
       }
 
@@ -329,7 +358,9 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         }
         await AuthController.bootstrapWithDelay();
         setShowWelcomeDialog?.(true);
-        router.push(HOME_ROUTES.HOME);
+        startNavigation(() => {
+          router.push(ONBOARDING_ROUTES.TAGS);
+        });
       } else {
         await ProfileController.commitUpdate({
           name: user.name,
@@ -352,7 +383,9 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         toast({
           title: 'Profile updated',
         });
-        router.push(PROFILE_ROUTES.PROFILE);
+        startNavigation(() => {
+          router.push(editRedirectTo ?? PROFILE_ROUTES.PROFILE);
+        });
       }
     } catch (error) {
       const sizeLimitMessage = getImageUploadSizeLimitToastMessage(error);
@@ -405,9 +438,11 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     avatarChanged,
     originalAvatarUrl,
     userDetails,
+    editRedirectTo,
+    idleSubmitText,
+    isEditProfileDirty,
     setShowWelcomeDialog,
     router,
-    toast,
   ]);
 
   const handleCancel = useCallback(() => {
@@ -428,7 +463,8 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     !!bioError ||
     Object.values(linkUrlErrors).some((m) => !!m) ||
     !!avatarError ||
-    isSaving;
+    isSaving ||
+    isNavigating;
 
   return {
     state: {
@@ -437,7 +473,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       links,
       avatarFile,
       avatarPreview,
-      isSaving,
+      isSaving: isSaving || isNavigating,
       isLoading,
       submitText,
     },

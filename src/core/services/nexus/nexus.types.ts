@@ -149,6 +149,21 @@ export type NexusUserRelationship = {
   followed_by: boolean;
 };
 
+/**
+ * How established an account is in the follow graph, computed by Nexus from its
+ * seeded trust ranking. Nexus picks the tier and never exposes the raw score.
+ *
+ * Describes position in the graph, not character: it is not an endorsement.
+ */
+export enum NexusSocialGraphStatus {
+  /** Little or no network presence (unreachable from the seed set, or brand new) */
+  NEW = 'new',
+  /** Part of the broader network (reachable from the seed set) */
+  NETWORKED = 'networked',
+  /** Central to the network (top slice of the ranking) */
+  ESTABLISHED = 'established',
+}
+
 // =============================================================================
 // Response Types - Tags
 // =============================================================================
@@ -186,6 +201,12 @@ export type NexusUser = {
   counts: NexusUserCounts;
   tags: NexusTag[];
   relationship: NexusUserRelationship;
+  /**
+   * Social graph badge tier. `null` when Nexus has no ranking available, which
+   * hides the badge and is distinct from `new`. Absent on Nexus builds that
+   * predate the field.
+   */
+  social_graph_status?: NexusSocialGraphStatus | null;
 };
 
 /** Stream response containing only user identifiers */

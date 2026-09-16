@@ -2,8 +2,9 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, expect, it, vi } from 'vitest';
-import { renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
+import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { matchVrtFrameScreenshot, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -24,6 +25,24 @@ const routeState = vi.hoisted(() => ({
   pathname: '/profile',
   params: {} as Record<string, string>,
 }));
+
+// Per-test feed overrides. `emptyCollections` swaps the collections stream
+// fixture for an empty page (and zeroes the tab badge) so the Collections tab
+// renders its empty state.
+const feedState = vi.hoisted(() => ({
+  emptyCollections: false,
+}));
+
+/** Registers describe-scoped hooks that empty the collections stream for every test inside. */
+function withEmptyCollections() {
+  beforeEach(() => {
+    feedState.emptyCollections = true;
+  });
+
+  afterEach(() => {
+    feedState.emptyCollections = false;
+  });
+}
 
 // Browser-mode vi.mock factories run before top-level imports resolve and have
 // no synchronous require(), so each factory loads its fixture via async import
@@ -263,8 +282,8 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useKeyboardOffset/useKeyboardOffset', () => ({
-  useKeyboardOffset: () => ({ isKeyboardVisible: false, keyboardOffset: 0 }),
+vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
+  useKeyboardVisible: () => false,
 }));
 
 vi.mock('@/hooks/usePublicRoute/usePublicRoute', () => ({
@@ -304,13 +323,19 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
     useStreamPagination: ({ streamId }: { streamId: string }) => {
       const id = String(streamId);
       if (id.startsWith('author_replies:')) return buildResult(f.replyIds);
-      if (id.endsWith(':author:collection')) return buildResult(f.collectionIds);
+      if (id.endsWith(':author:collection')) return buildResult(feedState.emptyCollections ? [] : f.collectionIds);
       if (id === `author:${f.otherPubky}`) return buildResult(f.otherPostIds);
       if (id.startsWith('author:')) return buildResult(f.postIds);
       return buildResult([]);
     },
   };
 });
+
+// `CollectionsEmpty` mounts `DialogNewCollection` (closed) on own profile; its
+// first-collection intro gate reads authored collections through this hook.
+vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
+  useAuthoredCollections: () => ({ collections: [], isLoading: false }),
+}));
 
 vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => {
   const result = {
@@ -338,6 +363,13 @@ vi.mock('@/hooks/useFollowUser/useFollowUser', () => {
 vi.mock('@/hooks/useIsFollowing/useIsFollowing', () => {
   const result = { isFollowing: false, isLoading: false };
   return { useIsFollowing: () => result };
+});
+
+// No social graph tier: the real hook would fetch the full user view from Nexus on the
+// fixture's cache miss, and the sidebar section stays hidden while no tier is known.
+vi.mock('@/hooks/useSocialGraphStatus/useSocialGraphStatus', () => {
+  const result = { status: null, isLoading: false };
+  return { useSocialGraphStatus: () => result };
 });
 
 vi.mock('@/hooks/useUnreadPosts/useUnreadPosts', () => {
@@ -465,8 +497,7 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
       const cached = cache.get(compositeId);
       if (cached) return cached;
       const fixture = f.entitiesByCompositeId.get(compositeId) as
-        | { relationships?: { reposted?: string | null } }
-        | undefined;
+        { relationships?: { reposted?: string | null } } | undefined;
       const result = {
         showRepostHeader: !!fixture?.relationships?.reposted,
         shouldShowPostHeader: true,
@@ -511,13 +542,14 @@ vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
   useEnrichedTags: (tags: unknown[]) => ({ enrichedTags: tags, isLoading: false }),
 }));
 
-vi.mock('@/hooks/usePostTaggers/usePostTaggers', () => {
-  const result = {
-    taggersByLabel: new Map<string, string[]>(),
-    taggerStates: new Map<string, { isLoading: boolean; error: string | null }>(),
-    fetchAllTaggers: async () => {},
+vi.mock('@/hooks/useEntityTaggers/useEntityTaggers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEntityTaggers/useEntityTaggers')>();
+  const result: UseEntityTaggersResult = {
+    taggerStates: new Map(),
+    loadTaggers: async () => {},
+    loadMoreTaggers: async () => {},
   };
-  return { usePostTaggers: () => result };
+  return { ...actual, useEntityTaggers: () => result };
 });
 
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', async () => {
@@ -671,11 +703,21 @@ vi.mock('@/hooks/useProfileStats/useProfileStats', async () => {
     friends: 4,
     uniqueTags: f.otherTaggedTags.length,
   };
+  // Stable variants so the badge count agrees with the emptied stream.
+  const ownEmptyCollectionsStats = { ...ownStats, collections: 0 };
+  const otherEmptyCollectionsStats = { ...otherStats, collections: 0 };
   return {
-    useProfileStats: (userId?: string) => ({
-      stats: userId === f.otherPubky ? otherStats : ownStats,
-      isLoading: false,
-    }),
+    useProfileStats: (userId?: string) => {
+      const isOther = userId === f.otherPubky;
+      const stats = feedState.emptyCollections
+        ? isOther
+          ? otherEmptyCollectionsStats
+          : ownEmptyCollectionsStats
+        : isOther
+          ? otherStats
+          : ownStats;
+      return { stats, isLoading: false };
+    },
   };
 });
 
@@ -852,13 +894,13 @@ describe('Own profile — notifications — visual regression', () => {
     const screen = await renderOwnProfileTab('/profile', <ProfileNotificationsPage />, VRT_VIEWPORT_DESKTOP);
     // "Hana Voss" appears twice (Follow + PostEdited actor) — scope to the first match.
     await expect.element(screen.getByText('Hana Voss').first()).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-notifications-desktop');
+    await matchVrtFrameScreenshot('own-profile-notifications-desktop');
   });
 
   it('renders notifications at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile', <ProfileNotificationsPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Hana Voss').first()).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-notifications-mobile');
+    await matchVrtFrameScreenshot('own-profile-notifications-mobile');
   });
 });
 
@@ -868,7 +910,7 @@ describe('Own profile — posts — visual regression', () => {
     await expect.element(screen.getByRole('feed').first()).toBeVisible();
     await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
     await expect.element(screen.getByText('9 more replies')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-posts-desktop');
+    await matchVrtFrameScreenshot('own-profile-posts-desktop');
   });
 
   it('renders posts at mobile viewport', async () => {
@@ -876,7 +918,7 @@ describe('Own profile — posts — visual regression', () => {
     await expect.element(screen.getByRole('feed').first()).toBeVisible();
     await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
     await expect.element(screen.getByText('9 more replies')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-posts-mobile');
+    await matchVrtFrameScreenshot('own-profile-posts-mobile');
   });
 
   it('truncates a long profile name before the status emoji at desktop viewport', async () => {
@@ -911,13 +953,13 @@ describe('Own profile — replies — visual regression', () => {
   it('renders replies at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/replies', <ProfileRepliesPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByRole('feed')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-replies-desktop');
+    await matchVrtFrameScreenshot('own-profile-replies-desktop');
   });
 
   it('renders replies at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/replies', <ProfileRepliesPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByRole('feed')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-replies-mobile');
+    await matchVrtFrameScreenshot('own-profile-replies-mobile');
   });
 });
 
@@ -925,13 +967,13 @@ describe('Own profile — followers — visual regression', () => {
   it('renders followers at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/followers', <ProfileFollowersPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-followers-desktop');
+    await matchVrtFrameScreenshot('own-profile-followers-desktop');
   });
 
   it('renders followers at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/followers', <ProfileFollowersPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-followers-mobile');
+    await matchVrtFrameScreenshot('own-profile-followers-mobile');
   });
 });
 
@@ -939,13 +981,13 @@ describe('Own profile — following — visual regression', () => {
   it('renders following at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/following', <ProfileFollowingPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-following-desktop');
+    await matchVrtFrameScreenshot('own-profile-following-desktop');
   });
 
   it('renders following at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/following', <ProfileFollowingPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-following-mobile');
+    await matchVrtFrameScreenshot('own-profile-following-mobile');
   });
 });
 
@@ -953,13 +995,13 @@ describe('Own profile — friends — visual regression', () => {
   it('renders friends at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/friends', <ProfileFriendsPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-friends-desktop');
+    await matchVrtFrameScreenshot('own-profile-friends-desktop');
   });
 
   it('renders friends at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/friends', <ProfileFriendsPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Bran Ó Conaill')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-friends-mobile');
+    await matchVrtFrameScreenshot('own-profile-friends-mobile');
   });
 });
 
@@ -967,13 +1009,13 @@ describe('Own profile — tagged — visual regression', () => {
   it('renders tagged at desktop viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/tagged', <ProfileTaggedPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByText('localfirst')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-tagged-desktop');
+    await matchVrtFrameScreenshot('own-profile-tagged-desktop');
   });
 
   it('renders tagged at mobile viewport', async () => {
     const screen = await renderOwnProfileTab('/profile/tagged', <ProfileTaggedPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('localfirst')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-tagged-mobile');
+    await matchVrtFrameScreenshot('own-profile-tagged-mobile');
   });
 });
 
@@ -986,7 +1028,7 @@ describe('Own profile — collections — visual regression', () => {
     await preloadImages(Object.values(f.profileCollectionCoverUrls));
     const screen = await renderOwnProfileTab('/profile/collections', <ProfileCollectionsPage />, VRT_VIEWPORT_DESKTOP);
     await expect.element(screen.getByRole('feed')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-collections-desktop');
+    await matchVrtFrameScreenshot('own-profile-collections-desktop');
   });
 
   it('renders collections at mobile viewport', async () => {
@@ -994,7 +1036,25 @@ describe('Own profile — collections — visual regression', () => {
     await preloadImages(Object.values(f.profileCollectionCoverUrls));
     const screen = await renderOwnProfileTab('/profile/collections', <ProfileCollectionsPage />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByRole('feed')).toBeVisible();
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('own-profile-collections-mobile');
+    await matchVrtFrameScreenshot('own-profile-collections-mobile');
+  });
+});
+
+describe('Own profile — collections empty — visual regression', () => {
+  withEmptyCollections();
+
+  it('renders empty collections at desktop viewport', async () => {
+    const screen = await renderOwnProfileTab('/profile/collections', <ProfileCollectionsPage />, VRT_VIEWPORT_DESKTOP);
+    await expect.element(screen.getByText('No collections yet')).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Create Collection' })).toBeVisible();
+    await matchVrtFrameScreenshot('own-profile-collections-empty-desktop');
+  });
+
+  it('renders empty collections at mobile viewport', async () => {
+    const screen = await renderOwnProfileTab('/profile/collections', <ProfileCollectionsPage />, VRT_VIEWPORT_MOBILE);
+    await expect.element(screen.getByText('No collections yet')).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Create Collection' })).toBeVisible();
+    await matchVrtFrameScreenshot('own-profile-collections-empty-mobile');
   });
 });
 
@@ -1017,12 +1077,40 @@ describe('Other profile — posts — visual regression', () => {
   }
 
   it("renders another user's posts at desktop viewport", async () => {
-    const screen = await renderOtherProfilePosts(VRT_VIEWPORT_DESKTOP);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('other-profile-posts-desktop');
+    await renderOtherProfilePosts(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('other-profile-posts-desktop');
   });
 
   it("renders another user's posts at mobile viewport", async () => {
-    const screen = await renderOtherProfilePosts(VRT_VIEWPORT_MOBILE);
-    await expect(screen.getByTestId(VRT_ROOT_TESTID)).toMatchScreenshot('other-profile-posts-mobile');
+    await renderOtherProfilePosts(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('other-profile-posts-mobile');
+  });
+});
+
+describe('Other profile — collections empty — visual regression', () => {
+  // Visitor variant: read-only copy, no Create Collection CTA.
+  withEmptyCollections();
+
+  async function renderOtherProfileCollectionsEmpty(viewport: { width: number; height: number }) {
+    const f = await fixtures;
+    const screen = await renderProfileTab(
+      `/profile/${f.otherPubky}/collections`,
+      <ProfileCollectionsPage />,
+      viewport,
+      f.otherPubky,
+    );
+    await expect.element(screen.getByText('No collections yet')).toBeVisible();
+    await expect.element(screen.getByText("This user hasn't created any collections yet.")).toBeVisible();
+    return screen;
+  }
+
+  it("renders another user's empty collections at desktop viewport", async () => {
+    await renderOtherProfileCollectionsEmpty(VRT_VIEWPORT_DESKTOP);
+    await matchVrtFrameScreenshot('other-profile-collections-empty-desktop');
+  });
+
+  it("renders another user's empty collections at mobile viewport", async () => {
+    await renderOtherProfileCollectionsEmpty(VRT_VIEWPORT_MOBILE);
+    await matchVrtFrameScreenshot('other-profile-collections-empty-mobile');
   });
 });

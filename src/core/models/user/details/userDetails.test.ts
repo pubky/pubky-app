@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { generateTestUserId } from '@/models/user/users.helpers';
-import type { NexusUserDetails } from '@/services/nexus/nexus.types';
+import { NexusSocialGraphStatus, type NexusUserDetails } from '@/services/nexus/nexus.types';
 
 describe('UserDetailsModel', () => {
   beforeEach(async () => {
@@ -40,6 +40,17 @@ describe('UserDetailsModel', () => {
       expect(userDetails.indexed_at).toBe(mockUserDetailsData.indexed_at);
       expect(userDetails.links).toEqual(mockUserDetailsData.links);
       expect(userDetails.status).toBe(mockUserDetailsData.status);
+    });
+
+    it('should carry the social graph status so row spreads preserve it', () => {
+      const userDetails = new UserDetailsModel({
+        id: testUserId1,
+        ...MOCK_NEXUS_USER_DETAILS,
+        social_graph_status: NexusSocialGraphStatus.NEW,
+      });
+
+      expect(userDetails.social_graph_status).toBe(NexusSocialGraphStatus.NEW);
+      expect({ ...userDetails }.social_graph_status).toBe(NexusSocialGraphStatus.NEW);
     });
   });
 

@@ -1,4 +1,5 @@
 'use client';
+import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
 import { TaggedList } from '../TaggedList/TaggedList';
@@ -7,6 +8,7 @@ import type { TaggedSectionProps } from './TaggedSection.types';
 
 export function TaggedSection({
   tags,
+  taggedId,
   userName,
   handleTagAdd,
   handleTagToggle,
@@ -30,6 +32,8 @@ export function TaggedSection({
 
       <TaggedList
         tags={tags}
+        taggedId={taggedId}
+        taggedKind={TagKind.USER}
         hasMore={hasMore}
         isLoadingMore={isLoadingMore}
         onLoadMore={loadMore}

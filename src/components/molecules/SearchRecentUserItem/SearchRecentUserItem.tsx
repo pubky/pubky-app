@@ -25,7 +25,8 @@ export function SearchRecentUserItem({ user, onClick }: SearchRecentUserItemProp
   return (
     <Container
       overrideDefaults
-      className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md transition-colors hover:bg-secondary"
+      // 32px avatar, no card padding/background hover (#1840): hover matches the right sidebar.
+      className="flex min-w-0 cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
       onClick={handleClick}
       data-testid={`recent-user-${user.id}`}
       role="button"
@@ -35,10 +36,10 @@ export function SearchRecentUserItem({ user, onClick }: SearchRecentUserItemProp
         avatarUrl={avatarUrl}
         name={userDetails?.name || ''}
         fallbackSeed={user.id}
-        size="default"
+        size="md"
         className="shrink-0"
       />
-      <Container overrideDefaults className="min-w-0 flex-1 flex-col items-start">
+      <Container overrideDefaults className="flex min-w-0 flex-1 flex-col items-start">
         <Typography
           className="block max-w-full truncate text-sm font-bold text-foreground"
           overrideDefaults

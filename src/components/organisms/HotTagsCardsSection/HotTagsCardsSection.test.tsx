@@ -13,14 +13,12 @@ const mockUseBulkUserAvatars = vi.hoisted(() =>
 );
 
 const mockUseMutedUsers = vi.hoisted(() =>
-  vi.fn(
-    (): UseMutedUsersResult => ({
-      mutedUserIds: [],
-      mutedUserIdSet: new Set(),
-      isMuted: (_userId: Pubky) => false,
-      isLoading: false,
-    }),
-  ),
+  vi.fn((): UseMutedUsersResult => ({
+    mutedUserIds: [],
+    mutedUserIdSet: new Set(),
+    isMuted: (_userId: Pubky) => false,
+    isLoading: false,
+  })),
 );
 
 const mockPush = vi.fn();
@@ -104,14 +102,12 @@ describe('HotTagsCardsSection', () => {
     mockUseBulkUserAvatars.mockImplementation(() => ({
       getUsersWithAvatars: vi.fn((_userIds: Pubky[]): UserWithAvatar[] => []),
     }));
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: [],
-        mutedUserIdSet: new Set(),
-        isMuted: (_userId: Pubky) => false,
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: [],
+      mutedUserIdSet: new Set(),
+      isMuted: (_userId: Pubky) => false,
+      isLoading: false,
+    }));
   });
 
   it('renders heading and empty state when tags are empty', () => {
@@ -176,14 +172,12 @@ describe('HotTagsCardsSection', () => {
   });
 
   it('excludes muted taggers from avatar bulk fetch and HotTagCard taggers', () => {
-    mockUseMutedUsers.mockImplementation(
-      (): UseMutedUsersResult => ({
-        mutedUserIds: ['muted-author'],
-        mutedUserIdSet: new Set(['muted-author']),
-        isMuted: (id: Pubky) => id === 'muted-author',
-        isLoading: false,
-      }),
-    );
+    mockUseMutedUsers.mockImplementation((): UseMutedUsersResult => ({
+      mutedUserIds: ['muted-author'],
+      mutedUserIdSet: new Set(['muted-author']),
+      isMuted: (id: Pubky) => id === 'muted-author',
+      isLoading: false,
+    }));
 
     const getUsersWithAvatars = vi.fn(() => []);
     mockUseBulkUserAvatars.mockImplementation(() => ({ getUsersWithAvatars }));

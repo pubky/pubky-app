@@ -7,8 +7,8 @@ import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
-import { ViewerTagMarkerStorage } from '@/services/local/tag/post/viewerTagMarkerStorage';
 import type { TLocalTagParams } from '@/services/local/tag/tag.types';
+import { ViewerTagMarkerStorage } from '@/services/local/tag/viewerTagMarkerStorage';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
 // Test data
@@ -218,7 +218,7 @@ describe('LocalTagService', () => {
 
       const marker = ViewerTagMarkerStorage.get({
         pubky: testData.taggerPubky,
-        postId: testData.postId,
+        taggedId: testData.postId,
         label: 'javascript',
       });
       expect(marker?.op).toBe(HttpMethod.PUT);
@@ -238,7 +238,7 @@ describe('LocalTagService', () => {
       // Therefore no marker was ever written — null here means "absent", not "deleted".
       const marker = ViewerTagMarkerStorage.get({
         pubky: testData.taggerPubky,
-        postId: testData.postId,
+        taggedId: testData.postId,
         label: 'javascript',
       });
       expect(marker).toBeNull();
@@ -326,7 +326,7 @@ describe('LocalTagService', () => {
 
       const marker = ViewerTagMarkerStorage.get({
         pubky: testData.taggerPubky,
-        postId: testData.postId,
+        taggedId: testData.postId,
         label: 'javascript',
       });
       expect(marker?.op).toBe(HttpMethod.DELETE);
@@ -412,7 +412,7 @@ describe('LocalTagService', () => {
         // Viewer just removed themselves locally — Nexus hasn't reindexed yet.
         ViewerTagMarkerStorage.set({
           pubky: testData.taggerPubky,
-          postId: testData.postId,
+          taggedId: testData.postId,
           label: 'a',
           op: HttpMethod.DELETE,
         });
@@ -436,7 +436,7 @@ describe('LocalTagService', () => {
         // Viewer just added themselves locally — Nexus hasn't reindexed yet.
         ViewerTagMarkerStorage.set({
           pubky: testData.taggerPubky,
-          postId: testData.postId,
+          taggedId: testData.postId,
           label: 'a',
           op: HttpMethod.PUT,
         });
@@ -473,7 +473,7 @@ describe('LocalTagService', () => {
         // ignores it and applies Nexus values as-is.
         ViewerTagMarkerStorage.set({
           pubky: testData.taggerPubky,
-          postId: testData.postId,
+          taggedId: testData.postId,
           label: 'a',
           op: HttpMethod.DELETE,
         });

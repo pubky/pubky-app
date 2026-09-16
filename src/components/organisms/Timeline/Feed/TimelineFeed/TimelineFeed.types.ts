@@ -87,10 +87,7 @@ type StandardTimelineFeedProps = TimelineFeedPropsBase & {
 };
 
 export type TimelineFeedProps =
-  | HomeTimelineFeedProps
-  | BookmarksTimelineFeedProps
-  | CollectionTimelineFeedProps
-  | StandardTimelineFeedProps;
+  HomeTimelineFeedProps | BookmarksTimelineFeedProps | CollectionTimelineFeedProps | StandardTimelineFeedProps;
 
 export interface TimelineFeedContextValue {
   /**

@@ -231,6 +231,13 @@ describe('FeedNavigation', () => {
     expect(screen.getByTestId('custom-feed-dialog-create')).toHaveTextContent('Feed');
   });
 
+  it('runs full-bleed below lg to cancel the shell gutter', () => {
+    render(<FeedNavigation />);
+
+    const [root] = screen.getAllByTestId('container');
+    expect(root).toHaveClass('-mx-4', 'w-auto', 'lg:mx-0', 'lg:w-full');
+  });
+
   // ── Reach tab (first tab, links to /home) ────────────────────────────────
 
   it('renders the reach tab as a link to /home', () => {
@@ -311,6 +318,31 @@ describe('FeedNavigation', () => {
 
     const label = getLink('/home')?.querySelector('[data-testid="typography"]');
     expect(label).not.toHaveClass('hidden');
+  });
+
+  it('splits All and Create evenly on mobile when there are no custom feeds', () => {
+    mockUsePathname.mockReturnValue('/home');
+    render(<FeedNavigation />);
+
+    // Both tabs share the equal flex basis, so the row divides 50/50: the
+    // active All tab must not get the content-hugging width here.
+    const homeLink = getLink('/home');
+    expect(homeLink).toHaveClass('min-w-0', 'basis-1/2', 'lg:flex-auto');
+    expect(homeLink).not.toHaveClass('flex-none');
+    expect(homeLink).not.toHaveClass('max-w-[60%]');
+
+    const createButton = screen.getByLabelText('Create feed');
+    expect(createButton).toHaveClass('min-w-0', 'basis-1/2', 'lg:flex-auto');
+    expect(createButton).not.toHaveClass('flex-none');
+  });
+
+  it('keeps the active reach tab hugging its content on mobile when custom feeds are present', () => {
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
+    mockUsePathname.mockReturnValue('/home');
+
+    render(<FeedNavigation />);
+
+    expect(getLink('/home')).toHaveClass('max-w-[60%]', 'flex-none', 'lg:flex-auto');
   });
 
   // ── Custom feeds rendering ──────────────────────────────────────────────
@@ -397,7 +429,7 @@ describe('FeedNavigation', () => {
 
     const activeLabel = getLink('/feed/feed-active')?.querySelector('[data-testid="typography"]');
     expect(activeLabel).not.toHaveClass('hidden');
-    expect(getLink('/feed/feed-active')).toHaveClass('px-10', 'lg:px-8');
+    expect(getLink('/feed/feed-active')).toHaveClass('px-10', 'lg:px-2.5');
 
     const inactiveLabel = getLink('/feed/feed-other')?.querySelector('[data-testid="typography"]');
     expect(inactiveLabel).toHaveClass('hidden', 'lg:inline');
@@ -448,7 +480,7 @@ describe('FeedNavigation', () => {
         'lg:group-hover:pointer-events-auto',
         'lg:group-focus-within:opacity-100',
       );
-      expect(editButton.querySelector('svg')).toHaveClass('size-4');
+      expect(editButton.querySelector('svg')).toHaveClass('size-3');
     });
   });
 
@@ -601,7 +633,7 @@ describe('FeedNavigation', () => {
     expect(wrapper).toHaveClass('mobile-menu-gradient-fade', 'sticky', 'top-(--header-height-settings)');
     expect(wrapper).toHaveClass('bg-background', 'lg:static', 'lg:bg-transparent', 'lg:after:hidden');
     expect(wrapper).not.toHaveClass('overflow-x-auto');
-    expect(row).toHaveClass('flex-row');
+    expect(row).toHaveClass('flex', 'flex-row');
     expect(row).toHaveClass('overflow-x-auto');
   });
 
@@ -610,14 +642,13 @@ describe('FeedNavigation', () => {
     render(<FeedNavigation />);
 
     const homeLink = getLink('/home');
-    expect(homeLink).toHaveClass('min-h-12', 'lg:min-w-40', 'lg:flex-auto');
-    // The reach tab keeps the shared active padding.
-    expect(homeLink).toHaveClass('px-8');
+    expect(homeLink).toHaveClass('min-h-12', 'lg:flex-auto');
+    expect(homeLink).toHaveClass('px-8', 'lg:px-2.5');
 
     const customLink = getLink('/feed/feed-1');
     expect(customLink).toHaveClass('h-full', 'w-full');
-    expect(customLink).toHaveClass('px-2', 'lg:px-8');
-    expect(customLink?.parentElement).toHaveClass('min-h-12', 'lg:min-w-40', 'flex-1');
+    expect(customLink).toHaveClass('px-2', 'lg:px-2.5');
+    expect(customLink?.parentElement).toHaveClass('min-h-12', 'flex-1');
 
     screen.getAllByTestId('typography').forEach((label) => {
       expect(label).toHaveClass('text-sm', 'leading-5');

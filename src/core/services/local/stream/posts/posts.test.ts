@@ -505,6 +505,83 @@ describe('LocalStreamPostsService', () => {
     });
   });
 
+  describe('persistPosts - refresh guard', () => {
+    // The TTL refresh path passes `refreshGuard`. A local-first edit is newer
+    // than anything Nexus returns until Nexus has re-indexed it, and the
+    // owner's next edit reads the local row — so an older Nexus copy must not
+    // clobber local details. Counts, tags and the TTL still refresh.
+    const fetchStartedAt = BASE_TIMESTAMP + 10_000;
+    const compositeId = buildCompositeId({ pubky: 'author-1', id: 'edited' });
+
+    const seedLocalRow = async ({ indexedAt, ttlWrittenAt }: { indexedAt: number; ttlWrittenAt: number }) => {
+      await PostDetailsModel.table.put({
+        id: compositeId,
+        content: 'local edit',
+        indexed_at: indexedAt,
+        kind: 'collection',
+        uri: 'pubky://author-1/pub/pubky.app/posts/edited',
+        attachments: null,
+      });
+      await PostTtlModel.table.put({ id: compositeId, lastUpdatedAt: ttlWrittenAt });
+    };
+
+    const nexusCopy = (indexedAt: number) => {
+      const post = createMockNexusPost('edited', 'author-1', indexedAt, {
+        counts: { replies: 7 } as NexusPost['counts'],
+      });
+      post.details.content = 'nexus copy';
+      return post;
+    };
+
+    it('keeps details whose TTL row was written at or after the fetch started, still refreshing the rest', async () => {
+      // Equality counts as "written since": the edit and the fetch can share a
+      // millisecond.
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: fetchStartedAt });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [nexusCopy(BASE_TIMESTAMP + 20_000)],
+        refreshGuard: { fetchStartedAt },
+      });
+
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe('local edit');
+      expect((await PostCountsModel.findById(compositeId))!.replies).toBe(7);
+      expect((await PostTtlModel.findById(compositeId))!.lastUpdatedAt).toBeGreaterThan(fetchStartedAt);
+    });
+
+    it('keeps details when the Nexus copy is not indexed after the local row', async () => {
+      // Nexus has not re-indexed the local edit yet: its copy carries the
+      // pre-edit indexed_at.
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP + 5_000, ttlWrittenAt: BASE_TIMESTAMP });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [nexusCopy(BASE_TIMESTAMP + 5_000)],
+        refreshGuard: { fetchStartedAt },
+      });
+
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe('local edit');
+      expect((await PostCountsModel.findById(compositeId))!.replies).toBe(7);
+    });
+
+    it('replaces details when the Nexus copy is indexed after the local row', async () => {
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP, ttlWrittenAt: BASE_TIMESTAMP });
+
+      await LocalStreamPostsService.persistPosts({
+        posts: [nexusCopy(BASE_TIMESTAMP + 5_000)],
+        refreshGuard: { fetchStartedAt },
+      });
+
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
+    });
+
+    it('applies no guard to ordinary (non-refresh) persistence', async () => {
+      await seedLocalRow({ indexedAt: BASE_TIMESTAMP + 5_000, ttlWrittenAt: fetchStartedAt });
+
+      await LocalStreamPostsService.persistPosts({ posts: [nexusCopy(BASE_TIMESTAMP)] });
+
+      expect((await PostDetailsModel.findById(compositeId))!.content).toBe('nexus copy');
+    });
+  });
+
   describe('persistPosts - tombstone guard', () => {
     // Regression coverage for the bug where Nexus's by-ids endpoint could
     // return a just-deleted post (Nexus eventual consistency between the

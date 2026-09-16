@@ -7,7 +7,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { isAppError, isAuthError, isTimeoutError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { copyToClipboard } from '@/libs/utils/utils';
-import { toast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 

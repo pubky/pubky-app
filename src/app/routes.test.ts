@@ -4,6 +4,7 @@ import {
   AUTH_ROUTES,
   AUTHENTICATED_ROUTES,
   getCollectionRoute,
+  getContentSearchUrl,
   getProfileRoute,
   getUserProfileUrl,
   isCollectionsOverviewRoute,
@@ -22,6 +23,12 @@ import {
   SETTINGS_ROUTES,
   UNAUTHENTICATED_ROUTES,
 } from './routes';
+
+describe('getContentSearchUrl', () => {
+  it('builds an encoded q-only search URL', () => {
+    expect(getContentSearchUrl('bitcoin wallets & privacy')).toBe('/search?q=bitcoin+wallets+%26+privacy');
+  });
+});
 
 describe('isDynamicPublicRoute', () => {
   describe('invite routes', () => {

@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagController } from '@/controllers/tag/tag';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { mockAuthStore } from '@/test-utils/stores';
@@ -9,9 +10,8 @@ import { usePostTags } from './usePostTags';
 import { TAGS_PER_PAGE } from './usePostTags.constants';
 
 // Hoisted mock for fetchTags - must be defined before vi.mock
-const { mockFetchTags, mockToast, mockAuthStoreSelector } = vi.hoisted(() => ({
+const { mockFetchTags, mockAuthStoreSelector } = vi.hoisted(() => ({
   mockFetchTags: vi.fn().mockResolvedValue([]),
-  mockToast: vi.fn(),
   mockAuthStoreSelector: (currentUserPubky: string | null) => {
     return (selector: (state: AuthStore) => unknown) => selector(mockAuthStore({ currentUserPubky }));
   },
@@ -51,9 +51,7 @@ vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(() => undefined),
 }));
 // Mock toast
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  toast: mockToast,
-}));
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock tag transformation utilities
 vi.mock('@/molecules/TaggedItem/TaggedItem.utils', () => ({
@@ -165,7 +163,7 @@ describe('usePostTags', () => {
       expect(response.error).toBe('You must be logged in to add tags');
     });
 
-    it('shows a success toast when a tag is added', async () => {
+    it('does not show a success toast when a tag is added', async () => {
       const { result } = renderHook(() => usePostTags('author:post123'));
 
       let response: Awaited<ReturnType<typeof result.current.handleTagAdd>>;
@@ -174,9 +172,7 @@ describe('usePostTags', () => {
       });
 
       expect(response!).toEqual({ success: true });
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Tag added: test-tag',
-      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('shows an error toast when adding a tag fails', async () => {
@@ -190,9 +186,9 @@ describe('usePostTags', () => {
       });
 
       expect(response!).toEqual({ success: false, error: 'Failed to add tag' });
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'Could not add tag: broken-tag',
+        description: 'Could not add tag',
       });
     });
   });
@@ -242,7 +238,7 @@ describe('usePostTags', () => {
       expect(result.current.tags[0].relationship).toBe(false);
     });
 
-    it('shows a success toast when a tag is removed', async () => {
+    it('does not show a success toast when a tag is removed', async () => {
       const mockViewerId = 'viewer-123';
       vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
       vi.mocked(useLiveQuery).mockReturnValue([
@@ -257,9 +253,7 @@ describe('usePostTags', () => {
         await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
-        title: 'Tag removed: solo-tag',
-      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('shows an error toast when removing a tag fails', async () => {
@@ -278,9 +272,9 @@ describe('usePostTags', () => {
         await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: 'Could not remove tag: solo-tag',
+        description: 'Could not remove tag',
       });
     });
   });
@@ -381,6 +375,7 @@ describe('usePostTags', () => {
       expect(result.current.tags[0].label).toBe('alpha');
       expect(result.current.tags[1].label).toBe('beta');
       expect(result.current.tags[2].label).toBe('gamma');
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('clears the recently-added pin when the viewer removes the tag right after adding it', async () => {

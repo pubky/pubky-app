@@ -1,7 +1,7 @@
 'use client';
 import { AuthController } from '@/controllers/auth/auth';
 import { getRetryAfter, isAppError, isAuthError, isRetryable } from '@/libs/error/error.utils';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import type { UseInviteCodeSignUpResult } from './useInviteCodeSignUp.types';
 
@@ -29,7 +29,6 @@ const SIGN_UP_RETRY_MAX_DELAY_MS = 5000;
  * };
  */
 export function useInviteCodeSignUp(): UseInviteCodeSignUpResult {
-  const { toast } = useToast();
   const getRetryDelayMs = (attempt: number, retryAfterSeconds?: number): number => {
     if (typeof retryAfterSeconds === 'number' && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
       return Math.min(retryAfterSeconds * 1000, SIGN_UP_RETRY_MAX_DELAY_MS);

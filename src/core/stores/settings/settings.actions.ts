@@ -146,6 +146,20 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
     );
   },
 
+  setModerationBot: (moderationBot) => {
+    set(
+      (state) =>
+        withTimestamp({
+          privacy: {
+            ...state.privacy,
+            moderationBot,
+          },
+        }),
+      false,
+      SettingsActionTypes.SET_MODERATION_BOT,
+    );
+  },
+
   // Muted users actions
   addMutedUser: (userId) => {
     set(

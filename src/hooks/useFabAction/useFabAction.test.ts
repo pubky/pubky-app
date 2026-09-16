@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/molecules/Toaster/toast';
 import { useFeedOptimisticStore } from '@/stores/feedOptimistic/feedOptimistic.store';
 import { useFabAction } from './useFabAction';
 
@@ -10,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   currentUserPubky: 'me-pubky' as string | null,
   commitUpdateCollectionItem: vi.fn(),
   commitCreate: vi.fn(),
-  toast: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -34,9 +34,7 @@ vi.mock('@/controllers/bookmark/bookmark', () => ({
   },
 }));
 
-vi.mock('@/molecules/Toaster/use-toast', () => ({
-  useToast: () => ({ toast: mocks.toast }),
-}));
+vi.mock('@/molecules/Toaster/toast');
 vi.mock('@/libs/logger/logger', async () => {
   const actual = await vi.importActual<typeof import('@/libs/logger/logger')>('@/libs/logger/logger');
   return {
@@ -124,7 +122,7 @@ describe('useFabAction', () => {
         shouldAdd: true,
       });
       expect(useFeedOptimisticStore.getState().pendingByKey[`collection:${ME}:post1`]).toEqual(['author:newpost']);
-      expect(mocks.toast).toHaveBeenCalledWith({ title: 'Success', description: 'Post added to collection.' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Success', description: 'Post added to collection.' });
     });
 
     it('bookmarks the created post, enqueues it, and toasts', async () => {
@@ -140,7 +138,7 @@ describe('useFabAction', () => {
 
       expect(mocks.commitCreate).toHaveBeenCalledWith({ postId: 'author:bp', userId: ME });
       expect(useFeedOptimisticStore.getState().pendingByKey.bookmarks).toEqual(['author:bp']);
-      expect(mocks.toast).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ title: 'Post saved to bookmarks' });
     });
 
     it('surfaces an error and skips bookmarking when the pubky is missing', async () => {
@@ -159,7 +157,7 @@ describe('useFabAction', () => {
 
       expect(mocks.commitCreate).not.toHaveBeenCalled();
       expect(useFeedOptimisticStore.getState().pendingByKey.bookmarks).toBeUndefined();
-      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Sign in to bookmark posts' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'error', description: 'Sign in to bookmark posts' });
     });
 
     it('shows an error toast and does not enqueue when the collection save fails', async () => {
@@ -174,7 +172,7 @@ describe('useFabAction', () => {
         await onPostCreated('author:x');
       });
 
-      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: 'Failed to update collection.' });
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'error', description: 'Failed to update collection.' });
       expect(useFeedOptimisticStore.getState().pendingByKey[`collection:${ME}:post1`]).toBeUndefined();
     });
   });

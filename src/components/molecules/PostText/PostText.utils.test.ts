@@ -12,6 +12,7 @@ import {
   remarkInlineShowMore,
   remarkMentions,
   remarkPlaintextCodeblock,
+  remarkSoftBreaks,
   truncateAtWordBoundary,
   truncatePostPreviewText,
 } from './PostText.utils';
@@ -151,6 +152,60 @@ describe('remarkPlaintextCodeblock', () => {
     expect(codeBlock1.lang).toBe('plaintext');
     expect(codeBlock2.lang).toBe('python');
     expect(codeBlock3.lang).toBe('plaintext');
+  });
+});
+
+describe('remarkSoftBreaks', () => {
+  it('splits a newline inside a text node into a break node', () => {
+    const paragraph = createParagraph('First line\nSecond line');
+    const tree = createRoot([paragraph]);
+
+    remarkSoftBreaks()(tree);
+
+    expect(paragraph.children.map((child) => child.type)).toEqual(['text', 'break', 'text']);
+    expect((paragraph.children[0] as Text).value).toBe('First line');
+    expect((paragraph.children[2] as Text).value).toBe('Second line');
+  });
+
+  it('turns consecutive newlines into consecutive breaks', () => {
+    const paragraph = createParagraph('First\n\nSecond');
+    const tree = createRoot([paragraph]);
+
+    remarkSoftBreaks()(tree);
+
+    expect(paragraph.children.map((child) => child.type)).toEqual(['text', 'break', 'break', 'text']);
+  });
+
+  it('leaves text without newlines untouched', () => {
+    const paragraph = createParagraph('One single line');
+    const tree = createRoot([paragraph]);
+
+    remarkSoftBreaks()(tree);
+
+    expect(paragraph.children).toHaveLength(1);
+    expect((paragraph.children[0] as Text).value).toBe('One single line');
+  });
+
+  it('splits newlines inside nested phrasing content', () => {
+    const emphasis: Emphasis = {
+      type: 'emphasis',
+      children: [{ type: 'text', value: 'stressed\nacross lines' } as Text],
+    };
+    const paragraph: Paragraph = { type: 'paragraph', children: [emphasis] };
+    const tree = createRoot([paragraph]);
+
+    remarkSoftBreaks()(tree);
+
+    expect(emphasis.children.map((child) => child.type)).toEqual(['text', 'break', 'text']);
+  });
+
+  it('does not touch newlines inside code blocks', () => {
+    const codeBlock: Code = { type: 'code', value: 'line one\nline two' };
+    const tree = createRoot([codeBlock]);
+
+    remarkSoftBreaks()(tree);
+
+    expect(codeBlock.value).toBe('line one\nline two');
   });
 });
 

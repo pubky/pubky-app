@@ -2,10 +2,10 @@
 
 import { type ComponentPropsWithoutRef, type ComponentRef, forwardRef, type SyntheticEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ClipboardPaste, Library, List as ListIcon, MessageCircle, Plus, Repeat, SquarePlus } from 'lucide-react';
+import { Activity, ClipboardPaste, Library, MessageCircle, Plus, Repeat, SquarePlus, UserRound } from 'lucide-react';
 import { APP_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
+import { Card, CardFooter, CardHeader, CardTitle } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import {
   Dialog,
@@ -114,20 +114,37 @@ function renderDialogAddContentTrigger(variant: DialogAddContentTriggerVariant, 
   }
 }
 
+type ActionPillEmphasis = 'muted' | 'highlighted' | 'default';
+
+function actionPillEmphasisClass(emphasis: ActionPillEmphasis): string {
+  switch (emphasis) {
+    case 'muted':
+      return 'text-muted-foreground opacity-30';
+    case 'highlighted':
+      return 'text-muted-foreground drop-shadow-[0_0_8px_var(--brand)]';
+    case 'default':
+      return 'text-secondary-foreground';
+    default: {
+      const exhaustiveCheck: never = emphasis;
+      return exhaustiveCheck;
+    }
+  }
+}
+
 function ActionPill({
   icon: Icon,
-  count,
-  isHighlighted = false,
+  label,
+  emphasis = 'default',
   onClick,
   dataCy,
   ariaLabel,
 }: {
   icon: typeof MessageCircle;
-  count?: number;
-  isHighlighted?: boolean;
+  label?: string | number;
+  emphasis?: ActionPillEmphasis;
   onClick: () => void;
   dataCy: string;
-  ariaLabel: string;
+  ariaLabel?: string;
 }) {
   return (
     <Button
@@ -137,74 +154,70 @@ function ActionPill({
       aria-label={ariaLabel}
       data-cy={dataCy}
       className={cn(
-        'flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 text-muted-foreground shadow-xs',
-        !isHighlighted && 'opacity-30',
-        isHighlighted && 'drop-shadow-[0_0_8px_var(--brand)]',
+        'flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-secondary px-3.5 py-2 shadow-xs',
+        actionPillEmphasisClass(emphasis),
       )}
     >
       <Icon className="size-4 shrink-0" />
-      {count !== undefined && (
+      {label !== undefined && (
         <Typography as="span" overrideDefaults className="text-xs leading-4 font-bold">
-          {count}
+          {label}
         </Typography>
       )}
     </Button>
   );
 }
 
-function FeedInstructionCard({ onOpenFeed }: { onOpenFeed: () => void }) {
+function FeedInstructionCard({
+  onOpenFeed,
+  onSelectFromPosts,
+}: {
+  onOpenFeed: () => void;
+  onSelectFromPosts: () => void;
+}) {
   return (
     <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
       <CardHeader className="px-6">
         <CardTitle className="text-base leading-none font-bold text-card-foreground">{'Add from feed'}</CardTitle>
       </CardHeader>
-      <CardFooter className="justify-start px-6">
-        <Container overrideDefaults className="flex w-full flex-wrap items-center justify-start gap-2">
-          <ActionPill
-            icon={MessageCircle}
-            count={7}
-            onClick={onOpenFeed}
-            dataCy="add-content-feed-reply-pill"
-            ariaLabel={'Add from feed'}
-          />
-          <ActionPill
-            icon={Repeat}
-            count={3}
-            onClick={onOpenFeed}
-            dataCy="add-content-feed-repost-pill"
-            ariaLabel={'Add from feed'}
-          />
-          <ActionPill
-            icon={Library}
-            isHighlighted
-            onClick={onOpenFeed}
-            dataCy="add-content-feed-save-pill"
-            ariaLabel={'Add from feed'}
-          />
+      <CardFooter className="px-6">
+        <Container overrideDefaults className="flex w-full flex-wrap items-center justify-between gap-2">
+          <Container overrideDefaults className="flex items-center gap-2" data-cy="add-content-feed-pills">
+            <ActionPill
+              icon={MessageCircle}
+              label={7}
+              emphasis="muted"
+              onClick={onOpenFeed}
+              dataCy="add-content-feed-reply-pill"
+              ariaLabel={'Add from feed'}
+            />
+            <ActionPill
+              icon={Repeat}
+              label={3}
+              emphasis="muted"
+              onClick={onOpenFeed}
+              dataCy="add-content-feed-repost-pill"
+              ariaLabel={'Add from feed'}
+            />
+            <ActionPill
+              icon={Library}
+              emphasis="highlighted"
+              onClick={onOpenFeed}
+              dataCy="add-content-feed-save-pill"
+              ariaLabel={'Add from feed'}
+            />
+          </Container>
+          <Container overrideDefaults className="flex items-center gap-2">
+            <ActionPill icon={Activity} label={'Feed'} onClick={onOpenFeed} dataCy="add-content-feed-button" />
+            <ActionPill
+              icon={UserRound}
+              label={'My posts'}
+              onClick={onSelectFromPosts}
+              dataCy="add-content-my-posts-button"
+            />
+          </Container>
         </Container>
       </CardFooter>
-    </Card>
-  );
-}
-
-function SelectFromPostsCard({ onSelectFromPosts }: { onSelectFromPosts: () => void }) {
-  return (
-    <Card className="min-w-0 gap-4 overflow-hidden rounded-md py-6 shadow-sm">
-      <CardHeader className="px-6">
-        <CardTitle className="text-base leading-none font-bold text-card-foreground">{'Select from posts'}</CardTitle>
-      </CardHeader>
-      <CardContent className="px-6">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={onSelectFromPosts}
-          data-cy="add-content-select-from-posts"
-        >
-          <ListIcon className="size-4" />
-          {'Select'}
-        </Button>
-      </CardContent>
     </Card>
   );
 }
@@ -306,13 +319,8 @@ function DialogAddContentBody({
           <span className="hidden sm:inline">{'There are several ways to add posts to your collection.'}</span>
         </DialogDescription>
       </DialogHeader>
-      <Container
-        overrideDefaults
-        data-cy="add-content-options"
-        className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2"
-      >
-        <FeedInstructionCard onOpenFeed={onOpenFeed} />
-        <SelectFromPostsCard onSelectFromPosts={onSelectFromPosts} />
+      <Container overrideDefaults data-cy="add-content-options" className="flex w-full flex-col gap-3">
+        <FeedInstructionCard onOpenFeed={onOpenFeed} onSelectFromPosts={onSelectFromPosts} />
         <UrlPasteCard addContentForm={addContentForm} />
         <CreatePostCard onCreatePost={onCreatePost} />
       </Container>

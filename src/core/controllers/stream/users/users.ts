@@ -5,6 +5,8 @@ import type {
   TReadUserStreamChunkResponse,
 } from '@/application/stream/users/users.types';
 import { NEXUS_USERS_PER_PAGE } from '@/config/nexus';
+import type { Pubky } from '@/models/models.types';
+import type { UserStreamId } from '@/models/stream/user/userStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 /**
@@ -113,5 +115,16 @@ export class StreamUserController {
       userIds,
       viewerId: viewerId ?? undefined,
     });
+  }
+
+  /**
+   * Read the cached user IDs of a stream (local only, never hits the network).
+   * Suited to `useLiveQuery` so consumers react to local follow/unfollow writes.
+   *
+   * @param streamId - User stream identifier (e.g., 'user123:following')
+   * @returns Cached user IDs, empty when the stream was never cached
+   */
+  static async getStreamUserIds(streamId: UserStreamId): Promise<Pubky[]> {
+    return await UserStreamApplication.getStreamUserIds(streamId);
   }
 }

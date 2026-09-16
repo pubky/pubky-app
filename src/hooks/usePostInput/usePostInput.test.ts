@@ -3,16 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
 import {
-  ARTICLE_ATTACHMENT_MAX_FILES,
+  ARTICLE_COVER_MAX_FILES,
   ARTICLE_TITLE_MAX_CHARACTER_LENGTH,
   ATTACHMENT_MAX_OTHER_SIZE,
   POST_ATTACHMENT_MAX_FILES,
   POST_MAX_CHARACTER_LENGTH,
+  POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { Logger } from '@/libs/logger/logger';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { mockClipboardEvent, mockDragEvent } from '@/test-utils/react-events';
@@ -64,6 +66,8 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', () => ({
   })),
 }));
 
+const mockInlineImageUpload = vi.fn();
+
 vi.mock('@/hooks/usePost/usePost', () => ({
   usePost: vi.fn(() => ({
     content: mockContent,
@@ -83,6 +87,8 @@ vi.mock('@/hooks/usePost/usePost', () => ({
     repost: mockRepost,
     edit: mockEdit,
     isSubmitting: mockIsSubmitting,
+    inlineImages: { upload: mockInlineImageUpload, getPreviewUrl: vi.fn(() => null) },
+    uploadingCount: 0,
   })),
 }));
 
@@ -94,13 +100,6 @@ vi.mock('@/hooks/useEditAttachments/useEditAttachments', () => ({
 
 vi.mock('@/hooks/useEmojiInsert/useEmojiInsert', () => ({
   useEmojiInsert: vi.fn(() => vi.fn()),
-}));
-
-vi.mock('@/hooks/useUserDetails/useUserDetails', () => ({
-  useUserDetails: vi.fn(() => ({
-    userDetails: { name: 'Test Author' },
-    isLoading: false,
-  })),
 }));
 
 vi.mock('@/hooks/useDeletePost/useDeletePost', () => ({
@@ -138,15 +137,8 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext', () => ({
   useTimelineFeedContext: vi.fn(() => mockTimelineFeedContext),
 }));
 
-// Mock useToast
-const mockToast = vi.fn();
-vi.mock('@/molecules/Toaster/use-toast', () => {
-  return {
-    useToast: vi.fn(() => ({
-      toast: mockToast,
-    })),
-  };
-});
+// Mock toast
+vi.mock('@/molecules/Toaster/toast');
 
 // Mock useLocalFilesStore
 const mockSetPostAttachments = vi.fn();
@@ -473,7 +465,6 @@ describe('usePostInput', () => {
 
       expect(mockRepost).toHaveBeenCalledWith({
         originalPostId: 'original-post-id',
-        originalAuthorName: 'Test Author',
         onSuccess: expect.any(Function),
         onUndo: expect.any(Function),
       });
@@ -588,6 +579,39 @@ describe('usePostInput', () => {
       });
     });
 
+    it('computes preserved (unreferenced) attachment URIs for article edits', async () => {
+      mockIsArticle = true;
+      mockContent = 'Text with ![a](pubky://user/pub/pubky.app/files/REF)';
+      mockArticleTitle = 'Title';
+      const uris = [
+        'pubky://user/pub/pubky.app/files/COVER',
+        'pubky://user/pub/pubky.app/files/REF',
+        'pubky://user/pub/pubky.app/files/UNSEEN',
+      ];
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editAttachmentUris: uris,
+          editIsArticle: true,
+          // Published body references slot 1 only; slot 0 is the cover, slot 2 was never shown
+          editContent: JSON.stringify({ title: 'Title', body: 'Text with ![a](attachment:1)' }),
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockEdit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          originalAttachmentUris: uris,
+          preservedAttachmentUris: ['pubky://user/pub/pubky.app/files/UNSEEN'],
+        }),
+      );
+    });
+
     it('submits edit with empty content when new attachments were added', async () => {
       mockContent = '';
       mockAttachments = [new File(['test'], 'test.png', { type: 'image/png' })];
@@ -625,7 +649,6 @@ describe('usePostInput', () => {
 
       expect(mockRepost).toHaveBeenCalledWith({
         originalPostId: 'original-post-id',
-        originalAuthorName: 'Test Author',
         onSuccess: expect.any(Function),
         onUndo: expect.any(Function),
       });
@@ -2177,9 +2200,9 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: expect.stringContaining('Unsupported file type for'),
+        description: expect.stringContaining('Unsupported file type'),
       });
     });
 
@@ -2199,7 +2222,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).toHaveBeenCalled();
-      expect(mockToast).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('rejects image files exceeding the raw image cap and shows toast', () => {
@@ -2219,7 +2242,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining(`exceeds the ${maxImageSizeLabel} limit`),
       });
@@ -2244,7 +2267,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining(`exceeds the ${maxOtherSizeLabel} limit`),
       });
@@ -2270,7 +2293,7 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: `Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`,
       });
@@ -2299,7 +2322,7 @@ describe('usePostInput', () => {
 
       // Should add only 1 file and show error for the rest
       expect(mockSetAttachments).toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining(`Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`),
       });
@@ -2329,7 +2352,7 @@ describe('usePostInput', () => {
       expect(mockSetAttachments).toHaveBeenCalledTimes(1);
       const updater = mockSetAttachments.mock.calls[0][0] as (prev: File[]) => File[];
       expect(updater([])).toEqual([files[0], files[1]]);
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: expect.stringContaining(`Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`),
       });
@@ -2356,31 +2379,43 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
         description: `Maximum ${POST_ATTACHMENT_MAX_FILES} files allowed`,
       });
     });
 
-    it('shows multiple errors with "Errors" title', () => {
+    it('tallies rejected files per reason in one toast, without naming them', () => {
       const { result } = renderHook(() =>
         usePostInput({
           variant: 'post',
         }),
       );
 
-      const invalidFile = new File(['test'], 'test.exe', { type: 'application/x-msdownload' });
-      const largeFile = new File(['test'], 'large.png', { type: 'image/png' });
-      Object.defineProperty(largeFile, 'size', { value: 6 * 1024 * 1024 });
+      const invalidFile = new File(['test'], 'secret-report.exe', { type: 'application/x-msdownload' });
+      const largeFiles = ['big-one.png', 'big-two.png'].map((name) => {
+        const file = new File(['test'], name, { type: 'image/png' });
+        Object.defineProperty(file, 'size', { value: IMAGE_MAX_RAW_SIZE + 1 });
+        return file;
+      });
+      const maxImageSizeLabel = `${Math.round(IMAGE_MAX_RAW_SIZE / (1024 * 1024))}MB`;
 
       act(() => {
-        result.current.handleFilesAdded([invalidFile, largeFile]);
+        result.current.handleFilesAdded([invalidFile, ...largeFiles]);
       });
 
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(mockSetAttachments).not.toHaveBeenCalled();
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: expect.any(String),
+        description: [
+          `Unsupported file type. Supported: ${POST_SUPPORTED_FILE_TYPES}.`,
+          `2 images exceed the ${maxImageSizeLabel} limit.`,
+        ].join('\n'),
       });
+      const { description } = vi.mocked(toast).mock.calls[0][0];
+      expect(description).not.toContain('secret-report');
+      expect(description).not.toContain('big-one');
     });
   });
 
@@ -2590,6 +2625,61 @@ describe('usePostInput', () => {
         expect(mockSetAttachments).toHaveBeenCalled();
       });
 
+      it('routes article drops landing inside the rich-text editor to inline insertion', async () => {
+        mockIsArticle = true;
+        mockInlineImageUpload.mockResolvedValue('pubky://author/pub/pubky.app/files/img1');
+
+        const { result } = renderHook(() =>
+          usePostInput({
+            variant: 'post',
+          }),
+        );
+
+        const insertMarkdown = vi.fn();
+        const focus = vi.fn();
+        result.current.markdownEditorRef.current = asOpaque<
+          NonNullable<(typeof result.current.markdownEditorRef)['current']>
+        >({ insertMarkdown, focus });
+
+        // Lexical ignores drops on non-editable islands (already-inserted
+        // images), so the event reaches the container un-prevented with a
+        // target inside the editor root
+        const editorRoot = document.createElement('div');
+        editorRoot.className = 'mdxeditor dark-theme';
+        const droppedOnImage = document.createElement('img');
+        editorRoot.appendChild(droppedOnImage);
+        document.body.appendChild(editorRoot);
+
+        const mockFile = new File(['test'], 'pic.png', { type: 'image/png' });
+        const dropEvent = mockDragEvent({
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          target: droppedOnImage,
+          dataTransfer: asOpaque<DataTransfer>({
+            items: [
+              {
+                kind: 'file',
+                getAsFile: () => mockFile,
+              },
+            ],
+          }),
+        });
+
+        try {
+          act(() => {
+            result.current.handleDrop(dropEvent);
+          });
+
+          await waitFor(() => {
+            expect(insertMarkdown).toHaveBeenCalledWith('![](pubky://author/pub/pubky.app/files/img1)');
+          });
+          expect(mockInlineImageUpload).toHaveBeenCalledWith(mockFile);
+          expect(mockSetAttachments).not.toHaveBeenCalled();
+        } finally {
+          editorRoot.remove();
+        }
+      });
+
       it('ignores non-file items in dataTransfer', () => {
         const { result } = renderHook(() =>
           usePostInput({
@@ -2671,9 +2761,9 @@ describe('usePostInput', () => {
   describe('handleFilesAdded with article mode', () => {
     it('uses article-specific file limits when in article mode', () => {
       mockIsArticle = true;
-      // Set up ARTICLE_ATTACHMENT_MAX_FILES existing attachments (article max)
+      // Set up ARTICLE_COVER_MAX_FILES existing attachments (article cover max)
       mockAttachments = Array.from(
-        { length: ARTICLE_ATTACHMENT_MAX_FILES },
+        { length: ARTICLE_COVER_MAX_FILES },
         (_, i) => new File([`${i}`], `${i}.png`, { type: 'image/png' }),
       );
 
@@ -2690,9 +2780,10 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: `Maximum ${ARTICLE_ATTACHMENT_MAX_FILES} files allowed`,
+        description:
+          'Articles support one cover image. Remove it first, or drop the image in the editor to add it inline.',
       });
     });
 
@@ -2713,9 +2804,10 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: `Maximum ${ARTICLE_ATTACHMENT_MAX_FILES} files allowed`,
+        description:
+          'Articles support one cover image. Remove it first, or drop the image in the editor to add it inline.',
       });
     });
 
@@ -2736,9 +2828,9 @@ describe('usePostInput', () => {
       });
 
       expect(mockSetAttachments).not.toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith({
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
         variant: 'error',
-        description: expect.stringContaining('Unsupported file type for'),
+        description: expect.stringContaining('Unsupported file type'),
       });
     });
 

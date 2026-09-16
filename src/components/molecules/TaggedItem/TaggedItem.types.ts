@@ -28,6 +28,13 @@ export interface TaggedItemProps {
   onExpandToggle?: (tagLabel: string) => void;
   /** Full tagger IDs for expanded list (optional) */
   expandedTaggerIds?: Pubky[];
-  /** Whether taggers are currently loading */
+  /** Whether the first page of taggers is currently loading */
   isLoadingTaggers?: boolean;
+  /** Whether a further page of taggers is currently loading */
+  isLoadingMoreTaggers?: boolean;
+  /** Whether more taggers can be loaded for the expanded list */
+  hasMoreTaggers?: boolean;
+  hasTaggersError?: boolean;
+  /** Callback to load the next page of taggers */
+  onLoadMoreTaggers?: () => void;
 }

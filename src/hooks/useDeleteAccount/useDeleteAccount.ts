@@ -6,7 +6,7 @@ import { AUTH_ROUTES } from '@/app/routes';
 import { AuthController } from '@/controllers/auth/auth';
 import { ProfileController } from '@/controllers/profile/profile';
 import { Logger } from '@/libs/logger/logger';
-import { useToast } from '@/molecules/Toaster/use-toast';
+import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 interface UseDeleteAccountResult {
@@ -24,7 +24,6 @@ interface UseDeleteAccountResult {
  */
 export function useDeleteAccount(): UseDeleteAccountResult {
   const router = useRouter();
-  const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
 

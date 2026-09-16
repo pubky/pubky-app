@@ -69,28 +69,28 @@ exports[`FilterTimeframe > matches snapshot 1`] = `
               rx="2"
               width="18"
               x="3"
-              y="4"
+              y="3"
             />
             <path
-              d="M16 2v4"
+              d="M16 2v3"
             />
             <path
-              d="M3 10h18"
+              d="M3 9h18"
             />
             <path
-              d="M8 2v4"
+              d="M8 2v3"
             />
             <path
-              d="M17 14h-6"
+              d="M17 13h-6"
             />
             <path
-              d="M13 18H7"
+              d="M13 17H7"
             />
             <path
-              d="M7 14h.01"
+              d="M7 13h.01"
             />
             <path
-              d="M17 18h.01"
+              d="M17 17h.01"
             />
           </svg>
         </span>
@@ -121,20 +121,20 @@ exports[`FilterTimeframe > matches snapshot 1`] = `
             xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              d="M8 2v4"
+              d="M8 2v3"
             />
             <path
-              d="M16 2v4"
+              d="M16 2v3"
             />
             <rect
               height="18"
               rx="2"
               width="18"
               x="3"
-              y="4"
+              y="3"
             />
             <path
-              d="M3 10h18"
+              d="M3 9h18"
             />
           </svg>
         </span>
@@ -263,28 +263,28 @@ exports[`HotFeedDrawer > matches snapshot 1`] = `
                 rx="2"
                 width="18"
                 x="3"
-                y="4"
+                y="3"
               />
               <path
-                d="M16 2v4"
+                d="M16 2v3"
               />
               <path
-                d="M3 10h18"
+                d="M3 9h18"
               />
               <path
-                d="M8 2v4"
+                d="M8 2v3"
               />
               <path
-                d="M17 14h-6"
+                d="M17 13h-6"
               />
               <path
-                d="M13 18H7"
+                d="M13 17H7"
               />
               <path
-                d="M7 14h.01"
+                d="M7 13h.01"
               />
               <path
-                d="M17 18h.01"
+                d="M17 17h.01"
               />
             </svg>
           </span>
@@ -315,20 +315,20 @@ exports[`HotFeedDrawer > matches snapshot 1`] = `
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M8 2v4"
+                d="M8 2v3"
               />
               <path
-                d="M16 2v4"
+                d="M16 2v3"
               />
               <rect
                 height="18"
                 rx="2"
                 width="18"
                 x="3"
-                y="4"
+                y="3"
               />
               <path
-                d="M3 10h18"
+                d="M3 9h18"
               />
             </svg>
           </span>
@@ -458,28 +458,28 @@ exports[`HotFeedSidebar > matches snapshot 1`] = `
                 rx="2"
                 width="18"
                 x="3"
-                y="4"
+                y="3"
               />
               <path
-                d="M16 2v4"
+                d="M16 2v3"
               />
               <path
-                d="M3 10h18"
+                d="M3 9h18"
               />
               <path
-                d="M8 2v4"
+                d="M8 2v3"
               />
               <path
-                d="M17 14h-6"
+                d="M17 13h-6"
               />
               <path
-                d="M13 18H7"
+                d="M13 17H7"
               />
               <path
-                d="M7 14h.01"
+                d="M7 13h.01"
               />
               <path
-                d="M17 18h.01"
+                d="M17 17h.01"
               />
             </svg>
           </span>
@@ -510,20 +510,20 @@ exports[`HotFeedSidebar > matches snapshot 1`] = `
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M8 2v4"
+                d="M8 2v3"
               />
               <path
-                d="M16 2v4"
+                d="M16 2v3"
               />
               <rect
                 height="18"
                 rx="2"
                 width="18"
                 x="3"
-                y="4"
+                y="3"
               />
               <path
-                d="M3 10h18"
+                d="M3 9h18"
               />
             </svg>
           </span>

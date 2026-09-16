@@ -115,6 +115,7 @@ describe('TimelinePosts', () => {
       refresh: vi.fn(),
       replace: vi.fn(),
       prefetch: vi.fn(),
+      bfcacheId: '',
     } as ReturnType<typeof useRouter>);
 
     mockUseInfiniteScroll.mockReturnValue({
@@ -636,6 +637,7 @@ describe('TimelinePosts - Snapshots', () => {
       refresh: vi.fn(),
       replace: vi.fn(),
       prefetch: vi.fn(),
+      bfcacheId: '',
     } as ReturnType<typeof useRouter>);
 
     mockUseInfiniteScroll.mockReturnValue({

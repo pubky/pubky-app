@@ -11,12 +11,10 @@ export interface UsePostPostOptions {
 
 export interface UsePostRepostOptions {
   originalPostId: string;
-  /** Original post author's name for the toast message */
-  originalAuthorName?: string;
   /**
    * Overrides the success toast title (e.g. "Share Collection" reuses the
-   * repost flow but reads as a collection action). Falls back to the standard
-   * "Reposted {author}'s post" copy when omitted.
+   * repost flow but reads as a collection action). Falls back to 'Reposted'
+   * when omitted.
    */
   successToastTitle?: string;
   onSuccess?: (createdPostId: string) => void;
@@ -33,6 +31,14 @@ export interface UsePostEditOptions {
    * didn't, the edit is committed content-only.
    */
   originalAttachmentUris?: string[];
+  /**
+   * Article-only: original attachment URIs that were NOT presented to the user
+   * at open (not the cover, not referenced by the body — e.g. attachments from
+   * other clients or targets of malformed refs). Carried through the edit at
+   * the tail of the attachment list so an unrelated edit never deletes files
+   * the user did not see and remove.
+   */
+  preservedAttachmentUris?: string[];
   onSuccess?: (createdPostId: string) => void;
 }
 
@@ -75,4 +81,11 @@ export interface UsePostReturn {
   repost: (options: UsePostRepostOptions) => Promise<void>;
   edit: (options: UsePostEditOptions) => Promise<void>;
   isSubmitting: boolean;
+  /** Article inline-image editor surface (upload at insert time + session preview lookup). */
+  inlineImages: {
+    upload: (file: File) => Promise<string>;
+    getPreviewUrl: (src: string) => string | null;
+  };
+  /** Inline image uploads currently in flight; publishing is blocked while > 0. */
+  uploadingCount: number;
 }

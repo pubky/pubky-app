@@ -89,6 +89,7 @@ export class ProfileController {
    */
   static async commitDelete({ pubky, setProgress }: TDeleteAccountInput) {
     await ProfileApplication.commitDelete({ pubky, setProgress });
+    useOnboardingStore.getState().clearExperienceCompleted(pubky);
   }
 
   /**
