@@ -3983,4 +3983,26 @@ describe('PostStreamApplication reply publication', () => {
     expect(result.nextPageIds).toEqual(replyIds);
     expect(result.cacheMissPostIds).toEqual([]);
   });
+
+  it('persists an ascending reply page newest-first while serving it in page order', async () => {
+    // The row is cached newest-first; handing the page over reversed keeps ids that still
+    // lack details (a failed hydration) in the right relative order under the timestamp sort.
+    const streamId = buildPostReplyStreamId('author:parent');
+    const replyIds = ['author:reply-1', 'author:reply-2', 'author:reply-3'];
+    vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({ post_keys: replyIds, last_post_score: null });
+    vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
+    const publish = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
+
+    const result = await PostStreamApplication.getOrFetchStreamSlice({
+      streamId,
+      streamHead: SKIP_FETCH_NEW_POSTS,
+      streamTail: 0,
+      limit: 3,
+      viewerId: null,
+      order: StreamOrder.ASCENDING,
+    });
+
+    expect(publish).toHaveBeenCalledExactlyOnceWith({ stream: [...replyIds].reverse(), streamId });
+    expect(result.nextPageIds).toEqual(replyIds);
+  });
 });

@@ -894,11 +894,11 @@ describe('LocalStreamPostsService', () => {
       ).resolves.toEqual([postId('post-1'), postId('post-2'), postId('post-3')]);
     });
 
-    it('stores a cursor-less reply row newest-first from creation and keeps it so on a repeated page', async () => {
+    it('stores a cursor-less reply row newest-first from creation and leaves it untouched when the page repeats', async () => {
       // Hydration creates a reply row in the by-ids response order (oldest first for an
       // ascending page); `useReplyStream` reverses the row for display, so it must be
-      // newest-first from the start, and the ascending page that then repeats every id
-      // must not leave it unsorted.
+      // newest-first from the start. The ascending page that then repeats every id adds
+      // nothing and never rewrites the row.
       const replyStreamId = 'post_replies:user-1:parent' as PostStreamId;
       await LocalStreamPostsService.persistPosts({
         posts: [
@@ -914,11 +914,11 @@ describe('LocalStreamPostsService', () => {
         LocalStreamPostsService.persistNewStreamChunk({ streamId: replyStreamId, stream: oldestFirst }),
       ).resolves.toEqual(newestFirst);
 
-      // A row an older client left in response order is normalized by the repeated page.
-      await LocalStreamPostsService.upsert({ streamId: replyStreamId, stream: oldestFirst });
+      const upsertSpy = vi.spyOn(PostStreamModel, 'upsert');
       await expect(
         LocalStreamPostsService.persistNewStreamChunk({ streamId: replyStreamId, stream: oldestFirst }),
       ).resolves.toEqual(newestFirst);
+      expect(upsertSpy).not.toHaveBeenCalled();
       expect((await LocalStreamPostsService.read({ streamId: replyStreamId }))?.stream).toEqual(newestFirst);
     });
 
@@ -948,7 +948,7 @@ describe('LocalStreamPostsService', () => {
       expect(result?.tailCursor).toBe(BASE_TIMESTAMP);
     });
 
-    it('still sorts cursor-less chunks by timestamp and preserves the persisted cursor', async () => {
+    it('appends a cursor-less chunk to a score-backed row without re-sorting and preserves the persisted cursor', async () => {
       await LocalStreamPostsService.persistPosts({
         posts: [
           createMockNexusPost('post-1', DEFAULT_AUTHOR, BASE_TIMESTAMP + 1),
@@ -961,11 +961,12 @@ describe('LocalStreamPostsService', () => {
         tailCursor: BASE_TIMESTAMP + 1,
       });
 
-      // A hydration-discovered id carries no Nexus position.
+      // A hydration-discovered id carries no Nexus position; the row's order is Nexus's and
+      // a newer indexed_at (an edit) must not float the id above the raw anchor.
       await LocalStreamPostsService.persistNewStreamChunk({ streamId, stream: [postId('post-2')] });
 
       const result = await LocalStreamPostsService.read({ streamId });
-      expect(result?.stream).toEqual([postId('post-2'), postId('post-1')]);
+      expect(result?.stream).toEqual([postId('post-1'), postId('post-2')]);
       expect(result?.tailCursor).toBe(BASE_TIMESTAMP + 1);
     });
 

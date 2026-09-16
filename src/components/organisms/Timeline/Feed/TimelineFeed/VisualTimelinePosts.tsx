@@ -380,7 +380,7 @@ export function VisualTimelinePosts({
   showUnavailablePosts = false,
 }: VisualTimelinePostsProps) {
   const { navigateToPost } = usePostNavigation();
-  const { rows, hiddenPostCount, hasPendingSnapshot, hasPendingTiles, hasPendingFiles, hasPendingPostDetails } =
+  const { rows, tiles, hiddenPostCount, hasPendingSnapshot, hasPendingTiles, hasPendingFiles, hasPendingPostDetails } =
     useVisualFeedTiles({
       postIds,
       hasMore,
@@ -416,16 +416,19 @@ export function VisualTimelinePosts({
   // rounds that grow nothing; past it the manual Load more below takes over (#2523).
   // The budget measures mosaic progress, not ids: with content set to All a page of
   // text-only posts grows `postIds` while the tile pipeline drops every one of them, and a
-  // budget keyed on ids would keep resetting (#2523). Tiles still resolving count as loading
-  // so an unsettled page is not judged unproductive before its tiles can appear.
-  const tileCount = rows.reduce((count, row) => count + row.cells.length, 0);
+  // budget keyed on ids would keep resetting (#2523). It counts every tile the pipeline
+  // tracks — packed into a row, buffered for the next row, or still probing — so a page
+  // whose tiles are unsettled already counts as progress. The pending flags must not gate
+  // the observer: a file Nexus no longer returns, or a post that never resolves on a feed
+  // that drops unavailable posts, keeps them set for good and would freeze the feed with
+  // neither auto-loading nor the manual Load more.
   const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore: hasMore && (hasRows || postIds.length === 0),
-    isLoading: loadingMore || isInitialLoading || hasPendingTiles || hasPendingFiles || hasPendingPostDetails,
+    isLoading: loadingMore || isInitialLoading,
     threshold: 3000,
     debounceMs: 20,
-    itemCount: tileCount,
+    itemCount: tiles.length,
     maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 

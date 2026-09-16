@@ -272,6 +272,11 @@ function createRows(): VisualRow[] {
   ];
 }
 
+/** The tiles behind `createRows()`: what the tile pipeline tracks for that mosaic. */
+function createTiles(): VisualTile[] {
+  return createRows().flatMap((row) => row.cells.flatMap((cell) => (cell.tile ? [cell.tile] : [])));
+}
+
 describe('VisualTimelinePosts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -289,7 +294,7 @@ describe('VisualTimelinePosts', () => {
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),
       tail: [],
-      tiles: [],
+      tiles: createTiles(),
       hasPendingSnapshot: false,
       hasPendingTiles: false,
       hasPendingFiles: false,
@@ -952,20 +957,33 @@ describe('VisualTimelinePosts', () => {
       });
     });
 
-    it('treats tiles still resolving as loading so an unsettled page is not judged unproductive', async () => {
+    it('counts a tile still probing as mosaic progress without gating the observer on pending work', async () => {
+      // A page whose tiles are unsettled already grew the tracked tiles, so it is not an
+      // unproductive load. The pending flags must not feed `isLoading`: a file Nexus no
+      // longer returns keeps `hasPendingFiles` set for good, and a gated observer would
+      // leave the feed with neither auto-loading nor the manual Load more.
+      const [readyTile] = createTiles();
+      const probingTile: VisualTile = {
+        ...readyTile,
+        id: 'tile-2',
+        postId: 'author:post2',
+        preferredSize: undefined,
+        rowSize: undefined,
+        probeState: 'pending',
+      };
       mockUseVisualFeedTiles.mockReturnValue({
         rows: createRows(),
         tail: [],
-        tiles: [],
+        tiles: [readyTile, probingTile],
         hasPendingSnapshot: false,
         hasPendingTiles: true,
-        hasPendingFiles: false,
-        hasPendingPostDetails: false,
+        hasPendingFiles: true,
+        hasPendingPostDetails: true,
       });
 
       render(
         <VisualTimelinePosts
-          postIds={['author:post1', 'author:post2']}
+          postIds={['author:post1', 'author:post2', 'author:post3']}
           loading={false}
           loadingMore={false}
           error={null}
@@ -975,7 +993,7 @@ describe('VisualTimelinePosts', () => {
       );
 
       await waitFor(() => {
-        expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ isLoading: true, itemCount: 1 }));
+        expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ isLoading: false, itemCount: 2 }));
       });
     });
 

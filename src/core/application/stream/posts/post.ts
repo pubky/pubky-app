@@ -857,7 +857,10 @@ export class PostStreamApplication {
     let persistedRow: string[] | undefined;
     if (!isSkipPaginatedStream(streamId) && streamHead === SKIP_FETCH_NEW_POSTS) {
       persistedRow = await LocalStreamPostsService.persistNewStreamChunk({
-        stream: compositePostIds,
+        // Reply rows are cached newest-first. An ascending page is handed over reversed so
+        // that ids still missing their details (a hydration that failed) keep their relative
+        // order under the timestamp sort, which interpolates assuming descending input.
+        stream: order === StreamOrder.ASCENDING ? [...compositePostIds].reverse() : compositePostIds,
         streamId,
         // A descending page extends the cached stream downward: record Nexus's own position
         // as the row's resume cursor. Ascending pages read a reply thread upward from its
