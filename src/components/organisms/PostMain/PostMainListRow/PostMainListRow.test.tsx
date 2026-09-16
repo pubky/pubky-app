@@ -8,6 +8,7 @@ import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useUserDetails } from '@/hooks/useUserDetails/useUserDetails';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMainListRow } from './PostMainListRow';
 
 const { mockAuthStoreSelector } = vi.hoisted(() => ({
@@ -196,10 +197,19 @@ vi.mock('../../PostContentBlurred/PostContentBlurred', () => ({
   ),
 }));
 
+const { mockPanelFocus, mockPanelReveal } = vi.hoisted(() => ({
+  mockPanelFocus: vi.fn(),
+  mockPanelReveal: vi.fn(),
+}));
+
 vi.mock('../../PostTagsPanel/PostTagsPanel', () => {
-  const PostTagsPanel = React.forwardRef<HTMLDivElement, { postId: string }>(({ postId }, ref) => (
-    <div ref={ref} data-testid="post-tags-panel" data-post-id={postId} />
-  ));
+  const PostTagsPanel = React.forwardRef<unknown, { postId: string }>(({ postId }, ref) => {
+    React.useImperativeHandle(ref, () => ({
+      focus: () => mockPanelFocus(),
+      reveal: () => mockPanelReveal(),
+    }));
+    return <div data-testid="post-tags-panel" data-post-id={postId} />;
+  });
   PostTagsPanel.displayName = 'PostTagsPanel';
   return { PostTagsPanel };
 });
@@ -246,6 +256,47 @@ describe('PostMainListRow', () => {
       isLoading: false,
     }));
   };
+
+  it('scrolls the expanded tags panel into view without focusing it on mobile (issue #1650)', () => {
+    mockPostDetails('Some post content');
+    setMobileViewport();
+
+    try {
+      render(
+        <PostMainListRow
+          postId="author:post"
+          showFullContent={false}
+          shouldShowPostHeader={false}
+          onReplyClick={vi.fn()}
+          onRepostClick={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('tag-button'));
+
+      expect(mockPanelReveal).toHaveBeenCalled();
+      expect(mockPanelFocus).not.toHaveBeenCalled();
+    } finally {
+      resetViewport();
+    }
+  });
+
+  it('focuses the expanded tags panel from the tag button on desktop (issue #1650)', () => {
+    mockPostDetails('Some post content');
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={false}
+        onReplyClick={vi.fn()}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('tag-button'));
+
+    expect(mockPanelReveal).not.toHaveBeenCalled();
+  });
 
   it('uses secondary foreground color for the post content snippet', () => {
     mockPostDetails('Some post content');
