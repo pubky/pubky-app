@@ -14,6 +14,8 @@ const ZWJ = '\u200d';
  * runtime here is Node ≥ 20, which supports it.
  */
 const RGI_EMOJI_REGEX = new RegExp('^\\p{RGI_Emoji}$', 'v');
+/** Contains an emoji-capable code point: only such clusters are emoji sequences. */
+const EMOJI_REGEX = /\p{Extended_Pictographic}/u;
 
 /**
  * Splits emoji ZWJ clusters that are not valid (RGI) sequences into their
@@ -21,13 +23,17 @@ const RGI_EMOJI_REGEX = new RegExp('^\\p{RGI_Emoji}$', 'v');
  * exists. satori asks the emoji provider for one asset per grapheme cluster,
  * and an invalid sequence (e.g. MAGE + ZWJ + TROLL, seen in a display name)
  * has no asset: the cluster's width is reserved but nothing is painted. Valid
- * sequences (👨‍👩‍👧, 🏳️‍🌈, 🧙‍♂️) are untouched.
+ * sequences (👨‍👩‍👧, 🏳️‍🌈, 🧙‍♂️) are untouched, and so is every non-emoji
+ * cluster: Indic conjuncts and Arabic joining forms use the joiner for text
+ * shaping, where removing it changes the letters.
  */
 export function splitUnsupportedEmojiSequences(text: string): string {
   if (!text.includes(ZWJ)) return text;
   return splitGraphemes(text)
     .map((grapheme) =>
-      grapheme.includes(ZWJ) && !RGI_EMOJI_REGEX.test(grapheme) ? grapheme.replaceAll(ZWJ, '') : grapheme,
+      grapheme.includes(ZWJ) && EMOJI_REGEX.test(grapheme) && !RGI_EMOJI_REGEX.test(grapheme)
+        ? grapheme.replaceAll(ZWJ, '')
+        : grapheme,
     )
     .join('');
 }

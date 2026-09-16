@@ -32,6 +32,19 @@ describe('splitUnsupportedEmojiSequences', () => {
   it('handles valid and invalid sequences side by side', () => {
     expect(splitUnsupportedEmojiSequences('🧙‍🧌 and 👨‍👩‍👧')).toBe('🧙🧌 and 👨‍👩‍👧');
   });
+
+  it('leaves non-emoji clusters that use the joiner for text shaping untouched', () => {
+    // Malayalam chillu (NA + VIRAMA + ZWJ), Sinhala yansaya, Devanagari half-form,
+    // Arabic forced joining: the joiner is part of the spelling, not an emoji glue.
+    for (const text of [
+      '\u0d28\u0d4d\u200d',
+      '\u0d9a\u0dca\u200d\u0dc2',
+      '\u0915\u094d\u200d\u0916',
+      '\u0628\u200d\u062a',
+    ]) {
+      expect(splitUnsupportedEmojiSequences(`name ${text}`)).toBe(`name ${text}`);
+    }
+  });
 });
 
 describe('prepareOgText', () => {
