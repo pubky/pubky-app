@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { ExpirationPlugin, NetworkFirst, type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
+import { NetworkOnly, type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -72,33 +72,45 @@ self.addEventListener('fetch', (event: FetchEvent) => {
   }
 });
 
+// Precached static page served when a navigation cannot reach the network.
+// It is a plain HTML file (not a Next route) so it never boots the app: booting
+// offline would run the session restore, which wipes local state on failure.
+const OFFLINE_FALLBACK_URL = '/offline.html';
+
+// Runtime cache written by the previous service worker (NetworkFirst for Nexus).
+// Dexie is the app's only data cache; the entry is dropped on activation.
+const LEGACY_RUNTIME_CACHES = ['api-cache'];
+
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(Promise.all(LEGACY_RUNTIME_CACHES.map((name) => caches.delete(name))));
+});
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
-  skipWaiting: true,
+  // Never activate over live clients on its own: the app shows an "Update available"
+  // toast and posts SKIP_WAITING once the user opts in (useServiceWorkerUpdate).
+  skipWaiting: false,
+  // The first install claims open tabs immediately; updates still wait for consent.
   clientsClaim: true,
+  // Consumed by the NetworkOnly navigation route below.
   navigationPreload: true,
+  precacheOptions: { cleanupOutdatedCaches: true },
   runtimeCaching: [
-    // API caching for Nexus
+    // Same-origin page navigations go straight to the network. `fallbacks` serves the
+    // precached offline page only when the fetch itself fails (offline, DNS), never for
+    // an HTTP error response. No other runtime caching on purpose: Dexie is the data
+    // cache, and homeserver / pkarr / httprelay / nexus / CDN must never be cached here.
     {
-      matcher: ({ url }) => /^https:\/\/nexus\..*\.pubky\.app\/.*$/i.test(url.href),
-      handler: new NetworkFirst({
-        cacheName: 'api-cache',
-        networkTimeoutSeconds: 10,
-        plugins: [
-          new ExpirationPlugin({
-            maxEntries: 50,
-            maxAgeSeconds: 60 * 5, // 5 minutes
-          }),
-        ],
-      }),
+      matcher: ({ request, sameOrigin, url }) =>
+        sameOrigin && request.mode === 'navigate' && !url.pathname.startsWith('/api/'),
+      handler: new NetworkOnly(),
     },
-    // Do not use `defaultCache` to prevent other origin services such as pkarr, homeserver and httprelay from being cached
   ],
   fallbacks: {
     entries: [
       {
-        url: '/offline',
-        matcher: ({ request }) => request.destination === 'document',
+        url: OFFLINE_FALLBACK_URL,
+        matcher: ({ request }) => request.mode === 'navigate',
       },
     ],
   },

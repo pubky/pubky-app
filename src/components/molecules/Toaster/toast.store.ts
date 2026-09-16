@@ -17,6 +17,7 @@ interface ToasterToast {
   description?: string;
   dismissButton: boolean;
   action?: ToastActionDescriptor;
+  persistent: boolean;
   open: boolean;
 }
 
@@ -93,20 +94,23 @@ export function dispatch(action: Action) {
   // Timers are scheduled here rather than in the reducer so the reducer stays pure.
   switch (action.type) {
     case 'ADD_TOAST': {
-      const { id } = action.toast;
+      const { id, persistent } = action.toast;
       // Radix Toast's internal timer fails to start when isClosePausedRef stays true
       // after user interaction (e.g. clicking a button inside a toast), which left the
       // delete success toast stuck open in the repost → undo flow. Known unresolved bug:
       // https://github.com/radix-ui/primitives/issues/2233
       // The store therefore owns auto-dismiss, and the Toaster disarms Radix's own
-      // timer with duration={Infinity}.
-      dismissTimeouts.set(
-        id,
-        setTimeout(() => {
-          dismissTimeouts.delete(id);
-          dispatch({ type: 'DISMISS_TOAST', toastId: id });
-        }, TOAST_DURATION),
-      );
+      // timer with duration={Infinity}. A persistent toast gets no timer at all: it
+      // leaves only through its action, the dismiss button, a swipe, or limit eviction.
+      if (!persistent) {
+        dismissTimeouts.set(
+          id,
+          setTimeout(() => {
+            dismissTimeouts.delete(id);
+            dispatch({ type: 'DISMISS_TOAST', toastId: id });
+          }, TOAST_DURATION),
+        );
+      }
       for (const evicted of previous.toasts) {
         if (!next.toasts.includes(evicted)) clearToastTimers(evicted.id);
       }

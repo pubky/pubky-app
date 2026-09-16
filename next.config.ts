@@ -55,7 +55,30 @@ const nextConfig: NextConfig = {
 const withSerwist = withSerwistInit({
   swSrc: 'src/sw.ts',
   swDest: 'public/sw.js',
-  disable: process.env.NODE_ENV === 'development',
+  // Build-tool flag (like NEXT_STANDALONE), webpack dev only: `SERWIST_DEV=true npm run dev:https`.
+  // Dev builds ship an empty precache, so the offline fallback needs `npm run build && npm run start`.
+  disable: process.env.NODE_ENV === 'development' && process.env.SERWIST_DEV !== 'true',
+  // Registered by useServiceWorkerUpdate after its lifecycle listeners are attached (docs/pwa.md).
+  register: false,
+  // The local-first UI recovers on its own; a forced reload would drop in-progress state.
+  reloadOnOnline: false,
+  // `public/` precache allow-list. Public entries bypass `exclude` and
+  // `maximumFileSizeToCacheInBytes` (appended last by @serwist/build), so this list is the
+  // only size control for public assets. glob v13: `!(a|b)` works, a leading `!` does not.
+  globPublicPatterns: [
+    'offline.html',
+    'manifest.json',
+    'pubky-logo.svg',
+    'pubky-favicon.svg',
+    'preview.webp',
+    'images/*.webp',
+    'images/*.svg',
+    'images/!(landing-*).png',
+    'images/manifest/!(web-app-manifest-1280x720|web-app-manifest-640x1136).png',
+  ],
+  // The largest chunk is ~1.75 MB; an over-limit chunk is dropped with only a build warning
+  // and would break offline boot, so keep headroom above the 2 MiB default.
+  maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
 });
 
 const composedConfig = withSerwist(nextConfig);

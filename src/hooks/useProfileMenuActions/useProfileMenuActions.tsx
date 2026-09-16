@@ -7,6 +7,7 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
+import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
 import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
@@ -33,7 +34,9 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
   const { copyToClipboard: copyPubky } = useCopyToClipboard({
     successTitle: 'Pubky copied to clipboard',
   });
-  const { copyToClipboard: copyLink } = useCopyToClipboard({
+  // Touch devices (an installed PWA has no address bar) get the native share sheet;
+  // everywhere else the link is copied, as the label promises.
+  const { shareUrl: copyLink } = useShareUrl({
     successTitle: 'Profile link copied to clipboard',
   });
   const isUserMuted = isMuted(userId);

@@ -86,6 +86,36 @@ describe('toast', () => {
     expect(result.current.toasts[0].open).toBe(false);
   });
 
+  it('should keep a persistent toast open past the toast duration', () => {
+    const { result } = renderHook(() => useToastState());
+
+    act(() => {
+      toast({ title: 'Update available', persistent: true });
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(TOAST_DURATION * 2);
+    });
+
+    expect(result.current.toasts).toHaveLength(1);
+    expect(result.current.toasts[0].open).toBe(true);
+  });
+
+  it('should still dismiss a persistent toast via the returned handle', () => {
+    const { result } = renderHook(() => useToastState());
+
+    let handle: ReturnType<typeof toast> | undefined;
+    act(() => {
+      handle = toast({ title: 'Update available', persistent: true });
+    });
+
+    act(() => {
+      handle?.dismiss();
+    });
+
+    expect(result.current.toasts[0].open).toBe(false);
+  });
+
   it('should dismiss the toast immediately via the returned handle', () => {
     const { result } = renderHook(() => useToastState());
 

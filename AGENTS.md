@@ -84,7 +84,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - `src/hooks/**` → `docs/local-first.md`, `docs/data-patterns.md`, `docs/components.md` (Forms)
 - `src/components/**`, `src/app/**` → `docs/components.md`, `docs/z-index.md`, `docs/skeleton-architecture.md`,
   `docs/component-testing.md`
-- `src/test/vrt/**` → `docs/visual-regression-testing.md`
+- `src/test/vrt/**` → `docs/visual-regression-testing.md`; `src/sw.ts`, `public/manifest.json`, `src/libs/pwa/**` → `docs/pwa.md`
 - `src/libs/env/**`, `src/libs/runtime-config/**`, `src/config/**` → `docs/environment.md`
 - `src/libs/observability/**`, `src/instrumentation*.ts`, `src/sentry.*.config.ts` → `docs/sentry.md`
 - `src/core/database/**`, `src/core/services/homeserver/**`, `src/core/pipes/**`, `src/libs/network/**` →

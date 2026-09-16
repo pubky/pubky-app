@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Viewport } from 'next';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { COLORS } from '@/config/theme';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { RootContainer } from '@/molecules/ContainerRoot/ContainerRoot';
 import { Fab } from '@/molecules/Fab/Fab';
@@ -10,6 +11,7 @@ import { Toaster } from '@/molecules/Toaster/Toaster';
 import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
 import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
 import { Header } from '@/organisms/Header/Header';
+import { PwaManager } from '@/organisms/PwaManager/PwaManager';
 import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
 import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
 import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
@@ -20,7 +22,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#000000',
+  themeColor: COLORS.background,
 };
 
 export function generateMetadata() {
@@ -47,13 +49,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
         <GlobalErrorHandlerProvider>
           <ErrorBoundaryProvider>
+            {/*
+              Outside the DB/auth gates: the service worker, offline/online toasts and the
+              app badge must run on every route, including while the providers below show
+              their spinners. The Toaster sits here for the same reason (its viewport is
+              fixed, so DOM position does not matter).
+            */}
+            <PwaManager />
+            <Toaster />
             <DatabaseProvider>
               <RouteGuardProvider>
                 <CoordinatorsManager />
                 <Header />
                 {children}
                 <Fab />
-                <Toaster />
                 <DialogSignIn />
               </RouteGuardProvider>
             </DatabaseProvider>
