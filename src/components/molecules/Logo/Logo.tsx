@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { APP_ROUTES, isLogoLandingRoute, isNavItemActive, ROOT_ROUTES } from '@/app/routes';
+import { APP_ROUTES, isCustomFeedRoute, isLogoLandingRoute, ROOT_ROUTES } from '@/app/routes';
 import { Link } from '@/atoms/Link/Link';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
@@ -45,9 +45,7 @@ export function Logo({
   // A custom feed lives at `/feed/<id>` in the same persistent feed cluster as
   // `/home`. From there the logo is already on the user's feed, so it scrolls to
   // the top instead of navigating away to the default feed.
-  const isFeedActive =
-    pathname !== null &&
-    (isNavItemActive(pathname, { href: APP_ROUTES.HOME }) || isNavItemActive(pathname, { href: APP_ROUTES.FEED }));
+  const isFeedActive = pathname === APP_ROUTES.HOME || (pathname !== null && isCustomFeedRoute(pathname));
   const href = isLandingRoute ? ROOT_ROUTES : APP_ROUTES.HOME;
 
   return !noLink ? (
