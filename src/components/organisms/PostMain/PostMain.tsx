@@ -5,10 +5,12 @@ import { Card, CardContent } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConnector';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
+import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
@@ -19,6 +21,8 @@ import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
+import { PostSavePicker } from '@/organisms/PostSavePicker/PostSavePicker';
+import { useTimelineFeedContext } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeedContext';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
 import { PostContent } from '../PostContent/PostContent';
 import { PostHeader } from '../PostHeader/PostHeader';
@@ -61,13 +65,18 @@ function UndoableRepostHeader({
   postId,
   isCollectionShare,
   indexedAt,
+  hasBodyActions,
 }: {
   postId: string;
   isCollectionShare: boolean;
   indexedAt: Date | null;
+  hasBodyActions: boolean;
 }) {
   const { formatRelativeTime } = useRelativeTime();
   const { undoRepost, isUndoing } = useUndoRepost(isCollectionShare);
+  const feed = useTimelineFeedContext();
+  const isLibraryFeed =
+    feed?.variant === TIMELINE_FEED_VARIANT.BOOKMARKS || feed?.variant === TIMELINE_FEED_VARIANT.COLLECTION;
 
   return (
     <RepostHeader
@@ -76,7 +85,13 @@ function UndoableRepostHeader({
       isUndoing={isUndoing}
       timeAgo={indexedAt ? formatRelativeTime(indexedAt) : null}
       indexedAt={indexedAt}
-    />
+    >
+      {!hasBodyActions && isLibraryFeed && (
+        <Container overrideDefaults onClick={stopCardPropagation} onAuxClick={stopCardPropagation}>
+          <PostSavePicker postId={postId} buttonClassName="border-none shadow-xs" />
+        </Container>
+      )}
+    </RepostHeader>
   );
 }
 
@@ -101,11 +116,12 @@ export function PostMain({
 
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
-  const { showRepostHeader, shouldShowPostHeader, originalPostId } = usePostHeaderVisibility(postId);
+  const headerVisibility = usePostHeaderVisibility(postId);
+  const { showRepostHeader, shouldShowPostHeader, originalPostId } = headerVisibility;
   // A contentless repost adds a bar above the original post, not another card
-  // around it. Keep the repost ID for Undo; all body interactions use the original.
+  // around it. Undo and saved membership retain the repost's identity.
   const repostedPostId = showRepostHeader ? originalPostId : null;
-  const displayedPostId = repostedPostId ?? postId;
+  const displayedPostId = getDisplayedPostId(postId, headerVisibility);
   const showDisplayedPostHeader = repostedPostId !== null || shouldShowPostHeader;
   // Contentless collection shares get a distinct full-bleed treatment (#2121):
   // repost header + flush CollectionCard, no post chrome (header, actions, tags).
@@ -113,8 +129,7 @@ export function PostMain({
   const { postDetails: originalPostDetails, isLoading: isOriginalLoading } = usePostDetails(repostedPostId);
   const isOriginalMissing = repostedPostId !== null && originalPostDetails === null && !isOriginalLoading;
   const isOriginalDeleted = repostedPostId !== null && isPostDeleted(originalPostDetails?.content);
-  const collectionShareOriginalId =
-    showRepostHeader && originalPostDetails?.kind === 'collection' ? originalPostId : null;
+  const isCollectionShare = repostedPostId !== null && originalPostDetails?.kind === 'collection';
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(displayedPostId);
 
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
@@ -132,7 +147,7 @@ export function PostMain({
   // keep refreshing the original even though its preview wrapper is gone.
   const { ref: originalTtlRef } = useTtlSubscription({
     type: 'post',
-    id: collectionShareOriginalId === null || isOriginalDeleted ? repostedPostId : null,
+    id: isCollectionShare && !isOriginalDeleted ? null : repostedPostId,
   });
 
   // Determine thread connector variant based on reply status
@@ -173,7 +188,8 @@ export function PostMain({
               {showRepostHeader && (
                 <UndoableRepostHeader
                   postId={postId}
-                  isCollectionShare={collectionShareOriginalId !== null}
+                  hasBodyActions={!isCollectionShare && !isOriginalMissing && !isOriginalDeleted}
+                  isCollectionShare={isCollectionShare}
                   indexedAt={postDetails ? new Date(postDetails.indexed_at) : null}
                 />
               )}
@@ -181,11 +197,11 @@ export function PostMain({
                 <PostUnavailable message={'Post not found.'} />
               ) : isOriginalDeleted ? (
                 <PostUnavailable message={'This post has been deleted by its author.'} />
-              ) : collectionShareOriginalId !== null ? (
+              ) : isCollectionShare ? (
                 // Full-bleed collection share: the CollectionCard is the whole
                 // body — flush under the header, no padding, no actions/tags.
                 <CardContent className="flex min-w-0 flex-col p-0 @max-xl/grid:flex-1">
-                  <PostPreviewCard postId={collectionShareOriginalId} flush />
+                  <PostPreviewCard postId={displayedPostId} flush />
                 </CardContent>
               ) : (
                 <CardContent
@@ -197,6 +213,7 @@ export function PostMain({
                   {isListLayout ? (
                     <PostMainListRow
                       postId={displayedPostId}
+                      savePostId={postId}
                       showFullContent={!isReply && showFullContentInListLayout}
                       shouldShowPostHeader={showDisplayedPostHeader}
                       onReplyClick={openReplyDialog}
@@ -224,6 +241,7 @@ export function PostMain({
                           />
                           <PostActionsBar
                             postId={displayedPostId}
+                            savePostId={postId}
                             onTagClick={() => {
                               mobileTagsPanelRef.current?.focus();
                               desktopTagsPanelRef.current?.focus();
@@ -253,6 +271,7 @@ export function PostMain({
                       <PostContent postId={displayedPostId} />
                       <PostInlineTagsActions
                         postId={displayedPostId}
+                        savePostId={postId}
                         onReplyClick={openReplyDialog}
                         onRepostClick={openRepostDialog}
                         actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"

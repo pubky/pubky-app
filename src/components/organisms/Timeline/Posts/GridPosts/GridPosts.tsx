@@ -4,7 +4,10 @@ import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS } from '@/config/feed';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
+import type { UsePostListKeyboardResult } from '@/hooks/usePostListKeyboard/usePostListKeyboard.types';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { cn } from '@/libs/utils/utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
@@ -61,6 +64,36 @@ interface TimelineGridPostsProps {
 const GRID_TRAILING_CELL_CLASS =
   '@container/grid block h-full w-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1';
 
+function GridPost({
+  postId,
+  index,
+  totalCount,
+  setCardRef,
+}: {
+  postId: string;
+  index: number;
+  totalCount: number;
+  setCardRef: UsePostListKeyboardResult['setCardRef'];
+}) {
+  const visibility = usePostHeaderVisibility(postId);
+  const displayedPostId = getDisplayedPostId(postId, visibility);
+  const { handlePostKeyDown } = usePostNavigation();
+  return (
+    <Container
+      data-cy="post-card"
+      ref={setCardRef(index)}
+      role="article"
+      aria-posinset={index + 1}
+      aria-setsize={totalCount}
+      tabIndex={0}
+      onKeyDown={(e) => handlePostKeyDown(displayedPostId, e)}
+      className="@container/grid rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
+    >
+      <PostMain postId={postId} isReply={false} />
+    </Container>
+  );
+}
+
 export function TimelineGridPosts({
   postIds,
   loading,
@@ -80,7 +113,6 @@ export function TimelineGridPosts({
     debounceMs: 20,
   });
 
-  const { handlePostKeyDown } = usePostNavigation();
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
   const hasGridContent = postIds.length > 0 || trailingSlot != null;
   const showEmptyMessageWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
@@ -108,19 +140,13 @@ export function TimelineGridPosts({
           onKeyDown={onListKeyDown}
         >
           {postIds.map((postId, index) => (
-            <Container
+            <GridPost
               key={`grid_${postId}`}
-              data-cy="post-card"
-              ref={setCardRef(index)}
-              role="article"
-              aria-posinset={index + 1}
-              aria-setsize={postIds.length}
-              tabIndex={0}
-              onKeyDown={(e) => handlePostKeyDown(postId, e)}
-              className="@container/grid rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
-            >
-              <PostMain postId={postId} isReply={false} />
-            </Container>
+              postId={postId}
+              index={index}
+              totalCount={postIds.length}
+              setCardRef={setCardRef}
+            />
           ))}
           {trailingSlot != null ? (
             <Container overrideDefaults className={GRID_TRAILING_CELL_CLASS}>

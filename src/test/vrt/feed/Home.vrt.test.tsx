@@ -348,6 +348,7 @@ vi.mock('@/hooks/useRepostInfo/useRepostInfo', async () => {
       const uri = fixture?.relationships.reposted;
       const result = {
         isRepost: !!uri,
+        isReply: false,
         isCurrentUserRepost: !!uri && fixture?.details.author === f.viewerPubky,
         repostAuthorId: uri ? fixture?.details.author : null,
         originalPostId: uri ? buildCompositeIdFromPubkyUri({ uri, domain: CompositeIdDomain.POSTS }) : null,

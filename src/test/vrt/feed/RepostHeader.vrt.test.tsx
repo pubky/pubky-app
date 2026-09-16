@@ -1,5 +1,7 @@
+import { Library } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
+import { Button } from '@/atoms/Button/Button';
 import { RepostHeader } from '@/molecules/RepostHeader/RepostHeader';
 import { renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -15,6 +17,24 @@ function HeaderStates() {
 }
 
 describe('RepostHeader — visual regression', () => {
+  it.each([320, 390])('keeps library controls inside a %spx viewport', async (width) => {
+    await renderForVRT(
+      <div className="p-6">
+        <RepostHeader isCollectionShare onUndo={vi.fn()} timeAgo="12m">
+          <Button size="sm" variant="secondary" className="w-10" aria-label="Save post">
+            <Library />
+          </Button>
+        </RepostHeader>
+      </div>,
+      { viewport: { width, height: 844 } },
+    );
+    const header = page.getByTestId('repost-header').element();
+    expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
+    await expect.element(page.getByRole('button', { name: 'Undo' })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Save post' })).toBeVisible();
+    await expect.element(page.getByText('12m')).toBeVisible();
+  });
+
   it('renders default, hover, focus, and pending states', async () => {
     await renderForVRT(<HeaderStates />, { viewport: VRT_VIEWPORT_DESKTOP });
     const headers = page.getByTestId('header-states');

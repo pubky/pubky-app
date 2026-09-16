@@ -137,14 +137,14 @@ ttlBatchIntervalMs: 5_000, // 5 seconds between batches
 
 Post and user subscriptions are both reference counted, so nested surfaces that track the same entity cannot unsubscribe each other. Each surface still subscribes once per entity it renders; an embed whose enclosing surface already subscribes the same id skips its own subscription, since a second one would only add a redundant `IntersectionObserver`:
 
-| Surface                             | Subscribes           | Notes                                                                              |
-| ----------------------------------- | -------------------- | ---------------------------------------------------------------------------------- |
-| `PostMain`                          | its post id          | Feed / thread / single-post cards                                                  |
-| `PostPreviewCard`                   | the original post id | Repost + link embeds, share/repost dialogs                                         |
-| `CollectionCard` (`landing`)        | the collection id    | Profile Collections tab, `/collections` sections, search                           |
-| `CollectionCard` (`embed`)          | —                    | Always inside `PostPreviewCard` or `PostMain` → `PostContentBase`, which subscribe |
-| `CollectionHero`                    | the collection id    | The single-collection page's subscriber for its envelope                           |
-| `ProfilePageHeader`, `UserListItem` | the user pubky       | Profile header and user lists                                                      |
+| Surface                             | Subscribes                                           | Notes                                                                                           |
+| ----------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `PostMain`                          | its post id; also the original for flattened reposts | Feed / thread / single-post cards; collection-share originals remain owned by `PostPreviewCard` |
+| `PostPreviewCard`                   | the original post id                                 | Repost + link embeds, share/repost dialogs                                                      |
+| `CollectionCard` (`landing`)        | the collection id                                    | Profile Collections tab, `/collections` sections, search                                        |
+| `CollectionCard` (`embed`)          | —                                                    | Always inside `PostPreviewCard` or `PostMain` → `PostContentBase`, which subscribe              |
+| `CollectionHero`                    | the collection id                                    | The single-collection page's subscriber for its envelope                                        |
+| `ProfilePageHeader`, `UserListItem` | the user pubky                                       | Profile header and user lists                                                                   |
 
 The collection envelope (`name`, `description`, `cover_image`, `items`, `layout`) is one cached post row, so a single refresh updates the title, cover, and item count everywhere at once. For every viewer except the owner, signed in or not, the single-collection item grid mirrors the envelope's `items` in place (`TimelineFeedContent`'s `membershipPostIds`): only loaded ids the membership contains are rendered, members the settled stream never delivered are prepended once as optimistic posts, and removed ids are committed out, so the grid tracks the same array the count badge renders without refetching the (asynchronously re-indexed) Nexus items stream. Guests are included because the coordinator refreshes public data for them too (ADR-0020), so their count badge moves and the grid must follow. Owners are excluded — their own flows already update the grid optimistically, and mirroring their local envelope writes would race those flows (for example the save picker's close-gated removal).
 

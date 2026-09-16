@@ -1,13 +1,16 @@
 'use client';
 
 import { Loader2, Repeat } from 'lucide-react';
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { cn } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 
 interface RepostHeaderProps {
+  /** Entry-level actions when the flattened body has no action bar. */
+  children?: ReactNode;
   /** True when the reposted (embedded) post is a collection — copy becomes "You shared this". */
   isCollectionShare?: boolean;
   /** Deletes the repost itself (the repost's own composite id). */
@@ -29,6 +32,7 @@ interface RepostHeaderProps {
  * Only shown on simple reposts (no content) by current user.
  */
 export function RepostHeader({
+  children,
   isCollectionShare = false,
   onUndo,
   isUndoing = false,
@@ -44,7 +48,7 @@ export function RepostHeader({
 
   return (
     <Container
-      className="flex items-center gap-3 rounded-t-md bg-muted px-4 py-3"
+      className={cn('flex items-center gap-3 rounded-t-md bg-muted px-4 py-3', children && 'flex-wrap')}
       overrideDefaults
       data-testid="repost-header"
     >
@@ -66,6 +70,7 @@ export function RepostHeader({
         {isUndoing ? <Loader2 aria-hidden="true" className="animate-spin" /> : null}
         {'Undo'}
       </Button>
+      {children}
       {timeAgo && (
         <Container className="ml-auto" overrideDefaults>
           <PostHeaderTimestamp timeAgo={timeAgo} indexedAt={indexedAt} />

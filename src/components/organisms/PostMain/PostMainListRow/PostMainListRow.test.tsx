@@ -223,6 +223,7 @@ describe('PostMainListRow', () => {
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: false,
       repostAuthorId: null,
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
       isLoading: false,
@@ -421,6 +422,7 @@ describe('PostMainListRow', () => {
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
       isLoading: false,
@@ -481,12 +483,62 @@ describe('PostMainListRow', () => {
     expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-post-id', 'original-author:original-post');
   });
 
+  it.each([false, true])('keeps compact embedded replies in their own thread (blurred embed: %s)', (isBlurred) => {
+    mockPostDetails('');
+    vi.mocked(useRepostInfo).mockReturnValue({
+      isRepost: true,
+      isReply: true,
+      repostAuthorId: 'author',
+      isCurrentUserRepost: true,
+      originalPostId: 'original-author:original-post',
+      isLoading: false,
+      hasError: false,
+    });
+    vi.mocked(usePostDetails).mockImplementation((postId) => ({
+      postDetails: {
+        ...createPostDetails(postId ?? '', postId === 'author:post' ? '' : 'Embedded original'),
+        is_blurred: postId === 'original-author:original-post' && isBlurred,
+      },
+      isLoading: false,
+    }));
+    const onReplyClick = vi.fn();
+    render(
+      <PostMainListRow
+        postId="author:post"
+        showFullContent={false}
+        shouldShowPostHeader={true}
+        onReplyClick={onReplyClick}
+        onRepostClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('post-actions-bar')).toHaveAttribute('data-post-id', 'author:post');
+    fireEvent.click(screen.getByTestId('reply-button'));
+    expect(onReplyClick).toHaveBeenCalledWith('author:post');
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-tagged-id', 'author:post');
+    if (isBlurred) {
+      expect(screen.queryByText('Embedded original')).not.toBeInTheDocument();
+      expect(screen.getByTestId('post-content-blurred')).toHaveAttribute(
+        'data-post-id',
+        'original-author:original-post',
+      );
+      expect(screen.queryByTestId('post-list-media-thumbnail')).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByText('Embedded original')).toBeInTheDocument();
+      expect(screen.getByTestId('post-list-media-thumbnail')).toHaveAttribute(
+        'data-post-id',
+        'original-author:original-post',
+      );
+    }
+  });
+
   it('uses the original post moderation state for compact simple repost rows', () => {
     vi.mocked(useAvatarUrl).mockReturnValue('https://example.com/original-avatar.png');
     vi.mocked(useRelativeTime).mockReturnValue({ formatRelativeTime: () => '1m' });
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
       isLoading: false,
@@ -535,6 +587,7 @@ describe('PostMainListRow', () => {
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
       isLoading: false,
@@ -578,6 +631,7 @@ describe('PostMainListRow', () => {
     vi.mocked(useRepostInfo).mockReturnValue({
       isRepost: true,
       repostAuthorId: 'author',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:missing-post',
       isLoading: false,

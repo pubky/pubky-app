@@ -4,6 +4,7 @@ import type { EnrichedPostDetails } from '@/application/moderation/moderation.ty
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { usePostHeaderVisibility } from './usePostHeaderVisibility';
+import { getDisplayedPostId } from './usePostHeaderVisibility.utils';
 
 // Mock the hooks that usePostHeaderVisibility depends on
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
@@ -45,6 +46,7 @@ describe('usePostHeaderVisibility', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: false,
       repostAuthorId: null,
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
       isLoading: false,
@@ -54,6 +56,7 @@ describe('usePostHeaderVisibility', () => {
     const { result } = renderHook(() => usePostHeaderVisibility('user:post-1'));
 
     expect(result.current.showRepostHeader).toBe(false);
+    expect(getDisplayedPostId('current:post', result.current)).toBe('current:post');
     expect(result.current.shouldShowPostHeader).toBe(true);
     expect(result.current.originalPostId).toBeNull();
   });
@@ -66,6 +69,7 @@ describe('usePostHeaderVisibility', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'me',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
       isLoading: false,
@@ -75,6 +79,7 @@ describe('usePostHeaderVisibility', () => {
     const { result } = renderHook(() => usePostHeaderVisibility('me:repost-1'));
 
     expect(result.current.showRepostHeader).toBe(true);
+    expect(getDisplayedPostId('me:repost-1', result.current)).toBe('orig');
     expect(result.current.shouldShowPostHeader).toBe(false);
     expect(result.current.originalPostId).toBe('orig');
   });
@@ -87,6 +92,7 @@ describe('usePostHeaderVisibility', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'me',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
       isLoading: false,
@@ -97,6 +103,7 @@ describe('usePostHeaderVisibility', () => {
 
     // Quote reposts should not show "You reposted" header
     expect(result.current.showRepostHeader).toBe(false);
+    expect(getDisplayedPostId('current:post', result.current)).toBe('current:post');
     expect(result.current.shouldShowPostHeader).toBe(true);
   });
 
@@ -117,6 +124,7 @@ describe('usePostHeaderVisibility', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'me',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
       isLoading: false,
@@ -127,6 +135,7 @@ describe('usePostHeaderVisibility', () => {
 
     // Reposts with attachments should not show "You reposted" header
     expect(result.current.showRepostHeader).toBe(false);
+    expect(getDisplayedPostId('current:post', result.current)).toBe('current:post');
     expect(result.current.shouldShowPostHeader).toBe(true);
   });
 
@@ -147,6 +156,7 @@ describe('usePostHeaderVisibility', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'me',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
       isLoading: false,
@@ -156,6 +166,7 @@ describe('usePostHeaderVisibility', () => {
     const { result } = renderHook(() => usePostHeaderVisibility('me:whitespace-repost-1'));
 
     expect(result.current.showRepostHeader).toBe(true);
+    expect(getDisplayedPostId('me:repost-1', result.current)).toBe('orig');
     expect(result.current.shouldShowPostHeader).toBe(false);
   });
 
@@ -167,6 +178,7 @@ describe('usePostHeaderVisibility', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'other-user',
+      isReply: false,
       isCurrentUserRepost: false,
       originalPostId: 'orig',
       isLoading: false,
@@ -176,6 +188,7 @@ describe('usePostHeaderVisibility', () => {
     const { result } = renderHook(() => usePostHeaderVisibility('other-user:repost-1'));
 
     expect(result.current.showRepostHeader).toBe(false);
+    expect(getDisplayedPostId('current:post', result.current)).toBe('current:post');
     expect(result.current.shouldShowPostHeader).toBe(true);
   });
 
@@ -187,6 +200,7 @@ describe('usePostHeaderVisibility', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'me',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
       isLoading: false,
@@ -197,6 +211,7 @@ describe('usePostHeaderVisibility', () => {
 
     // When loading, hide RepostHeader to avoid layout shift (we don't know if it has content yet)
     expect(result.current.showRepostHeader).toBe(false);
+    expect(getDisplayedPostId('current:post', result.current)).toBe('current:post');
     expect(result.current.shouldShowPostHeader).toBe(true);
   });
 
@@ -208,6 +223,7 @@ describe('usePostHeaderVisibility', () => {
     mockUseRepostInfo.mockReturnValue({
       isRepost: true,
       repostAuthorId: 'me',
+      isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'orig',
       isLoading: false,
@@ -218,6 +234,7 @@ describe('usePostHeaderVisibility', () => {
 
     // When null, hide RepostHeader (we can't determine content)
     expect(result.current.showRepostHeader).toBe(false);
+    expect(getDisplayedPostId('current:post', result.current)).toBe('current:post');
     expect(result.current.shouldShowPostHeader).toBe(true);
   });
 });
