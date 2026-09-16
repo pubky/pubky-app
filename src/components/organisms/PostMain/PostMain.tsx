@@ -102,13 +102,20 @@ export function PostMain({
   const { handlePostClick, handlePostAuxClick } = usePostNavigation();
 
   const { showRepostHeader, shouldShowPostHeader, originalPostId } = usePostHeaderVisibility(postId);
+  // A contentless repost adds a bar above the original post, not another card
+  // around it. Keep the repost ID for Undo; all body interactions use the original.
+  const repostedPostId = showRepostHeader ? originalPostId : null;
+  const displayedPostId = repostedPostId ?? postId;
+  const showDisplayedPostHeader = repostedPostId !== null || shouldShowPostHeader;
   // Contentless collection shares get a distinct full-bleed treatment (#2121):
   // repost header + flush CollectionCard, no post chrome (header, actions, tags).
   // The original's details query stays disabled unless the header is showing.
-  const { postDetails: originalPostDetails } = usePostDetails(showRepostHeader ? originalPostId : null);
+  const { postDetails: originalPostDetails, isLoading: isOriginalLoading } = usePostDetails(repostedPostId);
+  const isOriginalMissing = repostedPostId !== null && originalPostDetails === null && !isOriginalLoading;
+  const isOriginalDeleted = repostedPostId !== null && isPostDeleted(originalPostDetails?.content);
   const collectionShareOriginalId =
     showRepostHeader && originalPostDetails?.kind === 'collection' ? originalPostId : null;
-  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
+  const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(displayedPostId);
 
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
@@ -121,6 +128,12 @@ export function PostMain({
     type: 'post',
     id: postId,
   });
+  // PostPreviewCard owns collection freshness; flattened ordinary reposts must
+  // keep refreshing the original even though its preview wrapper is gone.
+  const { ref: originalTtlRef } = useTtlSubscription({
+    type: 'post',
+    id: collectionShareOriginalId === null || isOriginalDeleted ? repostedPostId : null,
+  });
 
   // Determine thread connector variant based on reply status
   const connectorVariant = isLastReply ? POST_THREAD_CONNECTOR_VARIANTS.LAST : POST_THREAD_CONNECTOR_VARIANTS.REGULAR;
@@ -128,10 +141,13 @@ export function PostMain({
   return (
     <>
       <Container
-        ref={ttlRef}
+        ref={(node) => {
+          ttlRef(node);
+          originalTtlRef(node);
+        }}
         overrideDefaults
-        onClick={isNavigable ? (e) => handlePostClick(postId, e) : undefined}
-        onAuxClick={isNavigable ? (e) => handlePostAuxClick(postId, e) : undefined}
+        onClick={isNavigable ? (e) => handlePostClick(displayedPostId, e) : undefined}
+        onAuxClick={isNavigable ? (e) => handlePostAuxClick(displayedPostId, e) : undefined}
         className={cn('relative flex min-w-0 @max-xl/grid:h-full', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
       >
         {isReply && (
@@ -161,7 +177,11 @@ export function PostMain({
                   indexedAt={postDetails ? new Date(postDetails.indexed_at) : null}
                 />
               )}
-              {collectionShareOriginalId !== null ? (
+              {isOriginalMissing ? (
+                <PostUnavailable message={'Post not found.'} />
+              ) : isOriginalDeleted ? (
+                <PostUnavailable message={'This post has been deleted by its author.'} />
+              ) : collectionShareOriginalId !== null ? (
                 // Full-bleed collection share: the CollectionCard is the whole
                 // body — flush under the header, no padding, no actions/tags.
                 <CardContent className="flex min-w-0 flex-col p-0 @max-xl/grid:flex-1">
@@ -176,19 +196,19 @@ export function PostMain({
                 >
                   {isListLayout ? (
                     <PostMainListRow
-                      postId={postId}
+                      postId={displayedPostId}
                       showFullContent={!isReply && showFullContentInListLayout}
-                      shouldShowPostHeader={shouldShowPostHeader}
+                      shouldShowPostHeader={showDisplayedPostHeader}
                       onReplyClick={openReplyDialog}
                       onRepostClick={openRepostDialog}
                     />
                   ) : isWideLayout ? (
                     <Container className="flex min-w-0 flex-col lg:flex-row">
                       <Container className="flex min-w-0 flex-col gap-4 p-12 lg:flex-1">
-                        {shouldShowPostHeader && (
-                          <PostHeader postId={postId} size="extraLarge" timeAgoPlacement="bottom-left" />
+                        {showDisplayedPostHeader && (
+                          <PostHeader postId={displayedPostId} size="extraLarge" timeAgoPlacement="bottom-left" />
                         )}
-                        <PostContent postId={postId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
+                        <PostContent postId={displayedPostId} textClassName={WIDE_POST_BODY_TEXT_CLASS} />
                         {pinActionsToBottom && <Container overrideDefaults className="flex-1" />}
                         <Container
                           overrideDefaults
@@ -198,12 +218,12 @@ export function PostMain({
                         >
                           <PostTagsPanel
                             ref={mobileTagsPanelRef}
-                            postId={postId}
+                            postId={displayedPostId}
                             widthMode="full"
                             className="lg:hidden"
                           />
                           <PostActionsBar
-                            postId={postId}
+                            postId={displayedPostId}
                             onTagClick={() => {
                               mobileTagsPanelRef.current?.focus();
                               desktopTagsPanelRef.current?.focus();
@@ -219,15 +239,20 @@ export function PostMain({
                         onAuxClick={stopCardPropagation}
                         className="hidden lg:flex lg:w-96 lg:shrink-0 lg:p-12"
                       >
-                        <PostTagsPanel ref={desktopTagsPanelRef} postId={postId} widthMode="full" className="w-full" />
+                        <PostTagsPanel
+                          ref={desktopTagsPanelRef}
+                          postId={displayedPostId}
+                          widthMode="full"
+                          className="w-full"
+                        />
                       </Container>
                     </Container>
                   ) : (
                     <>
-                      {shouldShowPostHeader && <PostHeader postId={postId} />}
-                      <PostContent postId={postId} />
+                      {showDisplayedPostHeader && <PostHeader postId={displayedPostId} />}
+                      <PostContent postId={displayedPostId} />
                       <PostInlineTagsActions
-                        postId={postId}
+                        postId={displayedPostId}
                         onReplyClick={openReplyDialog}
                         onRepostClick={openRepostDialog}
                         actionsClassName="w-full shrink-0 justify-start sm:w-auto md:justify-end @max-xl/grid:w-full! @max-xl/grid:justify-start!"

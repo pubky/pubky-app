@@ -8,6 +8,7 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useRemoveDeletedPost } from '@/hooks/useRemoveDeletedPost/useRemoveDeletedPost';
+import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { PostMain } from './PostMain';
 import { PostMainLayoutProvider } from './PostMainLayoutContext';
@@ -167,8 +168,8 @@ vi.mock('@/organisms/PostActionsBar/PostActionsBar', () => {
             Tag
           </button>
         )}
-        {onReplyClick && <button onClick={onReplyClick}>Reply</button>}
-        {onRepostClick && <button onClick={onRepostClick}>Repost</button>}
+        {onReplyClick && <button onClick={() => onReplyClick()}>Reply</button>}
+        {onRepostClick && <button onClick={() => onRepostClick()}>Repost</button>}
       </div>
     ),
   };
@@ -357,6 +358,7 @@ describe('PostMain', () => {
     vi.clearAllMocks();
     mockPostHeader.mockClear();
     mockUseIsMobile.mockReturnValue(false);
+    vi.mocked(useTtlSubscription).mockReturnValue({ ref: vi.fn(), isVisible: false });
     vi.mocked(useRemoveDeletedPost).mockReturnValue({
       canRemove: false,
       isRemoving: false,
@@ -909,18 +911,121 @@ describe('PostMain', () => {
     expect(screen.queryByTestId('post-tags-panel')).not.toBeInTheDocument();
   });
 
-  it('keeps the regular repost preview inside post chrome for non-collection reposts', () => {
+  const mockPlainRepost = () => {
     vi.mocked(usePostHeaderVisibility).mockReturnValue({
       showRepostHeader: true,
       shouldShowPostHeader: false,
-      originalPostId: null,
+      originalPostId: 'author:original-1',
     });
+  };
 
+  it.each(['inline', 'side'] as const)(
+    'renders the original directly below the repost bar in %s layout',
+    (tagsLayout) => {
+      mockPlainRepost();
+
+      render(
+        <PostMainLayoutProvider tagsLayout={tagsLayout}>
+          <PostMain postId="me:simple-repost-1" />
+        </PostMainLayoutProvider>,
+      );
+
+      expect(screen.queryByTestId('post-preview-card')).not.toBeInTheDocument();
+      expect(screen.getByTestId('repost-header')).toBeInTheDocument();
+      expect(screen.getByTestId('post-header')).toHaveTextContent('PostHeader author:original-1');
+      expect(screen.getByTestId('post-content')).toHaveTextContent('PostContent author:original-1');
+      expect(screen.getByTestId('post-actions')).toHaveTextContent('Actions author:original-1');
+      if (tagsLayout === 'inline') {
+        expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-tagged-id', 'author:original-1');
+      } else {
+        for (const panel of screen.getAllByTestId('post-tags-panel')) {
+          expect(panel).toHaveAttribute('data-post-id', 'author:original-1');
+        }
+      }
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
+      expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-post-id', 'author:original-1');
+      expect(screen.getByTestId('dialog-reply')).toHaveAttribute('data-open', 'true');
+      fireEvent.click(screen.getByTestId('dialog-reply'));
+      fireEvent.click(screen.getByRole('button', { name: 'Repost' }));
+      expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-post-id', 'author:original-1');
+      expect(screen.getByTestId('dialog-repost')).toHaveAttribute('data-open', 'true');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+      expect(mockDeletePost).toHaveBeenCalledWith('me:simple-repost-1');
+    },
+  );
+
+  it.each([false, true])('uses the original for a list repost (full content: %s)', (showFullContent) => {
+    mockPlainRepost();
+    render(
+      <PostMainLayoutProvider tagsLayout="list">
+        <PostMain postId="me:simple-repost-1" showFullContentInListLayout={showFullContent} />
+      </PostMainLayoutProvider>,
+    );
+    expect(screen.getByTestId('post-main-list-row')).toHaveTextContent('author:original-1');
+    expect(screen.getByTestId('post-main-list-row')).toHaveAttribute('data-show-full-content', String(showFullContent));
+    expect(screen.getByTestId('repost-header')).toBeInTheDocument();
+  });
+
+  it('navigates directly to the original from a contentless repost', () => {
+    mockPlainRepost();
     render(<PostMain postId="me:simple-repost-1" />);
 
-    expect(screen.queryByTestId('post-preview-card')).not.toBeInTheDocument();
-    expect(screen.getByTestId('post-content')).toBeInTheDocument();
-    expect(screen.getByTestId('post-actions')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('post-content'));
+    fireEvent(screen.getByTestId('post-content'), new MouseEvent('auxclick', { bubbles: true, button: 1 }));
+
+    expect(mockHandlePostClick).toHaveBeenCalledWith('author:original-1', expect.anything());
+    expect(mockHandlePostAuxClick).toHaveBeenCalledWith('author:original-1', expect.anything());
+  });
+
+  it('keeps the original subscribed for freshness after removing the preview wrapper', () => {
+    mockPlainRepost();
+    const originalRef = vi.fn();
+    const repostRef = vi.fn();
+    vi.mocked(useTtlSubscription).mockImplementation(({ id }) => ({
+      ref: id === 'author:original-1' ? originalRef : repostRef,
+      isVisible: false,
+    }));
+    render(<PostMain postId="me:simple-repost-1" />);
+
+    expect(useTtlSubscription).toHaveBeenCalledWith({ type: 'post', id: 'me:simple-repost-1' });
+    expect(originalRef).toHaveBeenCalledWith(expect.any(HTMLElement));
+    expect(repostRef).toHaveBeenCalledWith(expect.any(HTMLElement));
+  });
+
+  it.each([
+    { content: null, message: 'Post not found.' },
+    { content: '[DELETED]', message: 'This post has been deleted by its author.' },
+  ])('keeps Undo available when the original is unavailable: $message', ({ content, message }) => {
+    mockPlainRepost();
+    const details = vi.mocked(usePostDetails)('me:simple-repost-1').postDetails!;
+    vi.mocked(usePostDetails).mockImplementation((id) => ({
+      postDetails: id === 'author:original-1' ? (content === null ? null : { ...details, content }) : details,
+      isLoading: false,
+    }));
+    render(<PostMain postId="me:simple-repost-1" />);
+
+    expect(screen.getByTestId('post-unavailable')).toHaveAttribute('data-message', message);
+    expect(screen.queryByTestId('post-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-actions')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(mockDeletePost).toHaveBeenCalledWith('me:simple-repost-1');
+  });
+
+  it('retains the quote post as the body and action target', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: false,
+      shouldShowPostHeader: true,
+      originalPostId: 'author:original-1',
+    });
+    render(<PostMain postId="me:quote-1" />);
+
+    expect(screen.queryByTestId('repost-header')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post-header')).toHaveTextContent('PostHeader me:quote-1');
+    expect(screen.getByTestId('post-content')).toHaveTextContent('PostContent me:quote-1');
+    expect(screen.getByTestId('post-actions')).toHaveTextContent('Actions me:quote-1');
   });
 
   it('passes extraLarge size and bottom-left timestamp placement for side tags layout', () => {
