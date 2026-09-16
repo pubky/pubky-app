@@ -7,6 +7,7 @@ import { PostThreadConnector } from '@/atoms/PostThreadConnector/PostThreadConne
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
@@ -77,6 +78,7 @@ export function PostMain({
 
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
+  const isMobile = useIsMobile();
 
   // Get post height for thread connector
   const { ref: cardRef, height: postHeight } = useElementHeight();
@@ -157,6 +159,10 @@ export function PostMain({
                         <PostActionsBar
                           postId={postId}
                           onTagClick={() => {
+                            // The tag button only reveals the tags. On mobile that reveal must not
+                            // focus the input and pop the soft keyboard: the `[+]` add control owns
+                            // autofocus.
+                            if (isMobile) return;
                             mobileTagsPanelRef.current?.focus();
                             desktopTagsPanelRef.current?.focus();
                           }}

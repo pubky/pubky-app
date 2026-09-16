@@ -171,6 +171,17 @@ describe('PostTagsExpandableRow', () => {
     expect(screen.getByLabelText('Tag post (3)')).toHaveAttribute('aria-expanded', 'true');
   });
 
+  it('does not autofocus the tag input when the tag button reveals it on mobile (issue #1650)', () => {
+    mockUseIsMobile.mockReturnValue(true);
+
+    render(<PostTagsExpandableRow postId={POST_ID} />);
+
+    fireEvent.click(screen.getByLabelText('Tag post (3)'));
+
+    // Mobile: the reveal must not focus the input; the `[+]` control keeps its own autofocus.
+    expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-auto-focus-input', 'false');
+  });
+
   it('uses panelWidthMode full when expanded', () => {
     render(<PostTagsExpandableRow postId={POST_ID} panelWidthMode="full" />);
 
