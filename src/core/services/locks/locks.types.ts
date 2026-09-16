@@ -165,7 +165,7 @@ interface LockAccessPolicy {
 
 /** Optional override of which lock server verifies the criteria. */
 interface LockServer {
-  override: string;
+  override: string | null;
 }
 
 /**
@@ -182,7 +182,7 @@ export interface LockFile {
   /** The entry-point post. Optional per the contract, but at least one resource is always present. */
   primary_resource?: LockPostResource;
   /** Attachments, keyed by full canonical private path. */
-  secondary_resources: Record<string, LockAttachmentResource>;
+  secondary_resources?: Record<string, LockAttachmentResource>;
   criteria: LockCriterion[];
   lock_logic: LockLogic;
   access_policy: LockAccessPolicy;

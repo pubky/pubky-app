@@ -60,7 +60,6 @@ vi.mock('@/hooks/useLockFile/useLockFile', () => ({
   useLockFile: (lockUrl?: string) => ({
     lockFile: null,
     priceSats: lockUrl ? '4321' : null,
-    hasError: false,
   }),
 }));
 
