@@ -195,18 +195,63 @@ export class LocalStreamPostsService {
     // Filter out deleted posts from unread stream before merging
     const validUnreadPosts = await PostDetailsModel.filterDeleted(unreadPostStream.stream);
 
-    // An id the row already holds keeps the row's position: the row is the authority on
-    // stream order, and a poll can only have seen it at or above where the row has it.
-    const rowIds = new Set(postStream.stream);
-    const newUnreadPosts = validUnreadPosts.filter((id) => !rowIds.has(id));
+    // An id both rows hold takes the unread position: a locally created post that a poll
+    // returned is at the head either way.
+    const unreadIds = new Set(validUnreadPosts);
+    const rest = postStream.stream.filter((id) => !unreadIds.has(id));
 
     // Both parts are already in stream order: every head poll prepends a Nexus page that is
     // newer than the previous one, and the cached row keeps the order its pages arrived in.
-    // Nothing is re-sorted by indexed_at — that would float an edited or deleted post above
-    // its real position (#2523) — and the tail's Nexus resume cursor is untouched.
-    const combinedStream = [...newUnreadPosts, ...postStream.stream];
+    // Nothing fetched from Nexus is re-sorted by indexed_at — that would float an edited or
+    // deleted post above its real position (#2523) — and the tail's resume cursor is untouched.
+    // The one thing newer than the polled posts the row can hold is a local prepend (an own
+    // post or bookmark written after the poll) at its head; those are merged into the polled
+    // prefix by timestamp so the user's newest post is not shown below older polled ones.
+    const leading = await this.leadingPostsNewerThan(rest, validUnreadPosts);
+    const prefix = await this.mergeByTimestamp(validUnreadPosts, leading);
+    const combinedStream = [...prefix, ...rest.slice(leading.length)];
 
     await PostStreamModel.upsert(streamId, combinedStream, this.tailCursorFields(postStream.tailCursor));
+  }
+
+  /** The ids at the head of `row` whose `indexed_at` is newer than every id in `reference`. */
+  private static async leadingPostsNewerThan(row: string[], reference: string[]): Promise<string[]> {
+    if (row.length === 0 || reference.length === 0) return [];
+    const referenceTimestamps = await this.readTimestamps(reference);
+    // A polled id without details cannot be placed; keep the plain prepend in that case.
+    if (referenceTimestamps.some((timestamp) => timestamp === undefined)) return [];
+    const oldestReference = Math.min(...(referenceTimestamps as number[]));
+
+    const leading: string[] = [];
+    for (const id of row) {
+      const [timestamp] = await this.readTimestamps([id]);
+      if (timestamp === undefined || timestamp <= oldestReference) break;
+      leading.push(id);
+    }
+    return leading;
+  }
+
+  /** Merges two lists that are each newest-first into one, newest first; `first` wins ties. */
+  private static async mergeByTimestamp(first: string[], second: string[]): Promise<string[]> {
+    if (second.length === 0) return first;
+    const [firstTimestamps, secondTimestamps] = await Promise.all([
+      this.readTimestamps(first),
+      this.readTimestamps(second),
+    ]);
+    const merged: string[] = [];
+    let i = 0;
+    let j = 0;
+    while (i < first.length || j < second.length) {
+      const takeSecond =
+        i >= first.length || (j < second.length && (secondTimestamps[j] ?? 0) > (firstTimestamps[i] ?? 0));
+      merged.push(takeSecond ? second[j++] : first[i++]);
+    }
+    return merged;
+  }
+
+  private static async readTimestamps(ids: string[]): Promise<(number | undefined)[]> {
+    const details = await PostDetailsModel.findByIdsPreserveOrder(ids);
+    return details.map((detail) => detail?.indexed_at);
   }
 
   /**
@@ -428,13 +473,9 @@ export class LocalStreamPostsService {
    * @param stream - Incoming post IDs to merge into the stream cache
    * @param streamId - Stream identifier to create or update
    * @param tailCursor - Nexus `last_post_score` of a descending page, when persisting one
-   * @returns The id at the tail of the stored stream (undefined when it is empty)
+   * @returns The stored stream, in row order (empty when nothing is cached)
    */
-  static async persistNewStreamChunk({
-    stream,
-    streamId,
-    tailCursor,
-  }: TPostStreamUpsertParams): Promise<string | undefined> {
+  static async persistNewStreamChunk({ stream, streamId, tailCursor }: TPostStreamUpsertParams): Promise<string[]> {
     const postStream = await PostStreamModel.findById(streamId);
 
     if (!postStream || postStream.stream.length === 0) {
@@ -442,7 +483,7 @@ export class LocalStreamPostsService {
       // its own position is the resume cursor — a stale cursor on an emptied row must not
       // survive, or the next seam would skip everything above it.
       await PostStreamModel.upsert(streamId, stream, this.tailCursorFields(tailCursor));
-      return stream[stream.length - 1];
+      return stream;
     }
 
     // Check for duplicates before adding
@@ -457,7 +498,7 @@ export class LocalStreamPostsService {
       if (deepestCursor !== postStream.tailCursor) {
         await PostStreamModel.upsert(streamId, postStream.stream, nextTailCursor);
       }
-      return postStream.stream[postStream.stream.length - 1];
+      return postStream.stream;
     }
 
     // Combine existing and new posts
@@ -465,14 +506,14 @@ export class LocalStreamPostsService {
 
     if (tailCursor !== undefined || this.isBookmarkStream(streamId)) {
       await PostStreamModel.upsert(streamId, combinedStream, nextTailCursor);
-      return combinedStream[combinedStream.length - 1];
+      return combinedStream;
     }
 
     // Sort by timestamp (indexed_at) in descending order (most recent first)
     const sortedStream = await sortPostIdsByTimestamp(combinedStream);
 
     await PostStreamModel.upsert(streamId, sortedStream, nextTailCursor);
-    return sortedStream[sortedStream.length - 1];
+    return sortedStream;
   }
 
   /**
@@ -485,10 +526,11 @@ export class LocalStreamPostsService {
    * holds are below the tail; everything before is either cached already or above the row
    * (a head poll's business, and possibly above the head the current walk started from),
    * so it is neither served by the walk nor appended below the tail. A page sharing no id
-   * with the row is entirely above it when its last score is newer than `headTimestamp`;
-   * otherwise it lies below the tail, as a page beyond the cached region normally does.
+   * with the row is taken as lying below the tail, which is what a seam page normally is:
+   * no local timestamp can tell that shape from a page entirely above the row (an edited
+   * head reads as newer than it is), so that rarer shape is served once as it comes.
    */
-  static async keepIdsBelowRow({ streamId, stream, lastScore, headTimestamp }: TAlignPageParams): Promise<string[]> {
+  static async keepIdsBelowRow({ streamId, stream }: TAlignPageParams): Promise<string[]> {
     if (stream.length === 0) return stream;
     const row = await PostStreamModel.findById(streamId);
     if (!row || row.stream.length === 0) return stream;
@@ -497,8 +539,7 @@ export class LocalStreamPostsService {
     for (let index = stream.length - 1; index >= 0; index -= 1) {
       if (rowIds.has(stream[index])) return stream.slice(index + 1);
     }
-
-    return lastScore !== undefined && headTimestamp !== undefined && lastScore > headTimestamp ? [] : stream;
+    return stream;
   }
 
   /** The deeper (smaller) of two Nexus resume cursors; pages only ever extend a stream downward. */

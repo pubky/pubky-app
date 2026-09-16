@@ -564,7 +564,7 @@ export class PostStreamApplication {
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
     // Avoid the indexdb query for skip-paginated streams (engagement + single-collection items):
     // their local cache is timestamp-keyed and incompatible with offset pagination.
-    let rowAlignment: TFetchStreamParams['rowAlignment'];
+    let seededFromTimestamp = false;
     if (!isSkipPaginatedStream(streamId) && !streamHead) {
       const cachedStream = await LocalStreamPostsService.read({ streamId });
 
@@ -575,9 +575,7 @@ export class PostStreamApplication {
         const tailCursor = await this.resolveCachedStreamTailCursor(streamId, cachedStream);
         // A row without a cursor seeds once from a post timestamp, which can overshoot the
         // row if that post was edited; the seam page is then trimmed to the ids below the row.
-        if (cachedStream.tailCursor === undefined) {
-          rowAlignment = { headTimestamp: await this.getStreamCursorTimestamp(streamId, cachedStream.stream[0]) };
-        }
+        seededFromTimestamp = cachedStream.tailCursor === undefined;
 
         // Full cache hit: the caller keeps walking the cache by id; the cursor it carries is
         // the position Nexus continues from once the cache runs out.
@@ -591,7 +589,7 @@ export class PostStreamApplication {
             cachedStreamChunk,
             limit,
             streamTail: tailCursor ?? streamTail,
-            rowAlignment,
+            seededFromTimestamp,
             streamId,
             viewerId,
             isCurrent,
@@ -618,7 +616,8 @@ export class PostStreamApplication {
       limit,
       streamTail,
       streamHead,
-      rowAlignment,
+      lastPostId,
+      seededFromTimestamp,
       viewerId,
       isCurrent,
       order,
@@ -752,7 +751,7 @@ export class PostStreamApplication {
     cachedStreamChunk,
     limit,
     streamTail,
-    rowAlignment,
+    seededFromTimestamp,
     streamId,
     viewerId,
     isCurrent,
@@ -766,7 +765,7 @@ export class PostStreamApplication {
       limit: remainingLimit,
       streamTail,
       streamHead: SKIP_FETCH_NEW_POSTS,
-      rowAlignment,
+      seededFromTimestamp,
       viewerId,
       isCurrent,
       lastPostId: lastCachedPostId,
@@ -805,7 +804,8 @@ export class PostStreamApplication {
     limit,
     streamHead,
     streamTail,
-    rowAlignment,
+    lastPostId,
+    seededFromTimestamp,
     viewerId,
     isCurrent,
     order,
@@ -834,16 +834,10 @@ export class PostStreamApplication {
     // A cursor seeded from a post timestamp can start inside or above the cached row (the
     // post was edited after newer posts arrived). Only the part of the page below the row is
     // served or cached; the rest is cached already or belongs to a head poll. The page's own
-    // cursor still moves the walk on, so such a page is skipped rather than re-requested.
-    const alignsWithRow =
-      rowAlignment !== undefined && !isSkipPaginatedStream(streamId) && order !== StreamOrder.ASCENDING;
+    // cursor still moves the walk on, so a page inside the row is skipped, not re-requested.
+    const alignsWithRow = seededFromTimestamp && !isSkipPaginatedStream(streamId) && order !== StreamOrder.ASCENDING;
     const compositePostIds = alignsWithRow
-      ? await LocalStreamPostsService.keepIdsBelowRow({
-          streamId,
-          stream: rawPageIds,
-          lastScore: rawScore ?? undefined,
-          headTimestamp: rowAlignment.headTimestamp,
-        })
+      ? await LocalStreamPostsService.keepIdsBelowRow({ streamId, stream: rawPageIds })
       : rawPageIds;
     let cacheMissPostIds = await this.getCacheMissPostIds(streamId, compositePostIds);
     // Reply hooks observe stream IDs directly. Hydrate first so newly mounted cards
@@ -857,9 +851,9 @@ export class PostStreamApplication {
       return { nextPageIds: [], cacheMissPostIds: [], nextCursor: undefined, reachedEnd: false };
     // Do not persist skip-paginated streams (engagement + single-collection items) to the
     // timestamp-keyed local stream cache; they always page from Nexus by offset.
-    let rowTailId: string | undefined;
+    let persistedRow: string[] | undefined;
     if (!isSkipPaginatedStream(streamId) && streamHead === SKIP_FETCH_NEW_POSTS) {
-      rowTailId = await LocalStreamPostsService.persistNewStreamChunk({
+      persistedRow = await LocalStreamPostsService.persistNewStreamChunk({
         stream: compositePostIds,
         streamId,
         // A descending page extends the cached stream downward: record Nexus's own position
@@ -891,10 +885,13 @@ export class PostStreamApplication {
       cacheMissPostIds,
       nextCursor: rawScore ?? undefined,
       reachedEnd: rawPageIds.length < limit || overflowsContentSearchSkip,
-      // The cache walk resumes from the row tail: a page the row already held (a legacy row
-      // seeded above its true tail) must not drag the anchor back up the row, or the walk
-      // re-serves the whole cached region before every Nexus page.
-      lastRawPostId: order === StreamOrder.ASCENDING ? undefined : rowTailId,
+      // The cache walk resumes from the deepest of this page's ids and the caller's anchor,
+      // as positioned in the row after the page was persisted: a page the row already held
+      // (a cursor-less row seeded above its tail) must not drag the anchor back up the row,
+      // and a row another walker extended past this page must not let the anchor jump over
+      // ids this walker never served.
+      lastRawPostId:
+        order === StreamOrder.ASCENDING ? undefined : this.resumeAnchorAfterPage(persistedRow, rawPageIds, lastPostId),
     };
   }
 
@@ -1070,6 +1067,17 @@ export class PostStreamApplication {
     }
 
     return cachedStream.stream.slice(startIndex, endIndex);
+  }
+
+  /** The candidate (page id or previous anchor) that sits deepest in `row`; the row tail when none does. */
+  private static resumeAnchorAfterPage(
+    row: string[] | undefined,
+    pageIds: string[],
+    previousAnchor: string | undefined,
+  ): string | undefined {
+    if (!row || row.length === 0) return undefined;
+    const index = this.deepestCachedIndex(row, previousAnchor === undefined ? pageIds : [...pageIds, previousAnchor]);
+    return index === -1 ? row[row.length - 1] : row[index];
   }
 
   /** Highest row index among `candidates` that is present in `stream`, or -1. */

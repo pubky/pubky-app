@@ -303,6 +303,37 @@ describe('PostStreamApplication: score cursors come from Nexus, not from local i
     expect(nexusSpy).toHaveBeenCalledTimes(3);
   });
 
+  it('keeps its anchor on the page it served when another walker extended the row past it', async () => {
+    // Two walkers on one row (two tabs, two mounted feeds): while this one fetches the page
+    // below the cached tail, the other appends that page and the next one. The anchor must
+    // land on this page's last id, not the row tail, or the next page is never served here.
+    const cached = unedited('cached', 10, 2000);
+    const page = unedited('page', 10, 1990);
+    const next = unedited('next', 10, 1980);
+    await persistDetails([...cached, ...page, ...next]);
+    await LocalStreamPostsService.persistNewStreamChunk({ streamId, stream: ids(cached), tailCursor: 1991 });
+    const nexusSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockImplementation(async ({ params }) => {
+      const start = params.start;
+      const keys = [...cached, ...page, ...next].filter((post) => start === undefined || post.score <= start);
+      const served = keys.slice(0, params.limit);
+      // The other walker lands both pages before this response is handled.
+      await LocalStreamPostsService.persistNewStreamChunk({
+        streamId,
+        stream: ids([...page, ...next]),
+        tailCursor: next[next.length - 1].score,
+      });
+      return { post_keys: ids(served), last_post_score: served[served.length - 1]?.score ?? null };
+    });
+
+    const round1 = await runRound(streamId, { lastPostId: cached[cached.length - 1].id, streamTail: 1991 });
+    expect(round1.nextPageIds).toEqual(ids(page));
+    expect(round1.lastRawPostId).toBe(page[page.length - 1].id);
+
+    const round2 = await runRound(streamId, nextAnchor(round1, { streamTail: 1991 }));
+    expect(round2.nextPageIds).toEqual(ids(next));
+    expect(nexusSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('pages a profile past a run of re-indexed deleted tombstones (#1569 geometry)', async () => {
     // Deleting bumps indexed_at too, so a run of tombstones sorts above live posts locally
     // while Nexus keeps them at their original position. The author stream filters them out.

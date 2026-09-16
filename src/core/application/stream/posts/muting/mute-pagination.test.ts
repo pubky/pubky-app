@@ -716,7 +716,7 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       const mockNexusKeyStream = createMockNexusPostsKeyStream(10, 21, DEFAULT_AUTHOR, BASE_TIMESTAMP + 20);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusKeyStream);
       vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
-      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
 
       // First: with muted user
       await setupMutedUsers([MUTED_AUTHOR]);
@@ -769,7 +769,7 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       const mockNexusKeyStream = createMockNexusPostsKeyStream(10, 41, DEFAULT_AUTHOR, BASE_TIMESTAMP + 40);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusKeyStream);
       vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
-      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
 
       // Start with muted user
       await setupMutedUsers([MUTED_AUTHOR]);

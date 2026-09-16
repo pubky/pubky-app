@@ -17,12 +17,11 @@ export interface TFetchStreamParams {
    * was deleted or un-bookmarked): the walk resumes after the deepest one still cached. */
   visiblePostIds?: string[];
   /**
-   * Set when `streamTail` was seeded from a cached post's timestamp because the row has no
-   * persisted Nexus cursor yet (bootstrap-seeded, or pre-cursor). Only the part of the page
-   * below the row is then served or persisted (`LocalStreamPostsService.keepIdsBelowRow`);
-   * `headTimestamp` is the row head's seed timestamp, in the stream's cursor units.
+   * `streamTail` was seeded from a cached post's timestamp because the row has no persisted
+   * Nexus cursor yet (bootstrap-seeded, or pre-cursor). Only the part of the page below the
+   * row is then served or persisted (`LocalStreamPostsService.keepIdsBelowRow`).
    */
-  rowAlignment?: { headTimestamp?: number };
+  seededFromTimestamp?: boolean;
   tags?: string[];
   order?: StreamOrder;
 }
@@ -62,8 +61,8 @@ export interface TPartialCacheHitParams {
   limit: number;
   /** The cached stream's Nexus resume cursor: the position the remaining posts are fetched from. */
   streamTail: number;
-  /** See `TFetchStreamParams.rowAlignment`. */
-  rowAlignment?: { headTimestamp?: number };
+  /** See `TFetchStreamParams.seededFromTimestamp`. */
+  seededFromTimestamp?: boolean;
   streamId: PostStreamId;
   /** Optional viewer ID for relationship data. Null for unauthenticated views. */
   viewerId: Pubky | null;

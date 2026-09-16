@@ -1007,7 +1007,7 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts([]);
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
 
       const findByIdsSpy = vi
         .spyOn(PostDetailsModel, 'findByIdsPreserveOrder')
@@ -3931,7 +3931,7 @@ describe('PostStreamApplication reply publication', () => {
     vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(replyIds);
     const hydration = Promise.withResolvers<boolean>();
     vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockReturnValue(hydration.promise);
-    const publish = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+    const publish = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
     const page = PostStreamApplication.getOrFetchStreamSlice({
       streamId,
       streamHead: SKIP_FETCH_NEW_POSTS,

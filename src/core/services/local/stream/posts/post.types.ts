@@ -30,14 +30,6 @@ export interface TAlignPageParams {
   streamId: PostStreamId;
   /** A descending Nexus page, in Nexus order. */
   stream: string[];
-  /** Nexus `last_post_score` of that page, when it returned one. */
-  lastScore?: number;
-  /**
-   * The row head's seed timestamp in the stream's own cursor units (bookmark time for
-   * bookmark streams, `indexed_at` otherwise), at or above the head's score. Tells a page
-   * that shares no id with the row apart: above it when `lastScore` is newer, below it otherwise.
-   */
-  headTimestamp?: number;
 }
 
 export interface TPostDetailsTimestampParams {
