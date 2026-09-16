@@ -894,11 +894,11 @@ describe('LocalStreamPostsService', () => {
       ).resolves.toEqual([postId('post-1'), postId('post-2'), postId('post-3')]);
     });
 
-    it('stores a cursor-less reply row newest-first from creation and leaves it untouched when the page repeats', async () => {
+    it('stores a cursor-less reply row newest-first from creation and normalizes one an earlier build left unsorted', async () => {
       // Hydration creates a reply row in the by-ids response order (oldest first for an
       // ascending page); `useReplyStream` reverses the row for display, so it must be
-      // newest-first from the start. The ascending page that then repeats every id adds
-      // nothing and never rewrites the row.
+      // newest-first from the start. A repeated page leaves a sorted row untouched, and
+      // re-orders a row an earlier build stored in hydration order.
       const replyStreamId = 'post_replies:user-1:parent' as PostStreamId;
       await LocalStreamPostsService.persistPosts({
         posts: [
@@ -919,6 +919,12 @@ describe('LocalStreamPostsService', () => {
         LocalStreamPostsService.persistNewStreamChunk({ streamId: replyStreamId, stream: oldestFirst }),
       ).resolves.toEqual(newestFirst);
       expect(upsertSpy).not.toHaveBeenCalled();
+
+      // A row an earlier build left in hydration order is normalized by the repeated page.
+      await LocalStreamPostsService.upsert({ streamId: replyStreamId, stream: oldestFirst });
+      await expect(
+        LocalStreamPostsService.persistNewStreamChunk({ streamId: replyStreamId, stream: oldestFirst }),
+      ).resolves.toEqual(newestFirst);
       expect((await LocalStreamPostsService.read({ streamId: replyStreamId }))?.stream).toEqual(newestFirst);
     });
 

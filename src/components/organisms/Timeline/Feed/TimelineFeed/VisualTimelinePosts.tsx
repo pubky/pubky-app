@@ -419,9 +419,10 @@ export function VisualTimelinePosts({
   // budget keyed on ids would keep resetting (#2523). It counts every tile the pipeline
   // tracks — packed into a row, buffered for the next row, or still probing — so a page
   // whose tiles are unsettled already counts as progress. The pending flags must not gate
-  // the observer: a file Nexus no longer returns, or a post that never resolves on a feed
-  // that drops unavailable posts, keeps them set for good and would freeze the feed with
-  // neither auto-loading nor the manual Load more.
+  // the observer: `hasPendingFiles` stays set for good once an attachment Nexus no longer
+  // returns (no not-found marker is written), which would freeze the feed with neither
+  // auto-loading nor the manual Load more; tiles and post details settle, and gating on
+  // them would hold every load behind a slow probe, which dev never did.
   const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore: hasMore && (hasRows || postIds.length === 0),

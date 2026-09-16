@@ -533,7 +533,7 @@ describe('useStreamPagination against a simulated Nexus (remote-origin mutations
   );
 
   describe('randomized remote-origin runs', () => {
-    const seeds = Array.from({ length: 16 }, (_, i) => i + 1);
+    const seeds = Array.from({ length: Number(process.env.SIM_SEEDS ?? 16) }, (_, i) => i + 1);
 
     it.each(seeds)('seed %i', async (seed) => {
       const random = prng(seed);

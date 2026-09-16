@@ -427,9 +427,11 @@ export class LocalStreamPostsService {
    * order (bookmark time, not post time). Chunks that carry no Nexus position
    * (hydration-discovered replies, ascending reply pages) keep a row that has no cursor of
    * its own newest-first by post timestamp, at creation and whenever they add ids, because
-   * `useReplyStream` reverses that row for chronological display. A row with a Nexus cursor
-   * is never re-sorted, whatever chunk reaches it, and a chunk that adds nothing never
-   * rewrites a row.
+   * `useReplyStream` reverses that row for chronological display. A cursor-less row is also
+   * normalized by a cursor-less chunk that adds nothing, because an earlier build stored such
+   * rows in hydration order and only re-sorted them on a later write. A row with a Nexus
+   * cursor is never re-sorted, whatever chunk reaches it, and nothing rewrites its ids when a
+   * chunk adds none.
    *
    * @param stream - Incoming post IDs to merge into the stream cache
    * @param streamId - Stream identifier to create or update
@@ -461,8 +463,19 @@ export class LocalStreamPostsService {
     const nextTailCursor = this.tailCursorFields(deepestCursor);
 
     if (newPostsToAdd.length === 0) {
-      // Nothing to add (an empty end page, or a page the row already holds): never rewrite
-      // the ids — only a deeper cursor is worth persisting.
+      // A cursor-less row is normalized by any cursor-less chunk that repeats its ids: a row an
+      // earlier build created in hydration order, or one seeded while its details were still
+      // missing, would otherwise keep that order until a new reply arrives.
+      if (normalizesByTimestamp && stream.length > 0) {
+        const sortedStream = await sortPostIdsByTimestamp(postStream.stream);
+        if (sortedStream.some((id, index) => id !== postStream.stream[index])) {
+          await PostStreamModel.upsert(streamId, sortedStream, nextTailCursor);
+          return sortedStream;
+        }
+        return postStream.stream;
+      }
+      // Nothing to add to a row with a Nexus cursor (an empty end page, or a page it already
+      // holds): never rewrite the ids — only a deeper cursor is worth persisting.
       if (deepestCursor !== postStream.tailCursor) {
         await PostStreamModel.upsert(streamId, postStream.stream, nextTailCursor);
       }
