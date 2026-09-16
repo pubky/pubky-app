@@ -55,8 +55,12 @@ For future Server Actions, wrap with `Sentry.withServerActionInstrumentation('ac
 - Invalid user URLs return a normal `400` response from the controller/route without `Err.validation`.
 - `og:image` normalization uses non-throwing DNS safety checks, so invalid image URLs, DNS failures, and private image
   IPs simply remove the image from otherwise valid page metadata.
-- Security/anomaly cases on the main page fetch path, such as private IPs, non-HTTP redirects, redirect loops, oversized
-  bodies, and parser/runtime surprises remain reportable through `Err.*`.
+- A target that resolves into a private range is refused by the SSRF guard and returns fallback metadata
+  (`blocked_ip`): a pasted private-network link is expected input, not a bug. A body that exceeds the 5MB cap, stalls
+  past the read deadline, or dies mid-stream is fallback metadata too (`body_too_large`, `body_timeout`,
+  `body_unreadable`).
+- Security/anomaly cases on the main page fetch path, such as non-HTTP redirects, redirect loops, and parser/runtime
+  surprises remain reportable through `Err.*`.
 
 Fallback paths use `Logger.warn`, which is currently platform/server logging. Sentry Logs are disabled in this app, so
 these warnings are not Sentry aggregate events unless logging infrastructure is enabled separately.
