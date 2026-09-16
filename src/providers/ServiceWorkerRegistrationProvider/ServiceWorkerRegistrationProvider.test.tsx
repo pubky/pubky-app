@@ -45,13 +45,31 @@ describe('ServiceWorkerRegistrationProvider', () => {
   });
 
   it('treats a rejected registration as benign', async () => {
-    // The rejection `navigator.serviceWorker.register()` produces in the browser when the script
-    // cannot be fetched, not an app error.
     const register = vi.fn().mockRejectedValue(new TypeError('Script https://pubky.app/sw.js load failed'));
     vi.stubGlobal('serwist', { register });
 
     renderProvider();
 
+    await waitFor(() => expect(Logger.warn).toHaveBeenCalledTimes(1));
+  });
+
+  it('handles a registration that rejects with the library TypeError instead of leaving it floating', async () => {
+    const error = new TypeError("Cannot read properties of undefined (reading 'waiting')");
+    const register = vi.fn().mockRejectedValue(error);
+    vi.stubGlobal('serwist', { register });
+
+    renderProvider();
+
+    await waitFor(() => expect(Logger.warn).toHaveBeenCalledWith(expect.any(String), { error }));
+  });
+
+  it('treats a registration that throws synchronously as benign', async () => {
+    const register = vi.fn(() => {
+      throw new TypeError('navigator.serviceWorker is not available');
+    });
+    vi.stubGlobal('serwist', { register });
+
+    expect(() => renderProvider()).not.toThrow();
     await waitFor(() => expect(Logger.warn).toHaveBeenCalledTimes(1));
   });
 

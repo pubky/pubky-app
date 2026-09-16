@@ -1,8 +1,8 @@
 'use client';
 
 import { type ReactNode, useEffect } from 'react';
-// Types only: brings in `@serwist/next`'s `Window.serwist` declaration, so `window.serwist` below
-// is typed without a cast.
+// Type-only import: Serwist declares `Window.serwist` in its `@serwist/next/typings` entry (a
+// types-only export), which the injected entry relies on.
 import type {} from '@serwist/next/typings';
 import { Logger } from '@/libs/logger/logger';
 
@@ -33,12 +33,14 @@ export function ServiceWorkerRegistrationProvider({ children }: ServiceWorkerReg
 
     try {
       // A failed registration is expected behaviour rather than an error to report: log it quietly
-      // and let the app run without a service worker. `register()` resolves to
-      // `ServiceWorkerRegistration | undefined`, so the result is never dereferenced here.
-      void serwist.register().catch((error) => {
+      // and let the app run without a service worker. Swallowing the rejection keeps it away from
+      // Sentry's global handler, which reports unhandled rejections whatever their origin.
+      void serwist.register().catch((error: unknown) => {
         Logger.warn('[ServiceWorkerRegistrationProvider] Service worker registration failed', { error });
       });
     } catch (error) {
+      // `window.serwist` is a page global: guard against a value that is not a Serwist instance
+      // rather than letting the effect throw.
       Logger.warn('[ServiceWorkerRegistrationProvider] Service worker registration threw', { error });
     }
   }, []);
