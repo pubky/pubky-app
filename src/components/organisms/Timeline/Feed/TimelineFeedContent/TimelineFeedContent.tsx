@@ -236,7 +236,7 @@ function TimelineFeedContent({
   // does); additions are reconciled once the stream has settled: any member
   // the stream never delivered is prepended once — except muted authors, whom
   // the stream filters on purpose. Both are idempotent.
-  const { mutedUserIdSet } = useMutedUsers();
+  const { mutedUserIdSet, isLoading: mutedUsersLoading } = useMutedUsers();
   const seenMembershipRef = useRef<Set<string>>(new Set());
   const everLoadedRef = useRef<Set<string>>(new Set());
   const prependedRef = useRef<Set<string>>(new Set());
@@ -356,6 +356,7 @@ function TimelineFeedContent({
             variant={variant}
             postIds={postIds}
             mutedUserIdSet={mutedUserIdSet}
+            mutedUsersLoading={mutedUsersLoading}
             loading={loading}
             prependPosts={prependPosts}
           />

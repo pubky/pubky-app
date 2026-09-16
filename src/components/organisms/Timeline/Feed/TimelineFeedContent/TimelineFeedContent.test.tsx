@@ -7,6 +7,7 @@ import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFe
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
+import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
 import {
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
@@ -241,7 +242,32 @@ describe('TimelineFeedContent', () => {
     vi.clearAllMocks();
     mockUseStreamPagination.mockReturnValue(defaultPaginationResult);
     mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+    vi.mocked(useUnreadPosts).mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
     mockUsePullToRefresh.mockReturnValue({ state: 'idle' as const, pullDistance: 0 });
+  });
+
+  it('passes mute-list readiness to the new-posts section', () => {
+    vi.mocked(useUnreadPosts).mockReturnValue({ unreadPostIds: ['author:new-post'], unreadCount: 1 });
+    mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, isLoading: true });
+    const feed = (
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+      />
+    );
+    const { rerender } = render(feed);
+    expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
+
+    mockUseMutedUsers.mockReturnValue(defaultMutedUsersResult);
+    rerender(
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+      />,
+    );
+    expect(screen.getByTestId('new-posts-button')).toHaveTextContent('1 new posts');
   });
 
   describe('TimelineFeedWithStream guard', () => {

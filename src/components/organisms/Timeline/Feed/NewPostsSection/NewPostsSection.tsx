@@ -17,6 +17,7 @@ interface NewPostsSectionProps {
   variant: TimelineFeedVariant;
   postIds: string[];
   mutedUserIdSet: Set<Pubky>;
+  mutedUsersLoading: boolean;
   loading: boolean;
   prependPosts: (postIds: string | string[]) => Promise<void>;
 }
@@ -42,6 +43,7 @@ export function NewPostsSection({
   variant,
   postIds,
   mutedUserIdSet,
+  mutedUsersLoading,
   loading,
   prependPosts,
 }: NewPostsSectionProps) {
@@ -53,7 +55,9 @@ export function NewPostsSection({
   const actualNewPostIds =
     variant === TIMELINE_FEED_VARIANT.BOOKMARKS
       ? notDisplayed
-      : MuteFilter.filterPostsSafe(notDisplayed, mutedUserIdSet);
+      : mutedUsersLoading
+        ? []
+        : MuteFilter.filterPostsSafe(notDisplayed, mutedUserIdSet);
   const actualNewCount = actualNewPostIds.length;
 
   const handleNewPostsClick = async () => {
