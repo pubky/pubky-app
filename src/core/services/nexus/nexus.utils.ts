@@ -118,16 +118,22 @@ export function getNexusResponseStartedAt(response: object): number | undefined 
 /**
  * Forced revalidations currently in flight, keyed by serialized query key.
  *
- * TanStack coalesces concurrent fetchQuery calls that share a key, but only through its
- * cache slot. A `force` call deliberately steps around that slot (it waits for an earlier
- * request, then fetches with staleTime 0), so two forced callers hitting the same endpoint
- * with the same ids each open their own request. That is the shape of the rate-limited
- * by_ids bursts: several subscribers revalidating the same ids at once (a notification
- * refresh landing on a TTL tick). Joining the first forced request preserves the freshness
- * intent — the data still comes from a network revalidation started at or after the
- * caller's own call — while halving the requests Nexus sees (PUBKY-APP-B3).
+ * A forced caller must not receive data fetched before the event that forced it: that is
+ * the shape of the rate-limited by_ids bursts (a notification refresh landing on a TTL
+ * tick), and reusing the earlier request would stamp its response -- and the snapshot
+ * built from it -- as evidence newer than the event. A caller that finds a forced request
+ * already in flight therefore waits for it and starts a revalidation of its own.
  */
 const inFlightForcedQueries = new Map<string, Promise<unknown>>();
+
+/**
+ * The one follow-up revalidation shared by the forced callers waiting behind the running
+ * request, keyed by serialized query key. Without it each waiter would open its own
+ * request; with it a burst of subscribers behind one running request still costs a single
+ * extra request (PUBKY-APP-B3). It is dropped the moment the follow-up starts, because a
+ * caller arriving after that needs a request started after its own call, not this one.
+ */
+const queuedForcedQueries = new Map<string, Promise<unknown>>();
 
 /**
  * Queries Nexus API with automatic retry logic via TanStack Query.
@@ -173,23 +179,44 @@ export async function queryNexus<T>({
   if (!force) return await execute();
 
   const forceKey = JSON.stringify(queryKey);
-  const joined = inFlightForcedQueries.get(forceKey) as Promise<T> | undefined;
-  if (joined) return await joined;
 
-  // staleTime alone still joins a request started before the invalidating event.
-  // Wait for that request, then let concurrent revalidations share a new one.
-  const pending = nexusQueryClient.getQueryCache().find({ queryKey, exact: true });
-  if (pending?.state.fetchStatus === 'fetching') await pending.promise?.catch(() => {});
-
-  // Re-check after the await: a sibling forced call may have started while we waited.
-  const raced = inFlightForcedQueries.get(forceKey) as Promise<T> | undefined;
-  if (raced) return await raced;
-
-  const run = execute();
-  inFlightForcedQueries.set(forceKey, run);
-  const clear = () => {
-    if (inFlightForcedQueries.get(forceKey) === run) inFlightForcedQueries.delete(forceKey);
+  const startRun = (): Promise<T> => {
+    const run = (async () => {
+      // staleTime alone still joins a request started before the invalidating event.
+      // Wait for it, then let concurrent revalidations share a new one.
+      const pending = nexusQueryClient.getQueryCache().find({ queryKey, exact: true });
+      if (pending?.state.fetchStatus === 'fetching') await pending.promise?.catch(() => {});
+      return await execute();
+    })();
+    inFlightForcedQueries.set(forceKey, run);
+    const clear = () => {
+      if (inFlightForcedQueries.get(forceKey) === run) inFlightForcedQueries.delete(forceKey);
+    };
+    run.then(clear, clear);
+    return run;
   };
-  run.then(clear, clear);
-  return await run;
+
+  if (!inFlightForcedQueries.has(forceKey)) return await startRun();
+
+  // A revalidation is already in flight, and it began before this caller's event. Share
+  // one follow-up behind it with the other waiters instead of handing back that older
+  // response (which would come back stamped as fresh) or opening a request each.
+  const shared = queuedForcedQueries.get(forceKey) as Promise<T> | undefined;
+  if (shared) return await shared;
+
+  const followUp = inFlightForcedQueries
+    .get(forceKey)!
+    .catch(() => {})
+    .then(() => {
+      // Drop the shared slot as the follow-up starts: only the callers that queued behind
+      // the request we just waited for share it.
+      queuedForcedQueries.delete(forceKey);
+      return startRun();
+    });
+  queuedForcedQueries.set(forceKey, followUp);
+  const clearQueued = () => {
+    if (queuedForcedQueries.get(forceKey) === followUp) queuedForcedQueries.delete(forceKey);
+  };
+  followUp.then(clearQueued, clearQueued);
+  return await followUp;
 }

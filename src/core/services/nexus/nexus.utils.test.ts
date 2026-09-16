@@ -321,18 +321,65 @@ describe('nexus.utils', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
-    it('collapses two concurrent forced revalidations of the same ids into one request', async () => {
+    it('does not reuse a forced revalidation already in flight, and starts the follow-up after it settles', async () => {
       const posts = [{ details: { author: 'author1', id: 'post1' } }];
-      mockFetch.mockResolvedValueOnce(nexusResponse(posts));
+      mockFetch
+        .mockImplementationOnce(() => Promise.resolve(nexusResponse([])))
+        .mockImplementationOnce(() => Promise.resolve(nexusResponse(posts)));
 
-      const [first, second] = await Promise.all([
+      const [older, fresh] = await Promise.all([
         NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'], force: true }),
         NexusPostStreamService.fetchByIds({ post_ids: ['author1:post1'], force: true }),
       ]);
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(first).toEqual(posts);
-      expect(second).toEqual(posts);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(older).toEqual([]);
+      expect(fresh).toEqual(posts);
+    });
+
+    it('gives a forced caller a response started after its own call, never the older in-flight one', async () => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+      const inFlight = Promise.withResolvers<Response>();
+      const url = `${getNexusUrl()}/stale-forced-revalidation-test`;
+      mockFetch
+        .mockReturnValueOnce(inFlight.promise)
+        .mockImplementation(() => Promise.resolve(nexusResponse([{ details: { author: 'author1', id: 'post1' } }])));
+      try {
+        // A TTL tick opens a revalidation; the notification arrives while it is still fetching.
+        const ttl = queryNexus<object>({ url, force: true });
+        await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+        now.mockReturnValue(2_000);
+        const notification = queryNexus<object>({ url, force: true });
+        inFlight.resolve(nexusResponse([]));
+
+        // Reusing the older request would hand back its empty tag list stamped as fresh.
+        expect(await ttl).toEqual([]);
+        const hydrated = await notification;
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(hydrated).toEqual([{ details: { author: 'author1', id: 'post1' } }]);
+        expect(getNexusResponseStartedAt(hydrated)).toBe(2_000);
+      } finally {
+        now.mockRestore();
+      }
+    });
+
+    it('shares one follow-up among the forced callers waiting behind a running revalidation', async () => {
+      const inFlight = Promise.withResolvers<Response>();
+      const url = `${getNexusUrl()}/shared-forced-follow-up-test`;
+      mockFetch
+        .mockReturnValueOnce(inFlight.promise)
+        .mockImplementation(() => Promise.resolve(nexusResponse([{ details: { id: 'user1' } }])));
+
+      const running = queryNexus<object>({ url, force: true });
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+      const waiters = [queryNexus<object>({ url, force: true }), queryNexus<object>({ url, force: true })];
+      inFlight.resolve(nexusResponse([]));
+
+      const [first, second] = await Promise.all(waiters);
+      expect(await running).toEqual([]);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(first).toBe(second);
+      expect(first).toEqual([{ details: { id: 'user1' } }]);
     });
 
     it('does not retry a 429 before the server Retry-After (delta-seconds) has elapsed', async () => {
