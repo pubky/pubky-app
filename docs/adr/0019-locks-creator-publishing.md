@@ -123,8 +123,9 @@ frontend must handle both cases.
 
 - Offline session restore means expiry surfaces only at publish time (401 → re-auth) — no proactive
   TTL check is possible client-side.
-- Nexus and the local post model do not carry `lock` yet; announcements render as plain posts until
-  the reader work (#2003) and Nexus indexing land.
+- The specs and frontend Nexus/local models carry the top-level `lock`; the configured Nexus must
+  expose it, and edit reconstruction must use the specs lock-aware constructor so the public pointer
+  survives announcement edits (#2312).
 - The announcement envelope is app-owned rather than spec-owned; other Pubky apps define their own.
 
 ## Alternatives Considered

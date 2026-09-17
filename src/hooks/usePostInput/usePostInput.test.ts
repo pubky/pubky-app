@@ -36,6 +36,7 @@ const mockSetAttachments = vi.fn();
 const mockSetExistingAttachments = vi.fn();
 const mockSetIsArticle = vi.fn();
 const mockSetArticleTitle = vi.fn();
+const mockSetLockTitle = vi.fn();
 const mockReply = vi.fn();
 const mockPost = vi.fn();
 const mockRepost = vi.fn();
@@ -46,6 +47,7 @@ let mockAttachments: File[] = [];
 let mockExistingAttachments: ExistingAttachment[] = [];
 let mockIsArticle = false;
 let mockArticleTitle = '';
+let mockLockTitle = '';
 let mockIsSubmitting = false;
 
 // Factory for the existing (already-persisted) attachments an edit session starts with
@@ -82,6 +84,8 @@ vi.mock('@/hooks/usePost/usePost', () => ({
     setIsArticle: mockSetIsArticle,
     articleTitle: mockArticleTitle,
     setArticleTitle: mockSetArticleTitle,
+    lockTitle: mockLockTitle,
+    setLockTitle: mockSetLockTitle,
     reply: mockReply,
     post: mockPost,
     repost: mockRepost,
@@ -163,6 +167,7 @@ describe('usePostInput', () => {
     mockExistingAttachments = [];
     mockIsArticle = false;
     mockArticleTitle = '';
+    mockLockTitle = '';
     mockIsSubmitting = false;
     mockRepost.mockClear();
     mockEdit.mockClear();
@@ -496,6 +501,29 @@ describe('usePostInput', () => {
       expect(mockPost).not.toHaveBeenCalled();
       expect(mockReply).not.toHaveBeenCalled();
       expect(mockRepost).not.toHaveBeenCalled();
+    });
+
+    it('passes lock announcement metadata to the edit method', async () => {
+      mockContent = 'Updated teaser';
+      const editLock = { lockUrl: 'pubky://author/pub/locks.app/LOCK1.json', title: 'Private note' };
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editLock,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(mockEdit).toHaveBeenCalledWith({
+        editPostId: 'post-to-edit-id',
+        isLockAnnouncement: true,
+        onSuccess: expect.any(Function),
+      });
     });
 
     it('passes the seeded attachment snapshot to edit as originalAttachmentUris', async () => {

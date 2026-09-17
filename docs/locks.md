@@ -16,6 +16,7 @@ reader pays it from Bitkit.
 - [Where the data lives](#where-the-data-lives)
 - Details
   - [Detecting a lock post](#detecting-a-lock-post)
+  - [Editing an announcement](#editing-an-announcement)
   - [Data shape](#data-shape)
   - [Render flow (shared by feed and detail)](#render-flow-shared-by-feed-and-detail)
   - [Reading a lock post](#reading-a-lock-post)
@@ -99,9 +100,37 @@ The announcement is detected by the post's **top-level `lock` URL**, not by `kin
 const isLock = !!postDetails.lock; // PostContentBase.tsx
 ```
 
-`lock` is written by the publish flow (`useCreateLockContent` → `services/local/post`) and
-persisted on `NexusPostDetails` / `PostDetailsModel`. Whether Nexus serves it back on read is
-not confirmed here.
+`lock` is written by the publish flow (`useCreateLockContent` → `services/local/post`) and represented
+by `NexusPostDetails` / `PostDetailsModel`. Reader and edit flows depend on the configured Nexus
+honoring the specs contract and returning this field.
+
+## Editing an announcement
+
+Lock announcements use the existing `DialogEditPost` composer. The dialog detects the top-level
+`lock`, parses the public envelope with the reader's parse, and exposes only the teaser
+description and editable lock title. Saving rebuilds the envelope with
+`buildLockTeaserContent`; `PostNormalizer.toEdit` reconstructs the original post with
+`PubkyAppPost.new_with_lock` so the stored lock URL survives content, kind, and attachment edits.
+The price is read-only from the existing `lock.json`; the edit composer cannot change lock criteria
+or guarded content.
+
+### When the content is not a teaser envelope
+
+The dialog parses the envelope with the same lenient reader parse, where every field has a Zod
+`.catch('')`. A lock post therefore always opens in teaser mode, showing the two fields the reader
+would show:
+
+| stored content                   | composer body                  | lock title |
+| -------------------------------- | ------------------------------ | ---------- |
+| complete envelope                | `teaser_description`           | stored one |
+| half envelope, or unrelated JSON | the parsed field, or empty     | as parsed  |
+| not JSON at all                  | the stored `content`, verbatim | empty      |
+
+Saving always re-serializes the envelope. Editing a lock post as plain text is not offered: the
+stored content would no longer parse, and the reader renders nothing for a lock post it cannot
+parse, so one edit would blank the post for everyone.
+
+The `lock` URL survives either way — `toEdit` reads it from the stored row, not from the content.
 
 ## Data shape
 
@@ -114,7 +143,9 @@ not confirmed here.
 
 - `content` is FE-owned (pubky-app-specs does not manage it) and validated at runtime
   with Zod (`lockPostContentSchema`, `core/services/locks/locks.types.ts`). Bad / missing
-  fields degrade to empty strings so the teaser still renders.
+  fields degrade to empty strings so the teaser still renders. The edit composer reads it with
+  the same parse, so what the creator edits is what the reader sees (see
+  [Editing an announcement](#editing-an-announcement)).
 - `LockFile` mirrors the Lock server's public `lock.json` (`version`, `creator`,
   `primary_resource`, `secondary_resources`, `criteria`, `lock_logic`, `access_policy`,
   `lock_server`). It is the **Lock server's contract**, not FE-owned — it should come from
@@ -146,6 +177,8 @@ and swaps in the guarded post once it becomes readable.
 | `hooks/usePayToUnlock/usePayToUnlock.ts`                       | the payment state machine: bundle-id routing, submit, polling, stall/resume         |
 | `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                    |
 | `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction            |
+| `components/organisms/DialogEditPost/DialogEditPost.tsx`       | routes an announcement into teaser mode, or falls back to a plain post edit         |
+| `libs/post/lockTeaser.ts`                                      | the envelope: builder and length guard                                              |
 
 ## Reading a lock post
 
