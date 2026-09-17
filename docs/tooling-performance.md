@@ -17,17 +17,6 @@ Adding the three check medians (fresh type check + lint + formatting) gives **38
 
 The native compiler provides the largest reduction in type-check time. Oxlint preserves the existing custom checks and still loads JavaScript plugins for import sorting, padding and missing native rules; that limits its speedup relative to an all-native configuration. Oxfmt provides the largest formatting speedup while retaining Tailwind sorting.
 
-## Local production build
-
-One clean Webpack build per setup, with both builds using the same local Inter Tight font fixture to remove Google Fonts download variability:
-
-| Measurement                                |   Before |    After | Time reduction |
-| ------------------------------------------ | -------: | -------: | -------------: |
-| Complete build                             | 179.67 s | 165.29 s |           8.0% |
-| Next.js TypeScript step (reported by Next) |   13.1 s |    2.1 s |          84.0% |
-
-The full build remains dominated by bundling. These are single observations, not repeated medians. Each build started without `.next`; both used Next's `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` hook and the same local font from the existing `@fontsource-variable/inter-tight` dependency. This fixture was only used in temporary benchmark copies; application font loading is unchanged. Separate builds with normal font downloads also passed, but network timing is excluded from this comparison.
-
 ## Local memory
 
 Median peak RSS reported by macOS `/usr/bin/time -l`:
@@ -56,22 +45,20 @@ Fresh type checking is about 3% higher in memory, so this migration should not b
 
 Measured the first run of [PR #2571](https://github.com/pubky/pubky-app/pull/2571), commit `0cd49bca2d03a0a0ddbb279b4162caec22a267f0`, against the latest successful runs at the measured heads of three other open PRs targeting `dev`. These runs occurred on September 16–17, 2026.
 
-All four use identical `format.yml`, `build.yml` and `test.yml` workflows, `ubuntu-latest` (image `ubuntu-24.04`, version `20260907.300.1`), Node 24.20.0 and npm 11.19.0. The baseline PRs have identical package manifests, including TypeScript 5.9.3, ESLint 9.39.2, Prettier 3.9.6 and Next.js 16.3.4. This migration leaves Next.js and the workflows unchanged.
+All four use identical `format.yml` and `test.yml` workflows, `ubuntu-latest` (image `ubuntu-24.04`, version `20260907.300.1`), Node 24.20.0 and npm 11.19.0. The baseline PRs have identical package manifests, including TypeScript 5.9.3, ESLint 9.39.2, Prettier 3.9.6 and Next.js 16.3.4. This migration leaves Next.js and the workflows unchanged.
 
-Durations below come from GitHub Actions job/step timestamps, in whole seconds, except Next's internal TypeScript timing, which comes from the build log. Queue time is excluded. The baseline median is across the three different PRs; the migrated result is one run, not a repeated-run median.
+Durations below come from GitHub Actions job/step timestamps, in whole seconds. Queue time is excluded. The baseline median is across the three different PRs; the migrated result is one run, not a repeated-run median.
 
-| Measurement                                      |  #2569 |  #2566 |  #2552 | Baseline median | #2571 | Change vs median |
-| ------------------------------------------------ | -----: | -----: | -----: | --------------: | ----: | ---------------- |
-| Formatting step                                  |   29 s |   18 s |   23 s |            23 s |   3 s | 87.0% less time  |
-| Lint step                                        |   37 s |   25 s |   28 s |            28 s |  19 s | 32.1% less time  |
-| Type-check step                                  |   32 s |   18 s |   23 s |            23 s |   7 s | 69.6% less time  |
-| Sum of those three checks                        |   98 s |   61 s |   74 s |            74 s |  29 s | 60.8% less time  |
-| Entire code-quality job, including install/setup |  137 s |   94 s |  111 s |           111 s |  77 s | 30.6% less time  |
-| Next's internal TypeScript step                  | 25.3 s | 25.5 s | 36.0 s |          25.5 s | 6.8 s | 73.3% less time  |
-| Entire production build step                     |  123 s |  128 s |  182 s |           128 s | 136 s | 6.3% more time   |
-| Slowest of five Vitest shard steps               |  139 s |  130 s |  140 s |           139 s | 130 s | 6.5% less time   |
+| Measurement                                      | #2569 | #2566 | #2552 | Baseline median | #2571 | Change vs median |
+| ------------------------------------------------ | ----: | ----: | ----: | --------------: | ----: | ---------------- |
+| Formatting step                                  |  29 s |  18 s |  23 s |            23 s |   3 s | 87.0% less time  |
+| Lint step                                        |  37 s |  25 s |  28 s |            28 s |  19 s | 32.1% less time  |
+| Type-check step                                  |  32 s |  18 s |  23 s |            23 s |   7 s | 69.6% less time  |
+| Sum of those three checks                        |  98 s |  61 s |  74 s |            74 s |  29 s | 60.8% less time  |
+| Entire code-quality job, including install/setup | 137 s |  94 s | 111 s |           111 s |  77 s | 30.6% less time  |
+| Slowest of five Vitest shard steps               | 139 s | 130 s | 140 s |           139 s | 130 s | 6.5% less time   |
 
-The clear gain is in formatting and type checking, with a smaller lint improvement. This CI sample does **not** demonstrate a faster overall production build: bundling and other build work outweighed the type-check savings. The small test difference is not evidence of a reliable speedup. Test workloads differ: #2569 passed 13,778 tests, #2566 passed 13,728, #2552 passed 13,814 (plus two expected failures), and #2571 passed 13,785, including all 53 tooling fixtures. All four skipped two tests. Shards run concurrently, so their durations must not be added to claim elapsed suite time.
+The clear gain is in formatting and type checking, with a smaller lint improvement. The small test difference is not evidence of a reliable speedup. Test workloads differ: #2569 passed 13,778 tests, #2566 passed 13,728, #2552 passed 13,814 (plus two expected failures), and #2571 passed 13,785, including all 53 tooling fixtures. All four skipped two tests. Shards run concurrently, so their durations must not be added to claim elapsed suite time.
 
 The new lockfile caused an npm download-cache miss in #2571's code-quality job; all three baseline jobs hit the existing cache. Its install step took 38 s versus a 24 s baseline median. That reduces the observed whole-job gain and is why install/setup is separated from the checks. The test workflow instead uses Bun 1.3.11 and five shards with four workers each, unchanged by this PR.
 
@@ -79,14 +66,14 @@ These are observations from separate hosted runners and different source changes
 
 ### Source runs
 
-| PR and measured head                                                                              | Code quality                                                       | Build                                                              | Tests                                                              |
-| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| [#2569](https://github.com/pubky/pubky-app/pull/2569), `79205c07be612edbec2c82265eba7a124ad91738` | [Run](https://github.com/pubky/pubky-app/actions/runs/35160629809) | [Run](https://github.com/pubky/pubky-app/actions/runs/35160629782) | [Run](https://github.com/pubky/pubky-app/actions/runs/35160629771) |
-| [#2566](https://github.com/pubky/pubky-app/pull/2566), `48d2c7c03291eb3ef5dd2735889907610fb361db` | [Run](https://github.com/pubky/pubky-app/actions/runs/35155271226) | [Run](https://github.com/pubky/pubky-app/actions/runs/35155271169) | [Run](https://github.com/pubky/pubky-app/actions/runs/35155271223) |
-| [#2552](https://github.com/pubky/pubky-app/pull/2552), `08fa17e92b2336fedea7c1303a94521ddae355ea` | [Run](https://github.com/pubky/pubky-app/actions/runs/35181054522) | [Run](https://github.com/pubky/pubky-app/actions/runs/35181054480) | [Run](https://github.com/pubky/pubky-app/actions/runs/35181054440) |
-| [#2571](https://github.com/pubky/pubky-app/pull/2571), `0cd49bca2d03a0a0ddbb279b4162caec22a267f0` | [Run](https://github.com/pubky/pubky-app/actions/runs/35181950765) | [Run](https://github.com/pubky/pubky-app/actions/runs/35181950899) | [Run](https://github.com/pubky/pubky-app/actions/runs/35181950755) |
+| PR and measured head                                                                              | Code quality                                                       | Tests                                                              |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| [#2569](https://github.com/pubky/pubky-app/pull/2569), `79205c07be612edbec2c82265eba7a124ad91738` | [Run](https://github.com/pubky/pubky-app/actions/runs/35160629809) | [Run](https://github.com/pubky/pubky-app/actions/runs/35160629771) |
+| [#2566](https://github.com/pubky/pubky-app/pull/2566), `48d2c7c03291eb3ef5dd2735889907610fb361db` | [Run](https://github.com/pubky/pubky-app/actions/runs/35155271226) | [Run](https://github.com/pubky/pubky-app/actions/runs/35155271223) |
+| [#2552](https://github.com/pubky/pubky-app/pull/2552), `08fa17e92b2336fedea7c1303a94521ddae355ea` | [Run](https://github.com/pubky/pubky-app/actions/runs/35181054522) | [Run](https://github.com/pubky/pubky-app/actions/runs/35181054440) |
+| [#2571](https://github.com/pubky/pubky-app/pull/2571), `0cd49bca2d03a0a0ddbb279b4162caec22a267f0` | [Run](https://github.com/pubky/pubky-app/actions/runs/35181950765) | [Run](https://github.com/pubky/pubky-app/actions/runs/35181950755) |
 
-To inspect the measurements, use `gh api repos/pubky/pubky-app/actions/runs/<run-id>/jobs` for each job's `started_at`, `completed_at` and `steps`. `gh run view <run-id> --repo pubky/pubky-app --log` includes the runner image, cache result, test counts and Next's `Finished TypeScript` timing.
+To inspect the measurements, use `gh api repos/pubky/pubky-app/actions/runs/<run-id>/jobs` for each job's `started_at`, `completed_at` and `steps`. `gh run view <run-id> --repo pubky/pubky-app --log` includes the runner image, cache result and test counts.
 
 ## Verification
 
