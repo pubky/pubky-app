@@ -1,7 +1,7 @@
 // Intentional import order — vi.hoisted + vi.mock factories rely on stable
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
-// @vitest/browser. Do not let `eslint --fix` reorder these imports.
-/* eslint-disable simple-import-sort/imports */
+// @vitest/browser. Do not let `oxlint --fix` reorder these imports.
+/* oxlint-disable simple-import-sort/imports */
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
@@ -201,7 +201,7 @@ vi.mock('dexie-react-hooks', async () => {
         return () => {
           alive = false;
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // oxlint-disable-next-line react/exhaustive-deps -- serialized dependencies control mock live-query subscriptions, matching the other VRT fixtures
       }, [depsKey]);
       return data;
     },
@@ -500,7 +500,8 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
       const cached = cache.get(compositeId);
       if (cached) return cached;
       const fixture = f.entitiesByCompositeId.get(compositeId) as
-        { relationships?: { reposted?: string | null } } | undefined;
+        | { relationships?: { reposted?: string | null } }
+        | undefined;
       const result = {
         showRepostHeader: !!fixture?.relationships?.reposted,
         shouldShowPostHeader: true,

@@ -24,6 +24,7 @@ class MockIntersectionObserver implements IntersectionObserver {
 
   readonly root: Element | Document | null = null;
   readonly rootMargin = '-30% 0px -35% 0px';
+  readonly scrollMargin = '0px';
   readonly thresholds: ReadonlyArray<number> = [0];
 
   observe = mockObserve;

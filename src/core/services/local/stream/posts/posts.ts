@@ -298,7 +298,7 @@ export class LocalStreamPostsService {
       }
 
       // Remove author from details as it's in the composite ID
-      // eslint-disable-next-line
+      // oxlint-disable-next-line no-unused-vars -- omit author because it is encoded in the composite post ID
       const { author, ...detailsWithoutAuthor } = post.details;
       postDetails.push({ ...detailsWithoutAuthor, id: postId });
 

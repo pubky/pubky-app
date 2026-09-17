@@ -1,6 +1,6 @@
 # Pubky App
 
-Decentralized social app: Next.js 16 App Router, React 19 with the React Compiler, TypeScript, Tailwind v4 + Shadcn UI, Zustand,
+Decentralized social app: Next.js 16 App Router, React 19 with the React Compiler, TypeScript 7, Tailwind v4 + Shadcn UI, Zustand,
 Dexie (IndexedDB), TanStack Query. Package name `franky`. Local-first: writes go to Dexie first and sync to the homeserver;
 reads come from Dexie and fall back to Nexus. This file is the entry point for every AI agent (Claude Code, Codex, Cursor);
 it indexes `docs/`, which is canonical and wins over anything here (`docs/development-workflow.md` is the long version).
@@ -59,7 +59,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   organisms → templates; z-index only `-z-10, z-10, z-30, z-40, z-50, z-60`. `docs/components.md`, `docs/z-index.md`
 - No `useCallback` / `useMemo` / `React.memo`: the React Compiler handles it. Add one only with profiler evidence.
 - Icons: stock from `lucide-react`, custom from `@/icons`, URL helpers from `@/libs/utils/urlToIcon`. `docs/components.md`
-- Toasts: `toast()` from `@/molecules/Toaster/toast` with `variant`; internals are ESLint-blocked; copy is static, never
+- Toasts: `toast()` from `@/molecules/Toaster/toast` with `variant`; internals are Oxlint-blocked; copy is static, never
   interpolate user-entered text. `docs/components.md`
 - Forms: react-hook-form + zod inside a `use{Action}Form` hook returning `{ form, submit }`; schema in a sibling `*.types.ts`;
   form components never call `commit*` controllers directly; Zod v4 (`z.url()`). `docs/components.md`
@@ -72,7 +72,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Generated files are hands-off: `public/sw.js`, `src/libs/lucide/lucideIcons.{aliases,nodes,tags}.ts`, `package-lock.json`.
   CI workflows change only in a CI task.
 - Env: only `src/libs/env/env.ts` and `src/libs/runtime-config/**` read `process.env.NEXT_PUBLIC_*` / `PUBKY_RUNTIME_*`
-  (ESLint-enforced); deploy-time values are `PUBKY_RUNTIME_*` getters, never secrets. `docs/environment.md`
+  (Oxlint-enforced); deploy-time values are `PUBKY_RUNTIME_*` getters, never secrets. `docs/environment.md`
 - Sentry: throw via `Err.*`; `Sentry.captureException` is called only in `app/error.tsx` and `app/global-error.tsx`, for
   non-`AppError` values; no raw user data in error context. `docs/sentry.md`
 - Tests: colocated `*.test.tsx`, one snapshot per test, mobile snapshot blocks for viewport-aware organisms; no `as any` or

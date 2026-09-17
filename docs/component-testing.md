@@ -193,7 +193,7 @@ vi.mock('@/libs/logger/logger', async () => {
 
 ### Typed Mocks: No `as unknown as T` or `as any`
 
-ESLint bans both `as any` and `as unknown as T` in every `*.test.{ts,tsx}` file (via `no-restricted-syntax` in `eslint.config.mjs`). Both patterns silently switch off TypeScript on the mock and let a bad shape sail through for the lifetime of the test.
+Oxlint bans both `as any` and `as unknown as T` in every `*.test.{ts,tsx}` file (via `pubky/no-restricted-syntax` in `.oxlintrc.json`). Both patterns silently switch off TypeScript on the mock and let a bad shape sail through for the lifetime of the test.
 
 Route every cast in a test through a named helper from `src/test-utils` instead. See `src/test-utils/README.md` for the full list, but in short:
 

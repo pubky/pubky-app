@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: true,
   experimental: {
     serverSourceMaps: true,
+    // TypeScript 7 provides the native CLI instead of the legacy JavaScript compiler API.
+    useTypeScriptCli: true,
   },
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
   ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),

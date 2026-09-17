@@ -1,7 +1,7 @@
 // Intentional import order — vi.hoisted + vi.mock factories rely on stable
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
-// @vitest/browser. Do not let `eslint --fix` reorder these imports.
-/* eslint-disable simple-import-sort/imports */
+// @vitest/browser. Do not let `oxlint --fix` reorder these imports.
+/* oxlint-disable simple-import-sort/imports */
 import { describe, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';

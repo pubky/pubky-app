@@ -1,7 +1,7 @@
 // Intentional import order — vi.hoisted + vi.mock factories rely on stable
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
-// @vitest/browser. Do not let `eslint --fix` reorder these imports.
-/* eslint-disable simple-import-sort/imports */
+// @vitest/browser. Do not let `oxlint --fix` reorder these imports.
+/* oxlint-disable simple-import-sort/imports */
 import { describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import {

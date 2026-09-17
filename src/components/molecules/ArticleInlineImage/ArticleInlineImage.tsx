@@ -78,7 +78,7 @@ export const ArticleInlineImage = ({ src, alt, attachments, authorId, postId }: 
       )}
       {/* Kept mounted (tiny, invisible) while loading so the fetch and
           lazy-loading intersection still run */}
-      {/* eslint-disable-next-line @next/next/no-img-element -- needs onError fallback; the Image atom (next/image) has none */}
+      {/* oxlint-disable-next-line nextjs/no-img-element -- needs onError fallback; the Image atom (next/image) has none */}
       <img
         src={finalSrc}
         alt={alt ?? ''}

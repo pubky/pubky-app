@@ -1,6 +1,6 @@
 // Intentional import order — keep alias imports grouped with the template last;
-// matches the other VRT suites. Do not let `eslint --fix` reorder these imports.
-/* eslint-disable simple-import-sort/imports */
+// matches the other VRT suites. Do not let `oxlint --fix` reorder these imports.
+/* oxlint-disable simple-import-sort/imports */
 import { describe, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';

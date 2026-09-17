@@ -77,7 +77,7 @@ those baselines, delete the PNGs first so they are regenerated from scratch.
   `FacehashAvatar`. `vrt.setup.ts` sets `globalThis.__VRT__` and stabiliser CSS;
   `FacehashAvatar` disables blink, 3D tilt, and hover when that flag is set.
 - **vi.mock + import order** — factories are hoisted; keep the
-  `eslint-disable simple-import-sort/imports` header so `eslint --fix` can't
+  `oxlint-disable simple-import-sort/imports` header so `oxlint --fix` can't
   reorder imports into a TDZ crash. Don't reference a top-level `const` inside a
   `vi.mock` factory (it's hoisted above the const) — inline the literal.
 

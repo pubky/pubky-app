@@ -100,7 +100,7 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
         >
           {coverSrc ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* oxlint-disable-next-line nextjs/no-img-element -- Satori requires plain img elements */}
               <img
                 src={coverSrc}
                 alt=""

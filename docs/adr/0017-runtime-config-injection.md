@@ -88,7 +88,7 @@ The optional observability tier (Sentry) and the decoupled source-map strategy t
 - Injection: `src/components/molecules/ContainerRoot/ContainerRoot.tsx`
 - Consumers: `src/config/nexus.ts`, `src/config/network.ts`, `src/core/services/nexus/nexus.utils.ts`, `src/core/services/homegate/homegate.api.ts`, `src/core/services/homeserver/homeserver.ts`, `src/components/organisms/AvatarWithFallback/AvatarWithFallback.utils.ts`
 - Additional public config consumers: `src/config/sync.ts`, `src/config/moderation.ts`, `src/config/metadata.ts`, `src/config/externalLinks.ts`, `src/components/molecules/Metadata/Metadata.tsx`, `src/app/layout.tsx`
-- ESLint guard: `eslint.config.mjs` (`no-restricted-syntax`); also covers the optional-tier names from [ADR 0018](0018-runtime-sentry-and-decoupled-source-maps.md)
+- Oxlint guard (migrated from ESLint in #2357): `.oxlintrc.json` (`pubky/no-restricted-syntax`); also covers the optional-tier names from [ADR 0018](0018-runtime-sentry-and-decoupled-source-maps.md)
 
 ## References
 

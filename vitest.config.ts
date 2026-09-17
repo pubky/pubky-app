@@ -1,12 +1,12 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import tsconfigPaths from 'vite-tsconfig-paths';
 import { playwright } from '@vitest/browser-playwright';
 import { VRT_VIEWPORT_DESKTOP } from './src/test-utils/vrt.viewports';
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react()],
   resolve: {
+    tsconfigPaths: true,
     // Force a single copy of these packages so we never load two versions at once.
     dedupe: ['react', 'react-dom'],
   },
@@ -39,7 +39,8 @@ export default defineConfig({
     projects: [
       // Unit tests run in jsdom.
       {
-        plugins: [react(), tsconfigPaths()],
+        plugins: [react()],
+        resolve: { tsconfigPaths: true },
         test: {
           name: 'unit',
           environment: 'jsdom',
@@ -53,7 +54,8 @@ export default defineConfig({
       },
       // VRT(Visual Regression Tests) run in real browsers via Playwright.
       {
-        plugins: [react(), tsconfigPaths()],
+        plugins: [react()],
+        resolve: { tsconfigPaths: true },
         optimizeDeps: {
           include: [
             'react',

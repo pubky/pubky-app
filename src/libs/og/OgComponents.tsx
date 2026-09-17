@@ -47,7 +47,7 @@ export function OgAvatar({ src, size }: { src: string | null; size: number }) {
     return <FallbackAvatar size={size} />;
   }
   return (
-    // eslint-disable-next-line @next/next/no-img-element
+    // oxlint-disable-next-line nextjs/no-img-element -- Satori renders these elements to an image and requires plain img elements
     <img
       src={src}
       width={size}
