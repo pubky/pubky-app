@@ -95,6 +95,8 @@ Right-sized verification:
 - Run the full `npm test` before handing off a cross-cutting change; `npm run build` when the change is route- or config-wide.
 - Cypress e2e needs the full pubky-stack (private `pubky/pubky-stack`) and runs on push to `master`/`dev` in CI. Do not attempt it from a bare checkout, and do not report an e2e result you did not obtain.
 
+The Build workflow caches `.next/cache` separately from setup-node's npm download cache. Cache keys separate runner OS/architecture, dependencies and build configuration; source changes restore the most recent compatible cache and save a new entry after a successful job. A missing cache simply causes a fresh build. Docker retains its existing layer caching; it does not transfer Next.js's incremental cache between fresh CI builders.
+
 Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; `describe('<Component>')` plus a separate `describe('<Component> - Snapshots')` with exactly one `expect().toMatchSnapshot()` per test; mobile blocks (`- Mobile Snapshots`) for organisms/templates that use `useIsMobile` directly or through a child, via `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are Oxlint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
 
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
