@@ -118,7 +118,24 @@ Both Build jobs use `ubuntu-24.04` image `20260907.300.1`, Node 24.20.0 and npm 
 
 The complete build commands include type checking and service-worker generation. The Build job's npm download cache hit before and missed after; installation took 31 s and 29 s, respectively. Neither used a restored Next.js cache. Preview Docker builds use Linux/amd64 and the unchanged Dockerfile/layer-cache setup; both `npm run build` layers actually executed. Docker does not restore the normal Build job's `.next/cache`.
 
-Compilation improved, but these samples do **not** demonstrate faster preview deployments. The new dependencies invalidated Docker's cached installation layer (42.3 s after versus a cache hit before). Image export/upload took 130.4 s after versus 69.2 s before, and the separate Sentry upload step took 25.2 s versus 17.5 s. Those costs offset the compilation gain. Whole-job duration includes setup/cleanup; preview workflow elapsed time also includes waits between jobs. Queue time before the first job is excluded, and parallel job durations are not summed.
+Compilation improved, but this first pair did **not** demonstrate faster preview deployment. The new dependencies invalidated Docker's cached installation layer (42.3 s after versus a cache hit before). Exporting the **build cache to the registry** took 130.4 s after versus 69.2 s before; exporting/pushing the actual application image took 15.8 s versus 15.7 s. The earlier version of this report incorrectly called the cache-export duration image export/upload. The separate Sentry upload step took 25.2 s versus 17.5 s. Those costs offset the compilation gain in this pair. Whole-job duration includes setup/cleanup; preview workflow elapsed time also includes waits between jobs. Queue time before the first job is excluded, and parallel job durations are not summed.
+
+### Existing Docker overhead versus migration costs
+
+The Dockerfile and Docker workflow are unchanged by the bundler migration. The existing [shared build action](https://github.com/pubky/ci-workflows/blob/e6d3b38b5ebfa97b86595cb44f3a86695e473b09/.github/actions/docker/build_and_push/action.yml) imports and exports `pubky-app:cache` with `mode=max`. This [registry cache](https://docs.docker.com/build/cache/backends/registry/) includes intermediate build stages and is separate from the application image. It predates the newly added `.next/cache` preservation in the normal Build job.
+
+| Preview head | Bundler   | Docker dependency install | Application image export/push | Registry cache export | Entire image job |
+| ------------ | --------- | ------------------------: | ----------------------------: | --------------------: | ---------------: |
+| `c47b0e57`   | Webpack   |                    40.7 s |                        12.7 s |               135.6 s |            444 s |
+| `11326f0f`   | Webpack   |                    Cached |                        12.8 s |                61.1 s |            306 s |
+| `80c2e031`   | Webpack   |                    Cached |                        15.7 s |                69.2 s |            328 s |
+| `c2206c06`   | Turbopack |                    42.3 s |                        15.8 s |               130.4 s |            362 s |
+| `fa06d02f`   | Turbopack |                    41.4 s |                        10.8 s |               118.8 s |            333 s |
+| `7aec1fb1`   | Turbopack |                    Cached |                        14.4 s |                60.7 s |            248 s |
+
+The first migration install-cache miss follows from the changed dependency manifests; a fresh Webpack installation already took about the same time. A later Turbopack run also missed that layer, so this is not a guaranteed one-run cost: reuse depends on the available registry cache. All these runs use the same mutable cache tag; the logs alone do not establish what invalidated every later cache entry.
+
+Cache-export overhead was already substantial with Webpack. Most of the first pair's difference was preparation of the cache export (52.0 s before, 95.7 s after), not application-image transfer. The subsequent `7aec1fb1` run reused dependencies, spent 60.7 s exporting cache, and built/pushed the image in **248 s versus 328 s** for `80c2e031` (**24.4% less time**). Its complete preview workflow took **318 s versus 412 s** (**22.8% less time**). These later source revisions differ, so this supports the benefit once cache reuse resumes without promising a fixed deployment speedup. Docker's build command remained consistent across the three Turbopack runs: **79.0, 77.6 and 78.1 s**.
 
 ### Cache reuse and run variability
 
@@ -135,7 +152,8 @@ Four consecutive successful Webpack Build runs in this PR took **136, 141, 156 a
 | `11326f0f`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35183089235) | [Run](https://github.com/pubky/pubky-app/actions/runs/35183089596) |
 | `80c2e031`, Webpack, Next.js cache miss                  | [Run](https://github.com/pubky/pubky-app/actions/runs/35184138730) | [Run](https://github.com/pubky/pubky-app/actions/runs/35184138930) |
 | `c2206c06`, Turbopack, Next.js cache miss                | [Run](https://github.com/pubky/pubky-app/actions/runs/35185281615) | [Run](https://github.com/pubky/pubky-app/actions/runs/35185281786) |
-| `fa06d02f`, Turbopack, compatible Next.js cache restored | [Run](https://github.com/pubky/pubky-app/actions/runs/35186756262) | Not used in this comparison                                        |
+| `fa06d02f`, Turbopack, compatible Next.js cache restored | [Run](https://github.com/pubky/pubky-app/actions/runs/35186756262) | [Run](https://github.com/pubky/pubky-app/actions/runs/35186756474) |
+| `7aec1fb1`, Turbopack, compatible Next.js cache restored | [Run](https://github.com/pubky/pubky-app/actions/runs/35187224850) | [Run](https://github.com/pubky/pubky-app/actions/runs/35187225173) |
 
 ## Bundler verification
 
