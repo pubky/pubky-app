@@ -212,6 +212,22 @@ const otherTabPaginates = async (sim: SimNexus, streamId: PostStreamId) => {
   });
 };
 
+/**
+ * `PostStreamApplication.prepareStreamForInitialLoad` in another tab: an expired or dirty stream
+ * has its row and unread row deleted before that tab fetches the replacement. The mounted walk
+ * loses every cached id it has not consumed; the allowance covers fetching them again.
+ */
+const otherTabClearsRow = async (feed: Feed, streamId: PostStreamId): Promise<number> => {
+  const row = await LocalStreamPostsService.read({ streamId });
+  const delivered = new Set(feed.result.current.postIds);
+  const lost = row?.stream.filter((id) => !delivered.has(id)).length ?? 0;
+  await Promise.all([
+    LocalStreamPostsService.deleteById({ streamId }),
+    LocalStreamPostsService.clearUnreadStream({ streamId }),
+  ]);
+  return Math.ceil(lost / LIMIT) + 1;
+};
+
 // ---------------------------------------------------------------------------------------------
 // Walk driver and invariants
 // ---------------------------------------------------------------------------------------------
@@ -447,6 +463,35 @@ describe('useStreamPagination against a simulated Nexus (remote-origin mutations
     expectWalkInvariants(feed, sim, TIMELINE, walk, 'bootstrap mid-walk');
   });
 
+  // Known gap, tracked in #2570: another tab paginated the shared row two pages past what this
+  // reader consumed, then an initial load elsewhere found the row expired and deleted it. The
+  // reader's carried cursor is the vanished row's tail, below twenty ids it never served, and
+  // the walk resumes there. A resume seeded from local timestamps was reviewed and rejected
+  // (it falls open to a post's creation time on an emptied Bookmarks row, aligns against a row
+  // this walk did not build, and trusts a locally authored post's timestamp before its first
+  // refresh); the fix belongs with the non-atomic row rebuild in `prepareStreamForInitialLoad`.
+  it.fails('survives another tab clearing the row mid-walk without skipping unconsumed cached ids', async () => {
+    const sim = newSim();
+    seedStream(sim, 60, () => AUTHORS[2]);
+    wireNexus(sim);
+    const feed = mountFeed(TIMELINE);
+    await settled(feed);
+
+    const walk = await walkToEnd(feed, sim, TIMELINE, {
+      beforeRound: async (round) => {
+        if (round === 0) {
+          await otherTabPaginates(sim, TIMELINE);
+          await otherTabPaginates(sim, TIMELINE);
+          return { seamCost: 4, headPolls: 0 };
+        }
+        if (round === 1) return { seamCost: await otherTabClearsRow(feed, TIMELINE), headPolls: 0 };
+        return { seamCost: 0, headPolls: 0 };
+      },
+    });
+
+    expectWalkInvariants(feed, sim, TIMELINE, walk, 'other tab clears the row');
+  });
+
   it('never serves posts above the feed head from a bootstrap row whose tail was edited later', async () => {
     const sim = newSim();
     seedStream(sim, 40, () => AUTHORS[1]);
@@ -585,6 +630,8 @@ describe('useStreamPagination against a simulated Nexus (remote-origin mutations
             await headPoll(streamId);
             headPolls += 1;
           } else {
+            // `otherTabClearsRow` stays out of the random mix: a walk whose row vanished is a
+            // known gap (#2570), reproduced by the expected-failure scenario above.
             await otherTabPaginates(sim, streamId);
             seamCost += 2;
           }
