@@ -41,6 +41,14 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
+  it('applies wrapping and shrink constraints to the lock title', () => {
+    renderDialog('pay');
+
+    const title = screen.getByText('My locked post');
+    expect(title).toHaveClass('min-w-0', 'wrap-anywhere');
+    expect(title.parentElement).toHaveClass('min-w-0');
+  });
+
   it('always shows the grouped price and the creator', () => {
     renderDialog('pay');
     expect(screen.getByText('₿ 1,000')).toBeInTheDocument();

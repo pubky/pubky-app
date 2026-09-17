@@ -95,9 +95,9 @@ export function DialogPayToUnlock({
           <DialogTitle>{stage === 'paid' ? 'Unlocked' : 'Pay to Unlock'}</DialogTitle>
         </DialogHeader>
 
-        <Container overrideDefaults className="flex items-center gap-2 rounded-md bg-muted p-6">
+        <Container overrideDefaults className="flex min-w-0 items-center gap-2 rounded-md bg-muted p-6">
           <Newspaper className="size-6 shrink-0 text-muted-foreground" aria-hidden />
-          <Typography className="min-w-0 flex-1 truncate text-xl font-bold text-foreground">
+          <Typography className="min-w-0 flex-1 text-xl font-bold wrap-anywhere text-foreground">
             {lockTitle || DEFAULT_LOCK_TITLE}
           </Typography>
           <CreatorAvatar authorId={authorId} />

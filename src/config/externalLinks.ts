@@ -44,5 +44,6 @@ export const getAppStoreLink = getAppStoreUrl;
 export const getPlayStoreLink = getPlayStoreUrl;
 
 // Bitkit store links — the wallet a creator connects for payouts.
+export const BITKIT_WEBSITE_URL = 'https://bitkit.to/';
 export const BITKIT_APP_STORE_URL = 'https://get.bitkit.to/iOS';
 export const BITKIT_PLAY_STORE_URL = 'https://get.bitkit.to/PlayStore';
