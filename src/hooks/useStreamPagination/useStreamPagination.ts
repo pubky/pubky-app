@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { STREAM_LOAD_MAX_RAW_SCAN } from '@/config/feed';
 import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
@@ -114,19 +115,28 @@ export function useStreamPagination({
   }, []);
 
   /**
-   * Fetches a slice from the stream
+   * Fetches the next visible page of the stream.
+   *
+   * One load may take several stream-layer rounds: filtering is client-side, so a round
+   * can come back with nothing new to show while the stream has more. Rather than
+   * returning empty and letting the scroll sentinel refire (which unmounts and remounts the
+   * loading block once per round and pulses the feed's height — #2523), the load keeps
+   * scanning with both resume cursors advanced, up to `STREAM_LOAD_MAX_RAW_SCAN` raw posts,
+   * until a visible post arrives, the stream ends, or a round makes no progress at all.
    */
   const fetchStreamSlice = useCallback(
     async (isInitialLoad: boolean) => {
       setLoadingState(isInitialLoad, true);
       setError(null);
-      const committedRemovalsAtRequest = committedRemovalsRef.current;
       const generationAtRequest = fetchGenerationRef.current;
       const isStale = () => fetchGenerationRef.current !== generationAtRequest;
 
       try {
-        let result: TReadPostStreamChunkResponse;
-        // Always resume from `streamTail`; never recompute the cursor from the visible count.
+        // Resume positions for this load. Always resume from `streamTail`; never recompute
+        // the cursor from the visible count. Held in locals across chained rounds because the
+        // state writes below only land after this call completes.
+        let anchor = lastPostId;
+        let cursor = streamTail;
 
         if (isInitialLoad) {
           // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
@@ -135,84 +145,94 @@ export function useStreamPagination({
           const cachedLastPostTimestamp = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
           if (isStale()) return;
           setStreamTail(cachedLastPostTimestamp);
+          anchor = undefined;
+          // Skip streams always start at offset 0; score streams seed from the cached tail.
+          cursor = isSkipPaginatedStream(streamId) ? 0 : cachedLastPostTimestamp;
+        }
 
-          result = await StreamPostsController.getOrFetchStreamSlice({
+        // Resume positions and `hasMore` are committed once, after the scan: every round
+        // reads the locals, and a state write per round would re-render the feed (and
+        // re-create `loadMore`) once per round while nothing visible changes.
+        let reachedEnd = false;
+        let rawScanned = 0;
+        for (;;) {
+          const committedRemovalsAtRequest = committedRemovalsRef.current;
+          const result: TReadPostStreamChunkResponse = await StreamPostsController.getOrFetchStreamSlice({
             streamId,
-            lastPostId: undefined,
-            // Skip streams always start at offset 0; score streams seed from the cached tail.
-            streamTail: isSkipPaginatedStream(streamId) ? 0 : cachedLastPostTimestamp,
+            lastPostId: anchor,
+            streamTail: cursor,
+            // Lets the cache walk re-anchor if `anchor` was removed from the cached row
+            // (its post deleted or un-bookmarked) instead of skipping to the row tail.
+            visiblePostIds: anchor === undefined ? undefined : postIdsRef.current,
             limit,
           });
-        } else {
-          result = await StreamPostsController.getOrFetchStreamSlice({
-            streamId,
-            lastPostId,
-            streamTail,
-            limit,
-          });
+
+          // A reset (stream switch or refresh) during the flight makes this response stale;
+          // every write below belongs to state that no longer exists.
+          if (isStale()) return;
+
+          // Advance BOTH resume positions from the response, even on a fully-filtered (empty)
+          // page: `streamTail` by the raw backend cursor, `lastPostId` (the local cache-walk
+          // anchor) by the raw scan anchor. Both advance by raw scanned data, never by the
+          // post-filter visible count — otherwise a fully-filtered round would restart the
+          // cache walk at the head and spin in place on long filtered runs. A score cursor
+          // is always Nexus's own position (persisted on the cached stream row), never a
+          // post's local `indexed_at`, which Nexus bumps on edit/delete without moving the
+          // post in the stream (#2523).
+          let nextCursor = cursor;
+          if (result.nextCursor != null) {
+            // Skip streams: `nextCursor` extends the offset this request captured
+            // at start, so removals committed during the flight are not in it —
+            // re-apply them or the absolute write below would discard their
+            // decrements. Clamped: a `clearState` during the flight resets the
+            // counter, and a stale resolution must not over-correct a fresh one.
+            const removalsDuringFlight = isSkipPaginatedStream(streamId)
+              ? Math.max(0, committedRemovalsRef.current - committedRemovalsAtRequest)
+              : 0;
+            nextCursor = Math.max(0, result.nextCursor - removalsDuringFlight);
+          }
+          // Never overwrite a defined anchor with undefined.
+          const nextAnchor = resolveResumeAnchor(result) ?? anchor;
+          const consumed = result.rawScannedCount ?? 0;
+          const progressed = consumed > 0 || nextAnchor !== anchor || nextCursor !== cursor;
+          anchor = nextAnchor;
+          cursor = nextCursor;
+          // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
+          // keeps hasMore so the advanced cursors are re-requested.
+          reachedEnd = result.reachedEnd === true;
+
+          // Deduplicate posts
+          const existingIds = new Set(postIdsRef.current);
+          const newUniquePostIds = result.nextPageIds.filter((id) => !existingIds.has(id));
+          if (newUniquePostIds.length > 0) {
+            // Update state with unique posts only
+            const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
+            postIdsRef.current = updatedPostIds;
+            const displayedState = resolveDisplayedPostIds(
+              updatedPostIds,
+              optimisticPostIdsRef.current,
+              new Set(hiddenPostCountsRef.current.keys()),
+            );
+            optimisticPostIdsRef.current = displayedState.optimisticPostIds;
+            setPostIds(displayedState.displayedPostIds);
+            break;
+          }
+
+          // Nothing new to show (fully filtered, or only duplicates). Keep scanning while the
+          // round consumed raw ids or moved a resume position and the raw-scan budget allows;
+          // otherwise yield with hasMore true — the auto-loading renderer decides whether to
+          // keep going (`TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS`) or hand over to a manual
+          // Load more.
+          rawScanned += consumed;
+          if (reachedEnd || !progressed || rawScanned >= STREAM_LOAD_MAX_RAW_SCAN) break;
         }
 
-        // A reset (stream switch or refresh) during the flight makes this response stale;
-        // every write below belongs to state that no longer exists.
-        if (isStale()) return;
-
-        // Advance BOTH resume cursors from the response, even on a fully-filtered (empty)
-        // page: `streamTail` by the raw backend cursor, `lastPostId` (the local cache-walk
-        // anchor) by the raw scan anchor. Both advance by raw scanned data, never by the
-        // post-filter visible count — otherwise a fully-filtered round would restart the
-        // cache walk at the head and spin in place on long filtered runs.
-        if (result.nextCursor != null) {
-          // Skip streams: `nextCursor` extends the offset this request captured
-          // at start, so removals committed during the flight are not in it —
-          // re-apply them or the absolute write below would discard their
-          // decrements. Clamped: a `clearState` during the flight resets the
-          // counter, and a stale resolution must not over-correct a fresh one.
-          const removalsDuringFlight = isSkipPaginatedStream(streamId)
-            ? Math.max(0, committedRemovalsRef.current - committedRemovalsAtRequest)
-            : 0;
-          setStreamTail(Math.max(0, result.nextCursor - removalsDuringFlight));
-        }
-
-        // Never overwrite a defined anchor with undefined.
-        const nextAnchor = resolveResumeAnchor(result);
-        if (nextAnchor !== undefined) {
-          setLastPostId(nextAnchor);
-        }
-
-        // hasMore reflects the stream end, not the filtered count: a mute/filter-emptied page
-        // keeps hasMore so the advanced cursors are re-requested. An auto-loading caller
-        // (useInfiniteScroll) still chains bounded rounds through a filtered region until the
-        // true stream end, with no per-user-action feedback. Known limitation, deliberately
-        // unchanged here — any remedy (toast + backoff, manual load-more) is a
-        // product-visible UX change tracked as follow-up.
-        if (result.nextPageIds.length === 0) {
-          setHasMore(!result.reachedEnd);
-          setLoadingState(isInitialLoad, false);
-          return;
-        }
-
-        // Deduplicate posts
-        const existingIds = new Set(postIdsRef.current);
-        const newUniquePostIds = result.nextPageIds.filter((id) => !existingIds.has(id));
-
-        setHasMore(result.reachedEnd !== true);
-
-        // If all posts were duplicates, don't update the UI but keep hasMore state
-        if (newUniquePostIds.length === 0) {
-          setLoadingState(isInitialLoad, false);
-          return;
-        }
-
-        // Update state with unique posts only
-        const updatedPostIds = isInitialLoad ? newUniquePostIds : [...postIdsRef.current, ...newUniquePostIds];
-        postIdsRef.current = updatedPostIds;
-        const displayedState = resolveDisplayedPostIds(
-          updatedPostIds,
-          optimisticPostIdsRef.current,
-          new Set(hiddenPostCountsRef.current.keys()),
-        );
-        optimisticPostIdsRef.current = displayedState.optimisticPostIds;
-        setPostIds(displayedState.displayedPostIds);
+        // Written unconditionally: a removal committed while this call awaited a page may
+        // have moved the live offset, so equality with the captured value does not mean the
+        // state still holds it (React skips the render for an unchanged primitive anyway).
+        setStreamTail(cursor);
+        if (anchor !== undefined) setLastPostId(anchor);
+        setHasMore(!reachedEnd);
       } catch (err) {
         Logger.error('Failed to fetch stream slice:', err);
         // A stale failure belongs to a discarded request: surfacing it (error banner,

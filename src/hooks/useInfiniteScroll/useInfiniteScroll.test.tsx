@@ -227,6 +227,21 @@ describe('useInfiniteScroll - unproductive-load budget', () => {
     expect(result.current.isStalled).toBe(false);
   });
 
+  it('clears a stall reached at zero items once the next stream delivers its first page', () => {
+    // Renderers are not re-keyed per stream: a stall reached while the previous stream
+    // showed nothing must not survive the new stream's first page.
+    const { result, rerender } = renderWithSentinel(0, 3);
+
+    for (let i = 0; i < 4; i += 1) intersect();
+    expect(result.current.isStalled).toBe(true);
+
+    rerender({ itemCount: 10 });
+    expect(result.current.isStalled).toBe(false);
+
+    intersect();
+    expect(mockOnLoadMore).toHaveBeenCalledTimes(4);
+  });
+
   it('never stalls when no budget is configured', () => {
     const { result } = renderWithSentinel(undefined, undefined);
 

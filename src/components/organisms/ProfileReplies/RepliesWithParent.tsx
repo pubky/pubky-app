@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Container } from '@/atoms/Container/Container';
 import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
+import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
@@ -19,6 +20,7 @@ import { RepliesEmpty } from '@/molecules/RepliesEmpty/RepliesEmpty';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
+import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { PostMain } from '../PostMain/PostMain';
@@ -34,13 +36,17 @@ import type { RepliesWithParentProps, ReplyWithParentProps } from './RepliesWith
 export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
   const { postIds, loading, loadingMore, error, hasMore, loadMore } = useStreamPagination({ streamId });
 
-  // Infinite scroll hook
-  const { sentinelRef } = useInfiniteScroll({
+  // Filtering is client-side, so a load round can come back with nothing visible while the
+  // stream still has more. Rounds that fail to grow the list are budgeted: past the budget
+  // the sentinel stops and the manual Load more below takes over (#2523).
+  const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: loadingMore,
     threshold: 3000,
     debounceMs: 20,
+    itemCount: postIds.length,
+    maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 
   const { handlePostKeyDown } = usePostNavigation();
@@ -52,6 +58,7 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
       error={error}
       hasItems={postIds.length > 0}
       hasMore={hasMore}
+      stalled={isStalled}
       emptyComponent={<RepliesEmpty />}
     >
       <Container>
@@ -82,8 +89,11 @@ export function RepliesWithParent({ streamId }: RepliesWithParentProps) {
           {/* End of posts message */}
           {!hasMore && !loadingMore && postIds.length > 0 && <TimelineEndMessage />}
 
-          {/* Infinite scroll sentinel */}
-          <Container overrideDefaults className="h-[20px]" ref={sentinelRef} />
+          {hasMore && isStalled && !loadingMore && <TimelineLoadMore onLoadMore={resumeAutoLoad} />}
+
+          {/* Infinite scroll sentinel — only while there is more to observe for and
+              auto-loading is not stalled, mirroring TimelinePosts. */}
+          {hasMore && !isStalled && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
         </Container>
       </Container>
     </TimelineStateWrapper>
