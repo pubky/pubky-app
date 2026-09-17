@@ -137,6 +137,19 @@ The first migration install-cache miss follows from the changed dependency manif
 
 Cache-export overhead was already substantial with Webpack. Most of the first pair's difference was preparation of the cache export (52.0 s before, 95.7 s after), not application-image transfer. The subsequent `7aec1fb1` run reused dependencies, spent 60.7 s exporting cache, and built/pushed the image in **248 s versus 328 s** for `80c2e031` (**24.4% less time**). Its complete preview workflow took **318 s versus 412 s** (**22.8% less time**). These later source revisions differ, so this supports the benefit once cache reuse resumes without promising a fixed deployment speedup. Docker's build command remained consistent across the three Turbopack runs: **79.0, 77.6 and 78.1 s**.
 
+### Direct warm CI comparison
+
+Reran the original Build workflows on 2026-09-17 after their first successful runs had saved `.next/cache`. Webpack reran head `80c2e031` / merge commit `89eaf784`; Turbopack reran head `c2206c06` / merge commit `702e77dd`. Logs verify the original checkouts, **exact Next.js cache-key hits** for both, successful build/smoke tests, and the same Ubuntu image `20260907.300.1`, Node 24.20.0 and npm 11.19.0. Neither checkout changed between its cold first attempt and this warm second attempt. Both already use TypeScript 7/Oxc.
+
+| Measurement                                  | Webpack | Turbopack + Serwist CLI |            Less time |
+| -------------------------------------------- | ------: | ----------------------: | -------------------: |
+| Complete build command, exact cache restored |    63 s |                    10 s | 84.1% (6.30× faster) |
+| Entire Build job                             |   120 s |                    73 s |                39.2% |
+
+Sources: [Webpack attempt 2](https://github.com/pubky/pubky-app/actions/runs/35184138730/attempts/2), [Turbopack attempt 2](https://github.com/pubky/pubky-app/actions/runs/35185281615/attempts/2). Both restored their Next.js cache in 8 s; dependency installation took 34 s and 35 s. Setup/install/cache restore therefore account for much of the remaining whole-job time. These are one successful warm run per bundler on separate hosted runners, not repeated-run medians. The cold measurements above remain linked explicitly to attempt 1.
+
+Historical PR runs cannot supply the same warm baseline: the old workflow retained npm downloads but did not restore `.next/cache`. Eight inspected Build runs across PRs #2569, #2566 and #2552 took **123–182 s** for the build command, including repeated pushes on those branches. The inspected logs for [#2569](https://github.com/pubky/pubky-app/actions/runs/35160629782), [#2566](https://github.com/pubky/pubky-app/actions/runs/35155271169) and [#2552](https://github.com/pubky/pubky-app/actions/runs/35182256208) show npm cache hits and Next.js's “No build cache found” warning. Those are useful historical workflow timings, but the reruns above provide the direct comparison with Next.js caches available on both sides.
+
 ### Cache reuse and run variability
 
 A later Build run at head `fa06d02f` restored the compatible cache saved by `c2206c06`: **21 s** for `npm run build`, **78 s** for the entire job. This was a restore-key hit after source changes, not an unchanged-repeat benchmark: `dev` had advanced to `8de93300` with #2552, and GitHub tested merge commit `9099015c`. The cache restored in 5 s and the new entry saved in 6 s. This verifies that the simple CI cache works across compatible source changes; it is not a measured warm-Webpack comparison.
@@ -145,22 +158,22 @@ Four consecutive successful Webpack Build runs in this PR took **136, 141, 156 a
 
 ### Source runs
 
-| Head and condition                                       | Build workflow                                                     | Preview workflow                                                   |
-| -------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `0cd49bca`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35181950899) | Cancelled; excluded                                                |
-| `c47b0e57`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35182356199) | [Run](https://github.com/pubky/pubky-app/actions/runs/35182356426) |
-| `11326f0f`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35183089235) | [Run](https://github.com/pubky/pubky-app/actions/runs/35183089596) |
-| `80c2e031`, Webpack, Next.js cache miss                  | [Run](https://github.com/pubky/pubky-app/actions/runs/35184138730) | [Run](https://github.com/pubky/pubky-app/actions/runs/35184138930) |
-| `c2206c06`, Turbopack, Next.js cache miss                | [Run](https://github.com/pubky/pubky-app/actions/runs/35185281615) | [Run](https://github.com/pubky/pubky-app/actions/runs/35185281786) |
-| `fa06d02f`, Turbopack, compatible Next.js cache restored | [Run](https://github.com/pubky/pubky-app/actions/runs/35186756262) | [Run](https://github.com/pubky/pubky-app/actions/runs/35186756474) |
-| `7aec1fb1`, Turbopack, compatible Next.js cache restored | [Run](https://github.com/pubky/pubky-app/actions/runs/35187224850) | [Run](https://github.com/pubky/pubky-app/actions/runs/35187225173) |
+| Head and condition                                       | Build workflow                                                                | Preview workflow                                                   |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `0cd49bca`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35181950899)            | Cancelled; excluded                                                |
+| `c47b0e57`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35182356199)            | [Run](https://github.com/pubky/pubky-app/actions/runs/35182356426) |
+| `11326f0f`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35183089235)            | [Run](https://github.com/pubky/pubky-app/actions/runs/35183089596) |
+| `80c2e031`, Webpack, Next.js cache miss                  | [Run](https://github.com/pubky/pubky-app/actions/runs/35184138730/attempts/1) | [Run](https://github.com/pubky/pubky-app/actions/runs/35184138930) |
+| `c2206c06`, Turbopack, Next.js cache miss                | [Run](https://github.com/pubky/pubky-app/actions/runs/35185281615/attempts/1) | [Run](https://github.com/pubky/pubky-app/actions/runs/35185281786) |
+| `fa06d02f`, Turbopack, compatible Next.js cache restored | [Run](https://github.com/pubky/pubky-app/actions/runs/35186756262)            | [Run](https://github.com/pubky/pubky-app/actions/runs/35186756474) |
+| `7aec1fb1`, Turbopack, compatible Next.js cache restored | [Run](https://github.com/pubky/pubky-app/actions/runs/35187224850)            | [Run](https://github.com/pubky/pubky-app/actions/runs/35187225173) |
 
 ## Bundler verification
 
 - Clean `npm ci`, formatting, lint, type checking and workflow validation pass. The full unit suite passes **13,791 tests**, with **2 skipped**, including **12** service-worker registration checks.
 - Chromium verifies upgrading an installed Webpack worker to the new worker at the same `/sw.js` URL and `/` scope, shared text/file redirects, cached assets offline, and no page errors. All **69 public assets** retain identical URLs and revisions. Emitted fonts are cached; source maps are excluded.
 - A local Linux/arm64 Docker image builds without Sentry credentials and serves `/`, `/home`, `/robots.txt` and the exact generated worker bytes. Browser source maps are absent; **68** server maps retain matching Sentry Debug IDs. Uploading to Sentry was not exercised locally.
-- CI passes the [production build, worker smoke test and cache save](https://github.com/pubky/pubky-app/actions/runs/35185281615), [code quality](https://github.com/pubky/pubky-app/actions/runs/35185281681) and [unit tests](https://github.com/pubky/pubky-app/actions/runs/35185281694), and [preview Docker build/deployment](https://github.com/pubky/pubky-app/actions/runs/35185281786). Browser verification used local production servers; the deployed preview requires Google IAP authentication.
+- CI passes the [production build, worker smoke test and cache save](https://github.com/pubky/pubky-app/actions/runs/35185281615/attempts/1), [code quality](https://github.com/pubky/pubky-app/actions/runs/35185281681) and [unit tests](https://github.com/pubky/pubky-app/actions/runs/35185281694), and [preview Docker build/deployment](https://github.com/pubky/pubky-app/actions/runs/35185281786). Browser verification used local production servers; the deployed preview requires Google IAP authentication.
 
 Existing worker limitations were reproduced before and after the migration: `/offline` is not precached, so offline document navigation fails, and the default 2 MiB chunk limit excludes one large JavaScript chunk in each bundler's output. Public files retain the classic integration's separate size policy, including the large landing-page video. Changing offline navigation or the chunk limit is outside this build migration.
 
