@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "dev:webpack": "next dev --webpack",
-    "dev:https": "next dev --experimental-https --webpack",
     "build": "next build && npm run build:sw",
     "build:sw": "serwist build serwist.config.mjs",
     "start": "next start",
