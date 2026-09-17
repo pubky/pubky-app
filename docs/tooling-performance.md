@@ -45,7 +45,7 @@ Fresh type checking is about 3% higher in memory, so this migration should not b
 
 Measured the first run of [PR #2571](https://github.com/pubky/pubky-app/pull/2571), commit `0cd49bca2d03a0a0ddbb279b4162caec22a267f0`, against the latest successful runs at the measured heads of three other open PRs targeting `dev`. These runs occurred on September 16–17, 2026.
 
-All four use identical `format.yml` and `test.yml` workflows, `ubuntu-latest` (image `ubuntu-24.04`, version `20260907.300.1`), Node 24.20.0 and npm 11.19.0. The baseline PRs have identical package manifests, including TypeScript 5.9.3, ESLint 9.39.2, Prettier 3.9.6 and Next.js 16.3.4. This migration leaves Next.js and the workflows unchanged.
+All four use identical `format.yml` and `test.yml` workflows, `ubuntu-latest` (image `ubuntu-24.04`, version `20260907.300.1`), Node 24.20.0 and npm 11.19.0. The baseline PRs have identical package manifests, including TypeScript 5.9.3, ESLint 9.39.2, Prettier 3.9.6 and Next.js 16.3.4. The measured commit keeps the Next.js version and these two workflows unchanged.
 
 Durations below come from GitHub Actions job/step timestamps, in whole seconds. Queue time is excluded. The baseline median is across the three different PRs; the migrated result is one run, not a repeated-run median.
 
@@ -75,7 +75,43 @@ These are observations from separate hosted runners and different source changes
 
 To inspect the measurements, use `gh api repos/pubky/pubky-app/actions/runs/<run-id>/jobs` for each job's `started_at`, `completed_at` and `steps`. `gh run view <run-id> --repo pubky/pubky-app --log` includes the runner image, cache result and test counts.
 
-## Verification
+## Local production-build comparison
+
+Measured on 2026-09-17 on the same Apple M4 Pro (14 CPU cores, 48 GiB RAM), macOS 26.7, Node 24.20.0 and npm 11.19.0. The baseline is `80c2e031e98ba0a18e836ffbad32337aa9ad4027`, which already contains the TypeScript 7/Oxc migration; the Turbopack implementation is `c2206c06bdb3215b58a122675f7df6a0cbc3255b`.
+
+The measurement is wall time for the complete `npm run build` command. Webpack builds the worker through its plugin; Turbopack runs Next.js and then `npm run build:sw`. Both include TypeScript checking and worker generation. Dependency installation, browser checks and Docker builds are excluded.
+
+Each bundler ran three cold/repeat pairs in separate temporary checkouts with their own dependencies. A cold run removed `.next`, `tsconfig.tsbuildinfo`, `public/sw.js` and `public/sw.js.map`; its immediate repeat retained the generated output and caches without changing source files. Three additional cached builds per bundler changed only the offline page’s copy in the temporary checkout, using distinct text in each round; those edits were restored afterward. Bundler order alternated between rounds. `NEXT_TELEMETRY_DISABLED=1` was set; `NODE_OPTIONS`, `NEXT_STANDALONE`, `TURBOPACK` and `NEXT_PUBLIC_APP_VERSION` were unset. No other assistant build, test suite or Docker workload ran during the measurements. These are local cache conditions; the OS filesystem cache was not flushed.
+
+| Build case, three-run median        |   Webpack | Turbopack + Serwist CLI | Speedup | Less time |
+| ----------------------------------- | --------: | ----------------------: | ------: | --------: |
+| Cold production build               | 173.397 s |                18.599 s |   9.32× |     89.3% |
+| Unchanged repeat build              |  26.522 s |                 5.939 s |   4.47× |     77.6% |
+| Cached build after a page-text edit | 145.410 s |                 6.470 s |  22.47× |     95.6% |
+
+### Raw build measurements
+
+| Build case                                     |     Run 1 |     Run 2 |     Run 3 |
+| ---------------------------------------------- | --------: | --------: | --------: |
+| Webpack: cold production build                 | 171.575 s | 173.397 s | 174.359 s |
+| Turbopack: cold production build               |  20.106 s |  16.469 s |  18.599 s |
+| Webpack: unchanged repeat build                |  26.341 s |  27.016 s |  26.522 s |
+| Turbopack: unchanged repeat build              |   5.874 s |   5.939 s |   6.029 s |
+| Webpack: cached build after a page-text edit   | 147.960 s | 145.410 s | 144.243 s |
+| Turbopack: cached build after a page-text edit |   7.124 s |   5.508 s |   6.470 s |
+
+The repeat figures describe unchanged local rebuilds with caches available. The page-edit figures cover a small, isolated source change; a dependency or configuration change can invalidate more work. Neither is a promised CI duration. The normal CI Build job now preserves `.next/cache`; Docker keeps its existing layer cache without transferring Next's incremental cache between fresh builders. This measures build tooling, not browser interaction or page-load performance.
+
+### Bundler verification
+
+- Clean `npm ci`, formatting, lint, type checking and workflow validation pass. The full unit suite passes **13,791 tests**, with **2 skipped**, including **12** service-worker registration checks.
+- Chromium verifies upgrading an installed Webpack worker to the new worker at the same `/sw.js` URL and `/` scope, shared text/file redirects, cached assets offline, and no page errors. All **69 public assets** retain identical URLs and revisions. Emitted fonts are cached; source maps are excluded.
+- A local Linux/arm64 Docker image builds without Sentry credentials and serves `/`, `/home`, `/robots.txt` and the exact generated worker bytes. Browser source maps are absent; **68** server maps retain matching Sentry Debug IDs. Uploading to Sentry was not exercised locally.
+- CI passes the [production build, worker smoke test and cache save](https://github.com/pubky/pubky-app/actions/runs/35185281615), [code quality](https://github.com/pubky/pubky-app/actions/runs/35185281681) and [unit tests](https://github.com/pubky/pubky-app/actions/runs/35185281694), and [preview Docker build/deployment](https://github.com/pubky/pubky-app/actions/runs/35185281786). Browser verification used local production servers; the deployed preview requires Google IAP authentication.
+
+Existing worker limitations were reproduced before and after the migration: `/offline` is not precached, so offline document navigation fails, and the default 2 MiB chunk limit excludes one large JavaScript chunk in each bundler's output. Public files retain the classic integration's separate size policy, including the large landing-page video. Changing offline navigation or the chunk limit is outside this build migration.
+
+## Initial tooling-migration verification
 
 The migrated setup passes a clean `npm ci`, formatting, lint and type checking, the full unit suite (**13,785 passed, 2 skipped**), **75** targeted VRT checks across Chromium/Firefox/WebKit, and a production build. The production startup smoke test returns HTTP 200 for `/` and `/robots.txt` when supplied with the documented required runtime configuration. No VRT baselines changed.
 
