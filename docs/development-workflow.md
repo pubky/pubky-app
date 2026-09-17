@@ -101,7 +101,7 @@ Manual checks for UI work: desktop and narrow viewport, loading/empty/error stat
 
 ## Compiler, Linter and Formatter
 
-Local before/after measurements and their limits are recorded in [Tooling performance](tooling-performance.md).
+Local before/after measurements, a CI comparison with other open PRs and their limits are recorded in [Tooling performance](tooling-performance.md).
 
 The project uses one compiler: `typescript@7.0.2`. Both `npm run typecheck` and Next.js production builds invoke its native `tsc` CLI. `next.config.ts` explicitly enables `experimental.useTypeScriptCli`; do not add a second TypeScript version to restore the old JavaScript compiler API. Vitest uses Vite's built-in `resolve.tsconfigPaths` for aliases, avoiding the TypeScript 5 peer dependency in the old `vite-tsconfig-paths` / `tsconfck` integration.
 
