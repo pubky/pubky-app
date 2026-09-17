@@ -81,14 +81,8 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     label: 'Copy profile link',
     icon: Link,
     onClick: async () => {
-      try {
-        await copyLink(profileUrl);
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-        });
-      }
+      // useShareUrl reports its own success/failure toasts and never throws.
+      await copyLink(profileUrl);
     },
   });
 

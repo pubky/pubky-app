@@ -61,7 +61,7 @@ describe('useAppBadge', () => {
     expect(clearAppBadge).toHaveBeenCalled();
   });
 
-  it('clears the badge on unmount', () => {
+  it('leaves the badge alone on unmount (it is OS state)', () => {
     installBadgeApi();
     act(() => useNotificationStore.getState().setUnread(2));
     const { unmount } = renderHook(() => useAppBadge());
@@ -69,7 +69,7 @@ describe('useAppBadge', () => {
 
     unmount();
 
-    expect(clearAppBadge).toHaveBeenCalledTimes(1);
+    expect(clearAppBadge).not.toHaveBeenCalled();
   });
 
   it('swallows a rejected badge call', async () => {

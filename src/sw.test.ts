@@ -16,6 +16,8 @@ interface RuntimeCachingEntry {
   method?: string;
 }
 
+type FallbackContext = Parameters<Matcher>[0];
+
 interface CapturedOptions {
   precacheEntries?: unknown;
   skipWaiting?: boolean;
@@ -99,19 +101,30 @@ describe('src/sw.ts', () => {
     const { fallbacks } = mocks.options!;
     expect(fallbacks?.entries).toHaveLength(1);
     expect(fallbacks!.entries[0].url).toBe('/offline.html');
-    expect(fallbacks!.entries[0].matcher(navigationContext('https://pubky.app/home'))).toBe(true);
-    expect(fallbacks!.entries[0].matcher(navigationContext('https://pubky.app/home', { mode: 'cors' }))).toBe(false);
+    // Serwist's fallback plugin passes only { request, event } here, never url/sameOrigin.
+    const fallbackContext = (mode: RequestMode) => ({ request: asOpaque<Request>({ mode }) });
+    expect(fallbacks!.entries[0].matcher(asOpaque<FallbackContext>(fallbackContext('navigate')))).toBe(true);
+    expect(fallbacks!.entries[0].matcher(asOpaque<FallbackContext>(fallbackContext('cors')))).toBe(false);
   });
 
-  it('deletes the legacy Nexus runtime cache on activation', async () => {
+  it('deletes the legacy Nexus runtime cache and its expiration database on activation', async () => {
     const [onActivate] = listeners.get('activate') ?? [];
     expect(onActivate).toBeDefined();
     const waitUntil = vi.fn();
+    const deleteRequest: {
+      onsuccess: (() => void) | null;
+      onerror: (() => void) | null;
+      onblocked: (() => void) | null;
+    } = { onsuccess: null, onerror: null, onblocked: null };
+    const deleteDatabase = vi.fn(() => deleteRequest);
+    Object.defineProperty(globalThis, 'indexedDB', { configurable: true, value: { deleteDatabase } });
 
     onActivate({ waitUntil });
+    deleteRequest.onsuccess?.();
     await waitUntil.mock.calls[0][0];
 
     expect(caches.delete).toHaveBeenCalledWith('api-cache');
+    expect(deleteDatabase).toHaveBeenCalledWith('serwist-expiration');
   });
 
   it('turns a share-target POST into a redirect to /share and stashes the files', async () => {

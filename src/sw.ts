@@ -77,12 +77,20 @@ self.addEventListener('fetch', (event: FetchEvent) => {
 // offline would run the session restore, which wipes local state on failure.
 const OFFLINE_FALLBACK_URL = '/offline.html';
 
-// Runtime cache written by the previous service worker (NetworkFirst for Nexus).
-// Dexie is the app's only data cache; the entry is dropped on activation.
-const LEGACY_RUNTIME_CACHES = ['api-cache'];
-
+// The previous service worker cached Nexus responses (NetworkFirst + ExpirationPlugin).
+// Dexie is the app's only data cache, so its Cache entry and the expiration timestamps
+// database are dropped on activation. Remove the database deletion if an ExpirationPlugin
+// is ever reintroduced: every instance shares that one database.
 self.addEventListener('activate', (event: ExtendableEvent) => {
-  event.waitUntil(Promise.all(LEGACY_RUNTIME_CACHES.map((name) => caches.delete(name))));
+  event.waitUntil(
+    Promise.all([
+      caches.delete('api-cache'),
+      new Promise<void>((resolve) => {
+        const request = indexedDB.deleteDatabase('serwist-expiration');
+        request.onsuccess = request.onerror = request.onblocked = () => resolve();
+      }),
+    ]),
+  );
 });
 
 const serwist = new Serwist({

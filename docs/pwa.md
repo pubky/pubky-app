@@ -13,7 +13,7 @@ How the installed-app layer works, what the service worker is allowed to do, and
 | `public/manifest.json`                                      | Web app manifest (colours, icons, shortcuts, screenshots, share target, protocol handler).           |
 | `public/offline.html`                                       | Static page served when a navigation cannot reach the network.                                       |
 | `src/components/organisms/PwaManager/PwaManager.tsx`        | No-UI organism in the root layout that mounts the lifecycle hooks below.                             |
-| `src/hooks/useServiceWorkerUpdate/`                         | Registers the worker and runs the "Update available" flow.                                           |
+| `src/hooks/useServiceWorkerUpdate/`                         | Runs the user-consented "Update available" flow; does not register the worker.                       |
 | `src/hooks/useNetworkStatus/`, `useNetworkStatusToasts/`    | Offline / online signal and toasts.                                                                  |
 | `src/hooks/useAppBadge/`                                    | Mirrors the unread notification count onto the app icon (Badging API).                               |
 | `src/hooks/useInstallPrompt/`, `useInstallPromptLifecycle/` | "Install Pubky" banner eligibility and actions; `beforeinstallprompt` capture.                       |
@@ -35,13 +35,13 @@ How the installed-app layer works, what the service worker is allowed to do, and
 
 ## Update flow
 
-1. `@serwist/next` injects `window.serwist` (a `@serwist/window` client) into the client bundle but does not register it (`register: false`).
-2. `useServiceWorkerUpdate` (mounted by `PwaManager`) attaches `waiting` / `controlling` listeners. `ServiceWorkerRegistrationProvider` wraps the whole tree and calls `window.serwist.register()` in its own effect, which React runs after the effects of everything it wraps, so the listeners exist before registration starts (a `waiting` event dispatched before a listener exists is lost). A rejected registration is logged with `Logger.warn`, never thrown (#2556).
-3. A new build installs, waits, and fires `waiting`. The hook shows a persistent info toast ("Update available", action "Reload").
-4. Reload posts `SKIP_WAITING`; the worker calls `self.skipWaiting()`, activates, and `clientsClaim` makes it the controller. Every open tab receives `controlling { isUpdate: true }` and reloads, so no tab keeps running chunks the new precache dropped.
-5. While a worker is waiting, the toast is re-shown when the tab becomes visible (the toast limit is one, so any other toast evicts it), and `registration.update()` is requested at most once per `SW_UPDATE_CHECK_MIN_INTERVAL_MS`.
+1. `@serwist/next` injects `window.serwist` into the client bundle but does not register it (`register: false`). `ServiceWorkerRegistrationProvider` wraps the whole tree and calls `window.serwist.register()` in its own effect; a rejected registration is logged with `Logger.warn`, never thrown (#2556).
+2. `useServiceWorkerUpdate` (mounted by `PwaManager`) works off the browser's registration, not the Serwist window client: it waits for `navigator.serviceWorker.ready`, listens for `updatefound` and `controllerchange`, and re-reads `registration.waiting` whenever the tab becomes visible. (The Serwist client stops reporting updates found more than a minute after registration and freezes its `isUpdate` flag at register time, so it cannot drive a long-lived tab.)
+3. A new build installs and waits (`skipWaiting: false`). The hook shows one persistent, dismissible "Update available" toast per waiting worker. Persistent toasts do not count toward the toast limit, so later transient toasts stack next to it instead of evicting it. Dismissing it means "later": the same worker is not re-prompted in this page lifetime, a newer one is.
+4. Reload posts `SKIP_WAITING`; the worker calls `self.skipWaiting()`, activates, and `clientsClaim` makes it the controller of every open tab. Only the tab that accepted reloads. Other tabs keep their in-progress state and get an "Update installed" toast with a Reload action; until they reload they may fail to lazy-load chunks the new precache dropped (#2548 tracks automatic recovery).
+5. `registration.update()` is requested at most once per `SW_UPDATE_CHECK_MIN_INTERVAL_MS`, on a tab return.
 
-The first install claims open tabs immediately (`controlling { isUpdate: false }`, no reload). Rollout note: users whose installed worker predates this policy get one automatic takeover (the old worker had `skipWaiting: true`); from then on they see the toast.
+The first install claims open tabs without a reload or a toast. Rollout note: `skipWaiting` is decided by the installing worker's own script, so on the first deploy of this change the new worker simply waits; pages still running the old bundle have no update hook yet and see no toast, and the new worker activates once every tab of that client closes. Consented, toast-driven updates start with the deploy after this one.
 
 ## Offline fallback
 
@@ -51,7 +51,7 @@ Do not replace it with a Next route: `/offline` under the root layout would rend
 
 ## Precache diet
 
-`@serwist/next` globs `public/` into the precache on top of `_next/static`. Those public entries bypass `exclude` and `maximumFileSizeToCacheInBytes` (they are appended last by `@serwist/build`), so `globPublicPatterns` in `next.config.ts` is the only size control for public assets. It is an allow-list: icons, manifest, logos, the in-app `.webp` illustrations, `qr-blurred.png`, `offline.html`. Landing videos and hero PNGs, `pubky.mp4`, `franky.png` and the manifest screenshots stay out (they took the install payload from ~15 MB to ~43 MB, and a precache install is all-or-nothing).
+`@serwist/next` globs `public/` into the precache on top of `_next/static`. Those public entries bypass `exclude` and `maximumFileSizeToCacheInBytes` (they are appended last by `@serwist/build`), so `globPublicPatterns` in `next.config.ts` is the only size control for public assets. It is a purely additive allow-list: `offline.html`, the manifest, the two logos, the SVGs under `images/`, and the manifest icons by name. In-app illustrations, landing media, `pubky.mp4`, `franky.png`, the og:image and the manifest screenshots stay out (the app never boots offline, so nothing beyond the offline page and the shell chunks is needed, and a precache install is all-or-nothing). Adding a public file to the precache means adding its name here.
 
 Read the `(serwist)` line in the build output: it lists how many URLs are precached and their total size. A jump in either is the signal that a new large `public/` file matched the allow-list, or that `exclude` was set without keeping `/\.map$/` (source maps are ~30 MB).
 

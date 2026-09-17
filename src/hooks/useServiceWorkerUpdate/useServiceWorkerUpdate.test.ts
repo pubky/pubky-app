@@ -1,14 +1,16 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SW_UPDATE_CHECK_MIN_INTERVAL_MS } from '@/config/pwa';
+import { toast } from '@/molecules/Toaster/toast';
+import { useServiceWorkerUpdate } from './useServiceWorkerUpdate';
 
 vi.mock('@/molecules/Toaster/toast');
 
-type Listener = (event: Record<string, unknown>) => void;
+type Listener = (event: Event) => void;
 
-function createSerwistStub() {
+function createTarget() {
   const listeners = new Map<string, Set<Listener>>();
-  const stub = {
+  return {
     addEventListener: vi.fn((type: string, listener: Listener) => {
       if (!listeners.has(type)) listeners.set(type, new Set());
       listeners.get(type)!.add(listener);
@@ -16,25 +18,49 @@ function createSerwistStub() {
     removeEventListener: vi.fn((type: string, listener: Listener) => {
       listeners.get(type)?.delete(listener);
     }),
-    register: vi.fn().mockResolvedValue(undefined),
-    update: vi.fn().mockResolvedValue(undefined),
-    messageSkipWaiting: vi.fn(),
-    emit(type: string, event: Record<string, unknown> = {}) {
+    emit(type: string) {
       act(() => {
-        listeners.get(type)?.forEach((listener) => listener({ type, ...event }));
+        listeners.get(type)?.forEach((listener) => listener(new Event(type)));
       });
     },
     listenerCount(type: string) {
       return listeners.get(type)?.size ?? 0;
     },
   };
-  return stub;
 }
 
-type SerwistStub = ReturnType<typeof createSerwistStub>;
+function createWorker(state: ServiceWorkerState) {
+  const target = createTarget();
+  return Object.assign(target, { state, postMessage: vi.fn() });
+}
 
-function installSerwist(stub: SerwistStub | undefined) {
-  Object.defineProperty(window, 'serwist', { configurable: true, value: stub, writable: true });
+type FakeWorker = ReturnType<typeof createWorker>;
+
+function createRegistration() {
+  const target = createTarget();
+  return Object.assign(target, {
+    waiting: null as FakeWorker | null,
+    installing: null as FakeWorker | null,
+    update: vi.fn().mockResolvedValue(undefined),
+  });
+}
+
+type FakeRegistration = ReturnType<typeof createRegistration>;
+
+function installServiceWorker(options: { controlled: boolean; registration: FakeRegistration }) {
+  const container = Object.assign(createTarget(), {
+    controller: options.controlled ? createWorker('activated') : null,
+    ready: Promise.resolve(options.registration),
+  });
+  Object.defineProperty(window.navigator, 'serviceWorker', { configurable: true, value: container });
+  Object.defineProperty(window, 'serwist', { configurable: true, writable: true, value: {} });
+  return container;
+}
+
+async function flushReady() {
+  await act(async () => {
+    await Promise.resolve();
+  });
 }
 
 function setVisibility(state: DocumentVisibilityState) {
@@ -44,15 +70,9 @@ function setVisibility(state: DocumentVisibilityState) {
   });
 }
 
-async function loadHook() {
-  // The update-check throttle is module state: reload the module so every test starts fresh.
-  // The toast mock is re-imported alongside it so assertions see the instance the hook uses.
-  vi.resetModules();
-  const [{ useServiceWorkerUpdate }, { toast }] = await Promise.all([
-    import('./useServiceWorkerUpdate'),
-    import('@/molecules/Toaster/toast'),
-  ]);
-  return { useServiceWorkerUpdate, toast: vi.mocked(toast) };
+function lastToastOptions() {
+  const calls = vi.mocked(toast).mock.calls;
+  return calls[calls.length - 1][0];
 }
 
 describe('useServiceWorkerUpdate', () => {
@@ -66,94 +86,164 @@ describe('useServiceWorkerUpdate', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    installSerwist(undefined);
+    Reflect.deleteProperty(window, 'serwist');
+    Reflect.deleteProperty(window.navigator, 'serviceWorker');
     Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
   });
 
   it('is a no-op when window.serwist is undefined', async () => {
-    installSerwist(undefined);
-    const { useServiceWorkerUpdate, toast } = await loadHook();
+    const registration = createRegistration();
+    registration.waiting = createWorker('installed');
+    installServiceWorker({ controlled: true, registration });
+    Reflect.deleteProperty(window, 'serwist');
 
     renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
 
-    expect(toast).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
-  it('only listens: registration belongs to ServiceWorkerRegistrationProvider', async () => {
-    const serwist = createSerwistStub();
-    installSerwist(serwist);
-    const { useServiceWorkerUpdate } = await loadHook();
+  it('prompts once for a worker already waiting when the registration is ready', async () => {
+    const registration = createRegistration();
+    const waiting = createWorker('installed');
+    registration.waiting = waiting;
+    installServiceWorker({ controlled: true, registration });
 
-    const first = renderHook(() => useServiceWorkerUpdate());
-    first.unmount();
     renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
 
-    expect(serwist.register).not.toHaveBeenCalled();
-    expect(serwist.listenerCount('waiting')).toBe(1);
-    expect(serwist.listenerCount('controlling')).toBe(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(lastToastOptions()).toMatchObject({
+      variant: 'info',
+      title: 'Update available',
+      persistent: true,
+      dismissButton: true,
+    });
+
+    // A tab return re-checks the registration but does not nag about the same worker.
+    setVisibility('visible');
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a persistent update toast whose action skips waiting', async () => {
-    const serwist = createSerwistStub();
-    installSerwist(serwist);
-    const { useServiceWorkerUpdate, toast } = await loadHook();
+  it('prompts when an update found later finishes installing', async () => {
+    const registration = createRegistration();
+    installServiceWorker({ controlled: true, registration });
     renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
 
-    serwist.emit('waiting', { sw: { state: 'installed' } });
+    const installing = createWorker('installing');
+    registration.installing = installing;
+    registration.emit('updatefound');
+    installing.state = 'installed';
+    registration.waiting = installing;
+    registration.installing = null;
+    installing.emit('statechange');
 
-    expect(toast).toHaveBeenCalledTimes(1);
-    const options = toast.mock.calls[0][0];
-    expect(options).toMatchObject({ variant: 'info', title: 'Update available', persistent: true });
-    options.action?.onClick();
-    expect(serwist.messageSkipWaiting).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(lastToastOptions().title).toBe('Update available');
   });
 
-  it('reloads when an updated worker takes control, not on first install', async () => {
-    const serwist = createSerwistStub();
-    installSerwist(serwist);
-    const { useServiceWorkerUpdate } = await loadHook();
+  it('prompts again for a newer waiting worker found on a tab return', async () => {
+    const registration = createRegistration();
+    registration.waiting = createWorker('installed');
+    installServiceWorker({ controlled: true, registration });
     renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
 
-    serwist.emit('controlling', { isUpdate: false });
-    expect(reload).not.toHaveBeenCalled();
+    registration.waiting = createWorker('installed');
+    setVisibility('visible');
 
-    serwist.emit('controlling', { isUpdate: true });
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(2);
+  });
+
+  it('reloads only the tab that accepted, even when it loaded without a controller', async () => {
+    const registration = createRegistration();
+    const waiting = createWorker('installed');
+    registration.waiting = waiting;
+    const container = installServiceWorker({ controlled: false, registration });
+    renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
+
+    lastToastOptions().action?.onClick();
+    expect(waiting.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+
+    container.emit('controllerchange');
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('re-surfaces the toast and re-checks for updates when the tab becomes visible', async () => {
-    vi.useFakeTimers();
-    const serwist = createSerwistStub();
-    installSerwist(serwist);
-    const { useServiceWorkerUpdate, toast } = await loadHook();
+  it('does not reload or prompt when the first install claims an uncontrolled page', async () => {
+    const registration = createRegistration();
+    const container = installServiceWorker({ controlled: false, registration });
     renderHook(() => useServiceWorkerUpdate());
-    serwist.emit('waiting', { sw: { state: 'installed' } });
-    expect(toast).toHaveBeenCalledTimes(1);
+    await flushReady();
 
-    // Too soon after mount: no update() call, but the toast comes back.
+    container.emit('controllerchange');
+
+    expect(reload).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
+  it('offers a reload instead of forcing one when another tab accepted the update', async () => {
+    const registration = createRegistration();
+    registration.waiting = createWorker('installed');
+    const container = installServiceWorker({ controlled: true, registration });
+    const dismiss = vi.fn();
+    vi.mocked(toast).mockReturnValueOnce({ dismiss });
+    renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
+    expect(lastToastOptions().title).toBe('Update available');
+
+    container.emit('controllerchange');
+
+    expect(reload).not.toHaveBeenCalled();
+    // The now-stale "Update available" prompt is withdrawn before the follow-up toast.
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(lastToastOptions()).toMatchObject({ title: 'Update installed', persistent: true, dismissButton: true });
+    lastToastOptions().action?.onClick();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a takeover after a first-install claim as an update', async () => {
+    const registration = createRegistration();
+    const container = installServiceWorker({ controlled: false, registration });
+    renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
+
+    container.emit('controllerchange');
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    container.emit('controllerchange');
+    expect(lastToastOptions().title).toBe('Update installed');
+  });
+
+  it('throttles registration.update() checks to the configured interval', async () => {
+    vi.useFakeTimers();
+    const registration = createRegistration();
+    installServiceWorker({ controlled: true, registration });
+    renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
+
     setVisibility('visible');
-    expect(toast).toHaveBeenCalledTimes(2);
-    expect(serwist.update).not.toHaveBeenCalled();
+    expect(registration.update).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(SW_UPDATE_CHECK_MIN_INTERVAL_MS);
     setVisibility('visible');
-    expect(serwist.update).toHaveBeenCalledTimes(1);
+    expect(registration.update).toHaveBeenCalledTimes(1);
 
     setVisibility('hidden');
-    expect(toast).toHaveBeenCalledTimes(3);
-    vi.useRealTimers();
+    expect(registration.update).toHaveBeenCalledTimes(1);
   });
 
   it('removes its listeners on unmount', async () => {
-    const serwist = createSerwistStub();
-    installSerwist(serwist);
-    const { useServiceWorkerUpdate } = await loadHook();
+    const registration = createRegistration();
+    const container = installServiceWorker({ controlled: true, registration });
     const { unmount } = renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
 
     unmount();
 
-    expect(serwist.listenerCount('waiting')).toBe(0);
-    expect(serwist.listenerCount('controlling')).toBe(0);
+    expect(container.listenerCount('controllerchange')).toBe(0);
+    expect(registration.listenerCount('updatefound')).toBe(0);
   });
 });

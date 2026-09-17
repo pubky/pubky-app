@@ -78,7 +78,18 @@ exports[`AlertInstall - Snapshots > matches snapshot for the native install bann
     data-open="false"
     data-testid="dialog-install-ios"
   >
-    DialogInstallIos
+    <button
+      data-testid="dialog-install-ios-close"
+      type="button"
+    >
+      close
+    </button>
+    <button
+      data-testid="dialog-install-ios-confirm"
+      type="button"
+    >
+      confirm
+    </button>
   </div>
 </div>
 `;
@@ -161,7 +172,18 @@ exports[`AlertInstall - Snapshots > matches snapshot with the iOS dialog open 1`
     data-open="true"
     data-testid="dialog-install-ios"
   >
-    DialogInstallIos
+    <button
+      data-testid="dialog-install-ios-close"
+      type="button"
+    >
+      close
+    </button>
+    <button
+      data-testid="dialog-install-ios-confirm"
+      type="button"
+    >
+      confirm
+    </button>
   </div>
 </div>
 `;

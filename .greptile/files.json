@@ -77,6 +77,8 @@
       "description": "Service worker scope (shell only, no data caching), user-consented updates, static offline fallback, precache allow-list, manifest, install banner",
       "scope": [
         "src/sw.ts",
+        "next.config.ts",
+        "src/providers/ServiceWorkerRegistrationProvider/**",
         "public/manifest.json",
         "public/offline.html",
         "src/libs/pwa/**",

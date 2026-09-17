@@ -57,11 +57,16 @@ const clearToastTimers = (toastId: string) => {
 
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case 'ADD_TOAST':
+    case 'ADD_TOAST': {
+      // Persistent toasts hold state the user must resolve, so they never count toward the
+      // limit and are never evicted by it; only transient toasts compete for TOAST_LIMIT.
+      const toasts = [action.toast, ...state.toasts];
+      let transientLeft = TOAST_LIMIT;
       return {
         ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+        toasts: toasts.filter((t) => t.persistent || transientLeft-- > 0),
       };
+    }
 
     case 'DISMISS_TOAST':
       if (!state.toasts.some((t) => t.id === action.toastId && t.open)) return state;
@@ -101,7 +106,7 @@ export function dispatch(action: Action) {
       // https://github.com/radix-ui/primitives/issues/2233
       // The store therefore owns auto-dismiss, and the Toaster disarms Radix's own
       // timer with duration={Infinity}. A persistent toast gets no timer at all: it
-      // leaves only through its action, the dismiss button, a swipe, or limit eviction.
+      // leaves only through its action, the dismiss button, or a swipe.
       if (!persistent) {
         dismissTimeouts.set(
           id,

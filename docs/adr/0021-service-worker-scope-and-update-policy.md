@@ -13,7 +13,7 @@ The app is local-first: Dexie is the data cache, TTL is the freshness mechanism,
 ## Decision
 
 - **The worker owns the app shell only.** It precaches `_next/static` plus an allow-list of `public/` files, handles the OS share target, and serves a static offline page for failed navigations. It has no other runtime caching: no `defaultCache`, no host- or path-based data caches. Homeserver, pkarr, httprelay, Nexus and the CDN are never intercepted.
-- **Updates are user-consented.** `skipWaiting: false`; the app registers the worker itself (`register: false`, `ServiceWorkerRegistrationProvider`, which also keeps a rejected registration out of Sentry) after `useServiceWorkerUpdate` has attached its lifecycle listeners, shows a persistent "Update available" toast on `waiting`, posts `SKIP_WAITING` on Reload, and reloads every tab once the new worker controls the page. `clientsClaim` stays on so the first install takes effect immediately.
+- **Updates are user-consented.** `skipWaiting: false`; the app registers the worker itself (`register: false`, `ServiceWorkerRegistrationProvider`, which also keeps a rejected registration out of Sentry) and `useServiceWorkerUpdate` drives the flow from the browser's registration API: one persistent, dismissible "Update available" toast per waiting worker, `SKIP_WAITING` on Reload, and a reload of the accepting tab only. Other tabs are claimed too (`clientsClaim` stays on so the first install takes effect immediately) but are offered a reload rather than forced into one.
 - **The offline fallback is a static file.** `public/offline.html` is precached and served by Serwist's `fallbacks` behind a `NetworkOnly` navigation route. It never boots the app.
 - **The network is not a reason to reload.** `reloadOnOnline: false`; the UI shows offline / online toasts instead.
 - **`public/` precaching is an allow-list** (`globPublicPatterns`), because public entries bypass Serwist's size limit and `exclude`.
@@ -30,11 +30,11 @@ The app is local-first: Dexie is the data cache, TTL is the freshness mechanism,
 ### Negative ❌
 
 - No offline data or write queue from the worker. Both belong at the Application layer (Dexie outbox, network-aware session restore) and are tracked as follow-ups.
-- Users must act on the update toast; a tab left open keeps the old version until they do or until every tab closes.
+- Users must act on the update toast; a tab left open keeps the old version until they do or until every tab closes. A non-accepting tab may hit chunk-load errors for lazily loaded routes until it reloads (#2548).
 
 ### Neutral ⚠️
 
-- The toast limit is one, so the update toast can be evicted; it is re-shown when the tab becomes visible.
+- Persistent toasts are exempt from the toast limit so the update prompt cannot be evicted by ordinary feedback.
 - `navigationPreload` is on and consumed by the navigation route; Safari ignores it.
 
 ## Alternatives Considered

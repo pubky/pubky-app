@@ -10,7 +10,7 @@ import type { BeforeInstallPromptEvent, InstallPromptOutcome } from './pwa.types
  * before the browser decides the page is installable.
  */
 
-export interface InstallPromptSnapshot {
+interface InstallPromptSnapshot {
   /** A `beforeinstallprompt` event is captured and can be shown. */
   canPrompt: boolean;
   /** `appinstalled` fired during this page's lifetime. */

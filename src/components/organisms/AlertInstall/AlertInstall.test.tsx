@@ -9,9 +9,22 @@ vi.mock('@/hooks/useInstallPrompt/useInstallPrompt', () => ({
 }));
 
 vi.mock('@/organisms/DialogInstallIos/DialogInstallIos', () => ({
-  DialogInstallIos: ({ open }: { open: boolean }) => (
+  DialogInstallIos: ({
+    open,
+    onOpenChange,
+    onConfirm,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+  }) => (
     <div data-testid="dialog-install-ios" data-open={open}>
-      DialogInstallIos
+      <button type="button" data-testid="dialog-install-ios-close" onClick={() => onOpenChange(false)}>
+        close
+      </button>
+      <button type="button" data-testid="dialog-install-ios-confirm" onClick={onConfirm}>
+        confirm
+      </button>
     </div>
   ),
 }));
@@ -66,6 +79,17 @@ describe('AlertInstall', () => {
     render(<AlertInstall />);
 
     expect(screen.getByTestId('dialog-install-ios')).toHaveAttribute('data-open', 'true');
+  });
+
+  it('maps closing the iOS dialog to a snooze and confirming it to a permanent dismissal', () => {
+    const prompt = mockPrompt({ platform: 'ios', iosDialogOpen: true });
+    render(<AlertInstall />);
+
+    fireEvent.click(screen.getByTestId('dialog-install-ios-close'));
+    expect(prompt.closeIosDialog).toHaveBeenLastCalledWith(false);
+
+    fireEvent.click(screen.getByTestId('dialog-install-ios-confirm'));
+    expect(prompt.closeIosDialog).toHaveBeenLastCalledWith(true);
   });
 });
 

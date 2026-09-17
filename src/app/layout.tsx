@@ -54,15 +54,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         */}
         <ServiceWorkerRegistrationProvider>
           <GlobalErrorHandlerProvider>
+            {/*
+              Above the error boundary and the DB/auth gates: the service worker update flow,
+              offline/online toasts and the app badge must keep running on every route, while the
+              providers below show their spinners and after a page render error swaps the tree for
+              the error fallback. The Toaster sits here for the same reason (its viewport is fixed,
+              so DOM position does not matter) and so the global error handler above always has a
+              viewport to render into.
+            */}
+            <PwaManager />
+            <Toaster />
             <ErrorBoundaryProvider>
-              {/*
-                Outside the DB/auth gates: the service worker update flow, offline/online toasts
-                and the app badge must run on every route, including while the providers below
-                show their spinners. The Toaster sits here for the same reason (its viewport is
-                fixed, so DOM position does not matter).
-              */}
-              <PwaManager />
-              <Toaster />
               <DatabaseProvider>
                 <RouteGuardProvider>
                   <CoordinatorsManager />

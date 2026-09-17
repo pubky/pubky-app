@@ -68,17 +68,15 @@ const withSerwist = withSerwistInit({
   reloadOnOnline: false,
   // `public/` precache allow-list. Public entries bypass `exclude` and
   // `maximumFileSizeToCacheInBytes` (appended last by @serwist/build), so this list is the
-  // only size control for public assets. glob v13: `!(a|b)` works, a leading `!` does not.
+  // only size control for public assets. Keep it additive: only what the shell, the manifest
+  // and the offline page need. Illustrations, landing media and screenshots stay out.
   globPublicPatterns: [
     'offline.html',
     'manifest.json',
     'pubky-logo.svg',
     'pubky-favicon.svg',
-    'preview.webp',
-    'images/*.webp',
     'images/*.svg',
-    'images/!(landing-*).png',
-    'images/manifest/!(web-app-manifest-1280x720|web-app-manifest-640x1136).png',
+    'images/manifest/web-app-manifest-{48x48,72x72,96x96,128x128,144x144,152x152,180x180,192x192,384x384,512x512,512x512-maskable}.png',
   ],
   // The largest chunk is ~1.75 MB; an over-limit chunk is dropped with only a build warning
   // and would break offline boot, so keep headroom above the 2 MiB default.

@@ -1,6 +1,8 @@
 ---
 paths:
   - "src/sw.ts"
+  - "next.config.ts"
+  - "src/providers/ServiceWorkerRegistrationProvider/**"
   - "public/manifest.json"
   - "public/offline.html"
   - "src/libs/pwa/**"

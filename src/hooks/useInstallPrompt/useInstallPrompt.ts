@@ -46,10 +46,17 @@ export function useInstallPrompt(): UseInstallPromptResult {
   const [reminder, setReminder] = useState<{ pubky: string | null; due: boolean }>({ pubky: null, due: false });
   const [iosDialogOpen, setIosDialogOpen] = useState(false);
 
+  const platform: InstallPlatform | null = canPrompt ? 'native' : isIos ? 'ios' : null;
+  // Only users who could actually see the banner pay for the storage re-check on every visit.
+  const eligible = PWA_INSTALL_BANNER_ENABLED && !isStandalone && !installed && platform !== null;
+
   useEffect(() => {
-    if (!currentUserPubky) return;
+    if (!currentUserPubky || !eligible) return;
     const check = () => {
-      setReminder({ pubky: currentUserPubky, due: isInstallReminderDue(currentUserPubky) });
+      const due = isInstallReminderDue(currentUserPubky);
+      setReminder((previous) =>
+        previous.pubky === currentUserPubky && previous.due === due ? previous : { pubky: currentUserPubky, due },
+      );
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') check();
@@ -66,18 +73,10 @@ export function useInstallPrompt(): UseInstallPromptResult {
       window.removeEventListener('focus', check);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [currentUserPubky]);
+  }, [currentUserPubky, eligible]);
 
-  const platform: InstallPlatform | null = canPrompt ? 'native' : isIos ? 'ios' : null;
   const due = Boolean(currentUserPubky) && reminder.pubky === currentUserPubky && reminder.due;
-  const visible =
-    PWA_INSTALL_BANNER_ENABLED &&
-    Boolean(currentUserPubky) &&
-    !isStandalone &&
-    !installed &&
-    !hasPendingBackup &&
-    platform !== null &&
-    due;
+  const visible = eligible && Boolean(currentUserPubky) && !hasPendingBackup && due;
 
   const remindLater = () => {
     if (currentUserPubky && visible) snoozeInstallReminder(currentUserPubky);
@@ -91,8 +90,9 @@ export function useInstallPrompt(): UseInstallPromptResult {
     }
     // Called synchronously from the click so the native prompt keeps its user gesture.
     const outcome = await promptInstall();
+    // Anything but an install counts as "later": a failed prompt must not re-nag on the next load.
     if (outcome === 'accepted') markInstallReminderDone(currentUserPubky);
-    else if (outcome === 'dismissed') snoozeInstallReminder(currentUserPubky);
+    else snoozeInstallReminder(currentUserPubky);
   };
 
   const closeIosDialog = (confirmed: boolean) => {

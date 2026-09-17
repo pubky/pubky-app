@@ -115,14 +115,8 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
     label: 'Copy link to post',
     icon: Link,
     onClick: async () => {
-      try {
-        await copyLink(postUrl);
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-        });
-      }
+      // useShareUrl reports its own success/failure toasts and never throws.
+      await copyLink(postUrl);
     },
     variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
   });

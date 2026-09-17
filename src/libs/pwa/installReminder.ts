@@ -8,7 +8,9 @@ import { PWA_INSTALL_REMINDER_DELAYS_MS, PWA_INSTALL_STORAGE_ID } from '@/config
  *
  * "Later" snoozes with escalating delays; installing (or confirming the iOS steps)
  * dismisses the banner permanently. Storage failures never throw: an unreadable
- * store hides the banner, an unwritable one still dismisses it for this session.
+ * store hides the banner and is never written to, and an unwritable one still
+ * dismisses the banner for this session because the last value written is kept
+ * in memory and preferred over an empty store.
  */
 
 const reminderSchema = z.object({
@@ -21,12 +23,22 @@ type InstallReminder = z.infer<typeof reminderSchema>;
 
 const initialReminder: InstallReminder = { done: false, laterCount: 0, nextShowAt: 0 };
 const dismissalListeners = new Set<(pubky: string) => void>();
+// Values localStorage refused to persist, per user: the source of truth for this tab until a
+// later write succeeds or another tab writes (see the `storage` listener below).
+const unsavedWrites = new Map<string, InstallReminder>();
+
+// exported for integration tests
+export function resetInstallReminderMemory() {
+  unsavedWrites.clear();
+}
 
 function storageKey(pubky: string): string {
   return buildFeatureDiscoveryStorageKey(pubky, PWA_INSTALL_STORAGE_ID);
 }
 
 function readReminder(pubky: string): InstallReminder {
+  const unsaved = unsavedWrites.get(pubky);
+  if (unsaved) return unsaved;
   const raw = window.localStorage.getItem(storageKey(pubky));
   if (!raw) return initialReminder;
   try {
@@ -36,13 +48,19 @@ function readReminder(pubky: string): InstallReminder {
   }
 }
 
+function notifyDismissal(pubky: string) {
+  for (const listener of dismissalListeners) listener(pubky);
+}
+
 function writeReminder(pubky: string, next: InstallReminder) {
   try {
     window.localStorage.setItem(storageKey(pubky), JSON.stringify(next));
+    unsavedWrites.delete(pubky);
   } catch {
-    // The in-memory dismissal below still hides mounted banners for this session.
+    // Keep the value for this session so re-checks do not resurrect a dismissed banner.
+    unsavedWrites.set(pubky, next);
   }
-  for (const listener of dismissalListeners) listener(pubky);
+  notifyDismissal(pubky);
 }
 
 export function isInstallReminderDue(pubky: string): boolean {
@@ -62,11 +80,14 @@ export function markInstallReminderDone(pubky: string) {
 
 /** "Later": hide for the next delay in the schedule; the last delay repeats. */
 export function snoozeInstallReminder(pubky: string) {
-  let previous = initialReminder;
+  let previous: InstallReminder;
   try {
     previous = readReminder(pubky);
   } catch {
-    // Fall through with the initial schedule.
+    // The stored schedule (possibly a permanent dismissal) could not be read, so it must not
+    // be overwritten; the banner still hides for this session.
+    notifyDismissal(pubky);
+    return;
   }
   if (previous.done) return;
   const step = Math.min(previous.laterCount, PWA_INSTALL_REMINDER_DELAYS_MS.length - 1);
@@ -83,7 +104,10 @@ export function subscribeToInstallReminderDismissal(pubky: string, onDismiss: ()
     if (dismissedPubky === pubky) onDismiss();
   };
   const onStorage = (event: StorageEvent) => {
-    if ((event.key === storageKey(pubky) || event.key === null) && !isInstallReminderDue(pubky)) onDismiss();
+    if (event.key !== storageKey(pubky) && event.key !== null) return;
+    // Another tab owns the latest value now.
+    unsavedWrites.delete(pubky);
+    if (!isInstallReminderDue(pubky)) onDismiss();
   };
   dismissalListeners.add(onLocalDismissal);
   window.addEventListener('storage', onStorage);

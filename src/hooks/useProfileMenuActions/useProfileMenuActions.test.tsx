@@ -407,10 +407,8 @@ describe('useProfileMenuActions', () => {
       });
     });
 
-    it('shows error toast when copy link fails', async () => {
-      const error = new Error('Copy failed');
-      vi.mocked(isAppError).mockReturnValue(false);
-      defaultMocks.shareUrl.mockRejectedValue(error);
+    it('stays silent when the share sheet is dismissed (useShareUrl owns the feedback)', async () => {
+      defaultMocks.shareUrl.mockResolvedValue(false);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
 
@@ -420,12 +418,8 @@ describe('useProfileMenuActions', () => {
         await copyLinkItem?.onClick();
       });
 
-      await waitFor(() => {
-        expect(vi.mocked(toast)).toHaveBeenCalledWith({
-          variant: 'error',
-          description: 'Could not copy to clipboard',
-        });
-      });
+      expect(defaultMocks.shareUrl).toHaveBeenCalledWith(`https://example.com/profile/${mockUserId}`);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
   });
 

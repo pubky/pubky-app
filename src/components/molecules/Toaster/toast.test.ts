@@ -89,8 +89,9 @@ describe('toast', () => {
   it('should keep a persistent toast open past the toast duration', () => {
     const { result } = renderHook(() => useToastState());
 
+    let handle: ReturnType<typeof toast> | undefined;
     act(() => {
-      toast({ title: 'Update available', persistent: true });
+      handle = toast({ title: 'Update available', persistent: true });
     });
 
     act(() => {
@@ -99,6 +100,26 @@ describe('toast', () => {
 
     expect(result.current.toasts).toHaveLength(1);
     expect(result.current.toasts[0].open).toBe(true);
+    // Persistent toasts have no timers, so the afterEach drain cannot remove them.
+    act(() => {
+      handle?.dismiss();
+    });
+  });
+
+  it('should keep a persistent toast when later transient toasts hit the limit', () => {
+    const { result } = renderHook(() => useToastState());
+
+    let handle: ReturnType<typeof toast> | undefined;
+    act(() => {
+      handle = toast({ title: 'Update available', persistent: true });
+      toast({ title: 'Transient 1' });
+      toast({ title: 'Transient 2' });
+    });
+
+    expect(result.current.toasts.map((t) => t.title)).toEqual(['Transient 2', 'Update available']);
+    act(() => {
+      handle?.dismiss();
+    });
   });
 
   it('should still dismiss a persistent toast via the returned handle', () => {

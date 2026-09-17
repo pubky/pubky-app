@@ -4,6 +4,7 @@ import { PWA_INSTALL_REMINDER_DELAYS_MS, PWA_INSTALL_STORAGE_ID } from '@/config
 import {
   isInstallReminderDue,
   markInstallReminderDone,
+  resetInstallReminderMemory,
   snoozeInstallReminder,
   subscribeToInstallReminderDismissal,
 } from './installReminder';
@@ -23,6 +24,7 @@ function readStored() {
 describe('installReminder', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    resetInstallReminderMemory();
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
   });
@@ -80,6 +82,33 @@ describe('installReminder', () => {
     });
     expect(isInstallReminderDue(PUBKY)).toBe(false);
     getItem.mockRestore();
+  });
+
+  it('does not overwrite a stored dismissal when the read fails during a snooze', () => {
+    markInstallReminderDone(PUBKY);
+    const onDismiss = vi.fn();
+    subscribeToInstallReminderDismissal(PUBKY, onDismiss);
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+
+    snoozeInstallReminder(PUBKY);
+    getItem.mockRestore();
+
+    expect(readStored()?.done).toBe(true);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a dismissal for the session when storage cannot be written', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+
+    snoozeInstallReminder(PUBKY);
+    setItem.mockRestore();
+
+    expect(window.localStorage.getItem(KEY)).toBeNull();
+    expect(isInstallReminderDue(PUBKY)).toBe(false);
   });
 
   it('still dismisses mounted banners when storage cannot be written', () => {

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildFeatureDiscoveryStorageKey } from '@/config/featureDiscovery';
 import { PWA_INSTALL_STORAGE_ID } from '@/config/pwa';
 import { promptInstall } from '@/libs/pwa/installPrompt';
+import { resetInstallReminderMemory } from '@/libs/pwa/installReminder';
 import { useInstallPrompt } from './useInstallPrompt';
 
 const PUBKY = 'pk:alice';
@@ -50,6 +51,7 @@ function readStored() {
 describe('useInstallPrompt', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    resetInstallReminderMemory();
     mocks.currentUserPubky = PUBKY;
     mocks.secretKey = null;
     mocks.isStandalone = false;
@@ -129,6 +131,29 @@ describe('useInstallPrompt', () => {
     expect(promptInstall).toHaveBeenCalledTimes(1);
     expect(readStored()?.done).toBe(true);
     expect(result.current.visible).toBe(false);
+  });
+
+  it('snoozes when the native prompt cannot be shown', async () => {
+    vi.mocked(promptInstall).mockResolvedValue('unavailable');
+    const { result } = renderHook(() => useInstallPrompt());
+    await waitFor(() => expect(result.current.visible).toBe(true));
+
+    await act(async () => result.current.install());
+
+    expect(readStored()).toMatchObject({ done: false, laterCount: 1 });
+  });
+
+  it('does not touch storage for users who can never see the banner', async () => {
+    mocks.isStandalone = true;
+    const getItem = vi.spyOn(Storage.prototype, 'getItem');
+    renderHook(() => useInstallPrompt());
+    await act(async () => {});
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    expect(getItem).not.toHaveBeenCalledWith(KEY);
+    getItem.mockRestore();
   });
 
   it('snoozes when the native prompt is dismissed', async () => {

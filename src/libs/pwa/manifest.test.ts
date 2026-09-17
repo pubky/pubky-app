@@ -75,3 +75,14 @@ describe('public/manifest.json', () => {
     expect(publicFileExists('/offline.html')).toBe(true);
   });
 });
+
+// The offline page is static HTML outside the token system; keep its palette pinned to the app's.
+describe('public/offline.html', () => {
+  const offlineHtml = readFileSync(join(PUBLIC_DIR, 'offline.html'), 'utf8').toLowerCase();
+
+  it('uses the app background for the page and the theme colour', () => {
+    const background = COLORS.background.toLowerCase();
+    expect(offlineHtml).toContain(`<meta name="theme-color" content="${background}" />`);
+    expect(offlineHtml).toContain(`background: ${background};`);
+  });
+});
