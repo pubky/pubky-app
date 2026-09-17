@@ -98,3 +98,25 @@ export const GRID_FEED_GAP_CLASS = 'gap-3 lg:gap-6';
  * scroll restoration. Centralized here so all call sites cannot drift.
  */
 export const FORCE_FEED_SCROLL_TOP_KEY = 'pubky:force-feed-scroll-top';
+
+/**
+ * Raw posts one `useStreamPagination` load keeps scanning through pages that surface
+ * nothing new before it yields with `hasMore` still true. Filtering is client-side
+ * (muted authors, deleted posts, collections), and the stream layer bounds a single round
+ * at about 200 raw posts when the region is already cached but at one page when it still
+ * has to be hydrated first, so the load budgets by raw posts rather than rounds. The
+ * loading block stays mounted for the whole scan, so a filtered region no longer pulses
+ * the feed's height once per round (#2523).
+ */
+export const STREAM_LOAD_MAX_RAW_SCAN = 600;
+
+/**
+ * Consecutive automatic infinite-scroll loads a timeline tolerates without a single new
+ * post reaching the list before it stops auto-loading and offers a manual "Load more"
+ * (`useInfiniteScroll`'s unproductive-load budget). Each load already scans up to
+ * `STREAM_LOAD_MAX_RAW_SCAN` raw posts, so this only trips after several hundred
+ * consecutive filtered posts (a muted author's run, deleted posts, collections) and never
+ * on an ordinary feed. The region can be arbitrarily long, so past that point the next
+ * scan is handed to the user instead of chaining to the end of the stream (#2523).
+ */
+export const TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS = 3;

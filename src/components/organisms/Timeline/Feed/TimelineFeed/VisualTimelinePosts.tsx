@@ -7,6 +7,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
 import { Video } from '@/atoms/Video/Video';
+import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useIsTouchDevice } from '@/hooks/useIsTouchDevice/useIsTouchDevice';
@@ -26,6 +27,7 @@ import { truncateAtWordBoundary } from '@/molecules/PostText/PostText.utils';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
+import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { ClickableTagsList } from '../../../ClickableTagsList/ClickableTagsList';
 import { PostActionsBar } from '../../../PostActionsBar/PostActionsBar';
@@ -378,7 +380,7 @@ export function VisualTimelinePosts({
   showUnavailablePosts = false,
 }: VisualTimelinePostsProps) {
   const { navigateToPost } = usePostNavigation();
-  const { rows, hiddenPostCount, hasPendingSnapshot, hasPendingTiles, hasPendingFiles, hasPendingPostDetails } =
+  const { rows, tiles, hiddenPostCount, hasPendingSnapshot, hasPendingTiles, hasPendingFiles, hasPendingPostDetails } =
     useVisualFeedTiles({
       postIds,
       hasMore,
@@ -410,13 +412,25 @@ export function VisualTimelinePosts({
   // `hasRows` keeps the observer quiet while the tile pipeline resolves rows for
   // existing postIds (the backfill effect owns that case). A fully-filtered stream
   // region leaves postIds itself empty — there the sentinel must stay armed so
-  // load rounds keep chaining toward the first visible posts.
-  const { sentinelRef } = useInfiniteScroll({
+  // load rounds keep chaining toward the first visible posts, within the budget of
+  // rounds that grow nothing; past it the manual Load more below takes over (#2523).
+  // The budget measures mosaic progress, not ids: with content set to All a page of
+  // text-only posts grows `postIds` while the tile pipeline drops every one of them, and a
+  // budget keyed on ids would keep resetting (#2523). It counts every tile the pipeline
+  // tracks — packed into a row, buffered for the next row, or still probing — so a page
+  // whose tiles are unsettled already counts as progress. The pending flags must not gate
+  // the observer: `hasPendingFiles` stays set for good once an attachment Nexus no longer
+  // returns (no not-found marker is written), which would freeze the feed with neither
+  // auto-loading nor the manual Load more; tiles and post details settle, and gating on
+  // them would hold every load behind a slow probe, which dev never did.
+  const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore: hasMore && (hasRows || postIds.length === 0),
     isLoading: loadingMore || isInitialLoading,
     threshold: 3000,
     debounceMs: 20,
+    itemCount: tiles.length,
+    maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 
   const showFilteredEmptyState =
@@ -444,6 +458,7 @@ export function VisualTimelinePosts({
       error={error}
       hasItems={(hasRows && !showFilteredEmptyState) || hasExtras}
       hasMore={hasMore}
+      stalled={isStalled}
       loadingComponent={<VisualTimelinePostsSkeleton />}
       emptyComponent={emptyState}
     >
@@ -475,11 +490,13 @@ export function VisualTimelinePosts({
 
             {showEndMessage && !hasMore && !loadingMore && rows.length > 0 && <TimelineEndMessage />}
 
+            {hasMore && isStalled && !loadingMore && <TimelineLoadMore onLoadMore={resumeAutoLoad} />}
+
             {/* Infinite-scroll sentinel — only mounted (and given height) while there are
-                more posts to observe for, mirroring TimelineGridPosts. Once the feed is
-                fully loaded the observer detaches, so rendering it would just leave dead
-                space below the mosaic. */}
-            {hasMore && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
+                more posts to observe for and auto-loading is not stalled, mirroring
+                TimelineGridPosts. Once the feed is fully loaded the observer detaches, so
+                rendering it would just leave dead space below the mosaic. */}
+            {hasMore && !isStalled && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
           </Container>
         </Container>
       ) : null}

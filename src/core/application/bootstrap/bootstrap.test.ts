@@ -153,6 +153,7 @@ type ServiceMocks = {
   persistPosts: unknown;
   persistFiles: unknown;
   upsertPostsStream: unknown;
+  clearUnreadPostsStream: unknown;
   upsertInfluencersStream: unknown;
   upsertHotTags: unknown;
   upsertTagsStream: unknown;
@@ -216,6 +217,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     upsertPostsStream: vi
       .spyOn(LocalStreamPostsService, 'upsert')
       .mockImplementation(upsertPostsError ? () => Promise.reject(upsertPostsError) : () => Promise.resolve(undefined)),
+    clearUnreadPostsStream: vi.spyOn(LocalStreamPostsService, 'clearUnreadStream').mockResolvedValue([]),
     upsertInfluencersStream: vi
       .spyOn(LocalStreamUsersService, 'upsert')
       .mockImplementation(
@@ -253,6 +255,8 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
     streamId: PostStreamTypes.TIMELINE_ALL_ALL,
     stream: bootstrapData.ids.stream,
   });
+  // The bootstrap page supersedes anything an earlier head poll collected.
+  expect(mocks.clearUnreadPostsStream).toHaveBeenCalledWith({ streamId: PostStreamTypes.TIMELINE_ALL_ALL });
   expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
     streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL,
     stream: bootstrapData.ids.influencers,

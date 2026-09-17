@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { TagKind } from '@/application/tag/tag.types';
 import { Container } from '@/atoms/Container/Container';
 import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS } from '@/config/tags';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { cn } from '@/libs/utils/utils';
 import { ClickableTagsList } from '../ClickableTagsList/ClickableTagsList';
 import { PostActionsBar } from '../PostActionsBar/PostActionsBar';
@@ -27,6 +28,9 @@ export function PostInlineTagsActions({
   actionsClassName,
 }: PostInlineTagsActionsProps) {
   const [tagsExpanded, setTagsExpanded] = useState(false);
+  // The tag button only reveals the tags. On mobile it must not focus the input and pop the soft
+  // keyboard: the `[+]` add control owns autofocus.
+  const isMobile = useIsMobile();
 
   return (
     <Container
@@ -44,7 +48,7 @@ export function PostInlineTagsActions({
         <PostTagsPanel
           postId={postId}
           widthMode="fit"
-          autoFocusInput
+          autoFocusInput={!isMobile}
           enableLoadingSkeleton={false}
           className="flex-1"
         />

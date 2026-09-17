@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getUserProfileUrl } from '@/app/routes';
 import { TagKind } from '@/application/tag/tag.types';
 import { CardContent } from '@/atoms/Card/Card';
@@ -8,6 +8,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRelativeTime } from '@/hooks/useRelativeTime/useRelativeTime';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
@@ -106,6 +107,13 @@ export function PostMainListRow({
   const { formatRelativeTime } = useRelativeTime();
   const tagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const [tagsExpanded, setTagsExpanded] = useState(false);
+  const isMobile = useIsMobile();
+
+  // The panel mounts on expand. On mobile its reveal must not focus the input, so the scroll that
+  // `focus()` used to perform has to happen here, after the panel exists.
+  useEffect(() => {
+    if (isMobile && tagsExpanded) tagsPanelRef.current?.reveal();
+  }, [isMobile, tagsExpanded]);
 
   const displayPostDetails = shouldUseOriginalPost ? originalPostDetails : postDetails;
 
@@ -132,7 +140,10 @@ export function PostMainListRow({
 
   const handleTagClick = () => {
     setTagsExpanded((previousValue) => !previousValue);
-    tagsPanelRef.current?.focus();
+    // The tag button only reveals the tags. On mobile that reveal must not focus the input and pop
+    // the soft keyboard: the `[+]` add control owns autofocus. The reveal still scrolls the panel
+    // into view, from the effect below, once it has mounted.
+    if (!isMobile) tagsPanelRef.current?.focus();
   };
 
   return (
@@ -241,7 +252,7 @@ export function PostMainListRow({
             ref={tagsPanelRef}
             postId={displayPostId}
             widthMode="fit"
-            autoFocusInput
+            autoFocusInput={!isMobile}
             enableLoadingSkeleton={false}
           />
         </Container>
