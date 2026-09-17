@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
@@ -68,6 +69,16 @@ vi.mock('@/molecules/Timeline/TimelineLoading', () => {
 vi.mock('@/molecules/Timeline/TimelineLoadingMore', () => {
   return {
     TimelineLoadingMore: () => <div data-testid="timeline-loading-more">Loading more...</div>,
+  };
+});
+
+vi.mock('@/molecules/Timeline/TimelineLoadMore', () => {
+  return {
+    TimelineLoadMore: ({ onLoadMore }: { onLoadMore: () => void }) => (
+      <button data-testid="timeline-load-more" onClick={onLoadMore}>
+        Load more
+      </button>
+    ),
   };
 });
 
@@ -524,7 +535,69 @@ describe('RepliesWithParent', () => {
         isLoading: false,
         threshold: 3000,
         debounceMs: 20,
+        // Rounds that do not grow the list are budgeted so a filtered region cannot
+        // chain loads to the end of the stream (#2523).
+        itemCount: 1,
+        maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
       });
+    });
+
+    it('replaces the sentinel with a manual Load more once auto-loading stalls', () => {
+      const resumeAutoLoad = vi.fn();
+      mockUseInfiniteScroll.mockReturnValue({
+        sentinelRef: vi.fn(),
+        isStalled: true,
+        resumeAutoLoad,
+      });
+      mockUseStreamPagination.mockReturnValue({
+        postIds: ['author1:reply1'],
+        loading: false,
+        loadingMore: false,
+        error: null,
+        hasMore: true,
+        loadMore: vi.fn(),
+        refresh: vi.fn(),
+        prependPosts: vi.fn(),
+        prependOptimisticPosts: vi.fn(),
+        removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
+      });
+
+      const { container } = render(<RepliesWithParent streamId={mockStreamId} />);
+
+      expect(container.querySelector('.h-5')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('timeline-load-more'));
+      expect(resumeAutoLoad).toHaveBeenCalledTimes(1);
+    });
+
+    it('hides the manual Load more while a resumed load is in flight or the stream has ended', () => {
+      mockUseInfiniteScroll.mockReturnValue({
+        sentinelRef: vi.fn(),
+        isStalled: true,
+        resumeAutoLoad: vi.fn(),
+      });
+      const pagination = {
+        postIds: ['author1:reply1'],
+        loading: false,
+        loadingMore: true,
+        error: null,
+        hasMore: true,
+        loadMore: vi.fn(),
+        refresh: vi.fn(),
+        prependPosts: vi.fn(),
+        prependOptimisticPosts: vi.fn(),
+        removePosts: vi.fn(),
+        removePostsOptimistically: vi.fn(() => ({ commit: vi.fn(), rollback: vi.fn() })),
+      };
+      mockUseStreamPagination.mockReturnValue(pagination);
+
+      const { rerender } = render(<RepliesWithParent streamId={mockStreamId} />);
+      expect(screen.queryByTestId('timeline-load-more')).not.toBeInTheDocument();
+      expect(screen.getByTestId('timeline-loading-more')).toBeInTheDocument();
+
+      mockUseStreamPagination.mockReturnValue({ ...pagination, loadingMore: false, hasMore: false });
+      rerender(<RepliesWithParent streamId={mockStreamId} />);
+      expect(screen.queryByTestId('timeline-load-more')).not.toBeInTheDocument();
     });
   });
 

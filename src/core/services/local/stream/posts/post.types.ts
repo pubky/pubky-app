@@ -5,15 +5,31 @@ import type { StreamSource, TStreamBase } from '@/services/nexus/stream/posts/po
 
 export interface TStreamResult {
   stream: string[];
+  /** Persisted Nexus resume cursor of the deepest fetched page; see `PostStreamModelSchema.tailCursor`. */
+  tailCursor?: number;
 }
 
 export interface TPostStreamUpsertParams {
   streamId: PostStreamId;
   stream: string[];
+  /**
+   * Nexus `last_post_score` of the page being written, when `stream` is a descending
+   * pagination page. Persisted as the row's resume cursor (the deepest one wins) and
+   * marks the chunk as stream-ordered: it is appended after the existing ids instead of
+   * being re-sorted by `indexed_at`. Omit for chunks that carry no Nexus position
+   * (bootstrap, hydration-discovered replies, ascending reply pages).
+   */
+  tailCursor?: number;
 }
 
 export interface TPostStreamBulkParams {
   postStreams: TPostStreamUpsertParams[];
+}
+
+export interface TAlignPageParams {
+  streamId: PostStreamId;
+  /** A descending Nexus page, in Nexus order. */
+  stream: string[];
 }
 
 export interface TPostDetailsTimestampParams {
