@@ -65,7 +65,7 @@ exports[`AlertInstall - Snapshots > matches snapshot for the native install bann
         Later
       </button>
       <button
-        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs text-white hover:bg-neutral-800 hover:border-neutral-800 h-8 gap-1.5 has-[>svg]:px-3.5 border-card bg-card px-3.5 text-xs font-bold"
+        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs text-foreground hover:bg-muted h-8 gap-1.5 has-[>svg]:px-3.5 border-card bg-card px-3.5 text-xs font-bold"
         data-size="sm"
         data-slot="button"
         data-variant="dark"
@@ -148,7 +148,7 @@ exports[`AlertInstall - Snapshots > matches snapshot with the iOS dialog open 1`
         Later
       </button>
       <button
-        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs text-white hover:bg-neutral-800 hover:border-neutral-800 h-8 gap-1.5 has-[>svg]:px-3.5 border-card bg-card px-3.5 text-xs font-bold"
+        class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs text-foreground hover:bg-muted h-8 gap-1.5 has-[>svg]:px-3.5 border-card bg-card px-3.5 text-xs font-bold"
         data-size="sm"
         data-slot="button"
         data-variant="dark"
