@@ -45,7 +45,7 @@ function setVisibility(state: DocumentVisibilityState) {
 }
 
 async function loadHook() {
-  // `registrationStarted` is module state: reload the module so every test starts unregistered.
+  // The update-check throttle is module state: reload the module so every test starts fresh.
   // The toast mock is re-imported alongside it so assertions see the instance the hook uses.
   vi.resetModules();
   const [{ useServiceWorkerUpdate }, { toast }] = await Promise.all([
@@ -80,19 +80,16 @@ describe('useServiceWorkerUpdate', () => {
     expect(toast).not.toHaveBeenCalled();
   });
 
-  it('attaches listeners before registering, and registers once across remounts', async () => {
+  it('only listens: registration belongs to ServiceWorkerRegistrationProvider', async () => {
     const serwist = createSerwistStub();
     installSerwist(serwist);
     const { useServiceWorkerUpdate } = await loadHook();
 
     const first = renderHook(() => useServiceWorkerUpdate());
-    expect(serwist.addEventListener.mock.invocationCallOrder[0]).toBeLessThan(
-      serwist.register.mock.invocationCallOrder[0],
-    );
     first.unmount();
     renderHook(() => useServiceWorkerUpdate());
 
-    expect(serwist.register).toHaveBeenCalledTimes(1);
+    expect(serwist.register).not.toHaveBeenCalled();
     expect(serwist.listenerCount('waiting')).toBe(1);
     expect(serwist.listenerCount('controlling')).toBe(1);
   });
@@ -134,7 +131,7 @@ describe('useServiceWorkerUpdate', () => {
     serwist.emit('waiting', { sw: { state: 'installed' } });
     expect(toast).toHaveBeenCalledTimes(1);
 
-    // Too soon after registration: no update() call, but the toast comes back.
+    // Too soon after mount: no update() call, but the toast comes back.
     setVisibility('visible');
     expect(toast).toHaveBeenCalledTimes(2);
     expect(serwist.update).not.toHaveBeenCalled();

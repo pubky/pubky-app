@@ -3,25 +3,24 @@
 
 import { useEffect } from 'react';
 import { SW_UPDATE_CHECK_MIN_INTERVAL_MS } from '@/config/pwa';
-import { Logger } from '@/libs/logger/logger';
 import { toast, type ToastHandle } from '@/molecules/Toaster/toast';
 
-// Module-level so StrictMode's double mount and later remounts never register twice.
-let registrationStarted = false;
+// Module-level so remounts share one throttle window for `registration.update()` checks.
 let lastUpdateCheckAt = 0;
 
 /**
- * Registers the service worker and runs the user-consented update flow.
+ * Runs the user-consented service worker update flow.
  *
- * `@serwist/next` is configured with `register: false`, so registration happens
- * here, after the lifecycle listeners are attached (a `waiting` event dispatched
- * before a listener exists is lost). The worker is built with `skipWaiting: false`:
- * a new version installs, waits, and this hook shows a persistent "Update available"
- * toast. Reload posts `SKIP_WAITING`; once the new worker controls the page,
- * every open tab reloads so no tab keeps running chunks the new precache dropped.
+ * Registration itself belongs to ServiceWorkerRegistrationProvider (root layout), whose
+ * effect runs after this hook's, so the `waiting` / `controlling` listeners below are
+ * attached before `register()` is called (a `waiting` event dispatched before a listener
+ * exists is lost). The worker is built with `skipWaiting: false`: a new version installs,
+ * waits, and this hook shows a persistent "Update available" toast. Reload posts
+ * `SKIP_WAITING`; once the new worker controls the page, every open tab reloads so no tab
+ * keeps running chunks the new precache dropped.
  *
- * No-op when Serwist is disabled (dev without `SERWIST_DEV`) or the browser has
- * no service worker support: `window.serwist` is undefined in both cases.
+ * No-op when Serwist is disabled (dev without `SERWIST_DEV`) or the browser has no service
+ * worker support: `window.serwist` is undefined in both cases.
  */
 export function useServiceWorkerUpdate() {
   useEffect(() => {
@@ -69,13 +68,8 @@ export function useServiceWorkerUpdate() {
     serwist.addEventListener('controlling', onControlling);
     document.addEventListener('visibilitychange', onVisibilityChange);
 
-    if (!registrationStarted) {
-      registrationStarted = true;
-      lastUpdateCheckAt = Date.now();
-      serwist.register().catch((error: unknown) => {
-        Logger.warn('[useServiceWorkerUpdate] Service worker registration failed', { error });
-      });
-    }
+    // Registration (and the first update check it implies) happens right after mount.
+    if (lastUpdateCheckAt === 0) lastUpdateCheckAt = Date.now();
 
     return () => {
       serwist.removeEventListener('waiting', onWaiting);

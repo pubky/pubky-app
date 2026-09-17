@@ -603,6 +603,7 @@ describe('CollectionHero', () => {
         submitLabel: 'Share',
         submitIcon: expect.anything(),
         successToastTitle: "You've shared this collection",
+        isCollectionShare: true,
       });
       expect(screen.getByTestId('repost-dialogs')).toBeInTheDocument();
     });

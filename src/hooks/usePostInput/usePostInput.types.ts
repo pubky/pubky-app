@@ -29,6 +29,8 @@ export interface UsePostInputOptions {
    * shared repost flow read as a different action, e.g. sharing a collection.
    */
   successToastTitle?: string;
+  /** Use collection-share wording for the repost toast's Undo action. */
+  isCollectionShare?: boolean;
   /**
    * Controls whether the component starts in expanded mode.
    * @default false

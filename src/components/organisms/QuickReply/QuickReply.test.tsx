@@ -475,6 +475,22 @@ describe('QuickReply', () => {
     expect(screen.getByTestId('post-header-character-count')).toHaveTextContent(`11/${POST_MAX_CHARACTER_LENGTH}`);
   });
 
+  it('counts an emoji reply draft at the enforced limit so the warning is not missed (issue #1761)', () => {
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, {
+        content: `😀${'a'.repeat(POST_MAX_CHARACTER_LENGTH - 2)}`,
+        isExpanded: true,
+      }),
+    );
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    expect(getExpandedPostHeader()).toHaveAttribute('data-count', POST_MAX_CHARACTER_LENGTH.toString());
+    expect(screen.getByTestId('post-header-character-count')).toHaveTextContent(
+      `${POST_MAX_CHARACTER_LENGTH}/${POST_MAX_CHARACTER_LENGTH}`,
+    );
+  });
+
   it('does not show character count when collapsed', () => {
     mockUsePostInput.mockImplementation((options: unknown) =>
       createUsePostInputReturn(options, { content: 'Hello world', isExpanded: false }),

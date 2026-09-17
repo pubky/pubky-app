@@ -12,6 +12,7 @@ import { AppError } from '@/libs/error/error';
 import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
+import { normalizeProfileLinkUrl } from '@/libs/profile/profileLinks';
 import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
 import { generateRandomUsername } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
@@ -161,21 +162,27 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     }
   }, []);
 
-  const validateLinkUrl = useCallback((value: string, index: number) => {
-    if (value.trim().length === 0) {
-      setLinkUrlErrors((prev) => ({ ...prev, [index]: null }));
-    } else {
-      const res = safeExternalUrlSchema.safeParse(value);
-      setLinkUrlErrors((prev) => ({
-        ...prev,
-        [index]: res.success ? null : (res.error.issues[0]?.message ?? 'Invalid URL'),
-      }));
-    }
-  }, []);
+  const validateLinkUrl = useCallback(
+    (value: string, index: number) => {
+      if (value.trim().length === 0) {
+        setLinkUrlErrors((prev) => ({ ...prev, [index]: null }));
+      } else {
+        // Validate what we would store: a bare X handle is rewritten to its profile URL first.
+        const res = safeExternalUrlSchema.safeParse(normalizeProfileLinkUrl(links[index]?.label ?? '', value));
+        setLinkUrlErrors((prev) => ({
+          ...prev,
+          [index]: res.success ? null : (res.error.issues[0]?.message ?? 'Invalid URL'),
+        }));
+      }
+    },
+    [links],
+  );
 
   const validateUser = useCallback(() => {
     const avatarToValidate = mode === 'edit' && !avatarChanged ? null : avatarFile;
-    const { data, error } = UserValidator.check(name, bio, links, avatarToValidate);
+    // Validate and save the normalized links, so accepting a bare X handle is one behaviour.
+    const normalizedLinks = links.map((link) => ({ ...link, url: normalizeProfileLinkUrl(link.label, link.url) }));
+    const { data, error } = UserValidator.check(name, bio, normalizedLinks, avatarToValidate);
 
     if (error.length > 0) {
       for (const issue of error) {

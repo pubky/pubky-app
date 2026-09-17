@@ -9,6 +9,7 @@ How the installed-app layer works, what the service worker is allowed to do, and
 | `src/sw.ts`                                                 | Service worker source: share target, navigation route with offline fallback, precache.               |
 | `public/sw.js`                                              | Generated from `src/sw.ts` by `npm run build`. Gitignored, never edited.                             |
 | `next.config.ts` (`withSerwistInit`)                        | Build options: precache allow-list, `register: false`, `reloadOnOnline: false`, dev flag.            |
+| `src/providers/ServiceWorkerRegistrationProvider/`          | Registers the worker from app code so a rejected registration is logged, not reported (#2556).       |
 | `public/manifest.json`                                      | Web app manifest (colours, icons, shortcuts, screenshots, share target, protocol handler).           |
 | `public/offline.html`                                       | Static page served when a navigation cannot reach the network.                                       |
 | `src/components/organisms/PwaManager/PwaManager.tsx`        | No-UI organism in the root layout that mounts the lifecycle hooks below.                             |
@@ -35,7 +36,7 @@ How the installed-app layer works, what the service worker is allowed to do, and
 ## Update flow
 
 1. `@serwist/next` injects `window.serwist` (a `@serwist/window` client) into the client bundle but does not register it (`register: false`).
-2. `useServiceWorkerUpdate` attaches `waiting` / `controlling` listeners, then calls `window.serwist.register()` once per page load. Listeners go first because a `waiting` event dispatched before a listener exists is lost.
+2. `useServiceWorkerUpdate` (mounted by `PwaManager`) attaches `waiting` / `controlling` listeners. `ServiceWorkerRegistrationProvider` wraps the whole tree and calls `window.serwist.register()` in its own effect, which React runs after the effects of everything it wraps, so the listeners exist before registration starts (a `waiting` event dispatched before a listener exists is lost). A rejected registration is logged with `Logger.warn`, never thrown (#2556).
 3. A new build installs, waits, and fires `waiting`. The hook shows a persistent info toast ("Update available", action "Reload").
 4. Reload posts `SKIP_WAITING`; the worker calls `self.skipWaiting()`, activates, and `clientsClaim` makes it the controller. Every open tab receives `controlling { isUpdate: true }` and reloads, so no tab keeps running chunks the new precache dropped.
 5. While a worker is waiting, the toast is re-shown when the tab becomes visible (the toast limit is one, so any other toast evicts it), and `registration.update()` is requested at most once per `SW_UPDATE_CHECK_MIN_INTERVAL_MS`.

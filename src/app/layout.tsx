@@ -16,6 +16,7 @@ import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider'
 import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
 import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
 import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
+import { ServiceWorkerRegistrationProvider } from '@/providers/ServiceWorkerRegistrationProvider/ServiceWorkerRegistrationProvider';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -47,27 +48,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       */}
       <StructuredData />
       <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
-        <GlobalErrorHandlerProvider>
-          <ErrorBoundaryProvider>
-            {/*
-              Outside the DB/auth gates: the service worker, offline/online toasts and the
-              app badge must run on every route, including while the providers below show
-              their spinners. The Toaster sits here for the same reason (its viewport is
-              fixed, so DOM position does not matter).
-            */}
-            <PwaManager />
-            <Toaster />
-            <DatabaseProvider>
-              <RouteGuardProvider>
-                <CoordinatorsManager />
-                <Header />
-                {children}
-                <Fab />
-                <DialogSignIn />
-              </RouteGuardProvider>
-            </DatabaseProvider>
-          </ErrorBoundaryProvider>
-        </GlobalErrorHandlerProvider>
+        {/*
+          ServiceWorkerRegistrationProvider registers the worker in its own effect, which runs after
+          the effects of everything it wraps, so PwaManager's update listeners are attached first.
+        */}
+        <ServiceWorkerRegistrationProvider>
+          <GlobalErrorHandlerProvider>
+            <ErrorBoundaryProvider>
+              {/*
+                Outside the DB/auth gates: the service worker update flow, offline/online toasts
+                and the app badge must run on every route, including while the providers below
+                show their spinners. The Toaster sits here for the same reason (its viewport is
+                fixed, so DOM position does not matter).
+              */}
+              <PwaManager />
+              <Toaster />
+              <DatabaseProvider>
+                <RouteGuardProvider>
+                  <CoordinatorsManager />
+                  <Header />
+                  {children}
+                  <Fab />
+                  <DialogSignIn />
+                </RouteGuardProvider>
+              </DatabaseProvider>
+            </ErrorBoundaryProvider>
+          </GlobalErrorHandlerProvider>
+        </ServiceWorkerRegistrationProvider>
       </TooltipProvider>
     </RootContainer>
   );

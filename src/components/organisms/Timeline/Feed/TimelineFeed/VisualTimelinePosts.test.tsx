@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import type { VisualPlaceholderKind, VisualRow, VisualTile } from './TimelineFeedVisual.types';
 import { VisualTimelinePosts } from './VisualTimelinePosts';
@@ -271,6 +272,11 @@ function createRows(): VisualRow[] {
   ];
 }
 
+/** The tiles behind `createRows()`: what the tile pipeline tracks for that mosaic. */
+function createTiles(): VisualTile[] {
+  return createRows().flatMap((row) => row.cells.flatMap((cell) => (cell.tile ? [cell.tile] : [])));
+}
+
 describe('VisualTimelinePosts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -288,7 +294,7 @@ describe('VisualTimelinePosts', () => {
     mockUseVisualFeedTiles.mockReturnValue({
       rows: createRows(),
       tail: [],
-      tiles: [],
+      tiles: createTiles(),
       hasPendingSnapshot: false,
       hasPendingTiles: false,
       hasPendingFiles: false,
@@ -647,6 +653,9 @@ describe('VisualTimelinePosts', () => {
       isLoading: true,
       threshold: 3000,
       debounceMs: 20,
+      // The budget measures mosaic tiles, not ids: no rows yet, so nothing to count.
+      itemCount: 0,
+      maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
     });
 
     await waitFor(() => {
@@ -942,8 +951,139 @@ describe('VisualTimelinePosts', () => {
           isLoading: false,
           threshold: 3000,
           debounceMs: 20,
+          itemCount: 1,
+          maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
         });
       });
+    });
+
+    it('counts a tile still probing as mosaic progress without gating the observer on pending work', async () => {
+      // A page whose tiles are unsettled already grew the tracked tiles, so it is not an
+      // unproductive load. The pending flags must not feed `isLoading`: a file Nexus no
+      // longer returns keeps `hasPendingFiles` set for good, and a gated observer would
+      // leave the feed with neither auto-loading nor the manual Load more.
+      const [readyTile] = createTiles();
+      const probingTile: VisualTile = {
+        ...readyTile,
+        id: 'tile-2',
+        postId: 'author:post2',
+        preferredSize: undefined,
+        rowSize: undefined,
+        probeState: 'pending',
+      };
+      mockUseVisualFeedTiles.mockReturnValue({
+        rows: createRows(),
+        tail: [],
+        tiles: [readyTile, probingTile],
+        hasPendingSnapshot: false,
+        hasPendingTiles: true,
+        hasPendingFiles: true,
+        hasPendingPostDetails: true,
+      });
+
+      render(
+        <VisualTimelinePosts
+          postIds={['author:post1', 'author:post2', 'author:post3']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(mockUseInfiniteScroll).toHaveBeenCalledWith(expect.objectContaining({ isLoading: false, itemCount: 2 }));
+      });
+    });
+
+    it('hands over to Load more when ids keep growing but the mosaic does not', async () => {
+      // Home/Search Visual with content set to All consumes a mixed stream: a page of
+      // text-only posts grows `postIds` while the tile pipeline drops every one of them. The
+      // budget must count mosaic progress, so those rounds are unproductive and the sentinel
+      // stops after the configured number of them.
+      const { useInfiniteScroll: realUseInfiniteScroll } = await vi.importActual<
+        typeof import('@/hooks/useInfiniteScroll/useInfiniteScroll')
+      >('@/hooks/useInfiniteScroll/useInfiniteScroll');
+      mockUseInfiniteScroll.mockImplementation(realUseInfiniteScroll);
+      const observerCallbacks: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = [];
+      const previousObserver = window.IntersectionObserver;
+      Object.defineProperty(window, 'IntersectionObserver', {
+        writable: true,
+        configurable: true,
+        value: vi.fn(function (callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
+          observerCallbacks.push(callback);
+          return { observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn() };
+        }),
+      });
+      const mockLoadMore = vi.fn().mockResolvedValue(undefined);
+      const renderFeed = (postIds: string[]) => (
+        <VisualTimelinePosts
+          postIds={postIds}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={mockLoadMore}
+        />
+      );
+      const intersect = async () => {
+        await act(async () => {
+          observerCallbacks.at(-1)?.([{ isIntersecting: true }]);
+          await new Promise((resolve) => setTimeout(resolve, 40));
+        });
+      };
+
+      try {
+        const postIds = ['author:post1'];
+        const { rerender } = render(renderFeed(postIds));
+        await waitFor(() => expect(observerCallbacks.length).toBeGreaterThan(0));
+
+        for (let round = 1; round <= TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS; round += 1) {
+          await intersect();
+          expect(mockLoadMore).toHaveBeenCalledTimes(round);
+          // The page delivered ids but no tiles: the mosaic (createRows) stays the same.
+          postIds.push(`author:text-only-${round}`);
+          rerender(renderFeed([...postIds]));
+        }
+
+        await intersect();
+        expect(mockLoadMore).toHaveBeenCalledTimes(TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS);
+        expect(document.querySelector('[data-cy="timeline-load-more"]')).toBeInTheDocument();
+      } finally {
+        Object.defineProperty(window, 'IntersectionObserver', {
+          writable: true,
+          configurable: true,
+          value: previousObserver,
+        });
+      }
+    });
+
+    it('replaces the sentinel with a manual Load more once auto-loading stalls', async () => {
+      const resumeAutoLoad = vi.fn();
+      mockUseInfiniteScroll.mockReturnValue({
+        sentinelRef: vi.fn(),
+        isStalled: true,
+        resumeAutoLoad,
+      });
+
+      const { container } = render(
+        <VisualTimelinePosts
+          postIds={['author:post1']}
+          loading={false}
+          loadingMore={false}
+          error={null}
+          hasMore={true}
+          loadMore={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Open post author:post1')).toBeInTheDocument();
+      });
+      expect(container.querySelector('.h-5')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+      expect(resumeAutoLoad).toHaveBeenCalledTimes(1);
     });
 
     it('arms the observer when postIds is empty but hasMore (filtered stream region)', () => {

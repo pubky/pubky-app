@@ -1,9 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { STORAGE_QUOTA_REACHED_MESSAGE } from '@/libs/storage/storageQuota';
 import { toast } from '@/molecules/Toaster/toast';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { usePost } from './usePost';
@@ -722,6 +724,33 @@ describe('usePost', () => {
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to create post:', mockError);
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.content).toBe('Post content'); // Content should not be cleared on error
+    });
+
+    it('should warn with the storage-quota copy when the homeserver answers 507 (issue #1776)', async () => {
+      const { result } = renderHook(() => usePost());
+      const mockError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Insufficient Storage', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+        context: { statusCode: HttpStatusCode.INSUFFICIENT_STORAGE },
+      });
+      mockPostControllerCreate.mockRejectedValueOnce(mockError);
+
+      act(() => {
+        result.current.setContent('Post content');
+      });
+
+      await act(async () => {
+        await result.current.post({
+          onSuccess: vi.fn(),
+        });
+      });
+
+      // A full quota cannot be fixed by retrying, so the toast warns and says why.
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'warning',
+        description: STORAGE_QUOTA_REACHED_MESSAGE,
+      });
+      expect(result.current.content).toBe('Post content');
     });
 
     it('should toast a localized size-limit message when an attachment exceeds the upload limit', async () => {

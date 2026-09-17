@@ -58,7 +58,11 @@ const withSerwist = withSerwistInit({
   // Build-tool flag (like NEXT_STANDALONE), webpack dev only: `SERWIST_DEV=true npm run dev:https`.
   // Dev builds ship an empty precache, so the offline fallback needs `npm run build && npm run start`.
   disable: process.env.NODE_ENV === 'development' && process.env.SERWIST_DEV !== 'true',
-  // Registered by useServiceWorkerUpdate after its lifecycle listeners are attached (docs/pwa.md).
+  // Serwist's injected entry calls `window.serwist.register()` without a `.catch()`, so a rejected
+  // `navigator.serviceWorker.register()` reaches Sentry as an unhandled error even though it is an
+  // expected browser/network condition. Registration is done by ServiceWorkerRegistrationProvider,
+  // which handles that rejection, after useServiceWorkerUpdate has attached its lifecycle listeners;
+  // the injected entry still exposes `window.serwist` with the same script URL and scope (docs/pwa.md).
   register: false,
   // The local-first UI recovers on its own; a forced reload would drop in-progress state.
   reloadOnOnline: false,

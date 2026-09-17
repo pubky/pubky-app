@@ -393,13 +393,18 @@ describe('TtlApplication', () => {
         },
       ];
 
-      vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(nexusUsers);
+      const fetchByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(nexusUsers);
       const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+      const viewerId = 'viewer' as Pubky;
 
-      await TtlApplication.forceRefreshUsersByIds({ userIds });
+      await TtlApplication.forceRefreshUsersByIds({ userIds, viewerId });
 
-      // persistUsers handles TTL updates internally
-      expect(persistUsersSpy).toHaveBeenCalledWith(nexusUsers, expect.objectContaining({ revisions: expect.any(Map) }));
+      expect(fetchByIdsSpy).toHaveBeenCalledWith({ user_ids: userIds, force: true, viewer_id: viewerId });
+      // persistUsers handles TTL updates internally; the viewer keeps relationship rows viewer-relative
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        nexusUsers,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
     });
 
     it('does not persist when fetch fails', async () => {

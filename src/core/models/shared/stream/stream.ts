@@ -67,11 +67,13 @@ export abstract class BaseStreamModel<TId, TItem, TSchema extends BaseStreamMode
 
   /**
    * Inserts or replaces a stream in the database (upsert operation).
-   * If a stream with the given id already exists, it will be completely replaced.
+   * If a stream with the given id already exists, it will be completely replaced,
+   * including any extra schema fields not passed in `fields`.
    *
    * @param this - Context containing the table reference
    * @param id - The unique identifier for the stream
    * @param stream - Array of items to initialize the stream with (defaults to empty array)
+   * @param fields - Extra schema fields of the row beyond `id` and `stream` (e.g. a resume cursor)
    * @returns Promise that resolves to the upserted stream data
    * @throws {DatabaseError} When upsert fails
    *
@@ -84,9 +86,10 @@ export abstract class BaseStreamModel<TId, TItem, TSchema extends BaseStreamMode
     this: { table: Table<TSchema> },
     id: TId,
     stream: TItem[] = [],
+    fields?: Partial<Omit<TSchema, 'id' | 'stream'>>,
   ): Promise<TSchema> {
     try {
-      const streamData = { id, stream } as TSchema;
+      const streamData = { id, stream, ...fields } as TSchema;
       await this.table.put(streamData);
       return streamData;
     } catch (error) {
@@ -248,6 +251,9 @@ export abstract class BaseStreamModel<TId, TItem, TSchema extends BaseStreamMode
             const newItems = items.filter((item) => !stream.stream.includes(item));
 
             if (newItems.length > 0) {
+              // A resume cursor describes the ids it was fetched with: a row that is empty
+              // when new ids seed it must not hand them its old, deeper position.
+              if (stream.stream.length === 0) delete (stream as { tailCursor?: number }).tailCursor;
               // Add new items to the beginning of the stream
               stream.stream.unshift(...newItems);
             }
@@ -298,6 +304,8 @@ export abstract class BaseStreamModel<TId, TItem, TSchema extends BaseStreamMode
           .modify((stream) => {
             // Filter out the items that need to be removed
             stream.stream = stream.stream.filter((item) => !items.includes(item));
+            // Removing the last id leaves nothing the resume cursor describes; drop it with the ids.
+            if (stream.stream.length === 0) delete (stream as { tailCursor?: number }).tailCursor;
           });
       }
       // Stream doesn't exist, nothing to remove - silently succeed

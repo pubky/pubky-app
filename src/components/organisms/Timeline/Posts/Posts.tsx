@@ -2,12 +2,14 @@
 
 import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
+import { TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
+import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { TimelineFeedItem } from './FeedItem/TimelineFeedItem';
 
@@ -43,12 +45,17 @@ export function TimelinePosts({
   trailingSlot,
   showEndMessage = true,
 }: TimelinePostsProps) {
-  const { sentinelRef } = useInfiniteScroll({
+  // Filtering is client-side, so a load round can come back with nothing visible while the
+  // stream still has more. Rounds that fail to grow the list are budgeted: past the budget
+  // the sentinel stops and the manual Load more below takes over (#2523).
+  const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: loadingMore,
     threshold: 3000,
     debounceMs: 20,
+    itemCount: postIds.length,
+    maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 
   const { handlePostKeyDown } = usePostNavigation();
@@ -62,6 +69,7 @@ export function TimelinePosts({
       error={error}
       hasItems={hasListContent}
       hasMore={hasMore}
+      stalled={isStalled}
       emptyComponent={emptyState}
     >
       <Container
@@ -98,11 +106,13 @@ export function TimelinePosts({
 
           {showEndMessage && !hasMore && !loadingMore && postIds.length > 0 && <TimelineEndMessage />}
 
+          {hasMore && isStalled && !loadingMore && <TimelineLoadMore onLoadMore={resumeAutoLoad} />}
+
           {/* Infinite-scroll sentinel — only mounted (and given height) while there are
-              more posts to observe for, mirroring TimelineGridPosts. Once the feed is
-              fully loaded the observer detaches, so rendering it would just leave dead
-              space below the list. */}
-          {hasMore && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
+              more posts to observe for and auto-loading is not stalled, mirroring
+              TimelineGridPosts. Once the feed is fully loaded the observer detaches, so
+              rendering it would just leave dead space below the list. */}
+          {hasMore && !isStalled && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
         </Container>
       </Container>
     </TimelineStateWrapper>

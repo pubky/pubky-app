@@ -226,6 +226,12 @@ export function isPostRoute(pathname: string): boolean {
   return matchPostRoute(pathname) !== null;
 }
 
+/** `/feed/[id]` exactly — excludes the missing base route and deeper descendants. */
+export function isCustomFeedRoute(pathname: string): boolean {
+  const segments = pathname.split('/').filter(Boolean);
+  return segments[0] === 'feed' && segments.length === 2;
+}
+
 export function isCoreExploreRoute(pathname: string): boolean {
   return EXPLORE_ROUTES.includes(pathname);
 }

@@ -11,6 +11,7 @@ import {
   POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { Logger } from '@/libs/logger/logger';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
@@ -472,6 +473,35 @@ describe('usePostInput', () => {
       expect(mockReply).not.toHaveBeenCalled();
       expect(mockEdit).not.toHaveBeenCalled();
     });
+
+    it.each([
+      { isCollectionShare: false, content: '', label: 'Repost', failure: 'repost' },
+      { isCollectionShare: false, content: 'A quote', label: 'Repost', failure: 'repost' },
+      { isCollectionShare: true, content: '', label: 'Share', failure: 'share' },
+      { isCollectionShare: true, content: 'A quote', label: 'Share', failure: 'share' },
+    ])(
+      'uses $label removal copy for toast Undo with content "$content"',
+      async ({ isCollectionShare, content, label, failure }) => {
+        mockContent = content;
+        const { result, unmount } = renderHook(() =>
+          usePostInput({ variant: 'repost', originalPostId: 'original-post-id', isCollectionShare }),
+        );
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(useDeletePost).toHaveBeenCalledWith({
+          toastMessages: { deleted: `${label} removed`, deleteFailed: `Could not remove ${failure}. Try again.` },
+        });
+        const { onUndo } = mockRepost.mock.calls[0][0];
+        // The composer closes after success; the toast must still target the new repost.
+        unmount();
+        await onUndo('created-repost-id');
+        expect(mockDeletePost).toHaveBeenCalledWith('created-repost-id');
+        expect(mockDeletePost).not.toHaveBeenCalledWith('original-post-id');
+      },
+    );
 
     it('calls edit method for edit variant with editPostId', async () => {
       mockContent = 'Updated post content';

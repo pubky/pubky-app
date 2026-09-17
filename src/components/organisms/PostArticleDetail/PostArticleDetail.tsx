@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLinkConfirmation } from '@/hooks/useLinkConfirmation/useLinkConfirmation';
 import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
@@ -40,8 +41,16 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred }: P
   const { openReplyDialog, openRepostDialog, dialogs } = usePostReplyRepostDialogs(postId);
   const mobileTagsPanelRef = useRef<PostTagsPanelHandle>(null);
   const desktopTagsPanelRef = useRef<PostTagsPanelHandle>(null);
+  const isMobile = useIsMobile();
 
   const handleTagClick = () => {
+    // The tag button only reveals the tags. On mobile that reveal must not focus the input and pop
+    // the soft keyboard: the `[+]` add control owns autofocus. It still has to bring the panel
+    // into view, which the desktop path gets from `focus()` as a side effect.
+    if (isMobile) {
+      mobileTagsPanelRef.current?.reveal();
+      return;
+    }
     mobileTagsPanelRef.current?.focus();
     desktopTagsPanelRef.current?.focus();
   };
