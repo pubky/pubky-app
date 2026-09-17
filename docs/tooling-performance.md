@@ -102,7 +102,42 @@ Each bundler ran three cold/repeat pairs in separate temporary checkouts with th
 
 The repeat figures describe unchanged local rebuilds with caches available. The page-edit figures cover a small, isolated source change; a dependency or configuration change can invalidate more work. Neither is a promised CI duration. The normal CI Build job now preserves `.next/cache`; Docker keeps its existing layer cache without transferring Next's incremental cache between fresh builders. This measures build tooling, not browser interaction or page-load performance.
 
-### Bundler verification
+## PR CI production-build comparison
+
+Measured actual GitHub Actions runs of [PR #2571](https://github.com/pubky/pubky-app/pull/2571) on 2026-09-17. The direct before/after pair uses Webpack head `80c2e031` and Turbopack head `c2206c06`, both against base `6803c5f5`. The normal Build workflow checked out GitHub's merge commits `89eaf784` and `702e77dd`. Both already use TypeScript 7/Oxc, and both logs confirm a Next.js cache miss. This isolates the bundler/Serwist change from the earlier compiler migration and from incremental-cache reuse.
+
+Both Build jobs use `ubuntu-24.04` image `20260907.300.1`, Node 24.20.0 and npm 11.19.0. Step/job times come from GitHub's timestamps, rounded to whole seconds; Docker command times come from BuildKit's `DONE` records. Each before/after result is one observed run, not a repeated-run median.
+
+| Measurement                                                  | Webpack | Turbopack + Serwist CLI | Change                  |
+| ------------------------------------------------------------ | ------: | ----------------------: | ----------------------- |
+| Build workflow: complete `npm run build`, Next.js cache miss |   147 s |                    52 s | 64.6% less time (2.83×) |
+| Entire Build job, including setup/install/cache/smoke test   |   203 s |                   101 s | 50.2% less time         |
+| Preview Docker: `RUN npm run build`                          | 163.4 s |                  79.0 s | 51.7% less time (2.07×) |
+| Entire preview image build-and-push job                      |   328 s |                   362 s | 10.4% more time         |
+| Preview workflow, first job start to final job completion    |   412 s |                   439 s | 6.6% more time          |
+
+The complete build commands include type checking and service-worker generation. The Build job's npm download cache hit before and missed after; installation took 31 s and 29 s, respectively. Neither used a restored Next.js cache. Preview Docker builds use Linux/amd64 and the unchanged Dockerfile/layer-cache setup; both `npm run build` layers actually executed. Docker does not restore the normal Build job's `.next/cache`.
+
+Compilation improved, but these samples do **not** demonstrate faster preview deployments. The new dependencies invalidated Docker's cached installation layer (42.3 s after versus a cache hit before). Image export/upload took 130.4 s after versus 69.2 s before, and the separate Sentry upload step took 25.2 s versus 17.5 s. Those costs offset the compilation gain. Whole-job duration includes setup/cleanup; preview workflow elapsed time also includes waits between jobs. Queue time before the first job is excluded, and parallel job durations are not summed.
+
+### Cache reuse and run variability
+
+A later Build run at head `fa06d02f` restored the compatible cache saved by `c2206c06`: **21 s** for `npm run build`, **78 s** for the entire job. This was a restore-key hit after source changes, not an unchanged-repeat benchmark: `dev` had advanced to `8de93300` with #2552, and GitHub tested merge commit `9099015c`. The cache restored in 5 s and the new entry saved in 6 s. This verifies that the simple CI cache works across compatible source changes; it is not a measured warm-Webpack comparison.
+
+Four consecutive successful Webpack Build runs in this PR took **136, 141, 156 and 147 s** for the build command (median **144 s**), versus **52 s** for the first cold Turbopack run. Three completed Webpack preview runs took **175.2, 156.2 and 163.4 s** for Docker's build command, while their entire image jobs ranged from **306 to 444 s**. This variation is why the report separates compilation from deployment and does not extrapolate a single run to all CI workloads.
+
+### Source runs
+
+| Head and condition                                       | Build workflow                                                     | Preview workflow                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `0cd49bca`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35181950899) | Cancelled; excluded                                                |
+| `c47b0e57`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35182356199) | [Run](https://github.com/pubky/pubky-app/actions/runs/35182356426) |
+| `11326f0f`, Webpack, no Next.js cache restore            | [Run](https://github.com/pubky/pubky-app/actions/runs/35183089235) | [Run](https://github.com/pubky/pubky-app/actions/runs/35183089596) |
+| `80c2e031`, Webpack, Next.js cache miss                  | [Run](https://github.com/pubky/pubky-app/actions/runs/35184138730) | [Run](https://github.com/pubky/pubky-app/actions/runs/35184138930) |
+| `c2206c06`, Turbopack, Next.js cache miss                | [Run](https://github.com/pubky/pubky-app/actions/runs/35185281615) | [Run](https://github.com/pubky/pubky-app/actions/runs/35185281786) |
+| `fa06d02f`, Turbopack, compatible Next.js cache restored | [Run](https://github.com/pubky/pubky-app/actions/runs/35186756262) | Not used in this comparison                                        |
+
+## Bundler verification
 
 - Clean `npm ci`, formatting, lint, type checking and workflow validation pass. The full unit suite passes **13,791 tests**, with **2 skipped**, including **12** service-worker registration checks.
 - Chromium verifies upgrading an installed Webpack worker to the new worker at the same `/sw.js` URL and `/` scope, shared text/file redirects, cached assets offline, and no page errors. All **69 public assets** retain identical URLs and revisions. Emitted fonts are cached; source maps are excluded.
