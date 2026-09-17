@@ -9,7 +9,8 @@ import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate/useServic
  * PwaManager
  *
  * No-UI organism (same role as CoordinatorsManager) that mounts the installed-app
- * lifecycle hooks once: service worker registration and the update toast, offline /
+ * lifecycle hooks once: the service worker update flow (registration itself belongs to
+ * ServiceWorkerRegistrationProvider), offline /
  * online toasts, the unread app badge, and the install-prompt capture.
  *
  * Mounted outside RouteGuardProvider and DatabaseProvider so it runs on every route

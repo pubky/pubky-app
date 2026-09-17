@@ -3,7 +3,8 @@
 import type { ToastVariant } from '@/atoms/Toast/Toast.variants';
 import type { ToastActionDescriptor } from './toast';
 
-// Max number of toasts visible at once
+// Max number of transient toasts visible at once. Persistent toasts (see `persistent` in
+// toast.ts) are exempt: they stack next to the transient one until acted on or dismissed.
 const TOAST_LIMIT = 1;
 // Delay before removing a dismissed toast from React state (after visual dismiss)
 export const TOAST_REMOVE_DELAY = 20_000;
@@ -38,7 +39,7 @@ export function genId() {
 }
 
 // Pending timers per toast id. Cleared when the toast leaves state early
-// (limit eviction, manual dismiss) so no timer ever fires for an absent toast.
+// (transient limit eviction, manual dismiss) so no timer ever fires for an absent toast.
 const dismissTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 const removeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -61,10 +62,10 @@ const reducer = (state: State, action: Action): State => {
       // Persistent toasts hold state the user must resolve, so they never count toward the
       // limit and are never evicted by it; only transient toasts compete for TOAST_LIMIT.
       const toasts = [action.toast, ...state.toasts];
-      let transientLeft = TOAST_LIMIT;
+      const keptTransient = toasts.filter((t) => !t.persistent).slice(0, TOAST_LIMIT);
       return {
         ...state,
-        toasts: toasts.filter((t) => t.persistent || transientLeft-- > 0),
+        toasts: toasts.filter((t) => t.persistent || keptTransient.includes(t)),
       };
     }
 

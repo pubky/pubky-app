@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import type {} from '@serwist/next/typings';
 import { SW_UPDATE_CHECK_MIN_INTERVAL_MS } from '@/config/pwa';
-import { toast, type ToastHandle } from '@/molecules/Toaster/toast';
+import { toast, type ToastHandle, type ToastOptions } from '@/molecules/Toaster/toast';
 
 /**
  * Runs the user-consented service worker update flow.
@@ -15,11 +15,13 @@ import { toast, type ToastHandle } from '@/molecules/Toaster/toast';
  * `isUpdate` flag at register time.
  *
  * The worker is built with `skipWaiting: false`, so a new version installs and waits.
- * - A waiting worker gets one persistent "Update available" toast per worker; Reload posts
- *   `SKIP_WAITING`, and only the tab that accepted reloads once the new worker controls it.
+ * - At most one update toast is shown at a time; a newer state replaces it. A waiting
+ *   worker gets a persistent "Update available" prompt once; Reload posts `SKIP_WAITING`
+ *   to whichever worker is waiting at that moment, and only the tab that accepted reloads
+ *   once the new worker controls it.
  * - Other open tabs are claimed by the new worker too (`clientsClaim`); they keep their
- *   in-progress state and get an "Update installed" toast with a Reload action instead of
- *   being reloaded underneath the user.
+ *   in-progress state and get an "Update installed" prompt with a Reload action instead
+ *   of being reloaded underneath the user.
  * - On every return to the tab the registration is re-checked for a newer waiting worker,
  *   and `registration.update()` is requested at most once per `SW_UPDATE_CHECK_MIN_INTERVAL_MS`.
  *
@@ -33,65 +35,82 @@ export function useServiceWorkerUpdate() {
 
     let disposed = false;
     let registration: ServiceWorkerRegistration | undefined;
-    // The worker the user was last prompted about: a dismissed toast is not re-shown for the
+    // The worker the user was last prompted about: a dismissed prompt is not re-shown for the
     // same worker, but a newer waiting worker gets a fresh prompt.
     let promptedWorker: ServiceWorker | null = null;
-    let updatePrompt: ToastHandle | undefined;
+    let prompt: ToastHandle | undefined;
     let acceptedUpdate = false;
-    // A controller change on a page that already had a controller is an update taking over;
-    // without one it is the first install claiming the page.
+    // A controller change on a page that already had a controller, or that was prompted about
+    // a waiting worker, is an update taking over; otherwise it is the first install claiming
+    // the page (a hard reload bypasses the worker, so a controlled origin can still load uncontrolled).
     let hadController = Boolean(container.controller);
     let lastUpdateCheckAt = Date.now();
+    const workerListeners = new Map<ServiceWorker, () => void>();
+
+    // One update toast at a time: the newest state replaces whatever was showing.
+    const showPrompt = (options: ToastOptions) => {
+      prompt?.dismiss();
+      prompt = toast(options);
+    };
+
+    const acceptUpdate = () => {
+      // Read the live waiting worker: the one this prompt was created for may have been
+      // superseded by a newer install (and would be `redundant`, which cannot be messaged).
+      const waiting = registration?.waiting;
+      if (!waiting) return;
+      acceptedUpdate = true;
+      waiting.postMessage({ type: 'SKIP_WAITING' });
+    };
 
     const promptForWaitingWorker = () => {
+      if (disposed) return;
       const waiting = registration?.waiting;
       if (!waiting || waiting === promptedWorker) return;
       promptedWorker = waiting;
-      updatePrompt = toast({
+      showPrompt({
         variant: 'info',
         title: 'Update available',
         description: 'Reload to get the latest version.',
         persistent: true,
         dismissButton: true,
-        action: {
-          label: 'Reload',
-          altText: 'Reload to update',
-          onClick: () => {
-            acceptedUpdate = true;
-            waiting.postMessage({ type: 'SKIP_WAITING' });
-          },
-        },
+        action: { label: 'Reload', altText: 'Reload to update', onClick: acceptUpdate },
       });
     };
 
+    const untrack = (worker: ServiceWorker) => {
+      workerListeners.get(worker)?.();
+      workerListeners.delete(worker);
+    };
+
     const trackInstalling = (worker: ServiceWorker | null) => {
-      if (!worker) return;
-      worker.addEventListener('statechange', () => {
+      if (!worker || workerListeners.has(worker)) return;
+      const onStateChange = () => {
         if (worker.state === 'installed') promptForWaitingWorker();
-      });
+        if (worker.state === 'activated' || worker.state === 'redundant') untrack(worker);
+      };
+      worker.addEventListener('statechange', onStateChange);
+      workerListeners.set(worker, () => worker.removeEventListener('statechange', onStateChange));
     };
 
     const onUpdateFound = () => trackInstalling(registration?.installing ?? null);
 
     const onControllerChange = () => {
+      if (disposed) return;
       if (acceptedUpdate) {
         window.location.reload();
         return;
       }
-      // The worker this tab was prompted about has taken over (accepted elsewhere).
-      updatePrompt?.dismiss();
-      updatePrompt = undefined;
-      if (hadController) {
-        toast({
-          variant: 'info',
-          title: 'Update installed',
-          description: 'Reload to finish updating.',
-          persistent: true,
-          dismissButton: true,
-          action: { label: 'Reload', altText: 'Reload to finish updating', onClick: () => window.location.reload() },
-        });
-      }
+      const isUpdate = hadController || promptedWorker !== null;
       hadController = true;
+      if (!isUpdate) return;
+      showPrompt({
+        variant: 'info',
+        title: 'Update installed',
+        description: 'Reload to finish updating.',
+        persistent: true,
+        dismissButton: true,
+        action: { label: 'Reload', altText: 'Reload to finish updating', onClick: () => window.location.reload() },
+      });
     };
 
     const onVisibilityChange = () => {
@@ -121,6 +140,8 @@ export function useServiceWorkerUpdate() {
       container.removeEventListener('controllerchange', onControllerChange);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       registration?.removeEventListener('updatefound', onUpdateFound);
+      workerListeners.forEach((remove) => remove());
+      workerListeners.clear();
     };
   }, []);
 }

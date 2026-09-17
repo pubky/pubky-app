@@ -75,7 +75,6 @@ const withSerwist = withSerwistInit({
     'manifest.json',
     'pubky-logo.svg',
     'pubky-favicon.svg',
-    'images/*.svg',
     'images/manifest/web-app-manifest-{48x48,72x72,96x96,128x128,144x144,152x152,180x180,192x192,384x384,512x512,512x512-maskable}.png',
   ],
   // The largest chunk is ~1.75 MB; an over-limit chunk is dropped with only a build warning

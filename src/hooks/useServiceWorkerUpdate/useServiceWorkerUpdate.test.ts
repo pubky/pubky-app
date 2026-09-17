@@ -75,6 +75,10 @@ function lastToastOptions() {
   return calls[calls.length - 1][0];
 }
 
+function toastHandle(index: number) {
+  return vi.mocked(toast).mock.results[index].value as { dismiss: ReturnType<typeof vi.fn> };
+}
+
 describe('useServiceWorkerUpdate', () => {
   const reload = vi.fn();
   const originalLocation = window.location;
@@ -144,7 +148,7 @@ describe('useServiceWorkerUpdate', () => {
     expect(lastToastOptions().title).toBe('Update available');
   });
 
-  it('prompts again for a newer waiting worker found on a tab return', async () => {
+  it('replaces the prompt for a newer waiting worker found on a tab return', async () => {
     const registration = createRegistration();
     registration.waiting = createWorker('installed');
     installServiceWorker({ controlled: true, registration });
@@ -156,6 +160,32 @@ describe('useServiceWorkerUpdate', () => {
     setVisibility('visible');
 
     expect(vi.mocked(toast)).toHaveBeenCalledTimes(2);
+    expect(toastHandle(0).dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts whichever worker is waiting at click time, never a superseded one', async () => {
+    const registration = createRegistration();
+    const first = createWorker('installed');
+    registration.waiting = first;
+    const container = installServiceWorker({ controlled: true, registration });
+    renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
+    const staleAction = lastToastOptions().action;
+
+    // A newer worker took the waiting slot; the first one is redundant and cannot be messaged.
+    const newer = createWorker('installed');
+    registration.waiting = newer;
+    first.state = 'redundant';
+
+    staleAction?.onClick();
+    expect(first.postMessage).not.toHaveBeenCalled();
+    expect(newer.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+
+    // Nothing waiting any more: accepting is a no-op and must not arm a later forced reload.
+    registration.waiting = null;
+    staleAction?.onClick();
+    container.emit('controllerchange');
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('reloads only the tab that accepted, even when it loaded without a controller', async () => {
@@ -215,6 +245,26 @@ describe('useServiceWorkerUpdate', () => {
     expect(vi.mocked(toast)).not.toHaveBeenCalled();
     container.emit('controllerchange');
     expect(lastToastOptions().title).toBe('Update installed');
+
+    // A further takeover replaces the previous notice instead of stacking another.
+    container.emit('controllerchange');
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(2);
+    expect(toastHandle(0).dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('notifies an uncontrolled tab that was prompted when the update is accepted elsewhere', async () => {
+    const registration = createRegistration();
+    registration.waiting = createWorker('installed');
+    const container = installServiceWorker({ controlled: false, registration });
+    renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
+    expect(lastToastOptions().title).toBe('Update available');
+
+    container.emit('controllerchange');
+
+    expect(reload).not.toHaveBeenCalled();
+    expect(toastHandle(0).dismiss).toHaveBeenCalledTimes(1);
+    expect(lastToastOptions().title).toBe('Update installed');
   });
 
   it('throttles registration.update() checks to the configured interval', async () => {
@@ -235,15 +285,39 @@ describe('useServiceWorkerUpdate', () => {
     expect(registration.update).toHaveBeenCalledTimes(1);
   });
 
-  it('removes its listeners on unmount', async () => {
+  it('removes its listeners on unmount, including per-worker ones, and stops prompting', async () => {
     const registration = createRegistration();
     const container = installServiceWorker({ controlled: true, registration });
     const { unmount } = renderHook(() => useServiceWorkerUpdate());
     await flushReady();
+    const installing = createWorker('installing');
+    registration.installing = installing;
+    registration.emit('updatefound');
+    expect(installing.listenerCount('statechange')).toBe(1);
 
     unmount();
 
     expect(container.listenerCount('controllerchange')).toBe(0);
     expect(registration.listenerCount('updatefound')).toBe(0);
+    expect(installing.listenerCount('statechange')).toBe(0);
+    installing.state = 'installed';
+    registration.waiting = installing;
+    setVisibility('visible');
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
+  it('stops tracking a worker once it activates or becomes redundant', async () => {
+    const registration = createRegistration();
+    installServiceWorker({ controlled: true, registration });
+    renderHook(() => useServiceWorkerUpdate());
+    await flushReady();
+    const installing = createWorker('installing');
+    registration.installing = installing;
+    registration.emit('updatefound');
+
+    installing.state = 'redundant';
+    installing.emit('statechange');
+
+    expect(installing.listenerCount('statechange')).toBe(0);
   });
 });

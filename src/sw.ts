@@ -86,8 +86,13 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
     Promise.all([
       caches.delete('api-cache'),
       new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('serwist-expiration');
-        request.onsuccess = request.onerror = request.onblocked = () => resolve();
+        // Best effort: IndexedDB can be unavailable to the worker (blocked site data, some WebViews).
+        try {
+          const request = indexedDB.deleteDatabase('serwist-expiration');
+          request.onsuccess = request.onerror = request.onblocked = () => resolve();
+        } catch {
+          resolve();
+        }
       }),
     ]),
   );

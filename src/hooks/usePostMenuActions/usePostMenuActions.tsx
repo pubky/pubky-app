@@ -99,14 +99,8 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
     label: 'Copy pubky',
     icon: Key,
     onClick: async () => {
-      try {
-        await copyPubky(withPubkyPrefix(postAuthorId));
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-        });
-      }
+      // useCopyToClipboard reports its own success/failure toasts and never throws.
+      await copyPubky(withPubkyPrefix(postAuthorId));
     },
     variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
   });
@@ -126,14 +120,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       label: 'Copy text of post',
       icon: FileText,
       onClick: async () => {
-        try {
-          await copyText(postDetails?.content ?? '');
-        } catch (error) {
-          toast({
-            variant: 'error',
-            description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-          });
-        }
+        await copyText(postDetails?.content ?? '');
       },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });

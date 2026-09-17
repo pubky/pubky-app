@@ -48,10 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       */}
       <StructuredData />
       <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
-        {/*
-          ServiceWorkerRegistrationProvider registers the worker in its own effect, which runs after
-          the effects of everything it wraps, so PwaManager's update listeners are attached first.
-        */}
+        {/* ServiceWorkerRegistrationProvider owns registration; PwaManager only listens to the browser's registration. */}
         <ServiceWorkerRegistrationProvider>
           <GlobalErrorHandlerProvider>
             {/*
@@ -60,7 +57,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               providers below show their spinners and after a page render error swaps the tree for
               the error fallback. The Toaster sits here for the same reason (its viewport is fixed,
               so DOM position does not matter) and so the global error handler above always has a
-              viewport to render into.
+              viewport to render into. Both render no throwing UI of their own; a render error in
+              either would reach app/global-error.tsx.
             */}
             <PwaManager />
             <Toaster />

@@ -22,7 +22,7 @@ How the installed-app layer works, what the service worker is allowed to do, and
 
 ## What the service worker does
 
-1. **Precaches the app shell**: every `_next/static` asset the build emits plus an allow-list of `public/` files (icons, manifest, logos, in-app illustrations, `offline.html`). See _Precache diet_ below.
+1. **Precaches the app shell**: every `_next/static` asset the build emits plus a short allow-list of `public/` files (`offline.html`, the manifest, the logos, the manifest icons). See _Precache diet_ below.
 2. **Handles the share target**: a `POST /share` from the OS share sheet is turned into a `303` to `/share?…` with any files stashed in the `share-target-files` cache (see `src/libs/share/shareTarget.ts`).
 3. **Serves an offline fallback for navigations**: same-origin page navigations go to the network (`NetworkOnly`, consuming navigation preload). When the fetch itself fails (offline, DNS), Serwist's `fallbacks` returns the precached `offline.html`. An HTTP error response is passed through untouched.
 
@@ -51,7 +51,7 @@ Do not replace it with a Next route: `/offline` under the root layout would rend
 
 ## Precache diet
 
-`@serwist/next` globs `public/` into the precache on top of `_next/static`. Those public entries bypass `exclude` and `maximumFileSizeToCacheInBytes` (they are appended last by `@serwist/build`), so `globPublicPatterns` in `next.config.ts` is the only size control for public assets. It is a purely additive allow-list: `offline.html`, the manifest, the two logos, the SVGs under `images/`, and the manifest icons by name. In-app illustrations, landing media, `pubky.mp4`, `franky.png`, the og:image and the manifest screenshots stay out (the app never boots offline, so nothing beyond the offline page and the shell chunks is needed, and a precache install is all-or-nothing). Adding a public file to the precache means adding its name here.
+`@serwist/next` globs `public/` into the precache on top of `_next/static`. Those public entries bypass `exclude` and `maximumFileSizeToCacheInBytes` (they are appended last by `@serwist/build`), so `globPublicPatterns` in `next.config.ts` is the only size control for public assets. It is a purely additive allow-list: `offline.html`, the manifest, the two logos, and the manifest icons by name. In-app illustrations, landing media, `pubky.mp4`, `franky.png`, the og:image and the manifest screenshots stay out (the app never boots offline, so nothing beyond the offline page and the shell chunks is needed, and a precache install is all-or-nothing). Adding a public file to the precache means adding its name here.
 
 Read the `(serwist)` line in the build output: it lists how many URLs are precached and their total size. A jump in either is the signal that a new large `public/` file matched the allow-list, or that `exclude` was set without keeping `/\.map$/` (source maps are ~30 MB).
 

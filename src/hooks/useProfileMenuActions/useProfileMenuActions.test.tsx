@@ -386,10 +386,8 @@ describe('useProfileMenuActions', () => {
       expect(defaultMocks.shareUrl).toHaveBeenCalledWith(`https://example.com/profile/${mockUserId}`);
     });
 
-    it('shows error toast when copy pubky fails', async () => {
-      const error = new Error('Copy failed');
-      vi.mocked(isAppError).mockReturnValue(false);
-      defaultMocks.copyToClipboard.mockRejectedValue(error);
+    it('stays silent when copying the pubky fails (useCopyToClipboard owns the feedback)', async () => {
+      defaultMocks.copyToClipboard.mockResolvedValue(false);
 
       const { result } = renderHook(() => useProfileMenuActions(mockUserId));
 
@@ -399,12 +397,8 @@ describe('useProfileMenuActions', () => {
         await copyPubkyItem?.onClick();
       });
 
-      await waitFor(() => {
-        expect(vi.mocked(toast)).toHaveBeenCalledWith({
-          variant: 'error',
-          description: 'Could not copy to clipboard',
-        });
-      });
+      expect(defaultMocks.copyToClipboard).toHaveBeenCalledWith(`pubky${mockUserId}`);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
     });
 
     it('stays silent when the share sheet is dismissed (useShareUrl owns the feedback)', async () => {

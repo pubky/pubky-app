@@ -64,14 +64,8 @@ export function useProfileMenuActions(userId: string): UseProfileMenuActionsResu
     label: 'Copy user pubky',
     icon: Key,
     onClick: async () => {
-      try {
-        await copyPubky(withPubkyPrefix(userId));
-      } catch (error) {
-        toast({
-          variant: 'error',
-          description: isAppError(error) ? error.message : 'Could not copy to clipboard',
-        });
-      }
+      // useCopyToClipboard reports its own success/failure toasts and never throws.
+      await copyPubky(withPubkyPrefix(userId));
     },
   });
 

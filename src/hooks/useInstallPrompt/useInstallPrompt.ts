@@ -76,7 +76,7 @@ export function useInstallPrompt(): UseInstallPromptResult {
   }, [currentUserPubky, eligible]);
 
   const due = Boolean(currentUserPubky) && reminder.pubky === currentUserPubky && reminder.due;
-  const visible = eligible && Boolean(currentUserPubky) && !hasPendingBackup && due;
+  const visible = eligible && !hasPendingBackup && due;
 
   const remindLater = () => {
     if (currentUserPubky && visible) snoozeInstallReminder(currentUserPubky);
