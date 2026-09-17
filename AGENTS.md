@@ -16,7 +16,7 @@ Node 24 (`.nvmrc`), dependencies via `npm ci`. The pre-commit hook runs `lint-st
 | Unit tests (jsdom)      | `npm test` (~13k tests, minutes); one file `npm test -- <path>`; one name `npm test -- -t "x"` |
 | Snapshots               | `npm run test:update-snapshots`                                                                |
 | Visual regression (VRT) | `npm run test:vrt` (`npm run test:vrt:setup` once); baselines are CI-owned, never commit local |
-| Production build        | `npm run build` (`next build --webpack`)                                                       |
+| Production build        | `npm run build` (Turbopack, then Serwist)                                                      |
 | E2E (Cypress)           | `npm run test:e2e`; needs the full pubky-stack, not runnable from a bare checkout              |
 
 ## Architecture (`src/core`)

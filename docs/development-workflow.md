@@ -81,7 +81,8 @@ npm test -- -t "snapshot"                                 # one name pattern
 npm run test:update-snapshots
 npm run test:vrt                       # vitest --project vrt (chromium+firefox+webkit; needs npm run test:vrt:setup once)
 npm run test:vrt:check-baselines       # every __screenshots__ folder has a sibling test
-npm run build                          # next build --webpack (CI also smoke-tests `next start`)
+npm run build                          # Turbopack build, then Serwist (CI smoke-tests `next start` and /sw.js)
+npm run build:sw                       # regenerate public/sw.js from an existing Next.js build
 npm run start:e2e                      # cypress open, interactive
 npm run test:e2e                       # cypress run, firefox (needs the full pubky-stack)
 ```
@@ -96,6 +97,10 @@ Right-sized verification:
 - Cypress e2e needs the full pubky-stack (private `pubky/pubky-stack`) and runs on push to `master`/`dev` in CI. Do not attempt it from a bare checkout, and do not report an e2e result you did not obtain.
 
 The Build workflow caches `.next/cache` separately from setup-node's npm download cache. Cache keys separate runner OS/architecture, dependencies and build configuration; source changes restore the most recent compatible cache and save a new entry after a successful job. A missing cache simply causes a fresh build. Docker retains its existing layer caching; it does not transfer Next.js's incremental cache between fresh CI builders.
+
+Production builds use Next.js's default Turbopack bundler. Serwist 9.5.12 runs afterward in configurator mode (`serwist.config.mjs`), emitting `public/sw.js`; do not deploy the output of `next build` alone. Docker copies that worker with the other public assets. `@serwist/cli` uses esbuild to bundle the worker; TypeScript 7 remains the sole type checker. The config includes emitted font files and excludes source maps, with `precachePrerendered: false` to preserve the existing asset-only precache policy.
+
+`ServiceWorkerRegistrationProvider` creates the Serwist browser client directly, registers `/sw.js` as a classic worker at scope `/`, handles registration failures and reloads when connectivity returns. Registration stays disabled in development. There is no bundler-injected `window.serwist` dependency. The worker's share-target handler and Nexus-only runtime caching remain in `src/sw.ts`; the migration does not introduce Serwist's broader `defaultCache` rules.
 
 Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; `describe('<Component>')` plus a separate `describe('<Component> - Snapshots')` with exactly one `expect().toMatchSnapshot()` per test; mobile blocks (`- Mobile Snapshots`) for organisms/templates that use `useIsMobile` directly or through a child, via `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are Oxlint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
 
