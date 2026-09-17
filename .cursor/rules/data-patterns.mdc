@@ -1,6 +1,6 @@
 ---
 description: Data patterns - composite IDs, streams, TTL, pipes normalization
-globs: src/core/**/*
+globs: src/core/**/*,src/hooks/**/*
 alwaysApply: false
 ---
 

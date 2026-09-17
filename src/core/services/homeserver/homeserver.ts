@@ -28,6 +28,7 @@ import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
+import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky as TPubkyModel } from '@/models/models.types';
 import type {
@@ -110,7 +111,8 @@ export class HomeserverService {
   /**
    * Resolves the key's homeserver from its PKARR record.
    * @returns The homeserver public key, or `null` when the record is provably absent
-   * @throws When the lookup itself failed (relay/network error) — absence NOT proven
+   * @throws When the lookup itself failed (relay/network error) — absence NOT proven.
+   *   The SDK rejects with `PkarrError`, which is mapped to a retryable Network error.
    */
   private static async resolveHomeserverRecord({ publicKey }: THomeserverPublicKeyParams) {
     try {
@@ -120,7 +122,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { publicKey: publicKey?.z32?.() },
+        additionalContext: { publicKey: publicKey?.z32?.(), operation: 'resolveHomeserverRecord' },
       });
     }
   }
@@ -134,7 +136,8 @@ export class HomeserverService {
    * force-republish this guard exists to prevent (#2126). This also means a key
    * whose just-published record has not yet propagated to our relays is rejected
    * until it propagates. Only a lookup that itself failed (relay/network error)
-   * throws a retryable server error instead.
+   * throws a retryable error instead (Network for the SDK's `PkarrError`,
+   * Server for anything else).
    */
   static async assertUserHomeserverAllowed({ publicKey }: THomeserverPublicKeyParams): Promise<void> {
     if (!isStagingHomeserverDeploy()) {
@@ -175,7 +178,8 @@ export class HomeserverService {
     try {
       const homeserverPublicKey = PublicKey.from(getHomeserver());
       const signer = this.getSigner(keypair);
-      const session = await signer.signup(homeserverPublicKey, signupToken);
+      // Cookie-backed session on purpose: the grant-auth migration is tracked separately.
+      const session = await signer.signupCookie(homeserverPublicKey, signupToken);
 
       Logger.debug('Signup successful', { session });
 
@@ -183,7 +187,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { signupTokenProvided: Boolean(signupToken) },
+        additionalContext: { signupTokenProvided: Boolean(signupToken), operation: 'signUp' },
         statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
         alwaysUseHomeserverError: true,
       });
@@ -271,7 +275,8 @@ export class HomeserverService {
     }
 
     try {
-      const session = await signer.signin();
+      // Cookie-backed session on purpose: the grant-auth migration is tracked separately.
+      const session = await signer.signinCookie();
       return { session };
     } catch (signinError) {
       return await this.republishConfiguredHomeserver({ signer, keypair, originalError: signinError });
@@ -295,7 +300,11 @@ export class HomeserverService {
     } catch (republishError) {
       return handleError({
         error: republishError,
-        additionalContext: { pubky: Identity.pubkyFromKeypair(keypair), originalSigninError: String(originalError) },
+        additionalContext: {
+          pubky: Identity.pubkyFromKeypair(keypair),
+          originalSigninError: String(originalError),
+          operation: 'republishConfiguredHomeserver',
+        },
         statusCode: HttpStatusCode.UNAUTHORIZED,
       });
     }
@@ -311,7 +320,8 @@ export class HomeserverService {
 
     try {
       const pubkySdk = this.getPubkySdk();
-      const flow = pubkySdk.startAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay());
+      // Cookie auth flow on purpose: the grant-auth migration is tracked separately.
+      const flow = pubkySdk.startCookieAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay());
       const approval = createCancelableAuthApproval(flow);
 
       return {
@@ -650,7 +660,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { sessionExport: Boolean(sessionExport) },
+        additionalContext: { sessionExport: Boolean(sessionExport), operation: 'restoreSession' },
       });
     }
   }
@@ -719,9 +729,11 @@ export class HomeserverService {
 
       return this.normalizeUserEventStream(stream);
     } catch (error) {
+      // `operation` is matched by the `homeserver-event-stream-connect` Sentry drop rule:
+      // the mute-list coordinator reconnects on connect failures by design.
       return handleError({
         error,
-        additionalContext: { pathPrefix: params.pathPrefix },
+        additionalContext: { pathPrefix: params.pathPrefix, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },
       });
     }
   }

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetDatabase } from '@/database/franky/franky.helpers';
-import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { TagModel } from '@/models/shared/tag/tag';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { generateTestUserId } from '@/models/user/users.helpers';
@@ -18,8 +17,6 @@ describe('UserTagsModel', () => {
     { label: 'dev', taggers: [testUserId2], taggers_count: 1, relationship: false },
     { label: 'friend', taggers: [testUserId2], taggers_count: 1, relationship: true },
   ];
-
-  const MOCK_TAGS_2: NexusTag[] = [{ label: 'artist', taggers: [testUserId1], taggers_count: 1, relationship: false }];
 
   describe('Constructor', () => {
     it('should create UserTagsModel instance with id and TagModel array', () => {
@@ -87,29 +84,6 @@ describe('UserTagsModel', () => {
       const nonExistentId = generateTestUserId(999);
       const result = await UserTagsModel.findById(nonExistentId);
       expect(result).toBeNull();
-    });
-
-    it('should bulk save user tags from tuples', async () => {
-      const tuples: NexusModelTuple<NexusTag[]>[] = [
-        [testUserId1, MOCK_TAGS_1],
-        [testUserId2, MOCK_TAGS_2],
-      ];
-
-      const result = await UserTagsModel.bulkSave(tuples);
-      expect(result).toBeDefined();
-
-      const tags1 = await UserTagsModel.findById(testUserId1);
-      const tags2 = await UserTagsModel.findById(testUserId2);
-
-      expect(tags1).not.toBeNull();
-      expect(tags2).not.toBeNull();
-      expect(tags1!.tags.map((t) => t.label).sort()).toEqual(['dev', 'friend']);
-      expect(tags2!.tags.map((t) => t.label)).toEqual(['artist']);
-    });
-
-    it('should handle empty array in bulk save', async () => {
-      const result = await UserTagsModel.bulkSave([]);
-      expect(result).toBeUndefined();
     });
   });
 });

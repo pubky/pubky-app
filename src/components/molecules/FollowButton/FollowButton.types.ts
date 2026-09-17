@@ -13,5 +13,7 @@ export interface FollowButtonProps {
   displayName: string;
   /** `icon` renders a circular icon-only button; `iconWithText` renders a labelled button */
   variant: FollowButtonVariant;
+  /** Disables the button without the in-flight spinner, e.g. while the surrounding screen commits */
+  disabled?: boolean;
   onClick: (e: MouseEvent) => void;
 }

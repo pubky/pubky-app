@@ -2,14 +2,18 @@
 
 import type { ReactNode } from 'react';
 import { Container } from '@/atoms/Container/Container';
-import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS } from '@/config/feed';
+import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
+import type { UsePostListKeyboardResult } from '@/hooks/usePostListKeyboard/usePostListKeyboard.types';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { cn } from '@/libs/utils/utils';
 import { TimelineEndMessage } from '@/molecules/Timeline/TimelineEndMessage';
 import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
+import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
 import { PostMain } from '../../../PostMain/PostMain';
 import { GridPostsSkeleton } from './GridPosts.skeleton';
@@ -61,6 +65,36 @@ interface TimelineGridPostsProps {
 const GRID_TRAILING_CELL_CLASS =
   '@container/grid block h-full w-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1';
 
+function GridPost({
+  postId,
+  index,
+  totalCount,
+  setCardRef,
+}: {
+  postId: string;
+  index: number;
+  totalCount: number;
+  setCardRef: UsePostListKeyboardResult['setCardRef'];
+}) {
+  const visibility = usePostHeaderVisibility(postId);
+  const displayedPostId = getDisplayedPostId(postId, visibility);
+  const { handlePostKeyDown } = usePostNavigation();
+  return (
+    <Container
+      data-cy="post-card"
+      ref={setCardRef(index)}
+      role="article"
+      aria-posinset={index + 1}
+      aria-setsize={totalCount}
+      tabIndex={0}
+      onKeyDown={(e) => handlePostKeyDown(displayedPostId, e)}
+      className="@container/grid rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
+    >
+      <PostMain postId={postId} isReply={false} />
+    </Container>
+  );
+}
+
 export function TimelineGridPosts({
   postIds,
   loading,
@@ -72,15 +106,18 @@ export function TimelineGridPosts({
   emptyState,
   trailingSlot,
 }: TimelineGridPostsProps) {
-  const { sentinelRef } = useInfiniteScroll({
+  // Rounds that surface nothing new (a long client-side-filtered region) are budgeted;
+  // past the budget the sentinel stops and the manual Load more below takes over (#2523).
+  const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
     onLoadMore: loadMore,
     hasMore,
     isLoading: loadingMore,
     threshold: 3000,
     debounceMs: 20,
+    itemCount: postIds.length,
+    maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 
-  const { handlePostKeyDown } = usePostNavigation();
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
   const hasGridContent = postIds.length > 0 || trailingSlot != null;
   const showEmptyMessageWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
@@ -91,6 +128,7 @@ export function TimelineGridPosts({
       error={error}
       hasItems={hasGridContent}
       hasMore={hasMore}
+      stalled={isStalled}
       loadingComponent={<GridPostsSkeleton />}
       emptyComponent={emptyState}
     >
@@ -108,19 +146,13 @@ export function TimelineGridPosts({
           onKeyDown={onListKeyDown}
         >
           {postIds.map((postId, index) => (
-            <Container
+            <GridPost
               key={`grid_${postId}`}
-              data-cy="post-card"
-              ref={setCardRef(index)}
-              role="article"
-              aria-posinset={index + 1}
-              aria-setsize={postIds.length}
-              tabIndex={0}
-              onKeyDown={(e) => handlePostKeyDown(postId, e)}
-              className="@container/grid rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
-            >
-              <PostMain postId={postId} isReply={false} />
-            </Container>
+              postId={postId}
+              index={index}
+              totalCount={postIds.length}
+              setCardRef={setCardRef}
+            />
           ))}
           {trailingSlot != null ? (
             <Container overrideDefaults className={GRID_TRAILING_CELL_CLASS}>
@@ -137,10 +169,12 @@ export function TimelineGridPosts({
 
         {showEndMessage && !hasMore && !loadingMore && postIds.length > 0 && <TimelineEndMessage />}
 
+        {hasMore && isStalled && !loadingMore && <TimelineLoadMore onLoadMore={resumeAutoLoad} />}
+
         {/* Infinite-scroll sentinel — only mounted (and given height) while there are more
-            posts to observe for. Once the feed reaches its end the observer detaches, so
-            rendering it would just leave dead space below the grid. */}
-        {hasMore && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
+            posts to observe for and auto-loading is not stalled. Once the feed reaches its
+            end the observer detaches, so rendering it would just leave dead space below the grid. */}
+        {hasMore && !isStalled && <Container overrideDefaults className="h-5" ref={sentinelRef} />}
       </Container>
     </TimelineStateWrapper>
   );

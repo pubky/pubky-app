@@ -14,11 +14,12 @@ import type { UsePostHeaderVisibilityResult } from './usePostHeaderVisibility.ty
  *   - Shown for regular posts
  *   - Shown for quote reposts (with text content)
  *   - Shown for reposts with attachments (even without text)
+ *   - Shown for replies with an embedded post (they retain their own thread)
  *   - Shown for reposts by other users
  *   - Shown during loading state (to avoid layout shift)
  *
  * @param postId - Composite post ID in format "authorId:postId"
- * @returns Object with showRepostHeader and shouldShowPostHeader flags
+ * @returns Header visibility flags and the original post ID from the shared repost query
  *
  * @example
  * ```tsx
@@ -34,7 +35,7 @@ import type { UsePostHeaderVisibilityResult } from './usePostHeaderVisibility.ty
  */
 export function usePostHeaderVisibility(postId: string): UsePostHeaderVisibilityResult {
   const { postDetails } = usePostDetails(postId);
-  const { isRepost, isCurrentUserRepost } = useRepostInfo(postId);
+  const { isRepost, isReply, isCurrentUserRepost, originalPostId } = useRepostInfo(postId);
 
   // Determine if post has any content (text or attachments)
   // A repost with attachments but no text should still show the PostHeader
@@ -43,10 +44,11 @@ export function usePostHeaderVisibility(postId: string): UsePostHeaderVisibility
   const hasAttachments = postDetails ? (postDetails.attachments?.length ?? 0) > 0 : false;
   const hasContent = hasTextContent || hasAttachments;
 
-  // A "simple repost" is a repost without any content (no text, no attachments) by the current user
+  // Replies with an embed retain their own identity and thread, even without text or attachments.
+  // A "simple repost" has no content or parent relationship and belongs to the current user.
   // When postDetails is undefined/null, we can't determine content, so treat as not simple repost
   const isSimpleRepostByCurrentUser =
-    isRepost && isCurrentUserRepost && postDetails !== undefined && postDetails !== null && !hasContent;
+    isRepost && !isReply && isCurrentUserRepost && postDetails !== undefined && postDetails !== null && !hasContent;
 
   // Show repost header only for simple reposts (no content) by current user
   // Quote reposts (with text) should not show the "You reposted" header
@@ -59,5 +61,6 @@ export function usePostHeaderVisibility(postId: string): UsePostHeaderVisibility
   return {
     showRepostHeader,
     shouldShowPostHeader,
+    originalPostId,
   };
 }

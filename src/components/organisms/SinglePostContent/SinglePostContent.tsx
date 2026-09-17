@@ -2,6 +2,9 @@
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
+import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
@@ -23,6 +26,12 @@ import type { SinglePostContentProps } from './SinglePostContent.types';
  * - Below: two columns with Replies timeline (larger) and Participants sidebar (smaller)
  */
 export function SinglePostContent({ postId, postDetails }: SinglePostContentProps) {
+  const visibility = usePostHeaderVisibility(postId);
+  const displayedPostId = getDisplayedPostId(postId, visibility);
+  const { postDetails: originalDetails } = usePostDetails(displayedPostId !== postId ? displayedPostId : null);
+  const displayedDetails = displayedPostId === postId ? postDetails : originalDetails;
+  const canReply =
+    !isPostDeleted(postDetails.content) && !!displayedDetails && !isPostDeleted(displayedDetails.content);
   const layout = useHomeStore((state) => state.layout);
   const tagsLayout = getTagsLayoutForSurfaceLayout(layout);
 
@@ -34,7 +43,7 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
   return (
     <PostMainLayoutProvider tagsLayout={tagsLayout}>
       {/* Page header with breadcrumb navigation */}
-      {!isArticle && <PostPageHeader postId={postId} />}
+      {!isArticle && <PostPageHeader postId={canReply ? displayedPostId : postId} />}
 
       {/* Main post - FULL WIDTH - always visible */}
       {isDeleted ? (
@@ -60,7 +69,7 @@ export function SinglePostContent({ postId, postDetails }: SinglePostContentProp
         <Container className="mb-12 w-full min-w-0 flex-1 gap-0 overflow-hidden sm:mb-0">
           {isArticle && <Typography className="text-2xl font-light text-muted-foreground">{'Replies'}</Typography>}
           <Container overrideDefaults className="ml-3">
-            <ThreadTree key={postId} postId={postId} showQuickReply={!isDeleted} />
+            <ThreadTree key={displayedPostId} postId={displayedPostId} showQuickReply={canReply} />
           </Container>
         </Container>
       </Container>

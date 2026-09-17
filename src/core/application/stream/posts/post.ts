@@ -39,12 +39,12 @@ import {
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UnreadPostStreamModel } from '@/models/stream/post/tables/postStream.unread';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
-import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { LocalPostService } from '@/services/local/post/post';
 import type { TStreamResult } from '@/services/local/stream/posts/post.types';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { breakDownStreamId, createPostStreamParams } from '@/services/nexus/stream/posts/postStream.utils';
@@ -63,6 +63,11 @@ export class PostStreamApplication {
     return await LocalStreamPostsService.readUnreadStream({ streamId });
   }
 
+  /**
+   * The Nexus position a fresh pagination session resumes from once the cached ids are
+   * exhausted (see `resolveCachedStreamTailCursor`), or `NOT_FOUND_CACHED_STREAM` when
+   * there is no usable cache.
+   */
   static async getCachedLastPostTimestamp({ streamId }: TStreamIdParams): Promise<number> {
     try {
       const postStream = await LocalStreamPostsService.read({ streamId });
@@ -71,24 +76,47 @@ export class PostStreamApplication {
         return NOT_FOUND_CACHED_STREAM;
       }
 
-      // Iterate backwards through the stream to find the last entry we can resolve
-      // a pagination cursor for. This handles cases where the last PostDetails (or
-      // bookmark row) might be missing.
-      for (let i = postStream.stream.length - 1; i >= 0; i--) {
-        const cursor = await this.getStreamCursorTimestamp(streamId, postStream.stream[i]);
-
-        if (cursor !== undefined) {
-          return cursor;
-        }
-      }
-
-      // No stream entry yielded a cursor, cache is not useful
-      Logger.warn('No cursor found in cached stream', { streamId, streamLength: postStream.stream.length });
-      return NOT_FOUND_CACHED_STREAM;
+      return (await this.resolveCachedStreamTailCursor(streamId, postStream)) ?? NOT_FOUND_CACHED_STREAM;
     } catch (error) {
       Logger.warn('Failed to get timeline initial cursor', { streamId, error });
       return NOT_FOUND_CACHED_STREAM;
     }
+  }
+
+  /**
+   * Resolve the Nexus cursor a cached stream resumes from at the cache→Nexus seam.
+   *
+   * Nexus keeps a post at its original stream position (its score) but bumps the post's
+   * `indexed_at` when it is edited or deleted, so a cursor derived from `indexed_at` can
+   * land above posts that are already cached; the seam then re-serves them and, with the
+   * raw anchor sitting on one of them, never advances (#2523, #1569). The only exact
+   * cursor is the `last_post_score` Nexus returned for the deepest page, persisted on the
+   * row as `tailCursor`. Rows without one (written before it was tracked, or seeded by
+   * bootstrap) fall back once to the last resolvable post timestamp — bookmark time for
+   * bookmark streams — and their first Nexus page persists the real cursor.
+   */
+  private static async resolveCachedStreamTailCursor(
+    streamId: PostStreamId,
+    cachedStream: TStreamResult,
+  ): Promise<number | undefined> {
+    if (cachedStream.tailCursor !== undefined) {
+      return cachedStream.tailCursor;
+    }
+
+    // Iterate backwards through the stream to find the last entry we can resolve
+    // a pagination cursor for. This handles cases where the last PostDetails (or
+    // bookmark row) might be missing.
+    for (let i = cachedStream.stream.length - 1; i >= 0; i--) {
+      const cursor = await this.getStreamCursorTimestamp(streamId, cachedStream.stream[i]);
+
+      if (cursor !== undefined) {
+        return cursor;
+      }
+    }
+
+    // No stream entry yielded a cursor, cache is not useful
+    Logger.warn('No cursor found in cached stream', { streamId, streamLength: cachedStream.stream.length });
+    return undefined;
   }
 
   /**
@@ -355,15 +383,17 @@ export class PostStreamApplication {
     streamHead,
     streamTail,
     lastPostId,
+    visiblePostIds,
     limit,
     viewerId,
+    isCurrent,
     order,
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
     // Skip cache for ascending order (chronological) - always fetch from Nexus
     // This is because cache is stored in descending order
     // TODO: Might be a better way to handle this.
     if (order === StreamOrder.ASCENDING) {
-      return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
+      return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, isCurrent, order });
     }
 
     // Coordinator head-polls (streamHead > 0) only need the fetch side effects (unread
@@ -371,7 +401,7 @@ export class PostStreamApplication {
     // shared pagination queue: routing them through collect() consumes/rewrites the UI's
     // overflow buffer, and with a raw resume anchor those buffered posts would be skipped.
     if (streamHead > SKIP_FETCH_NEW_POSTS) {
-      return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
+      return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, isCurrent, order });
     }
 
     // Author streams and bookmarks intentionally include posts from muted users:
@@ -388,7 +418,7 @@ export class PostStreamApplication {
 
     let lastReturnedPostId: string | undefined = lastPostId;
 
-    const { posts, cacheMissIds, nextCursor, reachedEnd } = await postStreamQueue.collect(streamId, {
+    const { posts, cacheMissIds, nextCursor, reachedEnd, rawScannedCount } = await postStreamQueue.collect(streamId, {
       limit,
       cursor: streamTail,
       // Discover bounds its per-load scan tighter than the shared default: it is a
@@ -404,10 +434,6 @@ export class PostStreamApplication {
           ? PostStreamApplication.filterDiscoverOwnAndBookmarked(standard, viewerId, bookmarkedIds)
           : standard;
       },
-      // Overflow-buffer early returns resolve score cursors stream-aware: bookmark
-      // streams resume by bookmark time, everything else by the post's `indexed_at`.
-      // Without this, the buffered path re-introduces the #2100 pagination seam.
-      cursorForPost: (postId) => PostStreamApplication.getStreamCursorTimestamp(streamId, postId),
       fetch: async (cursor) => {
         // Continue reading from cache using lastReturnedPostId to track position
         // This ensures we exhaust cache before going to Nexus
@@ -418,13 +444,18 @@ export class PostStreamApplication {
           streamHead: SKIP_FETCH_NEW_POSTS,
           streamTail: cursor,
           lastPostId: lastReturnedPostId,
+          visiblePostIds,
           limit,
           viewerId,
+          isCurrent,
           order,
         });
 
-        // Track last returned post for cache continuation
-        if (result.nextPageIds.length > 0) {
+        // Track the raw position for cache continuation: the anchor the fetch positioned in
+        // the row after a Nexus page, else the last id of a cache chunk.
+        if (result.lastRawPostId !== undefined) {
+          lastReturnedPostId = result.lastRawPostId;
+        } else if (result.nextPageIds.length > 0) {
           lastReturnedPostId = result.nextPageIds[result.nextPageIds.length - 1];
         }
 
@@ -439,7 +470,7 @@ export class PostStreamApplication {
       const repostedUris = relationships
         .filter((rel): rel is PostRelationshipsModelSchema => rel !== undefined && rel.reposted !== null)
         .map((rel) => rel.reposted as string);
-      await this.fetchOriginalPostsByUris({ repostedUris, viewerId });
+      await this.fetchOriginalPostsByUris({ repostedUris, viewerId, isCurrent });
     } catch (error) {
       Logger.warn('Failed to fetch missing repost content', { postIds: posts, error });
     }
@@ -452,6 +483,7 @@ export class PostStreamApplication {
       // The raw cache-walk anchor: last raw id scanned this round (buffer-only rounds
       // scan nothing, so it holds at the caller's own lastPostId).
       lastRawPostId: lastReturnedPostId,
+      rawScannedCount,
     };
   }
 
@@ -523,28 +555,51 @@ export class PostStreamApplication {
     streamHead,
     streamTail,
     lastPostId,
+    visiblePostIds,
     limit,
     viewerId,
+    isCurrent,
     order,
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
     // Avoid the indexdb query for skip-paginated streams (engagement + single-collection items):
     // their local cache is timestamp-keyed and incompatible with offset pagination.
+    let seededFromTimestamp = false;
     if (!isSkipPaginatedStream(streamId) && !streamHead) {
       const cachedStream = await LocalStreamPostsService.read({ streamId });
 
-      if (cachedStream) {
-        const cachedStreamChunk = await this.getStreamFromCache({ lastPostId, limit, cachedStream });
+      if (cachedStream && cachedStream.stream.length > 0) {
+        const cachedStreamChunk = await this.getStreamFromCache({ lastPostId, visiblePostIds, limit, cachedStream });
+        // Every cache→Nexus seam resumes from the row's own Nexus cursor — never from the
+        // timestamp of a post in the chunk (see `resolveCachedStreamTailCursor`).
+        const tailCursor = await this.resolveCachedStreamTailCursor(streamId, cachedStream);
+        // A row without a cursor seeds once from a post timestamp, which can overshoot the
+        // row if that post was edited; the seam page is then trimmed to the ids below the row.
+        seededFromTimestamp = cachedStream.tailCursor === undefined;
 
-        // Full cache hit, return with proper cursor for pagination
+        // Full cache hit: the caller keeps walking the cache by id; the cursor it carries is
+        // the position Nexus continues from once the cache runs out.
         if (cachedStreamChunk.length === limit) {
-          const lastCachedPostId = cachedStreamChunk[cachedStreamChunk.length - 1];
-          const nextCursor = await this.getStreamCursorTimestamp(streamId, lastCachedPostId);
-          return { nextPageIds: cachedStreamChunk, cacheMissPostIds: [], nextCursor, reachedEnd: false };
+          return { nextPageIds: cachedStreamChunk, cacheMissPostIds: [], nextCursor: tailCursor, reachedEnd: false };
         }
 
         // Partial cache hit, fetch missing posts from Nexus and combine
-        if (cachedStreamChunk.length > 0 && cachedStreamChunk.length < limit) {
-          return await this.partialCacheHit({ cachedStreamChunk, limit, streamTail, streamId, viewerId });
+        if (cachedStreamChunk.length > 0) {
+          return await this.partialCacheHit({
+            cachedStreamChunk,
+            limit,
+            streamTail: tailCursor ?? streamTail,
+            seededFromTimestamp,
+            streamId,
+            viewerId,
+            isCurrent,
+          });
+        }
+
+        // Cache exhausted (the walk is at the row tail): continue below the deepest page
+        // fetched into it. A lost anchor never lands here — `getStreamFromCache` re-anchors
+        // it — so this cannot skip cached ids the caller has not seen.
+        if (lastPostId && tailCursor !== undefined) {
+          streamTail = tailCursor;
         }
       }
 
@@ -555,7 +610,17 @@ export class PostStreamApplication {
         streamTail = NOT_FOUND_CACHED_STREAM;
       }
     }
-    return await this.fetchStreamFromNexus({ streamId, limit, streamTail, streamHead, viewerId, order });
+    return await this.fetchStreamFromNexus({
+      streamId,
+      limit,
+      streamTail,
+      streamHead,
+      lastPostId,
+      seededFromTimestamp,
+      viewerId,
+      isCurrent,
+      order,
+    });
   }
 
   /**
@@ -568,22 +633,36 @@ export class PostStreamApplication {
    * (they render what the cache has), but callers with strict post-hydration
    * filtering (author-scoped content search) must not mistake it for "no results".
    */
-  static async fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId }: TMissingPostsParams): Promise<boolean> {
+  static async fetchMissingPostsFromNexus({
+    cacheMissPostIds,
+    viewerId,
+    isCurrent,
+    force,
+  }: TMissingPostsParams): Promise<boolean> {
     try {
+      if (isCurrent && !isCurrent()) return false;
+      const revisions = await LocalTagCacheService.captureRevisions('post', cacheMissPostIds);
       const postBatch = await NexusPostStreamService.fetchByIds({
         post_ids: cacheMissPostIds,
+        force,
         // Only pass viewer_id if it's a valid string (not null/undefined)
         ...(viewerId ? { viewer_id: viewerId } : {}),
       });
-      const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({ posts: postBatch });
-      await FileApplication.persistFiles(attachmentMetadata);
+      if (isCurrent && !isCurrent()) return false;
+      // Keep missing posts retryable until their attachment metadata is durable.
+      await FileApplication.persistFiles(postBatch.flatMap((post) => post.attachments_metadata ?? []));
+      if (isCurrent && !isCurrent()) return false;
+      await LocalStreamPostsService.persistPosts({
+        posts: postBatch,
+        tagGuard: { revisions, isCurrent, viewerId },
+      });
       // Persist the missing authors of the posts
-      await this.fetchMissingUsersFromNexus({ posts: postBatch, viewerId });
+      await this.fetchMissingPostAuthors({ posts: postBatch, viewerId, isCurrent });
       // Fetch original posts for any reposts (to display embedded repost content)
       const repostedUris = postBatch
         .map((post) => post.relationships.reposted)
         .filter((uri): uri is string => uri !== null);
-      await this.fetchOriginalPostsByUris({ repostedUris, viewerId });
+      await this.fetchOriginalPostsByUris({ repostedUris, viewerId, isCurrent });
       return true;
     } catch (error) {
       Logger.warn('Failed to fetch missing posts from Nexus', { cacheMissPostIds, viewerId, error });
@@ -601,7 +680,9 @@ export class PostStreamApplication {
   static async fetchOriginalPostsByUris({
     repostedUris,
     viewerId,
+    isCurrent,
   }: {
+    isCurrent?: () => boolean;
     repostedUris: string[];
     /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
     viewerId?: Pubky | null;
@@ -636,13 +717,21 @@ export class PostStreamApplication {
     });
 
     try {
+      if (isCurrent && !isCurrent()) return;
+      const revisions = await LocalTagCacheService.captureRevisions('post', missingOriginalPostIds);
       const originalPosts = await NexusPostStreamService.fetchByIds({
         post_ids: missingOriginalPostIds,
         viewer_id: viewerId ?? undefined,
       });
-      const { attachmentMetadata } = await LocalStreamPostsService.persistPosts({ posts: originalPosts });
-      await FileApplication.persistFiles(attachmentMetadata);
-      await this.fetchMissingUsersFromNexus({ posts: originalPosts, viewerId });
+      if (isCurrent && !isCurrent()) return;
+      // Do not cache an original post as hydrated before its attachments are stored.
+      await FileApplication.persistFiles(originalPosts.flatMap((post) => post.attachments_metadata ?? []));
+      if (isCurrent && !isCurrent()) return;
+      await LocalStreamPostsService.persistPosts({
+        posts: originalPosts,
+        tagGuard: { revisions, isCurrent, viewerId },
+      });
+      await this.fetchMissingPostAuthors({ posts: originalPosts, viewerId, isCurrent });
     } catch (error) {
       Logger.warn('Failed to fetch original posts for reposts', { missingOriginalPostIds, error });
     }
@@ -653,7 +742,7 @@ export class PostStreamApplication {
    *
    * @param cachedStreamChunk - Array of post IDs from cache that need to be combined with fetched posts
    * @param limit - Maximum number of posts to return
-   * @param streamTail - Timestamp or skip count for pagination
+   * @param streamTail - The cached stream's Nexus resume cursor (`resolveCachedStreamTailCursor`)
    * @param streamId - ID of the post stream
    * @param viewerId - ID of the viewer
    **/
@@ -661,22 +750,23 @@ export class PostStreamApplication {
     cachedStreamChunk,
     limit,
     streamTail,
+    seededFromTimestamp,
     streamId,
     viewerId,
+    isCurrent,
   }: TPartialCacheHitParams): Promise<TPostStreamChunkResponse> {
     const lastCachedPostId = cachedStreamChunk[cachedStreamChunk.length - 1];
     const remainingLimit = limit - cachedStreamChunk.length;
 
-    // Get cursor from last cached post for pagination (bookmark-time for bookmark streams)
-    const nextStreamTail = (await this.getStreamCursorTimestamp(streamId, lastCachedPostId)) ?? streamTail;
-
-    // Fetch remaining posts from Nexus
-    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd } = await this.fetchStreamFromNexus({
+    // Fetch remaining posts from Nexus, resuming below the deepest page already cached
+    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd, lastRawPostId } = await this.fetchStreamFromNexus({
       streamId,
       limit: remainingLimit,
-      streamTail: nextStreamTail,
+      streamTail,
       streamHead: SKIP_FETCH_NEW_POSTS,
+      seededFromTimestamp,
       viewerId,
+      isCurrent,
       lastPostId: lastCachedPostId,
     });
 
@@ -689,17 +779,26 @@ export class PostStreamApplication {
       nextCursor,
       // Propagate reachedEnd from Nexus - don't recalculate from deduped length
       reachedEnd: reachedEnd ?? false,
+      // The walk resumes from the anchor the fetch positioned in the row after the page was
+      // appended (the last cached id when the page was empty), never from the chunk end.
+      lastRawPostId: lastRawPostId ?? lastCachedPostId,
     };
   }
 
-  private static async fetchMissingUsersFromNexus({ posts, viewerId }: TFetchMissingUsersParams) {
-    const cacheMissUserIds = await this.getNotPersistedUsersInCache(posts.map((post) => post.details.author));
+  private static async fetchMissingPostAuthors({ posts, viewerId, isCurrent }: TFetchMissingUsersParams) {
+    const cacheMissUserIds = await this.getNotPersistedUsersInCache(
+      posts.map((post) => post.details.author),
+      viewerId ?? undefined,
+    );
     if (cacheMissUserIds.length > 0) {
+      if (isCurrent && !isCurrent()) return;
+      const fetchStartedAt = Date.now();
+      const revisions = await LocalTagCacheService.captureRevisions('user', cacheMissUserIds);
       const userBatch = await NexusUserStreamService.fetchByIds({
         user_ids: cacheMissUserIds,
         viewer_id: viewerId ?? undefined,
       });
-      await LocalStreamUsersService.persistUsers(userBatch);
+      await LocalStreamUsersService.persistUsers(userBatch, { revisions, isCurrent, viewerId, fetchStartedAt });
     }
   }
 
@@ -708,7 +807,10 @@ export class PostStreamApplication {
     limit,
     streamHead,
     streamTail,
+    lastPostId,
+    seededFromTimestamp,
     viewerId,
+    isCurrent,
     order,
   }: TFetchStreamParams): Promise<TPostStreamChunkResponse> {
     // Nexus bounds the by_content offset (skip ≤ CONTENT_SEARCH_MAX_SKIP, inclusive). A cursor
@@ -727,14 +829,44 @@ export class PostStreamApplication {
       order,
     });
     const postStreamChunk = await NexusPostStreamService.fetch({ invokeEndpoint, params, extraParams });
+    if (isCurrent && !isCurrent())
+      return { nextPageIds: [], cacheMissPostIds: [], nextCursor: undefined, reachedEnd: false };
     // `last_post_score` is null for skip streams; normalize to undefined (advanceCursor derives
     // their offset from the raw page instead).
-    const { last_post_score: rawScore, post_keys: compositePostIds } = postStreamChunk;
+    const { last_post_score: rawScore, post_keys: rawPageIds } = postStreamChunk;
+    // A cursor seeded from a post timestamp can start inside or above the cached row (the
+    // post was edited after newer posts arrived). Only the part of the page below the row is
+    // served or cached; the rest is cached already or belongs to a head poll. The page's own
+    // cursor still moves the walk on, so a page inside the row is skipped, not re-requested.
+    const alignsWithRow = seededFromTimestamp && !isSkipPaginatedStream(streamId) && order !== StreamOrder.ASCENDING;
+    const compositePostIds = alignsWithRow
+      ? await LocalStreamPostsService.keepIdsBelowRow({ streamId, stream: rawPageIds })
+      : rawPageIds;
+    let cacheMissPostIds = await this.getCacheMissPostIds(streamId, compositePostIds);
+    // Reply hooks observe stream IDs directly. Hydrate first so newly mounted cards
+    // find details/counts/tags locally instead of racing the batch with individual fetches.
+    if (invokeEndpoint === StreamSource.REPLIES && streamHead === SKIP_FETCH_NEW_POSTS && cacheMissPostIds.length > 0) {
+      const hydrated = await this.fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId, isCurrent });
+      if (hydrated) cacheMissPostIds = [];
+    }
 
+    if (isCurrent && !isCurrent())
+      return { nextPageIds: [], cacheMissPostIds: [], nextCursor: undefined, reachedEnd: false };
     // Do not persist skip-paginated streams (engagement + single-collection items) to the
     // timestamp-keyed local stream cache; they always page from Nexus by offset.
+    let persistedRow: string[] | undefined;
     if (!isSkipPaginatedStream(streamId) && streamHead === SKIP_FETCH_NEW_POSTS) {
-      await LocalStreamPostsService.persistNewStreamChunk({ stream: compositePostIds, streamId });
+      persistedRow = await LocalStreamPostsService.persistNewStreamChunk({
+        // Reply rows are cached newest-first. An ascending page is handed over reversed so
+        // that ids still missing their details (a hydration that failed) keep their relative
+        // order under the timestamp sort, which interpolates assuming descending input.
+        stream: order === StreamOrder.ASCENDING ? [...compositePostIds].reverse() : compositePostIds,
+        streamId,
+        // A descending page extends the cached stream downward: record Nexus's own position
+        // as the row's resume cursor. Ascending pages read a reply thread upward from its
+        // oldest cached reply and carry no tail position.
+        tailCursor: order === StreamOrder.ASCENDING ? undefined : (rawScore ?? undefined),
+      });
     }
 
     // When streamHead is greater than 0, it means that it is a streamCoordinator calling this method.
@@ -747,20 +879,25 @@ export class PostStreamApplication {
       });
     }
 
-    const cacheMissPostIds = await this.getCacheMissPostIds(streamId, compositePostIds);
-
     // reachedEnd is true when Nexus returned fewer posts than requested (actual end of stream).
     // Content search also ends when the NEXT offset (this skip + raw ids consumed) would
     // overflow Nexus's inclusive skip bound: this valid page is still consumed, only the
     // follow-up request is suppressed. A next offset landing exactly on the bound stays valid.
     const overflowsContentSearchSkip =
-      isContentSearchStream(streamId) && streamTail + compositePostIds.length > CONTENT_SEARCH_MAX_SKIP;
+      isContentSearchStream(streamId) && streamTail + rawPageIds.length > CONTENT_SEARCH_MAX_SKIP;
 
     return {
       nextPageIds: compositePostIds,
       cacheMissPostIds,
       nextCursor: rawScore ?? undefined,
-      reachedEnd: compositePostIds.length < limit || overflowsContentSearchSkip,
+      reachedEnd: rawPageIds.length < limit || overflowsContentSearchSkip,
+      // The cache walk resumes from the deepest of this page's ids and the caller's anchor,
+      // as positioned in the row after the page was persisted: a page the row already held
+      // (a cursor-less row seeded above its tail) must not drag the anchor back up the row,
+      // and a row another walker extended past this page must not let the anchor jump over
+      // ids this walker never served.
+      lastRawPostId:
+        order === StreamOrder.ASCENDING ? undefined : this.resumeAnchorAfterPage(persistedRow, rawPageIds, lastPostId),
     };
   }
 
@@ -888,13 +1025,16 @@ export class PostStreamApplication {
   }
 
   // Delegate to service for cache miss detection
-  private static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
-    const existingUserIds = await UserDetailsModel.findByIdsPreserveOrder(userIds);
-    const missingUserIds = userIds.filter((_userId, index) => existingUserIds[index] === undefined);
-    return Array.from(new Set(missingUserIds));
+  private static async getNotPersistedUsersInCache(userIds: Pubky[], viewerId?: Pubky): Promise<Pubky[]> {
+    return LocalStreamUsersService.getNotPersistedUsersInCache([...new Set(userIds)], viewerId);
   }
 
-  private static async getStreamFromCache({ lastPostId, limit, cachedStream }: TCacheStreamParams): Promise<string[]> {
+  private static async getStreamFromCache({
+    lastPostId,
+    visiblePostIds,
+    limit,
+    cachedStream,
+  }: TCacheStreamParams): Promise<string[]> {
     // Handle limit 0 case, return empty array immediately
     if (limit === 0) {
       return [];
@@ -908,10 +1048,16 @@ export class PostStreamApplication {
     }
 
     // lastPostId is provided, find the position in cache
-    const postIndex = cachedStream.stream.indexOf(lastPostId);
+    let postIndex = cachedStream.stream.indexOf(lastPostId);
     if (postIndex === -1) {
-      // lastPostId not found in cache, cannot serve from cache
-      return [];
+      // The anchor was removed from the row (its post deleted or un-bookmarked). Resume
+      // after the deepest id the caller has already rendered, so at most the raw tail of
+      // one page is re-served; with no such id, re-walk from the head and let the caller
+      // dedupe. Jumping to the row tail instead would skip every cached id in between.
+      postIndex = this.deepestCachedIndex(cachedStream.stream, visiblePostIds);
+      if (postIndex === -1) {
+        return cachedStream.stream.slice(0, Math.min(limit, cachedStream.stream.length));
+      }
     }
 
     // Return all available posts after lastPostId (up to limit)
@@ -925,5 +1071,28 @@ export class PostStreamApplication {
     }
 
     return cachedStream.stream.slice(startIndex, endIndex);
+  }
+
+  /** The candidate (page id or previous anchor) that sits deepest in `row`; the row tail when none does. */
+  private static resumeAnchorAfterPage(
+    row: string[] | undefined,
+    pageIds: string[],
+    previousAnchor: string | undefined,
+  ): string | undefined {
+    if (!row || row.length === 0) return undefined;
+    const index = this.deepestCachedIndex(row, previousAnchor === undefined ? pageIds : [...pageIds, previousAnchor]);
+    return index === -1 ? row[row.length - 1] : row[index];
+  }
+
+  /** Highest row index among `candidates` that is present in `stream`, or -1. */
+  private static deepestCachedIndex(stream: string[], candidates: string[] | undefined): number {
+    if (!candidates || candidates.length === 0) return -1;
+    const rowIndex = new Map(stream.map((id, index) => [id, index] as const));
+    let deepest = -1;
+    for (const id of candidates) {
+      const index = rowIndex.get(id);
+      if (index !== undefined && index > deepest) deepest = index;
+    }
+    return deepest;
   }
 }

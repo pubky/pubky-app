@@ -14,6 +14,8 @@ export interface DialogRepostConfig {
   submitIcon?: ComponentType<{ className?: string; strokeWidth?: number }>;
   /** Success toast title. */
   successToastTitle?: string;
+  /** Identify collection shares so Undo uses the same wording as the header. */
+  isCollectionShare?: boolean;
 }
 
 export interface DialogRepostProps {

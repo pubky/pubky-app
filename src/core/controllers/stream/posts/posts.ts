@@ -6,6 +6,7 @@ import type {
   TReadPostStreamChunkResponse,
   TStreamIdParams,
 } from '@/controllers/stream/posts/posts.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NetworkErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -60,22 +61,27 @@ export class StreamPostsController {
     streamHead = SKIP_FETCH_NEW_POSTS,
     streamTail = NOT_FOUND_CACHED_STREAM,
     lastPostId,
+    visiblePostIds,
     limit = NEXUS_POSTS_PER_PAGE,
     order,
   }: TReadPostStreamChunkParams): Promise<TReadPostStreamChunkResponse> {
     // selectCurrentUserPubky() throws an error when user is not authenticated;
     // access currentUserPubky directly to get null instead (unauthenticated users can view profile posts)
     const viewerId = useAuthStore.getState().currentUserPubky;
-    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd, lastRawPostId } =
+    const isCurrent = captureViewerSession();
+    const { nextPageIds, cacheMissPostIds, nextCursor, reachedEnd, lastRawPostId, rawScannedCount } =
       await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit,
         streamHead,
         streamTail,
         lastPostId,
+        visiblePostIds,
         viewerId,
+        isCurrent,
         order,
       });
+    if (!isCurrent()) return { nextPageIds: [], nextCursor: undefined, reachedEnd: false };
     let visibleIds = nextPageIds;
     const isAuthorScopedSearch = isAuthorScopedContentSearchStream(streamId);
     // Query nexus to get the cacheMissPostIds
@@ -84,6 +90,7 @@ export class StreamPostsController {
       const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
+        isCurrent,
       });
       // Author-scoped search must not degrade a hydration failure into a false
       // "no results": on a cold cache every id is a miss, and the strict pass below
@@ -112,7 +119,7 @@ export class StreamPostsController {
         strictReplyClassification: true,
       });
     }
-    return { nextPageIds: visibleIds, nextCursor, reachedEnd, lastRawPostId };
+    return { nextPageIds: visibleIds, nextCursor, reachedEnd, lastRawPostId, rawScannedCount };
   }
 
   /**
@@ -126,17 +133,19 @@ export class StreamPostsController {
     // Access currentUserPubky directly (not selectCurrentUserPubky) so
     // unauthenticated viewers get null instead of a thrown error.
     const viewerId = useAuthStore.getState().currentUserPubky;
-    await PostStreamApplication.fetchOriginalPostsByUris({ repostedUris: uris, viewerId });
+    const isCurrent = captureViewerSession();
+    await PostStreamApplication.fetchOriginalPostsByUris({ repostedUris: uris, viewerId, isCurrent });
   }
 
   /**
-   * Gets the timestamp of the last cached post in a stream.
-   *
-   * Extracts the indexed_at timestamp from the oldest post in the cached stream.
-   * Returns 0 if no cached stream exists or if the last post's details cannot be found.
+   * The Nexus position a fresh pagination session resumes from once the cached ids are
+   * exhausted: the row's persisted `tailCursor` (the `last_post_score` of the deepest page
+   * fetched into it) or, for a row without one (bootstrap-seeded or written before cursors
+   * were tracked), a one-time seed from the tail entry's timestamp (bookmark time for
+   * bookmark streams).
    *
    * @param streamId - The ID of the post stream to query
-   * @returns Promise resolving to the timestamp (number) or 0 if not found
+   * @returns The resume cursor, or `NOT_FOUND_CACHED_STREAM` (0) when there is no usable cache
    */
   static async getCachedLastPostTimestamp(params: TStreamIdParams): Promise<number> {
     return await PostStreamApplication.getCachedLastPostTimestamp(params);

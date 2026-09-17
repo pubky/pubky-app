@@ -87,7 +87,12 @@ export function PostHeaderUserInfo({
   const characterLimitContent = characterLimit && (
     <Typography
       data-cy="post-header-character-count"
-      className="shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap text-muted-foreground tabular-nums"
+      className={cn(
+        'shrink-0 text-xs leading-4 font-medium tracking-[0.075rem] whitespace-nowrap tabular-nums',
+        // At the limit the counter turns red: the composer stops accepting input there, so the
+        // counter is the only thing telling the user why (issue #1761).
+        characterLimit.count >= characterLimit.max ? 'text-destructive' : 'text-muted-foreground',
+      )}
       overrideDefaults
     >
       {characterLimit.count}/{characterLimit.max}
