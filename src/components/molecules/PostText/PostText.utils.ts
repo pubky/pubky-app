@@ -16,7 +16,7 @@ import type {
   Text,
 } from 'mdast';
 import { visit } from 'unist-util-visit';
-import { Identity } from '@/libs/identity/identity';
+import { MENTION_IN_TEXT_REGEX } from '@/libs/identity/identity.constants';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
 import { isValidTagLabel } from '@/libs/utils/utils';
 import { HASHTAG_IN_TEXT_REGEX } from '@/libs/utils/utils.constants';
@@ -287,7 +287,7 @@ export const remarkHashtags = createPatternPlugin({
 // Mention pattern: pk: or pubky followed by exactly 52 lowercase alphanumeric characters
 // Must be at start of text or preceded by whitespace (standalone)
 export const remarkMentions = createPatternPlugin({
-  regex: new RegExp(`(^|\\s)(${Identity.PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE})`, 'g'),
+  regex: MENTION_IN_TEXT_REGEX,
   getUrl: (mention: string) => {
     // Extract the public key without the prefix (pk: or pubky)
     const publicKey = mention.startsWith('pk:') ? mention.slice(3) : mention.slice(5);

@@ -1,7 +1,6 @@
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
-import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { OG_HEADER_HEIGHT, OgAvatar, OgFrame, OgHeader } from './OgComponents';
@@ -9,6 +8,7 @@ import { OG_SIZE, OG_TOKENS, OG_TRUNCATE } from './ogConstants';
 import { buildAvatarUrl, fetchImageAsDataUri, resolvePostAttachmentUrl } from './ogData';
 import { LibraryIcon, StickyNoteIcon } from './OgIcons';
 import { ogImageResponse } from './ogImageResponse';
+import { prepareOgText } from './ogText';
 import { renderFallbackOg } from './renderFallbackOg';
 
 const FRAME_GAP = 48;
@@ -75,9 +75,9 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
       fetchImageAsDataUri(resolvePostAttachmentUrl(collection.cover_image, FileVariant.FEED)),
     ]);
 
-    const name = resolveDisplayName(user);
+    const name = prepareOgText(resolveDisplayName(user));
     const itemCount = collection.items?.length ?? 0;
-    const description = truncateByGraphemes(collection.description?.trim() ?? '', OG_TRUNCATE.collectionDescription);
+    const description = prepareOgText(collection.description?.trim() ?? '', OG_TRUNCATE.collectionDescription);
 
     return await ogImageResponse(
       <OgFrame style={{ gap: FRAME_GAP }}>
@@ -155,7 +155,7 @@ export async function renderCollectionOg({ userId, postId }: { userId: string; p
                   textOverflow: 'ellipsis',
                 }}
               >
-                {collection.name}
+                {prepareOgText(collection.name)}
               </div>
               <div
                 style={{
