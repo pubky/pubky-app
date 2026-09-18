@@ -98,8 +98,7 @@ describe('extractMetadata', () => {
   });
 
   it('should ignore the placeholder "undefined" that client-rendered shells serve for og:title and <title>', async () => {
-    const html =
-      '<html><head><meta property="og:title" content="undefined" /><title>undefined</title></head></html>';
+    const html = '<html><head><meta property="og:title" content="undefined" /><title>undefined</title></head></html>';
     const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
     expect(result.title).toBeNull();
   });
