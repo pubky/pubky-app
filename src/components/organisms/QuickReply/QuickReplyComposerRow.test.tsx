@@ -57,6 +57,7 @@ const createProps = (overrides: Partial<QuickReplyComposerRowProps> = {}): Quick
   onChange: vi.fn(),
   onFocus: vi.fn(),
   onKeyDown: vi.fn(),
+  onSelect: vi.fn(),
   onPaste: vi.fn(),
   mentionIsOpen: false,
   mentionUsers: [],
@@ -94,18 +95,25 @@ describe('QuickReplyComposerRow', () => {
     const onChange = vi.fn();
     const onFocus = vi.fn();
     const onKeyDown = vi.fn();
+    const onSelect = vi.fn();
     const onPaste = vi.fn();
-    render(<QuickReplyComposerRow {...createProps({ content: '', onChange, onFocus, onKeyDown, onPaste })} />);
+    render(
+      <QuickReplyComposerRow {...createProps({ content: '', onChange, onFocus, onKeyDown, onSelect, onPaste })} />,
+    );
 
     const textarea = screen.getByTestId('quick-reply-textarea');
     fireEvent.focus(textarea);
     fireEvent.change(textarea, { target: { value: 'typed reply' } });
     fireEvent.keyDown(textarea, { key: 'Enter' });
+    fireEvent.select(textarea);
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
     fireEvent.paste(textarea);
 
     expect(onFocus).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledTimes(1);
+    // Selection and arrow-key moves both report the caret
+    expect(onSelect).toHaveBeenCalledTimes(2);
     expect(onPaste).toHaveBeenCalledTimes(1);
   });
 

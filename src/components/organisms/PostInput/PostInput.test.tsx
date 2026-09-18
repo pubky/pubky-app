@@ -30,6 +30,7 @@ const mockSetIsArticle = vi.fn();
 const mockSetArticleTitle = vi.fn();
 const mockSetMentionSelectedIndex = vi.fn();
 const mockHandleMentionSelect = vi.fn();
+const mockHandleSelectionChange = vi.fn();
 const mockCurrentUserDetails = {
   id: 'test-user-id:pubkey',
   name: 'Current User',
@@ -516,6 +517,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     mentionSelectedIndex: 0,
     setMentionSelectedIndex: mockSetMentionSelectedIndex,
     handleMentionSelect: mockHandleMentionSelect,
+    handleSelectionChange: mockHandleSelectionChange,
     handleMentionKeyDown: mockHandleMentionKeyDown,
     ...overrides,
   } as UsePostInputReturn;
@@ -596,6 +598,7 @@ describe('PostInput', () => {
     mockSetArticleTitle.mockReset();
     mockSetMentionSelectedIndex.mockReset();
     mockHandleMentionSelect.mockReset();
+    mockHandleSelectionChange.mockReset();
 
     mockUseEnterSubmit.mockImplementation(() => mockEnterSubmitHandler);
     mockUsePostInput.mockImplementation((options: UsePostInputOptions) => createUsePostInputReturn(options));
@@ -944,6 +947,17 @@ describe('PostInput', () => {
     fireEvent.change(textarea, { target: { value: 'Test content' } });
 
     expect(mockSetContent).toHaveBeenCalledWith('Test content');
+  });
+
+  it('tracks the composer caret from the textarea selection events', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const textarea = screen.getByTestId('textarea');
+    // The caret moves without a change event: click/drag selection, then an arrow key
+    fireEvent.select(textarea);
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+
+    expect(mockHandleSelectionChange).toHaveBeenCalledTimes(2);
   });
 
   it('opens sign-in and does not mutate content when an anonymous user types', () => {
