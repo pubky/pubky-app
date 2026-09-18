@@ -308,6 +308,106 @@ describe('useVisualFeedTiles', () => {
     expect(result.current.hasPendingFiles).toBe(true);
   });
 
+  describe('missing file metadata', () => {
+    it('keeps hasPendingFiles while the request is in flight, then clears it when the request settles without a row', async () => {
+      let resolveFetchFiles!: () => void;
+      mockFetchFiles.mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveFetchFiles = resolve;
+          }),
+      );
+      mockUseLiveQuery.mockReturnValue({
+        tiles: [],
+        missingFileUris: ['pubky://user-1/pub/pubky.app/files/file-1'],
+      });
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-1'], hasMore: false }));
+
+      // In flight: the feed must still read as resolving.
+      await waitFor(() => {
+        expect(mockFetchFiles).toHaveBeenCalledTimes(1);
+      });
+      expect(result.current.hasPendingFiles).toBe(true);
+
+      await act(async () => {
+        resolveFetchFiles();
+      });
+
+      // Nexus returned no row for the URI, and nothing is in flight anymore, so
+      // the loading gates must open instead of holding the feed forever.
+      await waitFor(() => {
+        expect(result.current.hasPendingFiles).toBe(false);
+      });
+    });
+
+    it('settles the request after a failure instead of gating the feed forever', async () => {
+      mockFetchFiles.mockRejectedValue(new Error('nexus unavailable'));
+      mockUseLiveQuery.mockReturnValue({
+        tiles: [],
+        missingFileUris: ['pubky://user-1/pub/pubky.app/files/file-1'],
+      });
+
+      const { result } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-1'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.hasPendingFiles).toBe(false);
+      });
+      // A settled failure is not retried on every snapshot emission.
+      expect(mockFetchFiles).toHaveBeenCalledTimes(1);
+    });
+
+    it('requests each missing URI once however often the snapshot re-emits', async () => {
+      // A liveQuery that hands back a fresh snapshot per render mirrors the real
+      // one re-emitting while the metadata is still absent: the fetch must not
+      // be re-issued for a URI whose request already settled.
+      mockUseLiveQuery.mockImplementation(() => ({
+        tiles: [],
+        missingFileUris: ['pubky://user-1/pub/pubky.app/files/file-1'],
+      }));
+
+      const { result, rerender } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-1'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.hasPendingFiles).toBe(false);
+      });
+
+      rerender();
+      rerender();
+
+      await act(async () => {});
+
+      expect(mockFetchFiles).toHaveBeenCalledTimes(1);
+      expect(result.current.hasPendingFiles).toBe(false);
+    });
+
+    it('renders a tile whose metadata arrives after the request settled', async () => {
+      const snapshot: { tiles: VisualTile[]; missingFileUris: string[] } = {
+        tiles: [],
+        missingFileUris: ['pubky://user-1/pub/pubky.app/files/file-1'],
+      };
+      mockUseLiveQuery.mockImplementation(() => snapshot);
+
+      const { result, rerender } = renderHook(() => useVisualFeedTiles({ postIds: ['author:post-1'], hasMore: false }));
+
+      await waitFor(() => {
+        expect(result.current.hasPendingFiles).toBe(false);
+      });
+
+      // The row lands later (persisted by another flow): the snapshot re-emits
+      // with the tile and without the URI, and the settled marker must not
+      // suppress it.
+      snapshot.tiles = [
+        createPendingTile({ id: 'tile-a', postId: 'author:post-1', attachmentName: 'a.png', previewSrc: '/a.png' }),
+      ];
+      snapshot.missingFileUris = [];
+      rerender();
+
+      expect(result.current.tiles).toHaveLength(1);
+      expect(result.current.hasPendingFiles).toBe(false);
+    });
+  });
+
   it('exposes hasPendingSnapshot while the live query has not emitted yet', () => {
     // Before the first liveQuery emission the snapshot is `undefined` — callers
     // must treat this as loading, not as an (empty) resolved snapshot.
@@ -569,6 +669,13 @@ describe('useVisualFeedTiles', () => {
     });
 
     it('counts remote posts only once every attachment resolved to non-visual metadata', async () => {
+      let resolveFetchFiles!: () => void;
+      mockFetchFiles.mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveFetchFiles = resolve;
+          }),
+      );
       mockFindByIdsPreserveOrder.mockResolvedValue([
         createPostDetails({
           id: 'author:post-doc',
@@ -592,18 +699,28 @@ describe('useVisualFeedTiles', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.hasPendingFiles).toBe(true);
-      });
-
-      // post-doc: all metadata resolved, none visual -> counted.
-      // post-pending: one attachment still fetching -> not counted yet.
-      expect(result.current.hiddenPostCount).toBe(1);
-      expect(result.current.tiles).toHaveLength(0);
-      await waitFor(() => {
         expect(mockFetchFiles).toHaveBeenCalledWith({
           fileUris: ['pubky://user-2/pub/pubky.app/files/file-pending'],
         });
       });
+
+      // post-doc: all metadata resolved, none visual -> counted.
+      // post-pending: one attachment still fetching -> not counted yet.
+      expect(result.current.hasPendingFiles).toBe(true);
+      expect(result.current.hiddenPostCount).toBe(1);
+      expect(result.current.tiles).toHaveLength(0);
+
+      await act(async () => {
+        resolveFetchFiles();
+      });
+
+      // The fetch came back without a row: still not counted (there is nothing
+      // to render), but the feed is no longer resolving file metadata.
+      await waitFor(() => {
+        expect(result.current.hasPendingFiles).toBe(false);
+      });
+      expect(result.current.hiddenPostCount).toBe(1);
+      expect(result.current.tiles).toHaveLength(0);
     });
 
     it('counts posts whose local attachments produce no media tiles', async () => {

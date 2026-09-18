@@ -75,27 +75,12 @@ export interface TtlCoordinatorState {
   isStarted: boolean;
 
   /**
-   * Current route (used for reset on navigation)
-   */
-  currentRoute: string;
-
-  /**
    * Whether the page is currently visible
    */
   isPageVisible: boolean;
 
   /**
-   * Set of subscribed post composite IDs (authorPubky:postId)
-   */
-  subscribedPosts: Set<string>;
-
-  /**
-   * Set of subscribed user IDs (pubky)
-   */
-  subscribedUsers: Set<Pubky>;
-
-  /**
-   * Reference count for posts (nested surfaces can track the same post)
+   * Reference count for posts (nested surfaces and multiple visual tiles can track the same post)
    * Key: composite post ID, Value: number of live subscribers
    */
   postRefCount: Map<string, number>;
@@ -172,18 +157,12 @@ export interface TtlUnsubscribeUserParams {
 export interface EntityOps<T extends string> {
   /** Name for logging purposes */
   entityName: 'post' | 'user';
-  /** Set of currently subscribed entity IDs */
-  subscribed: Set<T>;
-  /** Live subscriber count per entity ID (entity stays subscribed until it reaches 0) */
+  /** Live subscriber count per entity ID; an entity is subscribed while its count is above zero */
   refCount: Map<T, number>;
   /** Queue of entity IDs pending refresh */
   batchQueue: Set<T>;
-  /** TTL in milliseconds for this entity type */
-  ttlMs: number;
   /** Maximum entities per batch request */
   maxBatchSize: number;
-  /** Whether this entity type requires viewerId for refresh (posts do, users don't) */
-  requiresViewerId: boolean;
   /** Find stale entities by IDs */
   findStaleByIds: (ids: T[]) => Promise<T[]>;
   /** Force refresh entities by IDs */

@@ -189,13 +189,13 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
       expect(lastProps().membershipPostIds).toBeUndefined();
     });
 
-    it('does not hand a signed-out viewer a membership (their envelope never refreshes)', () => {
+    it('hands a signed-out viewer the membership too (the public TTL refreshes their envelope)', () => {
       mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
       mockUsePostDetails.mockReturnValue(envelope([uriFor('author-1', 'item-a')]));
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
 
-      expect(lastProps().membershipPostIds).toBeUndefined();
+      expect(lastProps().membershipPostIds).toEqual(['author-1:item-a']);
     });
 
     it('maps only well-formed item URIs, dropping duplicates', () => {

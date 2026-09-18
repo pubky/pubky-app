@@ -6,6 +6,9 @@ export type TReadPostStreamChunkParams = {
   streamHead?: number;
   streamTail?: number;
   lastPostId?: string;
+  /** Ids already rendered from this stream, in display order; re-anchors the cache walk when
+   * `lastPostId` was removed from the cached row (post deleted or un-bookmarked). */
+  visiblePostIds?: string[];
   tags?: string[];
   limit?: number;
   /** Order of results: 'ascending' (oldest first) or 'descending' (newest first, default) */
@@ -30,4 +33,8 @@ export type TReadPostStreamChunkResponse = {
    * fully-filtered pages instead of restarting at the cache head.
    * May be a filtered-out post id — do not dereference for display. */
   lastRawPostId?: string;
+  /** Raw ids the stream layer scanned this round before filtering. `useStreamPagination`
+   * budgets a load by this sum, so an unhydrated region (one page per round) and a cached
+   * one (up to twenty) are scanned equally deep before the load yields. */
+  rawScannedCount?: number;
 };

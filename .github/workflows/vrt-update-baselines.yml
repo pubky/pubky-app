@@ -83,7 +83,7 @@ jobs:
           done
 
       - name: Upload regenerated baselines
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vrt-baselines-${{ runner.os == 'Linux' && 'linux' || 'darwin' }}
           path: ${{ runner.temp }}/vrt-baselines-${{ runner.os == 'Linux' && 'linux' || 'darwin' }}
@@ -138,13 +138,13 @@ jobs:
           fi
 
       - name: Download Linux baselines
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: vrt-baselines-linux
           path: ${{ runner.temp }}/vrt-baselines-linux
 
       - name: Download macOS baselines
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: vrt-baselines-darwin
           path: ${{ runner.temp }}/vrt-baselines-darwin

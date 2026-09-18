@@ -14,12 +14,13 @@ import { extractMentionQuery } from './useMentionAutocomplete.utils';
 /**
  * Hook for mention autocomplete functionality in post input
  *
- * Detects @username and pubky ID patterns in content and provides
- * user suggestions for autocomplete. Supports both new format (pubky)
+ * Detects @username and pubky ID patterns in the text before the caret and
+ * provides user suggestions for autocomplete. Supports both new format (pubky)
  * and legacy format (pk:) for backwards compatibility.
  */
 export function useMentionAutocomplete({
   content,
+  caret,
   onSelect,
 }: UseMentionAutocompleteParams): UseMentionAutocompleteResult {
   const [userIds, setUserIds] = useState<Pubky[]>([]);
@@ -29,7 +30,7 @@ export function useMentionAutocomplete({
   const requestIdRef = useRef(0);
 
   // Debounced search function ref
-  const debouncedSearchRef = useRef<DebouncedFunc<(content: string) => Promise<void>> | null>(null);
+  const debouncedSearchRef = useRef<DebouncedFunc<(content: string, caret: number) => Promise<void>> | null>(null);
 
   // Get user details from IDs using shared hook
   const { users } = useUserDetailsFromIds({ userIds });
@@ -58,11 +59,11 @@ export function useMentionAutocomplete({
 
   // Setup debounced search function
   useEffect(() => {
-    const performSearch = async (searchContent: string) => {
+    const performSearch = async (searchContent: string, searchCaret: number) => {
       const requestId = ++requestIdRef.current;
 
       try {
-        const { atQuery, pkQuery } = extractMentionQuery(searchContent);
+        const { atQuery, pkQuery } = extractMentionQuery(searchContent, searchCaret);
 
         // No valid queries - clear state
         if (!atQuery && !pkQuery) {
@@ -131,10 +132,11 @@ export function useMentionAutocomplete({
     };
   }, [resetSelection]);
 
-  // Trigger search on content change
+  // Trigger search on content or caret change: a mention completes at the caret,
+  // so moving it into (or out of) a pattern re-runs detection (#1959)
   useEffect(() => {
-    debouncedSearchRef.current?.(content);
-  }, [content]);
+    debouncedSearchRef.current?.(content, caret);
+  }, [content, caret]);
 
   return {
     users,

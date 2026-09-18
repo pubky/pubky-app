@@ -69,10 +69,10 @@ interface TimelineFeedContentProps {
    * the membership once contained but no longer does are committed out,
    * re-evaluated whenever the loaded ids change so a removal whose post only
    * arrives later (an in-flight page, a refresh that re-serves it) still
-   * applies. Used by the COLLECTION variant for signed-in viewers, whose
-   * envelope `items` refresh through the TTL coordinator while the
-   * skip-paginated items stream is fetched once and never polled. Reorders
-   * are handled by `transformPostIds`.
+   * applies. Used by the COLLECTION variant for every viewer except the
+   * owner, guests included, whose envelope `items` refresh through the TTL
+   * coordinator while the skip-paginated items stream is fetched once and
+   * never polled. Reorders are handled by `transformPostIds`.
    */
   membershipPostIds?: string[];
 }

@@ -22,6 +22,7 @@ import {
   generateRandomUsername,
   getCharacterCount,
   getDisplayTags,
+  getEnforcedCharacterCount,
   getValidAuthorPubkyFromPostCompositeId,
   hexToRgba,
   hoursAgo,
@@ -1112,6 +1113,23 @@ describe('Utils', () => {
       expect(getCharacterCount('Hello\nWorld')).toBe(11);
       expect(getCharacterCount('Tab\tHere')).toBe(8);
       expect(getCharacterCount('!@#$%^&*()')).toBe(10);
+    });
+  });
+
+  describe('getEnforcedCharacterCount', () => {
+    it('should count UTF-16 units, the measure the composer enforces (issue #1761)', () => {
+      expect(getEnforcedCharacterCount('hello')).toBe(5);
+      expect(getEnforcedCharacterCount('')).toBe(0);
+      // An astral character is one code point but two UTF-16 units, which is what maxLength counts.
+      expect(getEnforcedCharacterCount('👍')).toBe(2);
+      expect(getEnforcedCharacterCount('🇺🇸')).toBe(4);
+    });
+
+    it('should reach the post limit for an emoji draft that a code-point count reports as short', () => {
+      const emojiDraft = `😀${'a'.repeat(1998)}`;
+
+      expect(getEnforcedCharacterCount(emojiDraft)).toBe(2000);
+      expect(getCharacterCount(emojiDraft)).toBe(1999);
     });
   });
 

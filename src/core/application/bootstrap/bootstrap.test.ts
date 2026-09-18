@@ -153,6 +153,7 @@ type ServiceMocks = {
   persistPosts: unknown;
   persistFiles: unknown;
   upsertPostsStream: unknown;
+  clearUnreadPostsStream: unknown;
   upsertInfluencersStream: unknown;
   upsertHotTags: unknown;
   upsertTagsStream: unknown;
@@ -207,9 +208,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
       .mockImplementation(persistUsersError ? () => Promise.reject(persistUsersError) : () => Promise.resolve([])),
     persistPosts: vi
       .spyOn(LocalStreamPostsService, 'persistPosts')
-      .mockImplementation(
-        persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve({ attachmentMetadata: [] }),
-      ),
+      .mockImplementation(persistPostsError ? () => Promise.reject(persistPostsError) : () => Promise.resolve()),
     persistFiles: vi
       .spyOn(FileApplication, 'persistFiles')
       .mockImplementation(
@@ -218,6 +217,7 @@ const setupMocks = (config: MockConfig = {}): ServiceMocks => {
     upsertPostsStream: vi
       .spyOn(LocalStreamPostsService, 'upsert')
       .mockImplementation(upsertPostsError ? () => Promise.reject(upsertPostsError) : () => Promise.resolve(undefined)),
+    clearUnreadPostsStream: vi.spyOn(LocalStreamPostsService, 'clearUnreadStream').mockResolvedValue([]),
     upsertInfluencersStream: vi
       .spyOn(LocalStreamUsersService, 'upsert')
       .mockImplementation(
@@ -243,12 +243,20 @@ const assertCommonCalls = (mocks: ServiceMocks, bootstrapData: NexusBootstrapRes
   expect(mocks.homeserverRequest).toHaveBeenCalledWith({ method: HttpMethod.GET, url: MOCK_LAST_READ_URL });
   expect(mocks.fetchMutedUsers).toHaveBeenCalledWith(TEST_PUBKY);
   expect(mocks.fetchFeeds).toHaveBeenCalledWith(TEST_PUBKY);
-  expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
-  expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
+  expect(mocks.persistUsers).toHaveBeenCalledWith(
+    bootstrapData.users,
+    expect.objectContaining({ revisions: expect.any(Map), viewerId: TEST_PUBKY }),
+  );
+  expect(mocks.persistPosts).toHaveBeenCalledWith({
+    posts: bootstrapData.posts,
+    tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
+  });
   expect(mocks.upsertPostsStream).toHaveBeenCalledWith({
     streamId: PostStreamTypes.TIMELINE_ALL_ALL,
     stream: bootstrapData.ids.stream,
   });
+  // The bootstrap page supersedes anything an earlier head poll collected.
+  expect(mocks.clearUnreadPostsStream).toHaveBeenCalledWith({ streamId: PostStreamTypes.TIMELINE_ALL_ALL });
   expect(mocks.upsertInfluencersStream).toHaveBeenCalledWith({
     streamId: UserStreamTypes.TODAY_INFLUENCERS_ALL,
     stream: bootstrapData.ids.influencers,
@@ -337,7 +345,10 @@ describe('BootstrapApplication', () => {
 
       await expect(BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY))).rejects.toThrow('Database error');
 
-      expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
+      expect(mocks.persistUsers).toHaveBeenCalledWith(
+        bootstrapData.users,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId: TEST_PUBKY }),
+      );
     });
 
     it('should handle empty bootstrap data', async () => {
@@ -399,8 +410,14 @@ describe('BootstrapApplication', () => {
         bodyJson: mockLastReadResult.last_read.toJson(),
       });
 
-      expect(mocks.persistUsers).toHaveBeenCalledWith(bootstrapData.users);
-      expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
+      expect(mocks.persistUsers).toHaveBeenCalledWith(
+        bootstrapData.users,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId: TEST_PUBKY }),
+      );
+      expect(mocks.persistPosts).toHaveBeenCalledWith({
+        posts: bootstrapData.posts,
+        tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
+      });
       expect(result).toEqual({
         unread: 0,
         lastRead: MOCK_NORMALIZED_TIMESTAMP,
@@ -484,7 +501,10 @@ describe('BootstrapApplication', () => {
         'Posts persistence error',
       );
 
-      expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: bootstrapData.posts });
+      expect(mocks.persistPosts).toHaveBeenCalledWith({
+        posts: bootstrapData.posts,
+        tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
+      });
     });
 
     it('should throw error when upsert operations fail', async () => {
@@ -636,7 +656,7 @@ describe('BootstrapApplication', () => {
       const mockSubscribeUser = vi.fn();
       const mockGetInstance = vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
         asOpaque<TtlCoordinator>({
-          subscribeUser: mockSubscribeUser,
+          retryUserIndexing: mockSubscribeUser,
         }),
       );
       const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
@@ -666,7 +686,7 @@ describe('BootstrapApplication', () => {
       const mockSubscribeUser = vi.fn();
       vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
         asOpaque<TtlCoordinator>({
-          subscribeUser: mockSubscribeUser,
+          retryUserIndexing: mockSubscribeUser,
         }),
       );
       const loggerWarnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});

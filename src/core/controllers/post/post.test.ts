@@ -5,7 +5,7 @@ import { PostApplication } from '@/application/post/post';
 import { COLLECTION_LAYOUT } from '@/config/collections';
 import type { TCreatePostParams, TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { db } from '@/database/franky/franky';
-import { DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -1531,6 +1531,36 @@ describe('PostController', () => {
     });
   });
 
+  describe('commitCreateCollection cover upload', () => {
+    const coverFile = () => new File(['x'], 'cover.png', { type: 'image/png' });
+    const createParams = () => ({
+      authorId: testData.authorPubky,
+      name: 'Reading list',
+      description: '',
+      coverImage: coverFile(),
+    });
+
+    it('keeps an expired-session cover failure classified instead of wrapping it as validation', async () => {
+      const authError = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+      });
+      vi.spyOn(FileApplication, 'toFileAttachment').mockRejectedValue(authError);
+
+      const { PostController } = await import('./post');
+      await expect(PostController.commitCreateCollection(createParams())).rejects.toBe(authError);
+    });
+
+    it('still wraps non-auth cover failures as validation', async () => {
+      vi.spyOn(FileApplication, 'toFileAttachment').mockRejectedValue(new Error('boom'));
+
+      const { PostController } = await import('./post');
+      await expect(PostController.commitCreateCollection(createParams())).rejects.toThrow(
+        'Failed to upload collection cover image',
+      );
+    });
+  });
+
   describe('commitEditCollection', () => {
     const collectionPostId = buildCompositeId({ pubky: testData.authorPubky, id: 'editCol1' });
     const existingItemUri = 'pubky://target_author_pubky/pub/pubky.app/posts/keep-me';
@@ -1879,6 +1909,30 @@ describe('PostController', () => {
       }
     });
 
+    it('keeps an expired-session cover failure classified instead of wrapping it as validation', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const authError = Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+      });
+      vi.spyOn(FileApplication, 'toFileAttachment').mockRejectedValue(authError);
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: new File(['x'], 'cover.png', { type: 'image/png' }),
+          }),
+        ).rejects.toBe(authError);
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
     it('rejects when the current user is not the collection author', async () => {
       setupAuthUser('different_user_pubky' as Pubky);
       vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
@@ -1972,6 +2026,26 @@ describe('PostController', () => {
       }
     });
 
+    it('should inject the signed-in viewer when none is supplied (#1803)', async () => {
+      const { PostController } = await import('./post');
+      const authSpy = vi
+        .spyOn(useAuthStore, 'getState')
+        .mockReturnValue({ ...useAuthStore.getState(), currentUserPubky: testData.authorPubky });
+      const getOrFetchSpy = vi.spyOn(PostApplication, 'getOrFetch').mockResolvedValue(null);
+
+      try {
+        await PostController.getOrFetch({ compositeId: 'author:post123' });
+        expect(getOrFetchSpy).toHaveBeenCalledWith({
+          compositeId: 'author:post123',
+          viewerId: testData.authorPubky,
+          isCurrent: expect.any(Function),
+        });
+      } finally {
+        getOrFetchSpy.mockRestore();
+        authSpy.mockRestore();
+      }
+    });
+
     it('should call PostApplication.getOrFetch with correct postId', async () => {
       const { PostController } = await import('./post');
 
@@ -1979,7 +2053,11 @@ describe('PostController', () => {
 
       try {
         await PostController.getOrFetch({ compositeId: 'author:post123', viewerId: mockViewerId });
-        expect(getOrFetchSpy).toHaveBeenCalledWith({ compositeId: 'author:post123', viewerId: mockViewerId });
+        expect(getOrFetchSpy).toHaveBeenCalledWith({
+          isCurrent: expect.any(Function),
+          compositeId: 'author:post123',
+          viewerId: mockViewerId,
+        });
       } finally {
         getOrFetchSpy.mockRestore();
       }
@@ -1996,9 +2074,53 @@ describe('PostController', () => {
 
       try {
         await PostController.fetch({ compositeId: 'author:post123', viewerId: mockViewerId });
-        expect(fetchSpy).toHaveBeenCalledWith({ compositeId: 'author:post123', viewerId: mockViewerId });
+        expect(fetchSpy).toHaveBeenCalledWith({
+          isCurrent: expect.any(Function),
+          compositeId: 'author:post123',
+          viewerId: mockViewerId,
+        });
       } finally {
         fetchSpy.mockRestore();
+      }
+    });
+
+    it('should inject the signed-in viewer when none is supplied (#1803)', async () => {
+      const { PostController } = await import('./post');
+      const authSpy = vi
+        .spyOn(useAuthStore, 'getState')
+        .mockReturnValue({ ...useAuthStore.getState(), currentUserPubky: testData.authorPubky });
+      const fetchSpy = vi.spyOn(PostApplication, 'fetch').mockResolvedValue(null);
+
+      try {
+        await PostController.fetch({ compositeId: 'author:post123' });
+        expect(fetchSpy).toHaveBeenCalledWith({
+          compositeId: 'author:post123',
+          viewerId: testData.authorPubky,
+          isCurrent: expect.any(Function),
+        });
+      } finally {
+        fetchSpy.mockRestore();
+        authSpy.mockRestore();
+      }
+    });
+
+    it('should pass a null viewer for guests', async () => {
+      const { PostController } = await import('./post');
+      const authSpy = vi
+        .spyOn(useAuthStore, 'getState')
+        .mockReturnValue({ ...useAuthStore.getState(), currentUserPubky: null });
+      const fetchSpy = vi.spyOn(PostApplication, 'fetch').mockResolvedValue(null);
+
+      try {
+        await PostController.fetch({ compositeId: 'author:post123' });
+        expect(fetchSpy).toHaveBeenCalledWith({
+          compositeId: 'author:post123',
+          viewerId: null,
+          isCurrent: expect.any(Function),
+        });
+      } finally {
+        fetchSpy.mockRestore();
+        authSpy.mockRestore();
       }
     });
 

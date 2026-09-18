@@ -246,7 +246,7 @@ function CollectionCardContent({
               <CollectionCountBadge
                 count={itemCount}
                 showLabelOnMobile
-                tone={embeddedOnMuted ? 'on-muted' : 'on-card'}
+                tone={coverImage ? 'on-cover' : embeddedOnMuted ? 'on-muted' : 'on-card'}
               />
               <AvatarWithFallback
                 avatarUrl={ownerAvatarUrl}

@@ -861,7 +861,7 @@ describe('TimelineFeed', () => {
       }
     });
 
-    it('keeps ids outside the envelope for a signed-out viewer, whose envelope never refreshes', () => {
+    it('mirrors the envelope for a signed-out viewer too, whose envelope the public TTL refreshes', () => {
       orderedEnvelope();
       mockUseStreamPagination.mockReturnValue({
         ...defaultPaginationResult,
@@ -870,10 +870,8 @@ describe('TimelineFeed', () => {
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} requestedLayout={LAYOUT.COLUMNS} />);
 
-      expect(screen.getByTestId('timeline-posts')).toHaveAttribute(
-        'data-post-ids',
-        'author_a:post_a,author_b:post_b,stranger:post_x',
-      );
+      // The guest's count badge follows the refreshed envelope, so the grid must too.
+      expect(screen.getByTestId('timeline-posts')).toHaveAttribute('data-post-ids', 'author_a:post_a,author_b:post_b');
     });
 
     it('keeps ids outside the envelope for the owner, appended after the envelope order', () => {

@@ -297,6 +297,22 @@ describe('PostPreviewCard', () => {
     expect(screen.getByTestId('collection-card')).toHaveAttribute('data-interactive-actions', 'false');
   });
 
+  it('squares the top corners of collection embeds when flush', () => {
+    mockUsePostDetails.mockReturnValue(collectionPost);
+
+    render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} flush />);
+
+    expect(screen.getByTestId('collection-card')).toHaveClass('rounded-t-none');
+  });
+
+  it('keeps rounded corners for collection embeds by default', () => {
+    mockUsePostDetails.mockReturnValue(collectionPost);
+
+    render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} />);
+
+    expect(screen.getByTestId('collection-card')).not.toHaveClass('rounded-t-none');
+  });
+
   it('is the TTL subscriber for a collection original (observes the embed wrapper)', () => {
     // This wrapper owns the embed's subscription; the nested `CollectionCard`
     // skips its own for `presentation="embed"` (covered in CollectionCard tests).

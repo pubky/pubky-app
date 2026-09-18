@@ -4,6 +4,8 @@
 
 Accepted — 2026-01-01
 
+Partially superseded by [ADR 0020](0020-local-first-tag-cache.md) — subscription ownership across navigation, author tracking, and authentication (2026-09-07).
+
 ## Context
 
 ADR-0005 establishes a per-entity TTL strategy. The app has TTL tables (`post_ttl`, `user_ttl`), but there is no mechanism to **proactively refresh stale data** that users are actively viewing. This ADR defines TTL rows using a `lastUpdatedAt` timestamp (when the entity was last refreshed) so staleness can be computed as `now - lastUpdatedAt > TTL_MS`. Current behavior:
@@ -200,14 +202,15 @@ The TTL Coordinator uses these methods when `(now - lastUpdatedAt) > TTL_MS` to 
 
 ### Lifecycle Gating (auth + page visibility)
 
+> Superseded by [ADR 0020](0020-local-first-tag-cache.md): ticking no longer requires authentication. Public views refresh as a guest, a session change discards queued work but keeps subscriptions, and the manager owns start/stop. The bullets below describe the original design.
+
 The TTL Coordinator must be lifecycle-aware like other coordinators:
 
 - Only run refresh ticks when the user is authenticated (derive `viewerId` from auth store)
 - If unauthenticated, skip ticks and do not enqueue refresh work
 - Pause refresh when the page is hidden (unless explicitly configured otherwise)
 - On logout: stop ticking and `reset()` subscriptions
-- Auth changes are detected by comparing store snapshots (`isAuthenticatedState(state)` vs `isAuthenticatedState(prevState)`, plus `hasProfile`), never by calling a store selector on `prevState` — selectors read the live store, so such a comparison can never see a transition. A session restored after `start()` (a reload on a public route mounts the coordinator before restore) therefore starts ticking on its own.
-- A new subscription restarts a stopped tick loop when every condition above is met, as a safety net for any transient stop
+- Auth changes are detected by comparing store snapshots, never by calling a store selector on `prevState` — selectors read the live store, so such a comparison can never see a transition.
 
 ### Idempotency & Refcount Invariants
 

@@ -28,7 +28,6 @@ import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import { getTagsLayoutForSurfaceLayout } from '@/organisms/PostMain/PostMainLayoutRules';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
-import { isAuthenticatedState } from '@/stores/auth/auth.selectors';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT } from '@/stores/home/home.types';
@@ -247,21 +246,19 @@ function CollectionTimelineFeed({
   const envelopeItems = postDetails ? parseCollectionContent(postDetails.content)?.items : undefined;
   const membershipPostIds = collectionItemsToPostIds(envelopeItems);
 
-  // Signed-in viewers also hand the membership to the feed: the items stream
-  // is fetched once and never polled, so when the TTL coordinator refreshes
-  // the envelope (the owner added or removed posts elsewhere) the feed applies
-  // the delta in place and the grid tracks the count badge. Two exclusions:
+  // Viewers also hand the membership to the feed: the items stream is fetched
+  // once and never polled, so when the TTL coordinator refreshes the envelope
+  // (the owner added or removed posts elsewhere) the feed applies the delta in
+  // place and the grid tracks the count badge. Guests are included: the hero
+  // subscribes the envelope to the public TTL refresh (ADR 0020), so their
+  // count badge updates and the grid must follow it. One exclusion:
   // - Owners: their own flows already update this feed (optimistic inserts
   //   from the add dialog / FAB, the save picker's close-gated removal,
   //   deleted-post removal), and mirroring their local envelope writes would
   //   race those flows — e.g. yank a card out from under the open save picker.
-  // - Guests: the TTL coordinator only runs for a signed-in session, so a
-  //   guest's cached envelope never refreshes and must not filter the (fresh)
-  //   stream. They keep the pre-existing behaviour: live grid, cached count.
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
-  const isAuthenticated = useAuthStore(isAuthenticatedState);
   const isOwn = !!userId && currentUserPubky === userId;
-  const mirrorsMembership = isAuthenticated && !isOwn;
+  const mirrorsMembership = !isOwn;
 
   return (
     <TimelineFeedWithStream

@@ -45,11 +45,12 @@ export const createQuickPost = (postContent: string, tags?: string[], expectedPo
         });
       }
 
-      // verify displayed content length
+      // verify displayed content length: the counter measures UTF-16 units, the same
+      // length the limit enforces, so an emoji counts as two (#2564)
       cy.get('[data-cy="post-header-character-count"]').then((counter) => {
         expectedPostLength
           ? expect(counter.text()).to.eq(`${expectedPostLength}/${MAX_POST_LENGTH}`)
-          : expect(counter.text()).to.eq(`${Array.from(postContent).length}/${MAX_POST_LENGTH}`);
+          : expect(counter.text()).to.eq(`${postContent.length}/${MAX_POST_LENGTH}`);
       });
 
       cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
@@ -69,7 +70,7 @@ export const createQuickPostWithImage = (postContent: string) => {
       addImage();
       cy.get('textarea').type(postContent);
       cy.get('[data-cy="post-header-character-count"]').then((counter) => {
-        expect(counter.text()).to.eq(`${Array.from(postContent).length}/${MAX_POST_LENGTH}`);
+        expect(counter.text()).to.eq(`${postContent.length}/${MAX_POST_LENGTH}`);
       });
       cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('postCreated');
       cy.get('[data-cy="post-input-action-bar-post"]').click();

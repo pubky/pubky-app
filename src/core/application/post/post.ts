@@ -11,11 +11,7 @@ import { PostStreamApplication } from '@/application/stream/posts/post';
 import { TagApplication } from '@/application/tag/tag';
 import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { ModerationController } from '@/controllers/moderation/moderation';
-import type {
-  TDeletePostParams,
-  TFetchMorePostTagsParams,
-  TFetchPostTaggersParams,
-} from '@/controllers/post/post.types';
+import type { TDeletePostParams, TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -30,15 +26,13 @@ import type { PostCountsModelSchema } from '@/models/post/counts/postCounts.sche
 import { PostDetailsModel } from '@/models/post/details/postDetails';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { CollectionPostContent } from '@/pipes/post/post.collection';
 import { PostNormalizer } from '@/pipes/post/post.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostService } from '@/services/local/post/post';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
-import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
-import type { NexusTag, NexusTaggers } from '@/services/nexus/nexus.types';
+import type { NexusTaggers } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
 import type { TCompositeId } from '@/services/nexus/post/post.types';
 
@@ -76,15 +70,6 @@ export class PostApplication {
   }
 
   /**
-   * Reads post tags for a specific post from local database
-   * @param compositeId - Composite post ID in format "authorId:postId"
-   * @returns Post tags
-   */
-  static async getTags({ compositeId }: TCompositeId): Promise<TagCollectionModelSchema<string>[]> {
-    return await LocalPostService.readTags(compositeId);
-  }
-
-  /**
    * Reads post relationships for a specific post
    * @param compositeId - Composite post ID in format "authorId:postId"
    * @returns Post relationships or null if not found
@@ -105,24 +90,6 @@ export class PostApplication {
   }
 
   /**
-   * Fetch more post tags from Nexus with pagination and persist to local DB
-   * @param compositeId - Composite post ID in format "authorId:postId"
-   * @param skip - Number of tags to skip
-   * @param limit - Maximum number of tags to return
-   * @returns Array of tags from Nexus
-   */
-  static async fetchTags({ compositeId, skip, limit, viewerId }: TFetchMorePostTagsParams): Promise<NexusTag[]> {
-    const nexusTags = await NexusPostService.getPostTags({ compositeId, skip, limit, viewerId });
-
-    // Persist new tags to local DB (merge with existing)
-    if (nexusTags.length > 0) {
-      await LocalPostTagService.mergeTags({ postId: compositeId, tags: nexusTags, viewerId: viewerId ?? null });
-    }
-
-    return nexusTags;
-  }
-
-  /**
    * Fetch taggers for a specific tag label on a post from Nexus API
    * @param params - Parameters containing composite post ID, label, and pagination options
    * @returns Tagger payload for the label ({ users, relationship })
@@ -138,7 +105,11 @@ export class PostApplication {
    * @param viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found
    */
-  static async getOrFetch({ compositeId, viewerId }: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
+  static async getOrFetch({
+    compositeId,
+    viewerId,
+    isCurrent,
+  }: TGetOrFetchPostParams & { isCurrent?: () => boolean }): Promise<PostDetailsModelSchema | null> {
     const localPost = await LocalPostService.readDetails({ postId: compositeId });
     if (localPost) return localPost;
 
@@ -146,6 +117,7 @@ export class PostApplication {
     await PostStreamApplication.fetchMissingPostsFromNexus({
       cacheMissPostIds: [compositeId],
       viewerId,
+      isCurrent,
     });
 
     // Return the persisted post details
@@ -160,10 +132,15 @@ export class PostApplication {
    * @param viewerId - Optional viewer ID for relationship data
    * @returns Post details or null if not found on Nexus
    */
-  static async fetch({ compositeId, viewerId }: TGetOrFetchPostParams): Promise<PostDetailsModelSchema | null> {
+  static async fetch({
+    compositeId,
+    viewerId,
+    isCurrent,
+  }: TGetOrFetchPostParams & { isCurrent?: () => boolean }): Promise<PostDetailsModelSchema | null> {
     await PostStreamApplication.fetchMissingPostsFromNexus({
       cacheMissPostIds: [compositeId],
       viewerId,
+      isCurrent,
     });
 
     return await LocalPostService.readDetails({ postId: compositeId });
@@ -197,7 +174,8 @@ export class PostApplication {
   static async fetchAuthoredCollections({
     authorId,
     viewerId,
-  }: TAuthoredCollectionsParams): Promise<CollectionPost[] | null> {
+    isCurrent,
+  }: TAuthoredCollectionsParams & { isCurrent?: () => boolean }): Promise<CollectionPost[] | null> {
     const streamId = buildAuthorCollectionsStreamId(authorId);
     const { cacheMissPostIds } = await PostStreamApplication.fetchStreamSlice({
       streamId,
@@ -205,19 +183,21 @@ export class PostApplication {
       streamTail: NOT_FOUND_CACHED_STREAM,
       limit: NEXUS_STREAM_MAX_LIMIT,
       viewerId: viewerId ?? null,
+      isCurrent,
     });
 
     if (cacheMissPostIds.length > 0) {
       await PostStreamApplication.fetchMissingPostsFromNexus({
         cacheMissPostIds,
         viewerId,
+        isCurrent,
       });
     }
 
     return await this.getAuthoredCollections({ authorId, viewerId });
   }
 
-  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags }: TCreatePostInput) {
+  static async commitCreate({ postUrl, compositePostId, post, fileAttachments, tags, isCurrent }: TCreatePostInput) {
     const hasFiles = fileAttachments != null && fileAttachments.length > 0;
 
     if (hasFiles) {
@@ -254,7 +234,7 @@ export class PostApplication {
     }
 
     if (tags && tags.length > 0) {
-      await TagApplication.commitCreate({ tagList: tags });
+      await TagApplication.commitCreate({ tagList: tags, isCurrent });
     }
   }
 

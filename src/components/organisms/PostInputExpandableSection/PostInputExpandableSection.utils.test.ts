@@ -28,21 +28,22 @@ describe('getButtonLabel', () => {
     expect(getButtonLabel('unknown')).toBe('Post');
   });
 
-  // Note: In practice, isArticle is only true when variant is POST (article sub-mode).
-  // These tests cover the function's actual behavior exhaustively for completeness.
+  // Note: In practice, isArticle is true for the article sub-mode of POST (create)
+  // and of EDIT (edit an article). Articles always submit as "Publish", so the
+  // article sub-mode never reads as "Edit".
   describe('isArticle parameter', () => {
     it('returns "Publish" when isArticle is true', () => {
       expect(getButtonLabel(POST_INPUT_VARIANT.POST, true)).toBe('Publish');
     });
 
-    it('returns "Publish" when isArticle is true for non-EDIT variants', () => {
+    it('returns "Publish" when isArticle is true for other variants', () => {
       expect(getButtonLabel(POST_INPUT_VARIANT.REPLY, true)).toBe('Publish');
       expect(getButtonLabel(POST_INPUT_VARIANT.REPOST, true)).toBe('Publish');
       expect(getButtonLabel(undefined, true)).toBe('Publish');
     });
 
-    it('returns "Edit" when isArticle is true but variant is EDIT', () => {
-      expect(getButtonLabel(POST_INPUT_VARIANT.EDIT, true)).toBe('Edit');
+    it('returns "Publish" when isArticle is true and variant is EDIT (editing an article)', () => {
+      expect(getButtonLabel(POST_INPUT_VARIANT.EDIT, true)).toBe('Publish');
     });
 
     it('returns variant label when isArticle is false', () => {

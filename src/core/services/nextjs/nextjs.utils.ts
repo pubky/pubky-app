@@ -1,11 +1,15 @@
-import { AppError } from '@/libs/error/error';
-import { ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpStatusCode } from '@/libs/http/http.types';
 import { isIpSafe } from '@/libs/network/network';
 
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5MB
+/**
+ * Deadline for reading a remote body. The og-metadata fetch timeout is cleared as soon as the
+ * response headers arrive, so the body read needs a bound of its own: without one, a remote that
+ * trickles or stalls mid-body holds the request open until the platform kills it.
+ */
+const RESPONSE_READ_TIMEOUT_MS = 10_000;
 const DNS_SAFETY_OPERATION = 'checkDnsSafety';
 const IP_FAMILY_IPV4 = 4;
 const IP_FAMILY_IPV6 = 6;
@@ -115,51 +119,57 @@ function normalizeIpHostname(hostname: string): string {
 }
 
 /**
- * Reads response body with a 5MB size limit using stream reader.
- * Content-Length headers can be spoofed, so we enforce the limit by reading the stream.
+ * Reason a response body could not be read. Every value is an expected outcome for best-effort
+ * enrichment, so callers map them onto the fallback shape instead of an `Err.*`.
  */
-export async function readResponseBody(response: Response): Promise<string> {
+export type TResponseBodyReadFailure = 'body_too_large' | 'body_timeout' | 'body_unreadable';
+
+export type TResponseBodyReadResult = { ok: true; body: string } | { ok: false; reason: TResponseBodyReadFailure };
+
+/**
+ * Reads a response body as text under a size cap and a read deadline.
+ * Content-Length headers can be spoofed, so the cap is enforced by counting the streamed bytes.
+ *
+ * The cap and the deadline are returned as data rather than thrown: a remote document that is
+ * oversized, stalls, or dies mid-stream is a page we could not preview, not a bug, and must not
+ * become a Sentry issue through `Err.*`.
+ */
+export async function readResponseBody(response: Response): Promise<TResponseBodyReadResult> {
   const reader = response.body?.getReader();
   if (!reader) {
-    throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'No response body', {
-      service: ErrorService.NextJsServer,
-      operation: 'readResponseBody',
-      context: { statusCode: HttpStatusCode.BAD_REQUEST },
-    });
+    return { ok: false, reason: 'body_unreadable' };
   }
 
   let totalBytes = 0;
+  let timedOut = false;
   const chunks: Uint8Array[] = [];
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    void reader.cancel().catch(() => {});
+  }, RESPONSE_READ_TIMEOUT_MS);
 
   try {
     while (true) {
       const { done, value } = await reader.read();
+      if (timedOut) return { ok: false, reason: 'body_timeout' };
       if (done) break;
 
       totalBytes += value.byteLength;
       if (totalBytes > MAX_RESPONSE_SIZE) {
-        await reader.cancel();
-        throw Err.client(ClientErrorCode.PAYLOAD_TOO_LARGE, 'Response too large (max 5MB)', {
-          service: ErrorService.NextJsServer,
-          operation: 'readResponseBody',
-          context: { totalBytes, statusCode: HttpStatusCode.PAYLOAD_TOO_LARGE },
-        });
+        await reader.cancel().catch(() => {});
+        return { ok: false, reason: 'body_too_large' };
       }
 
       chunks.push(value);
     }
-  } catch (error) {
-    if (error instanceof AppError) throw error;
-
-    throw Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Failed to read response body', {
-      service: ErrorService.NextJsServer,
-      operation: 'readResponseBody',
-      cause: error,
-      context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
-    });
+  } catch {
+    // A body that errors mid-stream is an expected remote failure, not an internal one.
+    return { ok: false, reason: timedOut ? 'body_timeout' : 'body_unreadable' };
+  } finally {
+    clearTimeout(timeoutId);
   }
 
-  return new TextDecoder().decode(Buffer.concat(chunks));
+  return { ok: true, body: new TextDecoder().decode(Buffer.concat(chunks)) };
 }
 
 /**

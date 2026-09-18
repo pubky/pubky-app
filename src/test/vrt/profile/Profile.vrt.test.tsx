@@ -491,7 +491,10 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => {
 
 vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
   const f = await fixtures;
-  const cache = new Map<string, { showRepostHeader: boolean; shouldShowPostHeader: boolean }>();
+  const cache = new Map<
+    string,
+    { showRepostHeader: boolean; shouldShowPostHeader: boolean; originalPostId: string | null }
+  >();
   return {
     usePostHeaderVisibility: (compositeId: string) => {
       const cached = cache.get(compositeId);
@@ -501,6 +504,7 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
       const result = {
         showRepostHeader: !!fixture?.relationships?.reposted,
         shouldShowPostHeader: true,
+        originalPostId: null,
       };
       cache.set(compositeId, result);
       return result;
