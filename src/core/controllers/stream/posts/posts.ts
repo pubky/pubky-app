@@ -3,6 +3,7 @@ import { NEXUS_POSTS_PER_PAGE } from '@/config/nexus';
 import { NOT_FOUND_CACHED_STREAM, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import type {
   TClearUnreadStreamParams,
+  TMarkUnreadPostsAsReadParams,
   TReadPostStreamChunkParams,
   TReadPostStreamChunkResponse,
   TStreamIdParams,
@@ -198,6 +199,11 @@ export class StreamPostsController {
    */
   static async mergeUnreadStreamWithPostStream(params: TStreamIdParams) {
     return await PostStreamApplication.mergeUnreadStreamWithPostStream(params);
+  }
+
+  /** Merge and acknowledge exactly the posts the reader chose to open. */
+  static async markUnreadPostsAsRead(params: TMarkUnreadPostsAsReadParams): Promise<void> {
+    await PostStreamApplication.markUnreadPostsAsRead(params);
   }
 
   /**

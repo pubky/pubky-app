@@ -43,8 +43,7 @@ vi.mock('@/molecules/Toaster/toast');
 
 vi.mock('@/controllers/stream/posts/posts', () => ({
   StreamPostsController: {
-    mergeUnreadStreamWithPostStream: vi.fn(),
-    clearUnreadStream: vi.fn(),
+    markUnreadPostsAsRead: vi.fn(),
     filterDeletedPosts: vi.fn((ids: string[]) => Promise.resolve(ids)),
   },
 }));
@@ -154,10 +153,7 @@ describe('NewPostsSection', () => {
     fireEvent.click(screen.getByTestId('new-posts-button'));
 
     await waitFor(() => {
-      expect(StreamPostsController.mergeUnreadStreamWithPostStream).toHaveBeenCalledWith({
-        streamId: 'timeline:all:all',
-      });
-      expect(StreamPostsController.clearUnreadStream).toHaveBeenCalledWith({
+      expect(StreamPostsController.markUnreadPostsAsRead).toHaveBeenCalledWith({
         streamId: 'timeline:all:all',
         postIds: ['new1'],
       });

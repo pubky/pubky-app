@@ -855,6 +855,25 @@ describe('TimelineFeedContent', () => {
       expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['post1']);
     });
 
+    it('waits for the mute list before reconciling missing collection members', () => {
+      const membershipPostIds = ['muted-user:post9', 'other-user:post1'];
+      mockUseMutedUsers.mockReturnValue({ ...defaultMutedUsersResult, isLoading: true });
+      setLoadedIds([]);
+
+      const { rerender } = render(collectionFeed(membershipPostIds));
+      expect(mockPrependOptimisticPosts).not.toHaveBeenCalled();
+
+      mockUseMutedUsers.mockReturnValue({
+        ...defaultMutedUsersResult,
+        mutedUserIds: ['muted-user'],
+        mutedUserIdSet: new Set(['muted-user']),
+      });
+      rerender(collectionFeed(membershipPostIds));
+
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledTimes(1);
+      expect(mockPrependOptimisticPosts).toHaveBeenCalledWith(['other-user:post1']);
+    });
+
     it('does not reconcile while more pages are still loading', () => {
       setLoadedIds(['post1'], { loadingMore: true, hasMore: true });
       const { rerender } = render(collectionFeed(['post1', 'post2']));

@@ -70,6 +70,7 @@ it('keeps pending unread posts available after clicking a hydrated post', async 
   await waitFor(() => expect(screen.getByTestId('displayed-posts')).toHaveTextContent(ready.id));
 
   expect((await StreamPostsController.getUnreadStream({ streamId }))?.stream).toEqual([pending.id]);
+  expect((await PostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([ready.id, existing.id]);
   await act(async () => {
     await PostDetailsModel.create(pending);
   });

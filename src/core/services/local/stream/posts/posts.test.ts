@@ -1788,6 +1788,67 @@ describe('LocalStreamPostsService', () => {
     });
   });
 
+  describe('markUnreadPostsAsRead', () => {
+    it('moves only selected posts, retaining pending and later arrivals and the tail cursor', async () => {
+      const ready = postId('ready');
+      const pending = postId('pending');
+      const later = postId('later');
+      const existing = postId('existing');
+      await LocalStreamPostsService.upsert({ streamId, stream: [existing], tailCursor: BASE_TIMESTAMP });
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pending, ready]);
+      await LocalStreamPostsService.persistUnreadNewStreamChunk({ streamId, stream: [later] });
+
+      await LocalStreamPostsService.markUnreadPostsAsRead({ streamId, postIds: [ready] });
+
+      expect((await PostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([ready, existing]);
+      expect((await PostStreamModel.findById(streamId as PostStreamId))?.tailCursor).toBe(BASE_TIMESTAMP);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([later, pending]);
+    });
+
+    it('creates the main row before acknowledging posts when the cache is empty', async () => {
+      const ready = postId('ready');
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready]);
+
+      await LocalStreamPostsService.markUnreadPostsAsRead({ streamId, postIds: [ready] });
+
+      expect((await PostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([ready]);
+      expect(await UnreadPostStreamModel.findById(streamId as PostStreamId)).toBeNull();
+    });
+
+    it('rolls back the merge if acknowledgement fails', async () => {
+      const ready = postId('ready');
+      const pending = postId('pending');
+      const existing = postId('existing');
+      await createStream([existing]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready, pending]);
+      const error = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Could not acknowledge posts', {
+        service: ErrorService.Local,
+        operation: 'markUnreadPostsAsRead',
+      });
+      vi.spyOn(UnreadPostStreamModel, 'upsert').mockRejectedValueOnce(error);
+
+      await expect(LocalStreamPostsService.markUnreadPostsAsRead({ streamId, postIds: [ready] })).rejects.toBe(error);
+
+      expect((await PostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([existing]);
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([ready, pending]);
+    });
+
+    it('serializes a concurrent poll with acknowledgement without restoring the read post', async () => {
+      const ready = postId('ready');
+      const pending = postId('pending');
+      const later = postId('later');
+      await createStream([postId('existing')]);
+      await UnreadPostStreamModel.upsert(streamId as PostStreamId, [ready, pending]);
+
+      await Promise.all([
+        LocalStreamPostsService.persistUnreadNewStreamChunk({ streamId, stream: [later] }),
+        LocalStreamPostsService.markUnreadPostsAsRead({ streamId, postIds: [ready] }),
+      ]);
+
+      expect((await UnreadPostStreamModel.findById(streamId as PostStreamId))?.stream).toEqual([later, pending]);
+    });
+  });
+
   describe('clearUnreadStream', () => {
     it('acknowledges only the selected IDs and preserves later arrivals', async () => {
       const selectedId = postId('selected');

@@ -36,7 +36,7 @@ interface NewPostsSectionProps {
  * `useStreamPagination`) — it does not choose which stream a post belongs to in
  * Dexie. Before prepending, we drop ids whose `kind` does not match the active
  * `streamId` content filter so a post never flashes at the top of the wrong tab.
- * The merge above still persists unread ids into the stream; this gate is UI-only.
+ * Acknowledgement persists the selected unread ids into the stream; this gate is UI-only.
  */
 export function NewPostsSection({
   streamId,
@@ -62,9 +62,8 @@ export function NewPostsSection({
 
   const handleNewPostsClick = async () => {
     try {
-      await StreamPostsController.mergeUnreadStreamWithPostStream({ streamId });
       // Pending details and posts arriving after this render remain unread.
-      await StreamPostsController.clearUnreadStream({ streamId, postIds: actualNewPostIds });
+      await StreamPostsController.markUnreadPostsAsRead({ streamId, postIds: actualNewPostIds });
 
       const existingPosts = await StreamPostsController.filterDeletedPosts(actualNewPostIds);
       const displayedPostIdsSet = new Set(postIds);

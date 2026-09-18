@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { APP_ROUTES } from '@/app/routes';
+import { PostStreamApplication } from '@/application/stream/posts/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
@@ -115,7 +116,7 @@ it('hydrates older unread misses even with a cached head, then reads locally', a
 
   expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(head.details.indexed_at);
   expect(hydrate).toHaveBeenCalledWith(expect.objectContaining({ post_ids: [pendingId] }));
-  expect(await PostDetailsModel.findById(pendingId)).not.toBeNull();
+  await waitFor(async () => expect(await PostDetailsModel.findById(pendingId)).not.toBeNull());
   expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(head.details.indexed_at);
   expect(hydrate).toHaveBeenCalledTimes(1);
 });
@@ -152,4 +153,153 @@ it.each([true, false])('keeps polling when Nexus omits an unread ID (cached main
 
   expect(head).toBe(hasMainHead ? main.details.indexed_at : 1);
   expect((await StreamPostsController.getUnreadStream({ streamId }))?.stream).toEqual([pendingId]);
+});
+
+it('does not restart polling at the newest page when the main head also lacks details', async () => {
+  const mainId = buildCompositeId({ pubky: 'author', id: 'missing-main' });
+  const pendingId = buildCompositeId({ pubky: 'author', id: 'pending' });
+  await PostStreamModel.upsert(streamId as PostStreamId, [mainId]);
+  await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pendingId]);
+  vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue([]);
+
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(0);
+  expect((await StreamPostsController.getUnreadStream({ streamId }))?.stream).toEqual([pendingId]);
+});
+
+it.each([true, false])(
+  'discovers newer posts while one unread retry is pending (cached unread head: %s)',
+  async (hasUnreadHead) => {
+    const now = Date.now();
+    const main = nexusPost('main', now);
+    const ready = nexusPost('ready', now + 2);
+    const pending = nexusPost('pending', now + 1);
+    const fresh = nexusPost('fresh', now + 3);
+    const mainId = buildCompositeId({ pubky: 'author', id: main.details.id });
+    const readyId = buildCompositeId({ pubky: 'author', id: ready.details.id });
+    const pendingId = buildCompositeId({ pubky: 'author', id: pending.details.id });
+    const freshId = buildCompositeId({ pubky: 'author', id: fresh.details.id });
+    await PostDetailsModel.create({ ...main.details, id: mainId });
+    await PostStreamModel.upsert(streamId as PostStreamId, [mainId]);
+    if (hasUnreadHead) await PostDetailsModel.create({ ...ready.details, id: readyId });
+    await UnreadPostStreamModel.upsert(streamId as PostStreamId, hasUnreadHead ? [readyId, pendingId] : [pendingId]);
+    useAuthStore.getState().init({ session: mockSession(), currentUserPubky: 'viewer', hasProfile: true });
+    useAuthStore.getState().setHasHydrated(true);
+    useHomeStore.setState({
+      sort: SORT.TIMELINE,
+      reach: REACH.ALL,
+      content: CONTENT.ALL,
+      taggedAsActive: false,
+      hasHydrated: true,
+    });
+    const retry = Promise.withResolvers<NexusPost[]>();
+    const hydrate = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockImplementation(async ({ post_ids }) => {
+      return post_ids.includes(pendingId) ? retry.promise : [fresh];
+    });
+    vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
+    const fetchKeys = vi
+      .spyOn(NexusPostStreamService, 'fetch')
+      .mockResolvedValueOnce({ post_keys: [freshId], last_post_score: fresh.details.indexed_at })
+      .mockResolvedValue({ post_keys: [], last_post_score: null });
+    const { result } = renderHook(() => useUnreadPosts({ streamId }));
+    const coordinator = StreamCoordinator.getInstance();
+    coordinator.configure({ intervalMs: 100, pollOnStart: true, respectPageVisibility: false });
+    await coordinator.setRoute(APP_ROUTES.HOME);
+    await coordinator.start();
+
+    try {
+      await waitFor(() => expect(result.current.unreadPostIds).toContain(freshId));
+      await waitFor(() => expect(fetchKeys.mock.calls.length).toBeGreaterThanOrEqual(3));
+      expect(await PostDetailsModel.findById(pendingId)).toBeNull();
+      expect(hydrate.mock.calls.filter(([params]) => params.post_ids.includes(pendingId))).toHaveLength(1);
+    } finally {
+      coordinator.stop();
+      await act(async () => {
+        retry.resolve([pending]);
+      });
+      await waitFor(() => expect(result.current.unreadPostIds).toContain(pendingId));
+    }
+  },
+);
+
+it('replaces an obsolete session retry without letting its cleanup remove the current retry', async () => {
+  const main = nexusPost('main', Date.now());
+  const pending = nexusPost('pending', main.details.indexed_at + 1);
+  const mainId = buildCompositeId({ pubky: 'author', id: main.details.id });
+  const pendingId = buildCompositeId({ pubky: 'author', id: pending.details.id });
+  await PostDetailsModel.create({ ...main.details, id: mainId });
+  await PostStreamModel.upsert(streamId as PostStreamId, [mainId]);
+  await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pendingId]);
+  useAuthStore.getState().init({ session: mockSession(), currentUserPubky: 'viewer', hasProfile: true });
+  const oldRetry = Promise.withResolvers<NexusPost[]>();
+  const currentRetry = Promise.withResolvers<NexusPost[]>();
+  const hydrate = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus');
+  vi.spyOn(NexusPostStreamService, 'fetchByIds')
+    .mockReturnValueOnce(oldRetry.promise)
+    .mockReturnValue(currentRetry.promise);
+  vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
+
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+  useAuthStore.getState().init({ session: mockSession(), currentUserPubky: 'viewer', hasProfile: true });
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+  expect(hydrate).toHaveBeenCalledTimes(2);
+
+  oldRetry.resolve([pending]);
+  await hydrate.mock.results[0].value;
+  expect(await PostDetailsModel.findById(pendingId)).toBeNull();
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+  expect(hydrate).toHaveBeenCalledTimes(2);
+  currentRetry.resolve([pending]);
+  await hydrate.mock.results[1].value;
+  await waitFor(async () => expect(await PostDetailsModel.findById(pendingId)).not.toBeNull());
+});
+
+it('releases a failed background retry so the next poll can recover its unread details', async () => {
+  const main = nexusPost('main', Date.now());
+  const pending = nexusPost('pending', main.details.indexed_at + 1);
+  const mainId = buildCompositeId({ pubky: 'author', id: main.details.id });
+  const pendingId = buildCompositeId({ pubky: 'author', id: pending.details.id });
+  await PostDetailsModel.create({ ...main.details, id: mainId });
+  await PostStreamModel.upsert(streamId as PostStreamId, [mainId]);
+  await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pendingId]);
+  const hydrate = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus');
+  vi.spyOn(NexusPostStreamService, 'fetchByIds')
+    .mockRejectedValueOnce(
+      Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Unread hydration failed', {
+        service: ErrorService.Nexus,
+        operation: 'fetchByIds',
+      }),
+    )
+    .mockResolvedValue([pending]);
+  vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
+
+  expect(await StreamPostsController.getOrFetchStreamHead({ streamId })).toBe(main.details.indexed_at);
+  expect(await hydrate.mock.results[0].value).toBe(false);
+  await StreamPostsController.getOrFetchStreamHead({ streamId });
+  await waitFor(async () => expect(await PostDetailsModel.findById(pendingId)).not.toBeNull());
+  expect(hydrate).toHaveBeenCalledTimes(2);
+});
+
+it('waits for unread hydration when no cursor is cached and re-reads rows replaced during that wait', async () => {
+  const pending = nexusPost('pending', Date.now());
+  const pendingId = buildCompositeId({ pubky: 'author', id: pending.details.id });
+  const fresh = nexusPost('fresh-main', pending.details.indexed_at + 5);
+  const freshId = buildCompositeId({ pubky: 'author', id: fresh.details.id });
+  await UnreadPostStreamModel.upsert(streamId as PostStreamId, [pendingId]);
+  const retry = Promise.withResolvers<NexusPost[]>();
+  const hydrate = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockReturnValue(retry.promise);
+  vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
+  let settled = false;
+  const head = StreamPostsController.getOrFetchStreamHead({ streamId }).then((value) => {
+    settled = true;
+    return value;
+  });
+  await waitFor(() => expect(hydrate).toHaveBeenCalledTimes(1));
+  expect(settled).toBe(false);
+  await StreamPostsController.clearUnreadStream({ streamId });
+  await PostDetailsModel.create({ ...fresh.details, id: freshId });
+  await PostStreamModel.upsert(streamId as PostStreamId, [freshId]);
+  retry.resolve([pending]);
+
+  expect(await head).toBe(fresh.details.indexed_at);
+  expect(await StreamPostsController.getUnreadStream({ streamId })).toBeNull();
 });

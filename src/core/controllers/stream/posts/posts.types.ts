@@ -24,6 +24,10 @@ export type TClearUnreadStreamParams = TStreamIdParams & {
   postIds?: string[];
 };
 
+export type TMarkUnreadPostsAsReadParams = TStreamIdParams & {
+  postIds: string[];
+};
+
 export type TReadPostStreamChunkResponse = {
   nextPageIds: string[];
   /** Opaque resume cursor (raw `skip` offset for skip streams, score for score streams).

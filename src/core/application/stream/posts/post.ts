@@ -17,7 +17,11 @@ import {
   NOT_FOUND_CACHED_STREAM,
   SKIP_FETCH_NEW_POSTS,
 } from '@/controllers/stream/posts/post.constants';
-import type { TClearUnreadStreamParams, TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import type {
+  TClearUnreadStreamParams,
+  TMarkUnreadPostsAsReadParams,
+  TStreamIdParams,
+} from '@/controllers/stream/posts/posts.types';
 import { Logger } from '@/libs/logger/logger';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
@@ -55,6 +59,8 @@ import { postStreamQueue } from './muting/post-stream-queue';
 
 export class PostStreamApplication {
   private constructor() {}
+
+  private static readonly unreadHydrations = new Map<string, { request: Promise<boolean>; isCurrent: () => boolean }>();
 
   // ============================================================================
   // Public API
@@ -129,24 +135,53 @@ export class PostStreamApplication {
     return await LocalStreamPostsService.getStreamHead(params);
   }
 
-  /** Retry unresolved unread details on the existing poll before advancing its cursor. */
+  /** Retry unread details without delaying newer-key discovery when a cursor is already cached. */
   static async getOrFetchStreamHead({ streamId, viewerId, isCurrent }: TGetOrFetchStreamHeadParams): Promise<number> {
     const unreadStream = await this.getUnreadStream({ streamId });
+    let hydration: Promise<boolean> | undefined;
     if (unreadStream && unreadStream.stream.length > 0) {
       const cacheMissPostIds = await this.getNotPersistedPostsInCache(unreadStream.stream);
       if (cacheMissPostIds.length > 0) {
-        await this.fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId, isCurrent });
+        hydration = this.hydrateUnreadPosts({ streamId, cacheMissPostIds, viewerId, isCurrent });
       }
     }
-    if (!isCurrent()) return SKIP_FETCH_NEW_POSTS;
-    let streamHead = await this.getStreamHead({ streamId });
-    if (streamHead === SKIP_FETCH_NEW_POSTS) {
+
+    const readHead = async () => {
+      const streamHead = await this.getStreamHead({ streamId });
       // Nexus may omit a deleted or not-yet-indexed unread ID. Keep it pending
       // for hydration, but let newer keys arrive from the known main-stream cursor.
-      const mainStreamHead = await this.getMainStreamHeadTimestamp({ streamId });
-      streamHead = mainStreamHead === SKIP_FETCH_NEW_POSTS ? FORCE_FETCH_NEW_POSTS : mainStreamHead;
+      return streamHead === SKIP_FETCH_NEW_POSTS ? this.getMainStreamHeadTimestamp({ streamId }) : streamHead;
+    };
+    if (!isCurrent()) return SKIP_FETCH_NEW_POSTS;
+    let streamHead = await readHead();
+    if (hydration && streamHead <= FORCE_FETCH_NEW_POSTS) {
+      // Without a known cursor, hydration may be the only way to establish one.
+      // Re-read after it settles: an initial load may have replaced these rows.
+      await hydration;
+      if (!isCurrent()) return SKIP_FETCH_NEW_POSTS;
+      streamHead = await readHead();
     }
     return isCurrent() ? streamHead : SKIP_FETCH_NEW_POSTS;
+  }
+
+  private static hydrateUnreadPosts({
+    streamId,
+    cacheMissPostIds,
+    viewerId,
+    isCurrent,
+  }: TGetOrFetchStreamHeadParams & { cacheMissPostIds: string[] }): Promise<boolean> {
+    if (!isCurrent()) return Promise.resolve(false);
+    const key = JSON.stringify([streamId, viewerId]);
+    const pending = this.unreadHydrations.get(key);
+    if (pending?.isCurrent()) return pending.request;
+
+    // The hydration helper handles failures and leaves missing IDs retryable.
+    // Share the whole persist, not only the underlying Nexus request.
+    const request = this.fetchMissingPostsFromNexus({ cacheMissPostIds, viewerId, isCurrent }).finally(() => {
+      if (this.unreadHydrations.get(key)?.request === request) this.unreadHydrations.delete(key);
+    });
+    this.unreadHydrations.set(key, { request, isCurrent });
+    return request;
   }
 
   /**
@@ -164,6 +199,10 @@ export class PostStreamApplication {
 
   static async clearUnreadStream(params: TClearUnreadStreamParams): Promise<string[]> {
     return await LocalStreamPostsService.clearUnreadStream(params);
+  }
+
+  static async markUnreadPostsAsRead(params: TMarkUnreadPostsAsReadParams): Promise<void> {
+    await LocalStreamPostsService.markUnreadPostsAsRead(params);
   }
 
   /**
