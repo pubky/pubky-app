@@ -65,7 +65,7 @@ exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1
   <div
     data-testid="footer-links"
   >
-    By creating a 
+    By joining, continuing, or creating a 
     Pubky
      account, you agree to the
      
@@ -99,36 +99,47 @@ exports[`Home - Snapshots > matches snapshot for HomeFooter with default props 1
      and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.
   </div>
   <div
-    class="landing-brand-footer inline-flex min-w-max items-center gap-2 whitespace-nowrap transition-opacity duration-300 [&_*]:shrink-0 mt-2"
+    class="mt-2 flex-col items-start gap-4 md:flex-row md:items-center md:justify-between"
+    data-testid="container"
   >
-    <a
-      class="inline-flex items-center"
-      data-testid="link"
-      href="https://synonym.to"
-      target="_blank"
+    <div
+      class="landing-brand-footer inline-flex min-w-max items-center gap-2 whitespace-nowrap transition-opacity duration-300 [&_*]:shrink-0"
     >
-      <img
-        alt="Synonym"
-        data-testid="image"
-        height="24"
-        src="/images/synonym-grey-logo.svg"
-        width="95"
-      />
-    </a>
-    <a
-      class="inline-flex items-center"
-      data-testid="link"
-      href="https://tether.io/"
-      target="_blank"
+      <a
+        class="inline-flex items-center"
+        data-testid="link"
+        href="https://synonym.to"
+        target="_blank"
+      >
+        <img
+          alt="Synonym"
+          data-testid="image"
+          height="24"
+          src="/images/synonym-grey-logo.svg"
+          width="95"
+        />
+      </a>
+      <a
+        class="inline-flex items-center"
+        data-testid="link"
+        href="https://tether.io/"
+        target="_blank"
+      >
+        <img
+          alt="a tether. company"
+          data-testid="image"
+          height="16"
+          src="/images/a-tether-company.svg"
+          width="109"
+        />
+      </a>
+    </div>
+    <div
+      class="mr-0 flex justify-start gap-4 md:justify-end"
+      data-testid="header-social-links"
     >
-      <img
-        alt="a tether. company"
-        data-testid="image"
-        height="16"
-        src="/images/a-tether-company.svg"
-        width="109"
-      />
-    </a>
+      Social Links
+    </div>
   </div>
 </div>
 `;

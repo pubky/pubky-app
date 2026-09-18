@@ -5,6 +5,8 @@ export const ROOT_ROUTES = '/';
 export enum ONBOARDING_ROUTES {
   BACKUP = '/onboarding/backup',
   INSTALL = '/onboarding/install',
+  /** Step 1 when Pubky Passport is available: "Manage your own keys" vs "Continue with Google". */
+  JOIN = '/onboarding/join',
   PROFILE = '/onboarding/profile',
   PUBKY = '/onboarding/pubky',
   SCAN = '/onboarding/scan',
@@ -16,6 +18,8 @@ export enum ONBOARDING_ROUTES {
 export enum AUTH_ROUTES {
   SIGN_IN = '/sign-in',
   LOGOUT = '/logout',
+  /** Same-origin HTTPS callback Pubky Passport navigates to when the popup hand-off cannot complete. */
+  PASSPORT_RETURN = '/passport/return',
 }
 
 export enum APP_ROUTES {
@@ -100,6 +104,9 @@ export const PUBLIC_ROUTES: string[] = [
   // Sentry verification harness must be reachable without a session on preview deploys.
   // The page returns 404 in production via isSentryTestHarnessEnabled().
   DEV_ROUTES.SENTRY_TEST,
+  // Passport callback page: opened in the popup regardless of the opener's auth state; it only
+  // relays an outcome to the opener and never signs the user in.
+  AUTH_ROUTES.PASSPORT_RETURN,
 ];
 
 export const ALLOWED_ROUTES = [
@@ -129,6 +136,7 @@ export const UNAUTHENTICATED_ROUTES = {
     ONBOARDING_ROUTES.PUBKY,
     ONBOARDING_ROUTES.BACKUP,
     ONBOARDING_ROUTES.HUMAN,
+    ONBOARDING_ROUTES.JOIN,
     ...EXPLORE_ROUTES,
     AUTH_ROUTES.LOGOUT,
     COPYRIGHT_ROUTES.COPYRIGHT,

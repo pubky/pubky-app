@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { CheckCircle, Circle, Key, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
@@ -11,17 +11,24 @@ import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
+import type { PassportAttemptSettledEvent } from '@/hooks/usePassportAuth/usePassportAuth.types';
+import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { Logger } from '@/libs/logger/logger';
 import { cn } from '@/libs/utils/utils';
 import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
 import { ContentCard } from '@/molecules/Content/Content';
+import { IllustratedCard } from '@/molecules/IllustratedCard/IllustratedCard';
 import { Logo } from '@/molecules/Logo/Logo';
 import { PageTitle } from '@/molecules/Page/Page';
 import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { toast } from '@/molecules/Toaster/toast';
+import { PassportMethodCard, PassportMethodSection } from '@/organisms/PassportMethodCard/PassportMethodCard';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
 import type { SignInState } from '@/stores/signIn/signIn.types';
+
+const SOVEREIGN_METHOD_TITLE = 'Sovereign & Secure';
 
 // Step configuration for the progress display
 const SIGN_IN_STEPS = [
@@ -93,6 +100,22 @@ const SignInProgress = () => {
 export const SignInContent = () => {
   const { url, isLoading, isExpired, fetchUrl, copyAuthUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth();
   const authUrlResolved = useSignInStore((state) => state.authUrlResolved);
+  const passportEligibility = usePassportEligibility();
+  const isPassportEnabled = passportEligibility === 'enabled';
+  // Starting Passport cancels the pending Ring request (single active auth flow), which expires the QR.
+  // Regenerate it exactly once per Passport attempt that ends without a session; a successful
+  // attempt navigates away via RouteGuard and must never start another Ring flow.
+  const ringRefetchedForAttemptRef = useRef<string | null>(null);
+  const handlePassportAttemptSettled = ({ attemptId, result }: PassportAttemptSettledEvent) => {
+    if (result !== 'failed') return;
+    if (ringRefetchedForAttemptRef.current === attemptId) return;
+    ringRefetchedForAttemptRef.current = attemptId;
+    if (isLoading) return;
+    void fetchUrl();
+  };
+  const { startPassportAuth, isPending: isPassportPending } = usePassportAuth({
+    onAttemptSettled: handlePassportAttemptSettled,
+  });
   useEffect(() => {
     // Clear onboarding storage when sign-in flow begins to prevent backup reminders from showing for existing users
     useOnboardingStore.getState().reset();
@@ -114,6 +137,7 @@ export const SignInContent = () => {
     }
   };
   const isMobileLaunching = isLoading || isOpeningRing;
+  const isRingLocked = isPassportPending;
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
       <Loader2 className="mr-2 size-4 animate-spin" />
@@ -144,60 +168,114 @@ export const SignInContent = () => {
       </Container>
     );
   }
+  const qrButton = (
+    <button
+      type="button"
+      className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2"
+      onClick={isExpired ? fetchUrl : handleQRClick}
+      disabled={isLoading || isRingLocked || (!url && !isExpired)}
+      aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
+    >
+      <QrCodeSlot
+        isLoading={isLoading}
+        isExpired={isExpired}
+        url={url}
+        generatingLabel={'Generating QR Code...'}
+        clickToReloadLabel={'Click to reload'}
+        activeQrHasHoverEffect
+      />
+    </button>
+  );
+
+  const mobileRingButton = (
+    <Button
+      className="w-full"
+      size="lg"
+      onClick={onAuthorizeClick}
+      disabled={isMobileLaunching || isRingLocked || (!url && !isExpired)}
+      aria-busy={isMobileLaunching}
+      data-testid="button"
+    >
+      {mobileAuthorizeContent}
+    </Button>
+  );
+
   return (
     <>
       <Container size="container" className="hidden md:flex">
-        <SignInHeader />
-        <BalancedQrCard
-          data-testid="sign-in-qr-card"
-          illustration={
-            <Image
-              priority
-              src="/images/scan.webp"
-              alt="Pubky Ring phone scanning a QR code"
-              width={192}
-              height={192}
-              className="size-48"
-            />
-          }
-        >
-          <button
-            type="button"
-            className="group relative flex size-48 cursor-pointer items-center justify-center rounded-md bg-foreground p-2"
-            onClick={isExpired ? fetchUrl : handleQRClick}
-            disabled={isLoading || (!url && !isExpired)}
-            aria-label={isExpired ? 'Reload sign-in QR code' : 'Copy authentication link'}
+        <SignInHeader isPassportEnabled={isPassportEnabled} />
+        {isPassportEnabled ? (
+          <Container className="flex-row items-stretch gap-6" data-testid="sign-in-methods">
+            <IllustratedCard
+              data-testid="sign-in-ring-card"
+              className="flex-1 rounded-md"
+              visual={
+                <Image
+                  priority
+                  src="/images/keyring.webp"
+                  alt="Lime Pubky keyring representing keys you control"
+                  width={192}
+                  height={192}
+                  className="size-48"
+                />
+              }
+            >
+              <Container className="gap-3">
+                <Typography as="h3" size="lg" className="leading-8">
+                  {SOVEREIGN_METHOD_TITLE}
+                </Typography>
+                <Typography as="p" className="leading-6 text-secondary-foreground/80">
+                  {'Scan with '}
+                  <span className="text-brand">{'Pubky Ring'}</span>
+                  {' or '}
+                  <span className="text-brand">{'Bitkit'}</span>
+                  {'.'}
+                </Typography>
+              </Container>
+              {qrButton}
+            </IllustratedCard>
+            <PassportMethodCard onContinue={startPassportAuth} isPending={isPassportPending} />
+          </Container>
+        ) : (
+          <BalancedQrCard
+            data-testid="sign-in-qr-card"
+            illustration={
+              <Image
+                priority
+                src="/images/scan.webp"
+                alt="Pubky Ring phone scanning a QR code"
+                width={192}
+                height={192}
+                className="size-48"
+              />
+            }
           >
-            <QrCodeSlot
-              isLoading={isLoading}
-              isExpired={isExpired}
-              url={url}
-              generatingLabel={'Generating QR Code...'}
-              clickToReloadLabel={'Click to reload'}
-              activeQrHasHoverEffect
-            />
-          </button>
-        </BalancedQrCard>
+            {qrButton}
+          </BalancedQrCard>
+        )}
       </Container>
 
       {/** Mobile view */}
       <Container size="container" className="md:hidden">
-        <SignInHeader />
-        <ContentCard layout="column">
-          <Container className="flex-col items-center justify-center gap-6">
-            <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={onAuthorizeClick}
-              disabled={isMobileLaunching || (!url && !isExpired)}
-              aria-busy={isMobileLaunching}
-              data-testid="button"
-            >
-              {mobileAuthorizeContent}
-            </Button>
+        <SignInHeader isPassportEnabled={isPassportEnabled} />
+        {isPassportEnabled ? (
+          <Container className="gap-6" data-testid="sign-in-methods-mobile">
+            <Container className="gap-3">
+              <Typography as="p" size="xs" className="tracking-[1.2px] text-muted-foreground uppercase">
+                {SOVEREIGN_METHOD_TITLE}
+              </Typography>
+              {mobileRingButton}
+            </Container>
+            <PassportMethodSection onContinue={startPassportAuth} isPending={isPassportPending} />
           </Container>
-        </ContentCard>
+        ) : (
+          <ContentCard layout="column">
+            <Container className="flex-col items-center justify-center gap-6">
+              <Image src="/images/logo-pubky-ring.svg" alt="Pubky Ring" width={137} height={30} />
+              {mobileRingButton}
+            </Container>
+          </ContentCard>
+        )}
       </Container>
     </>
   );
@@ -215,7 +293,7 @@ export const SignInFooter = () => {
     </FooterLinks>
   );
 };
-export const SignInHeader = () => {
+export const SignInHeader = ({ isPassportEnabled = false }: { isPassportEnabled?: boolean }) => {
   return (
     <PageHeader>
       <PageTitle size="large">
@@ -223,9 +301,15 @@ export const SignInHeader = () => {
         <span className="text-brand">{'Pubky.'}</span>
       </PageTitle>
       <PageSubtitle>
-        {'Authorize with '}
-        <span className="text-brand">{'Pubky Ring'}</span>
-        {' to sign in.'}
+        {isPassportEnabled ? (
+          'Choose your preferred method to sign in.'
+        ) : (
+          <>
+            {'Authorize with '}
+            <span className="text-brand">{'Pubky Ring'}</span>
+            {' to sign in.'}
+          </>
+        )}
       </PageSubtitle>
     </PageHeader>
   );

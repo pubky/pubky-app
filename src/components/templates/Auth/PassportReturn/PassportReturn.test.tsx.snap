@@ -1,0 +1,67 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PassportReturn > relays a valid outcome to the opener on the same origin, closes, and still renders the return link 1`] = `
+<div>
+  <div
+    class="mx-auto w-full flex-col flex container max-w-(--container-max-width) h-screen-without-page-header-auth-pages gap-0 px-4 lg:px-6"
+    data-testid="container"
+  >
+    <div
+      class="mx-auto w-full flex-col flex container max-w-(--container-max-width) mb-6"
+      data-testid="container"
+    >
+      <div
+        class="mx-auto w-full flex-col flex gap-3 pt-2 pb-6"
+        data-testid="container"
+      >
+        <h1
+          class="font-bold text-foreground text-5xl lg:text-6xl"
+          data-testid="heading-1"
+        >
+          Back to 
+          <span
+            class="text-brand"
+          >
+            Pubky.
+          </span>
+        </h1>
+        <h2
+          class="text-xl leading-normal font-light text-muted-foreground lg:text-2xl"
+        >
+          You can close this window and return to Pubky to continue.
+        </h2>
+      </div>
+      <div
+        class="flex flex-col rounded-xl bg-card text-card-foreground shadow-sm gap-0 p-6 md:p-12"
+        data-slot="card"
+        data-testid="card"
+      >
+        <div
+          class="flex w-full gap-4 lg:items-start lg:gap-12 flex-col p-0"
+          data-slot="card-content"
+        >
+          <div
+            class="flex w-full max-w-xl min-w-0 flex-1 flex-col justify-start gap-4"
+            data-slot="illustrated-card-content"
+          >
+            <div
+              class="mx-auto w-full flex-col flex items-center justify-center gap-6 py-10"
+              data-testid="container"
+            >
+              <a
+                class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\\"size-\\"])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/40 aria-invalid:border-destructive cursor-pointer rounded-full border shadow-xs bg-brand/16 text-brand hover:!bg-brand/30 border-brand h-auto gap-2 px-8 py-5 text-sm font-bold leading-normal"
+                data-size="lg"
+                data-slot="button"
+                data-testid="passport-return-link"
+                href="/"
+              >
+                Return to Pubky
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

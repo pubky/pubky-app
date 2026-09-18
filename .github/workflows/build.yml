@@ -47,6 +47,7 @@ jobs:
           export PUBKY_RUNTIME_HOMEGATE_URL="https://homegate.staging.pubky.app"
           export PUBKY_RUNTIME_PKARR_RELAYS='["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
           export PUBKY_RUNTIME_DEFAULT_HTTP_RELAY="https://httprelay.staging.pubky.app/inbox"
+          export PUBKY_RUNTIME_PASSPORT_URL="https://passport.staging.pubky.app"
 
           npm run start > "$SERVER_LOG" 2>&1 &
           SERVER_PID=$!
