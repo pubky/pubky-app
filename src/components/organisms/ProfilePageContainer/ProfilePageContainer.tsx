@@ -93,6 +93,10 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
     (pubky !== null && pubky !== '' && !isPubkyIdentifier(pubky)) ||
     (userNotFound && !isOwnProfile && !isLoggingOut && !isProfileContextLoading);
 
+  // `null` on error, not `undefined`: the read has finished, so a spinner would be wrong, and `0`
+  // would claim nothing is unlocked.
+  const unlockedCount = unlocked.isError ? null : unlocked.isLoading ? undefined : unlocked.count;
+
   if (showUserNotFoundDiscovery) {
     return <ProfileUserNotFoundDiscoveryView />;
   }
@@ -103,7 +107,7 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
       <ProfilePageLayout
         profile={profile}
         stats={stats}
-        unlockedCount={unlocked.isLoading ? undefined : unlocked.count}
+        unlockedCount={unlockedCount}
         actions={mergedActions}
         activePage={activePage}
         filterBarActivePage={filterBarActivePage}
