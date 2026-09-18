@@ -607,17 +607,15 @@ export function PostInput({
         </motion.div>
       </Container>
 
-      {isPostVariant && (
+      {isPostVariant && lockServerPubky && (
         <>
-          {lockServerPubky && (
-            <DialogLocksAuth
-              open={isAuthDialogOpen}
-              onOpenChange={(open) => {
-                if (!open) closeAuthDialog();
-              }}
-              onSuccess={handleAuthSuccess}
-            />
-          )}
+          <DialogLocksAuth
+            open={isAuthDialogOpen}
+            onOpenChange={(open) => {
+              if (!open) closeAuthDialog();
+            }}
+            onSuccess={handleAuthSuccess}
+          />
           <DialogLockContent open={isLockDialogOpen} onOpenChange={closeLockDialog} onApplied={handleLockApplied} />
         </>
       )}
