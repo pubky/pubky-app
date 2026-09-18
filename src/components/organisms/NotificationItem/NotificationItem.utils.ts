@@ -1,6 +1,6 @@
 import { APP_ROUTES, getCollectionRoute, POST_ROUTES, PROFILE_ROUTES } from '@/app/routes';
 import { Logger } from '@/libs/logger/logger';
-import { truncateString } from '@/libs/utils/utils';
+import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
@@ -282,7 +282,7 @@ export function pubkyUriToCompositeId(uri: string): string | null {
  */
 export function formatPreviewText(content: string | null | undefined): string | null {
   if (!content) return null;
-  const truncated = truncateString(content, 20);
+  const truncated = truncateByGraphemes(content, 20);
   return `'${truncated}'`;
 }
 

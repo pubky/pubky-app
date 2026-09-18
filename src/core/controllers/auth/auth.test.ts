@@ -753,6 +753,8 @@ describe('AuthController', () => {
       );
       // Skip post-migration resync — new user has no homeserver data to resync
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
+      // Settings are account-local; the previous account's document must not carry over
+      expect(storeMocks.resetSettingsStore).toHaveBeenCalled();
       expect(keypairFromSecretKeySpy).toHaveBeenCalledWith(TEST_SECRET_KEY);
       expect(signUpSpy).toHaveBeenCalledWith({
         keypair,
@@ -829,6 +831,8 @@ describe('AuthController', () => {
       );
       // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
+      // Settings are account-local; the previous account's document must not carry over
+      expect(storeMocks.resetSettingsStore).toHaveBeenCalled();
       expect(keypairSpy).toHaveBeenCalledWith(mnemonic);
       expect(signInSpy).toHaveBeenCalledWith({ keypair: mockKeypair });
       expect(z32FromSessionSpy).toHaveBeenCalledWith({ session: mockSession });
@@ -1078,6 +1082,8 @@ describe('AuthController', () => {
       );
       // Skip post-migration resync — full bootstrap below covers all data
       expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
+      // Settings are account-local; the previous account's document must not carry over
+      expect(storeMocks.resetSettingsStore).toHaveBeenCalled();
       expect(result.authorizationUrl).toEqual(mockAuthUrl.authorizationUrl);
       expect(result.awaitApproval).toBeInstanceOf(Promise);
       expect(result.cancelAuthFlow).toBe(cancelAuthFlow);
@@ -1695,7 +1701,7 @@ describe('AuthController', () => {
 
       // Singletons
       expect(resetSpy).toHaveBeenCalledOnce();
-      expect(resetTtlSpy).toHaveBeenCalledOnce();
+      expect(resetTtlSpy).not.toHaveBeenCalled();
       expect(resetStreamSpy).toHaveBeenCalledOnce();
       expect(resetNotifCoordSpy).toHaveBeenCalledOnce();
       expect(postStreamQueueClearSpy).toHaveBeenCalledOnce();
@@ -1854,6 +1860,49 @@ describe('AuthController', () => {
       expect(logoutSpy).toHaveBeenCalled();
       expect(clearCookiesSpy).toHaveBeenCalled();
       expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should clear local state when the homeserver never answers the sign-out (issue #2315)', async () => {
+      // The bad case: the homeserver accepts the connection and never replies, so the sign-out
+      // promise never settles. Logout must still finish and clean up locally, in bounded time.
+      const logoutSpy = vi.spyOn(AuthApplication, 'logout').mockReturnValue(new Promise(() => {}));
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+      const clearCookiesSpy = await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+      const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+      const authStore = createAuthStore();
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+      try {
+        let settled = false;
+        const logoutPromise = AuthController.logout().then(() => {
+          settled = true;
+        });
+
+        // Still waiting on the silent homeserver: nothing is cleaned up yet.
+        await vi.advanceTimersByTimeAsync(4_000);
+        expect(settled).toBe(false);
+        expect(clearDatabaseSpy).not.toHaveBeenCalled();
+
+        // Past the bound, logout gives up on the server session and moves on.
+        await vi.advanceTimersByTimeAsync(10_000);
+        await logoutPromise;
+
+        expect(settled).toBe(true);
+        expect(logoutSpy).toHaveBeenCalledWith({ session: expect.anything() });
+        expect(warnSpy).toHaveBeenCalledWith(
+          'Homeserver sign-out did not answer in time, clearing local state anyway',
+          { timeoutMs: expect.any(Number) },
+        );
+        expect(clearCookiesSpy).toHaveBeenCalled();
+        expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
+        expect(authStore.reset).toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('should throw error if clearing the database fails', async () => {

@@ -63,6 +63,9 @@ export function FollowedCollections() {
 
   const [pagesShown, setPagesShown] = useState(1);
   const cursorRef = useRef<SeedCursor>(EMPTY_CURSOR);
+  // Visible ids the seed walk has served, so the cache walk can re-anchor after the anchor
+  // collection is un-bookmarked (its id leaves the cached row) instead of restarting at the head.
+  const walkedIdsRef = useRef<string[]>([]);
   const [reachedEnd, setReachedEnd] = useState(false);
   const [seedLoading, setSeedLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -75,14 +78,17 @@ export function FollowedCollections() {
         await StreamPostsController.prepareStreamForInitialLoad({ streamId });
         const cachedTail = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
         cursorRef.current = { lastPostId: undefined, streamTail: cachedTail };
+        walkedIdsRef.current = [];
       }
 
       const result = await StreamPostsController.getOrFetchStreamSlice({
         streamId,
         lastPostId: cursorRef.current.lastPostId,
+        visiblePostIds: cursorRef.current.lastPostId === undefined ? undefined : walkedIdsRef.current,
         streamTail: cursorRef.current.streamTail,
         limit: COLLECTIONS_SECTION_PAGE_SIZE,
       });
+      walkedIdsRef.current = [...walkedIdsRef.current, ...result.nextPageIds];
 
       // A fully-filtered slice (e.g. a run of deleted bookmarked collections) must
       // still advance the cache walk, so the anchor resolves from the raw scan.

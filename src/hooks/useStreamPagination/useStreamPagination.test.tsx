@@ -64,30 +64,21 @@ describe('useStreamPagination', () => {
       const { result } = renderHook(() => useStreamPagination({ streamId }));
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      // loadMore #1: a fully-filtered (empty) page that isn't the end; cursor advances to 40.
+      // loadMore: a fully-filtered (empty) page that isn't the end advances the cursor to 40;
+      // the load keeps scanning and its next round must resume from 40, not the stale 20.
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
-      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
-        nextPageIds: [],
-        reachedEnd: false,
-        nextCursor: 40,
-      });
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce({ nextPageIds: [], reachedEnd: false, nextCursor: 40 })
+        .mockResolvedValueOnce({ nextPageIds: ['p3'], nextCursor: 41 });
       await act(async () => {
         await result.current.loadMore();
       });
-      expect(result.current.hasMore).toBe(true); // empty-but-not-ended keeps loading
-
-      // loadMore #2 must resume from the advanced cursor (40), not the stale 20.
-      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
-      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
-        nextPageIds: ['p3'],
-        nextCursor: 41,
-      });
-      await act(async () => {
-        await result.current.loadMore();
-      });
-      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenNthCalledWith(
+        2,
         expect.objectContaining({ streamId, streamTail: 40 }),
       );
+      expect(result.current.postIds).toEqual(['p1', 'p2', 'p3']);
+      expect(result.current.hasMore).toBe(true);
     });
 
     it('advances lastPostId from lastRawPostId on an empty page so the next loadMore resumes past the filtered run', async () => {
@@ -100,8 +91,9 @@ describe('useStreamPagination', () => {
       const { result } = renderHook(() => useStreamPagination({ streamId }));
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      // loadMore #1: a fully-filtered page. The raw scan went through 'raw-200' even
-      // though nothing visible came back — the anchor must adopt it.
+      // loadMore: a fully-filtered page. The raw scan went through 'raw-200' even though
+      // nothing visible came back — the next round must resume the cache walk from it, not
+      // restart from scratch.
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
         nextPageIds: [],
@@ -109,13 +101,6 @@ describe('useStreamPagination', () => {
         nextCursor: 40,
         lastRawPostId: 'raw-200',
       });
-      await act(async () => {
-        await result.current.loadMore();
-      });
-      expect(result.current.hasMore).toBe(true);
-
-      // loadMore #2 must resume the cache walk from 'raw-200', not restart from scratch.
-      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
         nextPageIds: ['p3'],
         nextCursor: 41,
@@ -189,26 +174,218 @@ describe('useStreamPagination', () => {
 
       // Empty page without an anchor: must not clobber 'p2' with undefined.
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
-      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
-        nextPageIds: [],
-        reachedEnd: false,
-        nextCursor: 40,
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce({ nextPageIds: [], reachedEnd: false, nextCursor: 40 })
+        .mockResolvedValueOnce({ nextPageIds: ['p3'], nextCursor: 41 });
+      await act(async () => {
+        await result.current.loadMore();
       });
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ streamId, lastPostId: 'p2', streamTail: 40 }),
+      );
+    });
+  });
+
+  describe('Chained scanning through filtered pages', () => {
+    const streamId = 'timeline:all:all' as PostStreamId;
+    const RAW_PAGE = 10;
+    /** A fully-filtered round that still advanced both resume positions. */
+    const filteredRound = (n: number, rawScannedCount: number): TReadPostStreamChunkResponse => ({
+      nextPageIds: [],
+      reachedEnd: false,
+      nextCursor: 100 + n,
+      lastRawPostId: `raw-${n}`,
+      rawScannedCount,
+    });
+    /** Every round is fully filtered; each one scans `rawPerRound` raw posts. */
+    const mockEndlessFilteredRegion = (rawPerRound: number) => {
+      let n = 0;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockImplementation(async () => {
+        n += 1;
+        return filteredRound(n, rawPerRound);
+      });
+    };
+    const mountWithFirstPage = async () => {
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p1'],
+        nextCursor: 20,
+      });
+      const rendered = renderHook(() => useStreamPagination({ streamId }));
+      await waitFor(() => expect(rendered.result.current.loading).toBe(false));
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      return rendered;
+    };
+
+    it('keeps one loadMore scanning past fully-filtered rounds until a visible post arrives', async () => {
+      const { result } = await mountWithFirstPage();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce(filteredRound(1, 200))
+        .mockResolvedValueOnce(filteredRound(2, 200))
+        .mockResolvedValueOnce({ nextPageIds: ['p2'], nextCursor: 300, lastRawPostId: 'p2' });
+
+      const load = act(async () => {
+        await result.current.loadMore();
+      });
+      await load;
+
+      // Three rounds in one load, each resuming from the previous round's raw positions.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(3);
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ lastPostId: 'raw-1', streamTail: 101 }),
+      );
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({ lastPostId: 'raw-2', streamTail: 102 }),
+      );
+      expect(result.current.postIds).toEqual(['p1', 'p2']);
+      expect(result.current.loadingMore).toBe(false);
+    });
+
+    it('keeps loadingMore true for the whole chained scan', async () => {
+      const { result } = await mountWithFirstPage();
+      let resolveSecond: (value: TReadPostStreamChunkResponse) => void = () => {};
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce(filteredRound(1, 200))
+        .mockImplementationOnce(() => new Promise((resolve) => (resolveSecond = resolve)));
+
+      let load: Promise<void> = Promise.resolve();
+      act(() => {
+        load = result.current.loadMore();
+      });
+      await waitFor(() => expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(2));
+
+      // Between the first (empty) round and the second, the loading block must not blink off.
+      expect(result.current.loadingMore).toBe(true);
+
+      await act(async () => {
+        resolveSecond({ nextPageIds: ['p2'], nextCursor: 300 });
+        await load;
+      });
+      expect(result.current.loadingMore).toBe(false);
+      expect(result.current.postIds).toEqual(['p1', 'p2']);
+    });
+
+    it('yields with hasMore true once the raw-scan budget is spent, and resumes from there next time', async () => {
+      const { result } = await mountWithFirstPage();
+      mockEndlessFilteredRegion(200);
+
       await act(async () => {
         await result.current.loadMore();
       });
 
+      // 600 raw posts per load at 200 per round.
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(3);
+      expect(result.current.postIds).toEqual(['p1']);
+      expect(result.current.hasMore).toBe(true);
+      expect(result.current.loadingMore).toBe(false);
+
       vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
-      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
-        nextPageIds: ['p3'],
-        nextCursor: 41,
-      });
       await act(async () => {
         await result.current.loadMore();
       });
-      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
-        expect.objectContaining({ streamId, lastPostId: 'p2', streamTail: 40 }),
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ lastPostId: 'raw-3', streamTail: 103 }),
       );
+    });
+
+    it('budgets by raw posts, not rounds: unhydrated single-page rounds scan just as deep', async () => {
+      const { result } = await mountWithFirstPage();
+      // A cold region: the stream layer can only classify a page after hydrating it, so
+      // every round inspects one raw page.
+      mockEndlessFilteredRegion(RAW_PAGE);
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(600 / RAW_PAGE);
+      expect(result.current.hasMore).toBe(true);
+    });
+
+    it('stops scanning when a round moves neither resume position', async () => {
+      const { result } = await mountWithFirstPage();
+      // e.g. a replaced viewer session: nothing scanned, no cursor, no anchor, not the end.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: [],
+        reachedEnd: false,
+        nextCursor: undefined,
+      });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(1);
+      expect(result.current.hasMore).toBe(true);
+      expect(result.current.loadingMore).toBe(false);
+    });
+
+    it('keeps scanning after a buffered round that consumed raw posts without moving either position', async () => {
+      const { result } = await mountWithFirstPage();
+      // The stream queue served a page from its overflow buffer: the Nexus cursor is unchanged
+      // and there is no row tail to report, but raw posts were consumed and then hidden by the
+      // strict post-hydration pass. That is progress, not a stall.
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce({ nextPageIds: [], reachedEnd: false, nextCursor: 20, rawScannedCount: 10 })
+        .mockResolvedValueOnce({ nextPageIds: ['p2'], nextCursor: 300, lastRawPostId: 'p2' });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      expect(result.current.postIds).toEqual(['p1', 'p2']);
+    });
+
+    it('passes the rendered ids on loadMore so the stream layer can re-anchor a removed anchor', async () => {
+      const { result } = await mountWithFirstPage();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValueOnce({
+        nextPageIds: ['p2'],
+        nextCursor: 300,
+        lastRawPostId: 'p2',
+      });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ lastPostId: 'p1', visiblePostIds: ['p1'] }),
+      );
+    });
+
+    it('stops scanning at the end of the stream', async () => {
+      const { result } = await mountWithFirstPage();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce(filteredRound(1, 200))
+        .mockResolvedValueOnce({ nextPageIds: [], reachedEnd: true, nextCursor: 102, lastRawPostId: 'raw-2' });
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      expect(result.current.hasMore).toBe(false);
+    });
+
+    it('chains the initial load through a fully-filtered head region', async () => {
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice)
+        .mockResolvedValueOnce(filteredRound(1, 200))
+        .mockResolvedValueOnce({ nextPageIds: ['p1'], nextCursor: 300, lastRawPostId: 'p1' });
+
+      const { result } = renderHook(() => useStreamPagination({ streamId }));
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledTimes(2);
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ lastPostId: 'raw-1', streamTail: 101 }),
+      );
+      expect(result.current.postIds).toEqual(['p1']);
     });
   });
 
@@ -1684,6 +1861,56 @@ describe('useStreamPagination', () => {
         }),
       );
       expect(result.current.postIds).toEqual(['c1', 'c3', 'c4', 'c5', 'c6']);
+    });
+
+    it('writes the corrected skip offset even when it equals the offset captured at request time', async () => {
+      // Two rows are removed and committed while a page is in flight, so the live offset
+      // drops to 0. The page's corrected cursor (4 - 2) equals the captured offset (2); the
+      // write must still happen, or the next request starts at 0 and re-fetches the page.
+      const collectionStreamId = 'collection:author-1:post-1' as PostStreamId;
+      vi.mocked(StreamPostsController.getCachedLastPostTimestamp).mockResolvedValue(0);
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({
+        nextPageIds: ['c1', 'c2'],
+        nextCursor: 2,
+      });
+      const { result } = renderHook(() => useStreamPagination({ streamId: collectionStreamId }));
+      await waitFor(() => {
+        expect(result.current.postIds).toEqual(['c1', 'c2']);
+      });
+
+      let resolveSlice: ((value: { nextPageIds: string[]; nextCursor: number }) => void) | undefined;
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockReturnValue(
+        new Promise((resolve) => {
+          resolveSlice = resolve;
+        }),
+      );
+      let loadMorePromise: Promise<void> | undefined;
+      act(() => {
+        loadMorePromise = result.current.loadMore();
+      });
+
+      act(() => {
+        result.current.removePostsOptimistically('c1').commit();
+      });
+      act(() => {
+        result.current.removePostsOptimistically('c2').commit();
+      });
+
+      await act(async () => {
+        resolveSlice?.({ nextPageIds: ['c3', 'c4'], nextCursor: 4 });
+        await loadMorePromise;
+      });
+
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockClear();
+      vi.mocked(StreamPostsController.getOrFetchStreamSlice).mockResolvedValue({ nextPageIds: ['c5'], nextCursor: 3 });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(StreamPostsController.getOrFetchStreamSlice).toHaveBeenCalledWith(
+        expect.objectContaining({ streamId: collectionStreamId, streamTail: 2 }),
+      );
+      expect(result.current.postIds).toEqual(['c3', 'c4', 'c5']);
     });
 
     it('should not double-apply a commit that settled before the next fetch started', async () => {

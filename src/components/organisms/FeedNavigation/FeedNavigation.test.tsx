@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -88,11 +89,21 @@ vi.mock('@/atoms/Button/Button', () => {
 
 vi.mock('@/atoms/Container/Container', () => {
   return {
-    Container: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="container" className={className}>
-        {children}
-      </div>
-    ),
+    Container: forwardRef<
+      HTMLDivElement,
+      {
+        children: React.ReactNode;
+        className?: string;
+        overrideDefaults?: boolean;
+        onScroll?: React.UIEventHandler<HTMLDivElement>;
+      }
+    >(function Container({ children, className, overrideDefaults: _overrideDefaults, ...props }, ref) {
+      return (
+        <div ref={ref} data-testid="container" className={className} {...props}>
+          {children}
+        </div>
+      );
+    }),
   };
 });
 
@@ -181,6 +192,21 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
   }),
 }));
 
+// The tab strip's saved offset is bound to the sign-in that produced it, so the
+// component reads the account from the auth store directly (as `useRequireAuth`
+// does) and `captureViewerSession` reads the store's `getState`. A sign-in is a
+// pubky plus a session reference, exactly as the real store models it.
+let mockCurrentUserPubky: string | null = 'pk:test-viewer';
+let mockSession: object | null = { id: 'session-viewer' };
+const mockAuthState = () => ({ currentUserPubky: mockCurrentUserPubky, session: mockSession });
+vi.mock('@/stores/auth/auth.store', () => ({
+  useAuthStore: Object.assign(
+    (selector?: (state: ReturnType<typeof mockAuthState>) => unknown) =>
+      selector ? selector(mockAuthState()) : mockAuthState(),
+    { getState: () => mockAuthState() },
+  ),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -216,6 +242,8 @@ describe('FeedNavigation', () => {
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);
+    mockCurrentUserPubky = 'pk:test-viewer';
+    mockSession = { id: 'session-viewer' };
   });
 
   // ── Sanity ───────────────────────────────────────────────────────────────
@@ -621,6 +649,99 @@ describe('FeedNavigation', () => {
     expect(screen.getByTestId('custom-feed-dialog-create')).toHaveTextContent('Feed');
   });
 
+  // ── Tab strip scroll offset (#2442) ─────────────────────────────────────
+
+  // A saved offset only survives within the sign-in that produced it, so each
+  // test uses its own pubky and session id: a leftover offset from another test
+  // can then never be mistaken for a restore.
+  const scrollStripTo = (left: number) => {
+    const row = screen.getAllByTestId('container')[1];
+    row.scrollLeft = left;
+    fireEvent.scroll(row);
+    return row;
+  };
+
+  const scrollLeftOfStrip = () => screen.getAllByTestId('container')[1].scrollLeft;
+
+  it('keeps the tab strip where the user scrolled it when the strip remounts', () => {
+    mockCurrentUserPubky = 'pk:test-restore';
+    mockSession = { id: 'session-restore' };
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
+
+    const first = render(<FeedNavigation />);
+    scrollStripTo(180);
+    first.unmount();
+
+    render(<FeedNavigation />);
+
+    expect(scrollLeftOfStrip()).toBe(180);
+  });
+
+  it('starts a different account at the first tab', () => {
+    mockCurrentUserPubky = 'pk:test-account-a';
+    mockSession = { id: 'session-account-a' };
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
+
+    const first = render(<FeedNavigation />);
+    scrollStripTo(180);
+    first.unmount();
+
+    mockCurrentUserPubky = 'pk:test-account-b';
+    mockSession = { id: 'session-account-b' };
+    render(<FeedNavigation />);
+
+    expect(scrollLeftOfStrip()).toBe(0);
+  });
+
+  it('drops the saved offset when the session ends', () => {
+    mockCurrentUserPubky = 'pk:test-logout';
+    mockSession = { id: 'session-logout' };
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
+
+    const first = render(<FeedNavigation />);
+    scrollStripTo(180);
+    first.unmount();
+
+    mockIsAuthenticated = false;
+    mockCurrentUserPubky = null;
+    mockSession = null;
+    const signedOut = render(<FeedNavigation />);
+    expect(scrollLeftOfStrip()).toBe(0);
+    signedOut.unmount();
+
+    // Signing back in starts from the first tab as well.
+    mockIsAuthenticated = true;
+    mockCurrentUserPubky = 'pk:test-logout';
+    mockSession = { id: 'session-logout-again' };
+    render(<FeedNavigation />);
+    expect(scrollLeftOfStrip()).toBe(0);
+  });
+
+  // Profile and Settings unmount the strip, so signing out there and back in as
+  // the same account is a transition this component never renders. The saved
+  // offset still has to go: it belongs to the session that ended.
+  it('drops the saved offset when the session ends while the strip is unmounted', () => {
+    mockCurrentUserPubky = 'pk:test-relogin';
+    mockSession = { id: 'session-relogin-1' };
+    mockCustomFeeds = [createMockFeed({ id: 'feed-1', name: 'Test Feed' })];
+
+    const first = render(<FeedNavigation />);
+    scrollStripTo(180);
+    first.unmount();
+
+    // Nothing renders here for the whole auth transition.
+    mockIsAuthenticated = false;
+    mockCurrentUserPubky = null;
+    mockSession = null;
+    mockIsAuthenticated = true;
+    mockCurrentUserPubky = 'pk:test-relogin';
+    mockSession = { id: 'session-relogin-2' };
+
+    render(<FeedNavigation />);
+
+    expect(scrollLeftOfStrip()).toBe(0);
+  });
+
   // ── Container and layout ────────────────────────────────────────────────
 
   it('renders a horizontally scrollable row that sticks under the mobile header', () => {
@@ -688,6 +809,8 @@ describe('FeedNavigation - Snapshots', () => {
     mockRequireAuth.mockImplementation((action: () => unknown) => action());
     mockUsePathname.mockReturnValue('/home');
     mockGetList.mockResolvedValue([]);
+    mockCurrentUserPubky = 'pk:test-viewer';
+    mockSession = { id: 'session-viewer' };
   });
 
   it('matches snapshot with no custom feeds and Home active', () => {

@@ -16,6 +16,7 @@ interface QuickReplyComposerRowProps extends Pick<
   | 'onChange'
   | 'onFocus'
   | 'onKeyDown'
+  | 'onSelect'
   | 'onPaste'
   | 'mentionIsOpen'
   | 'mentionUsers'
@@ -37,6 +38,7 @@ export function QuickReplyComposerRow({
   onChange,
   onFocus,
   onKeyDown,
+  onSelect,
   onPaste,
   mentionIsOpen,
   mentionUsers,
@@ -56,6 +58,8 @@ export function QuickReplyComposerRow({
         onChange={onChange}
         onFocus={onFocus}
         onKeyDown={onKeyDown}
+        onKeyUp={onSelect}
+        onSelect={onSelect}
         onPaste={onPaste}
         maxLength={POST_MAX_CHARACTER_LENGTH}
         rows={1}

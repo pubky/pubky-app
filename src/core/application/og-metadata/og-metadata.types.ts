@@ -18,4 +18,14 @@ export interface TOgMetadataResult {
   image?: string | null;
 }
 
-export type TOgMetadataFallbackReason = 'http_error' | 'non_html' | 'dns_failed' | 'network' | 'timeout' | 'rate_limit';
+export type TOgMetadataFallbackReason =
+  | 'http_error'
+  | 'non_html'
+  | 'dns_failed'
+  | 'network'
+  | 'timeout'
+  | 'rate_limit'
+  | 'blocked_ip'
+  | 'body_too_large'
+  | 'body_timeout'
+  | 'body_unreadable';

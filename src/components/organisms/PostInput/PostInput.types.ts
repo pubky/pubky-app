@@ -23,6 +23,8 @@ interface PostInputBaseProps {
    * shared repost flow read as a different action, e.g. sharing a collection.
    */
   successToastTitle?: string;
+  /** Use collection-share wording for the repost toast's Undo action. */
+  isCollectionShare?: boolean;
   /** Show the thread connector (for replies, default: false) */
   showThreadConnector?: boolean;
   /**

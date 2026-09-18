@@ -4,6 +4,9 @@ import { PostStreamApplication } from '@/application/stream/posts/post';
 import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
 import { getStreamCacheMaxAgeMs } from '@/config/nexus';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
+import { DatabaseErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -14,6 +17,7 @@ import {
   buildAuthorCollectionsStreamId,
   buildContentSearchStreamId,
   buildDiscoverCollectionsStreamId,
+  buildPostReplyStreamId,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
@@ -29,16 +33,18 @@ import { UserTagsModel } from '@/models/user/tags/userTags';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import {
   type NexusFileDetails,
   type NexusFileUrls,
   type NexusPost,
   type NexusPostsKeyStream,
+  type NexusPostWithAttachmentMetadata,
   type NexusUser,
   StreamSorting,
 } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
-import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
+import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { asInvalid } from '@/test-utils/type-assertions';
 import { MuteFilter } from './muting/mute-filter';
@@ -58,7 +64,7 @@ describe('PostStreamApplication', () => {
     author: string = DEFAULT_AUTHOR,
     timestamp: number = BASE_TIMESTAMP,
     overrides?: Partial<NexusPost>,
-  ): NexusPost => ({
+  ): NexusPostWithAttachmentMetadata => ({
     details: {
       id: postId,
       content: `Post ${postId} content`,
@@ -92,7 +98,7 @@ describe('PostStreamApplication', () => {
     startIndex: number = 1,
     author: string = DEFAULT_AUTHOR,
     startTimestamp: number = BASE_TIMESTAMP,
-  ): NexusPost[] => {
+  ): NexusPostWithAttachmentMetadata[] => {
     return Array.from({ length: count }, (_, i) => {
       const postId = `post-${startIndex + i}`;
       return createMockNexusPost(postId, author, startTimestamp + i);
@@ -198,9 +204,12 @@ describe('PostStreamApplication', () => {
   });
 
   const setupDefaultMocks = () => ({
-    persistPosts: vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue({ attachmentMetadata: [] }),
+    persistPosts: vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined),
     persistFiles: vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined),
     getUserDetails: vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder'),
+    getUserRelationships: vi
+      .spyOn(UserRelationshipsModel, 'findByIds')
+      .mockImplementation(async (ids) => ids.map((id) => ({ id, following: false, followed_by: false }))),
   });
 
   const mockAllUsersCached = (count = 1, author = DEFAULT_AUTHOR) => {
@@ -699,8 +708,9 @@ describe('PostStreamApplication', () => {
       expect(result.nextCursor).toBeUndefined();
     });
 
-    it('returns the bookmark-time cursor on a full cache hit for bookmark streams', async () => {
-      // The cache→Nexus seam must page by bookmark time, not post indexed_at.
+    it('returns the bookmark-time resume cursor on a full cache hit for legacy bookmark rows', async () => {
+      // A row without a persisted Nexus cursor seeds its seam once from the tail entry's
+      // bookmark time (#2100), never from a post's indexed_at.
       const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
       const postIds = Array.from({ length: 12 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await PostStreamModel.create(bookmarkStreamId, postIds);
@@ -719,15 +729,39 @@ describe('PostStreamApplication', () => {
       });
 
       expect(result.nextPageIds).toHaveLength(10);
-      // 10th entry (index 9) → its bookmark time, NOT its post indexed_at (BASE + 9).
-      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 9);
+      // The row tail (post-12) → its bookmark time, NOT its post indexed_at (BASE + 11).
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 11);
     });
 
-    it('overflow early-return on a bookmark stream resumes by bookmark time, not post indexed_at', async () => {
-      // The queue's buffered path is the fourth cursor-synthesis site missed by #2100:
-      // filtering (collections are dropped from the :all bookmarks feed) makes the queue
-      // over-fetch and buffer the surplus; a later smaller-limit call is then served
-      // entirely from that buffer and must still resume by bookmark time.
+    it('prefers the persisted Nexus cursor over bookmark time on a full cache hit', async () => {
+      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+      const postIds = Array.from({ length: 12 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      for (let i = 0; i < postIds.length; i++) {
+        await createPostDetailWithTimestamp(postIds[i], BASE_TIMESTAMP + i);
+        await BookmarkModel.create({ id: postIds[i], created_at: BASE_TIMESTAMP + 5000 + i });
+      }
+      await LocalStreamPostsService.persistNewStreamChunk({
+        streamId: bookmarkStreamId,
+        stream: postIds,
+        tailCursor: BASE_TIMESTAMP + 7777,
+      });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: bookmarkStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 7777);
+    });
+
+    it('overflow early-return on a bookmark stream resumes by the raw backend position', async () => {
+      // The queue's buffered path must not synthesize a cursor from a served post: filtering
+      // (collections are dropped from the :all bookmarks feed) makes the queue over-fetch
+      // and buffer the surplus; a later smaller-limit call is then served entirely from
+      // that buffer and resumes where the raw scan stopped (the row's resume cursor).
       const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
       const collectionIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:coll-${i + 1}`);
       const postIds = Array.from({ length: 30 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
@@ -764,8 +798,9 @@ describe('PostStreamApplication', () => {
         viewerId: 'user-viewer' as Pubky,
       });
       expect(result2.nextPageIds).toEqual(postIds.slice(20, 30));
-      // post-30 was bookmarked at BASE + 5000 + 29 but created at BASE + 29 — the resume
-      // cursor must be its bookmark time or the next Nexus fetch skips the seam.
+      // The scan stopped at the legacy row's seam — the tail's bookmark time (BASE + 5000 +
+      // 29), never post-30's created-at (BASE + 29) — and the buffered round keeps it.
+      expect(result2.nextCursor).toBe(result1.nextCursor);
       expect(result2.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 29);
     });
 
@@ -795,7 +830,7 @@ describe('PostStreamApplication', () => {
     it('should paginate using cursor (post_id and timestamp)', async () => {
       const initialPostIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(initialPostIds);
-      await createPostDetails(initialPostIds);
+      await createPostDetails(initialPostIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
@@ -843,7 +878,7 @@ describe('PostStreamApplication', () => {
       // Create cache with only 3 posts (less than limit of 10)
       const cachedPostIds = Array.from({ length: 3 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(cachedPostIds);
-      await createPostDetails(cachedPostIds);
+      await createPostDetails(cachedPostIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       // Mock more posts from Nexus
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 4, DEFAULT_AUTHOR, BASE_TIMESTAMP + 3);
@@ -913,7 +948,7 @@ describe('PostStreamApplication', () => {
     it('should handle when cache has posts but not enough after post_id', async () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
-      await createPostDetails(postIds);
+      await createPostDetails(postIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
@@ -975,7 +1010,7 @@ describe('PostStreamApplication', () => {
       await createStreamWithPosts([]);
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
 
       const findByIdsSpy = vi
         .spyOn(PostDetailsModel, 'findByIdsPreserveOrder')
@@ -1137,15 +1172,17 @@ describe('PostStreamApplication', () => {
       expect(persistSpy).not.toHaveBeenCalled();
     });
 
-    it('should fallback to Nexus when cachedStream exists but getStreamFromCache returns empty', async () => {
+    it('re-walks the cache from the head when the anchor left the row and no visible ids are known', async () => {
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
-      await createPostDetails(postIds);
+      await createPostDetails(postIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
 
-      // lastPostId not found in cache
+      // The anchor is gone from the row (deleted / un-bookmarked) and the caller passed no
+      // visible ids: jumping to the row tail would skip every cached id, so the walk restarts
+      // at the head (the caller dedupes) and tops the page up from Nexus below the row.
       const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId,
         limit: 10,
@@ -1155,10 +1192,34 @@ describe('PostStreamApplication', () => {
         viewerId: DEFAULT_AUTHOR,
       });
 
-      // Should fallback to Nexus fetch
-      expect(nexusFetchSpy).toHaveBeenCalled();
-      expect(result.nextPageIds).toHaveLength(5);
-      expectPostIds(result.nextPageIds, 6, 5);
+      expect(nexusFetchSpy).toHaveBeenCalledTimes(1);
+      expectPostIds(result.nextPageIds, 1, 10);
+    });
+
+    it('resumes after the deepest visible id when the anchor left the row (#2523)', async () => {
+      const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      await createStreamWithPosts(postIds);
+      await createPostDetails(postIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
+
+      const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
+      const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
+
+      // The caller has rendered post-1..post-3 (in any order) and its raw anchor was removed
+      // from the row: the walk re-anchors on post-3 instead of skipping to the tail.
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: 0,
+        lastPostId: `${DEFAULT_AUTHOR}:post-999`,
+        visiblePostIds: [`${DEFAULT_AUTHOR}:post-3`, `${DEFAULT_AUTHOR}:post-1`, `${DEFAULT_AUTHOR}:post-2`],
+        streamTail: BASE_TIMESTAMP + 999,
+        viewerId: DEFAULT_AUTHOR,
+      });
+
+      expect(nexusFetchSpy).toHaveBeenCalledTimes(1);
+      expectPostIds(result.nextPageIds, 4, 7);
+      // The next round resumes from the row tail after the Nexus page was appended.
+      expect(result.lastRawPostId).toBe(`${DEFAULT_AUTHOR}:post-10`);
     });
 
     it('should deduplicate when fetched posts overlap with cached posts', async () => {
@@ -1205,7 +1266,7 @@ describe('PostStreamApplication', () => {
       // Cache has 3 posts: [post-1, post-2, post-3]
       const cachedPostIds = Array.from({ length: 3 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(cachedPostIds);
-      await createPostDetails(cachedPostIds);
+      await createPostDetails(cachedPostIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       // Mock error when getting last post details
       vi.spyOn(PostDetailsModel, 'findById').mockRejectedValueOnce(new Error('Database error'));
@@ -1268,7 +1329,7 @@ describe('PostStreamApplication', () => {
       // Cache has 5 posts: [post-1, post-2, post-3, post-4, post-5]
       const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(postIds);
-      await createPostDetails(postIds);
+      await createPostDetails(postIds, BASE_TIMESTAMP + 100); // cached row is newer than the page fetched below it
 
       const mockNexusPostsKeyStream = createMockNexusPostsKeyStream(5, 6, DEFAULT_AUTHOR, BASE_TIMESTAMP + 5);
       const nexusFetchSpy = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
@@ -1392,6 +1453,16 @@ describe('PostStreamApplication', () => {
       expect(result).toBe(0);
     });
 
+    it('returns the persisted Nexus cursor when the row carries one, ignoring post timestamps', async () => {
+      const postIds = Array.from({ length: 5 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      await createPostDetails(postIds);
+      await LocalStreamPostsService.persistNewStreamChunk({ streamId, stream: postIds, tailCursor: 4242 });
+
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId });
+
+      expect(result).toBe(4242);
+    });
+
     it('should return 0 when stream is empty', async () => {
       await createStreamWithPosts([]);
 
@@ -1445,9 +1516,24 @@ describe('PostStreamApplication', () => {
   });
 
   describe('getCachedLastPostTimestamp — bookmark streams', () => {
-    // Bookmark streams are ordered by bookmark time, so their pagination cursor must
-    // come from the bookmark's `created_at`, not the post's `indexed_at`.
+    // Bookmark streams are ordered by bookmark time, so a legacy row (no persisted Nexus
+    // cursor) seeds from the bookmark's `created_at`, not the post's `indexed_at`.
     const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+
+    it('prefers the persisted Nexus cursor over bookmark time', async () => {
+      const postOne = `${DEFAULT_AUTHOR}:post-1`;
+      await createPostDetailWithTimestamp(postOne, BASE_TIMESTAMP);
+      await BookmarkModel.create({ id: postOne, created_at: BASE_TIMESTAMP + 5000 });
+      await LocalStreamPostsService.persistNewStreamChunk({
+        streamId: bookmarkStreamId,
+        stream: [postOne],
+        tailCursor: BASE_TIMESTAMP + 4200,
+      });
+
+      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId });
+
+      expect(result).toBe(BASE_TIMESTAMP + 4200);
+    });
 
     it('uses the bookmark time (created_at), not the post indexed_at', async () => {
       const postOne = `${DEFAULT_AUTHOR}:post-1`;
@@ -1490,6 +1576,93 @@ describe('PostStreamApplication', () => {
     });
   });
 
+  describe.each(['missing', 'original'] as const)('%s post attachment hydration', (source) => {
+    const postId = 'user-1:post-1';
+    const hydrate = (isCurrent?: () => boolean) =>
+      source === 'missing'
+        ? PostStreamApplication.fetchMissingPostsFromNexus({ cacheMissPostIds: [postId], isCurrent })
+        : PostStreamApplication.fetchOriginalPostsByUris({
+            repostedUris: ['pubky://user-1/pub/pubky.app/posts/post-1'],
+            isCurrent,
+          });
+
+    beforeEach(() => {
+      vi.spyOn(LocalTagCacheService, 'captureRevisions').mockResolvedValue(new Map([[postId, null]]));
+      vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([postId]);
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(createMockNexusPosts(1));
+      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
+      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder').mockResolvedValue([createMockNexusUser().details]);
+    });
+
+    it('passes all inline attachment metadata to file persistence, including mixed batches', async () => {
+      const file = (id: string): NexusFileDetails => ({
+        id,
+        name: id,
+        src: '',
+        content_type: 'image/png',
+        size: 100,
+        created_at: 0,
+        indexed_at: 0,
+        metadata: {},
+        owner_id: 'user-1',
+        uri: `pubky://user-1/pub/pubky.app/files/${id}`,
+        urls: { main: '', feed: '', small: '' },
+      });
+      const attachments = [file('first'), file('second'), file('third')];
+      const posts = createMockNexusPosts(3);
+      posts[0].attachments_metadata = attachments.slice(0, 2);
+      posts[2].attachments_metadata = attachments.slice(2);
+      vi.mocked(NexusPostStreamService.fetchByIds).mockResolvedValue(posts);
+
+      await hydrate();
+
+      expect(FileApplication.persistFiles).toHaveBeenCalledWith(attachments);
+      expect(LocalStreamPostsService.persistPosts).toHaveBeenCalledWith({
+        posts,
+        tagGuard: expect.objectContaining({ revisions: new Map([[postId, null]]) }),
+      });
+    });
+
+    it('leaves post details and TTL unpublished after a file write failure, allowing retry', async () => {
+      vi.mocked(FileApplication.persistFiles).mockRejectedValueOnce(
+        Err.database(DatabaseErrorCode.WRITE_FAILED, 'File storage unavailable', {
+          service: ErrorService.Local,
+          operation: 'createMany',
+        }),
+      );
+
+      const result = await hydrate();
+
+      if (source === 'missing') expect(result).toBe(false);
+      expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
+      expect(UserDetailsModel.findByIdsPreserveOrder).not.toHaveBeenCalled();
+
+      await hydrate();
+
+      expect(FileApplication.persistFiles).toHaveBeenCalledTimes(2);
+      expect(LocalStreamPostsService.persistPosts).toHaveBeenCalledOnce();
+      expect(UserDetailsModel.findByIdsPreserveOrder).toHaveBeenCalledOnce();
+    });
+
+    it('does not publish posts while attachment persistence is pending or after the session changes', async () => {
+      const files = Promise.withResolvers<void>();
+      vi.mocked(FileApplication.persistFiles).mockReturnValueOnce(files.promise);
+      let current = true;
+      const hydration = hydrate(() => current);
+      await vi.waitFor(() => expect(FileApplication.persistFiles).toHaveBeenCalledOnce());
+      expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
+
+      current = false;
+      files.resolve();
+      const result = await hydration;
+
+      if (source === 'missing') expect(result).toBe(false);
+      expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
+      expect(UserDetailsModel.findByIdsPreserveOrder).not.toHaveBeenCalled();
+    });
+  });
+
   describe('fetchMissingPostsFromNexus', () => {
     const viewerId = 'user-viewer' as Pubky;
 
@@ -1509,7 +1682,10 @@ describe('PostStreamApplication', () => {
         post_ids: cacheMissPostIds,
         viewer_id: viewerId,
       });
-      expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: mockNexusPosts });
+      expect(mocks.persistPosts).toHaveBeenCalledWith({
+        posts: mockNexusPosts,
+        tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
+      });
       expect(mocks.persistFiles).toHaveBeenCalledWith([]);
       expect(hydrated).toBe(true);
     });
@@ -1550,7 +1726,10 @@ describe('PostStreamApplication', () => {
         user_ids: [DEFAULT_AUTHOR],
         viewer_id: viewerId,
       });
-      expect(persistUsersSpy).toHaveBeenCalledWith(mockNexusUsers);
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        mockNexusUsers,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
     });
 
     it('should handle when userBatch is null/undefined', async () => {
@@ -1568,7 +1747,10 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(persistUsersSpy).toHaveBeenCalledWith(undefined);
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        undefined,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
     });
 
     it('should not fetch users when all users are already cached', async () => {
@@ -1587,6 +1769,32 @@ describe('PostStreamApplication', () => {
       expect(fetchUsersByIdsSpy).not.toHaveBeenCalled();
     });
 
+    it('should refetch an author who has details cached but no relationship when a viewer is present', async () => {
+      const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
+      const mockNexusUsers = [createMockNexusUser(DEFAULT_AUTHOR)];
+      const mocks = setupDefaultMocks();
+      mocks.getUserDetails.mockResolvedValue(mockAllUsersCached(1));
+      mocks.getUserRelationships.mockResolvedValue([]);
+
+      vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
+      const fetchUsersByIdsSpy = vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue(mockNexusUsers);
+      const persistUsersSpy = vi.spyOn(LocalStreamUsersService, 'persistUsers').mockResolvedValue([]);
+
+      await PostStreamApplication.fetchMissingPostsFromNexus({
+        cacheMissPostIds,
+        viewerId,
+      });
+
+      expect(fetchUsersByIdsSpy).toHaveBeenCalledWith({
+        user_ids: [DEFAULT_AUTHOR],
+        viewer_id: viewerId,
+      });
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        mockNexusUsers,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
+    });
+
     it('should handle when cacheMissPostIds is empty array', async () => {
       const cacheMissPostIds: string[] = [];
       const mocks = setupDefaultMocks();
@@ -1602,7 +1810,10 @@ describe('PostStreamApplication', () => {
         post_ids: [],
         viewer_id: viewerId,
       });
-      expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: [] });
+      expect(mocks.persistPosts).toHaveBeenCalledWith({
+        posts: [],
+        tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
+      });
     });
 
     it('should handle when postBatch is empty array', async () => {
@@ -1616,7 +1827,10 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(mocks.persistPosts).toHaveBeenCalledWith({ posts: [] });
+      expect(mocks.persistPosts).toHaveBeenCalledWith({
+        posts: [],
+        tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
+      });
     });
 
     it('should handle when userBatch is empty array', async () => {
@@ -1634,7 +1848,10 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(persistUsersSpy).toHaveBeenCalledWith([]);
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
     });
 
     it('should handle error gracefully when NexusPostStreamService.fetchByIds fails', async () => {
@@ -1695,10 +1912,9 @@ describe('PostStreamApplication', () => {
         },
       ];
 
+      mockNexusPosts[0].attachments_metadata = mockAttachments;
       const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
-      vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue({
-        attachmentMetadata: mockAttachments,
-      });
+      const persistPostsSpy = vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
       const persistFilesSpy = vi
         .spyOn(FileApplication, 'persistFiles')
         .mockRejectedValue(new Error('Failed to persist files'));
@@ -1712,6 +1928,7 @@ describe('PostStreamApplication', () => {
       });
 
       expect(persistFilesSpy).toHaveBeenCalledWith(mockAttachments);
+      expect(persistPostsSpy).not.toHaveBeenCalled();
       expect(fetchPostsByIdsSpy).toHaveBeenCalledTimes(1);
       expect(getUserDetailsSpy).not.toHaveBeenCalled();
       expect(persistUsersSpy).not.toHaveBeenCalled();
@@ -1794,7 +2011,10 @@ describe('PostStreamApplication', () => {
       });
 
       expect(fetchUsersByIdsSpy).toHaveBeenCalled();
-      expect(persistUsersSpy).toHaveBeenCalledWith(mockNexusUsers);
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        mockNexusUsers,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
     });
 
     it('should handle when getNotPersistedUsersInCache returns partial users', async () => {
@@ -1821,7 +2041,10 @@ describe('PostStreamApplication', () => {
         user_ids: ['author-2'],
         viewer_id: viewerId,
       });
-      expect(persistUsersSpy).toHaveBeenCalledWith(mockNexusUsers);
+      expect(persistUsersSpy).toHaveBeenCalledWith(
+        mockNexusUsers,
+        expect.objectContaining({ revisions: expect.any(Map), viewerId }),
+      );
     });
 
     it('should handle error gracefully when getNotPersistedUsersInCache fails', async () => {
@@ -3323,7 +3546,7 @@ describe('PostStreamApplication', () => {
         id: 'author-1:post-1',
         content: DELETED, // DELETED
         kind: 'short',
-        indexed_at: BASE_TIMESTAMP,
+        indexed_at: BASE_TIMESTAMP + 100, // cached row is newer than the page fetched below it
         uri: 'https://pubky.app/author-1/pub/pubky.app/posts/post-1',
         attachments: null,
       });
@@ -3729,5 +3952,57 @@ describe('PostStreamApplication', () => {
 
       expect(result.nextPageIds).toEqual([ownPost, bookmarkedPost]);
     });
+  });
+});
+
+describe('PostStreamApplication reply publication', () => {
+  beforeEach(() => vi.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('awaits grouped hydration before publishing cold reply IDs', async () => {
+    const streamId = buildPostReplyStreamId('author:parent');
+    const replyIds = ['author:reply'];
+    vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({ post_keys: replyIds, last_post_score: null });
+    vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue(replyIds);
+    const hydration = Promise.withResolvers<boolean>();
+    vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockReturnValue(hydration.promise);
+    const publish = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
+    const page = PostStreamApplication.getOrFetchStreamSlice({
+      streamId,
+      streamHead: SKIP_FETCH_NEW_POSTS,
+      streamTail: 0,
+      limit: 3,
+      viewerId: null,
+      order: StreamOrder.ASCENDING,
+    });
+    await vi.waitFor(() => expect(PostStreamApplication.fetchMissingPostsFromNexus).toHaveBeenCalledTimes(1));
+    expect(publish).not.toHaveBeenCalled();
+    hydration.resolve(true);
+    const result = await page;
+    expect(publish).toHaveBeenCalledExactlyOnceWith({ stream: replyIds, streamId });
+    expect(result.nextPageIds).toEqual(replyIds);
+    expect(result.cacheMissPostIds).toEqual([]);
+  });
+
+  it('persists an ascending reply page newest-first while serving it in page order', async () => {
+    // The row is cached newest-first; handing the page over reversed keeps ids that still
+    // lack details (a failed hydration) in the right relative order under the timestamp sort.
+    const streamId = buildPostReplyStreamId('author:parent');
+    const replyIds = ['author:reply-1', 'author:reply-2', 'author:reply-3'];
+    vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({ post_keys: replyIds, last_post_score: null });
+    vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
+    const publish = vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
+
+    const result = await PostStreamApplication.getOrFetchStreamSlice({
+      streamId,
+      streamHead: SKIP_FETCH_NEW_POSTS,
+      streamTail: 0,
+      limit: 3,
+      viewerId: null,
+      order: StreamOrder.ASCENDING,
+    });
+
+    expect(publish).toHaveBeenCalledExactlyOnceWith({ stream: [...replyIds].reverse(), streamId });
+    expect(result.nextPageIds).toEqual(replyIds);
   });
 });
