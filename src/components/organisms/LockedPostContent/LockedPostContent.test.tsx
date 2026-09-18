@@ -79,6 +79,9 @@ vi.mock('@/molecules/DialogPayToUnlock/DialogPayToUnlock', () => ({
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
     getLockContent: vi.fn(),
+    getOwnPost: vi.fn().mockResolvedValue(null),
+    getUnlockedPost: vi.fn().mockResolvedValue(null),
+    fetchReplicatedAttachments: vi.fn().mockResolvedValue([]),
     replicateUnlockedContent: vi.fn().mockResolvedValue(undefined),
     fetchReplicatedContent: vi.fn().mockResolvedValue(null),
     fetchOwnContent: vi.fn().mockResolvedValue(null),
@@ -104,15 +107,13 @@ const mockLockData = ({
   lockContent = { lock_title: 'Secret', teaser_description: 'A teaser' },
   lockFile = null,
   priceSats = null,
-  hasError = false,
 }: {
   lockContent?: LockPostContent | null;
   lockFile?: LockFile | null;
   priceSats?: string | null;
-  hasError?: boolean;
-}) => {
+} = {}) => {
   vi.mocked(LocksController.getLockContent).mockReturnValue(lockContent);
-  vi.mocked(useLockFile).mockReturnValue({ lockFile, priceSats, hasError });
+  vi.mocked(useLockFile).mockReturnValue({ lockFile, priceSats });
 };
 
 const LOCK_URL = 'pubky://hs/pub/locks.app/lock1.json';
@@ -134,6 +135,7 @@ const useSlideGeometry = () => {
 describe('LockedPostContent', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     toastMock.mockClear();
     purchasedMocks.hasPurchase.mockReset(); // back to the `lock1` implementation
     purchasedMocks.markPurchased.mockClear();
@@ -311,15 +313,9 @@ describe('LockedPostContent', () => {
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeEnabled();
   });
 
-  it('disables Unlock when the lock file fetch failed', () => {
-    mockLockData({ hasError: true });
-    render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
-    expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
-  });
-
   it('disables Unlock while the lock file is loading', () => {
     // Submitting without a lock file returns silently — the dialog would look broken.
-    mockLockData({ lockFile: null, hasError: false });
+    mockLockData({ lockFile: null });
     render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkycreator" />);
     expect(screen.getByRole('button', { name: 'Unlock' })).toBeDisabled();
   });
@@ -354,7 +350,7 @@ describe('LockedPostContent', () => {
   });
 
   it('shows already-unlocked content on mount without the lock card', async () => {
-    mockLockData({ hasError: false });
+    mockLockData();
     vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
       post: { content: 'previously unlocked', kind: 'short', attachments: null },
       attachments: [],
@@ -380,7 +376,7 @@ describe('LockedPostContent', () => {
     render(<LockedPostContent content="{}" lock={LOCK_URL} authorId="pubkyreader" />);
 
     await waitFor(() => expect(screen.getByText('my own locked content')).toBeInTheDocument());
-    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockFile });
+    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockUrl: LOCK_URL, lockFile });
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
     // Own lock keeps the lock card (Unlock present but disabled) + a "My locked content" label.
     expect(screen.getByText('My locked content')).toBeInTheDocument();

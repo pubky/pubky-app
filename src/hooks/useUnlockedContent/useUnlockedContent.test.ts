@@ -7,6 +7,9 @@ import { useUnlockedContent } from './useUnlockedContent';
 
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
+    getUnlockedPost: vi.fn().mockResolvedValue(null),
+    getOwnPost: vi.fn().mockResolvedValue(null),
+    fetchReplicatedAttachments: vi.fn().mockResolvedValue([]),
     fetchOwnContent: vi.fn().mockResolvedValue(null),
     fetchReplicatedContent: vi.fn().mockResolvedValue(null),
     replicateUnlockedContent: vi.fn().mockResolvedValue(undefined),
@@ -25,6 +28,8 @@ const content: TUnlockedContent = { post: { content: 'x', kind: 'short', attachm
 describe('useUnlockedContent (replica resolution)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue(null);
+    vi.mocked(LocksController.getOwnPost).mockResolvedValue(null);
     authState.currentUserPubky = 'me';
     authState.session = {};
   });
@@ -66,6 +71,8 @@ describe('useUnlockedContent (replica resolution)', () => {
 describe('useUnlockedContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue(null);
+    vi.mocked(LocksController.getOwnPost).mockResolvedValue(null);
     vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue(null);
     vi.mocked(LocksController.replicateUnlockedContent).mockResolvedValue(undefined);
     authState.currentUserPubky = 'me';
@@ -80,7 +87,9 @@ describe('useUnlockedContent', () => {
 
     const { rerender } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'author' }));
 
-    await Promise.resolve();
+    await act(async () => undefined);
+    expect(LocksController.getUnlockedPost).not.toHaveBeenCalled();
+    expect(LocksController.getOwnPost).not.toHaveBeenCalled();
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
 
     authState.session = {};
@@ -92,7 +101,9 @@ describe('useUnlockedContent', () => {
   it('reads nothing without a lock url', async () => {
     renderHook(() => useUnlockedContent({ lock: null, lockFile: null, authorId: 'author' }));
 
-    await Promise.resolve();
+    await act(async () => undefined);
+    expect(LocksController.getUnlockedPost).not.toHaveBeenCalled();
+    expect(LocksController.getOwnPost).not.toHaveBeenCalled();
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
     expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
   });
@@ -108,7 +119,9 @@ describe('useUnlockedContent', () => {
       }),
     );
 
-    await Promise.resolve();
+    await act(async () => undefined);
+    expect(LocksController.getUnlockedPost).not.toHaveBeenCalled();
+    expect(LocksController.getOwnPost).not.toHaveBeenCalled();
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
     expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
   });
@@ -121,7 +134,7 @@ describe('useUnlockedContent', () => {
 
     await waitFor(() => expect(result.current.unlockedPost).toEqual(content.post));
     expect(result.current.isOwnLock).toBe(true);
-    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockFile });
+    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockUrl: LOCK_URL, lockFile });
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
   });
 
@@ -137,13 +150,55 @@ describe('useUnlockedContent', () => {
     expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
   });
 
+  it('uses a cached unlocked post without requesting its marker', async () => {
+    const cached = { content: 'cached', kind: 'short' as const, attachments: null };
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue(cached);
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, authorId: 'other' }));
+
+    await waitFor(() => expect(result.current.unlockedPost?.content).toBe('cached'));
+    expect(result.current.unlockedPost?.attachments).toBeNull();
+    expect(result.current.isResolvingReplica).toBe(false);
+    expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
+    expect(LocksController.fetchReplicatedAttachments).toHaveBeenCalledWith({ post: cached });
+  });
+
+  it('uses the creator’s cached original only on their own announcement', async () => {
+    const cached = { content: 'own cached', kind: 'short' as const, attachments: null };
+    vi.mocked(LocksController.getOwnPost).mockResolvedValue(cached);
+    const lockFile = asOpaque<LockFile>({ creator: 'pubkyme' });
+    const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'me' }));
+
+    await waitFor(() => expect(result.current.unlockedPost?.content).toBe('own cached'));
+    expect(result.current.unlockedPost?.attachments).toBeNull();
+    expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
+    expect(LocksController.getUnlockedPost).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the marker if the local cache read fails', async () => {
+    vi.mocked(LocksController.getUnlockedPost).mockRejectedValue(new Error('idb unavailable'));
+    renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, authorId: 'other' }));
+    await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalledOnce());
+  });
+
+  it('falls back to the marker if cached attachment loading fails', async () => {
+    const cached = { content: 'cached', kind: 'short' as const, attachments: null };
+    vi.mocked(LocksController.getUnlockedPost).mockResolvedValue(cached);
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockRejectedValueOnce(new Error('attachment unavailable'));
+
+    renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile: null, authorId: 'other' }));
+
+    await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalledOnce());
+  });
+
   it('reads nothing when I posted the lock under a different account (a != b)', async () => {
     // owner ('other') !== me, but I'm the author → phase-2 blocker; leave it locked.
     const lockFile = asOpaque<LockFile>({ creator: 'pubkyother' });
 
     renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'me' }));
 
-    await Promise.resolve();
+    await act(async () => undefined);
+    expect(LocksController.getOwnPost).not.toHaveBeenCalled();
+    expect(LocksController.getUnlockedPost).not.toHaveBeenCalled();
     expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
   });
@@ -155,8 +210,9 @@ describe('useUnlockedContent', () => {
 
     const { result } = renderHook(() => useUnlockedContent({ lock: LOCK_URL, lockFile, authorId: 'attacker' }));
 
-    await Promise.resolve();
+    await waitFor(() => expect(result.current.isResolvingReplica).toBe(false));
     expect(result.current.isOwnLock).toBe(false);
+    expect(LocksController.getOwnPost).not.toHaveBeenCalled();
     expect(LocksController.fetchOwnContent).not.toHaveBeenCalled();
   });
 
@@ -167,12 +223,13 @@ describe('useUnlockedContent', () => {
       { initialProps: { lockFile: null as LockFile | null } },
     );
 
-    await waitFor(() => expect(LocksController.fetchReplicatedContent).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(LocksController.getUnlockedPost).toHaveBeenCalledTimes(1));
 
     // lock.json arriving must not re-probe the reader's priv — the copy's existence didn't change.
     rerender({ lockFile: asOpaque<LockFile>({ creator: 'pubkyother' }) });
 
-    expect(LocksController.fetchReplicatedContent).toHaveBeenCalledTimes(1);
+    await act(async () => undefined);
+    expect(LocksController.getUnlockedPost).toHaveBeenCalledTimes(1);
   });
 
   it('never checks for a replicated copy of my own post (unlocking only happens on other people’s posts)', async () => {
@@ -187,7 +244,9 @@ describe('useUnlockedContent', () => {
     const ownLockFile = asOpaque<LockFile>({ creator: 'pubkyme' });
     rerender({ lockFile: ownLockFile });
 
-    expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockFile: ownLockFile });
+    await waitFor(() =>
+      expect(LocksController.fetchOwnContent).toHaveBeenCalledWith({ lockUrl: LOCK_URL, lockFile: ownLockFile }),
+    );
     expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
   });
 

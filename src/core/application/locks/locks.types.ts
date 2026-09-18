@@ -64,6 +64,7 @@ export type TFetchReplicatedAttachmentsParams = {
 };
 
 export type TFetchOwnContentParams = {
+  lockUrl: string;
   lockFile: LockFile;
 };
 
