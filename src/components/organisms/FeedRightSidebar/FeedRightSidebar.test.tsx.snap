@@ -67,11 +67,6 @@ exports[`HotFeedRightDrawer > matches snapshot 1`] = `
       WhoToFollowSidebar
     </div>
     <div
-      data-testid="vibes-card"
-    >
-      VibesCard
-    </div>
-    <div
       data-testid="feedback-card"
     >
       FeedbackCard
@@ -88,14 +83,9 @@ exports[`HotFeedRightSidebar > matches snapshot 1`] = `
     WhoToFollowSidebar
   </div>
   <div
-    class="sticky top-[100px] flex w-full flex-col gap-6 self-start"
+    class="sticky top-[100px] self-start"
     data-testid="container"
   >
-    <div
-      data-testid="vibes-card"
-    >
-      VibesCard
-    </div>
     <div
       data-testid="feedback-card"
     >

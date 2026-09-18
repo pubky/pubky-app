@@ -289,6 +289,24 @@ describe('LocalUserService', () => {
       expect(result!.lastUpdatedAt).toBeLessThanOrEqual(expectedMax);
     });
 
+    it('keeps a row written since the given time instead of shortening its freshness', async () => {
+      const fetchStartedAt = Date.now();
+      const fresh = fetchStartedAt + 1;
+      await UserTtlModel.upsert({ id: userId, lastUpdatedAt: fresh });
+
+      await LocalUserService.upsertTtlWithDelay(userId, 60_000, { unlessWrittenSince: fetchStartedAt });
+
+      expect((await UserTtlModel.findById(userId))!.lastUpdatedAt).toBe(fresh);
+    });
+
+    it('parks a row that predates the given time', async () => {
+      await UserTtlModel.upsert({ id: userId, lastUpdatedAt: 1 });
+
+      await LocalUserService.upsertTtlWithDelay(userId, 60_000, { unlessWrittenSince: Date.now() });
+
+      expect((await UserTtlModel.findById(userId))!.lastUpdatedAt).toBeGreaterThan(1);
+    });
+
     it('should handle multiple users with different delay values', async () => {
       const userId1 = 'user-1' as Pubky;
       const userId2 = 'user-2' as Pubky;

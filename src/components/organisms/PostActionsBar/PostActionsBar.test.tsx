@@ -134,6 +134,17 @@ describe('PostActionsBar', () => {
     });
   });
 
+  it('keeps saved membership on the repost while actions address the original', () => {
+    mockUsePostCounts.mockReturnValue({
+      postCounts: { tags: 0, unique_tags: 0, replies: 1, reposts: 1 },
+      isLoading: false,
+    });
+    render(<PostActionsBar postId="author:original" savePostId="me:repost" />);
+    expect(screen.getByTestId('post-save-picker')).toHaveAttribute('data-post-id', 'me:repost');
+    expect(screen.getByTestId('post-menu-actions')).toHaveAttribute('data-post-id', 'author:original');
+    expect(mockUsePostCounts).toHaveBeenCalledWith('author:original');
+  });
+
   it('shows skeleton loading state while counts are not available', () => {
     mockUsePostCounts.mockReturnValue({ postCounts: null, isLoading: true });
 

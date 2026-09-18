@@ -130,12 +130,6 @@ export interface TNormalizeTagsParams {
   tags: TTagEventParams[];
 }
 
-export interface TFetchMorePostTagsParams extends TCompositeId {
-  skip?: number;
-  limit?: number;
-  viewerId?: Pubky;
-}
-
 export interface TFetchPostTaggersParams extends TCompositeId {
   label: string;
   skip?: number;
