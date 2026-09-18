@@ -1,0 +1,54 @@
+/**
+ * Pubky Passport ("Continue with Google") integration constants.
+ *
+ * Passport is a hosted signer: franky starts a normal `pubkyauth://` cookie flow, opens
+ * `<passportUrl>/authorize#d=<encoded authorization URL>` in a popup and keeps polling the HTTP
+ * relay. Only the SDK `Session` returned by the relay authenticates the user; every message or
+ * callback described here is a UI signal.
+ *
+ * The Passport origin itself is runtime config (`PUBKY_RUNTIME_PASSPORT_URL`, see
+ * `@/config/network`). Fixed protocol values live here; see `docs/environment.md`.
+ */
+
+/** Human-readable app name Passport shows as the requesting source (`x-source`). Not a verified identity. */
+export const PASSPORT_X_SOURCE = 'Pubky';
+
+/** Path Passport is told to open on `/authorize`. The authorization URL travels in the fragment (`#d=`). */
+export const PASSPORT_AUTHORIZE_PATH = '/authorize';
+
+/** Same-origin HTTPS callback route Passport navigates to when the popup hand-off cannot complete. */
+export const PASSPORT_RETURN_PATH = '/passport/return';
+
+/** Query parameter names on {@link PASSPORT_RETURN_PATH}. Untrusted: they never sign the user in. */
+export const PASSPORT_RETURN_QUERY = {
+  attempt: 'attempt',
+  outcome: 'outcome',
+} as const;
+
+/** Window features for the Passport popup. `noopener`/`noreferrer` must not be used: Passport needs `window.opener`. */
+export const PASSPORT_POPUP_FEATURES = 'popup,width=520,height=760';
+
+/** Prefix of the popup window name; the attempt id is appended so each attempt targets its own window. */
+export const PASSPORT_POPUP_NAME_PREFIX = 'pubky-passport-';
+
+/** `postMessage` contract sent by Passport to the opener (see pubky-passport `docs/integration.md`). */
+export const PASSPORT_OUTCOME_MESSAGE_TYPE = 'pubky-passport.authorization-outcome';
+
+/** Acknowledgement franky posts back to Passport so it can close instead of navigating to the callback. */
+export const PASSPORT_ACK_MESSAGE_TYPE = 'pubky-passport.authorization-outcome-ack';
+
+/** Message the same-origin callback page posts to the opener when Passport fell back to navigation. */
+export const PASSPORT_RETURN_MESSAGE_TYPE = 'pubky-app.passport-return';
+
+/** Version of the Passport outcome/ack message contract franky understands. */
+export const PASSPORT_MESSAGE_VERSION = 1;
+
+/** Interval for detecting that the user closed the popup before Passport reported an outcome. */
+export const PASSPORT_POPUP_CLOSED_POLL_MS = 500;
+
+/**
+ * Wall-clock bound for the authorization phase of one Passport attempt. The relay poll helper only
+ * bounds the number of polls, so a hung request could otherwise wait indefinitely. Cleared as soon
+ * as the SDK session is accepted; initialization is not subject to it.
+ */
+export const PASSPORT_ATTEMPT_TIMEOUT_MS = 5 * 60_000;

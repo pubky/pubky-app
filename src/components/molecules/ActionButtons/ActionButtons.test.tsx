@@ -62,6 +62,33 @@ describe('ActionButtons', () => {
     expect(document.querySelector('.lucide-eye')).toBeInTheDocument();
     expect(mockOnExplore).toHaveBeenCalledTimes(1);
   });
+
+  it('does not render Continue with Google unless a handler is provided', () => {
+    render(<ActionButtons onCreateAccount={vi.fn()} />);
+
+    expect(screen.queryByTestId('continue-with-google')).not.toBeInTheDocument();
+  });
+
+  it('renders and calls Continue with Google when provided, disabled while pending', () => {
+    const mockOnContinueWithGoogle = vi.fn();
+    const { rerender, container } = render(
+      <ActionButtons onCreateAccount={vi.fn()} onContinueWithGoogle={mockOnContinueWithGoogle} />,
+    );
+
+    const googleButton = screen.getByTestId('continue-with-google');
+    fireEvent.click(googleButton);
+    expect(mockOnContinueWithGoogle).toHaveBeenCalledTimes(1);
+    expect(container.firstChild).toMatchSnapshot();
+
+    rerender(
+      <ActionButtons
+        onCreateAccount={vi.fn()}
+        onContinueWithGoogle={mockOnContinueWithGoogle}
+        isContinueWithGooglePending
+      />,
+    );
+    expect(screen.getByTestId('continue-with-google')).toBeDisabled();
+  });
 });
 
 describe('ActionButtons - Snapshots', () => {

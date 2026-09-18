@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { BookOpen, Eye, UserRoundPlus } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { APP_ROUTES, AUTH_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { APP_ROUTES, AUTH_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 import { LANDING_HERO_SECTION_ID, LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
 import { HeaderSocialLinks } from '../Header/Header';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
@@ -15,6 +16,7 @@ import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const router = useRouter();
   const pathname = usePathname();
+  const joinRoute = useJoinRoute();
   const [showJoinButton, setShowJoinButton] = React.useState(false);
 
   const isLandingPage = pathname === '/';
@@ -52,7 +54,7 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
   }, [isLandingPage]);
 
   const handleJoin = () => {
-    router.push(ONBOARDING_ROUTES.HUMAN);
+    router.push(joinRoute);
   };
 
   const handleLearn = () => {

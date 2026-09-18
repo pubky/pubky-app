@@ -22,6 +22,7 @@ import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
+import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { useHomeStore } from '@/stores/home/home.store';
@@ -1101,7 +1102,29 @@ describe('AuthController', () => {
       expect(generateAuthUrlSpy).toHaveBeenCalled();
     });
 
-    it('should free stale auth flows when multiple requests overlap (StrictMode)', async () => {
+    it('rejects a superseded start as canceled without generating its URL (StrictMode double-mount)', async () => {
+      mockClearDatabase.mockResolvedValue(undefined);
+
+      const cancelAuthFlowB = vi.fn();
+      const generateAuthUrlSpy = vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'https://example.com/auth?token=B',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelAuthFlowB,
+      });
+
+      const firstCall = AuthController.getAuthUrl();
+      const secondCall = AuthController.getAuthUrl();
+
+      const result = await secondCall;
+      await expect(firstCall).rejects.toMatchObject({ name: AUTH_FLOW_CANCELED_ERROR_NAME });
+
+      // The first start lost ownership while its database cleanup was in flight: it never generated a URL.
+      expect(generateAuthUrlSpy).toHaveBeenCalledTimes(1);
+      expect(result.authorizationUrl).toBe('https://example.com/auth?token=B');
+      expect(cancelAuthFlowB).not.toHaveBeenCalled();
+    });
+
+    it('cancels a flow whose generation finishes after a newer start took ownership', async () => {
       mockClearDatabase.mockResolvedValue(undefined);
 
       const cancelAuthFlowA = vi.fn();
@@ -1123,20 +1146,119 @@ describe('AuthController', () => {
         });
 
       const firstCall = AuthController.getAuthUrl();
+      // Let the first start pass its database cleanup and begin generating before the second start.
+      await Promise.resolve();
+      await Promise.resolve();
       const secondCall = AuthController.getAuthUrl();
 
-      // Resolve the first call after the second call already started.
+      const second = await secondCall;
+
+      // The first generation completes after the second flow already owns the state.
       resolveFirst!({
         authorizationUrl: 'https://example.com/auth?token=A',
         awaitApproval: new Promise(() => {}),
         cancelAuthFlow: cancelAuthFlowA,
       });
 
-      await secondCall;
-      await firstCall;
-
+      await expect(firstCall).rejects.toMatchObject({ name: AUTH_FLOW_CANCELED_ERROR_NAME });
+      expect(second.authorizationUrl).toBe('https://example.com/auth?token=B');
       expect(cancelAuthFlowA).toHaveBeenCalled();
       expect(cancelAuthFlowB).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPassportAuthUrl', () => {
+    const xCallback = {
+      xSource: 'Pubky',
+      xSuccess: 'https://app.example.com/passport/return?attempt=a&outcome=success',
+      xError: 'https://app.example.com/passport/return?attempt=a&outcome=error',
+      xCancel: 'https://app.example.com/passport/return?attempt=a&outcome=cancel',
+    };
+
+    beforeEach(() => {
+      setupOnboardingStore();
+    });
+
+    it('generates the Passport auth URL through the shared auth-flow wrapper', async () => {
+      const cancelAuthFlow = vi.fn();
+      const mockAuthUrl = {
+        authorizationUrl: 'pubkyauth:///?caps=/pub/pubky.app/:rw&secret=s&relay=https://relay.example.com/inbox',
+        awaitApproval: Promise.resolve(buildMockSession()),
+        cancelAuthFlow,
+      };
+      const generateSpy = vi.spyOn(AuthApplication, 'generatePassportAuthUrl').mockResolvedValue(mockAuthUrl);
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+
+      const result = await AuthController.getPassportAuthUrl({ xCallback });
+
+      expect(clearDatabaseSpy).toHaveBeenCalled();
+      expect(storeMocks.resetMigrationStore).toHaveBeenCalled();
+      expect(storeMocks.resetSettingsStore).toHaveBeenCalled();
+      expect(generateSpy).toHaveBeenCalledWith({ xCallback });
+      expect(result.authorizationUrl).toBe(mockAuthUrl.authorizationUrl);
+      expect(result.cancelAuthFlow).toBe(cancelAuthFlow);
+    });
+
+    it('takes ownership before database cleanup so a slower Ring start cannot cancel Passport', async () => {
+      let resolveRingClear!: () => void;
+      mockClearDatabase
+        .mockImplementationOnce(
+          () =>
+            new Promise<void>((resolve) => {
+              resolveRingClear = resolve;
+            }),
+        )
+        .mockResolvedValueOnce(undefined);
+
+      const cancelRing = vi.fn();
+      const cancelPassport = vi.fn();
+      const generateRingSpy = vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'pubkyauth:///?ring',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelRing,
+      });
+      vi.spyOn(AuthApplication, 'generatePassportAuthUrl').mockResolvedValue({
+        authorizationUrl: 'pubkyauth:///?passport',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelPassport,
+      });
+
+      const ringCall = AuthController.getAuthUrl();
+      const passportCall = AuthController.getPassportAuthUrl({ xCallback });
+
+      const passport = await passportCall;
+      expect(passport.authorizationUrl).toBe('pubkyauth:///?passport');
+
+      // Ring's database cleanup finishes only now, after Passport owns the flow.
+      resolveRingClear!();
+
+      await expect(ringCall).rejects.toMatchObject({ name: AUTH_FLOW_CANCELED_ERROR_NAME });
+      expect(generateRingSpy).not.toHaveBeenCalled();
+      expect(cancelRing).not.toHaveBeenCalled();
+      expect(cancelPassport).not.toHaveBeenCalled();
+    });
+
+    it('starting Passport cancels a Ring flow that already owns the state', async () => {
+      mockClearDatabase.mockResolvedValue(undefined);
+
+      const cancelRing = vi.fn();
+      const cancelPassport = vi.fn();
+      vi.spyOn(AuthApplication, 'generateAuthUrl').mockResolvedValue({
+        authorizationUrl: 'pubkyauth:///?ring',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelRing,
+      });
+      vi.spyOn(AuthApplication, 'generatePassportAuthUrl').mockResolvedValue({
+        authorizationUrl: 'pubkyauth:///?passport',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelPassport,
+      });
+
+      await AuthController.getAuthUrl();
+      await AuthController.getPassportAuthUrl({ xCallback });
+
+      expect(cancelRing).toHaveBeenCalledTimes(1);
+      expect(cancelPassport).not.toHaveBeenCalled();
     });
   });
 
@@ -1178,40 +1300,25 @@ describe('AuthController', () => {
       expect(generateSignupAuthUrlSpy).toHaveBeenCalledWith('INVITE-CODE');
     });
 
-    it('should free stale auth flows when multiple requests overlap (StrictMode)', async () => {
+    it('rejects a superseded signup start as canceled (StrictMode double-mount)', async () => {
       mockClearDatabase.mockResolvedValue(undefined);
 
-      const cancelAuthFlowA = vi.fn();
       const cancelAuthFlowB = vi.fn();
-
-      type GenerateSignupAuthUrlResult = Awaited<ReturnType<typeof AuthApplication.generateSignupAuthUrl>>;
-
-      let resolveFirst!: (value: GenerateSignupAuthUrlResult) => void;
-      const first = new Promise<GenerateSignupAuthUrlResult>((resolve) => {
-        resolveFirst = resolve;
+      const generateSpy = vi.spyOn(AuthApplication, 'generateSignupAuthUrl').mockResolvedValue({
+        authorizationUrl: 'https://example.com/auth?token=B',
+        awaitApproval: new Promise(() => {}),
+        cancelAuthFlow: cancelAuthFlowB,
       });
-
-      vi.spyOn(AuthApplication, 'generateSignupAuthUrl')
-        .mockImplementationOnce(() => first)
-        .mockResolvedValueOnce({
-          authorizationUrl: 'https://example.com/auth?token=B',
-          awaitApproval: new Promise(() => {}),
-          cancelAuthFlow: cancelAuthFlowB,
-        });
 
       const firstCall = AuthController.getSignupAuthUrl('CODE-A');
       const secondCall = AuthController.getSignupAuthUrl('CODE-B');
 
-      resolveFirst!({
-        authorizationUrl: 'https://example.com/auth?token=A',
-        awaitApproval: new Promise(() => {}),
-        cancelAuthFlow: cancelAuthFlowA,
-      });
+      const result = await secondCall;
+      await expect(firstCall).rejects.toMatchObject({ name: AUTH_FLOW_CANCELED_ERROR_NAME });
 
-      await secondCall;
-      await firstCall;
-
-      expect(cancelAuthFlowA).toHaveBeenCalled();
+      expect(generateSpy).toHaveBeenCalledTimes(1);
+      expect(generateSpy).toHaveBeenCalledWith('CODE-B');
+      expect(result.authorizationUrl).toBe('https://example.com/auth?token=B');
       expect(cancelAuthFlowB).not.toHaveBeenCalled();
     });
   });

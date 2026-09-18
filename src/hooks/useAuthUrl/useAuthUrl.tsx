@@ -11,6 +11,13 @@ import { toast } from '@/molecules/Toaster/toast';
 import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 
+/** Returns true when the auth flow was cancelled by the controller (superseded or torn down), not failed. */
+const isAuthFlowCanceledError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'name' in error &&
+  (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME;
+
 /** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
 const isAuthFlowExpiredError = (error: unknown): boolean => {
   if (!isAppError(error)) return false;
@@ -32,8 +39,15 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   const [isLoading, setIsLoading] = useState(autoFetch);
   const [isExpired, setIsExpired] = useState(false);
   const isMountedRef = useRef(true);
+  // Every fetchUrl() call is one request; only the latest request may touch UI state. An older
+  // request's late completion or cancellation (StrictMode, refresh, a Passport start superseding
+  // this Ring flow) must never overwrite or wipe the URL of a newer one.
+  const latestRequestIdRef = useRef(0);
 
   const fetchUrl = useCallback(async (): Promise<void> => {
+    const requestId = ++latestRequestIdRef.current;
+    const isCurrentRequest = () => isMountedRef.current && latestRequestIdRef.current === requestId;
+
     setIsLoading(true);
     setIsExpired(false);
     setUrl('');
@@ -61,24 +75,26 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
                 ? 'This key is linked to a different homeserver. Use a staging account on this site.'
                 : 'Sign in failed. Try again.',
             });
-            if (isMountedRef.current) {
+            if (isCurrentRequest()) {
               setUrl('');
               setIsExpired(true);
             }
           }
         })
         .catch((error: unknown) => {
-          if (
-            typeof error === 'object' &&
-            error !== null &&
-            'name' in error &&
-            (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME
-          ) {
+          if (isAuthFlowCanceledError(error)) {
+            // Cancelled by a newer flow (e.g. the user switched to "Continue with Google"): the QR
+            // on screen can no longer complete a sign-in, so show the reload state. An older
+            // request's cancellation says nothing about the current QR and is ignored.
+            if (isCurrentRequest()) {
+              setUrl('');
+              setIsExpired(true);
+            }
             return;
           }
 
           Logger.error('Authorization promise rejected:', error);
-          if (!isMountedRef.current) return;
+          if (!isCurrentRequest()) return;
 
           if (isAuthFlowExpiredError(error)) {
             setUrl('');
@@ -92,17 +108,21 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           });
         });
 
-      if (!isMountedRef.current) return;
+      if (!isCurrentRequest()) return;
       setUrl(authorizationUrl ?? '');
     } catch (error) {
+      // A start superseded before it produced a URL (StrictMode double-mount, method switch) is
+      // not a failure of the current request; the newer request owns the UI.
+      if (isAuthFlowCanceledError(error)) return;
+
       Logger.error('Failed to generate auth URL:', error);
-      if (!isMountedRef.current) return;
+      if (!isCurrentRequest()) return;
       toast({
         variant: 'error',
         description: 'Could not generate QR. Refresh and try again.',
       });
     } finally {
-      if (isMountedRef.current) {
+      if (isCurrentRequest()) {
         setIsLoading(false);
       }
     }

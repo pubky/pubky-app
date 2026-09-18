@@ -17,6 +17,11 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
+// Join entry: fair-access step unless Pubky Passport is enabled on this page.
+vi.mock('@/hooks/useJoinRoute/useJoinRoute', () => ({
+  useJoinRoute: () => '/onboarding/human',
+}));
+
 class MockIntersectionObserver implements IntersectionObserver {
   constructor(callback: IntersectionObserverCallback) {
     mockIntersectionCallback = callback;

@@ -25,7 +25,13 @@ import type { Pubky } from '@/models/models.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
-import type { TGenerateAuthUrlResult, THomeserverSessionResult } from '@/services/homeserver/homeserver.types';
+// Pure error factory shared with the auth-flow poll helper (no IO; keeps one canceled-error shape).
+import { createCanceledError } from '@/services/homeserver/error.utils';
+import type {
+  TGenerateAuthUrlResult,
+  TGeneratePassportAuthUrlParams,
+  THomeserverSessionResult,
+} from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
 import { useHotStore } from '@/stores/hot/hot.store';
@@ -55,6 +61,11 @@ export class AuthController {
     const cancel = this.activeAuthFlow?.cancel;
     this.activeAuthFlow = null;
     cancel?.();
+  }
+
+  /** True while `token` identifies the flow that currently owns auth-flow state. */
+  private static ownsAuthFlow(token: symbol): boolean {
+    return this.activeAuthFlow?.token === token;
   }
 
   /** Cancel detached moderation-follow work before account-local state changes ownership. */
@@ -326,30 +337,42 @@ export class AuthController {
 
   /**
    * Wraps auth URL generation with flow tracking so useAuthUrl can cancel on unmount
-   * and we detect stale requests (e.g. React StrictMode double-mount).
+   * and we detect stale requests (e.g. React StrictMode double-mount, or a Pubky Ring request
+   * started right before a Passport request).
+   *
+   * Ownership is taken synchronously, before the first `await`: a start that is superseded while
+   * its database cleanup or URL generation is still in flight never becomes the active flow, never
+   * cancels the newer flow, and rejects with the canceled error instead of returning a dead URL.
    * @param generateFn - Async function that returns the auth URL result
    * @returns Promise resolving to the generated authentication URL with wrapped approval
    */
   private static async wrapAuthFlow(
     generateFn: () => Promise<TGenerateAuthUrlResult>,
   ): Promise<TGenerateAuthUrlResult> {
+    const token = Symbol('auth-flow');
+    this.cancelActiveAuthFlow();
+    this.activeAuthFlow = { token, cancel: null };
     this.cancelModerationFollow();
+
     await clearDatabase();
+    if (!this.ownsAuthFlow(token)) throw createCanceledError();
+
     // Skip post-migration resync — full bootstrap below covers all data
     useMigrationStore.getState().reset();
     // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
     useSettingsStore.getState().reset();
-    const token = Symbol('auth-flow');
-    this.cancelActiveAuthFlow();
-    this.activeAuthFlow = { token, cancel: null };
+
     const { authorizationUrl, awaitApproval, cancelAuthFlow } = await generateFn();
 
-    if (!this.activeAuthFlow || this.activeAuthFlow.token !== token) {
+    const activeAuthFlow = this.activeAuthFlow;
+    if (!activeAuthFlow || activeAuthFlow.token !== token) {
       cancelAuthFlow();
-      return { authorizationUrl, awaitApproval, cancelAuthFlow };
+      // Swallow the rejection of the now-orphaned approval so it never surfaces as unhandled.
+      awaitApproval.catch(() => undefined);
+      throw createCanceledError();
     }
 
-    this.activeAuthFlow.cancel = cancelAuthFlow;
+    activeAuthFlow.cancel = cancelAuthFlow;
 
     const wrappedAwaitApproval = awaitApproval.finally(() => {
       if (this.activeAuthFlow?.token === token) {
@@ -422,6 +445,17 @@ export class AuthController {
    */
   static async getSignupAuthUrl(inviteCode: string): Promise<TGenerateAuthUrlResult> {
     return this.wrapAuthFlow(() => AuthApplication.generateSignupAuthUrl(inviteCode));
+  }
+
+  /**
+   * Generates the sign-in authentication URL handed to Pubky Passport ("Continue with Google").
+   * Shares the single-active-flow tracking with the Pubky Ring flows, so starting Passport cancels
+   * a pending Ring request and vice versa.
+   * @param params - x-callback-url metadata (source label and same-origin callbacks)
+   * @returns Promise resolving to the generated authentication URL with wrapped approval
+   */
+  static async getPassportAuthUrl(params: TGeneratePassportAuthUrlParams): Promise<TGenerateAuthUrlResult> {
+    return this.wrapAuthFlow(() => AuthApplication.generatePassportAuthUrl(params));
   }
 
   /**

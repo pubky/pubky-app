@@ -345,6 +345,136 @@ describe('useAuthUrl', () => {
     expect(mockLoggerError).not.toHaveBeenCalled();
   });
 
+  it('expires the current QR when its flow is cancelled by a newer flow (method switch)', async () => {
+    let rejectApproval: (error: Error) => void;
+    const mockAwaitApproval = new Promise<Session>((_, reject) => {
+      rejectApproval = reject;
+    });
+
+    mockGetAuthUrl.mockResolvedValue({
+      authorizationUrl: 'pubkyring://authorize?token=ring',
+      awaitApproval: mockAwaitApproval,
+      cancelAuthFlow: createCancelAuthFlow(),
+    });
+
+    const { result } = renderHook(() => useAuthUrl());
+
+    await waitFor(() => {
+      expect(result.current.url).toBe('pubkyring://authorize?token=ring');
+    });
+
+    const canceledError = new Error('Auth flow canceled');
+    canceledError.name = 'AuthFlowCanceled';
+    rejectApproval!(canceledError);
+
+    await waitFor(() => {
+      expect(result.current.isExpired).toBe(true);
+    });
+    expect(result.current.url).toBe('');
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    expect(mockLoggerError).not.toHaveBeenCalled();
+  });
+
+  it('ignores the cancellation of an older request so it never wipes a newer QR', async () => {
+    let rejectFirstApproval: (error: Error) => void;
+    const firstApproval = new Promise<Session>((_, reject) => {
+      rejectFirstApproval = reject;
+    });
+
+    mockGetAuthUrl
+      .mockResolvedValueOnce({
+        authorizationUrl: 'pubkyring://authorize?token=first',
+        awaitApproval: firstApproval,
+        cancelAuthFlow: createCancelAuthFlow(),
+      })
+      .mockResolvedValueOnce({
+        authorizationUrl: 'pubkyring://authorize?token=second',
+        awaitApproval: new Promise<Session>(() => {}),
+        cancelAuthFlow: createCancelAuthFlow(),
+      });
+
+    const { result } = renderHook(() => useAuthUrl());
+
+    await waitFor(() => {
+      expect(result.current.url).toBe('pubkyring://authorize?token=first');
+    });
+
+    await act(async () => {
+      await result.current.fetchUrl();
+    });
+    expect(result.current.url).toBe('pubkyring://authorize?token=second');
+
+    const canceledError = new Error('Auth flow canceled');
+    canceledError.name = 'AuthFlowCanceled';
+    rejectFirstApproval!(canceledError);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(result.current.url).toBe('pubkyring://authorize?token=second');
+    expect(result.current.isExpired).toBe(false);
+  });
+
+  it('shows only the newest URL when generations complete out of order', async () => {
+    let resolveFirst!: (value: {
+      authorizationUrl: string;
+      awaitApproval: Promise<Session>;
+      cancelAuthFlow: () => void;
+    }) => void;
+    const first = new Promise<{
+      authorizationUrl: string;
+      awaitApproval: Promise<Session>;
+      cancelAuthFlow: () => void;
+    }>((resolve) => {
+      resolveFirst = resolve;
+    });
+
+    mockGetAuthUrl
+      .mockImplementationOnce(() => first)
+      .mockResolvedValueOnce({
+        authorizationUrl: 'pubkyring://authorize?token=newest',
+        awaitApproval: new Promise<Session>(() => {}),
+        cancelAuthFlow: createCancelAuthFlow(),
+      });
+
+    const { result } = renderHook(() => useAuthUrl());
+
+    await waitFor(() => {
+      expect(mockGetAuthUrl).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      await result.current.fetchUrl();
+    });
+    expect(result.current.url).toBe('pubkyring://authorize?token=newest');
+    expect(result.current.isLoading).toBe(false);
+
+    // The first (delayed) generation completes last and must not overwrite the newest URL.
+    await act(async () => {
+      resolveFirst({
+        authorizationUrl: 'pubkyring://authorize?token=stale',
+        awaitApproval: new Promise<Session>(() => {}),
+        cancelAuthFlow: createCancelAuthFlow(),
+      });
+      await Promise.resolve();
+    });
+    expect(result.current.url).toBe('pubkyring://authorize?token=newest');
+  });
+
+  it('treats a superseded start (controller rejects as canceled) as a silent no-op', async () => {
+    const canceledError = new Error('Auth flow canceled');
+    canceledError.name = 'AuthFlowCanceled';
+    mockGetAuthUrl.mockRejectedValue(canceledError);
+
+    renderHook(() => useAuthUrl());
+
+    await waitFor(() => {
+      expect(mockGetAuthUrl).toHaveBeenCalled();
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    expect(mockLoggerError).not.toHaveBeenCalled();
+  });
+
   it('shows toast when getAuthUrl fails', async () => {
     mockGetAuthUrl.mockRejectedValue(new Error('Network error'));
 

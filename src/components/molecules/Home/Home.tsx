@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { APP_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { APP_ROUTES } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -9,6 +9,9 @@ import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { getPubkyCoreLink } from '@/config/externalLinks';
+import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
+import { usePassportAuth } from '@/hooks/usePassportAuth/usePassportAuth';
+import { usePassportEligibility } from '@/hooks/usePassportEligibility/usePassportEligibility';
 import { cn } from '@/libs/utils/utils';
 import { DialogAge } from '@/organisms/DialogAge/DialogAge';
 import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
@@ -18,13 +21,16 @@ import { ActionButtons } from '../ActionButtons/ActionButtons';
 
 export const HomeActions = () => {
   const router = useRouter();
+  const joinRoute = useJoinRoute();
+  const passportEligibility = usePassportEligibility();
+  const { startPassportAuth, isPending: isPassportPending } = usePassportAuth();
 
   const handleLearn = () => {
     document.getElementById(LANDING_NEXT_SECTION_ID)?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleCreateAccount = () => {
-    router.push(ONBOARDING_ROUTES.HUMAN);
+    router.push(joinRoute);
   };
 
   const handleExplore = () => {
@@ -36,6 +42,8 @@ export const HomeActions = () => {
       onLearn={handleLearn}
       onExplore={handleExplore}
       onCreateAccount={handleCreateAccount}
+      onContinueWithGoogle={passportEligibility === 'enabled' ? startPassportAuth : undefined}
+      isContinueWithGooglePending={isPassportPending}
       className="gap-4"
     />
   );
@@ -45,7 +53,7 @@ export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
   return (
     <Container className={cn('flex-1 flex-col items-start justify-end gap-1', className)} {...props}>
       <FooterLinks>
-        {'By creating a '}
+        {'By joining, continuing, or creating a '}
         {'Pubky'}
         {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
         {', and confirm you are'} <DialogAge /> {'Pubky is powered by '}
