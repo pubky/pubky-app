@@ -28,7 +28,9 @@ const toSats = (value: string) =>
 export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockContentProps) {
   // Bare digits — sats are whole units, and the value travels to the Lock Server as a string.
   const [amount, setAmount] = useState('');
-  const { rate: btcRate, status: rateStatus } = useBtcRate();
+  // The rate is only for pricing a lock, but every post composer mounts this dialog — fetching
+  // before it opens would cost a `/api/btc-rate` call on the home feed, Locks users or not.
+  const { rate: btcRate, status: rateStatus } = useBtcRate(open);
 
   const amountSats = Number(amount);
   const isValidAmount = isPositiveIntegerString(amount);

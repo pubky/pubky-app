@@ -5,10 +5,14 @@ import { DialogLockContent } from './DialogLockContent';
 const mocks = vi.hoisted(() => ({
   btcRate: null as { satUsd: number } | null,
   rateStatus: 'ready' as 'loading' | 'ready' | 'failed',
+  useBtcRate: vi.fn(),
 }));
 
 vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
-  useBtcRate: () => ({ rate: mocks.btcRate, status: mocks.rateStatus }),
+  useBtcRate: (enabled?: boolean) => {
+    mocks.useBtcRate(enabled);
+    return { rate: mocks.btcRate, status: mocks.rateStatus };
+  },
 }));
 
 vi.mock('@/atoms/Dialog/Dialog', () => ({
@@ -39,6 +43,15 @@ beforeEach(() => {
 });
 
 describe('DialogLockContent', () => {
+  it('asks for the rate only while open', () => {
+    setup({ open: false });
+    expect(mocks.useBtcRate).toHaveBeenCalledWith(false);
+
+    mocks.useBtcRate.mockClear();
+    setup();
+    expect(mocks.useBtcRate).toHaveBeenCalledWith(true);
+  });
+
   it('renders a single payment form without unlock-method tabs', () => {
     setup();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
