@@ -30,6 +30,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-nextjs-v1-${{ hashFiles('.nvmrc', 'package.json', 'package-lock.json', 'next.config.ts', 'serwist.config.mjs', 'tsconfig.json', 'postcss.config.mjs') }}-${{ hashFiles('src/**', 'public/**') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-nextjs-v1-${{ hashFiles('.nvmrc', 'package.json', 'package-lock.json', 'next.config.ts', 'serwist.config.mjs', 'tsconfig.json', 'postcss.config.mjs') }}-
+
       - name: Build prod
         run: npm run build
 
@@ -76,3 +84,6 @@ jobs:
           done
 
           echo "Production server is ready."
+          # A catch-all HTML response can also return 200; verify the actual worker bytes.
+          test -s public/sw.js
+          curl -fsS "http://localhost:${PORT}/sw.js" | cmp public/sw.js -

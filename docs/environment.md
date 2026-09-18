@@ -95,7 +95,7 @@ import { getHomeserver, getTestnet } from '@/config/network';
 const url = getNexusUrl(); // resolved at call time
 ```
 
-> Do NOT read `process.env.PUBKY_RUNTIME_*` directly, and do NOT invent new `NEXT_PUBLIC_*` names for runtime-configurable values — ESLint rules block both. Use the getters.
+> Do NOT read `process.env.PUBKY_RUNTIME_*` directly, and do NOT invent new `NEXT_PUBLIC_*` names for runtime-configurable values — Oxlint rules block both. Use the getters.
 
 ### Strict (deployed) vs lenient (dev/test)
 

@@ -1,7 +1,7 @@
 // Intentional import order — vi.hoisted + vi.mock factories rely on stable
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
-// @vitest/browser. Do not let `eslint --fix` reorder these imports.
-/* eslint-disable simple-import-sort/imports */
+// @vitest/browser. Do not let `oxlint --fix` reorder these imports.
+/* oxlint-disable simple-import-sort/imports */
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
@@ -100,7 +100,7 @@ vi.mock('dexie-react-hooks', async () => {
         };
         // Intentionally keyed by serialized deps — mirrors Dexie live-query
         // re-subscription when the dependency list identity changes.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // oxlint-disable-next-line react/exhaustive-deps
       }, [depsKey]);
       return data;
     },

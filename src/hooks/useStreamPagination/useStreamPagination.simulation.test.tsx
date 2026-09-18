@@ -555,27 +555,24 @@ describe('useStreamPagination against a simulated Nexus (remote-origin mutations
   // the bumped value, the next poll asks Nexus for posts above the edit time and skips every
   // post published between the head's score and that edit. Expected to fail until #2535
   // lands; vitest then reports it as unexpectedly passing, and `.fails` comes off.
-  it.fails(
-    'head-polls every post published above the head after a remote edit bumped its indexed_at (#2535)',
-    async () => {
-      const sim = newSim();
-      seedStream(sim, 20, () => AUTHORS[1]);
-      wireNexus(sim);
-      const feed = mountFeed(TIMELINE);
-      await settled(feed);
-      const head = sim.stream()[0];
+  it.fails('head-polls every post published above the head after a remote edit bumped its indexed_at (#2535)', async () => {
+    const sim = newSim();
+    seedStream(sim, 20, () => AUTHORS[1]);
+    wireNexus(sim);
+    const feed = mountFeed(TIMELINE);
+    await settled(feed);
+    const head = sim.stream()[0];
 
-      const publishedBeforeEdit = sim.publish(AUTHORS[2]);
-      sim.edit(head.id);
-      await ttlRefresh(sim, [head.id]);
-      const publishedAfterEdit = sim.publish(AUTHORS[0]);
-      await headPoll(TIMELINE);
-      await refresh(feed);
-      await settled(feed);
+    const publishedBeforeEdit = sim.publish(AUTHORS[2]);
+    sim.edit(head.id);
+    await ttlRefresh(sim, [head.id]);
+    const publishedAfterEdit = sim.publish(AUTHORS[0]);
+    await headPoll(TIMELINE);
+    await refresh(feed);
+    await settled(feed);
 
-      expect(feed.result.current.postIds.slice(0, 3)).toEqual([publishedAfterEdit.id, publishedBeforeEdit.id, head.id]);
-    },
-  );
+    expect(feed.result.current.postIds.slice(0, 3)).toEqual([publishedAfterEdit.id, publishedBeforeEdit.id, head.id]);
+  });
 
   describe('randomized remote-origin runs', () => {
     const seeds = Array.from({ length: Number(process.env.SIM_SEEDS ?? 16) }, (_, i) => i + 1);

@@ -1,0 +1,224 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "nextjs", "import"],
+  "categories": {
+    "correctness": "off"
+  },
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/.claude/**",
+    "**/.next/**",
+    "**/out/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/.turbo/**",
+    "**/coverage/**",
+    "**/__snapshots__/**",
+    "*.config.js",
+    "*.config.mjs",
+    "*.config.ts",
+    "cypress/**",
+    "cypress.config.ts",
+    "next-env.d.ts",
+    "public/sw.js"
+  ],
+  "overrides": [
+    {
+      "files": ["src/libs/runtime-config/**/*.{ts,tsx}", "src/config/test.ts"],
+      "rules": {
+        "pubky/no-restricted-syntax": "off"
+      }
+    },
+    {
+      "files": ["src/components/atoms/Toast/**", "src/components/molecules/Toaster/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.{ts,tsx,js,jsx,mjs,cjs}"],
+      "rules": {
+        "nextjs/no-img-element": "off",
+        "nextjs/no-html-link-for-pages": "off",
+        "typescript/no-explicit-any": "error",
+        "pubky/no-restricted-syntax": [
+          "error",
+          {
+            "selector": "TSAsExpression[expression.type=\"TSAsExpression\"][expression.typeAnnotation.type=\"TSUnknownKeyword\"]",
+            "message": "`as unknown as T` is banned in test files. Use asInvalid<T>() / asOpaque<T>() or a dedicated mock helper from @/test-utils instead."
+          },
+          {
+            "selector": "TSAsExpression[typeAnnotation.type=\"TSAnyKeyword\"]",
+            "message": "`as any` is banned in test files. Use asOpaque<T>() or a dedicated mock helper from @/test-utils instead."
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/test-utils/**/*.{ts,tsx}"],
+      "rules": {
+        "typescript/no-explicit-any": "off",
+        "pubky/no-restricted-syntax": "off"
+      }
+    }
+  ],
+  "jsPlugins": [
+    "@stylistic/eslint-plugin",
+    "eslint-plugin-simple-import-sort",
+    "./tooling/oxlint/pubky.mjs",
+    {
+      "name": "next-compat",
+      "specifier": "@next/eslint-plugin-next"
+    },
+    {
+      "name": "react-compat",
+      "specifier": "eslint-plugin-react"
+    },
+    {
+      "name": "react-hooks-compat",
+      "specifier": "eslint-plugin-react-hooks"
+    }
+  ],
+  "settings": {
+    "react": {
+      "version": "19.2"
+    }
+  },
+  "rules": {
+    "no-array-constructor": "error",
+    "no-unused-expressions": "error",
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "react/display-name": "error",
+    "react/jsx-key": "error",
+    "react/jsx-no-comment-textnodes": "error",
+    "react/jsx-no-duplicate-props": "error",
+    "react/jsx-no-target-blank": "error",
+    "react/jsx-no-undef": "error",
+    "react/no-children-prop": "error",
+    "react/no-danger-with-children": "error",
+    "react/no-direct-mutation-state": "error",
+    "react/no-find-dom-node": "error",
+    "react/no-is-mounted": "error",
+    "react/no-render-return-value": "error",
+    "react/no-string-refs": "error",
+    "react/no-unescaped-entities": "error",
+    "react/no-unknown-property": "error",
+    "react/no-unsafe": "off",
+    "react/react-in-jsx-scope": "off",
+    "import/first": "error",
+    "@stylistic/padding-line-between-statements": [
+      "error",
+      {
+        "blankLine": "always",
+        "prev": "import",
+        "next": "*"
+      },
+      {
+        "blankLine": "any",
+        "prev": "import",
+        "next": "import"
+      }
+    ],
+    "simple-import-sort/exports": "error",
+    "simple-import-sort/imports": [
+      "error",
+      {
+        "groups": [
+          ["^\\u0000", "^node:", "^react(?:$|/)", "^react-dom(?:$|/)", "^next(?:$|/)", "^@?\\w", "^@/", "^", "^\\."]
+        ]
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/Toaster/toast.store", "**/Toaster/useToastState", "**/atoms/Toast/*"],
+            "message": "Toast internals are private to the Toaster module. Import { toast } from '@/molecules/Toaster/toast'."
+          }
+        ]
+      }
+    ],
+    "nextjs/google-font-display": "warn",
+    "nextjs/google-font-preconnect": "warn",
+    "nextjs/next-script-for-ga": "warn",
+    "nextjs/no-async-client-component": "warn",
+    "nextjs/no-before-interactive-script-outside-document": "warn",
+    "nextjs/no-css-tags": "warn",
+    "nextjs/no-head-element": "warn",
+    "nextjs/no-html-link-for-pages": "error",
+    "nextjs/no-img-element": "warn",
+    "nextjs/no-page-custom-font": "warn",
+    "nextjs/no-styled-jsx-in-document": "warn",
+    "nextjs/no-sync-scripts": "error",
+    "nextjs/no-title-in-document-head": "warn",
+    "nextjs/no-typos": "warn",
+    "nextjs/no-unwanted-polyfillio": "warn",
+    "nextjs/inline-script-id": "error",
+    "nextjs/no-assign-module-variable": "error",
+    "nextjs/no-document-import-in-page": "error",
+    "nextjs/no-duplicate-head": "error",
+    "nextjs/no-head-import-in-document": "error",
+    "nextjs/no-script-component-in-head": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/static-components": "error",
+    "react/use-memo": "error",
+    "react/preserve-manual-memoization": "error",
+    "react/incompatible-library": "warn",
+    "react/immutability": "error",
+    "react/globals": "error",
+    "react/refs": "error",
+    "react/set-state-in-effect": "off",
+    "react/error-boundaries": "error",
+    "react/purity": "error",
+    "react/set-state-in-render": "error",
+    "react/unsupported-syntax": "warn",
+    "typescript/ban-ts-comment": "error",
+    "typescript/no-duplicate-enum-values": "error",
+    "typescript/no-empty-object-type": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-extra-non-null-assertion": "error",
+    "typescript/no-misused-new": "error",
+    "typescript/no-namespace": "error",
+    "typescript/no-non-null-asserted-optional-chain": "error",
+    "typescript/no-require-imports": "error",
+    "typescript/no-this-alias": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-unsafe-declaration-merging": "error",
+    "typescript/no-unsafe-function-type": "error",
+    "typescript/no-wrapper-object-types": "error",
+    "typescript/prefer-as-const": "error",
+    "typescript/prefer-namespace-keyword": "error",
+    "typescript/triple-slash-reference": "error",
+    "pubky/no-restricted-syntax": [
+      "error",
+      {
+        "selector": "MemberExpression[object.name=\"Env\"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION)$)/]",
+        "message": "Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) exist on Env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config."
+      },
+      {
+        "selector": "MemberExpression[object.type=\"MemberExpression\"][object.object.name=\"process\"][object.property.name=\"env\"][property.name=/^NEXT_PUBLIC_(?!(DB_NAME|DB_VERSION|DEBUG_MODE|APP_VERSION)$)/]",
+        "message": "Only build-intrinsic NEXT_PUBLIC_* values (DB_NAME, DB_VERSION, DEBUG_MODE, APP_VERSION) may be read from process.env. Runtime-configurable values must use the getters from @/libs/runtime-config/runtime-config."
+      },
+      {
+        "selector": "MemberExpression[object.type=\"MemberExpression\"][object.object.name=\"process\"][object.property.name=\"env\"][property.name=/^PUBKY_RUNTIME_/]",
+        "message": "Do not read process.env.PUBKY_RUNTIME_* directly. Resolve runtime config through the getters from @/libs/runtime-config/runtime-config."
+      }
+    ],
+    "next-compat/no-location-assign-relative-destination": "warn",
+    "react-compat/no-deprecated": "error",
+    "react/require-render-return": "error",
+    "react-hooks-compat/config": "error",
+    "react-hooks-compat/gating": "error"
+  }
+}

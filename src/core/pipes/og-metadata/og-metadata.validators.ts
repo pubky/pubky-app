@@ -1,7 +1,8 @@
 import { HttpStatusCode } from '@/libs/http/http.types';
 
 type TOgMetadataValidationResult =
-  { ok: true; url: URL } | { ok: false; message: string; statusCode: HttpStatusCode.BAD_REQUEST };
+  | { ok: true; url: URL }
+  | { ok: false; message: string; statusCode: HttpStatusCode.BAD_REQUEST };
 
 type TOgMetadataValidationFailure = Extract<TOgMetadataValidationResult, { ok: false }>;
 

@@ -1,0 +1,41 @@
+{
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "arrowParens": "always",
+  "printWidth": 120,
+  "tabWidth": 2,
+  "useTabs": false,
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "sortPackageJson": false,
+  "sortTailwindcss": {
+    "stylesheet": "src/app/globals.css",
+    "functions": ["cn"]
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "package-lock.json",
+    ".next/",
+    "out/",
+    "dist/",
+    "build/",
+    "coverage/",
+    ".eslintcache",
+    ".turbo",
+    "*.log",
+    ".DS_Store",
+    ".vscode/",
+    ".idea/",
+    ".cursor/",
+    ".claude/",
+    ".ai-reviews/",
+    "**/__snapshots__/",
+    ".husky/",
+    "public/",
+    "next-env.d.ts",
+    "tsconfig.json",
+    "src/components/templates/Public/**"
+  ],
+  "$schema": "./node_modules/oxfmt/configuration_schema.json"
+}

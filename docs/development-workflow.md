@@ -71,16 +71,18 @@ High-risk areas (schema, wire formats, TTL writers, env/runtime config, auth/key
 Commands (from `package.json`; Node 24 via `.nvmrc`, dependencies via `npm ci`):
 
 ```bash
-npm run format:check   # prettier
-npm run lint           # eslint
-npm run typecheck      # tsc --noEmit (includes tests)
+npm run format:check   # oxfmt
+npm run lint           # oxlint
+npm run typecheck      # TypeScript 7 native tsc --noEmit (includes tests)
+npm run test:tooling   # Oxlint guardrail fixtures (also run by npm test)
 npm test               # vitest --project unit (jsdom); ~13k tests, several minutes
 npm test -- src/components/atoms/Button/Button.test.tsx   # one file
 npm test -- -t "snapshot"                                 # one name pattern
 npm run test:update-snapshots
 npm run test:vrt                       # vitest --project vrt (chromium+firefox+webkit; needs npm run test:vrt:setup once)
 npm run test:vrt:check-baselines       # every __screenshots__ folder has a sibling test
-npm run build                          # next build --webpack (CI also smoke-tests `next start`)
+npm run build                          # Turbopack build, then Serwist (CI smoke-tests `next start` and /sw.js)
+npm run build:sw                       # regenerate public/sw.js from an existing Next.js build
 npm run start:e2e                      # cypress open, interactive
 npm run test:e2e                       # cypress run, firefox (needs the full pubky-stack)
 ```
@@ -94,18 +96,40 @@ Right-sized verification:
 - Run the full `npm test` before handing off a cross-cutting change; `npm run build` when the change is route- or config-wide.
 - Cypress e2e needs the full pubky-stack (private `pubky/pubky-stack`) and runs on push to `master`/`dev` in CI. Do not attempt it from a bare checkout, and do not report an e2e result you did not obtain.
 
-Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; `describe('<Component>')` plus a separate `describe('<Component> - Snapshots')` with exactly one `expect().toMatchSnapshot()` per test; mobile blocks (`- Mobile Snapshots`) for organisms/templates that use `useIsMobile` directly or through a child, via `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are ESLint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
+The Build workflow caches `.next/cache` separately from setup-node's npm download cache. Cache keys separate runner OS/architecture, dependencies and build configuration; source changes restore the most recent compatible cache and save a new entry after a successful job. A missing cache simply causes a fresh build. Docker retains its existing layer caching; it does not transfer Next.js's incremental cache between fresh CI builders.
+
+Production builds use Next.js's default Turbopack bundler. Serwist 9.5.12 runs afterward in configurator mode (`serwist.config.mjs`), emitting `public/sw.js`; do not deploy the output of `next build` alone. Docker copies that worker with the other public assets. `@serwist/cli` uses esbuild to bundle the worker; TypeScript 7 remains the sole type checker. The config includes emitted font files and excludes source maps, with `precachePrerendered: false` to preserve the existing asset-only precache policy.
+
+`ServiceWorkerRegistrationProvider` creates the Serwist browser client directly, registers `/sw.js` as a classic worker at scope `/`, handles registration failures and reloads when connectivity returns. Registration stays disabled in development. There is no bundler-injected `window.serwist` dependency. The worker's share-target handler and Nexus-only runtime caching remain in `src/sw.ts`; the migration does not introduce Serwist's broader `defaultCache` rules.
+
+Test conventions (full rules: `component-testing.md`): colocated `*.test.tsx`; `describe('<Component>')` plus a separate `describe('<Component> - Snapshots')` with exactly one `expect().toMatchSnapshot()` per test; mobile blocks (`- Mobile Snapshots`) for organisms/templates that use `useIsMobile` directly or through a child, via `setMobileViewport()` / `resetViewport()` from `@/test-utils/viewport`. Mock only network/fs/time/boundaries, keep real implementations of pure helpers, keep Lucide, `@/icons`, `DynamicLucideIcon` and Radix components real, use fake timers for relative time. `as any` and `as unknown as T` are Oxlint-banned in tests: use `asInvalid`, `asOpaque`, `mockAuthStore`, `mockSession`, `mockResponse`, `mockKeyboardEvent` from `src/test-utils`.
 
 Manual checks for UI work: desktop and narrow viewport, loading/empty/error states, hover/focus/disabled states, dark-on-brand contrast, and the mobile path where a Sheet replaces a Popover.
+
+## Compiler, Linter and Formatter
+
+Local before/after measurements, a CI comparison with other open PRs and their limits are recorded in [Tooling performance](tooling-performance.md).
+
+The project uses one compiler: `typescript@7.0.2`. Both `npm run typecheck` and Next.js production builds invoke its native `tsc` CLI. `next.config.ts` explicitly enables `experimental.useTypeScriptCli`; do not add a second TypeScript version to restore the old JavaScript compiler API. Vitest uses Vite's built-in `resolve.tsconfigPaths` for aliases, avoiding the TypeScript 5 peer dependency in the old `vite-tsconfig-paths` / `tsconfck` integration.
+
+The Next.js language-service plugin is disabled with `{ "name": "next", "enabled": false }` in `tsconfig.json`. Deleting the entry causes Next.js to add it again. This removes the plugin's extra editor diagnostics and completions; ordinary TypeScript diagnostics and Next's generated route types still apply.
+
+Oxlint owns linting through `.oxlintrc.json`. Most rules are native. The existing import sorter, import padding rule, React deprecation rule, React Compiler config/gating rules and Next.js relative-navigation rule use JavaScript plugins to retain coverage. These plugins still install ESLint as a peer dependency; no script runs ESLint and no TypeScript ESLint parser is installed. Oxlint's JavaScript plugin API is currently alpha, so keep the plugins pinned and run the tooling fixtures when upgrading.
+
+`tooling/oxlint/pubky.mjs` implements the existing selector-based restrictions. Their selectors, messages, override order and exceptions are preserved, including the test-file override replacing the environment selectors. `npm run test:tooling` checks prohibited forms, allowed forms, directory exceptions, suppression comments and the private toast imports. Use `oxlint-disable` comments with the names from `.oxlintrc.json` and a reason.
+
+Oxfmt owns formatting through `.oxfmtrc.json`, including Tailwind v4 class sorting with `src/app/globals.css` and `cn()`. Import sorting remains with the linter, and package.json sorting is disabled. The explicit `src/components/templates/Public/**` exclusion preserves Prettier's previous case-insensitive `public/` exclusion. Oxfmt 0.68 uses different union line wrapping from Prettier 3.9; the migration includes those formatting-only changes. Generated files and snapshots remain excluded.
+
+For VS Code and Cursor, install the recommended **Oxc** and Microsoft's **TypeScript 7** (`TypeScriptTeam.native-preview`) extensions. Workspace settings select Oxfmt and enable the native TypeScript language server. When the editor asks, select the workspace TypeScript SDK (`node_modules/typescript`); the extension requires this opt-in to use the repository's pinned version. Restart the language server after installing dependencies. Other editors should use the TypeScript 7 native language server and `oxlint --lsp` / `oxfmt --lsp`.
 
 ## Code Quality
 
 These apply to every diff and are what a reviewer (human or Greptile) checks first.
 
-- **No suppressed lints without a reason.** Every `eslint-disable`, `eslint-disable-next-line`, `@ts-ignore` and `@ts-expect-error` carries an adjacent comment saying why it is needed and what would break without it. If a rule is wrong for a whole file, prefer one top-level `eslint-disable` with rationale over inline ignores.
+- **No suppressed lints without a reason.** Every `oxlint-disable`, `oxlint-disable-next-line`, `@ts-ignore` and `@ts-expect-error` carries an adjacent comment saying why it is needed and what would break without it. If a rule is wrong for a whole file, prefer one top-level `oxlint-disable` with rationale over inline ignores.
 
   ```typescript
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Nexus returns untyped JSON; normalised in PostNormalizer.to
+  // oxlint-disable-next-line typescript/no-explicit-any -- Nexus returns untyped JSON; normalised in PostNormalizer.to
   const data: any = response.body;
   ```
 

@@ -1,5 +1,4 @@
 import type { NextConfig } from 'next';
-import withSerwistInit from '@serwist/next';
 import { withSentryConfig } from '@sentry/nextjs';
 import packageJson from './package.json';
 
@@ -8,6 +7,10 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION ?? packageJson.version,
   },
   reactCompiler: true,
+  compiler: {
+    // Preserve Sentry debug-log removal with either Next.js bundler.
+    define: { __SENTRY_DEBUG__: false },
+  },
   // Source maps are generated for every build (browser + server), but the Sentry plugin upload
   // is disabled below. Docker builds inject Debug IDs and optionally upload maps when Sentry
   // build credentials are provided; public builds without those credentials skip upload.
@@ -15,9 +18,12 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: true,
   experimental: {
     serverSourceMaps: true,
+    // TypeScript 7 provides the native CLI instead of the legacy JavaScript compiler API.
+    useTypeScriptCli: true,
   },
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
   ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
+  serverExternalPackages: ['@synonymdev/pubky'],
   async redirects() {
     return [
       // /profile/[pubky] is the canonical other-user posts view (see app/profile/[pubky]/page.tsx).
@@ -31,19 +37,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals.push('@synonymdev/pubky');
-    }
-
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-    };
-
-    return config;
-  },
-  // Turbopack config for WebAssembly dependencies
+  // Both SDKs embed their WebAssembly in these JavaScript entrypoints.
   turbopack: {
     resolveAlias: {
       '@synonymdev/pubky': '@synonymdev/pubky/index.js',
@@ -52,23 +46,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-const withSerwist = withSerwistInit({
-  swSrc: 'src/sw.ts',
-  swDest: 'public/sw.js',
-  disable: process.env.NODE_ENV === 'development',
-  // Serwist's injected entry calls `window.serwist.register()` without a `.catch()`, so the
-  // rejection of `navigator.serviceWorker.register()` reaches Sentry as an unhandled error even
-  // though it is an expected browser/network condition. Registration is done by
-  // ServiceWorkerRegistrationProvider instead, which handles that rejection; the injected entry
-  // still exposes `window.serwist` with the same script URL and scope.
-  register: false,
-});
-
-const composedConfig = withSerwist(nextConfig);
-
-export default withSentryConfig(composedConfig, {
+export default withSentryConfig(nextConfig, {
   silent: !process.env.CI,
-  disableLogger: true,
   // Disable the Sentry plugin upload. Docker builds handle Debug-ID injection and optional
   // source-map upload via sentry-cli, while public builds without Sentry credentials skip upload.
   sourcemaps: {

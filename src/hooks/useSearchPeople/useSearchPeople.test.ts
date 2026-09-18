@@ -80,7 +80,7 @@ vi.mock('dexie-react-hooks', async () => {
   return {
     useLiveQuery: <T>(queryFn: () => Promise<T> | T, deps: unknown[], defaultValue: T): T => {
       const [emission, setEmission] = useState<T>(defaultValue);
-      /* eslint-disable react-hooks/exhaustive-deps -- the fake forwards the caller's deps array verbatim, like the real useLiveQuery */
+      /* oxlint-disable react/exhaustive-deps -- the fake forwards the caller's deps array verbatim, like the real useLiveQuery */
       useEffect(() => {
         let cancelled = false;
         void Promise.resolve(queryFn()).then((result) => {
@@ -90,7 +90,7 @@ vi.mock('dexie-react-hooks', async () => {
           cancelled = true;
         };
       }, deps);
-      /* eslint-enable react-hooks/exhaustive-deps */
+      /* oxlint-enable react/exhaustive-deps */
       return emission;
     },
   };

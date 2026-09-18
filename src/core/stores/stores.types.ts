@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* oxlint-disable typescript/no-explicit-any -- Zustand DevTools accepts arbitrary action payloads */
 
 // Shared Zustand types for all stores
 

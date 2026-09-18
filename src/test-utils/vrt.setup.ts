@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
-// Intentional import order — see comments below. Do not let `eslint --fix` reorder these imports.
-/* eslint-disable import/first, simple-import-sort/imports */
+// Intentional import order — see comments below. Do not let `oxlint --fix` reorder these imports.
+/* oxlint-disable import/first, simple-import-sort/imports */
 
 // `process` does not exist in a real browser. App modules (e.g. `@/libs/logger`,
 // `@/libs/env`) read `process.env.*` at module load, so polyfill BEFORE any
