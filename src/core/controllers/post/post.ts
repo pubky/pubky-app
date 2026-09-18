@@ -21,7 +21,7 @@ import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { toAppError } from '@/libs/error/error.utils';
+import { isAppError, requiresLogin, toAppError } from '@/libs/error/error.utils';
 import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
 import { isAuthorFileUri } from '@/libs/post/articleInlineImages';
@@ -269,6 +269,11 @@ export class PostController {
         await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
         coverImageUrl = fileAttachment.fileResult.meta.url;
       } catch (error) {
+        // Keep an expired-session failure classified instead of wrapping it as
+        // validation, so the caller can ask for a sign-in rather than reporting a
+        // retryable cover-upload failure (issue #2555).
+        if (isAppError(error) && requiresLogin(error)) throw error;
+
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
           service: ErrorService.Local,
           operation: 'commitCreateCollection',
@@ -373,6 +378,10 @@ export class PostController {
         coverImageUrl = fileAttachment.fileResult.meta.url;
         uploadedCoverUri = coverImageUrl;
       } catch (error) {
+        // Same as `commitCreateCollection`: an expired session keeps its auth
+        // classification so the caller can prompt for sign-in (issue #2555).
+        if (isAppError(error) && requiresLogin(error)) throw error;
+
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
           service: ErrorService.Local,
           operation: 'commitEditCollection',

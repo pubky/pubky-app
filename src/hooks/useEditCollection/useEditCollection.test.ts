@@ -226,6 +226,31 @@ describe('useEditCollection', () => {
     });
   });
 
+  it('prompts sign-in when the controller rejects with an UNAUTHORIZED error (#2555)', async () => {
+    mocks.commitEditCollection.mockRejectedValue(
+      Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+        service: ErrorService.Homeserver,
+        operation: 'commitEditCollection',
+      }),
+    );
+
+    const { result } = renderHook(() => useEditCollection({ compositeCollectionId: COMPOSITE_ID }));
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+
+    let ok = true;
+    await act(async () => {
+      ok = await result.current.submit();
+    });
+
+    expect(ok).toBe(false);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({
+      variant: 'error',
+      description: 'Session expired. Please sign in.',
+    });
+    // The dialog stays open with the loaded values, so the user can retry.
+    expect(result.current.form.getValues()[CREATE_COLLECTION_FORM_FIELDS.NAME]).toBe('Reading list');
+  });
+
   it('toasts a localized size-limit message when cover upload exceeds the limit', async () => {
     mocks.commitEditCollection.mockRejectedValue(
       Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {

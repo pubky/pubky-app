@@ -515,6 +515,62 @@ describe('usePost', () => {
       expect(result.current.isSubmitting).toBe(false);
     });
 
+    it('should prompt sign-in when the reply write is rejected as UNAUTHORIZED (#2555)', async () => {
+      const { result } = renderHook(() => usePost());
+      mockPostControllerCreate.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('Reply content');
+      });
+
+      await act(async () => {
+        await result.current.reply({
+          postId: 'test-post-123',
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+      expect(result.current.content).toBe('Reply content');
+    });
+
+    it('should keep the retry copy when a post write is rejected as FORBIDDEN (#2555)', async () => {
+      const { result } = renderHook(() => usePost());
+      mockPostControllerCreate.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.FORBIDDEN, 'Forbidden', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('Post content');
+      });
+
+      await act(async () => {
+        await result.current.post({
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not create post. Try again.',
+      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+    });
+
     it('should set isSubmitting to true during reply submission', async () => {
       const { result } = renderHook(() => usePost());
       let resolvePromise: () => void;
