@@ -188,7 +188,9 @@ describe('useMentionAutocomplete', () => {
   it('skips complete pubkeys in pk: search', async () => {
     // A complete pubkey is 52 characters
     const completePubky = 'a'.repeat(52);
-    renderHook(() => useMentionAutocomplete({ content: `Hello pk:${completePubky}`, caret: `Hello pk:${completePubky}`.length }));
+    renderHook(() =>
+      useMentionAutocomplete({ content: `Hello pk:${completePubky}`, caret: `Hello pk:${completePubky}`.length }),
+    );
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -200,7 +202,9 @@ describe('useMentionAutocomplete', () => {
   it('skips complete pubkeys in pubky search', async () => {
     // A complete pubkey is 52 characters
     const completePubky = 'a'.repeat(52);
-    renderHook(() => useMentionAutocomplete({ content: `Hello pubky${completePubky}`, caret: `Hello pubky${completePubky}`.length }));
+    renderHook(() =>
+      useMentionAutocomplete({ content: `Hello pubky${completePubky}`, caret: `Hello pubky${completePubky}`.length }),
+    );
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -212,9 +216,12 @@ describe('useMentionAutocomplete', () => {
   it('closes popover when close is called', async () => {
     setMockUserDetailsMap(new Map([['user1', { id: 'user1', name: 'User One', image: null } as NexusUserDetails]]));
 
-    const { result, rerender } = renderHook(({ content }) => useMentionAutocomplete({ content, caret: content.length }), {
-      initialProps: { content: 'Hello @jo' },
-    });
+    const { result, rerender } = renderHook(
+      ({ content }) => useMentionAutocomplete({ content, caret: content.length }),
+      {
+        initialProps: { content: 'Hello @jo' },
+      },
+    );
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -298,10 +305,9 @@ describe('useMentionAutocomplete', () => {
     });
 
     it('re-runs detection when the caret moves into a pattern without the content changing', async () => {
-      const { rerender } = renderHook(
-        ({ content, caret }) => useMentionAutocomplete({ content, caret }),
-        { initialProps: { content: 'Hello @jo', caret: 5 } },
-      );
+      const { rerender } = renderHook(({ content, caret }) => useMentionAutocomplete({ content, caret }), {
+        initialProps: { content: 'Hello @jo', caret: 5 },
+      });
 
       await act(async () => {
         await vi.runAllTimersAsync();

@@ -278,9 +278,11 @@ describe('QuickReply', () => {
 
     const textarea = screen.getByTestId('quick-reply-textarea');
     fireEvent.select(textarea);
-    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(handleSelectionChange).toHaveBeenCalled();
 
-    expect(handleSelectionChange).toHaveBeenCalledTimes(2);
+    handleSelectionChange.mockClear();
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(handleSelectionChange).toHaveBeenCalled();
   });
 
   it('forwards clipboard paste to usePostInput handlePaste (image attachments)', () => {

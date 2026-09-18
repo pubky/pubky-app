@@ -95,26 +95,33 @@ describe('QuickReplyComposerRow', () => {
     const onChange = vi.fn();
     const onFocus = vi.fn();
     const onKeyDown = vi.fn();
-    const onSelect = vi.fn();
     const onPaste = vi.fn();
-    render(
-      <QuickReplyComposerRow {...createProps({ content: '', onChange, onFocus, onKeyDown, onSelect, onPaste })} />,
-    );
+    render(<QuickReplyComposerRow {...createProps({ content: '', onChange, onFocus, onKeyDown, onPaste })} />);
 
     const textarea = screen.getByTestId('quick-reply-textarea');
     fireEvent.focus(textarea);
     fireEvent.change(textarea, { target: { value: 'typed reply' } });
     fireEvent.keyDown(textarea, { key: 'Enter' });
-    fireEvent.select(textarea);
-    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
     fireEvent.paste(textarea);
 
     expect(onFocus).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledTimes(1);
-    // Selection and arrow-key moves both report the caret
-    expect(onSelect).toHaveBeenCalledTimes(2);
     expect(onPaste).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the caret on selection and key events', () => {
+    const onSelect = vi.fn();
+    render(<QuickReplyComposerRow {...createProps({ onSelect })} />);
+
+    const textarea = screen.getByTestId('quick-reply-textarea');
+    // The caret moves without a change event: a click/drag selection, then an arrow key
+    fireEvent.select(textarea);
+    expect(onSelect).toHaveBeenCalled();
+
+    onSelect.mockClear();
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(onSelect).toHaveBeenCalled();
   });
 
   it('renders mention suggestions when the popover is open', () => {

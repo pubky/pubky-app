@@ -144,6 +144,8 @@ vi.mock('@/atoms/Textarea/Textarea', () => {
         ref,
         onFocus,
         onKeyDown,
+        onKeyUp,
+        onSelect,
         onPaste,
         autoFocus,
         className,
@@ -156,6 +158,8 @@ vi.mock('@/atoms/Textarea/Textarea', () => {
           onChange={onChange}
           onFocus={onFocus}
           onKeyDown={onKeyDown}
+          onKeyUp={onKeyUp}
+          onSelect={onSelect}
           onPaste={onPaste}
           placeholder={placeholder}
           disabled={disabled}
@@ -953,11 +957,13 @@ describe('PostInput', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 
     const textarea = screen.getByTestId('textarea');
-    // The caret moves without a change event: click/drag selection, then an arrow key
+    // The caret moves without a change event: a click/drag selection, then an arrow key
     fireEvent.select(textarea);
-    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(mockHandleSelectionChange).toHaveBeenCalled();
 
-    expect(mockHandleSelectionChange).toHaveBeenCalledTimes(2);
+    mockHandleSelectionChange.mockClear();
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(mockHandleSelectionChange).toHaveBeenCalled();
   });
 
   it('opens sign-in and does not mutate content when an anonymous user types', () => {
