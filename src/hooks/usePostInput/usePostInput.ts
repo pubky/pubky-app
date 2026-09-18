@@ -216,10 +216,10 @@ export function usePostInput({
    * Track the composer caret. Arrow keys, Home/End and clicks move it without a
    * change event, and mention detection follows the caret (#1959)
    */
-  const handleSelectionChange = useCallback((e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+  const handleSelectionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;
     setCaret(target.selectionStart ?? target.value.length);
-  }, []);
+  };
 
   // Notify parent of content changes
   useEffect(() => {
