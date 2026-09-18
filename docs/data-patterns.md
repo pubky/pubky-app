@@ -55,10 +55,15 @@ type BaseStreamModelSchema<TId, TItem> = {
   stream: TItem[]; // Array of items (composite post IDs, pubkeys, or hot tags)
 };
 
-// Example: PostStreamModelSchema = BaseStreamModelSchema<PostStreamId, string>
+// Example: PostStreamModelSchema = BaseStreamModelSchema<PostStreamId, string> & { tailCursor?: number }
 // Example: UserStreamModelSchema = BaseStreamModelSchema<UserStreamId, string>
 // Example: TagStreamModelSchema  = BaseStreamModelSchema<TagStreamTypes, NexusHotTag>
 ```
+
+Post stream rows also carry `tailCursor`: the Nexus `last_post_score` of the deepest page fetched into the
+stream, which every cache→Nexus seam resumes from. It is a plain row field (not an index), so it needs no
+`DB_VERSION` bump. Never derive a stream cursor from a post's `indexed_at` — Nexus bumps it on edit/delete
+without moving the post in the stream (`docs/local-first.md`, _Stream Pagination Cursors_).
 
 ### Stream Operations
 
@@ -130,6 +135,24 @@ ttlPostMs: 300_000,  // 5 minutes (posts)
 ttlUserMs: 600_000,  // 10 minutes (users)
 ttlBatchIntervalMs: 5_000, // 5 seconds between batches
 ```
+
+### Viewport TTL subscriptions (UI)
+
+`useLocalFirstQuery` (and therefore `usePostDetails` / `useUserProfile`) never re-fetches a row that is already in IndexedDB. A cached row on screen is refreshed by a `TtlCoordinator` subscription (ADR-0012). The usual path is a viewport subscription via `useTtlSubscription`; `useIsFollowing` also holds a user reference for as long as the Follow control is mounted (not viewport-gated). The coordinator overwrites the row and bumps its TTL, and the live query re-renders every consumer.
+
+Post and user subscriptions are both reference counted, so nested surfaces that track the same entity cannot unsubscribe each other. Each surface still subscribes once per entity it renders; an embed whose enclosing surface already subscribes the same id skips its own subscription, since a second one would only add a redundant `IntersectionObserver`:
+
+| Surface                             | Subscribes                                           | Notes                                                                                                               |
+| ----------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `PostMain`                          | its post id; also the original for flattened reposts | Feed / thread / single-post cards; collection-share originals remain owned by `PostPreviewCard`                     |
+| `PostPreviewCard`                   | the original post id                                 | Repost + link embeds, share/repost dialogs                                                                          |
+| `CollectionCard` (`landing`)        | the collection id                                    | Profile Collections tab, `/collections` sections, search                                                            |
+| `CollectionCard` (`embed`)          | —                                                    | Always inside `PostPreviewCard` or `PostMain` → `PostContentBase`, which subscribe                                  |
+| `CollectionHero`                    | the collection id                                    | The single-collection page's subscriber for its envelope                                                            |
+| `ProfilePageHeader`, `UserListItem` | the user pubky                                       | Profile header and user lists                                                                                       |
+| `useIsFollowing`                    | the follow target                                    | Not viewport-gated: data hook without a DOM node; relationship rows are viewer-relative and only TTL refreshes them |
+
+The collection envelope (`name`, `description`, `cover_image`, `items`, `layout`) is one cached post row, so a single refresh updates the title, cover, and item count everywhere at once. For every viewer except the owner, signed in or not, the single-collection item grid mirrors the envelope's `items` in place (`TimelineFeedContent`'s `membershipPostIds`): only loaded ids the membership contains are rendered, members the settled stream never delivered are prepended once as optimistic posts, and removed ids are committed out, so the grid tracks the same array the count badge renders without refetching the (asynchronously re-indexed) Nexus items stream. Guests are included because the coordinator refreshes public data for them too (ADR-0020), so their count badge moves and the grid must follow. Owners are excluded — their own flows already update the grid optimistically, and mirroring their local envelope writes would race those flows (for example the save picker's close-gated removal).
 
 ## Pipes Normalization (ADR-0006)
 
@@ -220,12 +243,16 @@ return SettingsNormalizer.from(settingsJson);
 
 All tables defined in `src/core/database/franky/franky.ts`.
 
+### Schema changes
+
+`franky.ts` declares a single `this.version(DB_VERSION).stores({...})`; there is no incremental migration chain. `DB_VERSION` is `Env.NEXT_PUBLIC_DB_VERSION` (`src/config/database.ts`). When the stored version differs, the client deletes and recreates the local database (`recreateDatabase`), which is user-visible local data loss until the next sync. Bumping `DB_VERSION` or changing a table's index map is therefore a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature. See `docs/adr/0019-dexie-recreate-on-version-mismatch.md` (supersedes ADR-0007).
+
 ### User Tables
 
 ```
 user_details       — Profile data (name, bio, image, links, status) + social_graph_status folded in from the Nexus user view
 user_counts        — Follower/following/post counts
-user_relationships — Follow/mute relationships
+user_relationships — Follow/mute relationships (viewer-relative: only written when the fetch carried a `viewerId`)
 user_connections   — User connection data
 user_tags          — Tag collections per user
 user_ttl           — Cache staleness (id, lastUpdatedAt)

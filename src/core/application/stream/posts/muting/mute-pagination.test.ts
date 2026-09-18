@@ -207,24 +207,10 @@ describe('Mute filtering with stream pagination', () => {
       expect(validPostNumbers).toContain(8);
     });
 
-    it('should return correct timestamp when returning from queue early (no fetch needed)', async () => {
+    it('resumes by the buffered raw backend position when returning from queue early (no fetch needed)', async () => {
       const posts = Array.from({ length: 15 }, (_, i) => `author:post-${i}`);
-      queue['save'](streamId, posts, BASE_TIMESTAMP);
-
-      vi.spyOn(PostDetailsModel, 'findById').mockImplementation(async (id) => {
-        const idStr = id as string;
-        const match = idStr.match(/post-(\d+)/);
-        const index = match ? parseInt(match[1]) : 0;
-        return {
-          id: idStr,
-          indexed_at: BASE_TIMESTAMP + index,
-          content: `Post ${idStr}`,
-          kind: 'short' as const,
-          uri: `pubky://author/${idStr}`,
-          author: 'author1' as Pubky,
-          attachments: null,
-        };
-      });
+      // The buffer is keyed by the raw position Nexus was scanned to, past every buffered post.
+      queue['save'](streamId, posts, BASE_TIMESTAMP - 100);
 
       const mockFetch = vi.fn();
 
@@ -237,7 +223,8 @@ describe('Mute filtering with stream pagination', () => {
 
       expect(mockFetch).not.toHaveBeenCalled();
       expect(result.posts).toHaveLength(10);
-      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 9);
+      // Not a served post's timestamp (#2523): the caller resumes where the raw scan stopped.
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP - 100);
     });
   });
 
@@ -464,8 +451,8 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
   // ============================================================================
 
   describe('Full cache hit timestamp handling', () => {
-    it('should return proper timestamp for full cache hit (not undefined)', async () => {
-      // Create cache with 20 posts
+    it('should return the cached stream resume cursor for a full cache hit (not undefined)', async () => {
+      // Create cache with 20 posts (legacy row: no persisted Nexus cursor)
       const postIds = Array.from({ length: 20 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
       await createStreamWithPosts(streamId, postIds);
       await createPostDetails(postIds, BASE_TIMESTAMP);
@@ -479,9 +466,27 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       });
 
       expect(result.nextPageIds).toHaveLength(10);
-      // KEY FIX: timestamp should be defined for full cache hits
+      // The cursor is where Nexus continues once the whole cache is walked — the row's
+      // resume position (legacy rows: the tail post's timestamp), not the chunk end's.
       expect(result.nextCursor).toBeDefined();
-      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 9); // indexed_at of post-10
+      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 19); // resume below post-20
+    });
+
+    it('returns the persisted Nexus cursor for a full cache hit when the row carries one', async () => {
+      const postIds = Array.from({ length: 20 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
+      await createPostDetails(postIds, BASE_TIMESTAMP);
+      await LocalStreamPostsService.persistNewStreamChunk({ streamId, stream: postIds, tailCursor: 4242 });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId: 'user-viewer' as Pubky,
+      });
+
+      expect(result.nextPageIds).toEqual(postIds.slice(0, 10));
+      expect(result.nextCursor).toBe(4242);
     });
 
     it('should allow cursor to advance correctly after full cache hit', async () => {
@@ -711,7 +716,7 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       const mockNexusKeyStream = createMockNexusPostsKeyStream(10, 21, DEFAULT_AUTHOR, BASE_TIMESTAMP + 20);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusKeyStream);
       vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
-      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
 
       // First: with muted user
       await setupMutedUsers([MUTED_AUTHOR]);
@@ -764,7 +769,7 @@ describe('PostStreamApplication: Cache and Nexus transitions with muting', () =>
       const mockNexusKeyStream = createMockNexusPostsKeyStream(10, 41, DEFAULT_AUTHOR, BASE_TIMESTAMP + 40);
       vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusKeyStream);
       vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([]);
-      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue(undefined);
+      vi.spyOn(LocalStreamPostsService, 'persistNewStreamChunk').mockResolvedValue([]);
 
       // Start with muted user
       await setupMutedUsers([MUTED_AUTHOR]);

@@ -123,6 +123,22 @@ describe('PostInlineTagsActions', () => {
     expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-auto-focus-input', 'true');
   });
 
+  it('reveals the tags without focusing the input on mobile (issue #1650)', () => {
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 390 });
+
+    try {
+      render(<PostInlineTagsActions {...defaultProps} />);
+
+      fireEvent.click(screen.getByTestId('tag-button'));
+
+      // Mobile: tapping the tag button must not focus the input and raise the soft keyboard.
+      expect(screen.getByTestId('post-tags-panel')).toHaveAttribute('data-auto-focus-input', 'false');
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
+    }
+  });
+
   it('passes reply and repost clicks through to callers', () => {
     const onReplyClick = vi.fn();
     const onRepostClick = vi.fn();

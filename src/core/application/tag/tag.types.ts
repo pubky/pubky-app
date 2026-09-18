@@ -7,9 +7,10 @@ export interface TCreateTagInput extends TTagEventParams {
 
 export interface TCreateTagListInput {
   tagList: TCreateTagInput[];
+  isCurrent?: () => boolean;
 }
 
-export type TDeleteTagInput = Omit<TCreateTagInput, 'tagJson'>;
+export type TDeleteTagInput = Omit<TCreateTagInput, 'tagJson'> & { isCurrent?: () => boolean };
 
 export enum TagKind {
   USER = 'user',

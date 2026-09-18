@@ -1,25 +1,49 @@
 import {
-  AT_PATTERN_END,
+  AT_MENTION_PATTERN,
   COMPLETE_PUBKY_LENGTH,
   LEGACY_PK_PREFIX,
   MIN_USER_ID_SEARCH_LENGTH,
   MIN_USERNAME_SEARCH_LENGTH,
-  PUBKY_PATTERN_END,
+  PUBKY_MENTION_PATTERN,
   PUBKY_PREFIX,
 } from './useMentionAutocomplete.constants';
+
+/** Range of a mention pattern inside the content */
+export interface MentionRange {
+  /** Index of the first character of the pattern (the `@`, `pk:` or `pubky` prefix) */
+  start: number;
+  /** Index just past the last character of the pattern — the caret */
+  end: number;
+}
 
 export interface ExtractedMentionQuery {
   /** The last valid @username query (without @ prefix), or null if none */
   atQuery: string | null;
   /** The last valid pubky ID query (without prefix), or null if none */
   pkQuery: string | null;
+  /** The pattern a selection writes over, or null when the caret is not in one */
+  range: MentionRange | null;
+}
+
+/** Result of writing a mention into the content */
+export interface MentionInsertion {
+  /** Content with the mention written in place of the pattern */
+  content: string;
+  /** Caret position to restore, just after the inserted mention */
+  caret: number;
+}
+
+/** Keep a caret that is out of step with the content (a stale render, a programmatic set) usable */
+function clampCaret(content: string, caret: number): number {
+  if (!Number.isFinite(caret)) return content.length;
+  return Math.max(0, Math.min(caret, content.length));
 }
 
 /**
- * Extract the last mention query from content
+ * Extract the mention query the caret sits in
  *
- * Finds @username or pubky ID pattern at the end of content and returns
- * the query if it should trigger a search.
+ * Only the text before the caret can hold the pattern being typed, so a mention
+ * completes wherever the caret is, not only at the end of the value (#1959).
  *
  * Filtering rules (matching pubky-app):
  * - @username: requires at least MIN_USERNAME_SEARCH_LENGTH (2) chars after @
@@ -27,13 +51,19 @@ export interface ExtractedMentionQuery {
  * - pubky/pk: ID: skips complete pubkeys (52+ alphanumeric chars)
  *
  * Supports both new format (pubky) and legacy format (pk:) for backwards compatibility
+ *
+ * @param content - Full textarea value
+ * @param caret - Caret position in `content`; defaults to the end of the value
  */
-export function extractMentionQuery(content: string): ExtractedMentionQuery {
+export function extractMentionQuery(content: string, caret: number = content.length): ExtractedMentionQuery {
+  const caretIndex = clampCaret(content, caret);
+  const beforeCaret = content.slice(0, caretIndex);
+
   let atQuery: string | null = null;
   let pkQuery: string | null = null;
 
-  // Check for @username at end of content
-  const atMatch = content.match(AT_PATTERN_END);
+  // Check for @username in the text before the caret
+  const atMatch = beforeCaret.match(AT_MENTION_PATTERN);
   if (atMatch) {
     const username = atMatch[0].slice(1); // Remove @ prefix
     if (username.length >= MIN_USERNAME_SEARCH_LENGTH) {
@@ -41,8 +71,8 @@ export function extractMentionQuery(content: string): ExtractedMentionQuery {
     }
   }
 
-  // Check for pubky ID at end of content (supports both pk: and pubky patterns)
-  const pubkyMatch = content.match(PUBKY_PATTERN_END);
+  // Check for pubky ID before the caret (supports both pk: and pubky patterns)
+  const pubkyMatch = beforeCaret.match(PUBKY_MENTION_PATTERN);
   if (pubkyMatch) {
     const matchedText = pubkyMatch[0];
     // Determine which prefix was matched and extract the ID
@@ -58,25 +88,44 @@ export function extractMentionQuery(content: string): ExtractedMentionQuery {
     }
   }
 
-  return { atQuery, pkQuery };
+  // The pattern a selection writes over. A pubky ID pattern wins over an @ in the
+  // same tail, and a pattern too short to search on still counts: there is nothing
+  // else the selection could complete. The pattern ends at the caret, so it starts
+  // one pattern-length back.
+  const matchedPattern = pubkyMatch ?? atMatch;
+  const range = matchedPattern ? { start: caretIndex - matchedPattern[0].length, end: caretIndex } : null;
+
+  return { atQuery, pkQuery, range };
 }
 
 /**
- * Replace mention pattern in content with user ID
+ * Write a mention for `userId` at the caret, replacing the mention pattern the
+ * caret sits in
  *
- * Finds the @username or pubky ID pattern at the end of content
- * and replaces it with pubky{userId} (new format, no colon).
+ * The text after the caret is preserved, and the caret is reported back so the
+ * caller can leave the user typing where they were instead of at the end of the
+ * value. With no pattern to complete (a direct call, or a stale selection) the
+ * mention is written at the caret.
+ *
+ * @param content - Full textarea value
+ * @param caret - Caret position in `content`
+ * @param userId - Pubky of the selected user
  */
-export function getContentWithMention(content: string, userId: string): string {
-  // Check if there's a pubky ID pattern at the end of the text (pk: or pubky)
-  if (PUBKY_PATTERN_END.test(content)) {
-    return content.replace(PUBKY_PATTERN_END, `${PUBKY_PREFIX}${userId} `);
+export function getContentWithMention(content: string, caret: number, userId: string): MentionInsertion {
+  const caretIndex = clampCaret(content, caret);
+  const { range } = extractMentionQuery(content, caretIndex);
+  const mention = `${PUBKY_PREFIX}${userId} `;
+
+  if (!range) {
+    // Fallback: write at the caret (with a space before if the text before it is not empty)
+    const prefix = content.slice(0, caretIndex);
+    const space = prefix.length > 0 ? ' ' : '';
+    const inserted = `${space}${mention}`;
+    return { content: prefix + inserted + content.slice(caretIndex), caret: caretIndex + inserted.length };
   }
-  // Check if there's an @ pattern at the end of the text
-  if (AT_PATTERN_END.test(content)) {
-    return content.replace(AT_PATTERN_END, `${PUBKY_PREFIX}${userId} `);
-  }
-  // Fallback: just append (with space before if content is not empty)
-  const space = content.length > 0 ? ' ' : '';
-  return content + `${space}${PUBKY_PREFIX}${userId} `;
+
+  return {
+    content: content.slice(0, range.start) + mention + content.slice(range.end),
+    caret: range.start + mention.length,
+  };
 }

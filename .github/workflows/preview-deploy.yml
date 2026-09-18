@@ -103,7 +103,7 @@ jobs:
 
       - name: Find existing comment
         if: github.event_name == 'pull_request'
-        uses: peter-evans/find-comment@v3
+        uses: peter-evans/find-comment@v4
         id: find-comment
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -148,7 +148,7 @@ jobs:
           credentials_json: ${{ secrets.CLOUD_RUN_SA_KEY }}
 
       - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Delete Cloud Run service
         run: |

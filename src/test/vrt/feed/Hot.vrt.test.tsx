@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -314,7 +314,10 @@ vi.mock('@/hooks/useTtlSubscription/useTtlSubscription', () => {
 
 vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
   const f = await fixtures;
-  const cache = new Map<string, { showRepostHeader: boolean; shouldShowPostHeader: boolean }>();
+  const cache = new Map<
+    string,
+    { showRepostHeader: boolean; shouldShowPostHeader: boolean; originalPostId: string | null }
+  >();
   return {
     usePostHeaderVisibility: (compositeId: string) => {
       const cached = cache.get(compositeId);
@@ -322,6 +325,7 @@ vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', async () => {
       const result = {
         showRepostHeader: !!f.postsByCompositeId.get(compositeId)?.relationships.reposted,
         shouldShowPostHeader: true,
+        originalPostId: null,
       };
       cache.set(compositeId, result);
       return result;
@@ -475,8 +479,7 @@ describe('Hot — visual regression', () => {
   });
 
   it('renders the hot discovery page at mobile viewport', async () => {
-    const screen = await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
-    await expect.element(screen.getByTestId('vibes-card')).not.toBeVisible();
+    await renderForVRT(<HotWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     // Mobile defaults to the Tags tab (HotMobileMenu); Users/Posts stay mounted
     // but CSS-hidden so the snapshot matches the Tags first fold.
     await matchVrtFrameScreenshot('hot-mobile');

@@ -1,5 +1,5 @@
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, NetworkErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpStatusCodeToError } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
@@ -9,6 +9,7 @@ import type {
   THandleTypedErrorParams,
   TThrowHomeserverErrorParams,
   TThrowInvalidInputErrorParams,
+  TThrowPkarrLookupErrorParams,
   TThrowSessionExpiredErrorParams,
 } from './homeserver.types';
 
@@ -18,6 +19,8 @@ export const AUTH_FLOW_CANCELED_ERROR_NAME = 'AuthFlowCanceled';
 const PUBKY_ERROR_NAMES = {
   INVALID_INPUT: 'InvalidInput',
   AUTHENTICATION_ERROR: 'AuthenticationError',
+  /** PKARR lookup itself failed (relay/network error or malformed record) — absence NOT proven */
+  PKARR_ERROR: 'PkarrError',
 } as const;
 
 /**
@@ -98,6 +101,25 @@ const throwInvalidInputError = ({ errorMessage, additionalContext }: TThrowInval
 };
 
 /**
+ * Throws a retryable Network error for a failed PKARR lookup.
+ *
+ * The SDK rejects with `PkarrError` when the record could not be resolved (relay or
+ * network failure, malformed record). That is not proof the record is absent, so the
+ * error stays retryable and is never treated as a homeserver HTTP failure.
+ *
+ * @param errorMessage - The original error message
+ * @param additionalContext - Additional context to add to the error
+ * @returns Never (always throws)
+ */
+const throwPkarrLookupError = ({ errorMessage, additionalContext }: TThrowPkarrLookupErrorParams): never => {
+  throw Err.network(NetworkErrorCode.CONNECTION_FAILED, errorMessage || 'PKARR lookup failed', {
+    service: ErrorService.Homeserver,
+    operation: (additionalContext.operation as string | undefined) ?? 'unknown',
+    context: { originalError: errorMessage, ...additionalContext },
+  });
+};
+
+/**
  * Throws a homeserver error with the provided context.
  * Uses httpStatusCodeToError for proper HTTP status code mapping.
  * @param statusCode - The HTTP status code
@@ -117,7 +139,7 @@ const throwHomeserverError = ({ statusCode, errorMessage, additionalContext }: T
  * Routes to specialized throwers based on error name and status code.
  *
  * @param errorMessage - The original error message
- * @param errorName - The error name (e.g., 'InvalidInput', 'AuthenticationError')
+ * @param errorName - The error name (e.g., 'InvalidInput', 'AuthenticationError', 'PkarrError')
  * @param statusCode - The HTTP status code
  * @param additionalContext - Additional context to add to the error
  * @returns Never (always throws)
@@ -130,6 +152,12 @@ const handleTypedError = ({
 }: THandleTypedErrorParams): never => {
   if (errorName === PUBKY_ERROR_NAMES.INVALID_INPUT) {
     return throwInvalidInputError({ errorMessage, additionalContext });
+  }
+
+  // A PKARR failure carries no HTTP status, so it must be dispatched by name before
+  // the status-based fallbacks below turn it into a synthetic 500 homeserver error.
+  if (errorName === PUBKY_ERROR_NAMES.PKARR_ERROR) {
+    return throwPkarrLookupError({ errorMessage, additionalContext });
   }
 
   if (errorName === PUBKY_ERROR_NAMES.AUTHENTICATION_ERROR || statusCode === HttpStatusCode.UNAUTHORIZED) {

@@ -9,6 +9,7 @@ import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/Post
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH, POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useCharacterLimitWarning } from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
 import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/useComposerHeightAnimation';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
@@ -18,7 +19,7 @@ import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePo
 import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
-import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
+import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { sanitizeCodeBlockLanguages } from '@/molecules/MarkdownEditor/InitializedMDXEditor.utils';
 import { MarkdownEditor } from '@/molecules/MarkdownEditor/MarkdownEditor';
@@ -51,6 +52,7 @@ export function PostInput({
   submitLabel,
   submitIcon,
   successToastTitle,
+  isCollectionShare,
   showThreadConnector = false,
   expanded = false,
   onContentChange,
@@ -111,6 +113,7 @@ export function PostInput({
     setMentionSelectedIndex,
     handleMentionSelect,
     handleMentionKeyDown,
+    handleSelectionChange,
   } = usePostInput({
     variant,
     postId,
@@ -122,6 +125,7 @@ export function PostInput({
     onSuccess,
     placeholder,
     successToastTitle,
+    isCollectionShare,
     expanded,
     onContentChange,
     onArticleModeChange,
@@ -258,7 +262,10 @@ export function PostInput({
   }, []);
 
   const characterLimit =
-    isExpanded && !isArticle ? { count: getCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH } : undefined;
+    isExpanded && !isArticle
+      ? { count: getEnforcedCharacterCount(content), max: POST_MAX_CHARACTER_LENGTH }
+      : undefined;
+  useCharacterLimitWarning(characterLimit);
 
   const inheritedTagsLayout = useEffectiveTagsLayout();
   const tagsLayout = layoutOverride ?? inheritedTagsLayout;
@@ -412,6 +419,8 @@ export function PostInput({
                         onChange={handleChangeWithAuth}
                         onFocus={handleExpandWithAuth}
                         onKeyDown={handleKeyDown}
+                        onKeyUp={handleSelectionChange}
+                        onSelect={handleSelectionChange}
                         onPaste={handlePasteWithAuth}
                         maxLength={POST_MAX_CHARACTER_LENGTH}
                         rows={1}

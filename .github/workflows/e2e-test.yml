@@ -250,7 +250,7 @@ jobs:
 
       - name: Run e2e tests - Desktop (${{ matrix.browser }}) - Spec (${{matrix.spec}})
         id: test-desktop
-        uses: cypress-io/github-action@v6
+        uses: cypress-io/github-action@v7
         env:
           DEBUG: '@cypress/github-action'
         with:
@@ -284,7 +284,7 @@ jobs:
       # TODO: Skipped due to bug https://github.com/pubky/pubky-app/issues/372
       # - name: Run e2e tests - Mobile (${{ matrix.browser }})
       #   id: test-mobile
-      #   uses: cypress-io/github-action@v6
+      #   uses: cypress-io/github-action@v7
       #   env:
       #     DEBUG: '@cypress/github-action'
       #   with:

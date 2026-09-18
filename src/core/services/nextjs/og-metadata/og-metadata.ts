@@ -3,7 +3,7 @@ import type { Dispatcher } from 'undici';
 import { Agent } from 'undici';
 import type { TOgMetadataFallbackReason, TOgMetadataResult } from '@/application/og-metadata/og-metadata.types';
 import { AppError } from '@/libs/error/error';
-import { AuthErrorCode, NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { NetworkErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -14,7 +14,6 @@ import { buildFallbackMetadata, detectMediaType, extractMetadata, validateRedire
 const MAX_REDIRECTS = 5;
 const FETCH_TIMEOUT_MS = 10_000;
 const OG_METADATA_OPERATION = 'fetchOgMetadata';
-const DNS_SAFETY_OPERATION = 'checkDnsSafety';
 const SAFE_LOOKUP_OPERATION = 'safeOgMetadataLookup';
 
 const FETCH_HEADERS = {
@@ -35,6 +34,21 @@ class OgMetadataDnsError extends Error {
   constructor(cause?: unknown) {
     super('Connection-time DNS resolution failed', { cause });
     this.name = 'OgMetadataDnsError';
+  }
+}
+
+/**
+ * Internal transport signal for a target refused by the SSRF guard (private, loopback or
+ * link-local range).
+ *
+ * The guard is deliberate, so this must stay outside Err.* like OgMetadataDnsError: a private
+ * target is expected input, not a bug, and every scan of one must not become a Sentry group.
+ * The guard still refuses the connection; only the reporting changes.
+ */
+class OgMetadataBlockedIpError extends Error {
+  constructor() {
+    super('Blocked IP range. Cannot fetch from private networks.');
+    this.name = 'OgMetadataBlockedIpError';
   }
 }
 
@@ -88,11 +102,17 @@ export class NextJsOgMetadataService {
         return contentTypeOutcome;
       }
 
-      // 5. Read response body with size limit
-      const html = await readResponseBody(response);
+      // 5. Read response body under the size cap and read deadline
+      const bodyResult = await readResponseBody(response);
+      if (!bodyResult.ok) {
+        // The page exists but its body is unusable for enrichment: release the connection and
+        // degrade to the fallback card instead of reporting an expected remote outcome.
+        response.body?.cancel().catch(() => {});
+        return fallback(url, bodyResult.reason);
+      }
 
       // 6. Extract and normalize metadata
-      return await extractMetadata(url, html);
+      return await extractMetadata(url, bodyResult.body);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -179,7 +199,7 @@ type OgFetchResult =
   | { ok: true; response: Response }
   | {
       ok: false;
-      reason: Extract<TOgMetadataFallbackReason, 'dns_failed' | 'network' | 'timeout'>;
+      reason: Extract<TOgMetadataFallbackReason, 'dns_failed' | 'blocked_ip' | 'network' | 'timeout'>;
       url: string;
       context?: Record<string, unknown>;
     };
@@ -207,18 +227,6 @@ function logFallback(
   });
 }
 
-function throwBlockedIpError(hostname: string, operation: string): never {
-  throw createBlockedIpError(hostname, operation);
-}
-
-function createBlockedIpError(hostname: string, operation: string): AppError {
-  return Err.auth(AuthErrorCode.FORBIDDEN, 'Blocked IP range. Cannot fetch from private networks.', {
-    service: ErrorService.NextJsServer,
-    operation,
-    context: { hostname, statusCode: HttpStatusCode.FORBIDDEN },
-  });
-}
-
 function getHostname(url: string): string | undefined {
   try {
     return new URL(url).hostname;
@@ -232,7 +240,7 @@ async function fetchForOgMetadata(url: string, options: RequestInit): Promise<Og
   const dnsResult = await checkDnsSafety(hostname);
   if (!dnsResult.ok) {
     if (dnsResult.reason === 'unsafe_ip') {
-      throwBlockedIpError(hostname, DNS_SAFETY_OPERATION);
+      return { ok: false, reason: 'blocked_ip', url, context: { hostname } };
     }
 
     return { ok: false, reason: dnsResult.reason, url, context: { hostname } };
@@ -252,6 +260,14 @@ async function fetchForOgMetadata(url: string, options: RequestInit): Promise<Og
     const appError = findErrorInCauseChain(error, (candidate): candidate is AppError => candidate instanceof AppError);
     if (appError) {
       throw appError;
+    }
+
+    const blockedIpError = findErrorInCauseChain(
+      error,
+      (candidate): candidate is OgMetadataBlockedIpError => candidate instanceof OgMetadataBlockedIpError,
+    );
+    if (blockedIpError) {
+      return { ok: false, reason: 'blocked_ip', url, context: { hostname, errorName: blockedIpError.name } };
     }
 
     const dnsError = findErrorInCauseChain(
@@ -285,7 +301,7 @@ function safeOgMetadataLookup(...[hostname, options, callback]: Parameters<Looku
       const dnsResult = await checkDnsSafety(hostname);
       if (!dnsResult.ok) {
         if (dnsResult.reason === 'unsafe_ip') {
-          callback(createBlockedIpError(hostname, SAFE_LOOKUP_OPERATION), '');
+          callback(new OgMetadataBlockedIpError(), '');
           return;
         }
 

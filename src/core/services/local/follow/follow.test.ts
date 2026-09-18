@@ -8,6 +8,7 @@ import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserConnectionsModel } from '@/models/user/connections/userConnections';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalFollowService } from '@/services/local/follow/follow';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
@@ -34,11 +35,12 @@ const userD = 'pubky_user_D' as Pubky;
 async function clearUserTables() {
   await db.transaction(
     'rw',
-    [UserCountsModel.table, UserConnectionsModel.table, UserRelationshipsModel.table],
+    [UserCountsModel.table, UserConnectionsModel.table, UserRelationshipsModel.table, UserTtlModel.table],
     async () => {
       await UserCountsModel.table.clear();
       await UserConnectionsModel.table.clear();
       await UserRelationshipsModel.table.clear();
+      await UserTtlModel.table.clear();
     },
   );
 }
@@ -218,6 +220,13 @@ describe('LocalFollowService.create', () => {
     // Connections created
     expect(aConn?.following ?? []).toContain(userB);
     expect(bConn?.followers ?? []).toContain(userA);
+  });
+
+  it('stamps the followee user TTL so an in-flight refresh can keep the local follow', async () => {
+    await LocalFollowService.create({ follower: userA, followee: userB });
+
+    const ttl = await UserTtlModel.findById(userB);
+    expect(ttl?.lastUpdatedAt).toBeGreaterThan(0);
   });
 
   it('upserts relationship on first follow and sets following=true', async () => {
@@ -418,6 +427,15 @@ describe('LocalFollowService.delete', () => {
     // Connections removed
     expect(aConn?.following ?? []).not.toContain(userB);
     expect(bConn?.followers ?? []).not.toContain(userA);
+  });
+
+  it('stamps the followee user TTL so an in-flight refresh can keep the local unfollow', async () => {
+    await UserTtlModel.upsert({ id: userB, lastUpdatedAt: 1 });
+
+    await LocalFollowService.delete({ follower: userA, followee: userB });
+
+    const ttl = await UserTtlModel.findById(userB);
+    expect(ttl?.lastUpdatedAt).toBeGreaterThan(1);
   });
 });
 

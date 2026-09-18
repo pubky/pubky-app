@@ -1,6 +1,8 @@
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
+import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
+import { cn } from '@/libs/utils/utils';
 import { LANDING_NEXT_SECTION_ID } from './Landing.constants';
 import { LandingBrokenPoster } from './LandingBrokenPoster';
 
@@ -49,7 +51,7 @@ const FEATURES: Array<{
 export function LandingBrokenSection() {
   return (
     <section id={LANDING_NEXT_SECTION_ID} className="relative z-0 min-h-svh scroll-mt-[48px] py-10 sm:py-24">
-      <Container size="container" className="gap-10 px-6">
+      <Container size="container" className={cn('gap-10', PAGE_GUTTER_CLASS)}>
         <Container className="mx-0 max-w-[760px] gap-5">
           <Typography as="span" size="xs" className="text-brand tracking-[1.2px] uppercase">
             {'The problem'}

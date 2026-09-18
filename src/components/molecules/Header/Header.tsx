@@ -11,6 +11,7 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
+import { PAGE_GUTTER_CLASS } from '@/config/layoutClasses';
 import { useCollectionsNavDiscovery } from '@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { Github2, Telegram, XTwitter } from '@/icons';
@@ -40,8 +41,8 @@ export const HeaderContainer = ({ children, className, classNameNav }: HeaderCon
         as="nav"
         size="container"
         className={cn(
-          'pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 sm:flex-nowrap sm:gap-6',
-          'p-6',
+          'pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 py-6 sm:flex-nowrap sm:gap-6',
+          PAGE_GUTTER_CLASS,
           classNameNav,
         )}
       >

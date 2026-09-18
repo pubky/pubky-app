@@ -18,12 +18,12 @@ import {
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
-import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import { useEditAttachments } from '@/hooks/useEditAttachments/useEditAttachments';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete';
 import { getContentWithMention } from '@/hooks/useMentionAutocomplete/useMentionAutocomplete.utils';
 import { usePost } from '@/hooks/usePost/usePost';
+import { useUndoRepost } from '@/hooks/useUndoRepost/useUndoRepost';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineImages';
@@ -94,6 +94,7 @@ export function usePostInput({
   onSuccess,
   placeholder,
   successToastTitle,
+  isCollectionShare = false,
   expanded = false,
   onContentChange,
   onArticleModeChange,
@@ -102,6 +103,10 @@ export function usePostInput({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isExpanded, setIsExpanded] = useState(expanded);
   const [isDragging, setIsDragging] = useState(false);
+  // Caret of the composer textarea, or null until it is known. Mention detection
+  // and insertion are anchored here, so a mention completes anywhere in the text
+  // and the text after the caret survives (#1959)
+  const [caret, setCaret] = useState<number | null>(null);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -134,7 +139,7 @@ export function usePostInput({
     uploadingCount,
   } = usePost();
   const timelineFeed = useTimelineFeedContext();
-  const { deletePost } = useDeletePost();
+  const { undoRepost } = useUndoRepost(isCollectionShare);
 
   // Article edits show only the cover in the attachment strip — inline images
   // live in the body. The cover is attachments[0] unless the published body
@@ -165,17 +170,37 @@ export function usePostInput({
     setExistingAttachments,
   });
 
-  // Handle mention selection - inserts pubky{userId} into content
+  // The caret a mention selection acts on: the live one when it is known, else
+  // the end of the value (prefilled content, a programmatic set)
+  const mentionCaret = caret ?? content.length;
+
+  // Handle mention selection - writes pubky{userId} over the pattern at the caret
   const handleMentionSelect = useCallback(
     (userId: string) => {
-      const newContent = getContentWithMention(content, userId);
-      if (newContent.length <= POST_MAX_CHARACTER_LENGTH) {
-        setContent(newContent);
+      const textarea = textareaRef.current;
+      const selectionCaret = textarea?.selectionStart ?? mentionCaret;
+      const insertion = getContentWithMention(content, selectionCaret, userId);
+
+      if (insertion.content.length <= POST_MAX_CHARACTER_LENGTH) {
+        setContent(insertion.content);
+        setCaret(insertion.caret);
+
+        // A controlled value parks the caret at the end of the textarea; put it
+        // back after the inserted mention so the user keeps typing where they were
+        requestAnimationFrame(() => {
+          const element = textareaRef.current;
+          if (!element) return;
+          element.focus();
+          element.setSelectionRange(insertion.caret, insertion.caret);
+        });
+        return;
       }
-      // Focus textarea after selection
-      textareaRef.current?.focus();
+
+      // Over the character limit: leave the content alone, just keep the caret in
+      // the textarea for the next edit
+      textarea?.focus();
     },
-    [content, setContent],
+    [content, mentionCaret, setContent],
   );
 
   // Mention autocomplete
@@ -185,7 +210,16 @@ export function usePostInput({
     selectedIndex: mentionSelectedIndex,
     setSelectedIndex: setMentionSelectedIndex,
     handleKeyDown: mentionHandleKeyDown,
-  } = useMentionAutocomplete({ content, onSelect: handleMentionSelect });
+  } = useMentionAutocomplete({ content, caret: mentionCaret, onSelect: handleMentionSelect });
+
+  /**
+   * Track the composer caret. Arrow keys, Home/End and clicks move it without a
+   * change event, and mention detection follows the caret (#1959)
+   */
+  const handleSelectionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    setCaret(target.selectionStart ?? target.value.length);
+  };
 
   // Notify parent of content changes
   useEffect(() => {
@@ -370,7 +404,7 @@ export function usePostInput({
           originalPostId: originalPostId!,
           successToastTitle,
           onSuccess: handleSuccess,
-          onUndo: deletePost,
+          onUndo: undoRepost,
         });
         break;
       case POST_INPUT_VARIANT.EDIT:
@@ -407,7 +441,7 @@ export function usePostInput({
     uploadingCount,
     onSuccess,
     timelineFeed,
-    deletePost,
+    undoRepost,
   ]);
 
   // Handle textarea change with validation
@@ -416,6 +450,9 @@ export function usePostInput({
       const value = e.target.value;
       if (value.length <= POST_MAX_CHARACTER_LENGTH) {
         setContent(value);
+        // Typing moves the caret without a selection event; mention detection
+        // needs it before the next render (#1959)
+        setCaret(e.target.selectionStart ?? value.length);
       }
     },
     [setContent],
@@ -725,6 +762,7 @@ export function usePostInput({
     handleDragOver,
     handleDrop,
     handlePaste,
+    handleSelectionChange,
     handleMentionSelect,
     handleMentionKeyDown: mentionHandleKeyDown,
   };

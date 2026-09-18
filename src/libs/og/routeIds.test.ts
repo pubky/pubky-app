@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizePostIds, normalizeProfileId, safeDecode } from './routeIds';
+import { normalizePostIds, normalizeProfileId, safeDecode, stripEscapeSequences } from './routeIds';
 
 const VALID_PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 const PUBKY_STARTING_WITH_PREFIX = `pubky${'o'.repeat(47)}`;
@@ -12,6 +12,24 @@ describe('safeDecode', () => {
   it('returns null on malformed encoding instead of throwing', () => {
     expect(safeDecode('abc%')).toBeNull();
     expect(safeDecode('%ZZ')).toBeNull();
+  });
+});
+
+describe('stripEscapeSequences', () => {
+  it.each([
+    ['\\n', 'abc'],
+    ['\\r\\n', 'abc'],
+    ['\\t', 'abc'],
+    ['\\\\n', 'abc'],
+    ['\\\\\\t', 'abc'],
+  ])('removes %s', (sequence, expected) => {
+    expect(stripEscapeSequences(`abc${sequence}`)).toBe(expected);
+    expect(stripEscapeSequences(`${sequence}abc`)).toBe(expected);
+  });
+
+  it('leaves a lone backslash and other characters alone', () => {
+    expect(stripEscapeSequences('a\\b')).toBe('a\\b');
+    expect(stripEscapeSequences('abc')).toBe('abc');
   });
 });
 
@@ -39,6 +57,16 @@ describe('normalizeProfileId', () => {
     expect(normalizeProfileId('posts')).toBeNull();
     expect(normalizeProfileId('.')).toBeNull();
     expect(normalizeProfileId('ABC123...')).toBeNull();
+  });
+
+  it('strips crawler-appended literal escape sequences before validating', () => {
+    expect(normalizeProfileId(`${VALID_PUBKY}\\n`)).toBe(VALID_PUBKY);
+    expect(normalizeProfileId(`%5Cn${VALID_PUBKY}`)).toBe(VALID_PUBKY);
+  });
+
+  it('rejects a profile id made only of escape sequences', () => {
+    expect(normalizeProfileId('\\n\\n')).toBeNull();
+    expect(normalizeProfileId('\\r\\t')).toBeNull();
   });
 });
 
@@ -81,6 +109,27 @@ describe('normalizePostIds', () => {
   it('rejects a dot-only or empty post id', () => {
     expect(normalizePostIds(VALID_PUBKY, '.')).toBeNull();
     expect(normalizePostIds(VALID_PUBKY, '')).toBeNull();
+  });
+
+  it.each([
+    ['literal escapes', `${POST_ID}\\n\\n`],
+    ['percent-encoded literal escapes', `${POST_ID}%5Cn%5Cn`],
+    ['a double-escaped newline', `${POST_ID}\\\\n`],
+    ['escapes followed by whitespace', `${POST_ID}\\r\\t `],
+  ])('strips %s appended by a crawler', (_label, raw) => {
+    expect(normalizePostIds(VALID_PUBKY, raw)).toEqual({ userId: VALID_PUBKY, postId: POST_ID });
+  });
+
+  it('strips escape sequences from both ends before validating', () => {
+    expect(normalizePostIds(VALID_PUBKY, `\\n${POST_ID}\\n`)).toEqual({
+      userId: VALID_PUBKY,
+      postId: POST_ID,
+    });
+  });
+
+  it('rejects a post id made only of escape sequences or whitespace', () => {
+    expect(normalizePostIds(VALID_PUBKY, '\\n\\n')).toBeNull();
+    expect(normalizePostIds(VALID_PUBKY, '  ')).toBeNull();
   });
 
   it('leaves mid-id characters untouched (dot-free ids only end mangled)', () => {
