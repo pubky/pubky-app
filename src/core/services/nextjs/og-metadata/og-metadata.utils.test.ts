@@ -97,6 +97,38 @@ describe('extractMetadata', () => {
     expect(result.title).toBeNull();
   });
 
+  it('should ignore the placeholder "undefined" that client-rendered shells serve for og:title and <title>', async () => {
+    const html = '<html><head><meta property="og:title" content="undefined" /><title>undefined</title></head></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(result.title).toBeNull();
+  });
+
+  it('should ignore a placeholder og:title regardless of case and surrounding whitespace', async () => {
+    const html = '<html><head><meta property="og:title" content="  UnDefined  " /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBeNull();
+  });
+
+  it('should ignore a "null" placeholder title', async () => {
+    const html = '<html><head><meta property="og:title" content="null" /></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBeNull();
+  });
+
+  it('should fall back to <title> when og:title is a placeholder', async () => {
+    const html = '<html><head><meta property="og:title" content="undefined" /><title>Real Title</title></head></html>';
+    const result = await extractMetadata('https://example.com/', html);
+    expect(result.title).toBe('Real Title');
+  });
+
+  it('should not resolve a placeholder og:image against the page URL', async () => {
+    const html =
+      '<html><head><meta property="og:title" content="Real Title" /><meta property="og:image" content="undefined" /></head></html>';
+    const result = await extractMetadata('https://music.youtube.com/playlist?list=OLAK5uy_x', html);
+    expect(mockNormalizeImageUrl).not.toHaveBeenCalled();
+    expect(result.image).toBeNull();
+  });
+
   it('should call normalizeImageUrl when og:image is found', async () => {
     mockNormalizeImageUrl.mockResolvedValue('https://example.com/img.png');
     const html = '<html><head><meta property="og:image" content="/img.png" /></head></html>';

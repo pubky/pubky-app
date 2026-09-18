@@ -11,6 +11,22 @@ import { isHttpProtocol, normalizeImageUrl } from '../nextjs.utils';
 const MEDIA_TYPES = ['image', 'video', 'audio'] as const;
 
 /**
+ * Tag values some sites serve when they answer with a client-rendered shell instead of the real
+ * page. YouTube Music returns the literal string "undefined" in every og tag it emits for such a
+ * response (og:title, og:url, og:site_name, og:type), which used to become the card title.
+ */
+const PLACEHOLDER_VALUES = new Set(['undefined', 'null']);
+
+/**
+ * True when a tag value carries no metadata: missing, blank, or a placeholder.
+ * Callers treat a placeholder exactly like a missing value.
+ */
+function isPlaceholderValue(value: string | null | undefined): boolean {
+  const normalized = value?.trim().toLowerCase();
+  return !normalized || PLACEHOLDER_VALUES.has(normalized);
+}
+
+/**
  * Detects media content types (image/video/audio) and returns early.
  * Returns null if content is not a media type.
  */
@@ -30,17 +46,18 @@ export function detectMediaType(url: string, response: Response): TOgMetadataRes
  * Extracts OG metadata from HTML, normalizes image URLs, and applies truncation.
  */
 export async function extractMetadata(url: string, html: string): Promise<TOgMetadataResult> {
-  // Extract title (og:title → <title> fallback)
-  const ogTitle = extractFromHtml(html, OG_PATTERNS.TITLE);
-  const titleTag = html.match(OG_PATTERNS.TITLE_TAG)?.[1] || null;
-  const rawTitle = ogTitle || titleTag;
+  // Extract title (og:title → <title> fallback), skipping placeholder values so a shell page
+  // cannot become a card title and the fallback tag still gets its chance.
+  const titleCandidates = [extractFromHtml(html, OG_PATTERNS.TITLE), html.match(OG_PATTERNS.TITLE_TAG)?.[1] || null];
+  const rawTitle = titleCandidates.find((candidate) => !isPlaceholderValue(candidate)) ?? null;
   const title = rawTitle ? decodeHtmlEntities(rawTitle) : null;
 
   // Extract og:image
   const image = extractFromHtml(html, OG_PATTERNS.IMAGE);
 
-  // Normalize and validate image URL
-  const normalizedImage = image ? await normalizeImageUrl(image, url) : null;
+  // Normalize and validate image URL. A placeholder is not a path: resolving it against the page
+  // URL would turn "undefined" into https://<host>/undefined.
+  const normalizedImage = image && !isPlaceholderValue(image) ? await normalizeImageUrl(image, url) : null;
 
   return {
     url: truncateMiddle(url, URL_TRUNCATE_LENGTH),
