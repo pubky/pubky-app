@@ -12,6 +12,7 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FULL_BLEED_GUTTER_CLASS } from '@/config/layoutClasses';
 import { FeedController } from '@/controllers/feed/feed';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSelectedReachFilter } from '@/hooks/useSelectedReachFilter/useSelectedReachFilter';
 import { Logger } from '@/libs/logger/logger';
@@ -54,15 +55,20 @@ const FEED_TAB_PENCIL_CLASS =
 
 let cachedFeeds: FeedModelSchema[] = [];
 /**
- * Last horizontal offset of the tab strip, and the account it belongs to.
+ * Last horizontal offset of the tab strip, and the sign-in that produced it.
  *
  * `/home` and `/feed/[id]` render different templates, so the strip unmounts on
  * every feed switch and a fresh DOM node starts at `scrollLeft: 0`, so the tab
  * the user just picked would jump back to the first one (#2442). Kept in module
- * state next to `cachedFeeds`, scoped to the signed-in account so a different
- * user never inherits the previous one's offset.
+ * state next to `cachedFeeds`.
+ *
+ * `isCurrentSession` is `captureViewerSession()` taken when the offset was
+ * recorded, so an offset cannot outlive its sign-in: a logout, or a sign-in as
+ * the same account, is a different session. The check still holds when this
+ * component is off screen for the whole auth transition, which is the case for
+ * Profile and Settings, where nothing renders here while signed out.
  */
-let cachedTabStripScrollLeft: { pubky: string | null; left: number } = { pubky: null, left: 0 };
+let cachedTabStripScrollLeft: { isCurrentSession: () => boolean; left: number } | null = null;
 interface FeedNavigationProps {
   className?: string;
 }
@@ -117,23 +123,32 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   // is clamped by the browser to 0, so this re-runs on every tab/route change and
   // settles on the browser's own maximum when the saved offset no longer fits
   // (the previous active tab was the wide one, or the account has fewer feeds).
+  //
+  // The account is a dependency so the strip follows a sign-in change that
+  // happens while it is on screen; the saved offset itself is dropped whenever
+  // the sign-in that produced it is gone, including one that ended while this
+  // component was unmounted and never saw a signed-out render.
   useLayoutEffect(() => {
     const row = tabStripRef.current;
     if (!row) return;
-    if (cachedTabStripScrollLeft.pubky !== currentUserPubky) {
-      // Different account (or a signed-out render): start from the first tab.
-      cachedTabStripScrollLeft = { pubky: currentUserPubky, left: 0 };
+    if (cachedTabStripScrollLeft && !cachedTabStripScrollLeft.isCurrentSession()) {
+      cachedTabStripScrollLeft = null;
     }
-    if (row.scrollLeft !== cachedTabStripScrollLeft.left) {
-      row.scrollLeft = cachedTabStripScrollLeft.left;
+    const savedLeft = cachedTabStripScrollLeft?.left ?? 0;
+    if (row.scrollLeft !== savedLeft) {
+      row.scrollLeft = savedLeft;
     }
   }, [currentUserPubky, customFeeds, pathname]);
 
-  // Record where the user scrolled the strip to. A programmatic restore lands
-  // here too (the browser fires a scroll event for the assignment), which only
-  // re-saves the value just applied, clamped to what the row can reach.
+  // Record where the user scrolled the strip to, against the sign-in that was
+  // live at that moment. A programmatic restore lands here too (the browser
+  // fires a scroll event for the assignment), which only re-saves the value just
+  // applied, clamped to what the row can reach.
   const handleTabStripScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    cachedTabStripScrollLeft = { pubky: currentUserPubky, left: event.currentTarget.scrollLeft };
+    cachedTabStripScrollLeft = {
+      isCurrentSession: captureViewerSession(),
+      left: event.currentTarget.scrollLeft,
+    };
   };
 
   // The first tab mirrors the reach selection the sidebar filter shows. The
