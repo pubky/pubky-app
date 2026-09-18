@@ -33,6 +33,7 @@ export function DialogRepost({ postId, open, onOpenChangeAction, config }: Dialo
             submitLabel={config?.submitLabel}
             submitIcon={config?.submitIcon}
             successToastTitle={config?.successToastTitle}
+            isCollectionShare={config?.isCollectionShare}
             onSuccess={() => {
               onOpenChangeAction(false);
             }}

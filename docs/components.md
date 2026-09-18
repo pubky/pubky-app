@@ -21,6 +21,7 @@ Then adapt to project structure. Don't recreate from scratch.
 - Use exact sizes, colors, spacing from Figma
 - Verify using screenshots or MCP Figma tools
 - Test all states (hover, focus, disabled, active)
+- For icon and circular nav buttons, read active vs inactive styling (background, border, shadow) from the Shadcn `Button` variants (`Selected` vs `Default`), not from the parent frame or another surface's pattern
 
 Main Figma project: [shadcn_ui-PUBKY](https://www.figma.com/design/01ZvjSPZnKTNmaEWz0yJsq/shadcn_ui-PUBKY)
 
@@ -47,7 +48,8 @@ Do not add `index.ts` / `index.tsx` under `src/components` whose sole job is re-
 ### Config and app routes
 
 - **Config:** import from `@/config/<topic>` (concrete modules under `src/config/`, such as `@/config/nexus`, `@/config/posts`). Do not introduce an aggregate `src/config/index.ts` that re-exports the whole tree.
-- **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file.
+- **Routes:** import route constants and helpers from `@/app/routes` (implemented in `src/app/routes.ts`). Use named imports; use `import type` when you only need types from a colocated `*.types.ts` file. Never hardcode a path string in a component; add or use a builder (`getProfileRoute`, `getCollectionRoute`, …).
+- **Active nav state:** a nav item that links to a default child route (footer Settings → `SETTINGS_ROUTES.ACCOUNT`) but must stay active on sibling routes (`/settings/notifications`) needs active detection on the parent prefix (`activePrefix: APP_ROUTES.SETTINGS`, see `MobileFooter`), not only `href` or `pathname.startsWith(href + '/')`.
 
 #### Explore mode (unauthenticated browsing)
 
@@ -260,6 +262,19 @@ Short bounded values are fine to interpolate: build-time config constants (for e
 
 Mock `@/molecules/Toaster/toast` in unit tests (`vi.mock('@/molecules/Toaster/toast', () => ({ toast: ... }))`); assert `variant: 'error'` (or other variant) instead of `title: 'Error'`. The Toaster module's own tests render the real `<Toaster />` and trigger notifications through the real `toast()`.
 
+## Forms
+
+Build forms with `react-hook-form` + `zod` (via `@hookform/resolvers/zod`). Canonical example: `src/hooks/useCreateCollection/useCreateCollection.ts` with its sibling `useCreateCollection.types.ts`.
+
+- **The hook owns the form.** Form components never call `commit*` controllers directly: wrap the mutation in a hook named `use{Action}Form` or `use{Verb}{Entity}` that returns `{ form, submit, reset, ... }`.
+- **`submit()` returns `Promise<boolean>`** so the caller decides what to do on success. A form hook may instead return the created entity id as `Promise<string | null>` when the caller needs to navigate to it (`useCreateCollection`).
+- **Schema, types and defaults live in the sibling `*.types.ts`**: the zod schema, a `*_FORM_FIELDS` map, the inferred type and the default values.
+- **Fields render `Controller`**, using the `ControlledInputField` / `ControlledTextareaField` molecules where applicable.
+- **Non-text inputs** (file pickers, rich text, cover images) live in their own dedicated hooks (for example `useCoverImagePicker`) that the form hook composes.
+- **Validation messages** are literal US-English strings in the schema.
+- **Zod v4**: use `z.url()`, not the deprecated `z.string().url()`.
+- **On failure**, map the `AppError` to `toast({ variant: 'error', ... })`. Do not add a `Logger.error` of your own: `Err.*` factories already log and capture the failure (ADR-0015).
+
 ## Design System Integration
 
 ### Colors
@@ -310,7 +325,7 @@ const Button = (props: ButtonProps) => <button {...props} />;
 ### Available MCP Tools
 
 - `get_metadata` — Component structure and metadata
-- `get_code` — Generate UI code from Figma nodes
+- `get_design_context` — Generate UI code from Figma nodes
 - `get_screenshot` — Visual comparison screenshots
 - `get_variable_defs` — Design tokens and variables
 

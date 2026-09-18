@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Pencil, PlusCircle } from 'lucide-react';
@@ -12,6 +12,7 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FULL_BLEED_GUTTER_CLASS } from '@/config/layoutClasses';
 import { FeedController } from '@/controllers/feed/feed';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useSelectedReachFilter } from '@/hooks/useSelectedReachFilter/useSelectedReachFilter';
 import { Logger } from '@/libs/logger/logger';
@@ -20,6 +21,7 @@ import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { REACH_FILTER_META } from '@/molecules/Filters/FilterReach/FilterReach';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { REACH } from '@/stores/home/home.types';
 import { CustomFeedDialog } from '../CustomFeedDialog/CustomFeedDialog';
 
@@ -52,6 +54,21 @@ const FEED_TAB_PENCIL_CLASS =
   'absolute top-1/2 right-1 z-10 -translate-y-1/2 cursor-pointer p-2 text-muted-foreground transition-opacity [@media(hover:hover)]:lg:pointer-events-none [@media(hover:hover)]:lg:opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:group-focus-within:pointer-events-auto lg:group-focus-within:opacity-100';
 
 let cachedFeeds: FeedModelSchema[] = [];
+/**
+ * Last horizontal offset of the tab strip, and the sign-in that produced it.
+ *
+ * `/home` and `/feed/[id]` render different templates, so the strip unmounts on
+ * every feed switch and a fresh DOM node starts at `scrollLeft: 0`, so the tab
+ * the user just picked would jump back to the first one (#2442). Kept in module
+ * state next to `cachedFeeds`.
+ *
+ * `isCurrentSession` is `captureViewerSession()` taken when the offset was
+ * recorded, so an offset cannot outlive its sign-in: a logout, or a sign-in as
+ * the same account, is a different session. The check still holds when this
+ * component is off screen for the whole auth transition, which is the case for
+ * Profile and Settings, where nothing renders here while signed out.
+ */
+let cachedTabStripScrollLeft: { isCurrentSession: () => boolean; left: number } | null = null;
 interface FeedNavigationProps {
   className?: string;
 }
@@ -59,6 +76,8 @@ interface FeedNavigationProps {
 export const FeedNavigation = ({ className }: FeedNavigationProps) => {
   const pathname = usePathname();
   const { isAuthenticated, requireAuth } = useRequireAuth();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const tabStripRef = useRef<HTMLDivElement | null>(null);
   const [editingFeed, setEditingFeed] = useState<FeedModelSchema | null>(null);
   const customFeeds = useLiveQuery(
     async () => {
@@ -98,6 +117,40 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
     preloadLucideIcons(customFeeds.map((feed) => feed.icon));
   }, [customFeeds]);
 
+  // The tab strip is a horizontal scroll container, and a fresh DOM node always
+  // starts at `scrollLeft: 0`. Re-apply the offset the user left behind, once
+  // the tabs are in the DOM: assigning `scrollLeft` while the row is still empty
+  // is clamped by the browser to 0, so this re-runs on every tab/route change and
+  // settles on the browser's own maximum when the saved offset no longer fits
+  // (the previous active tab was the wide one, or the account has fewer feeds).
+  //
+  // The account is a dependency so the strip follows a sign-in change that
+  // happens while it is on screen; the saved offset itself is dropped whenever
+  // the sign-in that produced it is gone, including one that ended while this
+  // component was unmounted and never saw a signed-out render.
+  useLayoutEffect(() => {
+    const row = tabStripRef.current;
+    if (!row) return;
+    if (cachedTabStripScrollLeft && !cachedTabStripScrollLeft.isCurrentSession()) {
+      cachedTabStripScrollLeft = null;
+    }
+    const savedLeft = cachedTabStripScrollLeft?.left ?? 0;
+    if (row.scrollLeft !== savedLeft) {
+      row.scrollLeft = savedLeft;
+    }
+  }, [currentUserPubky, customFeeds, pathname]);
+
+  // Record where the user scrolled the strip to, against the sign-in that was
+  // live at that moment. A programmatic restore lands here too (the browser
+  // fires a scroll event for the assignment), which only re-saves the value just
+  // applied, clamped to what the row can reach.
+  const handleTabStripScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    cachedTabStripScrollLeft = {
+      isCurrentSession: captureViewerSession(),
+      left: event.currentTarget.scrollLeft,
+    };
+  };
+
   // The first tab mirrors the reach selection the sidebar filter shows. The
   // fallback covers a persisted reach outside the known set (corrupted or
   // rolled-back storage) — better an All tab than a crashed feed page.
@@ -134,7 +187,12 @@ export const FeedNavigation = ({ className }: FeedNavigationProps) => {
         className,
       )}
     >
-      <Container overrideDefaults className="flex w-full flex-row overflow-x-auto">
+      <Container
+        overrideDefaults
+        ref={tabStripRef}
+        onScroll={handleTabStripScroll}
+        className="flex w-full flex-row overflow-x-auto"
+      >
         <Link
           overrideDefaults
           href={APP_ROUTES.HOME}

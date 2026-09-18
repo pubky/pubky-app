@@ -1,0 +1,9 @@
+---
+description: Visual regression tests — determinism rules and CI-owned baselines
+globs: src/test/vrt/**/*,src/test-utils/vrt*
+alwaysApply: false
+---
+
+# Visual Regression Testing Rules
+
+@docs/visual-regression-testing.md

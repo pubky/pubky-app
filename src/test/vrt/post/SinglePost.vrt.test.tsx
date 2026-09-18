@@ -301,6 +301,7 @@ vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => {
   const result = {
     isRepost: false,
     repostAuthorId: null,
+    isReply: false,
     isCurrentUserRepost: false,
     originalPostId: null,
     isLoading: false,

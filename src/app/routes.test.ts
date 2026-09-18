@@ -9,6 +9,7 @@ import {
   getUserProfileUrl,
   isCollectionsOverviewRoute,
   isCoreExploreRoute,
+  isCustomFeedRoute,
   isDynamicPublicRoute,
   isLogoLandingRoute,
   isNavItemActive,
@@ -194,6 +195,19 @@ describe('matchesAllowedRoute', () => {
       false,
     );
   });
+});
+
+describe('isCustomFeedRoute', () => {
+  it.each(['/feed/feed-abc123', '/feed/feed-abc123/'])('matches a single custom feed segment for %s', (pathname) => {
+    expect(isCustomFeedRoute(pathname)).toBe(true);
+  });
+
+  it.each(['/feed', '/feed/feed-abc123/extra', '/home', '/home/missing'])(
+    'rejects non-custom-feed route %s',
+    (pathname) => {
+      expect(isCustomFeedRoute(pathname)).toBe(false);
+    },
+  );
 });
 
 function isRouteAccessible(

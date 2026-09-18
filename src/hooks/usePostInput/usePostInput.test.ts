@@ -11,6 +11,7 @@ import {
   POST_SUPPORTED_FILE_TYPES,
 } from '@/config/posts';
 import { PostController } from '@/controllers/post/post';
+import { useDeletePost } from '@/hooks/useDeletePost/useDeletePost';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { Logger } from '@/libs/logger/logger';
 import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
@@ -472,6 +473,35 @@ describe('usePostInput', () => {
       expect(mockReply).not.toHaveBeenCalled();
       expect(mockEdit).not.toHaveBeenCalled();
     });
+
+    it.each([
+      { isCollectionShare: false, content: '', label: 'Repost', failure: 'repost' },
+      { isCollectionShare: false, content: 'A quote', label: 'Repost', failure: 'repost' },
+      { isCollectionShare: true, content: '', label: 'Share', failure: 'share' },
+      { isCollectionShare: true, content: 'A quote', label: 'Share', failure: 'share' },
+    ])(
+      'uses $label removal copy for toast Undo with content "$content"',
+      async ({ isCollectionShare, content, label, failure }) => {
+        mockContent = content;
+        const { result, unmount } = renderHook(() =>
+          usePostInput({ variant: 'repost', originalPostId: 'original-post-id', isCollectionShare }),
+        );
+
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+
+        expect(useDeletePost).toHaveBeenCalledWith({
+          toastMessages: { deleted: `${label} removed`, deleteFailed: `Could not remove ${failure}. Try again.` },
+        });
+        const { onUndo } = mockRepost.mock.calls[0][0];
+        // The composer closes after success; the toast must still target the new repost.
+        unmount();
+        await onUndo('created-repost-id');
+        expect(mockDeletePost).toHaveBeenCalledWith('created-repost-id');
+        expect(mockDeletePost).not.toHaveBeenCalledWith('original-post-id');
+      },
+    );
 
     it('calls edit method for edit variant with editPostId', async () => {
       mockContent = 'Updated post content';
@@ -2990,6 +3020,90 @@ describe('usePostInput', () => {
 
       expect(pasteEvent.preventDefault).not.toHaveBeenCalled();
       expect(mockSetAttachments).not.toHaveBeenCalled();
+    });
+  });
+  describe('mention autocomplete', () => {
+    /** A real textarea so the hook can read the live selection, as the composer does */
+    const mountTextarea = (value: string, caret: number) => {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      document.body.appendChild(textarea);
+      textarea.setSelectionRange(caret, caret);
+      return textarea;
+    };
+
+    it('writes the mention over the pattern at the caret and keeps the text after it', () => {
+      mockContent = 'Hello @jo world';
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = mountTextarea(mockContent, 9);
+      result.current.textareaRef.current = textarea;
+
+      act(() => {
+        result.current.handleMentionSelect('abc123');
+      });
+
+      expect(mockSetContent).toHaveBeenCalledWith('Hello pubkyabc123  world');
+      textarea.remove();
+    });
+
+    it('restores the caret after the inserted mention', async () => {
+      mockContent = 'Hello @jo world';
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = mountTextarea(mockContent, 9);
+      const setSelectionRange = vi.spyOn(textarea, 'setSelectionRange');
+      result.current.textareaRef.current = textarea;
+
+      act(() => {
+        result.current.handleMentionSelect('abc123');
+      });
+
+      // 'Hello ' + 'pubkyabc123 ' = the caret sits after the mention, before ' world'
+      await waitFor(() => expect(setSelectionRange).toHaveBeenCalledWith(18, 18));
+      textarea.remove();
+    });
+
+    it('writes the mention at the end of the value when the caret is there', () => {
+      mockContent = 'Hello @jo';
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = mountTextarea(mockContent, mockContent.length);
+      result.current.textareaRef.current = textarea;
+
+      act(() => {
+        result.current.handleMentionSelect('abc123');
+      });
+
+      expect(mockSetContent).toHaveBeenCalledWith('Hello pubkyabc123 ');
+      textarea.remove();
+    });
+
+    it('leaves the content alone when the mention would exceed the character limit', () => {
+      mockContent = `@jo ${'a'.repeat(POST_MAX_CHARACTER_LENGTH - 4)}`;
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'post',
+        }),
+      );
+      const textarea = mountTextarea(mockContent, 3);
+      result.current.textareaRef.current = textarea;
+
+      act(() => {
+        result.current.handleMentionSelect('abc123');
+      });
+
+      expect(mockSetContent).not.toHaveBeenCalled();
+      textarea.remove();
     });
   });
 });

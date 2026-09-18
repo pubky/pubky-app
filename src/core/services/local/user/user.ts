@@ -1,6 +1,7 @@
 import type { TUserSocialGraphStatusResult } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
+import { db } from '@/database/franky/franky';
 import { getTtlUserMs } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -10,6 +11,7 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
+import { LocalTagCacheService, type TagPreviewGuard } from '@/services/local/tag/tag-cache';
 import type { NexusTag, NexusUserCounts, NexusUserDetails, NexusUserRelationship } from '@/services/nexus/nexus.types';
 
 export class LocalUserService {
@@ -152,16 +154,6 @@ export class LocalUserService {
   }
 
   /**
-   * Reads tags for a single user from local database.
-   * @param userId - User ID to read tags for
-   * @returns Promise resolving to array of tags or empty array if not found
-   */
-  static async readTags({ userId }: TReadProfileParams): Promise<NexusTag[]> {
-    const userTags = await UserTagsModel.findById(userId);
-    return userTags?.tags ?? [];
-  }
-
-  /**
    * Bulk reads multiple user tags from local database.
    * @param userIds - Array of user IDs to read tags for
    * @returns Promise resolving to Map of user ID to user tags
@@ -188,8 +180,8 @@ export class LocalUserService {
    * @param tags - The user tags to upsert
    * @returns Promise resolving to void
    */
-  static async upsertTags(userId: Pubky, tags: NexusTag[]): Promise<void> {
-    await UserTagsModel.upsert({ id: userId, tags });
+  static async upsertTags(userId: Pubky, tags: NexusTag[], tagGuard?: TagPreviewGuard): Promise<void> {
+    await LocalTagCacheService.savePreviews('user', [[userId, tags]], tagGuard);
   }
 
   /**
@@ -204,10 +196,24 @@ export class LocalUserService {
    *   If retryDelayMs >= the configured user TTL, the entity becomes immediately stale
    *   (triggers immediate refresh on next TTL coordinator tick). This is intentional
    *   and can be useful for forcing immediate refresh.
+   * @param options.unlessWrittenSince - Keep a row written at or after this time (a
+   *   local write or another successful refresh landed while a batch was in flight),
+   *   so a cooldown never shortens real freshness. The check and the write share one
+   *   transaction.
    * @returns Promise resolving to void
    */
-  static async upsertTtlWithDelay(userId: Pubky, retryDelayMs: number): Promise<void> {
+  static async upsertTtlWithDelay(
+    userId: Pubky,
+    retryDelayMs: number,
+    options: { unlessWrittenSince?: number } = {},
+  ): Promise<void> {
     const lastUpdatedAt = Date.now() - (getTtlUserMs() - retryDelayMs);
-    await UserTtlModel.upsert({ id: userId, lastUpdatedAt });
+    await db.transaction('rw', UserTtlModel.table, async () => {
+      if (options.unlessWrittenSince !== undefined) {
+        const existing = await UserTtlModel.findById(userId);
+        if (existing && existing.lastUpdatedAt >= options.unlessWrittenSince) return;
+      }
+      await UserTtlModel.upsert({ id: userId, lastUpdatedAt });
+    });
   }
 }

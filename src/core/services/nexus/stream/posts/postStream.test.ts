@@ -1511,14 +1511,17 @@ describe('NexusPostStreamService', () => {
       expect(result).toEqual(mockPosts);
     });
 
-    it('sorts post_ids so identical batches in different order share one query key', async () => {
+    it.each([undefined, false, true])('canonicalizes the body and forwards force=%s separately', async (force) => {
       // Arrange
       const queryNexusSpy = mockQueryNexus.mockResolvedValue([]);
+      const postIds = ['author2:post3', 'author1:post2', 'author1:post1'];
 
       // Act
       await NexusPostStreamService.fetchByIds({
-        post_ids: ['author2:post3', 'author1:post2', 'author1:post1'],
+        post_ids: postIds,
         viewer_id: mockViewerId,
+        include_attachment_metadata: false,
+        force,
       });
 
       // Assert
@@ -1527,10 +1530,12 @@ describe('NexusPostStreamService', () => {
         method: 'POST',
         body: JSON.stringify({
           post_ids: ['author1:post1', 'author1:post2', 'author2:post3'],
-          include_attachment_metadata: true,
+          include_attachment_metadata: false,
           viewer_id: mockViewerId,
         }),
+        force,
       });
+      expect(postIds).toEqual(['author2:post3', 'author1:post2', 'author1:post1']);
     });
 
     it('should return empty array when fetching empty post IDs', async () => {

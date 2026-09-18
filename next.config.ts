@@ -56,6 +56,12 @@ const withSerwist = withSerwistInit({
   swSrc: 'src/sw.ts',
   swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
+  // Serwist's injected entry calls `window.serwist.register()` without a `.catch()`, so the
+  // rejection of `navigator.serviceWorker.register()` reaches Sentry as an unhandled error even
+  // though it is an expected browser/network condition. Registration is done by
+  // ServiceWorkerRegistrationProvider instead, which handles that rejection; the injected entry
+  // still exposes `window.serwist` with the same script URL and scope.
+  register: false,
 });
 
 const composedConfig = withSerwist(nextConfig);
