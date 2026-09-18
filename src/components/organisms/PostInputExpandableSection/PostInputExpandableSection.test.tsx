@@ -358,6 +358,20 @@ describe('PostInputExpandableSection', () => {
     expect(actionBar).toHaveAttribute('data-post-button-label', 'Share');
   });
 
+  it('labels the submit button "Publish" when editing an article', () => {
+    render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} isArticle={true} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-post-button-label', 'Publish');
+  });
+
+  it('keeps the submit button label "Edit" when editing a non-article post', () => {
+    render(<PostInputExpandableSection {...defaultProps} submitMode={POST_INPUT_VARIANT.EDIT} isArticle={false} />);
+
+    const actionBar = screen.getByTestId('post-input-action-bar');
+    expect(actionBar).toHaveAttribute('data-post-button-label', 'Edit');
+  });
+
   it('overrides the submit button icon with submitIcon when provided', () => {
     const ShareIcon = () => <svg data-testid="share-icon" />;
     render(

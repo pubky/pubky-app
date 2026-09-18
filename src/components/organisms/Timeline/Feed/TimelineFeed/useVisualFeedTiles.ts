@@ -261,6 +261,17 @@ export function useVisualFeedTiles({
   // check: a post absent from the local DB counts as "not found" only once its
   // id lands here. Ids from earlier pages are deliberately kept on pagination.
   const [settledDetailPostIds, setSettledDetailPostIds] = React.useState<ReadonlySet<string>>(() => new Set());
+  // File URIs whose metadata fetch has settled (success OR failure) — the file
+  // equivalent of `settledDetailPostIds`. Nexus omits files it no longer serves
+  // instead of marking them missing, so a URI that is still absent once its
+  // fetch settled must stop reading as "still resolving": otherwise the flag
+  // stays set for the life of the feed and its loading gates never open. The
+  // marker only feeds `hasPendingFiles` — tiles are still built from whatever
+  // rows exist, so metadata arriving later renders as usual.
+  const [settledFileUris, setSettledFileUris] = React.useState<ReadonlySet<string>>(() => new Set());
+  // URIs with a fetch in flight. Settlement is recorded per URI, not per
+  // request, so overlapping snapshots cannot re-request the same URI.
+  const inFlightFileUrisRef = React.useRef<Set<string>>(new Set());
 
   React.useEffect(() => {
     if (!postIdsKey) return;
@@ -409,13 +420,37 @@ export function useVisualFeedTiles({
   React.useEffect(() => {
     if (!missingFileUris.length) return;
 
-    void FileController.fetchFiles({ fileUris: missingFileUris }).catch((error) => {
-      Logger.error('[VisualFeed] Failed to fetch missing file metadata', {
-        fileUris: missingFileUris,
-        error,
+    const requestedFileUris = missingFileUris.filter(
+      (fileUri) => !settledFileUris.has(fileUri) && !inFlightFileUrisRef.current.has(fileUri),
+    );
+    if (!requestedFileUris.length) return;
+
+    requestedFileUris.forEach((fileUri) => inFlightFileUrisRef.current.add(fileUri));
+
+    void FileController.fetchFiles({ fileUris: requestedFileUris })
+      .catch((error) => {
+        Logger.error('[VisualFeed] Failed to fetch missing file metadata', {
+          fileUris: requestedFileUris,
+          error,
+        });
+      })
+      .finally(() => {
+        requestedFileUris.forEach((fileUri) => inFlightFileUrisRef.current.delete(fileUri));
+        // Settle either way: a request that failed or came back without a row
+        // has told the feed everything it can, and `hasPendingFiles` is a
+        // loading gate. The URI stays in `missingFileUris` until a row lands,
+        // so a later arrival still renders — it just no longer blocks the feed.
+        setSettledFileUris((previous) => {
+          if (requestedFileUris.every((fileUri) => previous.has(fileUri))) {
+            return previous;
+          }
+
+          const next = new Set(previous);
+          requestedFileUris.forEach((fileUri) => next.add(fileUri));
+          return next;
+        });
       });
-    });
-  }, [missingFileUris, missingFileUrisKey]);
+  }, [missingFileUris, missingFileUrisKey, settledFileUris]);
 
   const tiles = (snapshot?.tiles ?? []).map(resolveTileProbeState);
   const pendingOverflowFallbackIds = React.useMemo(() => {
@@ -492,13 +527,18 @@ export function useVisualFeedTiles({
     firstPendingTileIndex === -1 && !hasMore,
   );
 
+  // Only file URIs whose fetch has not settled yet count as pending: a URI that
+  // is still absent after its request came back has no row to wait for, and
+  // gating on it would leave the feed on its skeleton with nothing in flight.
+  const hasPendingFiles = missingFileUris.some((fileUri) => !settledFileUris.has(fileUri));
+
   return {
     rows,
     tail,
     tiles: stabilizedTiles,
     hasPendingSnapshot,
     hasPendingTiles: firstPendingTileIndex !== -1,
-    hasPendingFiles: missingFileUris.length > 0,
+    hasPendingFiles,
     hasPendingPostDetails: (snapshot?.pendingDetailPostCount ?? 0) > 0,
     hiddenPostCount: snapshot?.hiddenPostCount ?? 0,
   };

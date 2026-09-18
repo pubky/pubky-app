@@ -5,7 +5,7 @@ import { PostApplication } from '@/application/post/post';
 import { COLLECTION_LAYOUT } from '@/config/collections';
 import type { TCreatePostParams, TFetchPostTaggersParams } from '@/controllers/post/post.types';
 import { db } from '@/database/franky/franky';
-import { DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, DatabaseErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -1531,6 +1531,36 @@ describe('PostController', () => {
     });
   });
 
+  describe('commitCreateCollection cover upload', () => {
+    const coverFile = () => new File(['x'], 'cover.png', { type: 'image/png' });
+    const createParams = () => ({
+      authorId: testData.authorPubky,
+      name: 'Reading list',
+      description: '',
+      coverImage: coverFile(),
+    });
+
+    it('keeps an expired-session cover failure classified instead of wrapping it as validation', async () => {
+      const authError = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+      });
+      vi.spyOn(FileApplication, 'toFileAttachment').mockRejectedValue(authError);
+
+      const { PostController } = await import('./post');
+      await expect(PostController.commitCreateCollection(createParams())).rejects.toBe(authError);
+    });
+
+    it('still wraps non-auth cover failures as validation', async () => {
+      vi.spyOn(FileApplication, 'toFileAttachment').mockRejectedValue(new Error('boom'));
+
+      const { PostController } = await import('./post');
+      await expect(PostController.commitCreateCollection(createParams())).rejects.toThrow(
+        'Failed to upload collection cover image',
+      );
+    });
+  });
+
   describe('commitEditCollection', () => {
     const collectionPostId = buildCompositeId({ pubky: testData.authorPubky, id: 'editCol1' });
     const existingItemUri = 'pubky://target_author_pubky/pub/pubky.app/posts/keep-me';
@@ -1874,6 +1904,30 @@ describe('PostController', () => {
             coverImage: new File(['x'], 'cover.png', { type: 'image/png' }),
           }),
         ).rejects.toThrow('Failed to upload collection cover image');
+      } finally {
+        cleanupAuthUser();
+      }
+    });
+
+    it('keeps an expired-session cover failure classified instead of wrapping it as validation', async () => {
+      setupAuthUser(testData.authorPubky);
+      vi.spyOn(PostApplication, 'getDetails').mockResolvedValue(createCollectionDetails());
+      const authError = Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+      });
+      vi.spyOn(FileApplication, 'toFileAttachment').mockRejectedValue(authError);
+
+      try {
+        const { PostController } = await import('./post');
+        await expect(
+          PostController.commitEditCollection({
+            compositeCollectionId: collectionPostId,
+            name: 'Renamed',
+            description: '',
+            coverImage: new File(['x'], 'cover.png', { type: 'image/png' }),
+          }),
+        ).rejects.toBe(authError);
       } finally {
         cleanupAuthUser();
       }

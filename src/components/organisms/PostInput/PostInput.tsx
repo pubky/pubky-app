@@ -113,6 +113,7 @@ export function PostInput({
     setMentionSelectedIndex,
     handleMentionSelect,
     handleMentionKeyDown,
+    handleSelectionChange,
   } = usePostInput({
     variant,
     postId,
@@ -418,6 +419,8 @@ export function PostInput({
                         onChange={handleChangeWithAuth}
                         onFocus={handleExpandWithAuth}
                         onKeyDown={handleKeyDown}
+                        onKeyUp={handleSelectionChange}
+                        onSelect={handleSelectionChange}
                         onPaste={handlePasteWithAuth}
                         maxLength={POST_MAX_CHARACTER_LENGTH}
                         rows={1}
