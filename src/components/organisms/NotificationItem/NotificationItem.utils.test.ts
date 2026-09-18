@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { type FlatNotification, NotificationType, PostChangedSource } from '@/models/notification/notification.types';
-import { getNotificationActionText, getNotificationLink, hasPostPreview } from './NotificationItem.utils';
+import {
+  formatPreviewText,
+  getNotificationActionText,
+  getNotificationLink,
+  hasPostPreview,
+} from './NotificationItem.utils';
 
 describe('NotificationItem utilities', () => {
   it('shows the subject preview for edited-collection notifications', () => {
@@ -146,5 +151,48 @@ describe('NotificationItem utilities', () => {
 
     expect(notificationLink).toBeNull();
     expect(userProfileLink).toBe('/profile/owner');
+  });
+});
+
+describe('formatPreviewText', () => {
+  it('returns null for missing content', () => {
+    expect(formatPreviewText(null)).toBeNull();
+    expect(formatPreviewText(undefined)).toBeNull();
+    expect(formatPreviewText('')).toBeNull();
+  });
+
+  it('quotes and truncates ASCII content to 20 characters', () => {
+    expect(formatPreviewText('This is a short post content')).toBe("'This is a short post...'");
+    expect(formatPreviewText('Short')).toBe("'Short'");
+  });
+
+  it('keeps an emoji that sits at the 20th position instead of splitting its surrogate pair', () => {
+    // 19 ASCII characters + one emoji = exactly 20 graphemes, so nothing is truncated.
+    const preview = formatPreviewText('Then collapse them 🙃');
+
+    expect(preview).toBe("'Then collapse them 🙃'");
+    expect(preview).not.toContain('\uFFFD');
+  });
+
+  it('truncates on a grapheme boundary when an emoji straddles the limit', () => {
+    const preview = formatPreviewText(`${'a'.repeat(19)}🙃🙃🙃`);
+
+    expect(preview).toBe(`'${'a'.repeat(19)}🙃...'`);
+    expect(preview).not.toContain('\uFFFD');
+  });
+
+  it('keeps a combining mark attached to its base character at the limit', () => {
+    const preview = formatPreviewText(`${'a'.repeat(19)}e\u0301xyz`);
+
+    expect(preview).toBe(`'${'a'.repeat(19)}e\u0301...'`);
+    expect(preview).not.toContain('\uFFFD');
+  });
+
+  it('keeps a zero-width-joiner cluster whole at the limit', () => {
+    const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}';
+    const preview = formatPreviewText(`${'a'.repeat(19)}${family}`);
+
+    expect(preview).toBe(`'${'a'.repeat(19)}${family}'`);
+    expect(preview).not.toContain('\uFFFD');
   });
 });

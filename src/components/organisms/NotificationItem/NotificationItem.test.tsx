@@ -536,6 +536,28 @@ describe('NotificationItem', () => {
     });
   });
 
+  it('keeps an emoji at the preview boundary instead of showing a replacement character', async () => {
+    mockPostDetails.value = {
+      kind: 'short',
+      content: 'Then collapse them 🙃',
+    };
+
+    const mentionNotification = {
+      id: 'mention:123:user1',
+      type: NotificationType.Mention,
+      timestamp: Date.now() - 1000 * 60 * 30,
+      mentioned_by: 'user1',
+      post_uri: 'pubky://user1/pub/pubky.app/posts/post123',
+    } as FlatNotification;
+
+    render(<NotificationItem notification={mentionNotification} isUnread={false} />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("'Then collapse them 🙃'")).toBeInTheDocument();
+    });
+    expect(document.body.textContent).not.toContain('\uFFFD');
+  });
+
   it('shows deleted message when post is deleted', async () => {
     mockPostDetails.value = {
       kind: 'short',
