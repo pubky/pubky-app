@@ -91,12 +91,24 @@ describe('HeaderHome', () => {
     window.IntersectionObserver = MockIntersectionObserver;
   });
 
-  it('renders social links and sign in button', () => {
+  it('renders Learn, Explore and Sign in on the landing page (social links live in the hero footer)', () => {
+    render(<HeaderHome />);
+
+    expect(screen.queryByTestId('header-social-links')).not.toBeInTheDocument();
+    expect(screen.getByTestId('header-learn-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('header-explore-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /join/i })).not.toBeInTheDocument();
+  });
+
+  it('renders social links and sign in button on other public pages', () => {
+    vi.mocked(usePathname).mockReturnValue('/copyright');
+
     render(<HeaderHome />);
 
     expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
+    expect(screen.queryByTestId('header-learn-btn')).not.toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /join/i })).not.toBeInTheDocument();
   });
 
   it('renders Learn and Explore next to Sign in on the logout page', () => {

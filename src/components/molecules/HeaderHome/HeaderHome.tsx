@@ -65,37 +65,45 @@ export const HeaderHome = ({ ...props }: React.HTMLAttributes<HTMLDivElement>) =
     router.push(APP_ROUTES.HOME);
   };
 
+  // Landing and logout share the navbar from the design: Learn / Explore (desktop) + Sign in.
+  // The social links live in the landing hero footer instead (see HomeFooter).
+  const learnExploreButtons = (
+    <>
+      <Button
+        id="header-learn-btn"
+        data-testid="header-learn-btn"
+        variant="outline"
+        onClick={handleLearn}
+        className="hidden gap-2 md:inline-flex"
+      >
+        <BookOpen className="size-4" />
+        {'Learn'}
+      </Button>
+      <Button
+        id="header-explore-btn"
+        data-testid="header-explore-btn"
+        variant="outline"
+        onClick={handleExplore}
+        className="hidden gap-2 md:inline-flex"
+      >
+        <Eye className="size-4" />
+        {'Explore'}
+      </Button>
+    </>
+  );
+
   if (isLogoutPage) {
     return (
       <Container className="flex-1 flex-row items-center justify-end gap-3" {...props}>
-        <Button
-          id="header-learn-btn"
-          data-testid="header-learn-btn"
-          variant="outline"
-          onClick={handleLearn}
-          className="hidden gap-2 md:inline-flex"
-        >
-          <BookOpen className="size-4" />
-          {'Learn'}
-        </Button>
-        <Button
-          id="header-explore-btn"
-          data-testid="header-explore-btn"
-          variant="outline"
-          onClick={handleExplore}
-          className="hidden gap-2 md:inline-flex"
-        >
-          <Eye className="size-4" />
-          {'Explore'}
-        </Button>
+        {learnExploreButtons}
         <HeaderButtonSignIn />
       </Container>
     );
   }
 
   return (
-    <Container className="flex-1 flex-row items-center justify-end" {...props}>
-      <HeaderSocialLinks />
+    <Container className="flex-1 flex-row items-center justify-end gap-3" {...props}>
+      {isLandingPage ? learnExploreButtons : <HeaderSocialLinks />}
       <AnimatePresence initial={false}>
         {showJoinButton && (
           <motion.div

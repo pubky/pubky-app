@@ -18,6 +18,7 @@ import { DialogPrivacy } from '@/organisms/DialogPrivacy/DialogPrivacy';
 import { DialogTerms } from '@/organisms/DialogTerms/DialogTerms';
 import { LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
 import { ActionButtons } from '../ActionButtons/ActionButtons';
+import { HeaderSocialLinks } from '../Header/Header';
 
 export const HomeActions = () => {
   const router = useRouter();
@@ -62,7 +63,10 @@ export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
         </Link>
         {' and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.'}
       </FooterLinks>
-      <HomeBrandFooter className="mt-2" />
+      <Container className="mt-2 flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+        <HomeBrandFooter />
+        <HeaderSocialLinks className="mr-0 flex justify-start gap-4 md:justify-end" />
+      </Container>
     </Container>
   );
 };

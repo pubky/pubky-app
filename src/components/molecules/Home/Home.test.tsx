@@ -95,6 +95,18 @@ vi.mock('@/organisms/DialogTerms/DialogTerms', () => {
 vi.mock('@/config/externalLinks', () => ({
   PUBKY_CORE_URL: 'https://github.com/pubky/pubky-core',
   getPubkyCoreLink: () => 'https://github.com/pubky/pubky-core',
+  getGithubLink: () => 'https://github.com/pubky',
+  getTwitterGetpubkyLink: () => 'https://x.com/getpubky',
+  getTelegramLink: () => 'https://t.me/pubkychat',
+}));
+
+// Social links moved from the landing navbar into the hero footer (design 41492-354461).
+vi.mock('../Header/Header', () => ({
+  HeaderSocialLinks: ({ className }: { className?: string }) => (
+    <div data-testid="header-social-links" className={className}>
+      Social Links
+    </div>
+  ),
 }));
 
 // Mock atoms
@@ -285,6 +297,12 @@ describe('HomeFooter', () => {
 
     expect(screen.getByAltText('Synonym')).toBeInTheDocument();
     expect(screen.getByAltText('a tether. company')).toBeInTheDocument();
+  });
+
+  it('renders the social links beside the brand endorsement', () => {
+    render(<HomeFooter />);
+
+    expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
   });
 });
 

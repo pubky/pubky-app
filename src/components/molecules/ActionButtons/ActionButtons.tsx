@@ -16,6 +16,11 @@ interface ActionButtonsProps {
   isContinueWithGooglePending?: boolean;
 }
 
+/**
+ * Landing hero actions. Primary row: "Join now" plus, when Passport is available, "Continue with
+ * Google". Learn / Explore are secondary: on desktop they live in the navbar (`HeaderHome`), so
+ * here they render only below `md` as an outline row under the primary actions.
+ */
 export function ActionButtons({
   className,
   onLearn,
@@ -25,57 +30,58 @@ export function ActionButtons({
   isContinueWithGooglePending = false,
   ...props
 }: ActionButtonsProps) {
-  const hasBothSecondaryActions = Boolean(onLearn && onExplore);
-  const secondaryActionClassName = cn('w-full sm:w-auto', !hasBothSecondaryActions && 'col-span-2 sm:col-span-1');
+  const hasSecondaryActions = Boolean(onLearn || onExplore);
 
   return (
-    <Container
-      display="grid"
-      className={cn('grid-cols-2 gap-3 sm:flex sm:flex-row sm:items-center', className)}
-      {...props}
-    >
-      {onLearn && (
+    <Container className={cn('gap-4', className)} {...props}>
+      <Container className="flex-col gap-3 sm:flex-row sm:items-center">
         <Button
-          id="learn-btn"
-          data-cy="learn-btn"
-          variant="secondary"
-          className={secondaryActionClassName}
+          id="create-account-btn"
+          variant="brand"
+          className="w-full px-10 sm:w-auto"
           size="lg"
-          onClick={onLearn}
+          onClick={onCreateAccount}
         >
-          <BookOpen className="h-4 w-4" />
-          {'Learn'}
+          <UserRoundPlus className="h-4 w-4" />
+          {'Join now'}
         </Button>
-      )}
-      {onExplore && (
-        <Button
-          id="explore-btn"
-          data-cy="explore-btn"
-          variant="secondary"
-          className={secondaryActionClassName}
-          size="lg"
-          onClick={onExplore}
-        >
-          <Eye className="h-4 w-4" />
-          {'Explore'}
-        </Button>
-      )}
-      <Button
-        id="create-account-btn"
-        variant="brand"
-        className="order-first col-span-2 w-full px-10 sm:order-none sm:col-span-1 sm:w-auto"
-        size="lg"
-        onClick={onCreateAccount}
-      >
-        <UserRoundPlus className="h-4 w-4" />
-        {'Join'}
-      </Button>
-      {onContinueWithGoogle && (
-        <ContinueWithPassport
-          onContinue={onContinueWithGoogle}
-          isPending={isContinueWithGooglePending}
-          className="order-first col-span-2 w-full sm:order-none sm:col-span-1 sm:w-auto"
-        />
+        {onContinueWithGoogle && (
+          <ContinueWithPassport
+            onContinue={onContinueWithGoogle}
+            isPending={isContinueWithGooglePending}
+            className="w-full sm:w-auto"
+          />
+        )}
+      </Container>
+      {hasSecondaryActions && (
+        <Container className="flex-row gap-3 md:hidden" data-testid="action-buttons-secondary">
+          {onLearn && (
+            <Button
+              id="learn-btn"
+              data-cy="learn-btn"
+              variant="outline"
+              className="flex-1 gap-2"
+              size="lg"
+              onClick={onLearn}
+            >
+              <BookOpen className="h-4 w-4" />
+              {'Learn'}
+            </Button>
+          )}
+          {onExplore && (
+            <Button
+              id="explore-btn"
+              data-cy="explore-btn"
+              variant="outline"
+              className="flex-1 gap-2"
+              size="lg"
+              onClick={onExplore}
+            >
+              <Eye className="h-4 w-4" />
+              {'Explore'}
+            </Button>
+          )}
+        </Container>
       )}
     </Container>
   );
