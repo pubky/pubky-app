@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HomegateController } from '@/controllers/homegate/homegate';
+import { btcRateSchema } from '@/hooks/useSatUsdRate/useSatUsdRate';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -24,6 +25,14 @@ describe('API Route: /api/btc-rate', () => {
       expect(data.btcUsd).toBe(rate.btcUsd);
       // `useBtcRate` rebuilds the Date from this field, so the serialized form has to survive the trip.
       expect(new Date(data.lastUpdatedAt).getTime()).toBe(rate.lastUpdatedAt.getTime());
+    });
+
+    // Guards every reader of this hook, Locks and onboarding alike: if the route's serialized shape
+    // and the client schema ever drift apart, every caller silently degrades to "rate unavailable".
+    it('should answer with a body the client schema accepts', async () => {
+      const response = await GET();
+
+      expect(btcRateSchema.safeParse(await response.json()).success).toBe(true);
     });
 
     it('should send the Cache-Control header the CDN caches on', async () => {

@@ -97,7 +97,7 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
             </Container>
 
             {rateStatus === 'failed' && (
-              <Typography className="pt-1 text-xs text-muted-foreground">
+              <Typography className="pt-1 text-xs text-destructive">
                 {"The dollar value can't be shown right now. Your price in sats is unaffected."}
               </Typography>
             )}
@@ -118,6 +118,9 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
             size="lg"
             onClick={handleApply}
             disabled={!isValidAmount}
+            // The Button base sets disabled:pointer-events-none, which would swallow the hover and
+            // leave the default arrow cursor. A disabled button still cannot fire a click.
+            className="disabled:pointer-events-auto disabled:cursor-not-allowed"
             data-cy="lock-content-apply"
           >
             {'Apply Lock'}

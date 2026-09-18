@@ -5,12 +5,12 @@ import { z } from 'zod';
 import { Logger } from '@/libs/logger/logger';
 import type { BtcRate } from '@/services/exchangerate/exchangerate.types';
 
-export type TBtcRateResult = { rate: BtcRate | null; status: 'loading' | 'ready' | 'failed' };
+type TBtcRateResult = { rate: BtcRate | null; status: 'loading' | 'ready' | 'failed' };
 
 // The route can answer 200 with something that is not a rate — a proxy error page, or a field
 // renamed on the server. Without this schema such a body reaches the UI as `satUsd: undefined`,
 // and the price line shows `$NaN` instead of saying the dollar value is unavailable.
-const btcRateSchema = z.object({
+export const btcRateSchema = z.object({
   satUsd: z.number().positive(),
   btcUsd: z.number().positive(),
   // Only a string or a number reaches the coercion — `new Date(null)` would otherwise pass as 1970.
