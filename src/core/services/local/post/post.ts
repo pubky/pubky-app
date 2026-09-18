@@ -6,6 +6,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -18,7 +19,6 @@ import { PostRelationshipsModel } from '@/models/post/relationships/postRelation
 import type { PostRelationshipsModelSchema } from '@/models/post/relationships/postRelationships.schema';
 import { PostTagsModel } from '@/models/post/tags/postTags';
 import { PostTtlModel } from '@/models/post/ttl/postTtl';
-import type { TagCollectionModelSchema } from '@/models/shared/tag/tag.schema';
 import {
   buildAuthorCollectionsStreamId,
   getPostStreamKind,
@@ -129,19 +129,34 @@ export class LocalPostService {
     return PostRelationshipsModel.getReplies(postId);
   }
 
-  /**
-   * Reads tags for a specific post from local database
-   * @param postId - Composite post ID (author:postId)
-   * @returns Array of tag collections or empty array if not found
-   */
-  static async readTags(postId: string): Promise<TagCollectionModelSchema<string>[]> {
-    const tags = await PostTagsModel.findById(postId);
-    if (!tags) return [];
-    return [tags] as unknown as TagCollectionModelSchema<string>[];
-  }
-
   static async updatePostCounts({ postCompositeId, countChanges }: TPostCountsParams) {
     await PostCountsModel.updateCounts({ postCompositeId, countChanges });
+  }
+
+  /**
+   * Upserts a post TTL record so the post becomes stale again after `retryDelayMs`.
+   * Used when Nexus omits a subscribed post (deleted, or not indexed yet) so the
+   * coordinator retries it on a cooldown instead of every tick.
+   *
+   * The timestamp is calculated as: now - (postTtlMs - retryDelayMs). With
+   * `unlessWrittenSince`, a row written at or after that time (a local edit, or
+   * another successful refresh, landed while the batch was in flight) is kept, so
+   * the cooldown never shortens real freshness. The check and the write share one
+   * transaction.
+   */
+  static async upsertTtlWithDelay(
+    compositePostId: string,
+    retryDelayMs: number,
+    options: { unlessWrittenSince?: number } = {},
+  ): Promise<void> {
+    const lastUpdatedAt = Date.now() - (getTtlPostMs() - retryDelayMs);
+    await db.transaction('rw', PostTtlModel.table, async () => {
+      if (options.unlessWrittenSince !== undefined) {
+        const existing = await PostTtlModel.findById(compositePostId);
+        if (existing && existing.lastUpdatedAt >= options.unlessWrittenSince) return;
+      }
+      await PostTtlModel.upsert({ id: compositePostId, lastUpdatedAt });
+    });
   }
 
   /**
@@ -298,7 +313,14 @@ export class LocalPostService {
             PostDetailsModel.create(postDetails),
             PostRelationshipsModel.create(postRelationships),
             PostCountsModel.create(postCounts),
-            PostTagsModel.create({ id: compositePostId, tags: [] }),
+            // A new post has no tags on Nexus yet. Seed an initialized, complete, fresh window
+            // for its author so the first card mount does not force a tag request and the
+            // TTL pass does not flag it immediately.
+            PostTagsModel.create({
+              id: compositePostId,
+              tags: [],
+              cache: { cursor: 0, exhausted: true, fetchedAt: Date.now(), revision: 0, viewerId: authorId },
+            }),
           ]);
 
           const ops: Promise<unknown>[] = [];

@@ -8,6 +8,7 @@ import { UserConnectionsModel } from '@/models/user/connections/userConnections'
 import { UserConnectionsFields } from '@/models/user/connections/userConnections.schema';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { UserStreamReach } from '@/services/nexus/nexus.types';
@@ -20,7 +21,7 @@ export class LocalFollowService {
 
       await db.transaction(
         'rw',
-        [UserCountsModel.table, UserConnectionsModel.table, UserRelationshipsModel.table],
+        [UserCountsModel.table, UserConnectionsModel.table, UserRelationshipsModel.table, UserTtlModel.table],
         async () => {
           const rel = await UserRelationshipsModel.findById(followee);
           // Snapshot: whether followee already follows follower
@@ -63,6 +64,9 @@ export class LocalFollowService {
           } else {
             ops.push(UserRelationshipsModel.create({ id: followee, following: true, followed_by: false }));
           }
+          // Stamp the followee TTL so an in-flight Nexus refresh cannot treat this
+          // write as stale and overwrite following: true.
+          ops.push(UserTtlModel.upsert({ id: followee, lastUpdatedAt: Date.now() }));
 
           await Promise.all(ops);
         },
@@ -91,7 +95,7 @@ export class LocalFollowService {
 
       await db.transaction(
         'rw',
-        [UserCountsModel.table, UserConnectionsModel.table, UserRelationshipsModel.table],
+        [UserCountsModel.table, UserConnectionsModel.table, UserRelationshipsModel.table, UserTtlModel.table],
         async () => {
           const rel = await UserRelationshipsModel.findById(followee);
           // Snapshot: whether we were following according to relationship model
@@ -133,6 +137,7 @@ export class LocalFollowService {
           } else {
             ops.push(UserRelationshipsModel.create({ id: followee, following: false, followed_by: false }));
           }
+          ops.push(UserTtlModel.upsert({ id: followee, lastUpdatedAt: Date.now() }));
 
           await Promise.all(ops);
         },

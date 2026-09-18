@@ -1,5 +1,6 @@
 'use client';
 
+import { useTransition } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Loader2, UserRoundPlus } from 'lucide-react';
@@ -9,6 +10,7 @@ import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useCreateInterestsFeed } from '@/hooks/useCreateInterestsFeed/useCreateInterestsFeed';
 import { useFollowAll } from '@/hooks/useFollowAll/useFollowAll';
 import { useFollowingCount } from '@/hooks/useFollowingCount/useFollowingCount';
 import { useStarterPackSuggestions } from '@/hooks/useStarterPackSuggestions/useStarterPackSuggestions';
@@ -24,6 +26,7 @@ export const FollowBestMatchesForm = () => {
   const router = useRouter();
   const pubky = useAuthStore((state) => state.currentUserPubky);
   const markExperienceCompleted = useOnboardingStore((state) => state.markExperienceCompleted);
+  const interestTags = useOnboardingStore((state) => state.interestTags);
 
   const {
     users,
@@ -45,18 +48,34 @@ export const FollowBestMatchesForm = () => {
     isRunning: isFollowingAll,
     progress,
   } = useFollowAll({ onFollowStarted: preserveFollowedUser, onFollowFailed: unpreserveFollowedUser });
+  const { createInterestsFeed, isCreating: isCreatingInterestsFeed } = useCreateInterestsFeed();
+  // The home route is fetched on Finish (nothing prefetches it), so the redirect runs as a
+  // transition: Finish keeps its loading state from the click until the home page renders,
+  // rather than dropping it the moment the feed write completes.
+  const [isNavigatingHome, startNavigation] = useTransition();
+  const isFinishing = isCreatingInterestsFeed || isNavigatingHome;
 
   const showFollowAll = !isLoading && (unfollowedUsers.length > 0 || isFollowingAll);
   // Finish decides the landing feed from `followingCount`, which only updates once a follow's
   // local write lands. Lock navigation while suggestions or the count are still settling and while
   // any follow (single card or Follow all) is in flight, so Finish never reads a stale count.
-  const isNavigationLocked = isLoading || isFollowingCountLoading || isFollowingAll || isFollowPending;
+  // Finish also stays locked while it writes the Interests feed and redirects home, so it cannot
+  // be double-fired; the follow toggles lock too, so no follow can land after the count was read.
+  const isNavigationLocked = isLoading || isFollowingCountLoading || isFollowingAll || isFollowPending || isFinishing;
 
   const handleFollowAll = () => {
     void followAll(unfollowedUsers.map(({ id, isFollowing }) => ({ id, isFollowing })));
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
+    // The Interests feed is the tags step's side effect, created here rather than on Tags
+    // Continue because Back from this screen can still change the selection. A failed write
+    // (reported by the hook's toast) keeps the user on this step with Finish re-enabled: the
+    // selection is still in the store, and the config-derived feed ID makes the retry an upsert.
+    if (interestTags.length > 0) {
+      const created = await createInterestsFeed(interestTags);
+      if (!created) return;
+    }
     // This screen owns Experience completion: written here (not on Tags Continue) so Back
     // from this screen never trips the re-prompt guard on the tags step.
     if (pubky) {
@@ -69,7 +88,9 @@ export const FollowBestMatchesForm = () => {
     if (followingCount >= 1) {
       useHomeStore.getState().setReach(REACH.NETWORK);
     }
-    router.replace(APP_ROUTES.HOME);
+    startNavigation(() => {
+      router.replace(APP_ROUTES.HOME);
+    });
   };
 
   const handleBack = () => {
@@ -106,7 +127,7 @@ export const FollowBestMatchesForm = () => {
                 variant="brand"
                 size="sm"
                 onClick={handleFollowAll}
-                disabled={isFollowingAll || isFollowPending}
+                disabled={isFollowingAll || isFollowPending || isFinishing}
                 data-cy="follow-all-btn"
                 data-testid="follow-all-btn"
               >
@@ -140,6 +161,7 @@ export const FollowBestMatchesForm = () => {
                   key={user.id}
                   user={user}
                   isLoading={isFollowingAll || isUserLoading(user.id)}
+                  disabled={isFinishing}
                   onFollowClick={handleFollowClick}
                 />
               ))}
@@ -154,6 +176,7 @@ export const FollowBestMatchesForm = () => {
         onHandleBackButton={handleBack}
         backButtonDisabled={isNavigationLocked}
         continueButtonDisabled={isNavigationLocked}
+        continueButtonLoading={isFinishing}
         continueText={'Finish'}
         onContinue={handleFinish}
       />

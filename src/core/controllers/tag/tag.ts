@@ -1,16 +1,14 @@
 import { TagApplication } from '@/application/tag/tag';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
-import type { TLocalTagMutation, TLocalTagParams } from '@/services/local/tag/tag.types';
+import type { TViewerTagMutationsParams } from '@/services/local/tag/tag.types';
 
 export class TagController {
-  static subscribeViewerMutations(listener: (params: TLocalTagMutation) => void) {
-    return TagApplication.subscribeViewerMutations(listener);
-  }
   private constructor() {}
 
-  static getViewerMutation(params: TLocalTagParams) {
-    return TagApplication.getViewerMutation(params);
+  static getViewerMutations(params: TViewerTagMutationsParams) {
+    return TagApplication.getViewerMutations(params);
   }
 
   /**
@@ -23,7 +21,7 @@ export class TagController {
   static async commitCreate(params: TTagEventParams) {
     const tag = TagNormalizer.from(params);
 
-    await TagApplication.commitCreate({ tagList: [tag] });
+    await TagApplication.commitCreate({ tagList: [tag], isCurrent: captureViewerSession() });
   }
 
   /**
@@ -42,6 +40,7 @@ export class TagController {
       taggedKind,
       taggerId,
       tagUrl,
+      isCurrent: captureViewerSession(),
     });
   }
 }

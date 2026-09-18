@@ -7,7 +7,11 @@ import { PostStreamId } from '../postStream.types';
 export class PostStreamModel extends BaseStreamModel<PostStreamId, string, PostStreamModelSchema> {
   static table: Table<PostStreamModelSchema> = db.table('post_streams');
 
+  /** See `PostStreamModelSchema.tailCursor`. */
+  tailCursor?: number;
+
   constructor(stream: PostStreamModelSchema) {
     super(stream);
+    this.tailCursor = stream.tailCursor;
   }
 }

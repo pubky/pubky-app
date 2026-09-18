@@ -1,6 +1,6 @@
 {
   "name": "franky",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -24,6 +24,7 @@
     "test:vrt": "vitest run --project vrt",
     "test:vrt:check-baselines": "bash src/test-utils/vrt.screenshot-siblings.sh",
     "test:vrt:regenerate-baseline": "vitest run --project vrt --update",
+    "test:vrt:setup": "playwright install --with-deps chromium firefox webkit",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path .prettierignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\" --ignore-path .prettierignore",
     "precommit": "lint-staged && npm run typecheck",
@@ -49,7 +50,7 @@
     "@prelude.so/js-sdk": "0.14.0",
     "@sentry/nextjs": "10.71.0",
     "@serwist/next": "9.5.12",
-    "@synonymdev/pubky": "0.8.0",
+    "@synonymdev/pubky": "0.11.0",
     "@tanstack/react-query": "5.102.8",
     "@vitest/browser": "4.1.11",
     "@vitest/browser-playwright": "4.1.11",
@@ -135,5 +136,10 @@
     "typescript": "5.9.3",
     "vite-tsconfig-paths": "6.1.1",
     "vitest-browser-react": "^2.2.0"
+  },
+  "allowScripts": {
+    "@sentry/cli": true,
+    "browser-tabs-lock": true,
+    "cypress": true
   }
 }

@@ -14,6 +14,7 @@ import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider'
 import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
 import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
 import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
+import { ServiceWorkerRegistrationProvider } from '@/providers/ServiceWorkerRegistrationProvider/ServiceWorkerRegistrationProvider';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -45,20 +46,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       */}
       <StructuredData />
       <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
-        <GlobalErrorHandlerProvider>
-          <ErrorBoundaryProvider>
-            <DatabaseProvider>
-              <RouteGuardProvider>
-                <CoordinatorsManager />
-                <Header />
-                {children}
-                <Fab />
-                <Toaster />
-                <DialogSignIn />
-              </RouteGuardProvider>
-            </DatabaseProvider>
-          </ErrorBoundaryProvider>
-        </GlobalErrorHandlerProvider>
+        <ServiceWorkerRegistrationProvider>
+          <GlobalErrorHandlerProvider>
+            <ErrorBoundaryProvider>
+              <DatabaseProvider>
+                <RouteGuardProvider>
+                  <CoordinatorsManager />
+                  <Header />
+                  {children}
+                  <Fab />
+                  <Toaster />
+                  <DialogSignIn />
+                </RouteGuardProvider>
+              </DatabaseProvider>
+            </ErrorBoundaryProvider>
+          </GlobalErrorHandlerProvider>
+        </ServiceWorkerRegistrationProvider>
       </TooltipProvider>
     </RootContainer>
   );

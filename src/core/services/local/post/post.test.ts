@@ -1,6 +1,7 @@
 import { PubkyAppPost, PubkyAppPostEmbed, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
+import { getTtlPostMs } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import { PostCountsModel } from '@/models/post/counts/postCounts';
@@ -117,6 +118,38 @@ const setupUserCounts = async (userId: Pubky) => {
   await UserCountsModel.table.add(userCounts);
 };
 
+describe('LocalPostService.upsertTtlWithDelay', () => {
+  const postId = 'author:post';
+  const retryDelayMs = 60_000;
+
+  beforeEach(async () => {
+    await db.initialize();
+    await PostTtlModel.table.clear();
+  });
+
+  it('parks a missing row so it goes stale again after the retry delay', async () => {
+    const before = Date.now();
+    await LocalPostService.upsertTtlWithDelay(postId, retryDelayMs);
+    const parked = await PostTtlModel.findById(postId);
+    expect(parked!.lastUpdatedAt).toBeGreaterThanOrEqual(before - (getTtlPostMs() - retryDelayMs));
+    expect(parked!.lastUpdatedAt).toBeLessThanOrEqual(Date.now() - (getTtlPostMs() - retryDelayMs));
+  });
+
+  it('parks a row that predates the batch even when asked to keep newer writes', async () => {
+    await PostTtlModel.upsert({ id: postId, lastUpdatedAt: 1 });
+    await LocalPostService.upsertTtlWithDelay(postId, retryDelayMs, { unlessWrittenSince: Date.now() });
+    expect((await PostTtlModel.findById(postId))!.lastUpdatedAt).toBeGreaterThan(1);
+  });
+
+  it('keeps a row written since the batch started instead of shortening its freshness', async () => {
+    const fetchStartedAt = Date.now();
+    const fresh = fetchStartedAt + 1;
+    await PostTtlModel.upsert({ id: postId, lastUpdatedAt: fresh });
+    await LocalPostService.upsertTtlWithDelay(postId, retryDelayMs, { unlessWrittenSince: fetchStartedAt });
+    expect((await PostTtlModel.findById(postId))!.lastUpdatedAt).toBe(fresh);
+  });
+});
+
 describe('LocalPostService', () => {
   beforeEach(async () => {
     await db.initialize();
@@ -168,6 +201,10 @@ describe('LocalPostService', () => {
 
       expect(tags).toBeTruthy();
       expect(tags!.tags).toEqual([]);
+      // A new post has no tags on Nexus yet: its author's window is initialized, complete and fresh,
+      // so the first card mount does not force a tag request and the TTL pass does not flag it.
+      expect(tags!.cache).toMatchObject({ cursor: 0, exhausted: true, revision: 0, viewerId: testData.authorPubky });
+      expect(tags!.cache!.fetchedAt).toBeGreaterThan(0);
 
       expect(relationships).toBeTruthy();
       expect(relationships!.replied).toBeNull();

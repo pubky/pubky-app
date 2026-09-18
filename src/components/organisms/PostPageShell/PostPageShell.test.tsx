@@ -1,8 +1,13 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { usePostMissing } from '@/hooks/usePostMissing/usePostMissing';
 import { POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { PostPageShell } from './PostPageShell';
+
+vi.mock('@/hooks/usePostHeaderVisibility/usePostHeaderVisibility', () => ({
+  usePostHeaderVisibility: vi.fn(() => ({ showRepostHeader: false, shouldShowPostHeader: true, originalPostId: null })),
+}));
 
 const VALID_COMPOSITE_POST_ID = `${PUBKY_52_STAGING_FIXTURE}:${POST_ID_STAGING_FIXTURE}`;
 
@@ -68,11 +73,32 @@ vi.mock('@/organisms/SinglePostRightPanel/SinglePostRightPanel', () => ({
 describe('PostPageShell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: false,
+      shouldShowPostHeader: true,
+      originalPostId: null,
+    });
     vi.mocked(usePostMissing).mockReturnValue({
       postMissing: false,
       postDetails: undefined,
       isLoading: true,
     });
+  });
+
+  it('uses the displayed original for desktop and drawer participants', () => {
+    vi.mocked(usePostHeaderVisibility).mockReturnValue({
+      showRepostHeader: true,
+      shouldShowPostHeader: false,
+      originalPostId: 'author:original',
+    });
+    render(
+      <PostPageShell postId={VALID_COMPOSITE_POST_ID}>
+        <div>body</div>
+      </PostPageShell>,
+    );
+    for (const panel of screen.getAllByTestId('single-post-right-panel')) {
+      expect(panel).toHaveAttribute('data-post-id', 'author:original');
+    }
   });
 
   it('renders post body without in-column search or header navigation', () => {

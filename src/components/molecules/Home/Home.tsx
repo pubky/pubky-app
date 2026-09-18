@@ -46,7 +46,7 @@ export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
     <Container className={cn('flex-1 flex-col items-start justify-end gap-1', className)} {...props}>
       <FooterLinks>
         {'By creating a '}
-        <span className="text-brand">Pubky</span>
+        {'Pubky'}
         {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
         {', and confirm you are'} <DialogAge /> {'Pubky is powered by '}
         <Link href={getPubkyCoreLink()} target="_blank">
