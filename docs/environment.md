@@ -70,12 +70,44 @@ const debugMode = Env.NEXT_PUBLIC_DEBUG_MODE; // boolean
 
 All **environment-specific and deployer-facing public values** are configured at **runtime**, not build time, so a single Docker image can be promoted across staging / prod / testnet — and deployed by third parties against their own infrastructure — without rebuilding. See [ADR 0017](adr/0017-runtime-config-injection.md) and [ADR 0018](adr/0018-runtime-sentry-and-decoupled-source-maps.md).
 
-The contract has three tiers:
+The contract has these tiers:
 
 - **Required (9 network values)**: `nexusUrl`, `cdnUrl`, `homeserver`, `homeserverUrl`, `homegateUrl`, `defaultHttpRelay`, `pkarrRelays`, `testnet`, `deployEnv`. (`deployEnv` — `PUBKY_RUNTIME_ENV`, `"production"` or `"staging"` — is the deploy's declared identity; it drives the staging homeserver sign-in guard (`isStagingHomeserverDeploy` in `@/config/network`), which is declared explicitly instead of inferred from network values so config drift can never silently disable it.) (`homeserverUrl` is the homeserver's HTTP base URL, used for invite-code verification — the homeserver pubkey has no resolvable HTTPS endpoint, see [pubky-core#410](https://github.com/pubky/pubky-core/issues/410).)
 - **Optional (5 Sentry values)**: `sentryDsn` (absent/empty disables Sentry entirely), `sentryEnvironment` (absent falls back to `NODE_ENV`), `sentryTracesSampleRate` / `sentryReplaysSessionSampleRate` / `sentryReplaysOnErrorSampleRate` (defaults `0.1` / `0.0` / `1.0`). A malformed value (bad DSN URL, rate outside `[0,1]`) fails loudly.
+- **Optional (2 Pulse values)**: `pulseClientKey` (absent/empty disables Pulse entirely; a provided value must start with `pulse_client_`) and `pulseEndpoint` (absent uses the SDK's hosted ingest host). See the Pulse paragraph below.
 - **Optional moderation identity**: `moderationId` must be a raw 52-character z-base-32 Pubky when set. In deployed environments, leaving it unset disables moderation-tag matching and the one-time default follow.
 - **Optional/defaulted public values**: operational polling and TTL settings, moderated tags, exchange-rate API, Prelude, Plausible, metadata/branding defaults, and external links. Missing values use the defaults in `src/libs/runtime-config/runtime-config.schema.ts`; malformed provided values still fail loudly.
+
+Pulse browser telemetry is opt-in: set the public, write-only `PUBKY_RUNTIME_PULSE_CLIENT_KEY`
+(`pulse_client_…`, never an admin key); omit it for zero Pulse tracking. `PUBKY_RUNTIME_PULSE_ENDPOINT`
+optionally overrides the SDK's hosted ingest host (`https://ingest.pubkypulse.com`); that fallback is silent,
+so a deployer running their own Pulse must set it or their users' events go to Pubky's host.
+Pulse collects anonymous sessions, route templates, the
+browser and operating-system versions the SDK parses from the user agent, and errors scrubbed by the same
+redaction/drop policy as Sentry; never the browser language (`deviceInfo.language` is off), bodies, replay, raw error context, request timings or identified users. Network failures arrive as application errors through that same
+policy — the SDK's fetch-level network tracking is off, because its events bypass the drop rules.
+
+With a client key configured, an analytics banner asks each browser for consent before Pulse
+initializes or stores an identifier. Accept/decline is stored separately as `pubky-pulse-consent-v1`,
+and accepting also stores the acceptance time as `pubky-pulse-consent-v1-granted-at`, which each tab
+mirrors in a `sessionStorage` marker naming the consent its own Pulse state started under. Neither is
+an identifier and neither is sent; they only let a tab that was suspended or away during a withdrawal
+notice it on its next run and clean up then. A withdrawal deletes the browser-wide state, so accepting
+again starts a new anonymous browser in every tab; the stale tab deletes its own client and session
+alone, because the anonymous ID and queued events it finds now belong to the current consent and other
+tabs are still using them. One limit sits in the SDK: it cannot tell whose events are in the shared
+queue, and replayed events are not filtered again. So an event a suspended tab re-queues after another
+tab's withdrawal already ran (a failed retry, or an unload) can still be sent by whichever tab flushes
+next. Users can withdraw in **Settings → Privacy and Safety** or the **Pulse analytics** button (also
+available to guests). Withdrawal stops collection without flushing and deletes the anonymous ID,
+session and any queued events from this browser; it does not delete data the server already received.
+Without a key — or on a testnet deploy (`PUBKY_RUNTIME_TESTNET=true`), which disables Pulse exactly as it
+disables Sentry — neither the banner nor analytics controls appear, and nothing is collected.
+Only consented visits are measured, so analytics are a partial, self-selected view of usage.
+This consent covers Pulse only, which is why the banner scopes its promise to Pubky Pulse rather than to
+analytics in general: the optional Plausible script (`PUBKY_RUNTIME_PLAUSIBLE_DOMAIN` /
+`PUBKY_RUNTIME_PLAUSIBLE_SCRIPT_URL`) is cookieless, stores no identifier, and is configured and served
+independently of it.
 
 ### Why a separate mechanism
 
@@ -109,11 +141,11 @@ const url = getNexusUrl(); // resolved at call time
 
 ### These are PUBLIC values
 
-`PUBKY_RUNTIME_*` are public (URLs, the homeserver public key, relay lists, the Sentry DSN) — they are exposed to the browser by design. They are **not secrets**; deployment tooling should not treat them as sensitive.
+`PUBKY_RUNTIME_*` are public (URLs, the homeserver public key, relay lists, the Sentry DSN, the write-only Pulse client key) — they are exposed to the browser by design. They are **not secrets**; deployment tooling should not treat them as sensitive.
 
 ### Running the public image (`docker run`)
 
-Copy-paste starting point for any deployer — nine required values plus the optional Sentry tier:
+Copy-paste starting point for any deployer — nine required values plus the optional Sentry and Pulse tiers:
 
 ```bash
 docker run -p 3000:3000 \
@@ -128,10 +160,12 @@ docker run -p 3000:3000 \
   -e PUBKY_RUNTIME_ENV=production \
   -e PUBKY_RUNTIME_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<project> \
   -e PUBKY_RUNTIME_SENTRY_ENVIRONMENT=production \
+  -e PUBKY_RUNTIME_PULSE_CLIENT_KEY=pulse_client_<your-client-key> \
+  -e PUBKY_RUNTIME_PULSE_ENDPOINT=https://ingest.example.com \
   pubky-app
 ```
 
-Omit the `PUBKY_RUNTIME_SENTRY_*` lines to run without Sentry. Other public runtime values are optional/defaulted; set them only when you need to tune polling/TTL behavior, branding/metadata, analytics, moderation, Prelude, exchange rates, or external links. Note for Sentry users: the image ships without browser source maps (Debug IDs only) — see the source-maps section of [docs/sentry.md](sentry.md).
+Omit the `PUBKY_RUNTIME_SENTRY_*` lines to run without Sentry, and the `PUBKY_RUNTIME_PULSE_*` lines to run without Pulse (no consent banner, no analytics controls). Set both Pulse values together: a client key with no endpoint sends to Pubky's hosted ingest host. Other public runtime values are optional/defaulted; set them only when you need to tune polling/TTL behavior, branding/metadata, analytics, moderation, Prelude, exchange rates, or external links. Note for Sentry users: the image ships without browser source maps (Debug IDs only) — see the source-maps section of [docs/sentry.md](sentry.md).
 
 ### Homeserver mute list sync
 

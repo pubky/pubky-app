@@ -11,7 +11,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `src/hooks/`                                | `local-first.md`, `data-patterns.md`                                              |
 | `src/components/`                           | `components.md`, `skeleton-architecture.md`, `z-index.md`, `component-testing.md` |
 | `src/libs/env/`, `src/libs/runtime-config/` | `environment.md`                                                                  |
-| Sentry / observability                      | `sentry.md`                                                                       |
+| Observability (Sentry, Pulse)               | `sentry.md`                                                                       |
 | Writing tests                               | `component-testing.md`, `visual-regression-testing.md`                            |
 | Making commits, branches, PRs               | `commit-message.md`                                                               |
 | Cutting a release                           | `release.md`                                                                      |
@@ -32,7 +32,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `visual-regression-testing.md` | VRT tests, determinism, CI-owned baselines                                                                         |
 | `skeleton-architecture.md`     | Skeleton loader placement, naming, and testing patterns                                                            |
 | `z-index.md`                   | Z-index layering conventions                                                                                       |
-| `sentry.md`                    | What is captured, capture rule, drop rules, privacy scrubbing, source maps                                         |
+| `sentry.md`                    | What Sentry and Pulse capture, capture rule, drop rules, the Pulse consent gate, privacy scrubbing, source maps    |
 | `environment.md`               | Build-time `Env` and runtime `PUBKY_RUNTIME_*` configuration                                                       |
 | `commit-message.md`            | Conventional commit format, branch naming, pull request conventions                                                |
 | `release.md`                   | Cutting a production release from `dev` onto `master`                                                              |
