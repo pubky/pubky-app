@@ -179,13 +179,6 @@ vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', () => {
   return { useSearchAutocomplete: () => result };
 });
 
-vi.mock('@/hooks/useCollectionsNavDiscovery/useCollectionsNavDiscovery', () => ({
-  useCollectionsNavDiscovery: () => ({
-    showCollectionsNew: false,
-    markCollectionsNavSeen: () => {},
-  }),
-}));
-
 vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', async () => {
   const f = await fixtures;
   const result = {
