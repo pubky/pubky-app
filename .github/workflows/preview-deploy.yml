@@ -34,7 +34,8 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') ||
       (github.event_name == 'pull_request' && github.event.action != 'closed' &&
-       github.event.pull_request.head.repo.full_name == github.repository)
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     outputs:
       pr_number: ${{ steps.vars.outputs.pr_number }}
