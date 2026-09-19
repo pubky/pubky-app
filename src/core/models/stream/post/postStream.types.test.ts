@@ -19,7 +19,7 @@ import {
   isContentSearchStream,
   isDeletedRetainingStream,
   isSkipPaginatedStream,
-  isViewerExcludedWotStream,
+  isViewerExcludedWotDomainStream,
   isWotDomainStream,
   isWotStream,
   parseContentSearchStreamId,
@@ -297,18 +297,19 @@ describe('isWotStream', () => {
   });
 });
 
-describe('isViewerExcludedWotStream', () => {
-  it('returns true for wot (My network) and wot_domain (Tagged as) streams', () => {
-    expect(isViewerExcludedWotStream('timeline:wot:all')).toBe(true);
-    expect(isViewerExcludedWotStream(buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['bitcoin']))).toBe(true);
+describe('isViewerExcludedWotDomainStream', () => {
+  it('returns true for wot_domain (Tagged as) streams', () => {
+    expect(isViewerExcludedWotDomainStream(buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['bitcoin']))).toBe(true);
   });
 
   it('returns false for streams that carry the viewer own posts', () => {
-    expect(isViewerExcludedWotStream('timeline:all:all')).toBe(false);
-    expect(isViewerExcludedWotStream('timeline:following:all')).toBe(false);
-    expect(isViewerExcludedWotStream('timeline:friends:short')).toBe(false);
-    expect(isViewerExcludedWotStream(buildSortedAuthorStreamId(StreamSorting.TIMELINE, TEST_PUBKY, 'all'))).toBe(false);
-    expect(isViewerExcludedWotStream(`author:${TEST_PUBKY}`)).toBe(false);
+    // My network (wot) is a Me + network reach, so the viewer's own posts belong.
+    expect(isViewerExcludedWotDomainStream('timeline:wot:all')).toBe(false);
+    expect(isViewerExcludedWotDomainStream('timeline:all:all')).toBe(false);
+    expect(isViewerExcludedWotDomainStream('timeline:following:all')).toBe(false);
+    expect(isViewerExcludedWotDomainStream('timeline:friends:short')).toBe(false);
+    expect(isViewerExcludedWotDomainStream(buildSortedAuthorStreamId(StreamSorting.TIMELINE, TEST_PUBKY, 'all'))).toBe(false);
+    expect(isViewerExcludedWotDomainStream(`author:${TEST_PUBKY}`)).toBe(false);
   });
 });
 

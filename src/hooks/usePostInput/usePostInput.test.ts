@@ -865,11 +865,12 @@ describe('usePostInput', () => {
     });
 
     /*
-      WoT-sourced streams are gated before the kind lookup (#2308), which also
-      covers the former kind-mismatch case on `timeline:wot_domain:…:image`.
+      'Tagged as' (wot_domain) streams are gated before the kind lookup (#2308),
+      which also covers the former kind-mismatch case on
+      `timeline:wot_domain:…:image`. 'My network' (wot) is no longer gated: the
+      reach includes the viewer's own posts.
     */
     it.each([
-      ['wot (My network)', 'timeline:wot:all'],
       ['wot_domain (Tagged as)', 'timeline:wot_domain:2:all:bitcoin'],
     ])('does not prependPosts on a %s stream even when the kind matches (#2308)', async (_label, streamId) => {
       mockContent = 'Test content';
@@ -903,6 +904,7 @@ describe('usePostInput', () => {
 
     it.each([
       ['following', PostStreamTypes.TIMELINE_FOLLOWING_ALL as string],
+      ['wot (My network)', 'timeline:wot:all'],
       ['Me (sorted author)', 'timeline:author:test-user-pubky:all'],
     ])('still prependPosts on the %s stream', async (_label, streamId) => {
       mockContent = 'Test content';
@@ -932,14 +934,14 @@ describe('usePostInput', () => {
       expect(mockOnSuccess).toHaveBeenCalledWith('created-post-id');
     });
 
-    it('collapses PostInput when prepend is skipped on a WoT stream', async () => {
+    it('collapses PostInput when prepend is skipped on a Tagged as stream', async () => {
       mockContent = 'Test content';
       mockPost.mockImplementation(async ({ onSuccess }) => {
         onSuccess('created-post-id');
       });
       vi.mocked(useTimelineFeedContext).mockReturnValue({
         ...mockTimelineFeedContext,
-        streamId: 'timeline:wot:all' as PostStreamId,
+        streamId: 'timeline:wot_domain:2:all:bitcoin' as PostStreamId,
       });
 
       const { result } = renderHook(() =>
