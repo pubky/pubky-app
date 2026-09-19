@@ -167,8 +167,7 @@ vi.mock('@/stores/auth/auth.store', async () => {
   };
 });
 
-// Header SearchInput fetches on mount. Collections nav would show a NEW badge
-// from empty localStorage. Current-user profile would miss IndexedDB and skeleton.
+// Header SearchInput fetches on mount. Current-user profile would miss IndexedDB and skeleton.
 vi.mock('@/hooks/useHotTags/useHotTags', () => {
   const result = { tags: [], rawTags: [], isLoading: false, error: null, refetch: async () => {} };
   return { useHotTags: () => result };
