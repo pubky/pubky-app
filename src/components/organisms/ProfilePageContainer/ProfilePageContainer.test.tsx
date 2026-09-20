@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
+import { useUnlockedList } from '@/hooks/useUnlockedList/useUnlockedList';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
@@ -20,6 +21,12 @@ const mockAuthStoreState = {
 };
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn((selector: (state: AuthStore) => unknown) => selector(mockAuthStore(mockAuthStoreState))),
+}));
+
+// vi.hoisted beats the vi.mock hoist, so the factory and the tests can share one literal.
+const UNLOCKED_LIST_SETTLED = vi.hoisted(() => ({ items: [], count: 0, isLoading: false, isError: false }));
+vi.mock('@/hooks/useUnlockedList/useUnlockedList', () => ({
+  useUnlockedList: vi.fn(() => UNLOCKED_LIST_SETTLED),
 }));
 
 // Mock Providers
@@ -144,6 +151,7 @@ vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', () => {
       filterBarActivePage,
       isLoading,
       isHeaderLoading,
+      unlockedCount,
     }: {
       children: React.ReactNode;
       profile: Record<string, unknown>;
@@ -154,6 +162,7 @@ vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', () => {
       navigateToPage: (page: string) => void;
       isLoading: boolean;
       isHeaderLoading?: boolean;
+      unlockedCount?: number | null;
     }) => (
       <div
         data-testid="profile-page-layout"
@@ -164,6 +173,7 @@ vi.mock('@/organisms/ProfilePageLayout/ProfilePageLayout', () => {
         data-filter-bar-page={filterBarActivePage}
         data-is-loading={isLoading}
         data-is-header-loading={isHeaderLoading === undefined ? '' : String(isHeaderLoading)}
+        data-unlocked-count={String(unlockedCount)}
       >
         {children}
       </div>
@@ -504,5 +514,71 @@ describe('ProfilePageContainer - User not found', () => {
     expect(screen.queryByTestId('profile-user-not-found-discovery')).not.toBeInTheDocument();
     // Should show the profile layout instead
     expect(screen.getByTestId('profile-page-layout')).toBeInTheDocument();
+  });
+});
+
+describe('ProfilePageContainer - Unlocked count', () => {
+  // Restated rather than inherited: the previous describe leaves a not-found, logging-out, other
+  // user's profile behind, and `vi.clearAllMocks()` keeps return values. Without this the layout
+  // would render for the wrong reason and these tests would not pin the own-profile wiring.
+  beforeEach(() => {
+    vi.mocked(useProfileContext).mockReturnValue({
+      pubky: mockCurrentUserPubky,
+      isOwnProfile: true,
+      isLoading: false,
+    });
+    vi.mocked(useAuthStore).mockImplementation((selector: (state: AuthStore) => unknown) =>
+      selector(mockAuthStore(mockAuthStoreState)),
+    );
+    vi.mocked(useProfileHeader).mockReturnValue({
+      profile: mockProfile,
+      stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
+      isLoading: false,
+      isProfileLoading: false,
+      userNotFound: false,
+    });
+  });
+
+  // The global afterEach clears calls but not return values, so without this the last test's error
+  // state would leak into whatever is added below this describe.
+  afterEach(() => {
+    vi.mocked(useUnlockedList).mockReturnValue(UNLOCKED_LIST_SETTLED);
+  });
+
+  it('passes the count once the read settles', () => {
+    vi.mocked(useUnlockedList).mockReturnValue({ ...UNLOCKED_LIST_SETTLED, count: 3 });
+
+    render(
+      <ProfilePageContainer>
+        <div>Test</div>
+      </ProfilePageContainer>,
+    );
+
+    expect(screen.getByTestId('profile-page-layout')).toHaveAttribute('data-unlocked-count', '3');
+  });
+
+  it('passes undefined while the read is in flight, so the sidebar keeps its spinner', () => {
+    vi.mocked(useUnlockedList).mockReturnValue({ ...UNLOCKED_LIST_SETTLED, isLoading: true });
+
+    render(
+      <ProfilePageContainer>
+        <div>Test</div>
+      </ProfilePageContainer>,
+    );
+
+    expect(screen.getByTestId('profile-page-layout')).toHaveAttribute('data-unlocked-count', 'undefined');
+  });
+
+  it('passes null when the read fails, so the sidebar shows no number instead of 0', () => {
+    vi.mocked(useUnlockedList).mockReturnValue({ ...UNLOCKED_LIST_SETTLED, isError: true });
+
+    render(
+      <ProfilePageContainer>
+        <div>Test</div>
+      </ProfilePageContainer>,
+    );
+
+    expect(screen.getByTestId('profile-page-layout')).toHaveAttribute('data-unlocked-count', 'null');
   });
 });
