@@ -518,6 +518,28 @@ describe('ProfilePageContainer - User not found', () => {
 });
 
 describe('ProfilePageContainer - Unlocked count', () => {
+  // Restated rather than inherited: the previous describe leaves a not-found, logging-out, other
+  // user's profile behind, and `vi.clearAllMocks()` keeps return values. Without this the layout
+  // would render for the wrong reason and these tests would not pin the own-profile wiring.
+  beforeEach(() => {
+    vi.mocked(useProfileContext).mockReturnValue({
+      pubky: mockCurrentUserPubky,
+      isOwnProfile: true,
+      isLoading: false,
+    });
+    vi.mocked(useAuthStore).mockImplementation((selector: (state: AuthStore) => unknown) =>
+      selector(mockAuthStore(mockAuthStoreState)),
+    );
+    vi.mocked(useProfileHeader).mockReturnValue({
+      profile: mockProfile,
+      stats: asOpaque<ReturnType<typeof useProfileHeader>['stats']>(mockStats),
+      actions: asOpaque<ReturnType<typeof useProfileHeader>['actions']>(mockActions),
+      isLoading: false,
+      isProfileLoading: false,
+      userNotFound: false,
+    });
+  });
+
   // The global afterEach clears calls but not return values, so without this the last test's error
   // state would leak into whatever is added below this describe.
   afterEach(() => {
