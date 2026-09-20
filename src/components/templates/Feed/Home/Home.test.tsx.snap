@@ -13,9 +13,9 @@ exports[`Home - Snapshots > matches snapshot 1`] = `
     FeedNavigation
   </div>
   <div
-    data-testid="alert-vibes"
+    data-testid="alert-install"
   >
-    AlertVibes
+    AlertInstall
   </div>
   <div
     data-testid="alert-backup"

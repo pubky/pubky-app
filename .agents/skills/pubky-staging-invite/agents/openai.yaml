@@ -1,0 +1,3 @@
+# Codex: only run this skill when the user invokes it explicitly ($pubky-staging-invite); it mints a real token.
+policy:
+  allow_implicit_invocation: false

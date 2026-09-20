@@ -13,7 +13,7 @@ export const HumanFooter = () => {
     <Container className={cn('flex-col gap-0 py-6')}>
       <FooterLinks>
         {'By creating a '}
-        <span className="text-brand">Pubky</span>
+        {'Pubky'}
         {' account, you agree to the'} <DialogTerms />, <DialogPrivacy />
         {', and confirm you are'} <DialogAge />
       </FooterLinks>

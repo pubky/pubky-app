@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Viewport } from 'next';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { COLORS } from '@/config/theme';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { RootContainer } from '@/molecules/ContainerRoot/ContainerRoot';
 import { Fab } from '@/molecules/Fab/Fab';
@@ -10,17 +11,19 @@ import { Toaster } from '@/molecules/Toaster/Toaster';
 import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/CoordinatorsManager';
 import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
 import { Header } from '@/organisms/Header/Header';
+import { PwaManager } from '@/organisms/PwaManager/PwaManager';
 import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
 import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
 import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
 import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
+import { ServiceWorkerRegistrationProvider } from '@/providers/ServiceWorkerRegistrationProvider/ServiceWorkerRegistrationProvider';
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#000000',
+  themeColor: COLORS.background,
 };
 
 export function generateMetadata() {
@@ -45,20 +48,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       */}
       <StructuredData />
       <TooltipProvider delayDuration={TOOLTIP_DELAY_MS}>
-        <GlobalErrorHandlerProvider>
-          <ErrorBoundaryProvider>
-            <DatabaseProvider>
-              <RouteGuardProvider>
-                <CoordinatorsManager />
-                <Header />
-                {children}
-                <Fab />
-                <Toaster />
-                <DialogSignIn />
-              </RouteGuardProvider>
-            </DatabaseProvider>
-          </ErrorBoundaryProvider>
-        </GlobalErrorHandlerProvider>
+        {/* ServiceWorkerRegistrationProvider owns registration; PwaManager only listens to the browser's registration. */}
+        <ServiceWorkerRegistrationProvider>
+          <GlobalErrorHandlerProvider>
+            {/*
+              Above the error boundary and the DB/auth gates: the service worker update flow,
+              offline/online toasts and the app badge must keep running on every route, while the
+              providers below show their spinners and after a page render error swaps the tree for
+              the error fallback. The Toaster sits here for the same reason (its viewport is fixed,
+              so DOM position does not matter) and so the global error handler above always has a
+              viewport to render into. Both render no throwing UI of their own; a render error in
+              either would reach app/global-error.tsx.
+            */}
+            <PwaManager />
+            <Toaster />
+            <ErrorBoundaryProvider>
+              <DatabaseProvider>
+                <RouteGuardProvider>
+                  <CoordinatorsManager />
+                  <Header />
+                  {children}
+                  <Fab />
+                  <DialogSignIn />
+                </RouteGuardProvider>
+              </DatabaseProvider>
+            </ErrorBoundaryProvider>
+          </GlobalErrorHandlerProvider>
+        </ServiceWorkerRegistrationProvider>
       </TooltipProvider>
     </RootContainer>
   );

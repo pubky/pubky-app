@@ -31,16 +31,18 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 **App configuration** lives under `src/config/`: import from `@/config/<module>` (for example `@/config/nexus`). Do not add `src/config/index.ts` that re-exports the entire config surface.
 
 **Route constants and helpers** live in `src/app/routes.ts`: import from `@/app/routes` (named imports; use `import type` when a colocated `*.types.ts` file only contributes types).
+
+| Layer        | Alias              |
 | ------------ | ------------------ |
-| Hooks | `@/hooks/*` |
-| Application | `@/application/*` |
-| Controllers | `@/controllers/*` |
+| Hooks        | `@/hooks/*`        |
+| Application  | `@/application/*`  |
+| Controllers  | `@/controllers/*`  |
 | Coordinators | `@/coordinators/*` |
-| Database | `@/database/*` |
-| Models | `@/models/*` |
-| Pipes | `@/pipes/*` |
-| Services | `@/services/*` |
-| Stores | `@/stores/*` |
+| Database     | `@/database/*`     |
+| Models       | `@/models/*`       |
+| Pipes        | `@/pipes/*`        |
+| Services     | `@/services/*`     |
+| Stores       | `@/stores/*`       |
 
 ## Layer Responsibilities
 
@@ -81,6 +83,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - `homegate/` — Homegate API
 - `chatwoot/` — Chatwoot integration
 - `exchangerate/` — Exchange rate service
+- `nextjs/` — Server-only work (OG-metadata scraping for link previews, Next.js route-handler helpers)
 - **NEVER** call application or controllers
 - **NEVER** access stores — one exception (ADR 0004): session-owning services read their session
   store via `getState()` (`homeserver` → `useAuthStore`, `locks` → `useLocksAuthStore`); reads only, never writes
@@ -107,8 +110,8 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 
 ### Database (`src/core/database/`)
 
-- Dexie schema versioning and safe initialization/recovery
-- Migration logic
+- Single Dexie schema version (`DB_VERSION`), safe initialization and recovery
+- A version mismatch deletes and recreates the database; there is no migration chain (ADR-0019, `docs/data-patterns.md` — _Schema changes_)
 
 ## Allowed Dependencies
 
@@ -116,7 +119,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 UI → Controllers (user-initiated actions)
 Coordinators → Controllers (system-initiated actions)
 Controllers → Pipes, Application, Stores
-Application → Pipes, Services (local, homeserver, nexus)
+Application → Pipes, Services (local, homeserver, nexus, homegate, chatwoot, exchangerate, nextjs)
 Application → Application (cross-domain, acyclic, max depth 1 by default; see ADR-0009 for the depth-2 attachment-persistence exception)
 Services:
   local → Models
@@ -204,7 +207,7 @@ class PostApplication {
 
 // GOOD — controller manages store, application handles IO
 // Real: src/core/controllers/stream/posts/posts.ts
-class PostStreamController {
+class StreamPostsController {
   static async getOrFetchStreamSlice(params) {
     const viewerId = useAuthStore.getState().currentUserPubky; // Controller reads store
     return await PostStreamApplication.getOrFetchStreamSlice({ ...params, viewerId });
@@ -280,36 +283,55 @@ src/core/
 │   ├── nexus/[domain]/    # Network reads
 │   ├── homegate/          # Homegate API
 │   ├── chatwoot/          # Chatwoot integration
-│   └── exchangerate/      # Exchange rate service
+│   ├── exchangerate/      # Exchange rate service
+│   └── nextjs/            # Server-only helpers (OG metadata)
 ├── pipes/[domain]/        # Data transformation
 ├── models/[domain]/       # Dexie tables
 ├── stores/[domain]/       # UI state (Zustand)
-├── database/              # Dexie schema and migrations
+├── database/              # Dexie schema (single version, recreated on mismatch)
 └── utils/                 # Utility functions
 ```
+
+## High-Risk Areas
+
+Trace call sites and mirror the existing pattern before changing any of these. No opportunistic refactors.
+
+- `src/core/database/franky/franky.ts` + `src/config/database.ts` — one `this.version(DB_VERSION).stores({...})` definition. A `DB_VERSION` mismatch deletes and recreates the local database (`recreateDatabase`), i.e. user-visible local data loss until the next sync. Bumping the version or editing a table's index map is a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature (ADR-0019).
+- `src/core/services/homeserver/**` and `src/core/pipes/**` — wire-format boundaries (`pubky-app-specs`, composite ids, signup tokens, auth URLs). Preserve payload shapes; do not change a format incidentally while adding a feature.
+- `src/core/services/local/**` — writer of Dexie + TTL invariants; getting the order wrong corrupts caches silently. Persist dependencies before dependents, refresh `*_ttl` rows on every write, and use the dirty registry rather than deleting stream rows eagerly (`docs/local-first.md`).
+- `src/core/application/**` cross-domain calls — verify the ADR-0009 allow-list above before wiring two Applications together.
+- `src/libs/env/env.ts` + `src/libs/runtime-config/**` — the only places allowed to read `process.env.NEXT_PUBLIC_*` / `process.env.PUBKY_RUNTIME_*` (ESLint-enforced). Runtime config is injected into the browser as `window.__PUBKY_CONFIG__`, so never put a secret there (`docs/environment.md`).
+- `src/libs/{password,identity,phone}`, `src/components/organisms/{Backup,DialogBackup*,DialogRestore*,Human*}` — cryptographic, identity and onboarding-verification flows.
+- `src/core/services/nextjs/og-metadata/**` + `src/libs/network/network.ts` — server-side fetching of user-supplied URLs for link previews, deliberately SSRF-guarded (`checkDnsSafety`, `isIpSafe`, DNS-rebinding checks). Any change here is a security change: keep the guards and their tests intact.
+- `src/sw.ts`, `next.config.ts`, `src/instrumentation*.ts`, `src/sentry.*.config.ts`, `.github/workflows/**` — build and runtime plumbing with cross-cutting effects. Change them only when the task is about them; `public/sw.js` is generated from `src/sw.ts`, never edit it by hand.
 
 ## Architecture Decision Records
 
 ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`.
 
-| ADR  | Title                                  |
-| ---- | -------------------------------------- |
-| 0001 | Local-first writes                     |
-| 0002 | Composite post IDs                     |
-| 0003 | Streams as caches                      |
-| 0004 | Layering and dependency rules          |
-| 0005 | TTL refresh policy                     |
-| 0006 | Pipes normalization                    |
-| 0007 | Dexie version normalization            |
-| 0008 | Coordinators layer                     |
-| 0009 | Application cross-domain orchestration |
-| 0010 | Notification application orchestration |
-| 0011 | Dexie PSD and TanStack Query           |
-| 0012 | TTL coordinator                        |
-| 0013 | Post stream queue                      |
-| 0014 | Muting system                          |
-| 0015 | Error handling                         |
-| 0016 | Service worker local file cache        |
+| ADR  | Title                                                                     |
+| ---- | ------------------------------------------------------------------------- |
+| 0001 | Local-first writes                                                        |
+| 0002 | Composite post IDs                                                        |
+| 0003 | Streams as caches                                                         |
+| 0004 | Layering and dependency rules                                             |
+| 0005 | TTL refresh policy                                                        |
+| 0006 | Pipes normalization                                                       |
+| 0007 | Dexie version normalization                                               |
+| 0008 | Coordinators layer                                                        |
+| 0009 | Application cross-domain orchestration                                    |
+| 0010 | Notification application orchestration                                    |
+| 0011 | Dexie PSD and TanStack Query                                              |
+| 0012 | TTL coordinator                                                           |
+| 0013 | Post stream queue                                                         |
+| 0014 | Muting system                                                             |
+| 0015 | Error handling                                                            |
+| 0016 | Service worker local file cache                                           |
+| 0017 | Runtime config injection                                                  |
+| 0018 | Optional runtime-config tier, runtime Sentry, decoupled source-map upload |
+| 0019 | Dexie schema changes recreate the local database                          |
+| 0020 | Local-first tag cache and viewport lifetimes                              |
+| 0021 | Service worker scope and update policy                                    |
 
 ## Quick Checklist
 

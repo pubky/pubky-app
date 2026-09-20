@@ -1,6 +1,6 @@
 {
   "name": "franky",
-  "version": "1.8.0",
+  "version": "1.10.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -50,7 +50,7 @@
     "@prelude.so/js-sdk": "0.14.0",
     "@sentry/nextjs": "10.71.0",
     "@serwist/next": "9.5.12",
-    "@synonymdev/pubky": "0.10.0-alpha.0",
+    "@synonymdev/pubky": "0.11.0",
     "@tanstack/react-query": "5.102.8",
     "@vitest/browser": "4.1.11",
     "@vitest/browser-playwright": "4.1.11",

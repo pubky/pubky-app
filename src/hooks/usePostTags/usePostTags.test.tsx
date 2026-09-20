@@ -1,17 +1,21 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { mockAuthStore } from '@/test-utils/stores';
 import { usePostTags } from './usePostTags';
-import { TAGS_PER_PAGE } from './usePostTags.constants';
 
-// Hoisted mock for fetchTags - must be defined before vi.mock
-const { mockFetchTags, mockAuthStoreSelector } = vi.hoisted(() => ({
-  mockFetchTags: vi.fn().mockResolvedValue([]),
+// Hoisted I/O and auth mocks
+const { mockGetOrFetchTags, mockAuthStoreSelector } = vi.hoisted(() => ({
+  mockGetOrFetchTags: vi.fn().mockResolvedValue(undefined),
   mockAuthStoreSelector: (currentUserPubky: string | null) => {
     return (selector: (state: AuthStore) => unknown) => selector(mockAuthStore({ currentUserPubky }));
   },
@@ -21,11 +25,12 @@ const { mockFetchTags, mockAuthStoreSelector } = vi.hoisted(() => ({
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: vi.fn(mockAuthStoreSelector('mock-user-id')),
 }));
+vi.mock('@/controllers/tag/tag-cache', () => ({
+  TagCacheController: { get: vi.fn(), getOrFetch: mockGetOrFetchTags, getOrFetchNext: vi.fn() },
+}));
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
-    getTags: vi.fn().mockResolvedValue([]),
     getCounts: vi.fn().mockResolvedValue(null),
-    fetchTags: mockFetchTags,
   },
 }));
 vi.mock('@/controllers/tag/tag', () => ({
@@ -34,18 +39,6 @@ vi.mock('@/controllers/tag/tag', () => ({
     commitDelete: vi.fn().mockResolvedValue(undefined),
   },
 }));
-vi.mock('@/application/tag/tag.types', () => ({
-  TagKind: {
-    POST: 'post',
-    USER: 'user',
-  },
-}));
-vi.mock('@/controllers/file/file', () => ({
-  FileController: {
-    getAvatarUrl: vi.fn((id: string) => `https://avatar.test/${id}`),
-  },
-}));
-
 // Mock dexie-react-hooks - returns undefined for loading state
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn(() => undefined),
@@ -53,36 +46,18 @@ vi.mock('dexie-react-hooks', () => ({
 // Mock toast
 vi.mock('@/molecules/Toaster/toast');
 
-// Mock tag transformation utilities
-vi.mock('@/molecules/TaggedItem/TaggedItem.utils', () => ({
-  transformTagWithAvatars: vi.fn((tag) => ({
-    ...tag,
-    taggers: tag.taggers?.map((id: string) => ({ id, avatarUrl: `https://avatar.test/${id}` })) ?? [],
-  })),
-  transformTagsForViewer: vi.fn((tags) =>
-    tags
-      .filter((tag: { label?: string }) => tag.label)
-      .map((tag: { label: string; taggers?: string[] }) => ({
-        ...tag,
-        taggers: tag.taggers?.map((id: string) => ({ id, avatarUrl: `https://avatar.test/${id}` })) ?? [],
-      })),
-  ),
-}));
-
 /**
  * Helper to mock useLiveQuery returning different values for its two call sites:
- *   - PostController.getTags  → tagsValue
+ *   - TagCacheController.get → tagsValue
  *   - PostController.getCounts → countsValue
  *
- * The mapping is based on the query factory function content rather than call
- * order, so the mock stays correct even if a future change reorders or adds
- * additional useLiveQuery calls in the hook.
+ * Tag observations depend on ID and kind; counts depend only on ID.
+ * Route by those query dependencies without inspecting function source text.
  */
-function setupLiveQueryMock(tagsValue: unknown, countsValue: unknown) {
-  vi.mocked(useLiveQuery).mockImplementation((queryFn) => {
-    const fnStr = queryFn.toString();
-    if (fnStr.includes('getTags')) return tagsValue;
-    if (fnStr.includes('getCounts')) return countsValue;
+function setupLiveQueryMock(tagsValue: { tags: NexusTag[] } | undefined, countsValue: unknown) {
+  vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => {
+    if (deps?.length === 2) return tagsValue ? { id: 'author:post123', tags: tagsValue.tags } : undefined;
+    if (deps?.length === 1) return countsValue;
     return undefined;
   });
 }
@@ -94,15 +69,125 @@ describe('usePostTags', () => {
     vi.mocked(useLiveQuery).mockReturnValue(undefined);
   });
 
+  it('rejects an existing viewer tag even when its tagger sample omits the viewer', async () => {
+    setupLiveQueryMock(
+      { tags: [{ label: 'bitcoin', taggers: ['other'], taggers_count: 10, relationship: true }] },
+      null,
+    );
+    const { result } = renderHook(() => usePostTags('author:post123'));
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.handleTagAdd('BITCOIN');
+    });
+    expect(outcome).toEqual({ success: false, error: 'You have already added this tag' });
+    expect(TagController.commitCreate).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('contains a counts read failure while keeping cached tag chips visible', async () => {
+    setupLiveQueryMock({ tags: [{ label: 'cached', taggers: [], taggers_count: 1, relationship: false }] }, null);
+    vi.mocked(PostController.getCounts).mockRejectedValueOnce(new Error('IndexedDB unavailable'));
+    const { result } = renderHook(() => usePostTags('author:post123'));
+    const query = vi.mocked(useLiveQuery).mock.calls.find(([, deps]) => deps?.length === 1)![0];
+    await expect(query()).resolves.toBeNull();
+    expect(result.current.tags.map((tag) => tag.label)).toEqual(['cached']);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it('discards zero-tagger placeholders when the viewer changes on the same post', async () => {
+    const tag = { label: 'solo', taggers: ['mock-user-id'], taggers_count: 1, relationship: true };
+    setupLiveQueryMock({ tags: [tag] }, { unique_tags: 1 });
+    const { result, rerender } = renderHook(() => usePostTags('author:post123'));
+    await act(async () => result.current.handleTagToggle(tag));
+    setupLiveQueryMock({ tags: [] }, { unique_tags: 0 });
+    rerender();
+    expect(result.current.tags).toEqual([expect.objectContaining({ label: 'solo', taggers_count: 0 })]);
+    vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('other-viewer'));
+    rerender();
+    expect(result.current.tags).toEqual([]);
+  });
+
+  it("does not pin a previous viewer's late tag creation or show its toast", async () => {
+    const pending = Promise.withResolvers<void>();
+    vi.mocked(TagController.commitCreate).mockReturnValueOnce(pending.promise);
+    const tags = [
+      { label: 'first', taggers: [], taggers_count: 2, relationship: false },
+      { label: 'slow', taggers: [], taggers_count: 1, relationship: false },
+    ];
+    setupLiveQueryMock({ tags }, { unique_tags: 2 });
+    const { result, rerender } = renderHook(() => usePostTags('author:post123'));
+    let add!: Promise<unknown>;
+    act(() => {
+      add = result.current.handleTagAdd('slow');
+    });
+    vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('other-viewer'));
+    rerender();
+    await act(async () => {
+      pending.resolve();
+      await add;
+    });
+    expect(result.current.tags.map((tag) => tag.label)).toEqual(['first', 'slow']);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("keeps the new viewer's tag pinned when an earlier removal finishes", async () => {
+    const pending = Promise.withResolvers<void>();
+    vi.mocked(TagController.commitDelete).mockReturnValueOnce(pending.promise);
+    const tags = [
+      { label: 'first', taggers: ['other'], taggers_count: 5, relationship: false },
+      { label: 'shared', taggers: ['mock-user-id', 'other'], taggers_count: 2, relationship: true },
+    ];
+    setupLiveQueryMock({ tags }, { unique_tags: 2 });
+    const { result, rerender } = renderHook(() => usePostTags('author:post123'));
+    let removal!: Promise<void>;
+    act(() => {
+      removal = result.current.handleTagToggle({ label: 'shared', relationship: true });
+    });
+
+    vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('new-viewer'));
+    setupLiveQueryMock({ tags: tags.map((tag) => ({ ...tag, relationship: false })) }, { unique_tags: 2 });
+    rerender();
+    await act(async () => {
+      await result.current.handleTagAdd('shared');
+    });
+    expect(result.current.tags.map((tag) => tag.label)).toEqual(['shared', 'first']);
+
+    await act(async () => {
+      pending.resolve();
+      await removal;
+    });
+    expect(result.current.tags.map((tag) => tag.label)).toEqual(['shared', 'first']);
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('does not show a failed toggle toast after the owning view unmounts', async () => {
+    const pending = Promise.withResolvers<void>();
+    vi.mocked(TagController.commitDelete).mockReturnValueOnce(pending.promise);
+    setupLiveQueryMock(
+      { tags: [{ label: 'solo', taggers: ['mock-user-id'], taggers_count: 1, relationship: true }] },
+      { unique_tags: 1 },
+    );
+    const { result, unmount } = renderHook(() => usePostTags('author:post123'));
+    let toggle!: Promise<void>;
+    act(() => {
+      toggle = result.current.handleTagToggle({ label: 'solo', relationship: true });
+    });
+    unmount();
+    await act(async () => {
+      pending.reject(new Error('offline'));
+      await toggle;
+    });
+    expect(toast).not.toHaveBeenCalled();
+  });
+
   describe('initialization', () => {
-    it('should fetch initial tags from Nexus on mount', async () => {
+    it('requests local-first initialization on mount', async () => {
       renderHook(() => usePostTags('author:post123'));
 
       await waitFor(() => {
-        expect(mockFetchTags).toHaveBeenCalledWith({
-          compositeId: 'author:post123',
-          skip: 0,
-          limit: TAGS_PER_PAGE,
+        expect(mockGetOrFetchTags).toHaveBeenCalledWith({
+          kind: 'post',
+          id: 'author:post123',
           viewerId: 'mock-user-id',
         });
       });
@@ -176,7 +261,12 @@ describe('usePostTags', () => {
     });
 
     it('shows an error toast when adding a tag fails', async () => {
-      vi.mocked(TagController.commitCreate).mockRejectedValueOnce(new Error('Network error'));
+      vi.mocked(TagController.commitCreate).mockRejectedValueOnce(
+        Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network error', {
+          service: ErrorService.Nexus,
+          operation: 'commitTag',
+        }),
+      );
 
       const { result } = renderHook(() => usePostTags('author:post123'));
 
@@ -214,7 +304,7 @@ describe('usePostTags', () => {
       };
 
       // Return the tag in useLiveQuery
-      vi.mocked(useLiveQuery).mockReturnValue([{ tags: [tagWithOneCount] }]);
+      vi.mocked(useLiveQuery).mockReturnValue({ id: 'author:post123', tags: [tagWithOneCount] });
 
       const { result, rerender } = renderHook(() => usePostTags('author:post123'));
 
@@ -227,7 +317,7 @@ describe('usePostTags', () => {
       await result.current.handleTagToggle({ label: 'solo-tag', relationship: true });
 
       // After delete, simulate IndexedDB returning empty (tag removed from DB)
-      vi.mocked(useLiveQuery).mockReturnValue([{ tags: [] }]);
+      vi.mocked(useLiveQuery).mockReturnValue({ id: 'author:post123', tags: [] });
       rerender();
 
       // BUG: Currently the tag disappears.
@@ -241,11 +331,10 @@ describe('usePostTags', () => {
     it('does not show a success toast when a tag is removed', async () => {
       const mockViewerId = 'viewer-123';
       vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
-      vi.mocked(useLiveQuery).mockReturnValue([
-        {
-          tags: [{ label: 'solo-tag', taggers_count: 1, taggers: [mockViewerId], relationship: true }],
-        },
-      ]);
+      vi.mocked(useLiveQuery).mockReturnValue({
+        id: 'author:post123',
+        tags: [{ label: 'solo-tag', taggers_count: 1, taggers: [mockViewerId], relationship: true }],
+      });
 
       const { result } = renderHook(() => usePostTags('author:post123'));
 
@@ -259,12 +348,16 @@ describe('usePostTags', () => {
     it('shows an error toast when removing a tag fails', async () => {
       const mockViewerId = 'viewer-123';
       vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector(mockViewerId));
-      vi.mocked(useLiveQuery).mockReturnValue([
-        {
-          tags: [{ label: 'solo-tag', taggers_count: 1, taggers: [mockViewerId], relationship: true }],
-        },
-      ]);
-      vi.mocked(TagController.commitDelete).mockRejectedValueOnce(new Error('Network error'));
+      vi.mocked(useLiveQuery).mockReturnValue({
+        id: 'author:post123',
+        tags: [{ label: 'solo-tag', taggers_count: 1, taggers: [mockViewerId], relationship: true }],
+      });
+      vi.mocked(TagController.commitDelete).mockRejectedValueOnce(
+        Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Network error', {
+          service: ErrorService.Nexus,
+          operation: 'commitTag',
+        }),
+      );
 
       const { result } = renderHook(() => usePostTags('author:post123'));
 
@@ -291,9 +384,8 @@ describe('usePostTags', () => {
       ];
 
       let liveTags = [...existingTags];
-      vi.mocked(useLiveQuery).mockImplementation((queryFn) => {
-        const fnStr = queryFn.toString();
-        if (fnStr.includes('getTags')) return [{ tags: liveTags }];
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => {
+        if (deps?.length === 2) return { id: 'author:post123', tags: liveTags };
         return undefined;
       });
 
@@ -324,9 +416,8 @@ describe('usePostTags', () => {
       let liveTags: Array<{ label: string; taggers_count: number; taggers: string[]; relationship: boolean }> = [
         { label: 'alpha', taggers_count: 5, taggers: ['other-1'], relationship: false },
       ];
-      vi.mocked(useLiveQuery).mockImplementation((queryFn) => {
-        const fnStr = queryFn.toString();
-        if (fnStr.includes('getTags')) return [{ tags: liveTags }];
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => {
+        if (deps?.length === 2) return { id: 'author:post123', tags: liveTags };
         return undefined;
       });
 
@@ -359,7 +450,7 @@ describe('usePostTags', () => {
         { label: 'gamma', taggers_count: 3, taggers: ['other-3'], relationship: false },
       ];
 
-      setupLiveQueryMock([{ tags: existingTags }], undefined);
+      setupLiveQueryMock({ tags: existingTags }, undefined);
 
       const { result } = renderHook(() => usePostTags('author:post123'));
 
@@ -386,9 +477,8 @@ describe('usePostTags', () => {
         { label: 'alpha', taggers_count: 5, taggers: ['other-1'], relationship: false },
         { label: 'beta', taggers_count: 4, taggers: ['other-2'], relationship: false },
       ];
-      vi.mocked(useLiveQuery).mockImplementation((queryFn) => {
-        const fnStr = queryFn.toString();
-        if (fnStr.includes('getTags')) return [{ tags: liveTags }];
+      vi.mocked(useLiveQuery).mockImplementation((_queryFn, deps) => {
+        if (deps?.length === 2) return { id: 'author:post123', tags: liveTags };
         return undefined;
       });
 
@@ -420,212 +510,6 @@ describe('usePostTags', () => {
         const labels = result.current.tags.map((t) => t.label);
         expect(labels).toContain('zeta');
         expect(labels[0]).not.toBe('zeta');
-      });
-    });
-  });
-
-  describe('loadMore pagination', () => {
-    beforeEach(() => {
-      mockFetchTags.mockClear();
-    });
-
-    it('should call fetchTags with correct skip value based on initial tags', async () => {
-      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
-
-      // Initial tags from IndexedDB (simulating 25 tags already loaded)
-      const initialTags = Array.from({ length: 25 }, (_, i) => ({
-        label: `tag-${i}`,
-        taggers_count: 1,
-        taggers: ['user-1'],
-        relationship: false,
-      }));
-
-      // hasMore is derived from postCounts.unique_tags > localTags.length
-      setupLiveQueryMock([{ tags: initialTags }], { unique_tags: 50 });
-
-      // fetchTags returns a full page of new tags
-      mockFetchTags.mockResolvedValueOnce(
-        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
-          label: `new-tag-${i}`,
-          taggers_count: 1,
-          taggers: ['user-1'],
-        })),
-      );
-
-      const { result } = renderHook(() => usePostTags('author:post123'));
-
-      // Wait for initial load
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      // Call loadMore
-      await result.current.loadMore();
-
-      // Should have called fetchTags with skip=25 (initial tag count)
-      expect(mockFetchTags).toHaveBeenCalledWith({
-        compositeId: 'author:post123',
-        skip: 25,
-        limit: TAGS_PER_PAGE,
-        viewerId: 'viewer-123',
-      });
-    });
-
-    it('should increment skip value by fetched count after each loadMore call', async () => {
-      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
-
-      // Initial tags from IndexedDB
-      const initialTags = Array.from({ length: 25 }, (_, i) => ({
-        label: `tag-${i}`,
-        taggers_count: 1,
-        taggers: ['user-1'],
-        relationship: false,
-      }));
-
-      // hasMore is derived from postCounts.unique_tags > localTags.length
-      setupLiveQueryMock([{ tags: initialTags }], { unique_tags: 100 });
-
-      // First loadMore returns a full page of tags
-      mockFetchTags.mockResolvedValueOnce(
-        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
-          label: `batch1-tag-${i}`,
-          taggers_count: 1,
-          taggers: ['user-1'],
-        })),
-      );
-
-      // Second loadMore returns a full page of tags
-      mockFetchTags.mockResolvedValueOnce(
-        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
-          label: `batch2-tag-${i}`,
-          taggers_count: 1,
-          taggers: ['user-1'],
-        })),
-      );
-
-      const { result } = renderHook(() => usePostTags('author:post123'));
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      // First loadMore
-      await result.current.loadMore();
-      expect(mockFetchTags).toHaveBeenLastCalledWith({
-        compositeId: 'author:post123',
-        skip: 25,
-        limit: TAGS_PER_PAGE,
-        viewerId: 'viewer-123',
-      });
-
-      // Second loadMore - skip should now be 25 + TAGS_PER_PAGE
-      await result.current.loadMore();
-      expect(mockFetchTags).toHaveBeenLastCalledWith({
-        compositeId: 'author:post123',
-        skip: 25 + TAGS_PER_PAGE,
-        limit: TAGS_PER_PAGE,
-        viewerId: 'viewer-123',
-      });
-    });
-
-    it('should set hasMore to false when fewer than TAGS_PER_PAGE tags are returned', async () => {
-      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
-
-      const initialTags = [{ label: 'tag-1', taggers_count: 1, taggers: ['user-1'], relationship: false }];
-      // unique_tags > localTags.length so hasMore starts as true
-      setupLiveQueryMock([{ tags: initialTags }], { unique_tags: 20 });
-
-      // Initial fetch on mount should return a full page so hasMore remains true.
-      mockFetchTags.mockResolvedValueOnce(
-        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
-          label: `initial-tag-${i}`,
-          taggers_count: 1,
-          taggers: ['user-1'],
-        })),
-      );
-
-      // Then loadMore returns fewer than 10 tags (end of list)
-      mockFetchTags.mockResolvedValueOnce([
-        { label: 'last-tag-1', taggers_count: 1, taggers: ['user-1'] },
-        { label: 'last-tag-2', taggers_count: 1, taggers: ['user-1'] },
-      ]);
-
-      const { result } = renderHook(() => usePostTags('author:post123'));
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      expect(result.current.hasMore).toBe(true);
-
-      await result.current.loadMore();
-
-      // hasMore should now be false since we got < 10 tags
-      await waitFor(() => {
-        expect(result.current.hasMore).toBe(false);
-      });
-    });
-
-    it('should reset skip value when postId changes', async () => {
-      vi.mocked(useAuthStore).mockImplementation(mockAuthStoreSelector('viewer-123'));
-
-      // Initial tags for first post
-      const initialTags = Array.from({ length: 25 }, (_, i) => ({
-        label: `tag-${i}`,
-        taggers_count: 1,
-        taggers: ['user-1'],
-        relationship: false,
-      }));
-
-      setupLiveQueryMock([{ tags: initialTags }], { unique_tags: 50 });
-
-      mockFetchTags.mockResolvedValue(
-        Array.from({ length: TAGS_PER_PAGE }, (_, i) => ({
-          label: `new-tag-${i}`,
-          taggers_count: 1,
-          taggers: ['user-1'],
-        })),
-      );
-
-      const { result, rerender } = renderHook(({ postId }) => usePostTags(postId), {
-        initialProps: { postId: 'author:post1' },
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      // Load more for first post
-      await result.current.loadMore();
-      expect(mockFetchTags).toHaveBeenLastCalledWith({
-        compositeId: 'author:post1',
-        skip: 25,
-        limit: TAGS_PER_PAGE,
-        viewerId: 'viewer-123',
-      });
-
-      // Change postId - this should reset the skip
-      const newPostTags = Array.from({ length: 15 }, (_, i) => ({
-        label: `post2-tag-${i}`,
-        taggers_count: 1,
-        taggers: ['user-1'],
-        relationship: false,
-      }));
-      setupLiveQueryMock([{ tags: newPostTags }], { unique_tags: 50 });
-
-      rerender({ postId: 'author:post2' });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      // Load more for second post - skip should be 15 (new post's tag count), not 35
-      await result.current.loadMore();
-      expect(mockFetchTags).toHaveBeenLastCalledWith({
-        compositeId: 'author:post2',
-        skip: 15,
-        limit: TAGS_PER_PAGE,
-        viewerId: 'viewer-123',
       });
     });
   });

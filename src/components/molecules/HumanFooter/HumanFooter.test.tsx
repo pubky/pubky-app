@@ -59,11 +59,11 @@ vi.mock('@/atoms/Link/Link', () => {
 });
 
 describe('HumanFooter', () => {
-  it('renders the footer text with Pubky brand highlight', () => {
-    render(<HumanFooter />);
+  it('renders the footer text without the brand highlight', () => {
+    const { container } = render(<HumanFooter />);
 
-    expect(screen.getByText('Pubky')).toHaveClass('text-brand');
-    expect(screen.getByText(/By creating a/i)).toBeInTheDocument();
+    expect(screen.getByText(/By creating a Pubky account/i)).toBeInTheDocument();
+    expect(container.querySelector('.text-brand')).toBeNull();
   });
 
   it('renders the terms and privacy dialogs', () => {

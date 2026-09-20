@@ -96,7 +96,7 @@ describe('useMentionAutocomplete', () => {
   });
 
   it('returns initial state when content is empty', () => {
-    const { result } = renderHook(() => useMentionAutocomplete({ content: '' }));
+    const { result } = renderHook(() => useMentionAutocomplete({ content: '', caret: 0 }));
 
     expect(result.current.users).toEqual([]);
     expect(result.current.isOpen).toBe(false);
@@ -104,14 +104,14 @@ describe('useMentionAutocomplete', () => {
   });
 
   it('returns initial state when content has no mention pattern', () => {
-    const { result } = renderHook(() => useMentionAutocomplete({ content: 'Hello world' }));
+    const { result } = renderHook(() => useMentionAutocomplete({ content: 'Hello world', caret: 11 }));
 
     expect(result.current.users).toEqual([]);
     expect(result.current.isOpen).toBe(false);
   });
 
   it('triggers search when @ pattern is detected at end of content', async () => {
-    renderHook(() => useMentionAutocomplete({ content: 'Hello @jo' }));
+    renderHook(() => useMentionAutocomplete({ content: 'Hello @jo', caret: 9 }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -125,7 +125,7 @@ describe('useMentionAutocomplete', () => {
   });
 
   it('triggers search when pk: pattern is detected at end of content (legacy)', async () => {
-    renderHook(() => useMentionAutocomplete({ content: 'Hello pk:abc' }));
+    renderHook(() => useMentionAutocomplete({ content: 'Hello pk:abc', caret: 12 }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -139,7 +139,7 @@ describe('useMentionAutocomplete', () => {
   });
 
   it('triggers search when pubky pattern is detected at end of content (new format)', async () => {
-    renderHook(() => useMentionAutocomplete({ content: 'Hello pubkyabc' }));
+    renderHook(() => useMentionAutocomplete({ content: 'Hello pubkyabc', caret: 15 }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -153,7 +153,7 @@ describe('useMentionAutocomplete', () => {
   });
 
   it('does not search when @ query is too short', async () => {
-    renderHook(() => useMentionAutocomplete({ content: 'Hello @j' }));
+    renderHook(() => useMentionAutocomplete({ content: 'Hello @j', caret: 8 }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -164,7 +164,7 @@ describe('useMentionAutocomplete', () => {
   });
 
   it('does not search when pk: query is too short', async () => {
-    renderHook(() => useMentionAutocomplete({ content: 'Hello pk:ab' }));
+    renderHook(() => useMentionAutocomplete({ content: 'Hello pk:ab', caret: 11 }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -175,7 +175,7 @@ describe('useMentionAutocomplete', () => {
   });
 
   it('does not search when pubky query is too short', async () => {
-    renderHook(() => useMentionAutocomplete({ content: 'Hello pubkyab' }));
+    renderHook(() => useMentionAutocomplete({ content: 'Hello pubkyab', caret: 14 }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -188,7 +188,9 @@ describe('useMentionAutocomplete', () => {
   it('skips complete pubkeys in pk: search', async () => {
     // A complete pubkey is 52 characters
     const completePubky = 'a'.repeat(52);
-    renderHook(() => useMentionAutocomplete({ content: `Hello pk:${completePubky}` }));
+    renderHook(() =>
+      useMentionAutocomplete({ content: `Hello pk:${completePubky}`, caret: `Hello pk:${completePubky}`.length }),
+    );
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -200,7 +202,9 @@ describe('useMentionAutocomplete', () => {
   it('skips complete pubkeys in pubky search', async () => {
     // A complete pubkey is 52 characters
     const completePubky = 'a'.repeat(52);
-    renderHook(() => useMentionAutocomplete({ content: `Hello pubky${completePubky}` }));
+    renderHook(() =>
+      useMentionAutocomplete({ content: `Hello pubky${completePubky}`, caret: `Hello pubky${completePubky}`.length }),
+    );
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -212,9 +216,12 @@ describe('useMentionAutocomplete', () => {
   it('closes popover when close is called', async () => {
     setMockUserDetailsMap(new Map([['user1', { id: 'user1', name: 'User One', image: null } as NexusUserDetails]]));
 
-    const { result, rerender } = renderHook(({ content }) => useMentionAutocomplete({ content }), {
-      initialProps: { content: 'Hello @jo' },
-    });
+    const { result, rerender } = renderHook(
+      ({ content }) => useMentionAutocomplete({ content, caret: content.length }),
+      {
+        initialProps: { content: 'Hello @jo' },
+      },
+    );
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -238,12 +245,88 @@ describe('useMentionAutocomplete', () => {
 
   describe('keyboard navigation', () => {
     it('handleKeyDown returns false when popover is closed', () => {
-      const { result } = renderHook(() => useMentionAutocomplete({ content: '' }));
+      const { result } = renderHook(() => useMentionAutocomplete({ content: '', caret: 0 }));
 
       const event = mockKeyboardEvent({ key: 'ArrowDown', preventDefault: vi.fn() });
       const handled = result.current.handleKeyDown(event);
 
       expect(handled).toBe(false);
+    });
+  });
+  describe('caret-anchored detection', () => {
+    it('triggers search when the caret sits in an @ pattern with text after it', async () => {
+      // 'Hello @jo| world' - the caret is mid-text, not at the end of the value
+      renderHook(() => useMentionAutocomplete({ content: 'Hello @jo world', caret: 9 }));
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(mockGetUsersByName).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prefix: 'jo',
+        }),
+      );
+    });
+
+    it('triggers search when the caret sits in a pk: pattern with text after it', async () => {
+      renderHook(() => useMentionAutocomplete({ content: 'Hello pk:abc world', caret: 12 }));
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(mockFetchUsersById).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prefix: 'abc',
+        }),
+      );
+    });
+
+    it('does not search when the caret sits outside the pattern', async () => {
+      // 'Hello @jo |world' - the caret moved past the pattern's trailing space
+      renderHook(() => useMentionAutocomplete({ content: 'Hello @jo world', caret: 10 }));
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(mockGetUsersByName).not.toHaveBeenCalled();
+    });
+
+    it('does not search when the pattern starts after the caret', async () => {
+      renderHook(() => useMentionAutocomplete({ content: 'Hello @john', caret: 5 }));
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(mockGetUsersByName).not.toHaveBeenCalled();
+    });
+
+    it('re-runs detection when the caret moves into a pattern without the content changing', async () => {
+      const { rerender } = renderHook(({ content, caret }) => useMentionAutocomplete({ content, caret }), {
+        initialProps: { content: 'Hello @jo', caret: 5 },
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(mockGetUsersByName).not.toHaveBeenCalled();
+
+      // Same content, caret moved back into the mention pattern
+      rerender({ content: 'Hello @jo', caret: 9 });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(mockGetUsersByName).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prefix: 'jo',
+        }),
+      );
     });
   });
 });

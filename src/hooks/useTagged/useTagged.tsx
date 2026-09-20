@@ -1,18 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { TagKind } from '@/application/tag/tag.types';
 import { TagController } from '@/controllers/tag/tag';
-import { UserController } from '@/controllers/user/user';
 import { useProfileStats } from '@/hooks/useProfileStats/useProfileStats';
-import { Logger } from '@/libs/logger/logger';
+import { useTagCache } from '@/hooks/useTagCache/useTagCache';
 import type { Pubky } from '@/models/models.types';
 import { transformTagsForViewer } from '@/molecules/TaggedItem/TaggedItem.utils';
 import { toast } from '@/molecules/Toaster/toast';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { TAGS_PER_PAGE } from './useTagged.constants';
 import type { UseTaggedOptions, UseTaggedResult } from './useTagged.types';
 
 /**
@@ -40,17 +37,23 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
   // Only fetch stats if enabled
   const { stats, isLoading: isLoadingStats } = useProfileStats(enableStats ? (userId ?? '') : '');
 
-  // Fetch tags directly from IndexedDB - this will react to any changes made by TagController
-  const localTags = useLiveQuery(async () => {
-    try {
-      if (!userId) return undefined;
-      const tags = await UserController.getTags({ userId });
-      return tags.length > 0 ? tags : null;
-    } catch (error) {
-      Logger.error('[useTagged] Failed to query user tags', { userId, error });
-      return null;
-    }
-  }, [userId]);
+  const {
+    record,
+    isLoading: isLoadingTags,
+    isLoadingMore,
+    loadMore: loadNextPage,
+  } = useTagCache('user', userId, viewerId);
+  const localTags = record?.tags;
+  const viewRevision = useRef(0);
+
+  useEffect(() => {
+    viewRevision.current += 1;
+    setZeroTaggerTags(new Map());
+    setTagOrder(new Map());
+    return () => {
+      viewRevision.current += 1;
+    };
+  }, [userId, viewerId]);
 
   // Update tag order map when localTags change (only for new tags)
   useEffect(() => {
@@ -71,44 +74,6 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
       return hasChanges ? newOrder : prevOrder;
     });
   }, [localTags]);
-
-  // Track if we've already fetched from server for this user
-  const [hasFetched, setHasFetched] = useState(false);
-  const prevUserIdRef = useRef<string | null | undefined>(null);
-
-  // Reset hasFetched when userId changes
-  useEffect(() => {
-    if (prevUserIdRef.current !== userId) {
-      setHasFetched(false);
-      prevUserIdRef.current = userId;
-    }
-  }, [userId]);
-
-  // Initial fetch from server (always fetch to ensure we have all tags)
-  useEffect(() => {
-    if (!userId || hasFetched) return;
-
-    const fetchTags = async () => {
-      try {
-        // Fetch from server
-        const fetchedTags = await UserController.fetchTags({
-          user_id: userId,
-          viewer_id: viewerId ?? undefined,
-          ...(enablePagination && { limit_tags: TAGS_PER_PAGE, skip_tags: 0 }),
-        });
-
-        // Save to IndexedDB so useLiveQuery reacts
-        await UserController.upsertTags(userId, fetchedTags);
-
-        setHasFetched(true);
-      } catch {
-        // Ignore fetch errors - we'll show empty state
-        setHasFetched(true);
-      }
-    };
-
-    fetchTags();
-  }, [userId, viewerId, enablePagination, hasFetched]);
 
   // Combine local tags with zero-tagger tags, preserving order
   const allTags = useMemo(() => {
@@ -144,6 +109,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
   const handleTagAdd = useCallback(
     async (tagString: string): Promise<{ success: boolean; error?: string }> => {
+      const revision = viewRevision.current;
       const label = tagString.trim();
 
       if (!label) return { success: false, error: 'Tag label cannot be empty' };
@@ -152,7 +118,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
       // Check if user already tagged
       const existingTag = allTags.find((t) => t.label.toLowerCase() === label.toLowerCase());
-      if (existingTag?.taggers?.includes(viewerId)) {
+      if (existingTag?.relationship) {
         return { success: false, error: 'You have already added this tag' };
       }
 
@@ -166,6 +132,8 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           taggedKind: TagKind.USER,
         });
 
+        if (viewRevision.current !== revision) return { success: false };
+
         // Remove from zero-tagger list if it was there
         const labelLower = label.toLowerCase();
         setZeroTaggerTags((prev) => {
@@ -176,6 +144,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
         return { success: true };
       } catch {
+        if (viewRevision.current !== revision) return { success: false };
         toast({
           variant: 'error',
           description: 'Could not add tag',
@@ -188,6 +157,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
 
   const handleTagToggle = useCallback(
     async (tag: { label: string; relationship?: boolean }): Promise<void> => {
+      const revision = viewRevision.current;
       if (!userId || !viewerId) return;
 
       const currentTagIndex = allTags.findIndex((t) => t.label === tag.label);
@@ -228,6 +198,8 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           // TagController.commitCreate updates IndexedDB first and rolls back on homeserver failure.
           await TagController.commitCreate(params);
 
+          if (viewRevision.current !== revision) return;
+
           // Remove from zero-tagger list
           setZeroTaggerTags((prev) => {
             const next = new Map(prev);
@@ -236,6 +208,7 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
           });
         }
       } catch {
+        if (viewRevision.current !== revision) return;
         // Rollback zero-tagger state on error
         if (userIsTagger) {
           setZeroTaggerTags((prev) => {
@@ -253,34 +226,14 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
     [userId, viewerId, allTags, tagOrder],
   );
 
-  // Use actual total count from stats to determine if there are more tags
-  const hasMore = enablePagination && allTags.length >= TAGS_PER_PAGE && allTags.length < stats.uniqueTags;
+  const hasMore =
+    enablePagination && !!record && !record.cache?.exhausted && (localTags?.length ?? 0) < stats.uniqueTags;
 
-  const loadMore = useCallback(async () => {
-    if (!enablePagination || !userId || !hasMore) return;
+  async function loadMore() {
+    if (hasMore) await loadNextPage();
+  }
 
-    try {
-      const moreTags = await UserController.fetchTags({
-        user_id: userId,
-        viewer_id: viewerId ?? undefined,
-        limit_tags: TAGS_PER_PAGE,
-        skip_tags: allTags.length,
-      });
-
-      // Merge with existing tags and save to IndexedDB
-      if (moreTags.length > 0) {
-        const existingLabels = new Set(allTags.map((t) => t.label.toLowerCase()));
-        const newTags = moreTags.filter((t) => !existingLabels.has(t.label.toLowerCase()));
-        const mergedTags = [...allTags, ...newTags];
-
-        await UserController.upsertTags(userId, mergedTags);
-      }
-    } catch {
-      // Ignore pagination errors
-    }
-  }, [enablePagination, userId, viewerId, allTags, hasMore]);
-
-  const isLoading = localTags === undefined || (enableStats && isLoadingStats);
+  const isLoading = isLoadingTags || (enableStats && isLoadingStats);
 
   const tagsWithAvatars = useMemo(() => transformTagsForViewer(allTags, viewerId), [allTags, viewerId]);
 
@@ -288,8 +241,8 @@ export function useTagged(userId: string | null | undefined, options: UseTaggedO
     tags: tagsWithAvatars,
     count: enableStats ? stats.uniqueTags : 0,
     isLoading,
-    isLoadingMore: false,
-    hasMore: enablePagination ? hasMore : false,
+    isLoadingMore,
+    hasMore,
     loadMore,
     handleTagAdd,
     handleTagToggle,

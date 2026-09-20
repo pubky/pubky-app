@@ -31,6 +31,8 @@ export interface UsePostInputOptions {
    * shared repost flow read as a different action, e.g. sharing a collection.
    */
   successToastTitle?: string;
+  /** Use collection-share wording for the repost toast's Undo action. */
+  isCollectionShare?: boolean;
   /**
    * Controls whether the component starts in expanded mode.
    * @default false
@@ -110,6 +112,8 @@ export interface UsePostInputReturn {
   handleDragOver: (e: React.DragEvent) => void;
   handleDrop: (e: React.DragEvent) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
+  /** Track the composer caret from the textarea's selection events */
+  handleSelectionChange: (e: React.SyntheticEvent<HTMLTextAreaElement>) => void;
   handleMentionSelect: (userId: string) => void;
   handleMentionKeyDown: (e: React.KeyboardEvent) => boolean;
 }

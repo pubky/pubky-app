@@ -1,8 +1,7 @@
 import { Logger } from '@/libs/logger/logger';
 import { advanceCursor, isSkipPaginatedStream, type PostStreamId } from '@/models/stream/post/postStream.types';
-import { LocalPostService } from '@/services/local/post/post';
 import { TQueueEntry } from '../post.types';
-import { CollectParams, CollectResult, CursorForPostFn } from './post-stream-queue.types';
+import { CollectParams, CollectResult } from './post-stream-queue.types';
 
 // Safety valve to prevent infinite loops when filters remove many posts.
 // At 20 iterations with the default 10-post limit we scan up to 200 raw posts before giving
@@ -10,9 +9,10 @@ import { CollectParams, CollectResult, CursorForPostFn } from './post-stream-que
 // extreme cases like a muted user having 200+ consecutive posts.
 //
 // NOTE: this bounds ONE collect() call, not the caller's behavior — an auto-loading feed
-// whose sentinel refires on every empty-but-not-ended result will chain collects until the
-// true stream end. Callers that need a tighter per-action budget pass `maxIterations`
-// (Discover Collections does).
+// whose sentinel refires on every empty-but-not-ended result chains collects; the timeline
+// renderers cap that chain with `useInfiniteScroll`'s unproductive-load budget
+// (`TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS`). Callers that need a tighter per-action budget
+// pass `maxIterations` (Discover Collections does).
 const MAX_FETCH_ITERATIONS = 20;
 
 /**
@@ -47,7 +47,7 @@ export class PostStreamQueue {
    * Handles deduplication, filtering, and saves overflow back to queue.
    */
   async collect(streamId: PostStreamId, params: CollectParams): Promise<CollectResult> {
-    const { limit, filter, fetch, cursorForPost } = params;
+    const { limit, filter, fetch } = params;
     const maxIterations = params.maxIterations ?? MAX_FETCH_ITERATIONS;
 
     // Load from queue and filter
@@ -56,14 +56,13 @@ export class PostStreamQueue {
     const seen = new Set(posts);
     let cursor = savedQueue?.cursor ?? params.cursor;
 
-    // Serve from the overflow buffer without touching the backend cursor. Skip streams
-    // resume by the saved offset; score streams from the last served post's own score
-    // (stream-aware via `cursorForPost` — bookmark streams resume by bookmark time).
-    if (posts.length >= limit) {
-      const nextCursor = isSkipPaginatedStream(streamId)
-        ? cursor
-        : await this.getLastPostCursor(posts, limit, cursorForPost);
-      return this.finalize(streamId, posts, limit, cursor, [], nextCursor, false);
+    // Serve from the overflow buffer without touching the backend. The resume cursor stays
+    // the raw backend position past everything already scanned into the buffer (skip offset
+    // or Nexus score) — the position the raw anchor (`lastRawPostId`) sits at. A cursor
+    // synthesized from the last served post's own timestamp would not be a stream position:
+    // Nexus keeps edited/deleted posts at their original score while bumping `indexed_at`.
+    if (limit > 0 && posts.length >= limit) {
+      return this.finalize(streamId, posts, limit, cursor, [], cursor, false, limit);
     }
 
     // Fetch until we have enough
@@ -71,11 +70,13 @@ export class PostStreamQueue {
     let latestScore: number | undefined;
     let fetchCount = 0;
     let reachedEnd = false;
+    let rawScannedCount = 0;
 
     while (posts.length < limit && fetchCount < maxIterations) {
       fetchCount++;
 
       const result = await fetch(cursor);
+      rawScannedCount += result.nextPageIds.length;
 
       // Filter and dedupe
       const filtered = await filter(result.nextPageIds);
@@ -92,7 +93,7 @@ export class PostStreamQueue {
       }
 
       // Advance by raw ids returned, never by how many survived the filter above.
-      cursor = advanceCursor(streamId, cursor, { ids: result.nextPageIds, lastScore: result.nextCursor });
+      const nextCursor = advanceCursor(streamId, cursor, { ids: result.nextPageIds, lastScore: result.nextCursor });
       if (result.nextCursor != null) {
         latestScore = result.nextCursor;
       }
@@ -101,53 +102,36 @@ export class PostStreamQueue {
       // Use the reachedEnd flag from the fetch result rather than calculating from length,
       // since deduplication in partialCacheHit can reduce the array size without reaching the end
       if (result.reachedEnd) {
+        cursor = nextCursor;
         reachedEnd = true;
         break;
       }
+
+      // An empty page that neither ended the stream nor moved the cursor (e.g. the viewer
+      // session was replaced mid-flight) would be re-requested verbatim: stop instead of
+      // spending the whole budget on identical requests. The caller keeps its position and
+      // its next round retries from there.
+      if (result.nextPageIds.length === 0 && nextCursor === cursor) {
+        Logger.debug('PostStreamQueue: empty page without progress, stopping this round', { streamId, cursor });
+        break;
+      }
+
+      cursor = nextCursor;
     }
 
     // Skip streams resume by raw offset; score streams by the last real score (undefined if
     // none, so the caller keeps its cursor rather than resetting).
     const nextCursor = isSkipPaginatedStream(streamId) ? cursor : latestScore;
-    return this.finalize(streamId, posts, limit, cursor, Array.from(allCacheMissIds), nextCursor, reachedEnd);
-  }
-
-  /**
-   * Gets the resume cursor for the last post that will be returned to the caller.
-   * This ensures pagination can continue correctly with the right cursor.
-   *
-   * Uses the caller-supplied stream-aware resolver when provided (bookmark streams
-   * paginate by bookmark time, not the post's `indexed_at` — see #2100); otherwise
-   * falls back to the post's `indexed_at`.
-   *
-   * @param posts - Array of post IDs
-   * @param limit - Number of posts to return
-   * @param cursorForPost - Optional stream-aware cursor resolver
-   * @returns The cursor of the last post, or undefined if not found or error occurs
-   */
-  private async getLastPostCursor(
-    posts: string[],
-    limit: number,
-    cursorForPost?: CursorForPostFn,
-  ): Promise<number | undefined> {
-    const toReturn = posts.slice(0, limit);
-    if (toReturn.length === 0) {
-      return undefined;
-    }
-
-    try {
-      const lastPostId = toReturn[toReturn.length - 1];
-      if (cursorForPost) {
-        return await cursorForPost(lastPostId);
-      }
-      const postDetails = await LocalPostService.readDetails({ postId: lastPostId });
-      return postDetails?.indexed_at;
-    } catch (error) {
-      // Log but don't fail - caller can fall back to cursor
-      // This allows pagination to continue even if IndexedDB access fails
-      Logger.warn('Failed to get last post cursor', { error });
-      return undefined;
-    }
+    return this.finalize(
+      streamId,
+      posts,
+      limit,
+      cursor,
+      Array.from(allCacheMissIds),
+      nextCursor,
+      reachedEnd,
+      rawScannedCount,
+    );
   }
 
   private finalize(
@@ -158,6 +142,7 @@ export class PostStreamQueue {
     cacheMissIds: string[],
     nextCursor: number | undefined,
     reachedEnd: boolean,
+    rawScannedCount: number,
   ): CollectResult {
     const toReturn = posts.slice(0, limit);
     const toSave = posts.slice(limit);
@@ -179,6 +164,7 @@ export class PostStreamQueue {
       // "Show more" / dead sentinel. The follow-up load serves the buffer, re-fetches
       // at the end cursor (one cheap short/empty page), and then reachedEnd propagates.
       reachedEnd: reachedEnd && toSave.length === 0,
+      rawScannedCount,
     };
   }
 }

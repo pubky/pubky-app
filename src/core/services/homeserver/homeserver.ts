@@ -117,7 +117,8 @@ export class HomeserverService {
   /**
    * Resolves the key's homeserver from its PKARR record.
    * @returns The homeserver public key, or `null` when the record is provably absent
-   * @throws When the lookup itself failed (relay/network error) — absence NOT proven
+   * @throws When the lookup itself failed (relay/network error) — absence NOT proven.
+   *   The SDK rejects with `PkarrError`, which is mapped to a retryable Network error.
    */
   private static async resolveHomeserverRecord({ publicKey }: THomeserverPublicKeyParams) {
     try {
@@ -127,7 +128,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { publicKey: publicKey?.z32?.() },
+        additionalContext: { publicKey: publicKey?.z32?.(), operation: 'resolveHomeserverRecord' },
       });
     }
   }
@@ -141,7 +142,8 @@ export class HomeserverService {
    * force-republish this guard exists to prevent (#2126). This also means a key
    * whose just-published record has not yet propagated to our relays is rejected
    * until it propagates. Only a lookup that itself failed (relay/network error)
-   * throws a retryable server error instead.
+   * throws a retryable error instead (Network for the SDK's `PkarrError`,
+   * Server for anything else).
    */
   static async assertUserHomeserverAllowed({ publicKey }: THomeserverPublicKeyParams): Promise<void> {
     if (!isStagingHomeserverDeploy()) {
@@ -182,7 +184,7 @@ export class HomeserverService {
     try {
       const homeserverPublicKey = PublicKey.from(getHomeserver());
       const signer = this.getSigner(keypair);
-      // TODO: cookie auth is deprecated in pubky 0.10 — migrate to the grant flow (`signup()` + `signin(clientId)`).
+      // Cookie-backed session on purpose: the grant-auth migration is tracked separately.
       const session = await signer.signupCookie(homeserverPublicKey, signupToken);
 
       Logger.debug('Signup successful', { session });
@@ -191,7 +193,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { signupTokenProvided: Boolean(signupToken) },
+        additionalContext: { signupTokenProvided: Boolean(signupToken), operation: 'signUp' },
         statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
         alwaysUseHomeserverError: true,
       });
@@ -279,7 +281,7 @@ export class HomeserverService {
     }
 
     try {
-      // TODO: cookie auth is deprecated in pubky 0.10 — migrate to grant `signin(clientId)`.
+      // Cookie-backed session on purpose: the grant-auth migration is tracked separately.
       const session = await signer.signinCookie();
       return { session };
     } catch (signinError) {
@@ -304,7 +306,11 @@ export class HomeserverService {
     } catch (republishError) {
       return handleError({
         error: republishError,
-        additionalContext: { pubky: Identity.pubkyFromKeypair(keypair), originalSigninError: String(originalError) },
+        additionalContext: {
+          pubky: Identity.pubkyFromKeypair(keypair),
+          originalSigninError: String(originalError),
+          operation: 'republishConfiguredHomeserver',
+        },
         statusCode: HttpStatusCode.UNAUTHORIZED,
       });
     }
@@ -320,7 +326,7 @@ export class HomeserverService {
 
     try {
       const pubkySdk = this.getPubkySdk();
-      // TODO: cookie auth is deprecated in pubky 0.10 — migrate to `startGrantAuthFlow()`.
+      // Cookie auth flow on purpose: the grant-auth migration is tracked separately.
       const flow = pubkySdk.startCookieAuthFlow(capabilities, AuthFlowKind.signin(), getDefaultHttpRelay());
       const approval = createCancelableAuthApproval(flow);
 
@@ -698,7 +704,7 @@ export class HomeserverService {
     } catch (error) {
       return handleError({
         error,
-        additionalContext: { sessionExport: Boolean(sessionExport) },
+        additionalContext: { sessionExport: Boolean(sessionExport), operation: 'restoreSession' },
       });
     }
   }

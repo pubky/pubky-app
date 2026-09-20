@@ -28,11 +28,15 @@ vi.mock('@/controllers/auth/auth', () => ({
 
 // Mock useCopyToClipboard hook
 const mockCopyToClipboard = vi.fn();
+const copyToClipboardOptions: Array<{ successTitle?: string }> = [];
 
 vi.mock('@/hooks/useCopyToClipboard/useCopyToClipboard', () => ({
-  useCopyToClipboard: () => ({
-    copyToClipboard: mockCopyToClipboard,
-  }),
+  useCopyToClipboard: (options: { successTitle?: string } = {}) => {
+    copyToClipboardOptions.push(options);
+    return {
+      copyToClipboard: mockCopyToClipboard,
+    };
+  },
 }));
 
 describe('useProfileActions', () => {
@@ -136,6 +140,15 @@ describe('useProfileActions', () => {
       result.current.onCopyLink();
 
       expect(mockCopyToClipboard).toHaveBeenCalledWith('');
+    });
+
+    it('titles the toast for a profile link rather than a pubky', () => {
+      copyToClipboardOptions.length = 0;
+
+      renderHook(() => useProfileActions(defaultProps));
+
+      const titles = copyToClipboardOptions.map((options) => options.successTitle);
+      expect(titles).toContain('Profile link copied to clipboard');
     });
   });
 

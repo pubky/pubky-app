@@ -61,7 +61,7 @@ the captured post + attachments into the creator's **guarded storage** (a `/priv
 the creator's own homeserver — the creator reads it directly with their session; readers
 only ever get it proxied by the Lock Server), registers the
 lock, and posts the announcement with a `lock` field pointing at the public `lock.json`.
-Details: [ADR 0019](adr/0019-locks-creator-publishing.md).
+Details: [ADR 0022](adr/0022-locks-creator-publishing.md).
 
 The announcement is a teaser, so it may never be an **article (`long`) or a `collection`** —
 the locked content behind it still may. Two layers enforce that: the composer hides the
@@ -357,6 +357,6 @@ the copy — if lock imports suddenly fail or behave stale, re-copy first.
 
 - Lock server FE integration: `pubky/locks` → `docs/_front_end_integration.md` — the
   `lock.json` shape and the submit-proof → credential → proxy-read access flow.
-- Creator side: [ADR 0019](adr/0019-locks-creator-publishing.md)
+- Creator side: [ADR 0022](adr/0022-locks-creator-publishing.md)
 - Issues: #2297 (bundle-id persistence), #2368 (reader payment), #2369 (payment-only locks),
   #2468 (multi-tab read-back), #1998 (Phase 1 epic).

@@ -7,11 +7,12 @@ import {
   ClientErrorCode,
   DatabaseErrorCode,
   NetworkErrorCode,
+  RateLimitErrorCode,
   ServerErrorCode,
   TimeoutErrorCode,
 } from '@/libs/error/error.codes';
 import type { Err } from '@/libs/error/error.factories';
-import { safeFetch } from '@/libs/error/error.http';
+import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { RUNTIME_CONFIG_WINDOW_KEY } from '@/libs/runtime-config/runtime-config';
@@ -108,10 +109,14 @@ async function withEnabledSentryCapture(
   const removeRuntimeConfig = injectRuntimeConfig();
 
   try {
-    const [{ captureAppError }, { Err: freshErr }] = await Promise.all([
-      import('./sentry'),
-      import('@/libs/error/error.factories'),
-    ]);
+    // Import sequentially: `sentry` ⇄ `error.factories` ⇄ `env` form an import
+    // cycle, and evaluating it from two concurrent dynamic imports can hand the
+    // capture funnel a half-initialised graph (seen as a CI-only flake where
+    // `captureException` was never called).
+    const { captureAppError, shouldEnableSentry } = await import('./sentry');
+    const { Err: freshErr } = await import('@/libs/error/error.factories');
+    // Fail loudly on the gate itself rather than as a silent "0 calls" downstream.
+    expect(shouldEnableSentry()).toBe(true);
     run({ captureAppError, captureException, Err: freshErr });
   } finally {
     removeRuntimeConfig();
@@ -396,6 +401,40 @@ describe('expected-error drop rules (pipeline-verified)', () => {
       context: { statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR },
     });
 
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+
+  const nexusHotUrl = 'https://nexus.pubky.app/v0/hot';
+  const rateLimitedResponse = () =>
+    new Response(null, { status: HttpStatusCode.TOO_MANY_REQUESTS, statusText: 'Too Many Requests' });
+
+  it('drops repeat 429 reports for the same operation and keeps the first one', () => {
+    const first = httpResponseToError(rateLimitedResponse(), ErrorService.Nexus, 'fetchHotFeed', nexusHotUrl);
+    const repeat = httpResponseToError(rateLimitedResponse(), ErrorService.Nexus, 'fetchHotFeed', nexusHotUrl);
+
+    expect(first.code).toBe(RateLimitErrorCode.RATE_LIMITED);
+    expect(first.context?.statusCode).toBe(HttpStatusCode.TOO_MANY_REQUESTS);
+    expect(shouldDropAppErrorFromSentry(first)).toBe(false);
+
+    expect(repeat.context?.reportSuppressed).toBe(true);
+    expect(shouldDropAppErrorFromSentry(repeat)).toBe(true);
+  });
+
+  it('keeps a 429 from another operation reportable', () => {
+    const error = httpResponseToError(rateLimitedResponse(), ErrorService.Nexus, 'fetchOtherFeed', nexusHotUrl);
+
+    expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+  });
+
+  it('keeps a 5xx for the same operation reportable', () => {
+    const error = httpResponseToError(
+      new Response(null, { status: HttpStatusCode.SERVICE_UNAVAILABLE }),
+      ErrorService.Nexus,
+      'fetchHotFeed',
+      nexusHotUrl,
+    );
+
+    expect(error.context?.reportSuppressed).toBeUndefined();
     expect(shouldDropAppErrorFromSentry(error)).toBe(false);
   });
 });

@@ -1,6 +1,8 @@
 export interface UseRepostInfoResult {
   /** Whether the post is a repost (used by PostContent, PostMain) */
   isRepost: boolean;
+  /** Whether this post also belongs to a reply thread */
+  isReply: boolean;
   /** ID of the user who reposted (derived from postId) */
   repostAuthorId: string | null;
   /** Whether the current user is the one who reposted (used by PostMain) */

@@ -3,6 +3,7 @@ import type { TGetOrFetchNotificationsResponse } from '@/application/notificatio
 import { NEXUS_NOTIFICATIONS_LIMIT } from '@/config/nexus';
 import type { TGetNotificationsParams } from '@/controllers/notification/notification.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
@@ -24,6 +25,7 @@ export class NotificationController {
    * @returns Promise resolving when notifications are updated
    */
   static async fetchNotifications({ userId }: TReadProfileParams) {
+    const isCurrent = captureViewerSession();
     const notificationStore = useNotificationStore.getState();
     const lastPolledTimestamp = notificationStore.selectLastPolledTimestamp();
     const lastRead = notificationStore.selectLastRead();
@@ -35,8 +37,10 @@ export class NotificationController {
       lastPolledTimestamp,
       lastRead,
       allowedTypes,
+      isCurrent,
     });
 
+    if (!isCurrent()) return;
     notificationStore.setUnread(unread);
 
     const currentCursor = notificationStore.selectLastPolledTimestamp();
@@ -109,6 +113,7 @@ export class NotificationController {
       olderThan,
       limit,
       allowedTypes: shouldFilterByPreferences ? allowedTypes : undefined,
+      isCurrent: captureViewerSession(),
     });
   }
 

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useUnlockedList } from '@/hooks/useUnlockedList/useUnlockedList';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
@@ -407,6 +408,7 @@ describe('ProfilePageContainer - User not found', () => {
     expect(screen.getByTestId('profile-user-not-found-discovery')).toBeInTheDocument();
     expect(screen.queryByTestId('profile-page-layout')).not.toBeInTheDocument();
     expect(useProfileHeader).toHaveBeenCalledWith(PUBKY_INVALID_TOO_LONG, { enabled: false });
+    expect(useIsFollowing).toHaveBeenCalledWith('');
   });
 
   it('shows ProfilePageLayout when user is found', async () => {

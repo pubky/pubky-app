@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/pubky/pubky-app/discussions
     about: Ask questions or share ideas in our discussions
   - name: 📚 Documentation
-    url: https://github.com/pubky/pubky-app/tree/master/.cursor
+    url: https://github.com/pubky/pubky-app/tree/master/docs
     about: Check our documentation for architecture and guidelines

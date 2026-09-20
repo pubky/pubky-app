@@ -42,6 +42,7 @@ describe('StreamUserController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         skip: 0,
         limit: NEXUS_USERS_PER_PAGE,
@@ -76,12 +77,14 @@ describe('StreamUserController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         skip: 0,
         limit: NEXUS_USERS_PER_PAGE,
         viewerId,
       });
       expect(fetchMissingUsersSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         cacheMissUserIds,
         viewerId,
       });
@@ -110,6 +113,7 @@ describe('StreamUserController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         skip,
         limit: NEXUS_USERS_PER_PAGE,
@@ -141,6 +145,7 @@ describe('StreamUserController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         skip: 0,
         limit: NEXUS_USERS_PER_PAGE,
@@ -165,6 +170,7 @@ describe('StreamUserController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         skip: 0,
         limit: NEXUS_USERS_PER_PAGE,
@@ -229,6 +235,7 @@ describe('StreamUserController', () => {
       });
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         skip: 0,
         limit: NEXUS_USERS_PER_PAGE,
@@ -264,6 +271,7 @@ describe('StreamUserController', () => {
 
       // fetchMissingUsersFromNexus should be called and awaited
       expect(fetchMissingUsersSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         cacheMissUserIds,
         viewerId,
       });
@@ -278,10 +286,7 @@ describe('StreamUserController', () => {
 
       await StreamUserController.getOrFetchUsers({ userIds });
 
-      expect(getOrFetchUsersSpy).toHaveBeenCalledWith({
-        userIds,
-        viewerId,
-      });
+      expect(getOrFetchUsersSpy).toHaveBeenCalledWith({ isCurrent: expect.any(Function), userIds, viewerId });
     });
 
     it('should pass undefined as viewerId when currentUserPubky is null', async () => {
@@ -297,6 +302,7 @@ describe('StreamUserController', () => {
       await StreamUserController.getOrFetchUsers({ userIds });
 
       expect(getOrFetchUsersSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         userIds,
         viewerId: undefined,
       });
@@ -332,12 +338,14 @@ describe('StreamUserController', () => {
       });
 
       expect(refreshStreamSliceSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         streamId,
         skip: 0,
         limit: 10,
         viewerId,
       });
       expect(fetchMissingUsersSpy).toHaveBeenCalledWith({
+        isCurrent: expect.any(Function),
         cacheMissUserIds,
         viewerId,
       });

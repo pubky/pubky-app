@@ -4,6 +4,10 @@ import { useReducedMotion } from 'motion/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST_THREAD_CONNECTOR_VARIANTS } from '@/atoms/PostThreadConnector/PostThreadConnector.constants';
 import { POST_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import {
+  MAX_CHARACTERS_TOAST_DESCRIPTION,
+  MAX_CHARACTERS_TOAST_TITLE,
+} from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
@@ -27,6 +31,7 @@ const mockSetIsArticle = vi.fn();
 const mockSetArticleTitle = vi.fn();
 const mockSetMentionSelectedIndex = vi.fn();
 const mockHandleMentionSelect = vi.fn();
+const mockHandleSelectionChange = vi.fn();
 const mockCurrentUserDetails = {
   id: 'test-user-id:pubkey',
   name: 'Current User',
@@ -150,6 +155,8 @@ vi.mock('@/atoms/Textarea/Textarea', () => {
         ref,
         onFocus,
         onKeyDown,
+        onKeyUp,
+        onSelect,
         onPaste,
         autoFocus,
         className,
@@ -162,6 +169,8 @@ vi.mock('@/atoms/Textarea/Textarea', () => {
           onChange={onChange}
           onFocus={onFocus}
           onKeyDown={onKeyDown}
+          onKeyUp={onKeyUp}
+          onSelect={onSelect}
           onPaste={onPaste}
           placeholder={placeholder}
           disabled={disabled}
@@ -526,6 +535,7 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     mentionSelectedIndex: 0,
     setMentionSelectedIndex: mockSetMentionSelectedIndex,
     handleMentionSelect: mockHandleMentionSelect,
+    handleSelectionChange: mockHandleSelectionChange,
     handleMentionKeyDown: mockHandleMentionKeyDown,
     ...overrides,
   } as UsePostInputReturn;
@@ -606,6 +616,7 @@ describe('PostInput', () => {
     mockSetArticleTitle.mockReset();
     mockSetMentionSelectedIndex.mockReset();
     mockHandleMentionSelect.mockReset();
+    mockHandleSelectionChange.mockReset();
 
     mockUseEnterSubmit.mockImplementation(() => mockEnterSubmitHandler);
     mockUsePostInput.mockImplementation((options: UsePostInputOptions) => createUsePostInputReturn(options));
@@ -641,6 +652,32 @@ describe('PostInput', () => {
     expect(postHeader).toHaveAttribute('data-count', '11');
     expect(postHeader).toHaveAttribute('data-max', POST_MAX_CHARACTER_LENGTH.toString());
     expect(postHeader).toHaveAttribute('data-character-limit-placement', 'name-row');
+  });
+
+  it('warns at the enforced limit for an emoji draft a code-point count reports as short (issue #1761)', () => {
+    // One emoji plus ASCII letters fills the 2,000 UTF-16 units the composer enforces; the old
+    // code-point count read 1,999 and stayed silent.
+    mockUsePostReturn.content = `😀${'a'.repeat(POST_MAX_CHARACTER_LENGTH - 2)}`;
+    mockUsePostReturn.isExpanded = true;
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const postHeader = getStatePostHeader();
+    expect(postHeader).toHaveAttribute('data-count', POST_MAX_CHARACTER_LENGTH.toString());
+    expect(postHeader).toHaveAttribute('data-max', POST_MAX_CHARACTER_LENGTH.toString());
+    expect(toast).toHaveBeenCalledWith({
+      variant: 'warning',
+      title: MAX_CHARACTERS_TOAST_TITLE,
+      description: MAX_CHARACTERS_TOAST_DESCRIPTION,
+    });
+  });
+
+  it('stays silent one unit below the enforced limit for an emoji draft (issue #1761)', () => {
+    mockUsePostReturn.content = `😀${'a'.repeat(POST_MAX_CHARACTER_LENGTH - 3)}`;
+    mockUsePostReturn.isExpanded = true;
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    expect(getStatePostHeader()).toHaveAttribute('data-count', (POST_MAX_CHARACTER_LENGTH - 1).toString());
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('does not show character count when collapsed', () => {
@@ -940,6 +977,19 @@ describe('PostInput', () => {
     fireEvent.change(textarea, { target: { value: 'Test content' } });
 
     expect(mockSetContent).toHaveBeenCalledWith('Test content');
+  });
+
+  it('tracks the composer caret from the textarea selection events', () => {
+    render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+    const textarea = screen.getByTestId('textarea');
+    // The caret moves without a change event: a click/drag selection, then an arrow key
+    fireEvent.select(textarea);
+    expect(mockHandleSelectionChange).toHaveBeenCalled();
+
+    mockHandleSelectionChange.mockClear();
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(mockHandleSelectionChange).toHaveBeenCalled();
   });
 
   it('opens sign-in and does not mutate content when an anonymous user types', () => {

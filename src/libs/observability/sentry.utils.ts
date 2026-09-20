@@ -84,6 +84,19 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       matchesEndpointPath(error, NEXUS_POST_TAGS_PATH_PATTERN),
   },
   {
+    name: 'rate-limit-repeat-reports',
+    reason:
+      'A 429 is one server-side throttling window, not one failure per request: a throttled client keeps issuing queries and the ' +
+      'query client retries a 429 once after the 429 backoff, so reporting every attempt produced ~8.7k events for a handful of ' +
+      'windows (PUBKY-APP-B3 on /hot, PUBKY-APP-9X on /home). httpStatusCodeToError reports the first 429 per service/operation per ' +
+      'window and tags the repeats with context.reportSuppressed, so throttling stays visible while the repeat events are dropped. ' +
+      'Non-429 rate-limit errors carry no flag and stay reportable.',
+    matches: (error) =>
+      error.category === ErrorCategory.RateLimit &&
+      error.context?.statusCode === HttpStatusCode.TOO_MANY_REQUESTS &&
+      error.context?.reportSuppressed === true,
+  },
+  {
     name: 'aborted-requests',
     reason:
       'REQUEST_ABORTED is only produced by safeFetch when fetch rejects with an AbortError DOMException. When the ' +
@@ -99,13 +112,14 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       'The mute-list SSE subscribe drops routinely (homeserver deploys, idle timeouts, mobile backgrounding) and ' +
       'MuteListSyncCoordinator reconnects with backoff by design. Connect failures reach here as ' +
       'handleError → httpStatusCodeToError(500) → Err.server(INTERNAL_ERROR) tagged with the subscribe operation ' +
-      '(PUBKY-APP-11/1Y/6G/CX). Auth/validation failures on the same operation and every other Homeserver ' +
+      '(PUBKY-APP-11/1Y/6G/CX), or as Err.network(CONNECTION_FAILED) when the SDK cannot resolve the homeserver ' +
+      "from PKARR first ('PkarrError', @synonymdev/pubky >= 0.10). Auth/validation failures on the same operation and every other Homeserver " +
       'operation stay reportable, and the coordinator reports a persistent outage once via the ' +
       "'muteListEventStreamExhausted' operation after MUTE_SYNC_STREAM_FAILURE_ALERT_THRESHOLD consecutive failures.",
     matches: (error) =>
       error.service === ErrorService.Homeserver &&
       error.operation === HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION &&
-      error.category === ErrorCategory.Server,
+      (error.category === ErrorCategory.Server || error.category === ErrorCategory.Network),
   },
 ];
 

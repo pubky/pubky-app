@@ -14,6 +14,7 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
+import { useCharacterLimitWarning } from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
 import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/useComposerHeightAnimation';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
@@ -26,7 +27,7 @@ import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
 import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
-import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
+import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
@@ -62,6 +63,7 @@ export function PostInput({
   submitLabel,
   submitIcon,
   successToastTitle,
+  isCollectionShare,
   showThreadConnector = false,
   expanded = false,
   onContentChange,
@@ -126,6 +128,7 @@ export function PostInput({
     setMentionSelectedIndex,
     handleMentionSelect,
     handleMentionKeyDown,
+    handleSelectionChange,
   } = usePostInput({
     variant,
     postId,
@@ -138,6 +141,7 @@ export function PostInput({
     onSuccess,
     placeholder,
     successToastTitle,
+    isCollectionShare,
     expanded,
     onContentChange,
     onArticleModeChange,
@@ -343,7 +347,8 @@ export function PostInput({
   // With the lock on the body is the teaser, sharing the post budget with the title in one envelope.
   const composerMaxLength = isLockMode ? LOCK_TEASER_MAX_CHARACTER_LENGTH : POST_MAX_CHARACTER_LENGTH;
   const characterLimit =
-    isExpanded && !isArticle ? { count: getCharacterCount(content), max: composerMaxLength } : undefined;
+    isExpanded && !isArticle ? { count: getEnforcedCharacterCount(content), max: composerMaxLength } : undefined;
+  useCharacterLimitWarning(characterLimit);
 
   useEffect(() => {
     onLockModeChange?.(isLockEnabled);
@@ -503,6 +508,8 @@ export function PostInput({
                         onChange={handleChangeWithAuth}
                         onFocus={handleExpandWithAuth}
                         onKeyDown={handleKeyDown}
+                        onKeyUp={handleSelectionChange}
+                        onSelect={handleSelectionChange}
                         onPaste={handlePasteWithAuth}
                         maxLength={composerMaxLength}
                         rows={1}
