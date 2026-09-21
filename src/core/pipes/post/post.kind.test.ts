@@ -49,6 +49,14 @@ describe('inferPostKindForCreate', () => {
     expect(kind).toBe(PubkyAppPostKind.Link);
   });
 
+  it('returns link when content contains a protocol-less url', () => {
+    const kind = inferPostKindForCreate({
+      content: 'Watch youtube.com/video',
+    });
+
+    expect(kind).toBe(PubkyAppPostKind.Link);
+  });
+
   it('returns short when there is no attachment and no url', () => {
     const kind = inferPostKindForCreate({
       content: 'Just plain text',

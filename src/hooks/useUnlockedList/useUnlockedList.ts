@@ -27,14 +27,18 @@ export function useUnlockedList({ enabled = true }: UseUnlockedListParams = {}):
       // Signing out or switching to someone else's profile must not leave my list on screen.
       setItems([]);
       setHasResolved(false);
+      setIsError(false);
       return;
     }
 
     let cancelled = false;
-    setIsError(false);
     LocksController.fetchUnlockedList({ readerPubky: currentUserPubky })
       .then((result) => {
-        if (!cancelled) setItems(result);
+        if (cancelled) return;
+        setItems(result);
+        // Cleared on success, not when the read starts: a retry of a failed read still holds the
+        // emptied list, which would be reported as a settled count of 0 while it is in flight.
+        setIsError(false);
       })
       .catch(() => {
         // Already reported by the Err factory; `isError` lets the screen offer a retry.

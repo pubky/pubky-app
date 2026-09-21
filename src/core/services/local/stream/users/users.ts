@@ -1,18 +1,41 @@
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
+import { db } from '@/database/franky/franky';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { ModerationModel } from '@/models/moderation/moderation';
 import { type ModerationModelSchema, ModerationType } from '@/models/moderation/moderation.schema';
 import type { NexusModelTuple } from '@/models/shared/base/tuple/baseTuple.type';
 import { UserStreamModel } from '@/models/stream/user/userStream';
 import type { UserStreamId } from '@/models/stream/user/userStream.types';
-import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import type { UserDetailsModelSchema } from '@/models/user/details/userDetails.schema';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
-import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import type { TUserStreamUpsertParams } from '@/services/local/stream/users/users.types';
-import type { NexusTag, NexusUser, NexusUserCounts, NexusUserRelationship } from '@/services/nexus/nexus.types';
+import { LocalTagCacheService, type TagPreviewGuard } from '@/services/local/tag/tag-cache';
+import {
+  NexusSocialGraphStatus,
+  type NexusTag,
+  type NexusUser,
+  type NexusUserCounts,
+  type NexusUserRelationship,
+} from '@/services/nexus/nexus.types';
+import { getNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
+
+/** Tag-cache guard plus the fetch stamp used to keep local follow writes. */
+export type PersistUsersGuard = TagPreviewGuard & {
+  fetchStartedAt?: number;
+};
+
+const KNOWN_SOCIAL_GRAPH_STATUSES = new Set<string>(Object.values(NexusSocialGraphStatus));
+
+/**
+ * Nexus decides the badge tiers; a value this build does not know (a new tier, a renamed
+ * one) is treated as "no ranking" so the badge hides instead of rendering an empty pill.
+ */
+function toSocialGraphStatus(value: NexusUser['social_graph_status']): NexusSocialGraphStatus | null {
+  return value && KNOWN_SOCIAL_GRAPH_STATUSES.has(value) ? value : null;
+}
 
 /**
  * Local Stream Users Service
@@ -74,11 +97,16 @@ export class LocalStreamUsersService {
    * Used to identify missing user data that needs to be fetched
    *
    * @param userIds - Array of user IDs to check
+   * @param viewerId - When set, a missing relationship row is also a cache miss (#1803)
    * @returns Array of user IDs that are not persisted in cache
    */
-  static async getNotPersistedUsersInCache(userIds: Pubky[]): Promise<Pubky[]> {
-    const existingUserIds = await UserDetailsModel.findByIdsPreserveOrder(userIds);
-    return userIds.filter((_userId, index) => existingUserIds[index] === undefined);
+  static async getNotPersistedUsersInCache(userIds: Pubky[], viewerId?: Pubky): Promise<Pubky[]> {
+    const [details, relationships] = await Promise.all([
+      UserDetailsModel.findByIdsPreserveOrder(userIds),
+      viewerId ? UserRelationshipsModel.findByIds(userIds) : Promise.resolve([]),
+    ]);
+    const hydratedRelationships = new Set(relationships.map((row) => row.id));
+    return userIds.filter((id, index) => details[index] === undefined || (viewerId && !hydratedRelationships.has(id)));
   }
 
   /**
@@ -86,10 +114,20 @@ export class LocalStreamUsersService {
    * Separates user details, counts, tags, relationships, and TTL records
    * Also detects and persists moderation status for flagged profiles
    *
+   * Relationship rows (`following` / `followed_by`) are only meaningful relative to a viewer.
+   * When the batch was fetched without a `viewerId`, Nexus returns a viewer-agnostic
+   * relationship, so the row is skipped instead of caching "unknown" as "not following".
+   * A missing row reads as a cache miss and triggers a viewer-aware fetch (#1803).
+   *
    * @param users - Array of users from Nexus API
+   * @param tagGuard - Tag-cache guard; `viewerId` is required to persist relationship rows.
+   *   `fetchStartedAt` skips relationship rows whose user TTL was written at or after that
+   *   time so a local follow/unfollow during the request is not overwritten.
    * @returns Array of user IDs (Pubky)
    */
-  static async persistUsers(users: NexusUser[]): Promise<Pubky[]> {
+  static async persistUsers(users: NexusUser[], tagGuard: PersistUsersGuard = {}): Promise<Pubky[]> {
+    tagGuard = { ...tagGuard, validatedAt: tagGuard.validatedAt ?? getNexusResponseStartedAt(users) };
+    if (tagGuard.isCurrent && !tagGuard.isCurrent()) return [];
     const userCounts: NexusModelTuple<NexusUserCounts>[] = [];
     const userRelationships: NexusModelTuple<NexusUserRelationship>[] = [];
     const userTags: NexusModelTuple<NexusTag[]>[] = [];
@@ -106,7 +144,10 @@ export class LocalStreamUsersService {
       userCounts.push([userId, user.counts]);
       userRelationships.push([userId, user.relationship]);
       userTags.push([userId, user.tags]);
-      userDetails.push(user.details);
+      // The badge tier lives on the Nexus user view, not on `details`; it rides on the
+      // details row so profile reads stay a single lookup. An absent field (older Nexus)
+      // is stored as `null` so readers treat it as "no ranking" rather than "never fetched".
+      userDetails.push({ ...user.details, social_graph_status: toSocialGraphStatus(user.social_graph_status) });
       userTtl.push([userId, { lastUpdatedAt: now }]);
 
       // Detect moderation from user tags
@@ -124,14 +165,49 @@ export class LocalStreamUsersService {
     // Bulk save to normalized tables
     await Promise.all([
       UserDetailsModel.bulkSave(userDetails),
-      UserCountsModel.bulkSave(userCounts),
-      UserTagsModel.bulkSave(userTags),
-      UserRelationshipsModel.bulkSave(userRelationships),
-      UserTtlModel.bulkSave(userTtl),
+      LocalTagCacheService.savePreviews('user', userTags, tagGuard, userCounts),
+      this.persistRelationshipsAndTtl(userIds, userRelationships, userTtl, tagGuard),
       // Persist moderation records for flagged profiles
       userModerations.length > 0 ? ModerationModel.bulkSave(userModerations) : Promise.resolve(),
     ]);
 
     return userIds;
+  }
+
+  /**
+   * Guest / viewer-less Nexus payloads skip the relationship row (#1803).
+   * When `fetchStartedAt` is set, a user TTL written at or after that stamp
+   * means a local follow landed during the request — keep that row.
+   */
+  private static async persistRelationshipsAndTtl(
+    userIds: Pubky[],
+    userRelationships: NexusModelTuple<NexusUserRelationship>[],
+    userTtl: NexusModelTuple<{ lastUpdatedAt: number }>[],
+    tagGuard: PersistUsersGuard,
+  ): Promise<void> {
+    if (!tagGuard.viewerId) {
+      await UserTtlModel.bulkSave(userTtl);
+      return;
+    }
+
+    await db.transaction('rw', [UserRelationshipsModel.table, UserTtlModel.table], async () => {
+      let toSave = userRelationships;
+      const fetchStartedAt = tagGuard.fetchStartedAt;
+      if (fetchStartedAt !== undefined) {
+        const existingTtl = await UserTtlModel.findByIds(userIds);
+        const skipIds = new Set(existingTtl.filter((row) => row.lastUpdatedAt >= fetchStartedAt).map((row) => row.id));
+        if (skipIds.size > 0) {
+          Logger.debug('LocalStreamUsersService: Skipped relationship rows written since the fetch started', {
+            ids: Array.from(skipIds).slice(0, 5),
+            count: skipIds.size,
+          });
+          toSave = userRelationships.filter(([id]) => !skipIds.has(id));
+        }
+      }
+      await Promise.all([
+        toSave.length > 0 ? UserRelationshipsModel.bulkSave(toSave) : Promise.resolve(),
+        UserTtlModel.bulkSave(userTtl),
+      ]);
+    });
   }
 }

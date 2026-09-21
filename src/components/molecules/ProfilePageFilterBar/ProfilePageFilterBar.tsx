@@ -23,7 +23,7 @@ export interface ProfilePageFilterBarItem {
   label: string;
   count: number | undefined;
   pageType: FilterBarPageType;
-  /** When false, the tab renders without a count badge (set for tabs that have no stat). */
+  /** When false, the tab renders without a count badge: no stat to show, or the read for it failed. */
   showCount?: boolean;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
@@ -31,8 +31,11 @@ export interface ProfilePageFilterBarItem {
 export interface ProfilePageFilterBarProps {
   items?: ProfilePageFilterBarItem[];
   stats?: ProfileStats;
-  /** Unlocked-content count; separate from `stats` because Nexus cannot index the reader's `/priv`. */
-  unlockedCount?: number;
+  /**
+   * Unlocked-content count; separate from `stats` because Nexus cannot index the reader's `/priv`.
+   * `undefined` while the read is in flight (spinner), `null` when it failed (label only).
+   */
+  unlockedCount?: number | null;
   activePage: FilterBarPageType;
   onPageChangeAction: (page: FilterBarPageType) => void;
   /** Whether this is the logged-in user's own profile */
@@ -121,8 +124,8 @@ const FILTER_ITEMS_CONFIG: Array<{
 export interface GetDefaultItemsParams {
   stats?: ProfileStats;
   isOwnProfile?: boolean;
-  /** Count for the Unlocked tab; `undefined` renders its spinner, same as absent stats. */
-  unlockedCount?: number;
+  /** Count for the Unlocked tab: `undefined` while the read is in flight (spinner), `null` when it failed (label only). */
+  unlockedCount?: number | null;
 }
 
 export const getDefaultItems = ({
@@ -147,8 +150,8 @@ export const getDefaultItems = ({
       id: config.id,
       label: config.label,
       pageType: config.pageType,
-      showCount: isUnlocked || config.statKey !== undefined,
-      count: isUnlocked ? unlockedCount : statCount,
+      showCount: isUnlocked ? unlockedCount !== null : config.statKey !== undefined,
+      count: isUnlocked ? (unlockedCount ?? undefined) : statCount,
       ownProfileOnly: config.ownProfileOnly,
     };
   });

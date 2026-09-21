@@ -28,7 +28,9 @@ const toSats = (value: string) =>
 export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockContentProps) {
   // Bare digits — sats are whole units, and the value travels to the Lock Server as a string.
   const [amount, setAmount] = useState('');
-  const { rate: btcRate, status: rateStatus } = useBtcRate();
+  // The rate is only for pricing a lock, but every post composer mounts this dialog — fetching
+  // before it opens would cost a `/api/btc-rate` call on the home feed, Locks users or not.
+  const { rate: btcRate, status: rateStatus } = useBtcRate(open);
 
   const amountSats = Number(amount);
   const isValidAmount = isPositiveIntegerString(amount);
@@ -95,7 +97,7 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
             </Container>
 
             {rateStatus === 'failed' && (
-              <Typography className="pt-1 text-xs text-muted-foreground">
+              <Typography className="pt-1 text-xs text-destructive">
                 {"The dollar value can't be shown right now. Your price in sats is unaffected."}
               </Typography>
             )}
@@ -116,6 +118,9 @@ export function DialogLockContent({ open, onOpenChange, onApplied }: DialogLockC
             size="lg"
             onClick={handleApply}
             disabled={!isValidAmount}
+            // The Button base sets disabled:pointer-events-none, which would swallow the hover and
+            // leave the default arrow cursor. A disabled button still cannot fire a click.
+            className="disabled:pointer-events-auto disabled:cursor-not-allowed"
             data-cy="lock-content-apply"
           >
             {'Apply Lock'}

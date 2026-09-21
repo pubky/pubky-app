@@ -6,8 +6,10 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useProfileHeader } from '@/hooks/useProfileHeader/useProfileHeader';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useSocialGraphStatus } from '@/hooks/useSocialGraphStatus/useSocialGraphStatus';
 import { useTagged } from '@/hooks/useTagged/useTagged';
 import { ProfilePageLinks } from '@/molecules/ProfilePageLinks/ProfilePageLinks';
+import { ProfilePageSocialGraph } from '@/molecules/ProfilePageSocialGraph/ProfilePageSocialGraph';
 import { ProfilePageTaggedAs } from '@/molecules/ProfilePageTaggedAs/ProfilePageTaggedAs';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
 import { ProfilePageHeader } from '../ProfilePageHeader/ProfilePageHeader';
@@ -17,7 +19,7 @@ import { MAX_SIDEBAR_TAGS } from '../ProfilePageSidebar/ProfilePageSidebar.const
  * ProfileProfile
  *
  * Displays the user's profile page for mobile view.
- * Shows profile header, tagged section, and links.
+ * Shows profile header, social graph badge, tagged section, and links.
  * Uses ProfileContext to get the target user's pubky.
  */
 export function ProfileProfile() {
@@ -31,6 +33,9 @@ export function ProfileProfile() {
   const { requireAuth } = useRequireAuth();
   const { toggleFollow, isLoading: isFollowLoading, loadingAction: followLoadingAction } = useFollowUser();
   const { isFollowing } = useIsFollowing(pubky ?? '');
+
+  // Social graph badge tier; null hides the section (no ranking on Nexus yet)
+  const { status: socialGraphStatus } = useSocialGraphStatus(pubky);
 
   // Get tags for the user
   const {
@@ -73,6 +78,9 @@ export function ProfileProfile() {
           stats={stats}
         />
       )}
+
+      {/* Social graph section */}
+      {socialGraphStatus && <ProfilePageSocialGraph status={socialGraphStatus} />}
 
       {/* Tagged as section */}
       <ProfilePageTaggedAs tags={tags} isLoading={isLoadingTags} onTagClick={handleTagToggle} pubky={pubky ?? ''} />

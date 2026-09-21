@@ -5,10 +5,14 @@ import { DialogLockContent } from './DialogLockContent';
 const mocks = vi.hoisted(() => ({
   btcRate: null as { satUsd: number } | null,
   rateStatus: 'ready' as 'loading' | 'ready' | 'failed',
+  useBtcRate: vi.fn(),
 }));
 
 vi.mock('@/hooks/useSatUsdRate/useSatUsdRate', () => ({
-  useBtcRate: () => ({ rate: mocks.btcRate, status: mocks.rateStatus }),
+  useBtcRate: (enabled?: boolean) => {
+    mocks.useBtcRate(enabled);
+    return { rate: mocks.btcRate, status: mocks.rateStatus };
+  },
 }));
 
 vi.mock('@/atoms/Dialog/Dialog', () => ({
@@ -39,6 +43,15 @@ beforeEach(() => {
 });
 
 describe('DialogLockContent', () => {
+  it('asks for the rate only while open', () => {
+    setup({ open: false });
+    expect(mocks.useBtcRate).toHaveBeenCalledWith(false);
+
+    mocks.useBtcRate.mockClear();
+    setup();
+    expect(mocks.useBtcRate).toHaveBeenCalledWith(true);
+  });
+
   it('renders a single payment form without unlock-method tabs', () => {
     setup();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
@@ -102,7 +115,16 @@ describe('DialogLockContent', () => {
     mocks.rateStatus = 'failed';
     setup();
     enterPrice('1000');
-    expect(screen.getByText(/dollar value can't be shown/i)).toBeInTheDocument();
+    expect(screen.getByText(/dollar value can't be shown/i)).toHaveClass('text-destructive');
+  });
+
+  it('marks the apply button as refusing the pointer until the price is valid', () => {
+    setup();
+    const apply = screen.getByRole('button', { name: 'Apply Lock' });
+
+    expect(apply).toBeDisabled();
+    // The Button base would otherwise drop the hover and leave the default arrow cursor.
+    expect(apply).toHaveClass('disabled:cursor-not-allowed', 'disabled:pointer-events-auto');
   });
 
   it('stays quiet about the rate while it is still loading', () => {

@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TLockConfig } from '@/application/locks/locks.types';
+import { LOCK_TEASER_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -25,6 +26,8 @@ const mocks = vi.hoisted(() => ({
     setContent: (value: string) => void;
     tags: string[];
     attachments: File[];
+    lockTitle: string;
+    setLockTitle: (value: string) => void;
   },
 }));
 
@@ -47,18 +50,28 @@ vi.mock('@/config/network', () => ({
   getPaykitServerUrl: () => 'https://paykit.server',
 }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: (...args: unknown[]) => mocks.toast(...args) }));
+vi.mock('@/hooks/useLockFile/useLockFile', () => ({
+  useLockFile: (lockUrl?: string) => ({
+    lockFile: null,
+    priceSats: lockUrl ? '4321' : null,
+    hasError: false,
+  }),
+}));
 
 // Fake composer: real state for the fields the lock flow captures/clears, no-ops for the rest.
 vi.mock('@/hooks/usePostInput/usePostInput', async () => {
   const { useRef, useState } = await import('react');
   return {
+    // Everything starts empty on purpose: edit-mode values must arrive through PostInput's own
+    // seeding effects, so deleting one of those effects fails a test instead of passing silently.
     usePostInput: () => {
       const [content, setContent] = useState('');
       const [tags, setTags] = useState<string[]>([]);
       const [attachments, setAttachments] = useState<File[]>([]);
       const [isArticle, setIsArticle] = useState(false);
       const [articleTitle, setArticleTitle] = useState('');
-      mocks.composer = { content, setContent, tags, attachments };
+      const [lockTitle, setLockTitle] = useState('');
+      mocks.composer = { content, setContent, tags, attachments, lockTitle, setLockTitle };
       return {
         textareaRef: useRef(null),
         markdownEditorRef: useRef(null),
@@ -78,6 +91,8 @@ vi.mock('@/hooks/usePostInput/usePostInput', async () => {
         handleArticleClick: vi.fn(),
         articleTitle,
         setArticleTitle,
+        lockTitle,
+        setLockTitle,
         handleArticleTitleChange: vi.fn(),
         handleArticleBodyChange: vi.fn(),
         isDragging: false,
@@ -211,6 +226,19 @@ const renderComposer = () => {
   return { onSuccess };
 };
 
+const renderEditLock = () =>
+  render(
+    <PostInput
+      variant={POST_INPUT_VARIANT.EDIT}
+      editPostId="alice:POST1"
+      editContent="Public teaser"
+      editIsArticle={false}
+      editAttachments={[]}
+      editLock={{ lockUrl: 'pubky://alice/pub/locks.app/LOCK1.json', title: 'Private note' }}
+      expanded
+    />,
+  );
+
 /** Seed a body, switch the lock on (session already live), and apply the price. */
 const configureLock = async (body = 'secret body') => {
   act(() => mocks.composer.setContent(body));
@@ -240,8 +268,108 @@ describe('PostInput lock wiring', () => {
     expect(screen.getByTestId('lock-card-price')).toHaveTextContent('1234');
   });
 
+  it('shows an editable lock teaser, title, and read-only price in edit mode', () => {
+    renderEditLock();
+
+    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Private note');
+    expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveValue(
+      'Public teaser',
+    );
+    expect(screen.getByTestId('lock-card-price')).toHaveTextContent('4321');
+    expect(screen.queryByTestId('lock-switch')).not.toBeInTheDocument();
+  });
+
+  // Both fields come from the same stored row, so a live change to either one reseeds both. Reverting
+  // only one would let the next save write the new title over the old body.
+  it('reseeds the teaser and the title together when the stored row changes', () => {
+    const view = renderEditLock();
+
+    fireEvent.change(screen.getByPlaceholderText('Write a short announcement to tease your content.'), {
+      target: { value: 'Draft teaser' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lock title' }), { target: { value: 'Draft title' } });
+
+    view.rerender(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="alice:POST1"
+        editContent="Public teaser"
+        editIsArticle={false}
+        editAttachments={[]}
+        editLock={{ lockUrl: 'pubky://alice/pub/locks.app/LOCK1.json', title: 'Remote title' }}
+        expanded
+      />,
+    );
+
+    expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveValue(
+      'Public teaser',
+    );
+    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Remote title');
+  });
+
+  // A failed save writes the draft locally first and rolls it back after the homeserver rejects it.
+  // Both versions reach the composer through the live row, so the title has to follow the teaser.
+  it('reverts the title with the teaser when a failed save rolls the row back', () => {
+    const view = renderEditLock();
+    const teaserInput = screen.getByPlaceholderText('Write a short announcement to tease your content.');
+    const titleInput = screen.getByRole('textbox', { name: 'Lock title' });
+
+    fireEvent.change(teaserInput, { target: { value: 'Draft teaser' } });
+    fireEvent.change(titleInput, { target: { value: 'Draft title' } });
+
+    const rerenderRow = (content: string, title: string) =>
+      view.rerender(
+        <PostInput
+          variant={POST_INPUT_VARIANT.EDIT}
+          editPostId="alice:POST1"
+          editContent={content}
+          editIsArticle={false}
+          editAttachments={[]}
+          editLock={{ lockUrl: 'pubky://alice/pub/locks.app/LOCK1.json', title }}
+          expanded
+        />,
+      );
+
+    rerenderRow('Draft teaser', 'Draft title');
+    rerenderRow('Public teaser', 'Private note');
+
+    expect(screen.getByPlaceholderText('Write a short announcement to tease your content.')).toHaveValue(
+      'Public teaser',
+    );
+    expect(screen.getByRole('textbox', { name: 'Lock title' })).toHaveValue('Private note');
+  });
+
+  it('disables save when the edit lock title is cleared', () => {
+    renderEditLock();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lock title' }), { target: { value: '   ' } });
+
+    expect(screen.getByTestId('post-button')).toBeDisabled();
+  });
+
+  it('disables save when the serialized edit teaser exceeds the post limit', () => {
+    renderEditLock();
+
+    act(() => mocks.composer.setContent('\\'.repeat(LOCK_TEASER_MAX_CHARACTER_LENGTH)));
+
+    expect(screen.getByTestId('post-button')).toBeDisabled();
+  });
+
   // The single most important rule: while the switch is on, the composer body is the content to be
   // locked. Publishing before the price is applied would put that content out in the clear.
+  it('publishes nothing once the lock title is cleared', async () => {
+    renderComposer();
+    await configureLock();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lock title' }), { target: { value: '' } });
+    expect(screen.getByTestId('post-button')).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('post-button'));
+    await act(async () => {});
+
+    expect(mocks.createLockContent).not.toHaveBeenCalled();
+  });
+
   it('publishes nothing while the lock is on but not configured', async () => {
     renderComposer();
     act(() => mocks.composer.setContent('secret body'));

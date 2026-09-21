@@ -12,10 +12,12 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
-import type { NexusTag, NexusUser } from '@/services/nexus/nexus.types';
+import { NexusSocialGraphStatus, type NexusTag, type NexusUser } from '@/services/nexus/nexus.types';
+import { asInvalid } from '@/test-utils/type-assertions';
 
 describe('LocalStreamUsersService', () => {
   const targetUserId = 'user-target' as Pubky;
+  const VIEWER_ID = 'user-viewer' as Pubky;
   const streamId = buildUserCompositeId({ userId: targetUserId, reach: 'followers' });
   const NON_EXISTENT_STREAM_ID = buildUserCompositeId({ userId: 'non-existent', reach: 'followers' });
   const BASE_TIMESTAMP = 1000000;
@@ -93,7 +95,7 @@ describe('LocalStreamUsersService', () => {
 
   const persistAndVerifyUser = async (userId: Pubky, overrides?: Partial<NexusUser>) => {
     const mockUser = createMockNexusUser(userId, overrides);
-    const result = await LocalStreamUsersService.persistUsers([mockUser]);
+    const result = await LocalStreamUsersService.persistUsers([mockUser], { viewerId: VIEWER_ID });
 
     expect(result).toEqual([userId]);
     return { userId, mockUser };
@@ -230,6 +232,47 @@ describe('LocalStreamUsersService', () => {
       expect(result).toEqual(userIds);
     });
 
+    it('should fold the social graph status into the details row', async () => {
+      const userId = 'user-1' as Pubky;
+
+      await persistAndVerifyUser(userId, { social_graph_status: NexusSocialGraphStatus.ESTABLISHED });
+
+      const details = await UserDetailsModel.findById(userId);
+      expect(details?.social_graph_status).toBe(NexusSocialGraphStatus.ESTABLISHED);
+    });
+
+    it('should store a null social graph status when Nexus has no ranking', async () => {
+      const userId = 'user-1' as Pubky;
+
+      await persistAndVerifyUser(userId, { social_graph_status: null });
+
+      const details = await UserDetailsModel.findById(userId);
+      expect(details?.social_graph_status).toBeNull();
+    });
+
+    it('should normalize a social graph status this build does not know to null', async () => {
+      const userId = 'user-1' as Pubky;
+      const mockUser = createMockNexusUser(userId, {
+        social_graph_status: asInvalid<NexusSocialGraphStatus>('trusted'),
+      });
+
+      await LocalStreamUsersService.persistUsers([mockUser]);
+
+      const details = await UserDetailsModel.findById(userId);
+      expect(details?.social_graph_status).toBeNull();
+    });
+
+    it('should normalize an absent social graph status (older Nexus) to null', async () => {
+      const userId = 'user-1' as Pubky;
+      const mockUser = createMockNexusUser(userId);
+      expect(mockUser.social_graph_status).toBeUndefined();
+
+      await LocalStreamUsersService.persistUsers([mockUser]);
+
+      const details = await UserDetailsModel.findById(userId);
+      expect(details?.social_graph_status).toBeNull();
+    });
+
     it('should handle users with tags', async () => {
       const userId = 'user-1' as Pubky;
       const mockTags: NexusTag[] = [
@@ -305,7 +348,7 @@ describe('LocalStreamUsersService', () => {
       const userIds: Pubky[] = ['user-1', 'user-2', 'user-3'];
       const mockUsers = userIds.map((id) => createMockNexusUser(id));
 
-      await LocalStreamUsersService.persistUsers(mockUsers);
+      await LocalStreamUsersService.persistUsers(mockUsers, { viewerId: VIEWER_ID });
 
       // Verify all tables have data
       for (const userId of userIds) {
@@ -325,6 +368,78 @@ describe('LocalStreamUsersService', () => {
         expect(ttl).toBeTruthy();
         expect(ttl?.lastUpdatedAt).toBeGreaterThan(0);
       }
+    });
+
+    describe('viewer-relative relationships (#1803)', () => {
+      it('should skip relationship rows when no viewerId is supplied', async () => {
+        const userId = 'user-1' as Pubky;
+        const mockUser = createMockNexusUser(userId, { relationship: { following: false, followed_by: false } });
+
+        const result = await LocalStreamUsersService.persistUsers([mockUser]);
+
+        expect(result).toEqual([userId]);
+        expect(await UserDetailsModel.findById(userId)).toBeTruthy();
+        expect(await UserTtlModel.findById(userId)).toBeTruthy();
+        // No viewer → relationship is not meaningful → left as a cache miss
+        expect(await UserRelationshipsModel.findById(userId)).toBeNull();
+      });
+
+      it('should skip relationship rows when viewerId is null (guest)', async () => {
+        const userId = 'user-1' as Pubky;
+
+        await LocalStreamUsersService.persistUsers([createMockNexusUser(userId)], { viewerId: null });
+
+        expect(await UserRelationshipsModel.findById(userId)).toBeNull();
+      });
+
+      it('should keep an existing viewer-relative row when re-persisted without a viewer', async () => {
+        const userId = 'user-1' as Pubky;
+        await LocalStreamUsersService.persistUsers(
+          [createMockNexusUser(userId, { relationship: { following: true, followed_by: false } })],
+          { viewerId: VIEWER_ID },
+        );
+
+        await LocalStreamUsersService.persistUsers([
+          createMockNexusUser(userId, { relationship: { following: false, followed_by: false } }),
+        ]);
+
+        const relationship = await UserRelationshipsModel.findById(userId);
+        expect(relationship?.following).toBe(true);
+      });
+
+      it('should keep a local follow that landed while a viewer-aware refresh was in flight', async () => {
+        const userId = 'user-1' as Pubky;
+        const fetchStartedAt = Date.now() - 5_000;
+        await LocalStreamUsersService.persistUsers(
+          [createMockNexusUser(userId, { relationship: { following: false, followed_by: false } })],
+          { viewerId: VIEWER_ID },
+        );
+        await UserRelationshipsModel.update(userId, { following: true });
+        await UserTtlModel.upsert({ id: userId, lastUpdatedAt: Date.now() });
+
+        await LocalStreamUsersService.persistUsers(
+          [createMockNexusUser(userId, { relationship: { following: false, followed_by: false } })],
+          { viewerId: VIEWER_ID, fetchStartedAt },
+        );
+
+        expect((await UserRelationshipsModel.findById(userId))?.following).toBe(true);
+      });
+
+      it('should overwrite the relationship when no local write landed after the fetch started', async () => {
+        const userId = 'user-1' as Pubky;
+        await LocalStreamUsersService.persistUsers(
+          [createMockNexusUser(userId, { relationship: { following: false, followed_by: false } })],
+          { viewerId: VIEWER_ID },
+        );
+        await UserTtlModel.upsert({ id: userId, lastUpdatedAt: 1 });
+
+        await LocalStreamUsersService.persistUsers(
+          [createMockNexusUser(userId, { relationship: { following: true, followed_by: false } })],
+          { viewerId: VIEWER_ID, fetchStartedAt: Date.now() },
+        );
+
+        expect((await UserRelationshipsModel.findById(userId))?.following).toBe(true);
+      });
     });
 
     it('should persist user details correctly', async () => {
@@ -462,6 +577,35 @@ describe('LocalStreamUsersService', () => {
         const normalRecord = await ModerationModel.findById(normalUserId);
         expect(normalRecord).toBeNull();
       });
+    });
+  });
+
+  describe('getNotPersistedUsersInCache', () => {
+    it('treats missing details as a cache miss', async () => {
+      const userId = 'user-1' as Pubky;
+
+      await expect(LocalStreamUsersService.getNotPersistedUsersInCache([userId])).resolves.toEqual([userId]);
+    });
+
+    it('treats details without a viewer as a hit even when the relationship row is missing', async () => {
+      const userId = 'user-1' as Pubky;
+      await LocalStreamUsersService.persistUsers([createMockNexusUser(userId)]);
+
+      await expect(LocalStreamUsersService.getNotPersistedUsersInCache([userId])).resolves.toEqual([]);
+    });
+
+    it('treats a missing relationship as a miss when a viewer is present', async () => {
+      const userId = 'user-1' as Pubky;
+      await LocalStreamUsersService.persistUsers([createMockNexusUser(userId)]);
+
+      await expect(LocalStreamUsersService.getNotPersistedUsersInCache([userId], VIEWER_ID)).resolves.toEqual([userId]);
+    });
+
+    it('treats details plus a relationship as a hit when a viewer is present', async () => {
+      const userId = 'user-1' as Pubky;
+      await LocalStreamUsersService.persistUsers([createMockNexusUser(userId)], { viewerId: VIEWER_ID });
+
+      await expect(LocalStreamUsersService.getNotPersistedUsersInCache([userId], VIEWER_ID)).resolves.toEqual([]);
     });
   });
 });

@@ -56,6 +56,34 @@ describe('useProfileForm profile link safety', () => {
     expect(ProfileController.commitCreate).not.toHaveBeenCalled();
   });
 
+  it('accepts a bare X handle and saves it as the profile URL (issue #1846)', async () => {
+    const { result } = renderHook(() => useProfileForm({ mode: 'create', pubky, setShowWelcomeDialog: vi.fn() }));
+
+    act(() => {
+      result.current.handlers.setName('Valid User');
+      result.current.handlers.setLinks([
+        { label: 'WEBSITE', url: '' },
+        { label: 'X (TWITTER)', url: '@jack' },
+      ]);
+      result.current.handlers.validateLinkUrl('@jack', 1);
+    });
+
+    // The placeholder reads `@user`, so the handle must not be reported as an invalid URL.
+    expect(result.current.errors.linkUrlErrors[1]).toBeNull();
+
+    await act(async () => {
+      await result.current.handlers.handleSubmit();
+    });
+
+    expect(ProfileController.commitCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profile: expect.objectContaining({
+          links: expect.arrayContaining([{ label: 'X (TWITTER)', url: 'https://x.com/jack' }]),
+        }),
+      }),
+    );
+  });
+
   it('blocks an unsafe legacy link from the edit-profile submission path', async () => {
     const userDetails: NexusUserDetails = {
       id: pubky,

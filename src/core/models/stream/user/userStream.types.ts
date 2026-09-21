@@ -15,6 +15,8 @@ export enum UserStreamTypes {
   // Bootstrap default lists:
   // Active users in the UI. We get randomly, preview=true param active in nexus
   TODAY_INFLUENCERS_ALL = 'influencers:today:all',
+  // Starter pack fallback when no interests were chosen: most active users this month
+  THIS_MONTH_INFLUENCERS_ALL = 'influencers:this_month:all',
   MOST_FOLLOWED = 'most_followed:all:all',
   RECOMMENDED = 'recommended:all:all',
   MUTED = 'muted',

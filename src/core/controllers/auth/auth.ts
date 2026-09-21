@@ -3,7 +3,6 @@ import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
-import { TagApplication } from '@/application/tag/tag';
 import { UserApplication } from '@/application/user/user';
 import { getModerationId } from '@/config/moderation';
 import type {
@@ -12,9 +11,9 @@ import type {
   TSignUpParams,
 } from '@/controllers/auth/auth.types';
 import { LocksController } from '@/controllers/locks/locks';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
-import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
@@ -39,6 +38,13 @@ import { useSearchStore } from '@/stores/search/search.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { SettingsState } from '@/stores/settings/settings.types';
 import { useSignInStore } from '@/stores/signIn/signIn.store';
+
+/**
+ * How long logout waits for the homeserver to end the session. The SDK's `session.signout()`
+ * accepts no timeout or AbortSignal, so a homeserver that connects but never replies would
+ * otherwise hold logout open for the OS-level TCP timeout. Local cleanup runs either way.
+ */
+const LOGOUT_TIMEOUT_MS = 5_000;
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -143,6 +149,8 @@ export class AuthController {
     await clearDatabase();
     // Skip post-migration resync — bootstrap runs if user has profile, otherwise no data to resync
     useMigrationStore.getState().reset();
+    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
+    useSettingsStore.getState().reset();
     const session = await AuthApplication.signIn({ keypair });
     if (!session) {
       Logger.error('Failed to sign in. Please try again.', { keypair });
@@ -161,6 +169,7 @@ export class AuthController {
    * @param params.pubky - The user's public key identifier
    */
   private static async hydrateMeImAlive({ pubky }: { pubky: Pubky }) {
+    const isCurrent = captureViewerSession();
     const signInStore = useSignInStore.getState();
     const {
       meta: { url },
@@ -168,6 +177,7 @@ export class AuthController {
 
     // Progress callback to update signInStore from Controller layer (respecting architecture rules)
     const onProgress: BootstrapProgressCallback = (step) => {
+      if (!isCurrent()) return;
       switch (step) {
         case 'bootstrapFetched':
           signInStore.setBootstrapFetched(true); // Step 3 complete (60%)
@@ -190,7 +200,12 @@ export class AuthController {
     const preferences = (remoteSettings ?? localSettings).notifications;
     const allowedTypes = NotificationNormalizer.toEnabledTypes(preferences);
 
-    const notification = await BootstrapApplication.initialize({ pubky, lastReadUrl: url, allowedTypes }, onProgress);
+    if (!isCurrent()) return;
+    const notification = await BootstrapApplication.initialize(
+      { pubky, lastReadUrl: url, allowedTypes, isCurrent },
+      onProgress,
+    );
+    if (!isCurrent()) return;
     useNotificationStore.getState().setState(notification);
 
     // Apply remote settings to store (store mutation stays in Controller layer)
@@ -278,6 +293,8 @@ export class AuthController {
     await clearDatabase();
     // Skip post-migration resync — new user has no homeserver data to resync
     useMigrationStore.getState().reset();
+    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
+    useSettingsStore.getState().reset();
     const keypair = Identity.keypairFromSecretKey(secretKey);
     const { session } = await AuthApplication.signUp({ keypair, signupToken });
     const authStore = useAuthStore.getState();
@@ -321,6 +338,8 @@ export class AuthController {
     await clearDatabase();
     // Skip post-migration resync — full bootstrap below covers all data
     useMigrationStore.getState().reset();
+    // Settings are account-local: start from defaults so a previous account's document is never pushed to this one
+    useSettingsStore.getState().reset();
     const token = Symbol('auth-flow');
     this.cancelActiveAuthFlow();
     this.activeAuthFlow = { token, cancel: null };
@@ -351,18 +370,12 @@ export class AuthController {
    */
   private static async cleanupLocalState() {
     this.cancelModerationFollow();
-    // Capture pubky before resetting auth store; used to scope marker cleanup.
-    const pubky = useAuthStore.getState().currentUserPubky;
-    if (pubky) {
-      TagApplication.clearViewerMarkers(pubky);
-    }
-
     // Mute-list SSE cursors live in sessionStorage; clear before the next account might reuse the same tab.
     clearMuteSyncCursorSessionStorage();
 
     // Reset singletons
     PubkySpecsSingleton.reset();
-    TtlCoordinator.resetInstance();
+    // CoordinatorManager owns TTL lifetime; its auth listener clears session work.
     StreamCoordinator.resetInstance();
     NotificationCoordinator.resetInstance();
 
@@ -447,10 +460,36 @@ export class AuthController {
     }
 
     if (session) {
+      // Bound the sign-out. The SDK's session.signout() takes no timeout or AbortSignal, so a
+      // homeserver that accepts the connection and then never replies would hold logout open
+      // until the OS-level TCP timeout, leaving cookies and the local database in place.
+      // Local cleanup must always run; ending the server session is best-effort.
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       try {
-        await AuthApplication.logout({ session });
-      } catch (error) {
-        Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
+        const timeoutPromise = new Promise<boolean>((resolve) => {
+          timeoutId = setTimeout(() => resolve(true), LOGOUT_TIMEOUT_MS);
+        });
+
+        const timedOut = await Promise.race([
+          AuthApplication.logout({ session }).then(
+            () => false,
+            (error) => {
+              Logger.warn('Homeserver logout failed, clearing local state anyway', { error });
+              return false;
+            },
+          ),
+          timeoutPromise,
+        ]);
+
+        if (timedOut) {
+          Logger.warn('Homeserver sign-out did not answer in time, clearing local state anyway', {
+            timeoutMs: LOGOUT_TIMEOUT_MS,
+          });
+        }
+      } finally {
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
       }
     }
 

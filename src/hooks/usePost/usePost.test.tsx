@@ -1,9 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import { STORAGE_QUOTA_REACHED_MESSAGE } from '@/libs/storage/storageQuota';
 import { toast } from '@/molecules/Toaster/toast';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { usePost } from './usePost';
@@ -92,6 +94,7 @@ describe('usePost', () => {
       expect(result.current.existingAttachments).toEqual([]);
       expect(result.current.isArticle).toBe(false);
       expect(result.current.articleTitle).toBe('');
+      expect(result.current.lockTitle).toBe('');
       expect(result.current.isSubmitting).toBe(false);
       expect(typeof result.current.setContent).toBe('function');
       expect(typeof result.current.setExistingAttachments).toBe('function');
@@ -99,6 +102,7 @@ describe('usePost', () => {
       expect(typeof result.current.setAttachments).toBe('function');
       expect(typeof result.current.setIsArticle).toBe('function');
       expect(typeof result.current.setArticleTitle).toBe('function');
+      expect(typeof result.current.setLockTitle).toBe('function');
       expect(typeof result.current.reply).toBe('function');
       expect(typeof result.current.post).toBe('function');
       expect(typeof result.current.repost).toBe('function');
@@ -481,6 +485,94 @@ describe('usePost', () => {
       expect(result.current.content).toBe('Reply content'); // Content should not be cleared on error
     });
 
+    it('should prompt sign-in instead of a retry when a reply write is rejected as unauthenticated (#2555)', async () => {
+      const { result } = renderHook(() => usePost());
+      mockPostControllerCreate.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('Reply content');
+      });
+
+      await act(async () => {
+        await result.current.reply({
+          postId: 'test-post-123',
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not post reply. Try again.',
+      });
+      expect(result.current.content).toBe('Reply content'); // Draft kept for after sign-in
+      expect(result.current.isSubmitting).toBe(false);
+    });
+
+    it('should prompt sign-in when the reply write is rejected as UNAUTHORIZED (#2555)', async () => {
+      const { result } = renderHook(() => usePost());
+      mockPostControllerCreate.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('Reply content');
+      });
+
+      await act(async () => {
+        await result.current.reply({
+          postId: 'test-post-123',
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+      expect(result.current.content).toBe('Reply content');
+    });
+
+    it('should keep the retry copy when a post write is rejected as FORBIDDEN (#2555)', async () => {
+      const { result } = renderHook(() => usePost());
+      mockPostControllerCreate.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.FORBIDDEN, 'Forbidden', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('Post content');
+      });
+
+      await act(async () => {
+        await result.current.post({
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not create post. Try again.',
+      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+    });
+
     it('should set isSubmitting to true during reply submission', async () => {
       const { result } = renderHook(() => usePost());
       let resolvePromise: () => void;
@@ -722,6 +814,64 @@ describe('usePost', () => {
       expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to create post:', mockError);
       expect(result.current.isSubmitting).toBe(false);
       expect(result.current.content).toBe('Post content'); // Content should not be cleared on error
+    });
+
+    it('should prompt sign-in instead of a retry when a post write is rejected as unauthenticated (#2555)', async () => {
+      const { result } = renderHook(() => usePost());
+      mockPostControllerCreate.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('Post content');
+      });
+
+      await act(async () => {
+        await result.current.post({
+          onSuccess: vi.fn(),
+        });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not create post. Try again.',
+      });
+      expect(result.current.content).toBe('Post content'); // Draft kept for after sign-in
+      expect(result.current.isSubmitting).toBe(false);
+    });
+
+    it('should warn with the storage-quota copy when the homeserver answers 507 (issue #1776)', async () => {
+      const { result } = renderHook(() => usePost());
+      const mockError = Err.server(ServerErrorCode.UNKNOWN_ERROR, 'Insufficient Storage', {
+        service: ErrorService.Homeserver,
+        operation: 'commitCreate',
+        context: { statusCode: HttpStatusCode.INSUFFICIENT_STORAGE },
+      });
+      mockPostControllerCreate.mockRejectedValueOnce(mockError);
+
+      act(() => {
+        result.current.setContent('Post content');
+      });
+
+      await act(async () => {
+        await result.current.post({
+          onSuccess: vi.fn(),
+        });
+      });
+
+      // A full quota cannot be fixed by retrying, so the toast warns and says why.
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'warning',
+        description: STORAGE_QUOTA_REACHED_MESSAGE,
+      });
+      expect(result.current.content).toBe('Post content');
     });
 
     it('should toast a localized size-limit message when an attachment exceeds the upload limit', async () => {
@@ -1225,6 +1375,39 @@ describe('usePost', () => {
       expect(result.current.content).toBe('Repost content'); // Content should not be cleared on error
     });
 
+    it('should prompt sign-in instead of a retry when a repost write is rejected as unauthenticated (#2555)', async () => {
+      const { result } = renderHook(() => usePost());
+      mockPostControllerCreate.mockRejectedValueOnce(
+        Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('Repost content');
+      });
+
+      await act(async () => {
+        await result.current.repost({
+          originalPostId: 'test-post-123',
+          onSuccess: vi.fn(),
+          onUndo: vi.fn(),
+        });
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Session expired. Please sign in.',
+      });
+      expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
+        variant: 'error',
+        description: 'Could not repost. Try again.',
+      });
+      expect(result.current.content).toBe('Repost content'); // Draft kept for after sign-in
+      expect(result.current.isSubmitting).toBe(false);
+    });
+
     it('should set isSubmitting to true during repost submission', async () => {
       const { result } = renderHook(() => usePost());
       let resolvePromise: () => void;
@@ -1368,6 +1551,28 @@ describe('usePost', () => {
         expect(vi.mocked(toast)).toHaveBeenCalledWith({
           title: 'Post updated',
         });
+      });
+
+      it('serializes edited lock title and teaser into the announcement envelope', async () => {
+        const { result } = renderHook(() => usePost());
+
+        act(() => {
+          result.current.setContent('  Updated teaser  ');
+          result.current.setLockTitle('  Updated title  ');
+        });
+
+        await act(async () => {
+          await result.current.edit({ editPostId: 'test-post-123', isLockAnnouncement: true });
+        });
+
+        // Literal, not `buildLockTeaserContent(...)`: computing the expectation with the production
+        // helper would keep passing if the envelope gained a field or changed key order. Whitespace is
+        // kept on purpose — the lock path writes untrimmed, matching the create path.
+        expect(mockPostControllerEdit).toHaveBeenCalledWith({
+          compositePostId: 'test-post-123',
+          content: '{"lock_title":"  Updated title  ","teaser_description":"  Updated teaser  "}',
+        });
+        expect(result.current.lockTitle).toBe('');
       });
 
       it('should commit content-only (no attachments payload) when the attachment set is unchanged', async () => {
@@ -1689,6 +1894,38 @@ describe('usePost', () => {
           description: 'Could not update post. Try again.',
         });
         expect(mockLoggerError).toHaveBeenCalledWith('[usePost] Failed to edit post:', mockError);
+      });
+
+      it('should prompt sign-in instead of a retry when an edit is rejected as unauthenticated (#2555)', async () => {
+        const { result } = renderHook(() => usePost());
+        mockPostControllerEdit.mockRejectedValueOnce(
+          Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+            service: ErrorService.Homeserver,
+            operation: 'commitEdit',
+          }),
+        );
+
+        act(() => {
+          result.current.setContent('Edited content');
+        });
+
+        await act(async () => {
+          await result.current.edit({
+            editPostId: 'test-post-123',
+            onSuccess: vi.fn(),
+          });
+        });
+
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
+          variant: 'error',
+          description: 'Session expired. Please sign in.',
+        });
+        expect(vi.mocked(toast)).not.toHaveBeenCalledWith({
+          variant: 'error',
+          description: 'Could not update post. Try again.',
+        });
+        expect(result.current.content).toBe('Edited content'); // Edit kept for after sign-in
+        expect(result.current.isSubmitting).toBe(false);
       });
 
       it('should set isSubmitting to true during edit submission', async () => {

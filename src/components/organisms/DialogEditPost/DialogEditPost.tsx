@@ -2,6 +2,7 @@
 
 import { Dispatch, SetStateAction } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
+import { LocksController } from '@/controllers/locks/locks';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
@@ -25,9 +26,11 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
 
   if (!postDetails) return null;
 
-  // TODO:[Locks] #2312 — a lock announcement is `short`, so it misses this branch and its teaser
-  // envelope reaches the textarea as raw JSON. Needs a dedicated dialog once the post model carries
-  // `lock` (#2027) — collections route the same way.
+  const lockUrl = postDetails.lock;
+  // Same parse the reader uses. Editing a lock post as plain text would store content the reader
+  // cannot parse, and the post would render as nothing for everyone.
+  const teaser = lockUrl ? LocksController.getLockContent(postDetails.content) : null;
+  const teaserBody = teaser ? teaser.teaser_description : postDetails.content;
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const title = isArticle ? 'Edit Article' : 'Edit Post';
 
@@ -50,9 +53,10 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           autoFocusTextarea={!isArticle}
           onContentChange={handleContentChange}
           editPostId={postDetails.id}
-          editContent={postDetails.content}
+          editContent={teaserBody}
           editIsArticle={isArticle}
           editAttachments={postDetails.attachments ?? []}
+          editLock={lockUrl ? { lockUrl, title: teaser?.lock_title ?? '' } : undefined}
           layoutOverride="inline"
         />
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}

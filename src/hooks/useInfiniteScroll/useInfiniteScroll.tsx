@@ -54,12 +54,14 @@ export const useInfiniteScroll = ({
     budgetRef.current = { itemCount, maxUnproductiveLoads, enabled: budgetEnabled };
   }, [itemCount, maxUnproductiveLoads, budgetEnabled]);
 
-  // A refresh can replace the list with a shorter one while the consumer stays mounted.
-  // The stale high-water mark would then miscount every productive load as unproductive,
-  // so shrinkage resets the budget and re-arms auto-loading.
+  // Any change of the rendered count re-arms auto-loading. Growth means the last load was
+  // productive (a manual load after a stall, or a new stream's first page arriving while a
+  // stall reached at zero items is still set — the consumer is not re-keyed per stream). A
+  // refresh can also replace the list with a shorter one while the consumer stays mounted;
+  // the stale high-water mark would then miscount every productive load as unproductive.
   useEffect(() => {
     if (!budgetEnabled || itemCount === undefined) return;
-    if (itemCount < highWaterRef.current) {
+    if (itemCount !== highWaterRef.current) {
       highWaterRef.current = itemCount;
       unproductiveLoadsRef.current = 0;
       setIsStalled(false);

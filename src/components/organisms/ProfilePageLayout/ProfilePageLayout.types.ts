@@ -34,8 +34,11 @@ export interface ProfilePageLayoutProps {
   };
   /** Statistics for the profile */
   stats: ProfileStats;
-  /** Unlocked-content count for the sidebar; not part of `stats` (Nexus cannot index `/priv`). */
-  unlockedCount?: number;
+  /**
+   * Unlocked-content count for the sidebar; not part of `stats` (Nexus cannot index `/priv`).
+   * `undefined` while the read is in flight (spinner), `null` when it failed (label only).
+   */
+  unlockedCount?: number | null;
   /** Actions handlers for profile interactions */
   actions: ProfilePageLayoutActions;
   /** Currently active page */

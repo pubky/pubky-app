@@ -30,12 +30,18 @@ export class NexusPostStreamService {
    * @param params - Parameters containing post IDs and optional viewer ID
    * @returns Array of posts
    */
-  static async fetchByIds(params: TStreamPostsByIdsParams): Promise<NexusPostWithAttachmentMetadata[]> {
-    const { url, body } = postStreamApi.postsByIds(params);
+  static async fetchByIds({
+    force,
+    ...params
+  }: TStreamPostsByIdsParams & { force?: boolean }): Promise<NexusPostWithAttachmentMetadata[]> {
+    // Canonicalize (sorted post_ids) so identical concurrent batches share one query key and
+    // coalesce in the query cache instead of racing the rate-limited by_ids endpoint (PUBKY-APP-B3).
+    const { url, body } = postStreamApi.postsByIds({ ...params, post_ids: [...params.post_ids].sort() });
     return await queryNexus<NexusPostWithAttachmentMetadata[]>({
       url,
       method: HttpMethod.POST,
       body: JSON.stringify(body),
+      force,
     });
   }
 

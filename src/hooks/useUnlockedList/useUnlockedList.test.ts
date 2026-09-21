@@ -76,6 +76,34 @@ describe('useUnlockedList', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it('keeps the error until a retry succeeds, so the emptied list is not reported as a count', async () => {
+    vi.mocked(LocksController.fetchUnlockedList).mockRejectedValue(new Error('offline'));
+
+    const { result, rerender } = renderHook(() => useUnlockedList());
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    vi.mocked(LocksController.fetchUnlockedList).mockResolvedValue([item('LOCK1', 1)]);
+    // A restored session is a new object, which re-runs the read.
+    authState.session = {};
+    rerender();
+    expect(result.current.isError).toBe(true);
+
+    await waitFor(() => expect(result.current.count).toBe(1));
+    expect(result.current.isError).toBe(false);
+  });
+
+  it('drops a previous error when the session ends, so the next read starts clean', async () => {
+    vi.mocked(LocksController.fetchUnlockedList).mockRejectedValue(new Error('offline'));
+
+    const { result, rerender } = renderHook(() => useUnlockedList());
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    authState.session = null;
+    rerender();
+
+    expect(result.current.isError).toBe(false);
+  });
+
   it('clears the items when the session ends, so a signed-out profile shows nothing', async () => {
     vi.mocked(LocksController.fetchUnlockedList).mockResolvedValue([item('LOCK1', 1)]);
 

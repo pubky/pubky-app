@@ -3,7 +3,7 @@ import type { TFeedPersistCreateParams, TFeedPersistDeleteParams } from '@/appli
 import { DEFAULT_CUSTOM_FEED_ICON, isProfileTagReachSupported } from '@/config/feed';
 import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
 import { db } from '@/database/franky/franky';
-import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { DatabaseErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -36,7 +36,7 @@ export class FeedApplication {
     return LocalFeedService.readAll();
   }
 
-  static async get(params: TFeedIdParam): Promise<FeedModelSchema> {
+  static async get(params: TFeedIdParam): Promise<FeedModelSchema | null> {
     return LocalFeedService.read(params);
   }
 
@@ -47,8 +47,9 @@ export class FeedApplication {
     const idChanged = existingId != null && existingId !== newId;
 
     const now = Date.now();
+    // Model errors are already logged; this ancillary lookup can fall back to a fresh timestamp.
     const createdAt = existingId
-      ? (await LocalFeedService.read({ feedId: existingId }).catch(() => ({ created_at: now }))).created_at
+      ? ((await LocalFeedService.read({ feedId: existingId }).catch(() => null)) ?? { created_at: now }).created_at
       : now;
 
     const { tags, domain_tags, reach, sort, content, layout } = feed.feed;
@@ -72,6 +73,7 @@ export class FeedApplication {
     // 1) create new homeserver resource, 2) atomically swap local feed records,
     // 3) best-effort delete old homeserver resource.
     if (idChanged) {
+      // Model errors are already logged; migration can proceed without the old stream cache.
       const oldFeed = await LocalFeedService.read({ feedId: existingId }).catch(() => null);
       const newFeedUrl = feedUriBuilder(userId, newId);
       const newFeedJson: Record<string, unknown> = normalizedFeed.feed.toJson();
@@ -100,6 +102,7 @@ export class FeedApplication {
     const feedId = (params as TFeedPersistDeleteParams).feedId;
     const feedUrl = feedUriBuilder(userId, feedId);
 
+    // Model errors are already logged; cache cleanup must not block the delete itself.
     const feed = await LocalFeedService.read({ feedId }).catch(() => null);
     let streamId: ReturnType<typeof buildFeedStreamId> | null = null;
     if (feed) {
@@ -127,7 +130,18 @@ export class FeedApplication {
    * Presentation fields (`name` and `icon`) do not affect the ID.
    */
   static async prepareUpdateParams({ feedId, changes }: TFeedUpdateParams): Promise<TFeedCreateParams> {
+    // Update only runs on feeds the user is editing (they came from a list
+    // read), so a missing row means the feed was deleted mid-edit. Preserve
+    // the previous throw-after-read behavior in that case; the null return
+    // from read() is for the stale-id lookups elsewhere.
     const existing = await LocalFeedService.read({ feedId });
+    if (!existing) {
+      throw Err.database(DatabaseErrorCode.RECORD_NOT_FOUND, 'Feed not found', {
+        service: ErrorService.Local,
+        operation: 'prepareUpdateParams',
+        context: { table: 'feeds', id: feedId },
+      });
+    }
 
     return {
       name: changes.name ?? existing.name,

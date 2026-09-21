@@ -28,6 +28,8 @@ export function withPubkyPrefix(key: string): string {
 
 export function stripPubkyPrefix(key: string): string {
   if (!key) return '';
+  // A raw key can itself start with "pubky"; only strip a display prefix.
+  if (isPubkyIdentifier(key)) return key;
   if (key.startsWith(PUBKY_PREFIX)) return key.slice(PUBKY_PREFIX.length);
   if (key.startsWith(LEGACY_PUBKY_PREFIX)) return key.slice(LEGACY_PUBKY_PREFIX.length);
   return key;
@@ -595,6 +597,26 @@ export function shouldBypassLinkConfirmation(url: string): boolean {
  */
 export function getCharacterCount(text: string): number {
   return Array.from(text).length;
+}
+
+/**
+ * Counts the characters the composer actually enforces, i.e. UTF-16 code units.
+ *
+ * `maxLength` and `usePostInput`'s write handlers all compare `.length`, so an astral character
+ * (an emoji) occupies two units and input stops at that count. `getCharacterCount` counts code
+ * points instead, so it reads one lower per emoji: a draft can sit at the enforced limit with a
+ * code-point count still below it. Derive the counter, its destructive state and
+ * `useCharacterLimitWarning` from this measure so all three agree with what the field accepts.
+ *
+ * @param text - The string to measure
+ * @returns The number of UTF-16 code units in the string
+ *
+ * @example
+ * getEnforcedCharacterCount('Hello') // 5
+ * getEnforcedCharacterCount('👍') // 2
+ */
+export function getEnforcedCharacterCount(text: string): number {
+  return text.length;
 }
 
 /**

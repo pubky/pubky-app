@@ -22,6 +22,7 @@ import {
   generateRandomUsername,
   getCharacterCount,
   getDisplayTags,
+  getEnforcedCharacterCount,
   getValidAuthorPubkyFromPostCompositeId,
   hexToRgba,
   hoursAgo,
@@ -1139,6 +1140,23 @@ describe('Utils', () => {
     });
   });
 
+  describe('getEnforcedCharacterCount', () => {
+    it('should count UTF-16 units, the measure the composer enforces (issue #1761)', () => {
+      expect(getEnforcedCharacterCount('hello')).toBe(5);
+      expect(getEnforcedCharacterCount('')).toBe(0);
+      // An astral character is one code point but two UTF-16 units, which is what maxLength counts.
+      expect(getEnforcedCharacterCount('👍')).toBe(2);
+      expect(getEnforcedCharacterCount('🇺🇸')).toBe(4);
+    });
+
+    it('should reach the post limit for an emoji draft that a code-point count reports as short', () => {
+      const emojiDraft = `😀${'a'.repeat(1998)}`;
+
+      expect(getEnforcedCharacterCount(emojiDraft)).toBe(2000);
+      expect(getCharacterCount(emojiDraft)).toBe(1999);
+    });
+  });
+
   describe('sanitizeTagInput', () => {
     it('should remove colons from input', () => {
       expect(sanitizeTagInput('hello:world')).toBe('helloworld');
@@ -1536,6 +1554,11 @@ describe('Utils', () => {
   });
 
   describe('stripPubkyPrefix', () => {
+    it.each(['', 'pubky', 'pk:'])('preserves a raw key starting with pubky after the %s prefix', (prefix) => {
+      const rawKey = `pubky${'o'.repeat(47)}`;
+      expect(stripPubkyPrefix(`${prefix}${rawKey}`)).toBe(rawKey);
+    });
+
     it('should strip "pubky" prefix from a pubky identifier', () => {
       const prefixedKey = 'pubkyo1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
       const expected = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';

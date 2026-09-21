@@ -209,6 +209,35 @@ describe('ProfilePageFilterBar', () => {
       expect(container.querySelector('[data-cy="profile-filter-item-unlocked-count"]')).toHaveTextContent('3');
     });
 
+    it('renders a settled zero as 0, which is not the same as a failed read', () => {
+      const { container } = render(
+        <ProfilePageFilterBar
+          activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS}
+          onPageChangeAction={() => {}}
+          stats={mockStats}
+          unlockedCount={0}
+        />,
+      );
+
+      expect(container.querySelector('[data-cy="profile-filter-item-unlocked-count"]')).toHaveTextContent('0');
+    });
+
+    it('renders no count and no spinner when the count is null, because the read already failed', () => {
+      const { container } = render(
+        <ProfilePageFilterBar
+          activePage={PROFILE_PAGE_TYPES.NOTIFICATIONS}
+          onPageChangeAction={() => {}}
+          stats={mockStats}
+          unlockedCount={null}
+        />,
+      );
+
+      const unlockedRow = container.querySelector('[data-cy="profile-filter-item-unlocked"]')!.parentElement!;
+      expect(screen.getByText('Unlocked')).toBeInTheDocument();
+      expect(container.querySelector('[data-cy="profile-filter-item-unlocked-count"]')).not.toBeInTheDocument();
+      expect(unlockedRow.querySelector('[data-testid="spinner"]')).not.toBeInTheDocument();
+    });
+
     it("is hidden on another user's profile, whose /priv holds no unlocked content", () => {
       render(
         <ProfilePageFilterBar

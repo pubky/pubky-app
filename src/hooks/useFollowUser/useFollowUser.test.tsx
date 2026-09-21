@@ -115,6 +115,47 @@ describe('useFollowUser', () => {
     expect(mockLogger.error).toHaveBeenCalledWith('[useFollowUser] Failed to toggle follow:', error);
   });
 
+  it('tracks concurrent toggles per user until each one settles', async () => {
+    const resolvers: Array<() => void> = [];
+    mockCommitFollow.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+
+    const { result } = renderHook(() => useFollowUser());
+
+    act(() => {
+      void result.current.toggleFollow('user-a', false);
+      void result.current.toggleFollow('user-b', true);
+    });
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.isUserLoading('user-a')).toBe(true);
+    expect(result.current.isUserLoading('user-b')).toBe(true);
+    expect(result.current.loadingUserId).toBe('user-b');
+    expect(result.current.loadingAction).toBe('unfollow');
+
+    // Settling the second click must not clear the first one that is still in flight
+    await act(async () => {
+      resolvers[1]();
+    });
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.isUserLoading('user-a')).toBe(true);
+    expect(result.current.isUserLoading('user-b')).toBe(false);
+    expect(result.current.loadingUserId).toBe('user-a');
+    expect(result.current.loadingAction).toBe('follow');
+
+    await act(async () => {
+      resolvers[0]();
+    });
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isUserLoading('user-a')).toBe(false);
+    expect(result.current.loadingUserId).toBeNull();
+    expect(result.current.loadingAction).toBeNull();
+  });
+
   it('shows the unfollow-specific friendly error when unfollowing fails', async () => {
     mockCommitFollow.mockRejectedValue(new Error('boom'));
 

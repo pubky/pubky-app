@@ -169,6 +169,7 @@ describe('Header Components', () => {
     refresh: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn(),
+    bfcacheId: '',
   };
 
   beforeEach(() => {
@@ -240,8 +241,11 @@ describe('Header Components', () => {
         'gap-4',
         'sm:flex-nowrap',
         'sm:gap-6',
-        'p-6',
+        'py-6',
+        'px-4',
+        'lg:px-6',
       );
+      expect(inner).not.toHaveClass('p-6', 'px-6');
     });
 
     it('merges custom className', () => {
@@ -643,6 +647,7 @@ describe('Header Components - Snapshots', () => {
     refresh: vi.fn(),
     replace: vi.fn(),
     prefetch: vi.fn(),
+    bfcacheId: '',
   };
 
   beforeEach(() => {

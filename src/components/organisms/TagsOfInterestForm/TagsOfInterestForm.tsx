@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { APP_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { ONBOARDING_ROUTES } from '@/app/routes';
 import { Card } from '@/atoms/Card/Card';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
@@ -16,15 +16,16 @@ import { canonicalizeTagLabel, isStarterPackReservedTag } from '@/libs/utils/uti
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { ProfileNavigation } from '@/molecules/ProfileNavigation/ProfileNavigation';
 import { TagInput } from '@/molecules/TagInput/TagInput';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { PopularInterestTagsSkeleton } from './TagsOfInterestForm.skeleton';
 
 export const TagsOfInterestForm = () => {
   const router = useRouter();
-  const pubky = useAuthStore((state) => state.currentUserPubky);
   const setInterestTags = useOnboardingStore((state) => state.setInterestTags);
-  const markExperienceCompleted = useOnboardingStore((state) => state.markExperienceCompleted);
+  // Nothing prefetches the follow route (the Continue button is not a Link), so the push
+  // fetches it on click. Running it as a transition keeps Continue in its loading state until
+  // the next step actually renders, instead of a dead button during the fetch.
+  const [isNavigating, startNavigation] = useTransition();
 
   const { tags: fetchedPopularTags, isLoading: arePopularTagsLoading } = useHotTags({
     limit: ONBOARDING_INTERESTS_SUGGESTED_COUNT,
@@ -46,14 +47,11 @@ export const TagsOfInterestForm = () => {
   const customTags = arePopularTagsLoading ? [] : selectedTags.filter((tag) => !popularLabels.has(tag));
 
   const handleContinue = () => {
-    // Selection is already persisted by the sync effect above.
-    // TEMPORARY(#2388): Tags is currently the last Experience screen, so completion is
-    // written here. #2388 relocates this write to the Follow screen's Finish action and
-    // retargets Continue to the follow route.
-    if (pubky) {
-      markExperienceCompleted(pubky);
-    }
-    router.replace(APP_ROUTES.HOME);
+    // Selection is already persisted by the sync effect above. Experience completion is
+    // written by the Follow screen's Finish action, so Back from there lands here again.
+    startNavigation(() => {
+      router.push(ONBOARDING_ROUTES.FOLLOW);
+    });
   };
 
   const handleBack = () => {
@@ -155,7 +153,9 @@ export const TagsOfInterestForm = () => {
         className="onboarding-nav mt-auto flex-col sm:flex-row lg:pt-0"
         backText={'Back'}
         onHandleBackButton={handleBack}
-        continueButtonDisabled={false}
+        backButtonDisabled={isNavigating}
+        continueButtonDisabled={isNavigating}
+        continueButtonLoading={isNavigating}
         continueText={'Continue'}
         onContinue={handleContinue}
       />

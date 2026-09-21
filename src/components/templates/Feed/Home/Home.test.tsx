@@ -9,6 +9,12 @@ vi.mock('@/organisms/AlertBackup/AlertBackup', () => {
   };
 });
 
+vi.mock('@/organisms/AlertInstall/AlertInstall', () => {
+  return {
+    AlertInstall: () => <div data-testid="alert-install">AlertInstall</div>,
+  };
+});
+
 vi.mock('@/organisms/DialogWelcome/DialogWelcome', () => {
   return {
     DialogWelcome: () => <div data-testid="dialog-welcome">DialogWelcome</div>,
@@ -96,6 +102,13 @@ describe('Home', () => {
   it('renders AlertBackup', () => {
     render(<Home />);
     expect(screen.getByTestId('alert-backup')).toBeInTheDocument();
+  });
+
+  it('renders AlertInstall between FeedNavigation and AlertBackup', () => {
+    render(<Home />);
+    const alertInstall = screen.getByTestId('alert-install');
+    expect(screen.getByTestId('feed-navigation').nextElementSibling).toBe(alertInstall);
+    expect(alertInstall.nextElementSibling).toBe(screen.getByTestId('alert-backup'));
   });
 
   it('renders FeedNavigation in main content', () => {

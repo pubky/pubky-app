@@ -1,7 +1,31 @@
 import { slowCypressDown } from 'cypress-slow-down';
-import { BackupType, HasBackedUp } from '../support/types/enums';
-import { backupDownloadFilePath } from '../support/common';
-import { waitForFeedToLoad } from '../support/posts';
+import { backupDownloadFilePath, extendedTimeout } from '../support/common';
+import { goToProfilePageFromHeader } from '../support/header';
+import { createQuickPost, waitForFeedToLoad } from '../support/posts';
+import { addProfileTags } from '../support/profile';
+import { BackupType, CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
+
+const waitUntilStarterPackHasUsers = (tag: string) => {
+  const deadline = Date.now() + 90_000;
+  cy.env(['nexusUrl']).then(({ nexusUrl }) => {
+    const nexusOrigin = String(nexusUrl).replace(/\/$/, '');
+    const poll = () => {
+      cy.request({
+        url: `${nexusOrigin}/v0/stream/users/ids?source=starter_pack&tags=${encodeURIComponent(tag)}&skip=0&limit=10`,
+        failOnStatusCode: false,
+      }).then((response) => {
+        const ids = Array.isArray(response.body) ? response.body : [];
+        if (ids.length > 0) return;
+        if (Date.now() >= deadline) {
+          throw new Error(`Nexus starter_pack did not index ${tag}`);
+        }
+        cy.wait(2000);
+        poll();
+      });
+    };
+    poll();
+  });
+};
 
 describe('Onboarding', () => {
   before(() => {
@@ -69,6 +93,75 @@ describe('Onboarding', () => {
 
     // sign up as second user
     cy.onboardAsNewUser(secondProfileName);
+  });
+
+  it('suggests people for a chosen interest, follows them all, and lands on the My network feed', () => {
+    // Docker Nexus has no popular-tag chips. Seed a user who owns this tag so
+    // starter_pack can return a match after the next signup types it in.
+    const interestTag = `e2e${Date.now().toString().slice(-8)}`;
+
+    cy.onboardAsNewUser('Tagged Seed');
+    createQuickPost(`Seed post for ${interestTag}`, [interestTag]);
+    cy.findFirstPostInFeed(CheckForNewPosts.Yes);
+    goToProfilePageFromHeader();
+    cy.get('[data-cy="profile-filter-item-tagged"]').click();
+    addProfileTags([interestTag]);
+    waitUntilStarterPackHasUsers(interestTag);
+    cy.signOut(HasBackedUp.Yes);
+
+    cy.onboardAsNewUser('Interested User', '', undefined, undefined, OnboardingExperience.StopAtTags);
+
+    cy.get('[data-testid="tags-of-interest-form"]').within(() => {
+      cy.get('[data-testid="popular-interests-empty"], [data-testid^="popular-tag-"]', extendedTimeout()).should(
+        'exist',
+      );
+      cy.get('[data-cy="add-tag-input"]').type(`${interestTag}{enter}`);
+      // Seeded tags often land in Popular interests; otherwise they show as a custom chip
+      cy.get(
+        `[data-testid="popular-tag-${interestTag}"][aria-pressed="true"], [data-testid="interest-tag-${interestTag}"]`,
+      ).should('be.visible');
+      cy.get('#profile-finish-btn').click();
+    });
+
+    cy.location('pathname').should('eq', '/onboarding/follow');
+    cy.get('[data-cy="follow-best-matches-form"]').should('be.visible');
+    cy.get('[data-cy="suggested-user-card"]', extendedTimeout()).should('have.length.greaterThan', 0);
+
+    // Follow all: every card flips to following and the button disappears once nothing is left to follow
+    cy.get('[data-cy="follow-all-btn"]').should('contain.text', 'Follow all (').click();
+    cy.get('[data-cy="follow-all-btn"]', extendedTimeout()).should('not.exist');
+    cy.get('[data-cy="suggested-user-card"]').each(($card) => {
+      cy.wrap($card)
+        .find('[data-cy="user-list-item-follow-toggle-btn"]')
+        .invoke('attr', 'aria-label')
+        .should('match', /^Unfollow /);
+    });
+
+    cy.finishFollowBestMatchesStep();
+
+    // With at least one follow the landing feed is My network
+    cy.get('[data-cy="filter-reach-radiogroup"]')
+      .find('[data-cy="network-reach-toggle"]')
+      .should('have.attr', 'data-selected', 'true');
+  });
+
+  it('shows most active people without interests and lands on the All feed after finishing', () => {
+    cy.onboardAsNewUser('Undecided User', '', undefined, undefined, OnboardingExperience.StopAtTags);
+
+    // Continue with zero tags
+    cy.get('[data-testid="tags-of-interest-form"]').within(() => {
+      cy.get('#profile-finish-btn').click();
+    });
+
+    cy.location('pathname').should('eq', '/onboarding/follow');
+    cy.get('[data-cy="suggested-user-card"]', extendedTimeout()).should('have.length.greaterThan', 0);
+
+    cy.finishFollowBestMatchesStep();
+
+    // With zero follows the landing feed stays on All
+    cy.get('[data-cy="filter-reach-radiogroup"]')
+      .find('[data-cy="all-reach-toggle"]')
+      .should('have.attr', 'data-selected', 'true');
   });
 
   it('can use Explore mode without signing in and shows Join Pubky dialog when clicking new post button', () => {

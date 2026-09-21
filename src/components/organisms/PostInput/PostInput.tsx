@@ -14,10 +14,12 @@ import {
   LOCK_TITLE_MAX_CHARACTER_LENGTH,
   POST_MAX_CHARACTER_LENGTH,
 } from '@/config/posts';
+import { useCharacterLimitWarning } from '@/hooks/useCharacterLimitWarning/useCharacterLimitWarning';
 import { useComposerHeightAnimation } from '@/hooks/useComposerHeightAnimation/useComposerHeightAnimation';
 import { useEffectiveTagsLayout } from '@/hooks/useEffectiveTagsLayout/useEffectiveTagsLayout';
 import { useElementHeight } from '@/hooks/useElementHeight/useElementHeight';
 import { useEnterSubmit } from '@/hooks/useEnterSubmit/useEnterSubmit';
+import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import { usePostInputAuthHandlers } from '@/hooks/usePostInputAuthHandlers/usePostInputAuthHandlers';
 import { usePostInputLock } from '@/hooks/usePostInputLock/usePostInputLock';
@@ -25,7 +27,7 @@ import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { deserializeArticleBody } from '@/libs/post/articleInlineImages';
 import { isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
-import { canSubmitPost, cn, getCharacterCount } from '@/libs/utils/utils';
+import { canSubmitPost, cn, getEnforcedCharacterCount } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { DialogLockContent } from '@/molecules/DialogLockContent/DialogLockContent';
 import { LockedPostCard } from '@/molecules/LockedPostCard/LockedPostCard';
@@ -61,6 +63,7 @@ export function PostInput({
   submitLabel,
   submitIcon,
   successToastTitle,
+  isCollectionShare,
   showThreadConnector = false,
   expanded = false,
   onContentChange,
@@ -69,6 +72,7 @@ export function PostInput({
   editContent,
   editIsArticle,
   editAttachments,
+  editLock,
   autoFocusTextarea = false,
   initialContent,
   initialAttachments,
@@ -92,6 +96,8 @@ export function PostInput({
     handleArticleClick,
     articleTitle,
     setArticleTitle,
+    lockTitle: editLockTitle,
+    setLockTitle: setEditLockTitle,
     handleArticleTitleChange,
     handleArticleBodyChange,
     isDragging,
@@ -122,17 +128,20 @@ export function PostInput({
     setMentionSelectedIndex,
     handleMentionSelect,
     handleMentionKeyDown,
+    handleSelectionChange,
   } = usePostInput({
     variant,
     postId,
     originalPostId,
     editPostId,
+    editLock,
     editAttachmentUris: editAttachments,
     editContent,
     editIsArticle,
     onSuccess,
     placeholder,
     successToastTitle,
+    isCollectionShare,
     expanded,
     onContentChange,
     onArticleModeChange,
@@ -221,6 +230,10 @@ export function PostInput({
     onNormalSubmit: handleSubmitWithAuth,
   });
 
+  const { priceSats: editLockPriceSats } = useLockFile(editLock?.lockUrl);
+  const isLockMode = isLockEnabled || editLock != null;
+  const activeLockTitle = editLock ? editLockTitle : lockTitle;
+
   const isValid = () => {
     // `isPublishingLock` counts as submitting: the action-bar button only disables through this check,
     // so leaving it out lets a second click publish a duplicate lock while the first is in flight.
@@ -234,8 +247,12 @@ export function PostInput({
         articleTitle,
         uploadingCount > 0,
       ) &&
-      // Blocking the click is what prevents an orphaned lock: the publish creates the lock first.
-      (!isLockEnabled || isLockTeaserWithinLimit({ lock_title: lockTitle, teaser_description: content }))
+      // Validate the serialized announcement envelope before publish or edit reaches its write. The
+      // title is required like an article's: the card only shows a placeholder when it is blank, so an
+      // empty one reads as set and would be written as an empty string.
+      (!isLockMode ||
+        (activeLockTitle.trim().length > 0 &&
+          isLockTeaserWithinLimit({ lock_title: activeLockTitle, teaser_description: content })))
     );
   };
 
@@ -304,9 +321,12 @@ export function PostInput({
       } else {
         setContent(editContent);
       }
+      // Seeded with the body: a failed save rolls the stored row back, and reverting only one of the
+      // two would let the next save write the new title over the old body.
+      setEditLockTitle(editLock?.title ?? '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is an external side-effect, not a dependency
-  }, [variant, editContent, editIsArticle]);
+  }, [variant, editContent, editIsArticle, editLock?.title]);
 
   // Pre-fill content from share target or other external sources
   useEffect(() => {
@@ -325,9 +345,10 @@ export function PostInput({
   }, []);
 
   // With the lock on the body is the teaser, sharing the post budget with the title in one envelope.
-  const composerMaxLength = isLockEnabled ? LOCK_TEASER_MAX_CHARACTER_LENGTH : POST_MAX_CHARACTER_LENGTH;
+  const composerMaxLength = isLockMode ? LOCK_TEASER_MAX_CHARACTER_LENGTH : POST_MAX_CHARACTER_LENGTH;
   const characterLimit =
-    isExpanded && !isArticle ? { count: getCharacterCount(content), max: composerMaxLength } : undefined;
+    isExpanded && !isArticle ? { count: getEnforcedCharacterCount(content), max: composerMaxLength } : undefined;
+  useCharacterLimitWarning(characterLimit);
 
   useEffect(() => {
     onLockModeChange?.(isLockEnabled);
@@ -476,7 +497,7 @@ export function PostInput({
                         name="post-input-textarea"
                         ref={textareaRef}
                         placeholder={
-                          isLockEnabled ? 'Write a short announcement to tease your content.' : displayPlaceholder
+                          isLockMode ? 'Write a short announcement to tease your content.' : displayPlaceholder
                         }
                         variant="inline"
                         className={cn(
@@ -487,6 +508,8 @@ export function PostInput({
                         onChange={handleChangeWithAuth}
                         onFocus={handleExpandWithAuth}
                         onKeyDown={handleKeyDown}
+                        onKeyUp={handleSelectionChange}
+                        onSelect={handleSelectionChange}
                         onPaste={handlePasteWithAuth}
                         maxLength={composerMaxLength}
                         rows={1}
@@ -570,13 +593,13 @@ export function PostInput({
                       submitIcon={submitIcon}
                       lockSwitch={lockSwitch}
                       lockCard={
-                        isLockConfigured ? (
+                        isLockConfigured || editLock ? (
                           <LockedPostCard
-                            priceSats={lockConfig?.amountSats}
+                            priceSats={editLock ? editLockPriceSats : lockConfig?.amountSats}
                             editableTitle={{
-                              value: lockTitle,
-                              onChange: setLockTitle,
-                              disabled: isPublishingLock,
+                              value: activeLockTitle,
+                              onChange: editLock ? setEditLockTitle : setLockTitle,
+                              disabled: editLock ? isSubmitting : isPublishingLock,
                               maxLength: LOCK_TITLE_MAX_CHARACTER_LENGTH,
                             }}
                           />
@@ -591,17 +614,15 @@ export function PostInput({
         </motion.div>
       </Container>
 
-      {isPostVariant && (
+      {isPostVariant && lockServerPubky && (
         <>
-          {lockServerPubky && (
-            <DialogLocksAuth
-              open={isAuthDialogOpen}
-              onOpenChange={(open) => {
-                if (!open) closeAuthDialog();
-              }}
-              onSuccess={handleAuthSuccess}
-            />
-          )}
+          <DialogLocksAuth
+            open={isAuthDialogOpen}
+            onOpenChange={(open) => {
+              if (!open) closeAuthDialog();
+            }}
+            onSuccess={handleAuthSuccess}
+          />
           <DialogLockContent open={isLockDialogOpen} onOpenChange={closeLockDialog} onApplied={handleLockApplied} />
         </>
       )}

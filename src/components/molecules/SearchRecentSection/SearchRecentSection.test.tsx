@@ -102,19 +102,21 @@ vi.mock('@/molecules/SearchRecentItem/SearchRecentItem.constants', () => {
 // Use real icon implementations - icons should never be mocked per guidelines
 
 describe('SearchRecentSection', () => {
+  // Fixed, strictly descending timestamps: chips are sorted by recency, and
+  // `Date.now()` per fixture line could tick between lines and flip the order.
   const mockUsers = [
-    { id: 'pk:user1' as Pubky, searchedAt: Date.now() },
-    { id: 'pk:user2' as Pubky, searchedAt: Date.now() },
+    { id: 'pk:user1' as Pubky, searchedAt: 6000 },
+    { id: 'pk:user2' as Pubky, searchedAt: 5000 },
   ];
 
   const mockTags = [
-    { tag: 'tech', searchedAt: Date.now() },
-    { tag: 'news', searchedAt: Date.now() },
+    { tag: 'tech', searchedAt: 4000 },
+    { tag: 'news', searchedAt: 3000 },
   ];
 
   const mockQueries = [
-    { query: 'bitcoin wallets', searchedAt: Date.now() },
-    { query: 'nostr', searchedAt: Date.now() },
+    { query: 'bitcoin wallets', searchedAt: 2000 },
+    { query: 'nostr', searchedAt: 1000 },
   ];
 
   it('renders "Recent searches" header', () => {

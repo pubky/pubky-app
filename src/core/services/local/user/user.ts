@@ -1,5 +1,7 @@
+import type { TUserSocialGraphStatusResult } from '@/application/user/user.types';
 import type { TReadProfileParams } from '@/controllers/profile/profile.types';
 import type { TPubkyListParams } from '@/controllers/user/user.type';
+import { db } from '@/database/franky/franky';
 import { getTtlUserMs } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
@@ -9,6 +11,7 @@ import { UserRelationshipsModel } from '@/models/user/relationships/userRelation
 import type { UserRelationshipsModelSchema } from '@/models/user/relationships/userRelationships.schema';
 import { UserTagsModel } from '@/models/user/tags/userTags';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
+import { LocalTagCacheService, type TagPreviewGuard } from '@/services/local/tag/tag-cache';
 import type { NexusTag, NexusUserCounts, NexusUserDetails, NexusUserRelationship } from '@/services/nexus/nexus.types';
 
 export class LocalUserService {
@@ -41,6 +44,31 @@ export class LocalUserService {
     }
 
     return map;
+  }
+
+  /**
+   * Reads a user's social graph badge tier from local database.
+   *
+   * The tier is only known once a full Nexus user view has been persisted; a details
+   * row written from a details-only fetch has no `social_graph_status` yet.
+   *
+   * @param userId - User ID to read the tier for
+   * @returns `{ status }` once known (`status: null` when Nexus has no ranking or the TTL
+   *   coordinator will supply it), or `null` when the user is missing locally or was only
+   *   ever cached from a details-only fetch (a full fetch is needed)
+   */
+  static async readSocialGraphStatus({ userId }: TReadProfileParams): Promise<TUserSocialGraphStatusResult | null> {
+    const details = await UserDetailsModel.findById(userId);
+    if (!details) return null;
+    if (details.social_graph_status !== undefined) return { status: details.social_graph_status };
+
+    // A row without the tier came from a details-only write. When a TTL record exists the
+    // user is already on the refresh path (a full view persisted before this field existed,
+    // or a not-yet-indexed user scheduled for retry), so report "no ranking" and let the TTL
+    // coordinator fill the tier in rather than forcing a full fetch that would overwrite
+    // fresher local relationship and count rows.
+    const ttl = await UserTtlModel.findById(userId);
+    return ttl ? { status: null } : null;
   }
 
   /**
@@ -126,16 +154,6 @@ export class LocalUserService {
   }
 
   /**
-   * Reads tags for a single user from local database.
-   * @param userId - User ID to read tags for
-   * @returns Promise resolving to array of tags or empty array if not found
-   */
-  static async readTags({ userId }: TReadProfileParams): Promise<NexusTag[]> {
-    const userTags = await UserTagsModel.findById(userId);
-    return userTags?.tags ?? [];
-  }
-
-  /**
    * Bulk reads multiple user tags from local database.
    * @param userIds - Array of user IDs to read tags for
    * @returns Promise resolving to Map of user ID to user tags
@@ -162,8 +180,8 @@ export class LocalUserService {
    * @param tags - The user tags to upsert
    * @returns Promise resolving to void
    */
-  static async upsertTags(userId: Pubky, tags: NexusTag[]): Promise<void> {
-    await UserTagsModel.upsert({ id: userId, tags });
+  static async upsertTags(userId: Pubky, tags: NexusTag[], tagGuard?: TagPreviewGuard): Promise<void> {
+    await LocalTagCacheService.savePreviews('user', [[userId, tags]], tagGuard);
   }
 
   /**
@@ -178,10 +196,24 @@ export class LocalUserService {
    *   If retryDelayMs >= the configured user TTL, the entity becomes immediately stale
    *   (triggers immediate refresh on next TTL coordinator tick). This is intentional
    *   and can be useful for forcing immediate refresh.
+   * @param options.unlessWrittenSince - Keep a row written at or after this time (a
+   *   local write or another successful refresh landed while a batch was in flight),
+   *   so a cooldown never shortens real freshness. The check and the write share one
+   *   transaction.
    * @returns Promise resolving to void
    */
-  static async upsertTtlWithDelay(userId: Pubky, retryDelayMs: number): Promise<void> {
+  static async upsertTtlWithDelay(
+    userId: Pubky,
+    retryDelayMs: number,
+    options: { unlessWrittenSince?: number } = {},
+  ): Promise<void> {
     const lastUpdatedAt = Date.now() - (getTtlUserMs() - retryDelayMs);
-    await UserTtlModel.upsert({ id: userId, lastUpdatedAt });
+    await db.transaction('rw', UserTtlModel.table, async () => {
+      if (options.unlessWrittenSince !== undefined) {
+        const existing = await UserTtlModel.findById(userId);
+        if (existing && existing.lastUpdatedAt >= options.unlessWrittenSince) return;
+      }
+      await UserTtlModel.upsert({ id: userId, lastUpdatedAt });
+    });
   }
 }

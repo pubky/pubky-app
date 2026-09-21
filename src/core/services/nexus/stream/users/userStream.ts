@@ -74,11 +74,21 @@ export class NexusUserStreamService {
    * @param params - User IDs to fetch, optional viewer ID for relationship data
    * @returns Array of full user objects with details, counts, tags, and relationships
    */
-  static async fetchByIds(params: TUserStreamUsersByIdsParams): Promise<NexusUser[]> {
+  static async fetchByIds({
+    force,
+    ...params
+  }: TUserStreamUsersByIdsParams & { force?: boolean }): Promise<NexusUser[]> {
     if (params.user_ids.length === 0) {
       return [];
     }
-    const { url, body } = userStreamApi.usersByIds(params);
-    return await queryNexus<NexusUser[]>({ url, method: HttpMethod.POST, body: JSON.stringify(body) });
+    // Canonicalize (sorted user_ids) so identical concurrent batches share one query key and
+    // coalesce in the query cache instead of racing the rate-limited by_ids endpoint (PUBKY-APP-B3).
+    const { url, body } = userStreamApi.usersByIds({ ...params, user_ids: [...params.user_ids].sort() });
+    return await queryNexus<NexusUser[]>({
+      url,
+      method: HttpMethod.POST,
+      body: JSON.stringify(body),
+      force,
+    });
   }
 }
