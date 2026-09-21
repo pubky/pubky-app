@@ -393,6 +393,89 @@ describe('AuthApplication', () => {
     });
   });
 
+  describe('resolveUserIsSignedUp', () => {
+    const testPubky = 'test-pubky' as Pubky;
+
+    const createNetworkError = () =>
+      new AppError({
+        category: ErrorCategory.Network,
+        code: NetworkErrorCode.CONNECTION_FAILED,
+        message: 'ERR_NETWORK_CHANGED',
+        service: ErrorService.Homeserver,
+        operation: 'userIsSignedUp',
+      });
+
+    const createAuthError = () =>
+      new AppError({
+        category: ErrorCategory.Auth,
+        code: AuthErrorCode.SESSION_EXPIRED,
+        message: 'Session expired',
+        service: ErrorService.Homeserver,
+        operation: 'userIsSignedUp',
+      });
+
+    it('should return the homeserver answer without retrying when the profile exists', async () => {
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockResolvedValue({ name: 'Test' });
+
+      const result = await AuthApplication.resolveUserIsSignedUp({ pubky: testPubky });
+
+      expect(result).toBe(true);
+      expect(requestSpy).toHaveBeenCalledOnce();
+    });
+
+    it('should return false for a confirmed missing profile without retrying', async () => {
+      const notFoundError = Err.client(ClientErrorCode.NOT_FOUND, 'Profile not found', {
+        service: ErrorService.Homeserver,
+        operation: 'userIsSignedUp',
+      });
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockRejectedValue(notFoundError);
+      const sleepSpy = await spyOnSleep();
+
+      const result = await AuthApplication.resolveUserIsSignedUp({ pubky: testPubky });
+
+      expect(result).toBe(false);
+      expect(requestSpy).toHaveBeenCalledOnce();
+      expect(sleepSpy).not.toHaveBeenCalled();
+    });
+
+    it('should retry a transient failure and answer once the homeserver responds', async () => {
+      const requestSpy = vi
+        .spyOn(HomeserverService, 'request')
+        .mockRejectedValueOnce(createNetworkError())
+        .mockResolvedValueOnce({ name: 'Test' });
+      const sleepSpy = await spyOnSleep();
+
+      const result = await AuthApplication.resolveUserIsSignedUp({ pubky: testPubky });
+
+      expect(result).toBe(true);
+      expect(requestSpy).toHaveBeenCalledTimes(2);
+      expect(sleepSpy).toHaveBeenCalledOnce();
+    });
+
+    it('should return null when the retries are exhausted', async () => {
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockRejectedValue(createNetworkError());
+      const sleepSpy = await spyOnSleep();
+
+      const result = await AuthApplication.resolveUserIsSignedUp({ pubky: testPubky });
+
+      expect(result).toBeNull();
+      // 3 attempts with a sleep between them
+      expect(requestSpy).toHaveBeenCalledTimes(3);
+      expect(sleepSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not retry a non-retryable failure', async () => {
+      const requestSpy = vi.spyOn(HomeserverService, 'request').mockRejectedValue(createAuthError());
+      const sleepSpy = await spyOnSleep();
+
+      const result = await AuthApplication.resolveUserIsSignedUp({ pubky: testPubky });
+
+      expect(result).toBeNull();
+      expect(requestSpy).toHaveBeenCalledOnce();
+      expect(sleepSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('userIsSignedUp', () => {
     const testPubky = 'test-pubky' as Pubky;
 

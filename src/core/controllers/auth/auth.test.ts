@@ -1235,6 +1235,7 @@ describe('AuthController', () => {
       vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
       vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
       vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      const resolveSpy = vi.spyOn(AuthApplication, 'resolveUserIsSignedUp');
 
       const result = await AuthController.restorePersistedSession();
 
@@ -1246,6 +1247,100 @@ describe('AuthController', () => {
         currentUserPubky: mockPubky,
         hasProfile: true,
       });
+      // A restored session with a known profile state needs no extra homeserver round-trip
+      expect(resolveSpy).not.toHaveBeenCalled();
+    });
+
+    const buildRestoreStore = (overrides: Partial<AuthStore> = {}) =>
+      mockAuthStore({
+        ...storeMocks.getAuthState(),
+        hasHydrated: true,
+        session: null,
+        sessionExport: 'session-export',
+        isRestoringSession: false,
+        setIsRestoringSession: vi.fn(),
+        init: vi.fn(),
+        ...overrides,
+      });
+
+    it('should resolve an undetermined profile state for a restored session', async () => {
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const setHasProfile = vi.fn();
+      const setIsResolvingProfile = vi.fn();
+      const authStore = buildRestoreStore({ hasProfile: null, setHasProfile, setIsResolvingProfile });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      const resolveSpy = vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockResolvedValue(true);
+
+      const result = await AuthController.restorePersistedSession();
+
+      expect(result).toBe(true);
+      expect(resolveSpy).toHaveBeenCalledWith({ pubky: mockPubky });
+      // The session is stored with the undetermined profile and resolved afterwards
+      expect(authStore.init).toHaveBeenCalledWith({
+        session: mockSession,
+        currentUserPubky: mockPubky,
+        hasProfile: null,
+      });
+      expect(setHasProfile).toHaveBeenCalledWith(true);
+      expect(setIsResolvingProfile.mock.calls).toEqual([[true], [false]]);
+      expect(authStore.reset).not.toHaveBeenCalled();
+    });
+
+    it('should keep a real new user without a profile on the profile-creation path', async () => {
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const setHasProfile = vi.fn();
+      const setIsResolvingProfile = vi.fn();
+      const authStore = buildRestoreStore({ hasProfile: null, setHasProfile, setIsResolvingProfile });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockResolvedValue(false);
+
+      const result = await AuthController.restorePersistedSession();
+
+      expect(result).toBe(true);
+      expect(setHasProfile).toHaveBeenCalledWith(false);
+      expect(setIsResolvingProfile.mock.calls).toEqual([[true], [false]]);
+      expect(authStore.reset).not.toHaveBeenCalled();
+    });
+
+    it('should clean up and report failure when the restored profile state cannot be resolved', async () => {
+      const mockSession = buildMockSession();
+      const mockPubky = TEST_PUBKY as Pubky;
+      const setHasProfile = vi.fn();
+      const setIsResolvingProfile = vi.fn();
+      const authStore = buildRestoreStore({ hasProfile: null, setHasProfile, setIsResolvingProfile });
+
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(authStore);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
+      vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
+      vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockResolvedValue(null);
+      const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
+      await spyOnClearCookies();
+      await spyOnClearAllQueryClients();
+      vi.spyOn(PubkySpecsSingleton, 'reset');
+      spyOnCancelModerationFollow();
+      vi.spyOn(useHomeStore, 'getState').mockReturnValue(mockHomeStore(storeMocks.getHomeState()));
+      vi.spyOn(useSearchStore, 'getState').mockReturnValue(mockSearchStore(storeMocks.getSearchState()));
+      vi.spyOn(useNotificationStore, 'getState').mockReturnValue(
+        mockNotificationStore(storeMocks.getNotificationState()),
+      );
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(storeMocks.getSettingsState()));
+
+      const result = await AuthController.restorePersistedSession();
+
+      expect(result).toBe(false);
+      // An undetermined profile is never reported as a missing one
+      expect(setHasProfile).not.toHaveBeenCalled();
+      expect(setIsResolvingProfile.mock.calls).toEqual([[true], [false]]);
+      expect(authStore.reset).toHaveBeenCalled();
+      expect(clearDatabaseSpy).toHaveBeenCalled();
     });
 
     it('should return false and run full cleanup when restoration fails', async () => {

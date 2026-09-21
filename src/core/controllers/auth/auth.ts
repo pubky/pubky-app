@@ -117,12 +117,19 @@ export class AuthController {
         return false;
       }
       const { session } = result;
-      const initialState = {
-        session,
-        currentUserPubky: Identity.z32FromSession({ session }),
-        hasProfile: authStore.hasProfile,
-      };
-      authStore.init(initialState);
+      const currentUserPubky = Identity.z32FromSession({ session });
+      // A session restored from a persisted export can carry an undetermined profile: reloading
+      // mid sign-in persists `hasProfile: null` before the profile check completes. Leaving it
+      // unknown read as unauthenticated, which rendered the landing page behind the signed-in
+      // header (issue #2070).
+      const hasProfile = authStore.hasProfile;
+      authStore.init({ session, currentUserPubky, hasProfile });
+
+      if (hasProfile === null && !(await this.resolveRestoredProfileState({ pubky: currentUserPubky }))) {
+        await this.cleanupLocalState();
+        return false;
+      }
+
       return true;
     } catch (error) {
       const appError = toAppError(error, ErrorService.Local, 'restorePersistedSession');
@@ -131,6 +138,31 @@ export class AuthController {
         throw appError;
       }
       return false;
+    }
+  }
+
+  /**
+   * Resolves the profile state of a session restored from a persisted export, keeping
+   * `hasProfile` unknown until the homeserver answers.
+   *
+   * While this runs, useAuthStatus keeps the app loading, so no route decides on an
+   * undetermined profile. A state that stays undetermined after the retries signs the session
+   * out instead of letting the app treat the restored account as signed out (issue #2070).
+   *
+   * @param params - Parameters containing the restored session's public key
+   * @param params.pubky - The restored session's public key identifier
+   * @returns true when the store now holds a definite profile state
+   */
+  private static async resolveRestoredProfileState({ pubky }: { pubky: Pubky }): Promise<boolean> {
+    useAuthStore.getState().setIsResolvingProfile(true);
+    try {
+      const hasProfile = await AuthApplication.resolveUserIsSignedUp({ pubky });
+      if (hasProfile === null) return false;
+
+      useAuthStore.getState().setHasProfile(hasProfile);
+      return true;
+    } finally {
+      useAuthStore.getState().setIsResolvingProfile(false);
     }
   }
 
