@@ -62,7 +62,7 @@ There is no separate backend in this repo; the "backend" is the layer stack plus
 - `services/homeserver` — session, PUT/POST/DELETE writes, blob uploads, signup tokens.
 - `services/nexus` — paginated reads (bootstrap, streams, users, posts, tags, search, files).
 - `services/homegate` (SMS/phone verification), `chatwoot` (support), `exchangerate` (SAT/USD), `nextjs` (server-only work such as OG-metadata scraping) plus Next route handlers under `src/app/api/`.
-- Service worker: `src/sw.ts` (Serwist, share-target + local file cache, ADR-0016); its output `public/sw.js` is generated.
+- Service worker: `src/sw.ts` (Serwist: app-shell precache, share target, static offline fallback; no data caching, user-consented updates — `pwa.md`, ADR-0021); its output `public/sw.js` is generated.
 
 High-risk areas (schema, wire formats, TTL writers, env/runtime config, auth/keys, SSRF guards, build plumbing) are listed in `architecture.md`, _High-Risk Areas_.
 
