@@ -66,7 +66,9 @@ export async function fetchUserAndPostForMetadata(
  * the primary fetch, so a decoration never adds a full Nexus timeout to a
  * crawler's wait or pushes the OG render past its deadline.
  */
-async function fetchMentionedUserName(pubky: string): Promise<string | null> {
+type MentionLookup = { name: string | null; failure?: string };
+
+async function fetchMentionedUserName(pubky: string): Promise<MentionLookup> {
   const url = userApi.details({ user_id: pubky });
   try {
     const res = await fetch(url, {
@@ -76,17 +78,20 @@ async function fetchMentionedUserName(pubky: string): Promise<string | null> {
     if (!res.ok) {
       // Drop the unread body so undici returns the socket to its pool.
       await res.body?.cancel();
-      if (res.status !== HttpStatusCode.NOT_FOUND) {
-        Logger.warn('[postMetadata] Mention lookup failed; showing the shortened key', { pubky, status: res.status });
-      }
-      return null;
+      return { name: null, failure: res.status === HttpStatusCode.NOT_FOUND ? undefined : `HTTP ${res.status}` };
     }
     const user: NexusUserDetails = await res.json();
-    return user.name || null;
+    return { name: user.name || null };
   } catch (error) {
-    Logger.warn('[postMetadata] Mention lookup failed; showing the shortened key', { pubky, error });
-    return null;
+    return { name: null, failure: describeFailure(error) };
   }
+}
+
+/** A short label for a failed lookup: the error's name (`TimeoutError`, `TypeError`) when it has one. */
+function describeFailure(error: unknown): string {
+  return typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string'
+    ? error.name
+    : String(error);
 }
 
 /** Shortest label a mention can resolve to (`@` plus one character). */
@@ -121,12 +126,19 @@ export async function resolveMentionSegmentsForMetadata(
   );
 
   const names = new Map<string, string>();
+  const failed: Record<string, string> = {};
   await Promise.all(
     pubkys.map(async (pubky) => {
-      const name = await fetchMentionedUserName(pubky);
+      const { name, failure } = await fetchMentionedUserName(pubky);
       if (name) names.set(pubky, name);
+      if (failure) failed[pubky] = failure;
     }),
   );
+  // One line per render rather than one per failed lookup: a mention-heavy post
+  // resolves on three surfaces per page view.
+  if (Object.keys(failed).length > 0) {
+    Logger.warn('[postMetadata] Mention lookups failed; showing shortened keys', { failed });
+  }
 
   return splitMentions(content, (pubky) => formatMentionLabel({ pubky, name: names.get(pubky) }));
 }

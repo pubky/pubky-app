@@ -116,6 +116,18 @@ describe('resolveMentionsForMetadata', () => {
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
+  it('aggregates several failed lookups into a single warning', async () => {
+    const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('boom', { status: 503 }))
+      .mockRejectedValueOnce(new DOMException('The operation was aborted', 'TimeoutError'));
+
+    await resolveMentionsForMetadata(`pk:${PUBKY_A} and pk:${PUBKY_B}`, VISIBLE);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][1]).toEqual({ failed: { [PUBKY_A]: 'HTTP 503', [PUBKY_B]: 'TimeoutError' } });
+  });
+
   it('degrades a timed-out lookup to the shortened key instead of failing the whole preview', async () => {
     const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
     vi.spyOn(globalThis, 'fetch')

@@ -1,5 +1,5 @@
 import { type MentionSegment, truncateSegmentsByGraphemes } from '@/libs/post/postMentions';
-import { splitGraphemes, truncateByGraphemes } from '@/libs/utils/truncate';
+import { splitGraphemes } from '@/libs/utils/truncate';
 
 /**
  * Text preparation for satori: user-authored strings need the emoji fallback
@@ -67,8 +67,12 @@ function repairEmojiSequences(text: string): string {
 
 /** Emoji-repaired text, grapheme-truncated when `max` is given (names, titles, descriptions). */
 export function prepareOgText(text: string, max?: number): string {
-  const repaired = repairEmojiSequences(text);
-  return max === undefined ? repaired : truncateByGraphemes(repaired, max);
+  if (max === undefined) return repairEmojiSequences(text);
+  // Same truncate-then-repair order as the segment path, so a long string is
+  // not scanned past the cut either.
+  return prepareOgTextSegments([{ text, isMention: false }], max)
+    .map((segment) => segment.text)
+    .join('');
 }
 
 /**

@@ -15,6 +15,19 @@ import { parseCollectionContent } from './collectionContent';
  *
  * Pure function — does not truncate; callers apply `truncateByGraphemes`.
  */
+export function deriveTextPreview({ content, kind }: { content: string; kind: string }): string {
+  if (isPostDeleted(content)) {
+    return 'This post has been deleted by its author.';
+  }
+  if (kind === 'long') {
+    return parseArticleContent(content)?.title || content;
+  }
+  if (kind === 'collection') {
+    return parseCollectionContent(content)?.name ?? content;
+  }
+  return content;
+}
+
 /**
  * Whether the preview `deriveTextPreview` derives for this post is post copy
  * the app links mentions in (`PostText`), rather than an article title or a
@@ -27,17 +40,4 @@ export function isMentionResolvablePreview({ content, kind }: { content: string;
   if (isPostDeleted(content)) return false;
   if (kind === 'long') return parseArticleContent(content) === null;
   return kind !== 'collection';
-}
-
-export function deriveTextPreview({ content, kind }: { content: string; kind: string }): string {
-  if (isPostDeleted(content)) {
-    return 'This post has been deleted by its author.';
-  }
-  if (kind === 'long') {
-    return parseArticleContent(content)?.title || content;
-  }
-  if (kind === 'collection') {
-    return parseCollectionContent(content)?.name ?? content;
-  }
-  return content;
 }

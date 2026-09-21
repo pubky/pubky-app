@@ -70,14 +70,27 @@ describe('OgText', () => {
         plain('Hi ') +
         brand('@Talos ') +
         plain('and ') +
-        brand('@Jeb') +
-        plain(', ') +
+        `<div style="display:flex">${brand('@Jeb')}${plain(', ')}</div>` +
         plain('play ') +
         plain('rock-') +
         plain('paper-') +
         plain('scissors') +
         '</div>',
     );
+  });
+
+  it('keeps a short mention word with its punctuation as one unit, but lets a long glued word flow piece by piece', () => {
+    const short = renderToStaticMarkup(
+      <OgText segments={[{ text: '(', isMention: false }, mention('@Jeb'), { text: ')', isMention: false }]} />,
+    );
+    expect(short).toContain(`<div style="display:flex">${plain('(')}${brand('@Jeb')}${plain(')')}</div>`);
+
+    // Over the glued-word cap: a unit this wide could exceed a row, where satori would break it mid-word.
+    const long = renderToStaticMarkup(
+      <OgText segments={[mention('@Bob'), { text: ',https://example.com/a/very/long/path', isMention: false }]} />,
+    );
+    expect(long).not.toContain('<div style="display:flex">');
+    expect(long).toContain(brand('@Bob') + plain(',https://') + plain('example.com/'));
   });
 
   it('splits a URL after its slashes so it can flow across rows, but never at a run of slashes', () => {

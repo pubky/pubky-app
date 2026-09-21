@@ -67,12 +67,21 @@ export function OgAvatar({ src, size }: { src: string | null; size: number }) {
 
 /** One flex item of mention-aware text: a word, or a piece of one, and its styling. */
 type OgTextPiece = { text: string; isMention: boolean };
+/** A whitespace-delimited word as its pieces; `glued` when it holds a mention with something attached (`@Jeb,`). */
+type OgTextWord = { pieces: OgTextPiece[]; glued: boolean };
 
 /** The whitespace satori collapses under `white-space: normal`; NBSP and other Unicode spaces stay glue. */
 const WHITESPACE_RUN_REGEX = /([ \t\n\r]+)/;
 const WHITESPACE_ONLY_REGEX = /^[ \t\n\r]+$/;
 /** Break opportunities inside a word, as a text node would break: after `/` or `-` when more of the word follows. */
 const BREAK_AFTER_REGEX = /(?<=[/-])(?=[^/-])/;
+/**
+ * Longest glued word kept together as one non-wrapping item. Such an item must
+ * fit a row: satori shrinks the text inside a wider one and breaks it mid-word
+ * (the failure mode a nested row has). 20 characters is ~600px at the largest
+ * card size, well inside every text block, including the ~640px bio column.
+ */
+const MAX_GLUED_WORD_LENGTH = 20;
 
 /**
  * Cuts segment text into the items of satori's wrapping flex row: words, and
@@ -80,27 +89,46 @@ const BREAK_AFTER_REGEX = /(?<=[/-])(?=[^/-])/;
  * `example.com/`, `rock-`, `paper-`), so long URLs and hyphenated words flow
  * across rows instead of claiming whole ones. Whitespace runs collapse to one
  * space carried by the preceding piece, as `white-space: normal` does. Runs of
- * adjacent segments with no whitespace between them (`@Jeb,`) become adjacent
- * pieces, which only part at a row end when the whole word would not fit.
+ * adjacent segments with no whitespace between them (`@Jeb,`) form one word;
+ * a short one holding a mention is rendered as a unit so its punctuation is
+ * never orphaned at a row start, a longer one (`@Bob,https://…`) flows piece
+ * by piece.
  */
-function toPieces(segments: MentionSegment[]): OgTextPiece[] {
-  const pieces: OgTextPiece[] = [];
+function toWords(segments: MentionSegment[]): OgTextWord[] {
+  const words: OgTextWord[] = [];
+  let current: OgTextWord | null = null;
 
   for (const segment of segments) {
     for (const part of segment.text.split(WHITESPACE_RUN_REGEX)) {
       if (!part) continue;
       if (WHITESPACE_ONLY_REGEX.test(part)) {
-        const last = pieces.at(-1);
+        const last = current?.pieces.at(-1);
         if (last && !last.text.endsWith(' ')) last.text += ' ';
+        current = null;
         continue;
       }
+      if (!current) {
+        current = { pieces: [], glued: false };
+        words.push(current);
+      }
       for (const piece of part.split(BREAK_AFTER_REGEX)) {
-        pieces.push({ text: piece, isMention: segment.isMention });
+        current.pieces.push({ text: piece, isMention: segment.isMention });
       }
     }
   }
 
-  return pieces;
+  for (const word of words) {
+    const length = word.pieces.reduce((total, piece) => total + piece.text.length, 0);
+    word.glued =
+      word.pieces.length > 1 && word.pieces.some((piece) => piece.isMention) && length <= MAX_GLUED_WORD_LENGTH;
+  }
+  return words;
+}
+
+function OgTextPieceSpan({ piece }: { piece: OgTextPiece }) {
+  return (
+    <span style={{ whiteSpace: 'pre-wrap', ...(piece.isMention ? { color: OG_TOKENS.brand } : {}) }}>{piece.text}</span>
+  );
 }
 
 /**
@@ -125,11 +153,17 @@ export function OgText({ segments, style }: { segments: MentionSegment[]; style?
   }
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', ...style }}>
-      {toPieces(segments).map((piece, index) => (
-        <span key={index} style={{ whiteSpace: 'pre-wrap', ...(piece.isMention ? { color: OG_TOKENS.brand } : {}) }}>
-          {piece.text}
-        </span>
-      ))}
+      {toWords(segments).flatMap((word, wordIndex) =>
+        word.glued ? (
+          <div key={wordIndex} style={{ display: 'flex' }}>
+            {word.pieces.map((piece, pieceIndex) => (
+              <OgTextPieceSpan key={pieceIndex} piece={piece} />
+            ))}
+          </div>
+        ) : (
+          word.pieces.map((piece, pieceIndex) => <OgTextPieceSpan key={`${wordIndex}-${pieceIndex}`} piece={piece} />)
+        ),
+      )}
     </div>
   );
 }

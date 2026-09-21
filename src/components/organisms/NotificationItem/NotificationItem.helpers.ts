@@ -1,6 +1,6 @@
 import { UserController } from '@/controllers/user/user';
 import { Identity } from '@/libs/identity/identity';
-import { MENTION_IN_TEXT_REGEX as mentionInTextRegex } from '@/libs/identity/identity.constants';
+import { MENTION_IN_TEXT_REGEX } from '@/libs/identity/identity.constants';
 import { Logger } from '@/libs/logger/logger';
 
 /**
@@ -12,7 +12,7 @@ export async function resolvePubkyToNames(content: string): Promise<string> {
 
   // 1) Scan for mention-like tokens (same boundary rule as `remarkMentions`).
   const mentions = new Set<string>();
-  for (const match of content.matchAll(mentionInTextRegex)) {
+  for (const match of content.matchAll(MENTION_IN_TEXT_REGEX)) {
     // Regex: (^|\s)(pk:abc... | pubkyabc...)
     // match[0] = " pk:abc..."   — full match including leading whitespace
     // match[1] = " "            — leading boundary (start-of-string or whitespace)
@@ -46,7 +46,7 @@ export async function resolvePubkyToNames(content: string): Promise<string> {
   }
 
   // 5) Replace mentions while preserving the captured leading boundary (start/whitespace).
-  return content.replace(mentionInTextRegex, (_full, leading: string, mention: string) => {
+  return content.replace(MENTION_IN_TEXT_REGEX, (_full, leading: string, mention: string) => {
     return leading + (mentionToName.has(mention) ? `@${mentionToName.get(mention)}` : mention);
   });
 }

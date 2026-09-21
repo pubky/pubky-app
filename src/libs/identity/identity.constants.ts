@@ -6,7 +6,7 @@
  * can share the pattern without pulling the `@synonymdev/pubky` WASM SDK that
  * `Identity` depends on into the server bundle.
  */
-export const PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE = '(?:pk:|pubky)[a-z0-9]{52}';
+const PUBKY_IDENTIFIER_WITH_PREFIX_SOURCE = '(?:pk:|pubky)[a-z0-9]{52}';
 
 /**
  * A standalone mention in running text: a prefixed identifier at the start of
