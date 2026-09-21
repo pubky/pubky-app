@@ -1,6 +1,10 @@
 import { detectModerationFromTags } from '@/application/moderation/moderation.utils';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
-import type { TStreamIdParams } from '@/controllers/stream/posts/posts.types';
+import type {
+  TClearUnreadStreamParams,
+  TMarkUnreadPostsAsReadParams,
+  TStreamIdParams,
+} from '@/controllers/stream/posts/posts.types';
 import { db } from '@/database/franky/franky';
 import { Logger } from '@/libs/logger/logger';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
@@ -181,24 +185,29 @@ export class LocalStreamPostsService {
   }
 
   /**
-   * Merge the unread stream with the post stream, sorted by timestamp.
+   * Merge all or selected unread IDs into the post stream, preserving stream order.
    * Filters out deleted posts from unread stream before merging.
    * @param streamId - The stream ID to merge the unread stream with the post stream
    * @returns void
    */
-  static async mergeUnreadStreamWithPostStream({ streamId }: TStreamIdParams): Promise<void> {
+  static async mergeUnreadStreamWithPostStream({ streamId, postIds }: TClearUnreadStreamParams): Promise<void> {
     const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
     if (!unreadPostStream) return;
     const postStream = await PostStreamModel.findById(streamId);
-    if (!postStream) return;
+    if (!postStream && postIds === undefined) return;
 
     // Filter out deleted posts from unread stream before merging
-    const validUnreadPosts = await PostDetailsModel.filterDeleted(unreadPostStream.stream);
+    const selectedIds = postIds === undefined ? null : new Set(postIds);
+    const selectedPosts = selectedIds
+      ? unreadPostStream.stream.filter((id) => selectedIds.has(id))
+      : unreadPostStream.stream;
+    const validUnreadPosts = await PostDetailsModel.filterDeleted(selectedPosts);
+    if (validUnreadPosts.length === 0) return;
 
     // An id both rows hold takes the unread position: a locally created post that a poll
     // returned is at the head either way.
     const unreadIds = new Set(validUnreadPosts);
-    const rest = postStream.stream.filter((id) => !unreadIds.has(id));
+    const rest = (postStream?.stream ?? []).filter((id) => !unreadIds.has(id));
 
     // Both parts are already in stream order: every head poll prepends a Nexus page that is
     // newer than the previous one, and the cached row keeps the order its pages arrived in.
@@ -209,20 +218,42 @@ export class LocalStreamPostsService {
     // it, at which point it takes the unread slot. The tail's resume cursor is untouched.
     const combinedStream = [...validUnreadPosts, ...rest];
 
-    await PostStreamModel.upsert(streamId, combinedStream, this.tailCursorFields(postStream.tailCursor));
+    await PostStreamModel.upsert(streamId, combinedStream, this.tailCursorFields(postStream?.tailCursor));
+  }
+
+  /** Keep the merge and acknowledgement atomic with concurrent unread arrivals. */
+  static async markUnreadPostsAsRead(params: TMarkUnreadPostsAsReadParams): Promise<void> {
+    if (params.postIds.length === 0) return;
+    await db.transaction(
+      'rw',
+      [PostStreamModel.table, UnreadPostStreamModel.table, PostDetailsModel.table],
+      async () => {
+        await this.mergeUnreadStreamWithPostStream(params);
+        await this.clearUnreadStream(params);
+      },
+    );
   }
 
   /**
-   * Clear the unread stream and return the post IDs that were in it
+   * Acknowledge selected unread IDs, or clear the entire stream when omitted.
+   * The transaction preserves other IDs that arrived while the UI was loading.
    * @param streamId - The stream ID to clear the unread stream for
-   * @returns Array of post IDs that were in the unread stream
+   * @returns Array of unread IDs that were cleared
    */
-  static async clearUnreadStream({ streamId }: TStreamIdParams): Promise<string[]> {
-    const unreadStream = await UnreadPostStreamModel.findById(streamId);
-    if (!unreadStream) return [];
-    const postIds = unreadStream.stream;
-    await UnreadPostStreamModel.deleteById(streamId);
-    return postIds;
+  static async clearUnreadStream({ streamId, postIds }: TClearUnreadStreamParams): Promise<string[]> {
+    return db.transaction('rw', UnreadPostStreamModel.table, async () => {
+      const unreadStream = await UnreadPostStreamModel.findById(streamId);
+      if (!unreadStream) return [];
+      const selectedIds = postIds === undefined ? new Set(unreadStream.stream) : new Set(postIds);
+      const clearedIds = unreadStream.stream.filter((id) => selectedIds.has(id));
+      const remainingIds = unreadStream.stream.filter((id) => !selectedIds.has(id));
+      if (remainingIds.length > 0) {
+        await UnreadPostStreamModel.upsert(streamId, remainingIds);
+      } else {
+        await UnreadPostStreamModel.deleteById(streamId);
+      }
+      return clearedIds;
+    });
   }
 
   /**
@@ -546,32 +577,34 @@ export class LocalStreamPostsService {
    * @returns The post IDs that were actually added (after deduplication)
    */
   static async persistUnreadNewStreamChunk({ stream, streamId }: TPostStreamUpsertParams): Promise<string[]> {
-    const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
-    if (!unreadPostStream) {
-      await UnreadPostStreamModel.upsert(streamId, stream);
-      return stream;
-    }
-    const existingIds = new Set(unreadPostStream.stream);
-    const newPostsToAdd = stream.filter((id) => !existingIds.has(id));
-    if (newPostsToAdd.length === 0) return [];
-
-    // Head polls can complete out of order (two tabs share this row), so a late, older page
-    // must not land its unique ids above newer ones. The page is in Nexus order: each new id
-    // goes right after the nearest id before it that the row already holds, and an id no
-    // cached id precedes is newer than the row head and goes on top. A page sharing no id
-    // with the row is taken as newer, which is what a poll above the head returns.
-    const combinedStream = [...unreadPostStream.stream];
-    let insertAt = 0;
-    for (const id of stream) {
-      const cachedIndex = combinedStream.indexOf(id);
-      if (cachedIndex !== -1) {
-        insertAt = cachedIndex + 1;
-        continue;
+    return db.transaction('rw', UnreadPostStreamModel.table, async () => {
+      const unreadPostStream = await UnreadPostStreamModel.findById(streamId);
+      if (!unreadPostStream) {
+        await UnreadPostStreamModel.upsert(streamId, stream);
+        return stream;
       }
-      combinedStream.splice(insertAt, 0, id);
-      insertAt += 1;
-    }
-    await UnreadPostStreamModel.upsert(streamId, combinedStream);
-    return newPostsToAdd;
+      const existingIds = new Set(unreadPostStream.stream);
+      const newPostsToAdd = stream.filter((id) => !existingIds.has(id));
+      if (newPostsToAdd.length === 0) return [];
+
+      // Head polls can complete out of order (two tabs share this row), so a late, older page
+      // must not land its unique ids above newer ones. The page is in Nexus order: each new id
+      // goes right after the nearest id before it that the row already holds, and an id no
+      // cached id precedes is newer than the row head and goes on top. A page sharing no id
+      // with the row is taken as newer, which is what a poll above the head returns.
+      const combinedStream = [...unreadPostStream.stream];
+      let insertAt = 0;
+      for (const id of stream) {
+        const cachedIndex = combinedStream.indexOf(id);
+        if (cachedIndex !== -1) {
+          insertAt = cachedIndex + 1;
+          continue;
+        }
+        combinedStream.splice(insertAt, 0, id);
+        insertAt += 1;
+      }
+      await UnreadPostStreamModel.upsert(streamId, combinedStream);
+      return newPostsToAdd;
+    });
   }
 }
