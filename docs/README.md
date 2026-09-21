@@ -4,19 +4,20 @@ Single source of truth for all project standards, conventions, and architectural
 
 ## Quick Reference
 
-| Working on...                               | Read these docs                                                                   |
-| ------------------------------------------- | --------------------------------------------------------------------------------- |
-| Anything                                    | `../AGENTS.md`, `development-workflow.md`                                         |
-| `src/core/`                                 | `architecture.md`, `local-first.md`, `error-handling.md`, `data-patterns.md`      |
-| `src/hooks/`                                | `local-first.md`, `data-patterns.md`                                              |
-| `src/components/`                           | `components.md`, `skeleton-architecture.md`, `z-index.md`, `component-testing.md` |
-| `src/libs/env/`, `src/libs/runtime-config/` | `environment.md`                                                                  |
-| Sentry / observability                      | `sentry.md`                                                                       |
-| Writing tests                               | `component-testing.md`, `visual-regression-testing.md`                            |
-| Making commits, branches, PRs               | `commit-message.md`                                                               |
-| Cutting a release                           | `release.md`                                                                      |
-| Cutting a hotfix                            | `hotfix.md`                                                                       |
-| Architectural decisions                     | `adr-guidelines.md`, `adr/`                                                       |
+| Working on...                                                                                                                         | Read these docs                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Anything                                                                                                                              | `../AGENTS.md`, `development-workflow.md`                                         |
+| `src/core/`                                                                                                                           | `architecture.md`, `local-first.md`, `error-handling.md`, `data-patterns.md`      |
+| `src/hooks/`                                                                                                                          | `local-first.md`, `data-patterns.md`                                              |
+| `src/components/`                                                                                                                     | `components.md`, `skeleton-architecture.md`, `z-index.md`, `component-testing.md` |
+| `src/libs/env/`, `src/libs/runtime-config/`                                                                                           | `environment.md`                                                                  |
+| Sentry / observability                                                                                                                | `sentry.md`                                                                       |
+| PWA: `src/sw.ts`, `public/manifest.json`, `src/libs/pwa/`, `src/hooks/use{ServiceWorkerUpdate,NetworkStatus,AppBadge,InstallPrompt}*` | `pwa.md`                                                                          |
+| Writing tests                                                                                                                         | `component-testing.md`, `visual-regression-testing.md`                            |
+| Making commits, branches, PRs                                                                                                         | `commit-message.md`                                                               |
+| Cutting a release                                                                                                                     | `release.md`                                                                      |
+| Cutting a hotfix                                                                                                                      | `hotfix.md`                                                                       |
+| Architectural decisions                                                                                                               | `adr-guidelines.md`, `adr/`                                                       |
 
 ## Documentation Files
 
@@ -34,6 +35,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `z-index.md`                   | Z-index layering conventions                                                                                       |
 | `sentry.md`                    | What is captured, capture rule, drop rules, privacy scrubbing, source maps                                         |
 | `environment.md`               | Build-time `Env` and runtime `PUBKY_RUNTIME_*` configuration                                                       |
+| `pwa.md`                       | Service worker scope, update flow, offline fallback, precache allow-list, manifest, install banner, local testing  |
 | `commit-message.md`            | Conventional commit format, branch naming, pull request conventions                                                |
 | `release.md`                   | Cutting a production release from `dev` onto `master`                                                              |
 | `hotfix.md`                    | Cutting a production patch without taking `dev` HEAD (see `release.md` for shared steps)                           |
@@ -79,6 +81,7 @@ When making significant changes to:
 - **Testing patterns**: Update `component-testing.md`, `visual-regression-testing.md`
 - **Environment or runtime variables**: Update `environment.md`
 - **Observability**: Update `sentry.md`
+- **Service worker, manifest or installed-app behaviour**: Update `pwa.md`
 - **Commit, branch or PR conventions**: Update `commit-message.md`
 - **Release process**: Update `release.md`
 - **Hotfix process**: Update `hotfix.md`
