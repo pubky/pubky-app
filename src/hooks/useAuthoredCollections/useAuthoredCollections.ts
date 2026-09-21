@@ -75,6 +75,11 @@ export function useAuthoredCollectionsPagination({
   const { hasMore, loading, loadingMore, loadMore } = useStreamPagination({
     streamId: isEnabled && currentUserPubky ? buildAuthorCollectionsStreamId(currentUserPubky) : undefined,
     limit: COLLECTIONS_SECTION_PAGE_SIZE,
+    // The picker renders this stream from `useAuthoredCollections`'s local-first read, so
+    // its own load must never drop the shared row: `prepareStreamForInitialLoad` deletes an
+    // expired row before fetching the replacement, which would blank the picker's cached
+    // collection targets whenever Nexus is unavailable.
+    preserveCachedStream: true,
     onError,
   });
 

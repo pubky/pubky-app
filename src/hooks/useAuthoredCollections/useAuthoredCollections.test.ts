@@ -20,7 +20,12 @@ const mocks = vi.hoisted(() => ({
   getAuthoredCollections: vi.fn(),
   fetchAuthoredCollections: vi.fn(),
   loadMore: vi.fn(),
-  paginationParams: null as { streamId?: string; limit?: number; onError?: (error: unknown) => void } | null,
+  paginationParams: null as {
+    streamId?: string;
+    limit?: number;
+    onError?: (error: unknown) => void;
+    preserveCachedStream?: boolean;
+  } | null,
   paginationResult: { hasMore: false, loading: false, loadingMore: false },
 }));
 
@@ -55,7 +60,12 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
-  useStreamPagination: (params: { streamId?: string; limit?: number; onError?: (error: unknown) => void }) => {
+  useStreamPagination: (params: {
+    streamId?: string;
+    limit?: number;
+    onError?: (error: unknown) => void;
+    preserveCachedStream?: boolean;
+  }) => {
     mocks.paginationParams = params;
     return {
       hasMore: mocks.paginationResult.hasMore,
@@ -145,6 +155,9 @@ describe('useAuthoredCollectionsPagination', () => {
     expect(mocks.paginationParams?.streamId).toContain('current-user');
     expect(mocks.paginationParams?.streamId).toContain(':author:collection');
     expect(mocks.paginationParams?.limit).toBe(COLLECTIONS_SECTION_PAGE_SIZE);
+    // The shared authored stream is read local-first by the picker: its initial load must
+    // not reset (delete) the cached row before a replacement page arrives.
+    expect(mocks.paginationParams?.preserveCachedStream).toBe(true);
     expect(result.current).toMatchObject({ hasMore: true, isLoading: false, isLoadingMore: false });
     expect(result.current.loadMore).toBe(mocks.loadMore);
   });

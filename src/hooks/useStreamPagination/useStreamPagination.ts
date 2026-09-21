@@ -69,6 +69,7 @@ export function useStreamPagination({
   streamId,
   limit = NEXUS_POSTS_PER_PAGE,
   resetOnStreamChange = true,
+  preserveCachedStream = false,
   onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
   const [postIds, setPostIds] = useState<string[]>([]);
@@ -143,8 +144,14 @@ export function useStreamPagination({
         let cursor = streamTail;
 
         if (isInitialLoad) {
-          // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream
-          await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+          // Prepare stream for initial load: clear stale cache, merge unread posts, clear unread stream.
+          // Skipped for a caller that paginates a stream another surface owns and renders
+          // from its cached rows (`preserveCachedStream`): this reset deletes the shared row
+          // before the replacement page arrives, so a failed fetch would leave the caller
+          // with nothing to render. The load below stays additive either way.
+          if (!preserveCachedStream) {
+            await StreamPostsController.prepareStreamForInitialLoad({ streamId });
+          }
 
           const cachedLastPostTimestamp = await StreamPostsController.getCachedLastPostTimestamp({ streamId });
           if (isStale()) return;
@@ -254,7 +261,7 @@ export function useStreamPagination({
         }
       }
     },
-    [streamId, lastPostId, streamTail, limit, setLoadingState, onError],
+    [streamId, lastPostId, streamTail, limit, setLoadingState, preserveCachedStream, onError],
   );
 
   /**

@@ -18,6 +18,21 @@ export interface UseStreamPaginationOptions {
    */
   resetOnStreamChange?: boolean;
   /**
+   * Keep the cached stream row on the initial load instead of letting
+   * `prepareStreamForInitialLoad` drop it as expired.
+   *
+   * A feed's own first load may reset an expired cache: that surface renders from the
+   * pagination result, so the refetched page replaces what was dropped. A consumer that
+   * paginates a stream *another* surface owns and renders from a local-first read of the
+   * shared row must not: the reset deletes the row before the replacement page arrives,
+   * so an unavailable Nexus turns cached rows into an empty surface. With this flag the
+   * initial load is additive — it resumes from the cached tail and only writes pages on
+   * top of the rows already there.
+   *
+   * Defaults to false.
+   */
+  preserveCachedStream?: boolean;
+  /**
    * Optional callback invoked when a stream slice fetch fails. Fires after
    * the internal `error` state is set but before the `loading` / `loadingMore`
    * flags clear. Intended for surface-level UX (e.g. firing a toast in the

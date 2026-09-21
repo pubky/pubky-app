@@ -255,15 +255,17 @@ function SavePickerContent({
         )}
 
         {hasMoreCollections && isStalled && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={resumeAutoLoad}
+          <SavePickerRow
+            layout={layout}
             disabled={isCollectionsLoadingMore}
-            data-cy="post-save-collections-load-more"
+            dataCy="post-save-collections-load-more"
+            onActivate={() => void resumeAutoLoad()}
           >
-            {'Load more'}
-          </Button>
+            {isCollectionsLoadingMore && <Loader2 className="size-4 animate-spin" />}
+            <Typography as="span" overrideDefaults className={cn('min-w-0 flex-1', layout === 'sheet' && 'text-left')}>
+              {'Load more'}
+            </Typography>
+          </SavePickerRow>
         )}
         {hasMoreCollections && !isStalled && (
           <Container
