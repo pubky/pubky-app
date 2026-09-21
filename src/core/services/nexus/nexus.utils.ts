@@ -3,7 +3,7 @@ import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
-import { nexusQueryClient } from './nexus.query-client';
+import { nexusQueryClient, nexusRetryPolicy } from './nexus.query-client';
 import type {
   TBuildUrlWithQueryParams,
   TCreateFetchOptionsParams,
@@ -148,6 +148,7 @@ const queuedForcedQueries = new Map<string, Promise<unknown>>();
  * @param body - JSON string body (use JSON.stringify for objects)
  * @param staleTime - Cache freshness in milliseconds; omit for the shared default
  * @param force - Revalidate after any request already in flight, overriding staleTime
+ * @param notFoundRetries - 404 attempts allowed after the first, overriding the shared budget
  * @returns Parsed response data
  * @throws {NexusError} When response is not ok after all retries
  */
@@ -157,14 +158,20 @@ export async function queryNexus<T>({
   body = null,
   force = false,
   staleTime,
+  notFoundRetries,
 }: TQueryNexusParams): Promise<T> {
   const queryKey = ['nexus', url, method, body];
+  // A scoped 404 budget replaces the client-level retry option wholesale, so the full
+  // policy is derived from the shared Nexus config and passed with the query.
+  const retryPolicy = notFoundRetries === undefined ? undefined : nexusRetryPolicy(notFoundRetries);
+  const retryOptions = retryPolicy ? { retry: retryPolicy.shouldRetry, retryDelay: retryPolicy.retryDelay } : {};
 
   const execute = async (): Promise<T> => {
     let startedAt: number | undefined;
     const data = await nexusQueryClient.fetchQuery({
       queryKey,
       ...(force ? { staleTime: 0 } : staleTime !== undefined ? { staleTime } : {}),
+      ...retryOptions,
       queryFn: () => {
         startedAt = Date.now();
         return fetchNexus<T>({ url, method, body });

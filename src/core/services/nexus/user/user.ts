@@ -8,7 +8,12 @@ import type {
 } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { userApi } from '@/services/nexus/user/user.api';
-import type { TUserPaginationParams, TUserTaggersParams, TUserTagsParams } from '@/services/nexus/user/user.types';
+import {
+  type TUserPaginationParams,
+  type TUserTaggersParams,
+  type TUserTagsParams,
+  USER_DETAILS_NOT_FOUND_RETRIES,
+} from '@/services/nexus/user/user.types';
 
 /**
  * Nexus User Service
@@ -51,14 +56,18 @@ export class NexusUserService {
   }
 
   /**
-   * Retrieves user details from Nexus API
+   * Retrieves user details from Nexus API.
+   *
+   * A 404 here is the not-found verdict for a whole page, so the lookup runs on the
+   * short profile budget instead of the shared indexing one (see
+   * `USER_DETAILS_NOT_FOUND_RETRIES`).
    *
    * @param params - Parameters containing user ID
    * @returns User details including name, bio, status, image, and links
    */
   static async details(params: TUserId): Promise<NexusUserDetails> {
     const url = userApi.details(params);
-    return await queryNexus<NexusUserDetails>({ url });
+    return await queryNexus<NexusUserDetails>({ url, notFoundRetries: USER_DETAILS_NOT_FOUND_RETRIES });
   }
 
   /**

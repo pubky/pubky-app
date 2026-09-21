@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNexusUrl } from '@/config/nexus';
 import type { Pubky } from '@/models/models.types';
-import type { NexusTag, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
+import type { NexusTag, NexusUserCounts, NexusUserDetails, TUserId } from '@/services/nexus/nexus.types';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { NexusUserService } from '@/services/nexus/user/user';
 import { buildUrlWithQuery } from '../nexus.utils';
@@ -12,6 +12,7 @@ import {
   TUserTaggersParams,
   TUserTagsParams,
   TUserViewParams,
+  USER_DETAILS_NOT_FOUND_RETRIES,
   USER_PATH_PARAMS,
 } from './user.types';
 
@@ -218,7 +219,17 @@ describe('NexusUserService', () => {
       const result = await NexusUserService.details({ user_id: testUserId });
 
       expect(result).toEqual(mockUserDetails);
-      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${getNexusUrl()}/v0/user/${testUserId}/details` });
+      expect(queryNexusSpy).toHaveBeenCalledWith({
+        url: `${getNexusUrl()}/v0/user/${testUserId}/details`,
+        notFoundRetries: USER_DETAILS_NOT_FOUND_RETRIES,
+      });
+    });
+
+    it('scopes the not-found budget below the shared Nexus one', () => {
+      // The shared Nexus budget is 5 retries (~15.5s); the profile lookup must be
+      // shorter, or the "User not found" page is parked behind the indexing window.
+      expect(USER_DETAILS_NOT_FOUND_RETRIES).toBeLessThan(5);
+      expect(USER_DETAILS_NOT_FOUND_RETRIES).toBeGreaterThanOrEqual(1);
     });
 
     it('should handle user with complete profile data', async () => {
@@ -242,6 +253,17 @@ describe('NexusUserService', () => {
       expect(result).toEqual(mockUserDetails);
       expect(result.name).toBe('Satoshi Nakamoto');
       expect(result.links).toHaveLength(2);
+    });
+  });
+
+  describe('counts', () => {
+    it('keeps the shared not-found budget (profile-lookup scope only)', async () => {
+      const mockCounts = { followers: 1, following: 2, friends: 0, posts: 3 } as NexusUserCounts;
+      const queryNexusSpy = mockQueryNexus.mockResolvedValue(mockCounts);
+
+      await NexusUserService.counts({ user_id: testUserId });
+
+      expect(queryNexusSpy).toHaveBeenCalledWith({ url: `${getNexusUrl()}/v0/user/${testUserId}/counts` });
     });
   });
 });
