@@ -112,9 +112,7 @@ describe('useAttachmentsMetadata', () => {
     mockGetMetadata.mockImplementation(async () => localRows);
     mockFetchFiles.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() =>
-      useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('image2')] }),
-    );
+    const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('image2')] }));
 
     await waitFor(() => expect(result.current.files.map((file) => file.name)).toEqual(['image.jpg']));
     expect(mockFetchFiles).toHaveBeenCalledWith({ fileUris: [fileUri('image2')] });
@@ -156,9 +154,7 @@ describe('useAttachmentsMetadata', () => {
     mockGetMetadata.mockResolvedValue([]);
     mockFetchFiles.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() =>
-      useAttachmentsMetadata({ fileUris: [fileUri('image1')], enabled: false }),
-    );
+    const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1')], enabled: false }));
 
     expect(result.current.files).toEqual([]);
     expect(mockGetMetadata).not.toHaveBeenCalled();
