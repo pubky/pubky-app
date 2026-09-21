@@ -75,22 +75,24 @@ export function DialogReportPostIssueStep({
       <DialogFooter>
         <Button
           data-cy="report-issue-step-cancel"
-          variant="secondary"
+          variant="outline"
           size="lg"
           onClick={onCancel}
           aria-label={'Cancel'}
+          className="order-2 sm:order-1"
         >
           {'Cancel'}
         </Button>
         <Button
           data-cy="report-issue-step-next"
-          variant="dark-outline"
+          variant="default"
           size="lg"
           onClick={handleNext}
           disabled={!selectedType}
-          aria-label={'Next'}
+          aria-label={'Continue'}
+          className="order-1 sm:order-2"
         >
-          {'Next'}
+          {'Continue'}
         </Button>
       </DialogFooter>
     </>

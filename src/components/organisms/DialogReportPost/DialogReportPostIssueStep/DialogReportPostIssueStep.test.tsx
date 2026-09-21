@@ -54,7 +54,20 @@ describe('DialogReportPostIssueStep', () => {
     });
   });
 
-  it('calls onSelectIssueType with correct issue type when Next button is clicked after selecting issue', async () => {
+  it('renders the footer as a primary Continue action and an outline Cancel action', () => {
+    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
+
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+
+    // Primary action on top of the mobile column, trailing in the desktop row.
+    expect(continueButton).toHaveAttribute('data-variant', 'default');
+    expect(cancelButton).toHaveAttribute('data-variant', 'outline');
+    expect(continueButton.className).toContain('order-1 sm:order-2');
+    expect(cancelButton.className).toContain('order-2 sm:order-1');
+  });
+
+  it('calls onSelectIssueType with correct issue type when Continue button is clicked after selecting issue', async () => {
     const user = userEvent.setup();
     renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
 
@@ -62,8 +75,8 @@ describe('DialogReportPostIssueStep', () => {
     const firstIssueButton = screen.getByLabelText(REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.PERSONAL_INFO]);
     await user.click(firstIssueButton);
 
-    // Then click Next button (translated to "Next" from common.next)
-    const nextButton = screen.getByRole('button', { name: 'Next' });
+    // Then click the Continue action
+    const nextButton = screen.getByRole('button', { name: 'Continue' });
     await user.click(nextButton);
 
     expect(mockOnSelectIssueType).toHaveBeenCalledWith(REPORT_ISSUE_TYPES.PERSONAL_INFO);
@@ -80,7 +93,7 @@ describe('DialogReportPostIssueStep', () => {
     expect(mockOnCancel).toHaveBeenCalled();
   });
 
-  it('redirects to /copyright and closes dialog when copyright infringement is selected and Next is clicked', async () => {
+  it('redirects to /copyright and closes dialog when copyright infringement is selected and Continue is clicked', async () => {
     const user = userEvent.setup();
     renderWithDialog(
       <DialogReportPostIssueStep
@@ -94,8 +107,8 @@ describe('DialogReportPostIssueStep', () => {
     const copyrightButton = screen.getByLabelText(REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.COPYRIGHT]);
     await user.click(copyrightButton);
 
-    // Click Next button (translated to "Next" from common.next)
-    const nextButton = screen.getByRole('button', { name: 'Next' });
+    // Click the Continue action
+    const nextButton = screen.getByRole('button', { name: 'Continue' });
     await user.click(nextButton);
 
     // Should close dialog and redirect to /copyright
@@ -119,8 +132,8 @@ describe('DialogReportPostIssueStep', () => {
     const personalInfoButton = screen.getByLabelText(REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.PERSONAL_INFO]);
     await user.click(personalInfoButton);
 
-    // Click Next button (translated to "Next" from common.next)
-    const nextButton = screen.getByRole('button', { name: 'Next' });
+    // Click the Continue action
+    const nextButton = screen.getByRole('button', { name: 'Continue' });
     await user.click(nextButton);
 
     // Should call onSelectIssueType normally
