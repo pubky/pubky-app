@@ -106,6 +106,8 @@ export interface UsePostInputReturn {
   handleDragOver: (e: React.DragEvent) => void;
   handleDrop: (e: React.DragEvent) => void;
   handlePaste: (e: React.ClipboardEvent) => void;
+  /** Track the composer caret from the textarea's selection events */
+  handleSelectionChange: (e: React.SyntheticEvent<HTMLTextAreaElement>) => void;
   handleMentionSelect: (userId: string) => void;
   handleMentionKeyDown: (e: React.KeyboardEvent) => boolean;
 }

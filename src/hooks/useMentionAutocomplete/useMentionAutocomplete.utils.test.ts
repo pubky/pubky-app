@@ -248,101 +248,212 @@ describe('extractMentionQuery', () => {
       expect(result.pkQuery).toBeNull();
     });
   });
+
+  describe('caret-anchored extraction', () => {
+    it('extracts the @ query the caret sits in when text follows it', () => {
+      // 'Hello @jo| world' - the caret is after '@jo'
+      const result = extractMentionQuery('Hello @jo world', 9);
+
+      expect(result.atQuery).toBe('jo');
+      expect(result.range).toEqual({ start: 6, end: 9 });
+    });
+
+    it('extracts the partial username up to the caret mid-word', () => {
+      // 'Hello @joh|n' - only the characters before the caret count as the query
+      const result = extractMentionQuery('Hello @john', 10);
+
+      expect(result.atQuery).toBe('joh');
+      expect(result.range).toEqual({ start: 6, end: 10 });
+    });
+
+    it('ignores an @ pattern that starts after the caret', () => {
+      // 'Hello |@john' - nothing typed at the caret yet
+      const result = extractMentionQuery('Hello @john', 6);
+
+      expect(result.atQuery).toBeNull();
+      expect(result.range).toBeNull();
+    });
+
+    it('extracts the pk: query the caret sits in when text follows it', () => {
+      const result = extractMentionQuery('Hello pk:abc world', 12);
+
+      expect(result.pkQuery).toBe('abc');
+      expect(result.range).toEqual({ start: 6, end: 12 });
+    });
+
+    it('ignores a pk: pattern that starts after the caret', () => {
+      const result = extractMentionQuery('Hello pk:abc world', 6);
+
+      expect(result.pkQuery).toBeNull();
+      expect(result.range).toBeNull();
+    });
+
+    it('returns no range when the caret sits outside the pattern', () => {
+      // 'Hello @jo |world' - the caret moved past the pattern's trailing space
+      const result = extractMentionQuery('Hello @jo world', 10);
+
+      expect(result.atQuery).toBeNull();
+      expect(result.range).toBeNull();
+    });
+
+    it('keeps the pubky pattern as the range when both patterns end at the caret', () => {
+      const result = extractMentionQuery('Hello @pubkyabc', 15);
+
+      expect(result.atQuery).toBe('pubkyabc');
+      expect(result.pkQuery).toBe('abc');
+      expect(result.range).toEqual({ start: 7, end: 15 });
+    });
+
+    it('falls back to the end of the value when the caret is past it', () => {
+      const result = extractMentionQuery('Hello @jo', 999);
+
+      expect(result.atQuery).toBe('jo');
+      expect(result.range).toEqual({ start: 6, end: 9 });
+    });
+
+    it('extracts nothing at the start of the value', () => {
+      const result = extractMentionQuery('Hello @jo', 0);
+
+      expect(result.atQuery).toBeNull();
+      expect(result.pkQuery).toBeNull();
+      expect(result.range).toBeNull();
+    });
+  });
 });
 
 describe('getContentWithMention', () => {
   const userId = 'abc123xyz';
 
+  /** Selection made with the caret at the end of the value - the pre-#1959 behaviour */
+  const atEnd = (content: string) => getContentWithMention(content, content.length, userId);
+
   describe('replaces @ pattern at end with pubky format', () => {
     it('replaces @username with pubky{userId}', () => {
-      const result = getContentWithMention('Hello @john', userId);
-      expect(result).toBe(`Hello pubky${userId} `);
+      expect(atEnd('Hello @john').content).toBe(`Hello pubky${userId} `);
     });
 
     it('replaces partial @username with pubky{userId}', () => {
-      const result = getContentWithMention('Hello @jo', userId);
-      expect(result).toBe(`Hello pubky${userId} `);
+      expect(atEnd('Hello @jo').content).toBe(`Hello pubky${userId} `);
     });
 
     it('replaces @ alone with pubky{userId}', () => {
-      const result = getContentWithMention('Hello @', userId);
-      expect(result).toBe(`Hello pubky${userId} `);
+      expect(atEnd('Hello @').content).toBe(`Hello pubky${userId} `);
     });
 
     it('only replaces the @ pattern at the end', () => {
-      const result = getContentWithMention('@alice mentioned @bob', userId);
-      expect(result).toBe(`@alice mentioned pubky${userId} `);
+      expect(atEnd('@alice mentioned @bob').content).toBe(`@alice mentioned pubky${userId} `);
     });
   });
 
   describe('replaces pk: pattern at end with pubky format', () => {
     it('replaces pk:partial with pubky{userId}', () => {
-      const result = getContentWithMention('Hello pk:abc', userId);
-      expect(result).toBe(`Hello pubky${userId} `);
+      expect(atEnd('Hello pk:abc').content).toBe(`Hello pubky${userId} `);
     });
 
     it('replaces pk: alone with pubky{userId}', () => {
-      const result = getContentWithMention('Hello pk:', userId);
-      expect(result).toBe(`Hello pubky${userId} `);
+      expect(atEnd('Hello pk:').content).toBe(`Hello pubky${userId} `);
     });
 
     it('only replaces the pk: pattern at the end', () => {
-      const result = getContentWithMention('pk:user1 mentioned pk:user', userId);
-      expect(result).toBe(`pk:user1 mentioned pubky${userId} `);
+      expect(atEnd('pk:user1 mentioned pk:user').content).toBe(`pk:user1 mentioned pubky${userId} `);
     });
   });
 
   describe('replaces pubky pattern at end', () => {
     it('replaces pubky{partial} with pubky{userId}', () => {
-      const result = getContentWithMention('Hello pubkyabc', userId);
-      expect(result).toBe(`Hello pubky${userId} `);
+      expect(atEnd('Hello pubkyabc').content).toBe(`Hello pubky${userId} `);
     });
 
     it('only replaces the pubky pattern at the end', () => {
-      const result = getContentWithMention('pubkyuser1 mentioned pubkyuser', userId);
-      expect(result).toBe(`pubkyuser1 mentioned pubky${userId} `);
+      expect(atEnd('pubkyuser1 mentioned pubkyuser').content).toBe(`pubkyuser1 mentioned pubky${userId} `);
     });
   });
 
   describe('pubky ID pattern takes precedence over @', () => {
     it('replaces pk: when both patterns present at end', () => {
-      const result = getContentWithMention('@john pk:abc', userId);
-      expect(result).toBe(`@john pubky${userId} `);
+      expect(atEnd('@john pk:abc').content).toBe(`@john pubky${userId} `);
     });
 
     it('replaces pubky when both patterns present at end', () => {
-      const result = getContentWithMention('@john pubkyabc', userId);
-      expect(result).toBe(`@john pubky${userId} `);
+      expect(atEnd('@john pubkyabc').content).toBe(`@john pubky${userId} `);
     });
   });
 
   describe('fallback appends when no pattern at end', () => {
     it('appends pubky{userId} when content has no mention pattern at end', () => {
-      const result = getContentWithMention('Hello world', userId);
-      expect(result).toBe(`Hello world pubky${userId} `);
+      expect(atEnd('Hello world').content).toBe(`Hello world pubky${userId} `);
     });
 
     it('appends pubky{userId} to empty content', () => {
-      const result = getContentWithMention('', userId);
-      expect(result).toBe(`pubky${userId} `);
+      expect(atEnd('').content).toBe(`pubky${userId} `);
     });
 
     it('appends when @ pattern is not at the end', () => {
-      const result = getContentWithMention('@john is cool', userId);
-      expect(result).toBe(`@john is cool pubky${userId} `);
+      expect(atEnd('@john is cool').content).toBe(`@john is cool pubky${userId} `);
     });
 
     it('appends when pubky: (with colon) is at the end (invalid format)', () => {
       // pubky: with colon is not a valid pattern, so it falls back to append
-      const result = getContentWithMention('Hello pubky:abc', userId);
-      expect(result).toBe(`Hello pubky:abc pubky${userId} `);
+      expect(atEnd('Hello pubky:abc').content).toBe(`Hello pubky:abc pubky${userId} `);
     });
   });
 
   describe('adds trailing space', () => {
     it('always adds a trailing space after the mention', () => {
-      const result = getContentWithMention('Hello @test', userId);
-      expect(result.endsWith(' ')).toBe(true);
+      expect(atEnd('Hello @test').content.endsWith(' ')).toBe(true);
+    });
+  });
+
+  describe('caret inside the value', () => {
+    it('replaces only the pattern before the caret and keeps the text after it', () => {
+      // 'Hello @jo| world' - the mention is written over '@jo', ' world' survives
+      const result = getContentWithMention('Hello @jo world', 9, userId);
+
+      expect(result.content).toBe(`Hello pubky${userId}  world`);
+    });
+
+    it('leaves the caret after the inserted mention, before the surviving text', () => {
+      const result = getContentWithMention('Hello @jo world', 9, userId);
+
+      expect(result.content.slice(0, result.caret)).toBe(`Hello pubky${userId} `);
+      expect(result.content.slice(result.caret)).toBe(' world');
+    });
+
+    it('replaces a pk: pattern before the caret', () => {
+      const result = getContentWithMention('Hello pk:abc world', 12, userId);
+
+      expect(result.content).toBe(`Hello pubky${userId}  world`);
+      expect(result.caret).toBe(`Hello pubky${userId} `.length);
+    });
+
+    it('keeps the text after the caret when the caret sits mid-word', () => {
+      // 'Hello @jo|hn' - 'hn' was already there and is left alone
+      const result = getContentWithMention('Hello @john', 9, userId);
+
+      expect(result.content).toBe(`Hello pubky${userId} hn`);
+      expect(result.content.slice(result.caret)).toBe('hn');
+    });
+
+    it('does not touch an @ pattern that starts after the caret', () => {
+      // 'Hello |@john' - nothing to complete at the caret, so the mention is written there
+      const result = getContentWithMention('Hello @john', 5, userId);
+
+      expect(result.content).toBe(`Hello pubky${userId}  @john`);
+      expect(result.content.slice(0, result.caret)).toBe(`Hello pubky${userId} `);
+    });
+
+    it('writes at the caret when the value is empty', () => {
+      const result = getContentWithMention('', 0, userId);
+
+      expect(result.content).toBe(`pubky${userId} `);
+      expect(result.caret).toBe(`pubky${userId} `.length);
+    });
+
+    it('clamps a caret past the end of the value', () => {
+      const result = getContentWithMention('Hello @jo', 999, userId);
+
+      expect(result.content).toBe(`Hello pubky${userId} `);
+      expect(result.caret).toBe(`Hello pubky${userId} `.length);
     });
   });
 });
