@@ -234,6 +234,40 @@ describe('useUserProfile', () => {
     });
   });
 
+  describe('Other profile edits (#525)', () => {
+    it('reflects a re-indexed profile: new name, bio and avatar version', () => {
+      mockMocks.mockGetAvatarUrl.mockImplementation(
+        (userId: string, version?: string | number) => `avatar:${userId}:${version}`,
+      );
+      const before: NexusUserDetails = {
+        id: 'other-user' as Pubky,
+        name: 'Old name',
+        bio: 'Old bio',
+        image: 'old.jpg',
+        status: null,
+        links: null,
+        indexed_at: 1,
+      };
+      mockMocks.mockUserDetails.current = before;
+      mockMocks.mockGetDetails.mockResolvedValue(before);
+
+      const { result, rerender } = renderHook(() => useUserProfile('other-user'));
+
+      expect(result.current.profile?.name).toBe('Old name');
+      expect(result.current.profile?.avatarUrl).toBe('avatar:other-user:1');
+
+      // The other user edits their profile; the TTL refresh writes the new row.
+      const after: NexusUserDetails = { ...before, name: 'New name', bio: 'New bio', image: 'new.jpg', indexed_at: 2 };
+      mockMocks.mockUserDetails.current = after;
+      mockMocks.mockGetDetails.mockResolvedValue(after);
+      rerender();
+
+      expect(result.current.profile?.name).toBe('New name');
+      expect(result.current.profile?.bio).toBe('New bio');
+      expect(result.current.profile?.avatarUrl).toBe('avatar:other-user:2');
+    });
+  });
+
   describe('Default values', () => {
     it('includes default emoji', () => {
       const mockUser: NexusUserDetails = {
