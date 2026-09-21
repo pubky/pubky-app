@@ -234,11 +234,12 @@ toast({ variant: 'info', title: 'Copied to clipboard', dismissButton: true });
 toast({ title: 'Reposted', action: { label: 'Undo', altText: 'Undo', onClick: () => undoRepost() } });
 ```
 
-- `ToastOptions` requires at least one of `title` / `description` (both `string`), and exposes only app concepts: `variant`, `dismissButton`, `action`. Radix lifecycle, duration, open-state, and styling props are not part of the public API.
+- `ToastOptions` requires at least one of `title` / `description` (both `string`), and exposes only app concepts: `variant`, `dismissButton`, `action`, `persistent`. Radix lifecycle, duration, open-state, and styling props are not part of the public API.
 - **`variant: 'error'`** for errors — not `className: 'destructive …'`, and **no** `showErrorToast` / `showSuccessToast` wrapper helpers.
 - **`dismissButton: true`** when the toast should show an OK action (brand-styled on default toasts, muted otherwise, via `toastActionVariants`).
 - **`action`** is a plain descriptor `{ label, altText, onClick }` — never a component. The Toaster owns action rendering and styling, and dismisses the toast before invoking `onClick`.
 - **`toast()` returns a `ToastHandle`** with `dismiss()` for dismissing that toast programmatically.
+- **`persistent: true`** keeps a toast open until its action, the dismiss button, or a swipe removes it (no auto-dismiss), and it does not count toward the toast limit, so later transient toasts stack next to it instead of evicting it. Reserve it for state the user must resolve, such as the "Update available" toast in `useServiceWorkerUpdate`; normal feedback stays transient.
 
 ### Copy is static
 

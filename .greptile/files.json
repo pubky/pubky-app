@@ -73,6 +73,29 @@
       "scope": ["src/libs/env/**", "src/libs/runtime-config/**", "src/config/**", ".env.example", "Dockerfile"]
     },
     {
+      "path": "docs/pwa.md",
+      "description": "Service worker scope (shell only, no data caching), user-consented updates, static offline fallback, precache allow-list, manifest, install banner",
+      "scope": [
+        "src/sw.ts",
+        "next.config.ts",
+        "src/providers/ServiceWorkerRegistrationProvider/**",
+        "public/manifest.json",
+        "public/offline.html",
+        "src/libs/pwa/**",
+        "src/config/pwa.ts",
+        "src/hooks/useServiceWorkerUpdate/**",
+        "src/hooks/useNetworkStatus/**",
+        "src/hooks/useNetworkStatusToasts/**",
+        "src/hooks/useAppBadge/**",
+        "src/hooks/useIsStandalone/**",
+        "src/hooks/useInstallPrompt/**",
+        "src/hooks/useInstallPromptLifecycle/**",
+        "src/components/organisms/PwaManager/**",
+        "src/components/organisms/AlertInstall/**",
+        "src/components/organisms/DialogInstallIos/**"
+      ]
+    },
+    {
       "path": "docs/adr-guidelines.md",
       "description": "When and how to write Architecture Decision Records",
       "scope": ["docs/adr/**"]

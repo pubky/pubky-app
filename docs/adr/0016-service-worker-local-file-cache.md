@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 2026-01-27
+Accepted — 2026-01-27  
+Updated — 2026-09-17 (Context realigned with [ADR-0021](0021-service-worker-scope-and-update-policy.md): the Nexus runtime cache is gone; an avatar cache would be the one same-origin exception)
 
 ## Context
 
@@ -14,7 +15,7 @@ A concrete pain point is **avatar updates**:
 - The actual upload to the homeserver may take time or fail transiently.
 - A purely “server-first” image URL means the `<img>` cannot show the new avatar until the upload completes and the server serves it.
 
-We currently have a service worker implementation (`src/sw.ts`) via Serwist, used for runtime caching (e.g. Nexus API) and offline document fallback. This ADR proposes a future extension to that service worker so the app can treat “local user-selected files” as **immediately available** at stable URLs.
+We currently have a service worker implementation (`src/sw.ts`) via Serwist, used for the app-shell precache, the share target and the offline document fallback. (Its Nexus runtime cache was removed by [ADR-0021](0021-service-worker-scope-and-update-policy.md); an avatar cache under this ADR would be the one deliberate, same-origin exception to that policy.) This ADR proposes a future extension to that service worker so the app can treat “local user-selected files” as **immediately available** at stable URLs.
 
 ### Constraints / assumptions (MVP)
 
