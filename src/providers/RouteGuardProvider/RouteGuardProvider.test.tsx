@@ -96,7 +96,8 @@ vi.mock('@/stores/auth/auth.store', () => ({
     selector({
       hasHydrated: mocks.hasHydrated,
       session: mocks.session,
-      sessionExport: mocks.sessionExport,
+      sessionReference: mocks.sessionExport ? { kind: 'cookie', sessionExport: mocks.sessionExport } : null,
+      restoreStatus: 'idle',
       currentUserPubky: mocks.currentUserPubky,
     }),
 }));

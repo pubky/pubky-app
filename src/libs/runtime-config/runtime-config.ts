@@ -214,3 +214,9 @@ export const getGithubUrl = (): string => getRuntimeConfig().githubUrl;
 export const getEmail = (): string => getRuntimeConfig().email;
 export const getAppStoreUrl = (): string => getRuntimeConfig().appStoreUrl;
 export const getPlayStoreUrl = (): string => getRuntimeConfig().playStoreUrl;
+
+/** Stable signer-facing app identity; never derived from a preview hostname. */
+export const getAuthClientId = (): string => {
+  const config = getRuntimeConfig();
+  return config.authClientId ?? (config.deployEnv === 'production' ? 'pubky.app' : 'staging.pubky.app');
+};

@@ -1,145 +1,74 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Session } from '@synonymdev/pubky';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { AuthController } from '@/controllers/auth/auth';
-import { AuthErrorCode } from '@/libs/error/error.codes';
-import { isAppError, isAuthError, isTimeoutError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
-import { Logger } from '@/libs/logger/logger';
+import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/libs/auth/cancellation';
+import { isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
-import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
 
-/** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
-const isAuthFlowExpiredError = (error: unknown): boolean => {
-  if (!isAppError(error)) return false;
-  if (isTimeoutError(error)) return true;
-  return isAuthError(error) && error.code === AuthErrorCode.SESSION_EXPIRED;
-};
-
-/**
- * Manages the authentication URL lifecycle for Pubky Ring authorization.
- * @param options - Configuration for auth URL generation (autoFetch, type, inviteCode for signup)
- * @returns URL state, loading/expired flags, and fetch/copy actions
- */
+/** The controller owns approval/adoption so mobile handoff and Strict Mode cannot adopt twice. */
 export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
   const autoFetch = options.autoFetch ?? true;
   const type = options.type ?? 'signin';
   const inviteCode = options.type === 'signup' ? options.inviteCode : '';
-
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(autoFetch);
   const [isExpired, setIsExpired] = useState(false);
-  const isMountedRef = useRef(true);
+  const requestId = useRef(0);
 
-  const fetchUrl = useCallback(async (): Promise<void> => {
+  async function load(fresh: boolean): Promise<void> {
+    const id = ++requestId.current;
+    const current = () => id === requestId.current;
     setIsLoading(true);
     setIsExpired(false);
     setUrl('');
-
     try {
-      // Request auth URL from controller
-      const { authorizationUrl, awaitApproval } =
-        type === 'signup' ? await AuthController.getSignupAuthUrl(inviteCode) : await AuthController.getAuthUrl();
-
-      awaitApproval
-        .then(async (session: Session) => {
-          // No isMountedRef guard here: initializeAuthenticatedSession updates global stores
-          // and must run even if the component unmounted (e.g., mobile deeplink handoff where
-          // the browser may unmount/remount the page while Pubky Ring is open).
-          try {
-            await AuthController.initializeAuthenticatedSession({ session });
-          } catch (error) {
-            const isWrongEnvironment = isWrongEnvironmentHomeserverError(error);
-            if (!isWrongEnvironment && !isAppError(error)) {
-              Logger.error('Failed to persist session and check profile:', error);
-            }
-            toast({
-              variant: 'error',
-              description: isWrongEnvironment
-                ? 'This key is linked to a different homeserver. Use a staging account on this site.'
-                : 'Sign in failed. Try again.',
-            });
-            if (isMountedRef.current) {
-              setUrl('');
-              setIsExpired(true);
-            }
-          }
-        })
-        .catch((error: unknown) => {
-          if (
-            typeof error === 'object' &&
-            error !== null &&
-            'name' in error &&
-            (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME
-          ) {
-            return;
-          }
-
-          Logger.error('Authorization promise rejected:', error);
-          if (!isMountedRef.current) return;
-
-          if (isAuthFlowExpiredError(error)) {
-            setUrl('');
-            setIsExpired(true);
-            return;
-          }
-
-          toast({
-            variant: 'error',
-            description: 'Authorization failed. Try again.',
-          });
+      const flow =
+        type === 'signup'
+          ? await AuthController.getSignupAuthUrl(inviteCode, fresh)
+          : await AuthController.getAuthUrl(fresh);
+      void flow.awaitApproval.catch((error: unknown) => {
+        if (!current() || (error instanceof Error && error.name === AUTH_FLOW_CANCELED_ERROR_NAME)) return;
+        setUrl('');
+        setIsExpired(true);
+        toast({
+          variant: 'error',
+          description: isWrongEnvironmentHomeserverError(error)
+            ? 'This key is linked to a different homeserver. Use a staging account on this site.'
+            : 'Authorization failed. Try again.',
         });
-
-      if (!isMountedRef.current) return;
-      setUrl(authorizationUrl ?? '');
-    } catch (error) {
-      Logger.error('Failed to generate auth URL:', error);
-      if (!isMountedRef.current) return;
-      toast({
-        variant: 'error',
-        description: 'Could not generate QR. Refresh and try again.',
       });
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [type, inviteCode]);
-
-  const copyAuthUrl = useCallback(async (): Promise<void> => {
-    if (!url) return;
-    try {
-      await copyToClipboard({ text: url });
+      if (current()) setUrl(flow.authorizationUrl);
     } catch (error) {
-      Logger.error('Failed to copy auth URL to clipboard', error);
+      if (!current() || (error instanceof Error && error.name === AUTH_FLOW_CANCELED_ERROR_NAME)) return;
+      setIsExpired(true);
+      toast({ variant: 'error', description: 'Could not generate QR. Refresh and try again.' });
+    } finally {
+      if (current()) setIsLoading(false);
     }
-  }, [url]);
+  }
 
+  const resume = useEffectEvent(() => {
+    void load(false);
+  });
   useEffect(() => {
-    isMountedRef.current = true;
-
-    // We intentionally do NOT cancel the auth flow on unmount. The polling must survive
-    // component lifecycle changes (e.g., mobile deeplink handoff where the browser may
-    // unmount/remount the component while the user is in Pubky Ring). The AuthController
-    // already self-manages flow lifetime: it cancels stale flows when a new one starts
-    // (getAuthUrl), on successful session init, and on sign-out.
+    const subscriber = requestId;
+    if (autoFetch) resume();
+    // Keep controller polling alive during the Ring handoff. Only detach this UI subscriber.
     return () => {
-      isMountedRef.current = false;
+      subscriber.current++;
     };
-  }, []);
-
-  useEffect(() => {
-    if (!autoFetch) return;
-    void fetchUrl();
-  }, [autoFetch, fetchUrl]);
+  }, [autoFetch, type, inviteCode]);
 
   return {
     url,
     isLoading,
     isExpired,
-    fetchUrl,
-    copyAuthUrl,
+    fetchUrl: () => load(true),
+    copyAuthUrl: async () => {
+      if (url) await copyToClipboard({ text: url });
+    },
   };
 }

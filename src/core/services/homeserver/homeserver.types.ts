@@ -1,4 +1,4 @@
-import type { Capabilities, PublicKey, Session } from '@synonymdev/pubky';
+import type { PublicKey, Session } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { HttpMethod } from '@/libs/http/http.types';
 
@@ -26,6 +26,8 @@ export type TGenerateAuthUrlResult = {
   authorizationUrl: string;
   awaitApproval: Promise<Session>;
   cancelAuthFlow: () => void;
+  /** Drop resumable material only after the completed session has been persisted. */
+  completeAuthFlow?: () => void;
 };
 
 export type THomeserverRestoreSessionParams = {
@@ -54,11 +56,6 @@ type PrivPath<T extends string = string> = `/priv/${T}`;
 
 /** The only roots the homeserver accepts writes under — mirrors its `STORAGE_ROOTS`. */
 export type StoragePath<T extends string = string> = PubPath<T> | PrivPath<T>;
-
-export type TGenerateSignupAuthUrlParams = {
-  inviteCode: string;
-  caps?: Capabilities;
-};
 
 export type THomeserverFetchParams = {
   url: string;

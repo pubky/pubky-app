@@ -17,6 +17,8 @@ const mockOnboardingStore = {
 
 const mockAuthStore = {
   session: null as Session | null,
+  sessionReference: null as { kind: 'cookie'; sessionExport: string } | null,
+  restoreStatus: 'idle',
   sessionExport: null as string | null,
   isRestoringSession: false,
   hasProfile: null as boolean | null,
@@ -44,6 +46,8 @@ describe('useAuthStatus', () => {
     mockOnboardingStore.secretKey = '';
     mockAuthStore.session = null;
     mockAuthStore.sessionExport = null;
+    mockAuthStore.sessionReference = null;
+    mockAuthStore.restoreStatus = 'idle';
     mockAuthStore.isRestoringSession = false;
     mockAuthStore.hasProfile = null;
     mockAuthStore.hasHydrated = true;
@@ -92,7 +96,7 @@ describe('useAuthStatus', () => {
   it('should return loading state when sessionExport exists but session is null (pending restoration)', () => {
     mockOnboardingStore.hasHydrated = true;
     mockAuthStore.hasHydrated = true;
-    mockAuthStore.sessionExport = 'some-exported-session';
+    mockAuthStore.sessionReference = { kind: 'cookie', sessionExport: 'some-exported-session' };
     mockAuthStore.session = null;
 
     const { result } = renderHook(() => useAuthStatus());

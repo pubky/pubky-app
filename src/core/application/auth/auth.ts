@@ -1,130 +1,95 @@
 import type { Session } from '@synonymdev/pubky';
 import { userUriBuilder } from 'pubky-app-specs';
 import type { TKeypairParams, TRestoreSessionParams, TRestoreSessionResult } from '@/application/auth/auth.types';
+import { getAuthClientId } from '@/config/auth';
+import type { PersistedAuth, SessionReference } from '@/libs/auth/session.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import {
   isAppError,
+  isAuthError,
   isNotFound,
-  isRetryable,
+  isValidationError,
   isWrongEnvironmentHomeserverError,
   toAppError,
 } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
-import { Logger } from '@/libs/logger/logger';
-import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
+import type { GrantFlowRequest } from '@/services/homeserver/grant-flow';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type {
-  TGenerateAuthUrlResult,
   THomeserverPublicKeyParams,
   THomeserverSessionResult,
   THomeserverSignUpParams,
 } from '@/services/homeserver/homeserver.types';
+import { LocalAuthService } from '@/services/local/auth/auth';
 
 export class AuthApplication {
   private constructor() {} // Prevent instantiation
 
-  private static restoreSessionPromise: TRestoreSessionResult | null = null;
-
-  /** Max attempts before falling back to sign-out (~30 s with a 3 s delay between each) */
-  private static readonly RESTORE_MAX_ATTEMPTS = 10;
-  /** Fixed delay between retry attempts */
-  private static readonly RESTORE_RETRY_DELAY_MS = 3000;
-
-  /**
-   * Restores a session from a persisted session export.
-   * Prevents concurrent restoration attempts by managing a singleton promise.
-   *
-   * Retries on transient errors (network, timeout, server) to handle scenarios
-   * like ERR_NETWORK_CHANGED when the browser tab is resumed or the device
-   * reconnects. Non-retryable errors (e.g. genuinely expired session) bail out
-   * immediately. After all attempts are exhausted the session is cleared so the
-   * user is signed out rather than left on a loading spinner.
-   *
-   * @param authStore - The auth store object containing state and actions needed for restoration
-   * @returns The restored session, or null if restoration failed
-   */
-  static async restorePersistedSession({ authStore }: TRestoreSessionParams): TRestoreSessionResult {
-    // If a restoration is already in progress, return the existing promise
-    if (this.restoreSessionPromise) {
-      return await this.restoreSessionPromise;
+  /** A failed exchange is not proof that a saved grant should be deleted. */
+  static async restorePersistedSession({ reference, expectedPubky }: TRestoreSessionParams): TRestoreSessionResult {
+    if (!reference) return { status: 'none' };
+    if (
+      reference.kind === 'grant' &&
+      (reference.clientId !== getAuthClientId() || reference.grantExpiresAt <= Date.now() / 1000)
+    ) {
+      return { status: 'reauth-required' };
     }
-
-    // Safety check: if sessionExport is missing, return null
-    if (!authStore.sessionExport) {
-      if (authStore.isRestoringSession) authStore.setIsRestoringSession(false);
-      return null;
-    }
-
-    // Start restoration and store the promise so concurrent calls can await the same one
-    this.restoreSessionPromise = (async () => {
-      authStore.setIsRestoringSession(true);
-
-      try {
-        // The restored session is kept across attempts so a transient
-        // environment-check failure retries only the PKARR lookup instead of
-        // re-running the whole restore round-trip.
-        let session: Session | null = null;
-        for (let attempt = 1; attempt <= this.RESTORE_MAX_ATTEMPTS; attempt++) {
-          try {
-            session ??= await HomeserverService.restoreSession({
-              sessionExport: authStore.sessionExport!,
-            });
-            // Transient lookup failures fall through to the shared retry-or-cleanup
-            // policy below — keeping the store in a half-restored state would
-            // strand useAuthStatus in its loading branch with no retry trigger.
-            await HomeserverService.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
-            Logger.info('Session restored successfully');
-            return { session };
-          } catch (error) {
-            if (isWrongEnvironmentHomeserverError(error)) {
-              // The session is about to be discarded and its persisted export
-              // erased — sign it out on its own homeserver so it is not left
-              // dangling there. Best-effort: the rejection surfaces anyway.
-              if (session) {
-                await HomeserverService.logout({ session }).catch((logoutError) => {
-                  Logger.warn('Failed to sign out wrong-environment session', { logoutError });
-                });
-              }
-              throw error;
-            }
-
-            const canRetry = isAppError(error) && isRetryable(error) && attempt < this.RESTORE_MAX_ATTEMPTS;
-            if (!canRetry) {
-              Logger.error('Failed to restore session from persisted export', error);
-              break;
-            }
-
-            Logger.warn(
-              `Session restore attempt ${attempt}/${this.RESTORE_MAX_ATTEMPTS} failed with transient error, retrying in ${this.RESTORE_RETRY_DELAY_MS}ms`,
-              { error },
-            );
-            await sleep(this.RESTORE_RETRY_DELAY_MS);
-          }
-        }
-        return null;
-      } finally {
-        authStore.setIsRestoringSession(false);
-        this.restoreSessionPromise = null;
+    try {
+      const session = await HomeserverService.restoreReference(reference);
+      if (session.info.publicKey.z32() !== expectedPubky) {
+        return { status: 'reauth-required' };
       }
-    })();
-
-    return await this.restoreSessionPromise;
+      await HomeserverService.assertUserHomeserverAllowed({ publicKey: session.info.publicKey });
+      if (reference.kind === 'grant') {
+        const info = await session.grant?.sessionInfo();
+        if (!info || info.clientId !== getAuthClientId() || info.grantId !== reference.grantId)
+          return { status: 'reauth-required' };
+      }
+      return { status: 'restored', session };
+    } catch (error) {
+      const appError = toAppError(error, ErrorService.Homeserver, 'restorePersistedSession');
+      if (isWrongEnvironmentHomeserverError(appError)) throw appError;
+      // 401 can also mean an invalid proof or a displaced bearer. Preserve the record for retry/reauthorization.
+      return {
+        status: isAuthError(appError) || isValidationError(appError) ? 'reauth-required' : 'temporary-error',
+        error: appError,
+      };
+    }
   }
 
-  /**
-   * Signs up a new user in the homeserver with the provided keypair and authentication credentials.
-   *
-   * @param params - The authentication parameters containing user credentials
-   * @param params.keypair - The cryptographic keypair for the user
-   * @param params.signupToken - Invitation code for user registration
-   * @param params.secretKey - Secret key for homeserver service
-   * @returns Session and pubky of the signed up user
-   */
-  static async signUp({ keypair, signupToken }: THomeserverSignUpParams): Promise<THomeserverSessionResult> {
-    return await HomeserverService.signUp({ keypair, signupToken });
+  static startGrantFlow(request: GrantFlowRequest) {
+    return HomeserverService.startGrantFlow(request);
+  }
+  static clearPendingAuthFlow() {
+    HomeserverService.clearPendingAuthFlow();
+  }
+
+  static restoreReference(reference: SessionReference) {
+    return HomeserverService.restoreReference(reference);
+  }
+  static saveSession(session: Session) {
+    return HomeserverService.saveSession(session);
+  }
+  static removeUnusedSessionRecord(reference: SessionReference) {
+    return HomeserverService.removeUnusedSessionRecord(reference);
+  }
+  static removeSessionRecord(reference: SessionReference) {
+    return HomeserverService.removeSessionRecord(reference);
+  }
+  static readPersistedAuth() {
+    return LocalAuthService.read();
+  }
+  static commitPersistedAuth(record: PersistedAuth, expectedGeneration: string, isCurrent?: () => boolean) {
+    return LocalAuthService.commit(record, expectedGeneration, isCurrent);
+  }
+  static createAccount(params: THomeserverSignUpParams) {
+    return HomeserverService.createAccount(params);
+  }
+  static signInCreatedAccount(params: TKeypairParams) {
+    return HomeserverService.signInCreatedAccount(params);
   }
 
   /**
@@ -157,26 +122,6 @@ export class AuthApplication {
       );
     }
     return await HomeserverService.signIn({ keypair });
-  }
-
-  /**
-   * Generates an authentication URL for Pubky Ring App
-   *
-   * @returns Authentication URL and approval promise
-   */
-  static async generateAuthUrl(): Promise<TGenerateAuthUrlResult> {
-    return await HomeserverService.generateAuthUrl();
-  }
-
-  /**
-   * Generates a signup authentication URL for Pubky Ring App.
-   * Decorates a standard auth URL with homeserver address and invite code metadata.
-   *
-   * @param inviteCode - The invite code for signup
-   * @returns Authentication URL and approval promise
-   */
-  static async generateSignupAuthUrl(inviteCode: string): Promise<TGenerateAuthUrlResult> {
-    return await HomeserverService.generateSignupAuthUrl({ inviteCode });
   }
 
   /**

@@ -1,5 +1,7 @@
 import type { Capabilities } from '@synonymdev/pubky';
 
+export { getAuthClientId } from '@/libs/runtime-config/runtime-config';
+
 /** Ordinary Ring login requests only the app's public storage. */
 export const APP_CAPABILITIES = '/pub/pubky.app/:rw' satisfies Capabilities;
 

@@ -99,7 +99,7 @@ describe('useInviteCodeSignUp', () => {
     expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 
-  it('clears onboarding secrets on signUp failure (does not touch auth store)', async () => {
+  it('retains onboarding secrets after signup failure for account recovery', async () => {
     mockSignUp.mockRejectedValue(new Error('Invalid token'));
 
     const { result } = renderHook(() => useInviteCodeSignUp());
@@ -110,7 +110,7 @@ describe('useInviteCodeSignUp', () => {
       }),
     ).rejects.toThrow('Invalid token');
 
-    expect(mockClearSecrets).toHaveBeenCalled();
+    expect(mockClearSecrets).not.toHaveBeenCalled();
     expect(mockSetCurrentUserPubky).not.toHaveBeenCalled();
   });
 

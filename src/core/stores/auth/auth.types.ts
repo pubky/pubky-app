@@ -1,4 +1,5 @@
 import { Session } from '@synonymdev/pubky';
+import type { SessionReference, SessionRestoreStatus } from '@/libs/auth/session.types';
 import type { Pubky } from '@/models/models.types';
 
 export interface AuthInitParams {
@@ -6,9 +7,17 @@ export interface AuthInitParams {
   session: Session | null;
   /** null = unknown/undetermined, false = no profile, true = has profile */
   hasProfile: boolean | null;
+  sessionReference?: SessionReference | null;
+  generation?: string;
+  retiringSession?: SessionReference | null;
 }
 
 export interface AuthState extends AuthInitParams {
+  sessionReference: SessionReference | null;
+  generation: string;
+  retiringSession: SessionReference | null;
+  restoreStatus: SessionRestoreStatus;
+  /** Compatibility view for legacy consumers; never persisted in v2. */
   sessionExport: string | null;
   hasHydrated: boolean;
   isRestoringSession: boolean;
@@ -23,6 +32,8 @@ export interface AuthActions {
   init: (params: AuthInitParams) => void;
   setCurrentUserPubky: (pubky: Pubky | null) => void;
   setSession: (session: Session | null) => void;
+  setRestoreStatus: (status: SessionRestoreStatus) => void;
+  setRetiringSession: (reference: SessionReference | null) => void;
   setIsRestoringSession: (isRestoringSession: boolean) => void;
   setHasProfile: (hasProfile: boolean) => void;
   setHasHydrated: (hasHydrated: boolean) => void;
@@ -44,6 +55,10 @@ export const authInitialState: AuthState = {
   currentUserPubky: null,
   session: null,
   sessionExport: null,
+  sessionReference: null,
+  generation: '',
+  retiringSession: null,
+  restoreStatus: 'idle',
   hasProfile: null,
   hasHydrated: false,
   isRestoringSession: false,
