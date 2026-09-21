@@ -71,6 +71,7 @@ export function useStreamPagination({
   resetOnStreamChange = true,
   onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
+  const isEnabled = streamId !== undefined;
   const [postIds, setPostIds] = useState<string[]>([]);
   const [lastPostId, setLastPostId] = useState<string | undefined>(undefined);
   const [streamTail, setStreamTail] = useState<number>(NOT_FOUND_CACHED_STREAM);
@@ -126,6 +127,10 @@ export function useStreamPagination({
    */
   const fetchStreamSlice = useCallback(
     async (isInitialLoad: boolean) => {
+      // Inert hook (no `streamId`): nothing to paginate, so never load and never
+      // touch the loading flags the derived return masks anyway.
+      if (!streamId) return;
+
       setLoadingState(isInitialLoad, true);
       setError(null);
       const generationAtRequest = fetchGenerationRef.current;
@@ -287,6 +292,8 @@ export function useStreamPagination({
    * Refresh function - clears state and fetches from beginning
    */
   const refresh = useCallback(async () => {
+    if (!streamId) return;
+
     clearState({
       preserveOptimisticPostIds: isCollectionItemsStream(streamId),
       preserveHiddenPostIds: true,
@@ -417,6 +424,10 @@ export function useStreamPagination({
   }, []);
 
   const removePostsOptimistically = (postIds: string | string[]) => {
+    if (!streamId) {
+      return { commit: () => {}, rollback: () => {} };
+    }
+
     const existingPostIds = new Set([...postIdsRef.current, ...optimisticPostIdsRef.current]);
     const idsToRemove = [...new Set(Array.isArray(postIds) ? postIds : [postIds])].filter((id) =>
       existingPostIds.has(id),
@@ -475,12 +486,39 @@ export function useStreamPagination({
 
   // Initial load and reset when streamId changes
   useEffect(() => {
+    if (!streamId) {
+      // Inert: no stream to load. `clearState` still invalidates an in-flight
+      // load from a previously active stream so its late response cannot land
+      // on the next one.
+      clearState();
+      return;
+    }
+
     if (resetOnStreamChange) {
       clearState();
     }
     fetchStreamSlice(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamId]);
+
+  // Inert result: an undefined `streamId` means the consumer is not paginating
+  // right now (e.g. a closed picker). Report an empty settled stream and no-op
+  // every action so callers never render a permanent loading state.
+  if (!streamId) {
+    return {
+      postIds: [],
+      loading: false,
+      loadingMore: false,
+      error: null,
+      hasMore: false,
+      loadMore: async () => {},
+      refresh: async () => {},
+      prependPosts: async () => {},
+      prependOptimisticPosts: () => {},
+      removePosts: () => {},
+      removePostsOptimistically: () => ({ commit: () => {}, rollback: () => {} }),
+    };
+  }
 
   return {
     postIds,

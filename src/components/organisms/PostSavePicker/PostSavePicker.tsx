@@ -17,6 +17,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/at
 import { Typography } from '@/atoms/Typography/Typography';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { COLLECTION_NAME_MAX_CHARACTER_LENGTH } from '@/config/posts';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { type PostSaveCollectionTarget, usePostSaveTargets } from '@/hooks/usePostSaveTargets/usePostSaveTargets';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
@@ -48,6 +49,9 @@ type SavePickerContentProps = {
   collections: PostSaveCollectionTarget[];
   isCollectionsLoading: boolean;
   isCreatingCollection: boolean;
+  hasMoreCollections: boolean;
+  isCollectionsLoadingMore: boolean;
+  loadMoreCollections: () => Promise<void>;
   toggleBookmark: () => Promise<void>;
   toggleCollection: (collectionId: string) => Promise<void>;
   createCollectionWithPost: (name: string) => Promise<void>;
@@ -164,12 +168,30 @@ function SavePickerContent({
   collections,
   isCollectionsLoading,
   isCreatingCollection,
+  hasMoreCollections,
+  isCollectionsLoadingMore,
+  loadMoreCollections,
   toggleBookmark,
   toggleCollection,
   createCollectionWithPost,
 }: SavePickerContentProps) {
   const [newCollectionName, setNewCollectionName] = useState('');
   const canCreate = newCollectionName.trim().length > 0 && !isCreatingCollection;
+
+  // The collection rows are their own scroll region, so the sentinel lives inside
+  // it: scrolling the list to its end loads the next page of the author's
+  // collections. `itemCount` budgets unproductive auto-loads — a page that only
+  // re-serves already-revealed collections (the shared stream can hold more than
+  // this picker fetched) stalls and hands over to the manual "Load more" row.
+  const { sentinelRef, isStalled, resumeAutoLoad } = useInfiniteScroll({
+    onLoadMore: loadMoreCollections,
+    hasMore: hasMoreCollections,
+    isLoading: isCollectionsLoadingMore,
+    threshold: 200,
+    debounceMs: 300,
+    itemCount: collections.length,
+    maxUnproductiveLoads: 1,
+  });
 
   const handleCreate = async () => {
     if (!canCreate) return;
@@ -231,6 +253,28 @@ function SavePickerContent({
             />
           ))
         )}
+
+        {hasMoreCollections && isStalled && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={resumeAutoLoad}
+            disabled={isCollectionsLoadingMore}
+            data-cy="post-save-collections-load-more"
+          >
+            {'Load more'}
+          </Button>
+        )}
+        {hasMoreCollections && !isStalled && (
+          <Container
+            overrideDefaults
+            ref={sentinelRef}
+            data-cy="post-save-collections-sentinel"
+            className="flex w-full items-center justify-center py-1"
+          >
+            {isCollectionsLoadingMore && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+          </Container>
+        )}
       </Container>
 
       {layout === 'dropdown' ? <DropdownMenuSeparator /> : <Container overrideDefaults className="h-px bg-muted" />}
@@ -277,7 +321,7 @@ export function PostSavePicker({ postId, buttonClassName }: PostSavePickerProps)
   const feedCollectionId = feed?.collectionId;
   const removePosts = feed?.removePosts;
   const [open, setOpen] = useState(false);
-  const saveTargets = usePostSaveTargets(postId);
+  const saveTargets = usePostSaveTargets(postId, { isPickerOpen: open });
   const isBookmarkBusy = saveTargets.isBookmarkLoading || saveTargets.isBookmarkToggling;
   const isBookmarkResolved = !saveTargets.isBookmarkLoading && !saveTargets.isBookmarkToggling;
   const shouldRemoveFromBookmarksFeed =

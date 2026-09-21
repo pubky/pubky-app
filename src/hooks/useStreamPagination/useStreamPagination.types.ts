@@ -2,9 +2,13 @@ import type { PostStreamId } from '@/models/stream/post/postStream.types';
 
 export interface UseStreamPaginationOptions {
   /**
-   * Stream ID to fetch posts from
+   * Stream ID to fetch posts from. `undefined` makes the hook inert: it never
+   * loads, reports an empty settled result (`hasMore: false`, `loading: false`)
+   * and no-ops its actions. Lets a consumer that is only sometimes mounted for
+   * real (e.g. a picker that paginates while open) keep the hook call
+   * unconditional without paginating the stream while it is closed.
    */
-  streamId: PostStreamId;
+  streamId: PostStreamId | undefined;
   /**
    * Optional limit for posts per page (defaults to NEXUS_POSTS_PER_PAGE)
    */
