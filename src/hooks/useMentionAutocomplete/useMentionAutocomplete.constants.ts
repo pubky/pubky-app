@@ -22,9 +22,18 @@ export const COMPLETE_PUBKY_LENGTH = 52;
 
 /**
  * Regex pattern for an @username typed up to the caret
+ *
+ * Display names can hold spaces, so the query runs over the words typed after `@`
+ * instead of stopping at the first space (#1638): `@John Carvalho` searches for the
+ * whole name. It starts on a letter or digit (a bare `@ ` is not a mention) and
+ * stops at a newline, at sentence punctuation, or at anything else a name cannot
+ * hold, so the pattern never reaches back over the text around it. A trailing space
+ * stays part of the match: the caret is still inside the mention, and writing over
+ * the whole range keeps the space from doubling.
+ *
  * Matched against the text before the caret, so `$` is the caret, not the end of the value
  */
-export const AT_MENTION_PATTERN = /@[^\s]*$/;
+export const AT_MENTION_PATTERN = /@(?:[\p{L}\p{M}\p{N}._'’-]+(?:[ ][\p{L}\p{M}\p{N}._'’-]*)*)?$/u;
 
 /**
  * Regex pattern for a pubky ID typed up to the caret

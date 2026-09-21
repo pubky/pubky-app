@@ -40,13 +40,25 @@ function clampCaret(content: string, caret: number): number {
 }
 
 /**
+ * Normalize a name query for the search prefix
+ *
+ * The pattern keeps the whitespace the caret sits in, so the prefix handed to the
+ * name search is trimmed and its space runs collapsed: `@John  ` still searches
+ * for `John`.
+ */
+function normalizeNameQuery(query: string): string {
+  return query.replace(/ +/g, ' ').trim();
+}
+
+/**
  * Extract the mention query the caret sits in
  *
  * Only the text before the caret can hold the pattern being typed, so a mention
  * completes wherever the caret is, not only at the end of the value (#1959).
  *
  * Filtering rules (matching pubky-app):
- * - @username: requires at least MIN_USERNAME_SEARCH_LENGTH (2) chars after @
+ * - @username: requires at least MIN_USERNAME_SEARCH_LENGTH (2) chars after @,
+ *   spaces included, so a multiword display name is searched whole
  * - pubky/pk: ID: requires at least MIN_USER_ID_SEARCH_LENGTH (3) chars after prefix
  * - pubky/pk: ID: skips complete pubkeys (52+ alphanumeric chars)
  *
@@ -65,7 +77,9 @@ export function extractMentionQuery(content: string, caret: number = content.len
   // Check for @username in the text before the caret
   const atMatch = beforeCaret.match(AT_MENTION_PATTERN);
   if (atMatch) {
-    const username = atMatch[0].slice(1); // Remove @ prefix
+    // A display name can hold spaces, so the query is the whole run typed after
+    // `@`; the trailing space the pattern keeps is not part of the search prefix
+    const username = normalizeNameQuery(atMatch[0].slice(1)); // Remove @ prefix
     if (username.length >= MIN_USERNAME_SEARCH_LENGTH) {
       atQuery = username;
     }
