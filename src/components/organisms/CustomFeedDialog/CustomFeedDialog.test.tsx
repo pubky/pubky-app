@@ -1,7 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { type ReactElement } from 'react';
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react';
 import { within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { getLucideIconState, requestLucideIcon } from '@/libs/lucide/lucideIcons';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -340,6 +343,12 @@ vi.mock('@/atoms/Typography/Typography', () => {
 });
 
 // --- Test Helpers ---
+
+/**
+ * The dialog renders a tooltip next to its Layout heading, and Radix requires a
+ * provider above any tooltip, so every render in this file is wrapped in one.
+ */
+const render = (ui: ReactElement) => rtlRender(<TooltipProvider delayDuration={0}>{ui}</TooltipProvider>);
 
 const createMockFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema => ({
   id: 'feed-abc123',
@@ -947,6 +956,61 @@ describe('CustomFeedDialog', () => {
     expect(within(section).getByText('Columns')).toBeInTheDocument();
     expect(within(section).getByText('Wide')).toBeInTheDocument();
     expect(within(section).getByText('Visual')).toBeInTheDocument();
+  });
+
+  it('keeps the layout section visible with the desktop-only hint collapsed', () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    const section = screen.getByTestId('layout-filter-section');
+
+    expect(within(section).getByText('Layout')).toBeInTheDocument();
+    expect(within(section).getByTestId('layout-select')).toBeInTheDocument();
+    expect(screen.getByTestId('layout-tooltip-trigger')).toHaveAccessibleName('About layout settings');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('shows the desktop-only hint when the layout info affordance is hovered', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    await user.hover(screen.getByTestId('layout-tooltip-trigger'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent(
+        'Layout settings only affect how your feed appears on desktop.',
+      );
+    });
+  });
+
+  it('toggles the desktop-only hint when the layout info affordance is tapped', async () => {
+    render(
+      <CustomFeedDialog mode="create">
+        <button>Create Feed</button>
+      </CustomFeedDialog>,
+    );
+
+    const trigger = screen.getByTestId('layout-tooltip-trigger');
+
+    fireEvent.pointerDown(trigger, { pointerType: 'touch' });
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent(
+        'Layout settings only affect how your feed appears on desktop.',
+      );
+    });
+
+    fireEvent.pointerDown(trigger, { pointerType: 'touch' });
+    await waitFor(() => {
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
   });
 
   it('renders all content filter options', () => {

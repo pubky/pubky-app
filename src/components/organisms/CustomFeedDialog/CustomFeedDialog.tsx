@@ -1,8 +1,9 @@
 'use client';
 
-import { type ComponentType, type ReactNode, useEffect } from 'react';
+import { type ComponentType, type ReactNode, useEffect, useState } from 'react';
 import {
   Check,
+  CircleHelp,
   CirclePlay,
   Columns3,
   Download,
@@ -28,6 +29,7 @@ import { DynamicLucideIcon } from '@/atoms/DynamicLucideIcon/DynamicLucideIcon';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { useControlledState } from '@/hooks/useControlledState/useControlledState';
@@ -78,6 +80,12 @@ function parseReachValue(value: string): CustomFeedFormReach {
 /** Shown for a stored reach/content this dialog cannot offer as a choice. */
 const UNSUPPORTED_OPTION_LABEL = 'Unsupported (set elsewhere)';
 
+/**
+ * Layouts are desktop-only: the same feed opened on a phone ignores its layout,
+ * so the Layout heading carries this hint for whoever picks one on mobile.
+ */
+const LAYOUT_DESKTOP_ONLY_HINT = 'Layout settings only affect how your feed appears on desktop.';
+
 const REACH_OPTION_VALUES: CustomFeedFormReach[] = [
   PubkyAppFeedReach.Wot,
   TAGGED_AS_FILTER_KEY,
@@ -94,6 +102,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
     defaultValue: false,
     onChange: props.onOpenChange,
   });
+  const [isLayoutTooltipOpen, setIsLayoutTooltipOpen] = useState(false);
   // Read `feed` off `props` rather than destructuring it: the props union ties
   // `feed` to `mode`, and destructuring erases that link for TS.
   const { form, loading, submit, deleteFeed } = useCustomFeedForm(
@@ -414,7 +423,39 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
           </Container>
 
           <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="layout-filter-section">
-            <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Layout'}</Label>
+            <Container overrideDefaults className="flex items-center gap-1">
+              <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Layout'}</Label>
+
+              {/*
+                Radix opens a tooltip on hover and on focus. On touch the focus lands
+                after its pointer-down guard has cleared, so a tap toggles the hint
+                itself instead of leaving a touch user with no way to read it.
+              */}
+              <Tooltip open={isLayoutTooltipOpen} onOpenChange={setIsLayoutTooltipOpen}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={'About layout settings'}
+                    className="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    data-testid="layout-tooltip-trigger"
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+
+                      if (event.pointerType !== 'touch') return;
+
+                      event.preventDefault();
+                      setIsLayoutTooltipOpen((tooltipOpen) => !tooltipOpen);
+                    }}
+                  >
+                    <CircleHelp className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+
+                <TooltipPortal>
+                  <TooltipContent>{LAYOUT_DESKTOP_ONLY_HINT}</TooltipContent>
+                </TooltipPortal>
+              </Tooltip>
+            </Container>
 
             <Controller
               name={CUSTOM_FEED_FORM_FIELDS.LAYOUT}
