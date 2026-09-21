@@ -1,5 +1,5 @@
 import { createCanceledError } from '@/libs/auth/cancellation';
-import { createAuthStorage } from '@/libs/auth/persistence';
+import { createAuthStorage, readAuthStorage } from '@/libs/auth/persistence';
 import { type PersistedAuth, persistedAuthSchema } from '@/libs/auth/session.types';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -11,7 +11,7 @@ import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 export class LocalAuthService {
   static read(): PersistedAuth | null {
     try {
-      const raw = createAuthStorage(localStorage).getItem(AUTH_PERSIST_KEY);
+      const raw = readAuthStorage(localStorage);
       return raw ? persistedAuthSchema.parse(JSON.parse(raw).state) : null;
     } catch (error) {
       if (isAppError(error)) throw error;

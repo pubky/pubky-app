@@ -1,5 +1,6 @@
 import type { Capabilities, Session } from '@synonymdev/pubky';
 import { validateCapabilities } from '@synonymdev/pubky';
+import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import type { TKeypairParams } from '@/application/auth/auth.types';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
@@ -54,6 +55,24 @@ import { useSignInStore } from '@/stores/signIn/signIn.store';
  * otherwise hold logout open for the OS-level TCP timeout. Local cleanup runs either way.
  */
 const LOGOUT_TIMEOUT_MS = 5_000;
+
+/** Reset this tab without overwriting the new account's shared persisted stores. */
+function resetTabStore<T>(store: {
+  getState(): { reset(): void };
+  persist: {
+    getOptions(): { storage?: PersistStorage<T> };
+    setOptions(options: { storage?: PersistStorage<T> }): void;
+  };
+}): void {
+  const { storage } = store.persist.getOptions();
+  if (!storage) return;
+  store.persist.setOptions({ storage: { ...storage, setItem: () => {}, removeItem: () => {} } });
+  try {
+    store.getState().reset();
+  } finally {
+    store.persist.setOptions({ storage });
+  }
+}
 
 export class AuthController {
   private constructor() {} // Prevent instantiation
@@ -203,18 +222,19 @@ export class AuthController {
           useAuthStore.getState().setRestoreStatus(result.status === 'none' ? 'idle' : result.status);
           return false;
         }
-        snapshot.init({
+        const current = useAuthStore.getState();
+        current.init({
           session: result.session,
           currentUserPubky: snapshot.currentUserPubky,
-          hasProfile: snapshot.hasProfile,
+          hasProfile: current.hasProfile,
           sessionReference: snapshot.sessionReference,
           generation,
-          retiringSession: snapshot.retiringSession,
+          retiringSession: current.retiringSession,
         });
         useAuthStore.getState().setRestoreStatus('restoring');
         await this.retrySessionRetirement();
         if (!isCurrent()) return false;
-        if (snapshot.hasProfile === null)
+        if (useAuthStore.getState().hasProfile === null || useAuthStore.getState().needsAccountSync)
           await this.bounded(this.finishProfileBootstrap(result.session, generation), 'restoreProfile');
         if (isCurrent()) useAuthStore.getState().setRestoreStatus('ready');
         return isCurrent();
@@ -257,8 +277,10 @@ export class AuthController {
     }
     this.cancelActiveAuthFlow();
     this.cancelModerationFollow();
+    const epoch = this.epoch;
     const previousRestore = this.restorePromise;
     await useAuthStore.persist.rehydrate();
+    if (epoch !== this.epoch) return;
     if (!incoming) {
       useAuthStore.getState().init({
         session: null,
@@ -269,7 +291,36 @@ export class AuthController {
         retiringSession: null,
       });
     }
+    const current = useAuthStore.getState();
+    if (previous.currentUserPubky !== current.currentUserPubky) {
+      clearAllQueryClients();
+      postStreamQueue.clear();
+      clearMuteSyncCursorSessionStorage();
+      useLocalFilesStore.getState().reset();
+      useSignInStore.getState().reset();
+      resetTabStore(useSettingsStore);
+      resetTabStore(useNotificationStore);
+      resetTabStore(useOnboardingStore);
+      resetTabStore(useHomeStore);
+      resetTabStore(useHotStore);
+      resetTabStore(useSearchStore);
+      current.setNeedsAccountSync(current.currentUserPubky !== null);
+      // Another tab may have just signed up and still need its recovery backup.
+      await useOnboardingStore.persist.rehydrate();
+      if (epoch !== this.epoch) return;
+      const onboarding = useOnboardingStore.getState();
+      let onboardingPubky = onboarding.signupAttempt?.pubky;
+      if (!onboardingPubky && onboarding.secretKey) {
+        try {
+          onboardingPubky = Identity.keypairFromSecretKey(onboarding.secretKey).publicKey.z32();
+        } catch {
+          // Corrupt legacy recovery material must not become another account's backup.
+        }
+      }
+      if (!current.currentUserPubky || onboardingPubky !== current.currentUserPubky) resetTabStore(useOnboardingStore);
+    }
     if (previousRestore) await previousRestore.catch(() => false);
+    if (epoch !== this.epoch) return;
     if (useAuthStore.getState().sessionReference) await this.restorePersistedSession();
   }
 
@@ -435,7 +486,7 @@ export class AuthController {
         useSettingsStore.getState().reset();
       }
       await this.retrySessionRetirement(previous.sessionReference === retiringSession ? previous.session : null);
-      if (!preserveContext && (!sameAccount || previous.hasProfile === null))
+      if ((!preserveContext && (!sameAccount || previous.hasProfile === null)) || previous.needsAccountSync)
         await this.bounded(this.finishProfileBootstrap(session, generation), 'bootstrapProfile');
       if (this.isCurrentGeneration(generation)) useAuthStore.getState().setRestoreStatus('ready');
     } catch (error) {
@@ -457,6 +508,7 @@ export class AuthController {
     if (isSignedUp) await this.hydrateMeImAlive({ pubky });
     if (!this.isCurrentGeneration(generation)) throw createCanceledError();
     useAuthStore.getState().setHasProfile(isSignedUp);
+    useAuthStore.getState().setNeedsAccountSync(false);
   }
 
   static async retrySessionRetirement(livePrevious?: Session | null): Promise<void> {
@@ -468,16 +520,25 @@ export class AuthController {
       try {
         previous = await this.bounded(AuthApplication.restoreReference(reference), 'restoreRetiringSession');
       } catch (error) {
-        // Only a definitive rejected restore proves the old credential cannot be used.
-        const gone = reference.kind === 'cookie' && isAppError(error) && error.code === AuthErrorCode.SESSION_EXPIRED;
+        // A rejected grant must not block adoption of its valid replacement.
+        const gone = isAppError(error) && error.code === AuthErrorCode.SESSION_EXPIRED;
         const expired = reference.kind === 'grant' && reference.grantExpiresAt <= Date.now() / 1000;
         const missingMaterial = isAppError(error) && error.context?.reason === 'missing_local_grant';
         if (!gone && !expired && !missingMaterial) throw error;
-        if (missingMaterial)
+        if (missingMaterial || (gone && reference.kind === 'grant'))
           Logger.warn('Previous grant credentials are unavailable; remote revocation could not be confirmed.');
       }
     }
-    if (previous) await this.bounded(AuthApplication.logout({ session: previous }), 'retireSession');
+    if (previous) {
+      try {
+        await this.bounded(AuthApplication.logout({ session: previous }), 'retireSession');
+      } catch (error) {
+        if (reference.kind !== 'grant' || !isAppError(error) || error.code !== AuthErrorCode.SESSION_EXPIRED)
+          throw error;
+        // This may be a revoked grant or a rejected proof. Do not claim remote revocation succeeded.
+        Logger.warn('Previous grant was rejected; remote revocation could not be confirmed.');
+      }
+    }
     if (!this.isCurrentGeneration(snapshot.generation)) throw createCanceledError();
     await AuthApplication.removeSessionRecord(reference);
     if (!this.isCurrentGeneration(snapshot.generation)) throw createCanceledError();

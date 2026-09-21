@@ -249,9 +249,11 @@ describe('RouteGuardProvider — migration resync', () => {
     expect(mocks.resetMigrationStore).toHaveBeenCalled();
   });
 
-  it('does NOT call resync when currentUserPubky is falsy', async () => {
+  it('clears the fresh database loading gate for a guest without a session', async () => {
     mocks.wasDbReset = true;
     mocks.currentUserPubky = null;
+    mocks.session = null;
+    mocks.sessionExport = null;
 
     render(
       <RouteGuardProvider>

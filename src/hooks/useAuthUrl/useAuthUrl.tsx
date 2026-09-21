@@ -30,9 +30,10 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
           ? await AuthController.getSignupAuthUrl(inviteCode, fresh)
           : await AuthController.getAuthUrl(fresh);
       void flow.awaitApproval.catch((error: unknown) => {
-        if (!current() || (error instanceof Error && error.name === AUTH_FLOW_CANCELED_ERROR_NAME)) return;
+        if (!current()) return;
         setUrl('');
         setIsExpired(true);
+        if (error instanceof Error && error.name === AUTH_FLOW_CANCELED_ERROR_NAME) return;
         toast({
           variant: 'error',
           description: isWrongEnvironmentHomeserverError(error)
@@ -42,8 +43,9 @@ export function useAuthUrl(options: UseAuthUrlOptions = {}): UseAuthUrlReturn {
       });
       if (current()) setUrl(flow.authorizationUrl);
     } catch (error) {
-      if (!current() || (error instanceof Error && error.name === AUTH_FLOW_CANCELED_ERROR_NAME)) return;
+      if (!current()) return;
       setIsExpired(true);
+      if (error instanceof Error && error.name === AUTH_FLOW_CANCELED_ERROR_NAME) return;
       toast({ variant: 'error', description: 'Could not generate QR. Refresh and try again.' });
     } finally {
       if (current()) setIsLoading(false);

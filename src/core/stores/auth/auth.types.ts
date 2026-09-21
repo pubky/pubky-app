@@ -17,6 +17,8 @@ export interface AuthState extends AuthInitParams {
   generation: string;
   retiringSession: SessionReference | null;
   restoreStatus: SessionRestoreStatus;
+  /** This tab changed accounts and must bootstrap before exposing the new session. */
+  needsAccountSync: boolean;
   /** Compatibility view for legacy consumers; never persisted in v2. */
   sessionExport: string | null;
   hasHydrated: boolean;
@@ -32,6 +34,7 @@ export interface AuthActions {
   init: (params: AuthInitParams) => void;
   setCurrentUserPubky: (pubky: Pubky | null) => void;
   setSession: (session: Session | null) => void;
+  setNeedsAccountSync: (needed: boolean) => void;
   setRestoreStatus: (status: SessionRestoreStatus) => void;
   setRetiringSession: (reference: SessionReference | null) => void;
   setIsRestoringSession: (isRestoringSession: boolean) => void;
@@ -59,6 +62,7 @@ export const authInitialState: AuthState = {
   generation: '',
   retiringSession: null,
   restoreStatus: 'idle',
+  needsAccountSync: false,
   hasProfile: null,
   hasHydrated: false,
   isRestoringSession: false,

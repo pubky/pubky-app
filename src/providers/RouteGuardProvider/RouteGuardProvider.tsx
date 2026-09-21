@@ -97,14 +97,15 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
   // TODO: Consider using BroadcastChannel to notify other browser tabs when DB was recreated / resync completed
   useEffect(() => {
     if (!wasDbReset) return; // No need to resync if the DB was NOT reset
-    if (needsRecovery || !session) return;
     if (!hasHydrated) return; // No need to resync if the app has NOT hydrated
     if (isMigrationResyncRunningRef.current) return; // No need to resync if the resync is ALREADY running
     if (!currentUserPubky) {
+      if (needsRecovery || sessionReference) return;
       // No need to resync if the user is NOT logged in
       useMigrationStore.getState().reset();
       return;
     }
+    if (needsRecovery || !session) return;
 
     isMigrationResyncRunningRef.current = true;
 
@@ -143,7 +144,7 @@ export function RouteGuardProvider({ children }: RouteGuardProviderProps) {
     };
 
     runResync();
-  }, [wasDbReset, hasHydrated, currentUserPubky, needsRecovery, session]);
+  }, [wasDbReset, hasHydrated, currentUserPubky, needsRecovery, session, sessionReference]);
 
   // Determine if the current route is accessible based on authentication status
   const isRouteAccessible = (() => {

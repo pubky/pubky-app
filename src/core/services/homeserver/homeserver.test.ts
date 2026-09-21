@@ -1903,7 +1903,10 @@ describe('missing SDK grant material', () => {
   beforeEach(() => vi.clearAllMocks());
   it('requires reauthorization only when IndexedDB confirms the record is absent', async () => {
     const { HomeserverService } = await import('./homeserver');
-    mockState.restoreGrant.mockRejectedValue({ name: 'ClientStateError', message: 'No record' });
+    mockState.restoreGrant.mockRejectedValue({
+      name: 'ClientStateError',
+      message: 'Stored Pubky session not found: missing',
+    });
     mockState.listGrants.mockResolvedValue([]);
     await expect(HomeserverService.restoreReference(reference)).rejects.toMatchObject({
       code: AuthErrorCode.SESSION_EXPIRED,
@@ -1913,14 +1916,17 @@ describe('missing SDK grant material', () => {
   it('keeps an unavailable IndexedDB failure retryable', async () => {
     const { HomeserverService } = await import('./homeserver');
     mockState.restoreGrant.mockRejectedValue({ name: 'ClientStateError', message: 'Database unavailable' });
-    mockState.listGrants.mockRejectedValue(new Error('Database unavailable'));
+    mockState.listGrants.mockResolvedValue([]);
     await expect(HomeserverService.restoreReference(reference)).rejects.toMatchObject({
       category: ErrorCategory.Server,
     });
   });
   it('tolerates already-removed owned records during interrupted cleanup', async () => {
     const { HomeserverService } = await import('./homeserver');
-    mockState.removeGrant.mockRejectedValue({ name: 'ClientStateError', message: 'No record' });
+    mockState.removeGrant.mockRejectedValue({
+      name: 'ClientStateError',
+      message: 'Stored Pubky session not found: missing',
+    });
     mockState.listGrants.mockResolvedValue([]);
     await expect(HomeserverService.removeSessionRecord(reference)).resolves.toBeUndefined();
   });

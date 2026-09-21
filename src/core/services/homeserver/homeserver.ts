@@ -304,20 +304,12 @@ export class HomeserverService {
     try {
       return await store.restore(reference.sessionStoreId);
     } catch (error) {
-      // ClientStateError also covers unavailable IndexedDB. Confirm absence before asking for new authorization.
-      if (typeof error === 'object' && error !== null && 'name' in error && error.name === 'ClientStateError') {
-        try {
-          const records = await store.list();
-          if (!records.some((record) => record.id === reference.sessionStoreId)) {
-            throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Authorize this account again to restore its session.', {
-              service: ErrorService.Homeserver,
-              operation: 'restoreGrant',
-              context: { reason: 'missing_local_grant' },
-            });
-          }
-        } catch (lookupError) {
-          return handleError({ error: lookupError, additionalContext: { operation: 'restoreGrant' } });
-        }
+      if (this.isMissingSessionRecord(error, reference.sessionStoreId)) {
+        throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Authorize this account again to restore its session.', {
+          service: ErrorService.Homeserver,
+          operation: 'restoreGrant',
+          context: { reason: 'missing_local_grant' },
+        });
       }
       return handleError({ error, additionalContext: { operation: 'restoreGrant' } });
     }
@@ -344,15 +336,22 @@ export class HomeserverService {
     try {
       await store.remove(reference.sessionStoreId);
     } catch (error) {
-      if (typeof error === 'object' && error !== null && 'name' in error && error.name === 'ClientStateError') {
-        try {
-          if (!(await store.list()).some((record) => record.id === reference.sessionStoreId)) return;
-        } catch (lookupError) {
-          return handleError({ error: lookupError, additionalContext: { operation: 'removeSessionRecord' } });
-        }
-      }
+      if (this.isMissingSessionRecord(error, reference.sessionStoreId)) return;
       return handleError({ error, additionalContext: { operation: 'removeSessionRecord' } });
     }
+  }
+
+  private static isMissingSessionRecord(error: unknown, id: string): boolean {
+    // Pinned SDK 0.11 emits this only after a successful IndexedDB read finds no record.
+    // list() is unsuitable for checking absence: it also returns [] when IndexedDB fails.
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'name' in error &&
+      error.name === 'ClientStateError' &&
+      'message' in error &&
+      error.message === `Stored Pubky session not found: ${id}`
+    );
   }
 
   private static async republishConfiguredHomeserver({

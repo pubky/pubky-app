@@ -1,20 +1,28 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTH_MIGRATION_KEY, AUTH_PERSIST_KEY, LEGACY_AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
-import { createAuthStorage } from './persistence';
+import { createAuthStorage, readAuthStorage } from './persistence';
+
+beforeEach(() => {
+  Object.defineProperty(navigator, 'locks', {
+    configurable: true,
+    value: { request: async (_name: string, callback: () => unknown) => callback() },
+  });
+});
+afterEach(() => vi.restoreAllMocks());
 
 describe('auth persistence migration', () => {
   beforeEach(() => localStorage.clear());
 
-  it('imports an existing cookie once and never revives an old-tab rewrite after logout', () => {
+  it('imports an existing cookie once and never revives an old-tab rewrite after logout', async () => {
     const legacy = JSON.stringify({ state: { currentUserPubky: 'alice', sessionExport: 'cookie', hasProfile: true } });
     localStorage.setItem(LEGACY_AUTH_PERSIST_KEY, legacy);
     const storage = createAuthStorage(localStorage);
-    const migrated = JSON.parse(storage.getItem(AUTH_PERSIST_KEY)!);
+    const migrated = JSON.parse((await storage.getItem(AUTH_PERSIST_KEY))!);
     expect(migrated.state.sessionReference).toEqual({ kind: 'cookie', sessionExport: 'cookie' });
     expect(localStorage.getItem(AUTH_MIGRATION_KEY)).toBe('1');
-    storage.removeItem(AUTH_PERSIST_KEY);
+    await storage.removeItem(AUTH_PERSIST_KEY);
     localStorage.setItem(LEGACY_AUTH_PERSIST_KEY, legacy);
-    expect(storage.getItem(AUTH_PERSIST_KEY)).toBeNull();
+    expect(await storage.getItem(AUTH_PERSIST_KEY)).toBeNull();
   });
 });
 
@@ -25,14 +33,14 @@ describe('auth generation fencing', () => {
       state: { generation, currentUserPubky: 'alice', hasProfile: true, sessionReference, retiringSession: null },
     });
   beforeEach(() => localStorage.clear());
-  it('rejects late writes from the old generation after logout or replacement', () => {
+  it('rejects late writes from the old generation after logout or replacement', async () => {
     const storage = createAuthStorage(localStorage);
-    storage.setItem(AUTH_PERSIST_KEY, envelope('first'));
+    await storage.setItem(AUTH_PERSIST_KEY, envelope('first'));
     createAuthStorage(localStorage, true).setItem(AUTH_PERSIST_KEY, envelope('logout'));
-    storage.setItem(AUTH_PERSIST_KEY, envelope('first', { kind: 'cookie', sessionExport: 'old' }));
-    expect(JSON.parse(storage.getItem(AUTH_PERSIST_KEY)!).state.generation).toBe('logout');
+    await storage.setItem(AUTH_PERSIST_KEY, envelope('first', { kind: 'cookie', sessionExport: 'old' }));
+    expect(JSON.parse((await storage.getItem(AUTH_PERSIST_KEY))!).state.generation).toBe('logout');
   });
-  it('preserves the legacy export when the first durable write fails', () => {
+  it('preserves the legacy export when the first durable write fails', async () => {
     const legacy = JSON.stringify({ state: { currentUserPubky: 'alice', sessionExport: 'cookie', hasProfile: true } });
     localStorage.setItem(LEGACY_AUTH_PERSIST_KEY, legacy);
     const storage = {
@@ -45,7 +53,7 @@ describe('auth generation fencing', () => {
       },
       removeItem: localStorage.removeItem.bind(localStorage),
     } as Storage;
-    expect(() => createAuthStorage(storage).getItem(AUTH_PERSIST_KEY)).toThrow();
+    await expect(createAuthStorage(storage).getItem(AUTH_PERSIST_KEY)).rejects.toThrow();
     expect(localStorage.getItem(LEGACY_AUTH_PERSIST_KEY)).toBe(legacy);
     expect(localStorage.getItem(AUTH_MIGRATION_KEY)).toBeNull();
   });
@@ -55,13 +63,13 @@ describe('auth generation fencing', () => {
       LEGACY_AUTH_PERSIST_KEY,
       JSON.stringify({ state: { currentUserPubky: 'alice', sessionExport: 'old', hasProfile: true } }),
     );
-    expect(JSON.parse(createAuthStorage(localStorage).getItem(AUTH_PERSIST_KEY)!).state.sessionReference).toBeNull();
+    expect(JSON.parse(readAuthStorage(localStorage)!).state.sessionReference).toBeNull();
   });
 });
 
 describe('migration commit point', () => {
   beforeEach(() => localStorage.clear());
-  it('keeps a successful v2 write authoritative if saving the marker fails', () => {
+  it('keeps a successful v2 write authoritative if saving the marker fails', async () => {
     const storage: Storage = {
       length: 0,
       key: localStorage.key.bind(localStorage),
@@ -91,5 +99,74 @@ describe('migration commit point', () => {
     createAuthStorage(localStorage).setItem(AUTH_PERSIST_KEY, JSON.stringify({ state: { generation: '' } }));
     expect(localStorage.getItem(AUTH_PERSIST_KEY)).toBeNull();
     expect(localStorage.getItem(LEGACY_AUTH_PERSIST_KEY)).toBe('old-cookie-record');
+  });
+});
+
+describe('queued cross-tab persistence', () => {
+  const envelope = (generation: string, retiringSession: unknown = null, hasProfile: boolean | null = null) =>
+    JSON.stringify({
+      version: 2,
+      state: { generation, currentUserPubky: null, sessionReference: null, retiringSession, hasProfile },
+    });
+  let runNext: () => void;
+  beforeEach(() => {
+    localStorage.clear();
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: {
+        request: (_name: string, callback: () => unknown) =>
+          new Promise((resolve) => {
+            runNext = () => resolve(callback());
+          }),
+      },
+    });
+  });
+  it('re-reads inside the migration lock instead of resurrecting a logged-out cookie', async () => {
+    localStorage.setItem(
+      LEGACY_AUTH_PERSIST_KEY,
+      JSON.stringify({ state: { currentUserPubky: 'alice', sessionExport: 'cookie', hasProfile: true } }),
+    );
+    const pending = createAuthStorage(localStorage).getItem(AUTH_PERSIST_KEY);
+    // Another tab owns the lock and commits logout before the import acquires it.
+    createAuthStorage(localStorage, true).setItem(AUTH_PERSIST_KEY, envelope('logout'));
+    runNext();
+    expect(JSON.parse((await pending)!).state.generation).toBe('logout');
+    expect(JSON.parse(readAuthStorage(localStorage)!).state.sessionReference).toBeNull();
+  });
+  it('rechecks a queued metadata write after a new session wins', async () => {
+    localStorage.setItem(AUTH_PERSIST_KEY, envelope('old'));
+    const pending = createAuthStorage(localStorage).setItem(AUTH_PERSIST_KEY, envelope('old', null, true));
+    createAuthStorage(localStorage, true).setItem(AUTH_PERSIST_KEY, envelope('new'));
+    runNext();
+    await pending;
+    expect(JSON.parse(readAuthStorage(localStorage)!).state).toMatchObject({ generation: 'new', hasProfile: null });
+  });
+  it.each([null, false])(
+    'cannot revive retirement or erase profile discovery with stale %s metadata',
+    async (hasProfile) => {
+      localStorage.setItem(AUTH_PERSIST_KEY, envelope('same', null, true));
+      const pending = createAuthStorage(localStorage).setItem(
+        AUTH_PERSIST_KEY,
+        envelope('same', { kind: 'cookie', sessionExport: 'old' }, hasProfile),
+      );
+      runNext();
+      await pending;
+      expect(JSON.parse(readAuthStorage(localStorage)!).state).toMatchObject({
+        retiringSession: null,
+        hasProfile: true,
+      });
+    },
+  );
+  it('reads old cookies without mutating storage when Web Locks are unavailable', async () => {
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+    localStorage.setItem(
+      LEGACY_AUTH_PERSIST_KEY,
+      JSON.stringify({ state: { currentUserPubky: 'alice', sessionExport: 'cookie', hasProfile: true } }),
+    );
+    expect(JSON.parse((await createAuthStorage(localStorage).getItem(AUTH_PERSIST_KEY))!).state.generation).toBe(
+      'legacy',
+    );
+    expect(localStorage.getItem(AUTH_PERSIST_KEY)).toBeNull();
+    expect(localStorage.getItem(LEGACY_AUTH_PERSIST_KEY)).not.toBeNull();
   });
 });

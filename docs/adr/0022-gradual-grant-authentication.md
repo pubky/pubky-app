@@ -20,7 +20,7 @@ scope. Request missing private capabilities in the Locks context, preserving the
 Use SDK `browserSessionStore` for completed grants and a versioned app reference for their IDs and public metadata.
 Import legacy cookie exports once. Commit a replacement reference before retiring its predecessor. Persist retirement
 failures for retry; never downgrade a failed grant to a cookie. Use Web Locks and auth generations to serialize new
-adoption and reject stale tab work. Keep pending Ring serialization in sessionStorage with a bounded, context-bound
+adoption, legacy import and metadata writes, and reject stale tab work. Read-only generation checks never migrate storage. Keep pending Ring serialization in sessionStorage with a bounded, context-bound
 resume policy. Preserve onboarding keys and registration progress across an uncertain create response.
 
 Services own SDK and persistence IO, Application returns results, and Controllers own store transitions. The SDK owns
@@ -31,6 +31,9 @@ bearer refresh. App code does not implement a proof signer, refresh-token servic
 - Users retain valid sessions and cached account data across the update and transient restore failures.
 - Cookie and grant restore/logout coexist until the team separately decides to retire legacy sessions.
 - New durable adoption requires browser Web Locks and working SDK storage. Explicit local logout remains available.
+- A tab that changes accounts resets its in-memory account state without overwriting shared settings, then bootstraps the new account before becoming ready. Same-account upgrades preserve that state.
+- An old grant rejected during retirement does not block a valid replacement. The app discards its local record and records that remote revocation was not confirmed. Cookie signout failures still block for retry.
+- Missing SDK records require reauthorization only when the pinned SDK confirms a successful read found no record. IndexedDB failures remain retryable; SDK `list()` cannot distinguish them from absence.
 - Replacing a cookie explicitly signs it out, which may affect apps sharing that account's homeserver cookie.
 - The app must not release against an HS that replaces the other tab's bearer or falls back to an ambient cookie after
   bearer rejection. Working Android/iOS Ring grant builds also need release verification.

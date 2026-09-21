@@ -10,64 +10,100 @@ const legacySchema = z.object({
   }),
 });
 
-/** Zustand metadata writes are best effort. Explicit controller transitions require durable success. */
-export function createAuthStorage(storage: Storage, allowGenerationChange = false) {
+/** Read-only snapshot for generation checks, including browsers without Web Locks. */
+export function readAuthStorage(storage: Storage, name = AUTH_PERSIST_KEY): string | null {
+  const current = storage.getItem(name);
+  if (current !== null) {
+    const envelope = JSON.parse(current);
+    return JSON.stringify({ ...envelope, state: persistedAuthSchema.parse(envelope.state) });
+  }
+  if (name !== AUTH_PERSIST_KEY || storage.getItem(AUTH_MIGRATION_KEY)) return null;
+  const legacy = storage.getItem(LEGACY_AUTH_PERSIST_KEY);
+  if (legacy === null) return null;
+  const { state } = legacySchema.parse(JSON.parse(legacy));
+  return JSON.stringify({
+    version: 2,
+    state: {
+      currentUserPubky: state.currentUserPubky,
+      sessionReference: state.sessionExport ? { kind: 'cookie', sessionExport: state.sessionExport } : null,
+      hasProfile: state.hasProfile,
+      generation: 'legacy',
+      retiringSession: null,
+    },
+  });
+}
+
+/**
+ * Every writer shares LocalAuthService's lock. lockHeld is only for its explicit durable transition.
+ * Zustand metadata is best effort; migration and explicit transitions must report storage failures.
+ */
+export function createAuthStorage(storage: Storage, lockHeld = false) {
   function finishMigration() {
-    // The v2 write is the commit point. Failure of this housekeeping must not undo a durable adoption.
+    // The v2 write is the commit point. Housekeeping must not undo a durable adoption.
     try {
       storage.setItem(AUTH_MIGRATION_KEY, '1');
       storage.removeItem(LEGACY_AUTH_PERSIST_KEY);
     } catch {
-      /* Keep the authoritative v2 record and retry housekeeping on the next write. */
+      /* Retry housekeeping on the next write. */
     }
   }
   return {
-    getItem(name: string): string | null {
-      const current = storage.getItem(name);
-      if (current !== null) {
-        const envelope = JSON.parse(current);
-        return JSON.stringify({ ...envelope, state: persistedAuthSchema.parse(envelope.state) });
-      }
-      if (name !== AUTH_PERSIST_KEY || storage.getItem(AUTH_MIGRATION_KEY)) return null;
-      const legacy = storage.getItem(LEGACY_AUTH_PERSIST_KEY);
-      if (legacy === null) return null;
-      const { state } = legacySchema.parse(JSON.parse(legacy));
-      const migrated = JSON.stringify({
-        version: 2,
-        state: {
-          currentUserPubky: state.currentUserPubky,
-          sessionReference: state.sessionExport ? { kind: 'cookie', sessionExport: state.sessionExport } : null,
-          hasProfile: state.hasProfile,
-          generation: crypto.randomUUID(),
-          retiringSession: null,
-        },
+    getItem(name: string): string | null | Promise<string | null> {
+      const snapshot = readAuthStorage(storage, name);
+      if (!snapshot || storage.getItem(name) !== null || !navigator.locks) return snapshot;
+      return navigator.locks.request(AUTH_PERSIST_KEY, () => {
+        // A logout or adoption may have won while this legacy import was waiting.
+        const latest = readAuthStorage(storage, name);
+        if (!latest || storage.getItem(name) !== null) return latest;
+        const envelope = JSON.parse(latest);
+        envelope.state.generation = crypto.randomUUID();
+        const migrated = JSON.stringify(envelope);
+        storage.setItem(name, migrated);
+        finishMigration();
+        return migrated;
       });
-      // Save first. A quota error must leave the sole recoverable record untouched.
-      storage.setItem(name, migrated);
-      finishMigration();
-      return migrated;
     },
-    setItem(name: string, value: string): void {
-      try {
-        const current = storage.getItem(name);
-        if (!allowGenerationChange) {
-          // Failed migration must not be replaced by Zustand's initial signed-out state.
+    setItem(name: string, value: string): void | Promise<void> {
+      const write = () => {
+        let next = JSON.parse(value);
+        if (!lockHeld) {
+          const current = storage.getItem(name);
+          // Never replace a failed/uncompleted legacy migration with Zustand's initial state.
           if (current === null && storage.getItem(LEGACY_AUTH_PERSIST_KEY) && !storage.getItem(AUTH_MIGRATION_KEY))
             return;
-          if (current !== null && JSON.parse(current).state.generation !== JSON.parse(value).state.generation) return;
+          if (current !== null) {
+            const previous = JSON.parse(current);
+            if (previous.state.generation !== next.state.generation) return;
+            // Metadata cannot change identity or revive a completed retirement from a stale tab.
+            next = {
+              ...previous,
+              state: {
+                ...previous.state,
+                hasProfile:
+                  previous.state.hasProfile === true ? true : (next.state.hasProfile ?? previous.state.hasProfile),
+                retiringSession: previous.state.retiringSession ? next.state.retiringSession : null,
+              },
+            };
+          }
         }
-        storage.setItem(name, value);
+        storage.setItem(name, JSON.stringify(next));
         finishMigration();
-      } catch (error) {
-        // UI status/metadata may still update in memory when storage is unavailable.
-        // Only LocalAuthService's explicit, serialized transition can adopt a different session.
-        if (allowGenerationChange) throw error;
-      }
+      };
+      if (lockHeld) return write();
+      // Unsupported browsers may restore existing sessions, but cannot safely write metadata.
+      if (!navigator.locks) return;
+      return navigator.locks.request(AUTH_PERSIST_KEY, write).catch(() => {});
     },
-    removeItem(name: string): void {
-      storage.setItem(AUTH_MIGRATION_KEY, '1');
-      storage.removeItem(name);
-      storage.removeItem(LEGACY_AUTH_PERSIST_KEY);
+    removeItem(name: string): void | Promise<void> {
+      const remove = () => {
+        storage.setItem(AUTH_MIGRATION_KEY, '1');
+        storage.removeItem(name);
+        storage.removeItem(LEGACY_AUTH_PERSIST_KEY);
+      };
+      if (lockHeld) return remove();
+      if (navigator.locks) return navigator.locks.request(AUTH_PERSIST_KEY, remove);
+      // Explicit local cleanup remains available without Web Locks.
+      remove();
     },
   };
 }

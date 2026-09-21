@@ -67,7 +67,7 @@ describe('useAuthUrl', () => {
     const { result } = renderHook(() => useAuthUrl());
     await waitFor(() => expect(result.current.url).toBe('old'));
     await act(() => result.current.fetchUrl());
-    await act(async () => old.reject(new Error('offline')));
+    await act(async () => old.reject(Object.assign(new Error('canceled'), { name: 'AuthFlowCanceled' })));
     expect(result.current.url).toBe('new');
     expect(toast).not.toHaveBeenCalled();
   });
@@ -77,13 +77,15 @@ describe('useAuthUrl', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.isExpired).toBe(true);
   });
-  it('ignores cancellation', async () => {
+  it('invalidates the current canceled link without showing an error toast', async () => {
     const pending = flow();
     vi.mocked(AuthController.getAuthUrl).mockResolvedValue(pending.value);
     const { result } = renderHook(() => useAuthUrl());
     await waitFor(() => expect(result.current.url).not.toBe(''));
     await act(async () => pending.reject(Object.assign(new Error('canceled'), { name: 'AuthFlowCanceled' })));
     expect(toast).not.toHaveBeenCalled();
+    expect(result.current.url).toBe('');
+    expect(result.current.isExpired).toBe(true);
   });
   it('surfaces an environment rejection from controller adoption', async () => {
     const pending = flow();

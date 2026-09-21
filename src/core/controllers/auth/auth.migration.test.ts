@@ -14,6 +14,9 @@ import { Identity } from '@/libs/identity/identity';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { AUTH_PERSIST_KEY, ONBOARDING_PERSIST_KEY, SETTINGS_PERSIST_KEY } from '@/stores/persistedKeys';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { settingsInitialState } from '@/stores/settings/settings.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { AuthController } from './auth';
 
@@ -25,6 +28,7 @@ vi.mock('@/libs/query-client/query-client.factory', async (original) => ({
   clearAllQueryClients: vi.fn(),
 }));
 
+const OTHER_PUBKY = '7a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 const PUBKY = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 const offline = () =>
   Err.network(NetworkErrorCode.CONNECTION_FAILED, 'Offline', { service: ErrorService.Homeserver, operation: 'test' });
@@ -62,6 +66,21 @@ function seed(session: Session | null = cookie, reference: SessionReference | nu
     hasProfile: reference ? true : null,
     restoreStatus: session ? 'ready' : 'idle',
   });
+  // Seed durable state explicitly: UI metadata may not replace authentication identity.
+  const state = useAuthStore.getState();
+  localStorage.setItem(
+    AUTH_PERSIST_KEY,
+    JSON.stringify({
+      version: 2,
+      state: {
+        generation: state.generation,
+        currentUserPubky: state.currentUserPubky,
+        sessionReference: state.sessionReference,
+        hasProfile: state.hasProfile,
+        retiringSession: state.retiringSession,
+      },
+    }),
+  );
 }
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -91,6 +110,7 @@ beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   seed();
+  useSettingsStore.getState().reset();
   useOnboardingStore.getState().reset();
   vi.spyOn(AuthApplication, 'clearPendingAuthFlow').mockImplementation(() => {});
   AuthController.cancelActiveAuthFlow();
@@ -181,6 +201,27 @@ describe('gradual grant migration', () => {
       isRestoringSession: false,
       restoreStatus: 'idle',
     });
+  });
+  it('preserves profile completion rehydrated while the same generation is restoring', async () => {
+    seed(null);
+    useAuthStore.setState({ hasProfile: false });
+    localStorage.setItem(
+      AUTH_PERSIST_KEY,
+      JSON.stringify({ version: 2, state: { ...AuthApplication.readPersistedAuth(), hasProfile: false } }),
+    );
+    const pending = deferred<Awaited<ReturnType<typeof AuthApplication.restorePersistedSession>>>();
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockReturnValue(pending.promise);
+    const restore = AuthController.restorePersistedSession();
+    // Another tab creates the profile and completes retirement without replacing this grant.
+    localStorage.setItem(
+      AUTH_PERSIST_KEY,
+      JSON.stringify({ version: 2, state: { ...AuthApplication.readPersistedAuth(), hasProfile: true } }),
+    );
+    await AuthController.syncSessionFromStorage();
+    pending.resolve({ status: 'restored', session: cookie });
+    await restore;
+    expect(useAuthStore.getState().hasProfile).toBe(true);
+    expect(AuthApplication.readPersistedAuth()?.hasProfile).toBe(true);
   });
   it('does not resurrect a restore that finishes after logout', async () => {
     seed(null);
@@ -292,6 +333,172 @@ describe('gradual grant migration', () => {
     flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
     await expect(result!.awaitApproval).rejects.toThrow();
     expect(useAuthStore.getState().retiringSession).toEqual(cookieReference);
+  });
+  it.each(['restore', 'signout'])(
+    'adopts a valid replacement when the old grant is rejected during %s',
+    async (stage) => {
+      const old = grantReference('revoked');
+      seed(stage === 'restore' ? null : grantSession(), old);
+      useAuthStore.getState().setRestoreStatus('reauth-required');
+      const flow = startFlow();
+      const result = await AuthController.getAuthUrl();
+      if (stage === 'restore') vi.mocked(AuthApplication.restoreReference).mockRejectedValue(expired());
+      else vi.mocked(AuthApplication.logout).mockRejectedValue(expired());
+      const next = grantSession();
+      flow.approval.resolve(next);
+      await expect(result.awaitApproval).resolves.toBe(next);
+      expect(useAuthStore.getState()).toMatchObject({
+        session: next,
+        restoreStatus: 'ready',
+        retiringSession: null,
+        hasProfile: true,
+      });
+      expect(AuthApplication.removeSessionRecord).toHaveBeenCalledWith(old);
+      expect(clearDatabase).not.toHaveBeenCalled();
+    },
+  );
+  it('keeps grant retirement retryable when IndexedDB is temporarily unavailable', async () => {
+    seed(null, grantReference('old'));
+    const flow = startFlow();
+    const result = await AuthController.getAuthUrl();
+    vi.mocked(AuthApplication.restoreReference).mockRejectedValue(offline());
+    flow.approval.resolve(grantSession());
+    await expect(result.awaitApproval).rejects.toThrow();
+    expect(useAuthStore.getState()).toMatchObject({
+      restoreStatus: 'temporary-error',
+      retiringSession: { grantId: 'old' },
+    });
+    expect(AuthApplication.removeSessionRecord).not.toHaveBeenCalled();
+  });
+  it('bootstraps a different account from clean tab state even when its profile is already known', async () => {
+    useSettingsStore.getState().setMutedUsers(['alice-only-mute']);
+    const other = OTHER_PUBKY;
+    const remoteSettings = { ...settingsInitialState, muted: ['bob-only-mute'] };
+    // The other tab has already persisted its own settings. Resetting this tab must preserve them.
+    const sharedSettings = JSON.stringify({ state: remoteSettings, version: 0 });
+    localStorage.setItem(SETTINGS_PERSIST_KEY, sharedSettings);
+    await AuthApplication.commitPersistedAuth(
+      {
+        generation: 'other-tab',
+        currentUserPubky: other,
+        sessionReference: grantReference('other'),
+        hasProfile: true,
+        retiringSession: null,
+      },
+      '',
+    );
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+      status: 'restored',
+      session: grantSession([APP_CAPABILITIES], other),
+    });
+    vi.mocked(AuthApplication.userIsSignedUp).mockResolvedValue(true);
+    vi.mocked(SettingsApplication.initializeSettings).mockImplementation(async (_pubky, local) => {
+      expect(local.muted).toEqual([]);
+      expect(localStorage.getItem(SETTINGS_PERSIST_KEY)).toBe(sharedSettings);
+      return remoteSettings;
+    });
+    await AuthController.syncSessionFromStorage();
+    expect(useSettingsStore.getState().muted).toEqual(['bob-only-mute']);
+    expect(useAuthStore.getState()).toMatchObject({
+      currentUserPubky: other,
+      needsAccountSync: false,
+      restoreStatus: 'ready',
+    });
+    expect(clearDatabase).not.toHaveBeenCalled();
+  });
+  it('retries the new account bootstrap after a temporary failure', async () => {
+    useSettingsStore.getState().setMutedUsers(['alice-only-mute']);
+    await AuthApplication.commitPersistedAuth(
+      {
+        generation: 'other-tab',
+        currentUserPubky: OTHER_PUBKY,
+        sessionReference: grantReference('other'),
+        hasProfile: true,
+        retiringSession: null,
+      },
+      '',
+    );
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+      status: 'restored',
+      session: grantSession([APP_CAPABILITIES], OTHER_PUBKY),
+    });
+    vi.mocked(AuthApplication.userIsSignedUp).mockRejectedValueOnce(offline()).mockResolvedValue(true);
+    await AuthController.syncSessionFromStorage();
+    expect(useAuthStore.getState()).toMatchObject({ needsAccountSync: true, restoreStatus: 'temporary-error' });
+    await AuthController.restorePersistedSession();
+    expect(SettingsApplication.initializeSettings).toHaveBeenCalledWith(
+      OTHER_PUBKY,
+      expect.objectContaining({ muted: [] }),
+    );
+    expect(useAuthStore.getState()).toMatchObject({ needsAccountSync: false, restoreStatus: 'ready' });
+  });
+  it.each(['current', 'legacy'])('preserves the incoming signup backup from %s onboarding storage', async (kind) => {
+    const recovery = { secretKey: 'new-account-secret', mnemonic: 'new-account-phrase' };
+    const signupAttempt =
+      kind === 'current' ? { pubky: OTHER_PUBKY, homeserver: 'hs', environment: 'test', phase: 'created' } : null;
+    localStorage.setItem(ONBOARDING_PERSIST_KEY, JSON.stringify({ version: 0, state: { ...recovery, signupAttempt } }));
+    vi.spyOn(Identity, 'keypairFromSecretKey').mockReturnValue(asOpaque({ publicKey: { z32: () => OTHER_PUBKY } }));
+    await AuthApplication.commitPersistedAuth(
+      {
+        generation: 'new-signup',
+        currentUserPubky: OTHER_PUBKY,
+        sessionReference: grantReference('new-signup'),
+        hasProfile: false,
+        retiringSession: null,
+      },
+      '',
+    );
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+      status: 'restored',
+      session: grantSession([APP_CAPABILITIES], OTHER_PUBKY),
+    });
+    await AuthController.syncSessionFromStorage();
+    expect(useOnboardingStore.getState()).toMatchObject(recovery);
+    // Profile completion writes this flag; it must not persist null recovery keys over the other tab's backup.
+    useOnboardingStore.getState().setShowWelcomeDialog(true);
+    expect(JSON.parse(localStorage.getItem(ONBOARDING_PERSIST_KEY)!).state).toMatchObject(recovery);
+  });
+  it('does not expose a previous account backup after a cross-tab account change', async () => {
+    useOnboardingStore.getState().setSecrets({ secretKey: 'old-account-secret', mnemonic: 'old-account-phrase' });
+    useOnboardingStore
+      .getState()
+      .setSignupAttempt({ pubky: PUBKY, homeserver: 'hs', environment: 'test', phase: 'created' });
+    await AuthApplication.commitPersistedAuth(
+      {
+        generation: 'other-signup',
+        currentUserPubky: OTHER_PUBKY,
+        sessionReference: grantReference('other-signup'),
+        hasProfile: false,
+        retiringSession: null,
+      },
+      '',
+    );
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+      status: 'restored',
+      session: grantSession([APP_CAPABILITIES], OTHER_PUBKY),
+    });
+    await AuthController.syncSessionFromStorage();
+    expect(useOnboardingStore.getState()).toMatchObject({ secretKey: null, mnemonic: null, signupAttempt: null });
+  });
+  it('preserves account-local state when another tab upgrades the same account', async () => {
+    useSettingsStore.getState().setMutedUsers(['same-account-mute']);
+    await AuthApplication.commitPersistedAuth(
+      {
+        generation: 'upgraded',
+        currentUserPubky: PUBKY,
+        sessionReference: grantReference('upgraded'),
+        hasProfile: true,
+        retiringSession: null,
+      },
+      '',
+    );
+    vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
+      status: 'restored',
+      session: grantSession(),
+    });
+    await AuthController.syncSessionFromStorage();
+    expect(useSettingsStore.getState().muted).toEqual(['same-account-mute']);
+    expect(SettingsApplication.initializeSettings).not.toHaveBeenCalled();
   });
   it('fences a pending save when another tab commits logout', async () => {
     const flow = startFlow();

@@ -73,6 +73,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
     );
   },
 
+  setNeedsAccountSync: (needsAccountSync) => set({ needsAccountSync }),
   setRestoreStatus: (restoreStatus) => set({ restoreStatus, isRestoringSession: restoreStatus === 'restoring' }),
   setRetiringSession: (retiringSession) => set({ retiringSession }),
 

@@ -91,3 +91,11 @@ no fixed build/version has been recorded here yet.
 Unit tests exercise the app boundaries and state transitions; mocked SDK tests do not certify the deployed HS/Ring fixes.
 The new recovery surface has unit coverage. Existing auth VRT remains unchanged; add recovery-screen VRT coverage in the
 manual baseline workflow when its design is finalized. No local pixel baselines were generated for this migration.
+
+## Review regression coverage
+
+The app serializes legacy import and all auth metadata writes under the same Web Lock as adoption/logout. Generation checks are read-only; unsupported browsers can still restore legacy cookies without rewriting them. Queued metadata cannot revive a completed retirement or overwrite a newer account reference.
+
+Cross-tab account changes reset the receiving tab's settings, notifications, filters, onboarding state and previews in memory, without deleting the shared database or overwriting another tab's persisted settings. Bootstrap runs even if the incoming account already has a known profile, and remains retryable after a transient failure. Same-account upgrades preserve account-local state. Incoming signup recovery material is rehydrated only for its owning account, so subsequent onboarding actions preserve its pending backup. Profile discovery is monotonic within a generation; stale metadata cannot return a completed profile to onboarding.
+
+A rejected old grant is locally retired after its valid replacement is saved; remote revocation remains unconfirmed. A failed cookie signout still requires retry. SDK missing-record handling is covered against the installed 0.11 SDK, including its empty-list behavior when IndexedDB is inaccessible. Fresh guests and canceled Ring links have UI regression tests.
