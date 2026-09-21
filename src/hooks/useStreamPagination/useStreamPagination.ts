@@ -71,7 +71,6 @@ export function useStreamPagination({
   resetOnStreamChange = true,
   onError,
 }: UseStreamPaginationOptions): UseStreamPaginationResult {
-  const isEnabled = streamId !== undefined;
   const [postIds, setPostIds] = useState<string[]>([]);
   const [lastPostId, setLastPostId] = useState<string | undefined>(undefined);
   const [streamTail, setStreamTail] = useState<number>(NOT_FOUND_CACHED_STREAM);
