@@ -23,9 +23,7 @@ export function TaggedEmpty({ onTagAdd }: TaggedEmptyProps) {
       }
     >
       {/* The input is a compact field in the design, not the full column width. */}
-      {onTagAdd && (
-        <TagInput onTagAdd={onTagAdd} enableApiSuggestions addOnSuggestionClick className="w-48" />
-      )}
+      {onTagAdd && <TagInput onTagAdd={onTagAdd} enableApiSuggestions addOnSuggestionClick className="w-48" />}
     </IllustratedEmptyState>
   );
 }
