@@ -11,7 +11,7 @@ import { sleep } from '@/libs/utils/utils';
 import { createCanceledError, extractStatusCode, handleError } from './error.utils';
 import type {
   CancelableAuthApproval,
-  PubPath,
+  StoragePath,
   TAssertOkParams,
   TCheckSessionExpirationParams,
   TGetOwnedResponseParams,
@@ -218,24 +218,24 @@ export const createCancelableAuthApproval = (
 };
 
 /**
- * Resolves an owned session path from a URL.
- * Checks if the URL matches the current session's pubky and is a valid /pub/* path.
+ * Resolves an owned session path from a URL: the URL must belong to the current session's pubky and
+ * sit under one of the writable storage roots.
  *
  * @param url - The URL to resolve
  * @param session - The current session (or null if not authenticated)
- * @param pubPathPrefix - The pub path prefix constant (e.g., '/pub/')
+ * @param allowedPrefixes - Writable storage roots (`/pub/`, `/priv/`)
  * @returns Object with session and path if owned, null otherwise
  */
 export const resolveOwnedSessionPath = ({
   url,
   session,
-  pubPathPrefix,
+  allowedPrefixes,
 }: TResolveOwnedSessionPathParams): TOwnedSessionPath | null => {
   if (!session) return null;
 
   const pathname = toPathname(url);
-  if (!pathname || !pathname.startsWith(pubPathPrefix)) return null;
-  const path = pathname as PubPath<string>;
+  if (!pathname || !allowedPrefixes.some((prefix) => pathname.startsWith(prefix))) return null;
+  const path = pathname as StoragePath<string>;
 
   if (url.startsWith('/')) return { session, path };
 

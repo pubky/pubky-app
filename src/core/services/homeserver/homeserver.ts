@@ -41,8 +41,9 @@ import type {
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { extractStatusCode, handleError } from './error.utils';
 import type {
-  PubPath,
+  StoragePath,
   TGenerateSignupAuthUrlParams,
+  THomeserverBytesResult,
   THomeserverFetchParams,
   THomeserverListAllParams,
   THomeserverListParams,
@@ -63,7 +64,7 @@ import {
 } from './homeserver.utils';
 
 const CAPABILITIES = '/pub/pubky.app/:rw';
-const PUB_PATH_PREFIX = '/pub/' as const;
+const STORAGE_PATH_PREFIXES = ['/pub/', '/priv/'] as const;
 const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
 const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
 /** Default limit for list operations */
@@ -95,7 +96,7 @@ export class HomeserverService {
 
   private static resolveOwnedSessionPath(url: string): TOwnedSessionPath | null {
     const session = useAuthStore.getState().selectSession();
-    return resolveOwnedSessionPath({ url, session, pubPathPrefix: PUB_PATH_PREFIX });
+    return resolveOwnedSessionPath({ url, session, allowedPrefixes: STORAGE_PATH_PREFIXES });
   }
 
   /**
@@ -437,7 +438,7 @@ export class HomeserverService {
     if (method !== HttpMethod.GET && !isHttpUrl(url)) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Authenticated writes must target an owned ${PUB_PATH_PREFIX}* path for the current session.`,
+        'Authenticated writes must target an owned /pub/* or /priv/* path for the current session.',
         {
           service: ErrorService.Homeserver,
           operation: 'request',
@@ -485,7 +486,7 @@ export class HomeserverService {
     if (!isHttpUrl(url)) {
       throw Err.validation(
         ValidationErrorCode.INVALID_INPUT,
-        `Blob uploads must target an owned ${PUB_PATH_PREFIX}* path for the current session.`,
+        'Blob uploads must target an owned /pub/* or /priv/* path for the current session.',
         {
           service: ErrorService.Homeserver,
           operation: 'putBlob',
@@ -519,7 +520,7 @@ export class HomeserverService {
     try {
       const owned = this.resolveOwnedSessionPath(baseDirectory);
       if (owned) {
-        const dirPath = owned.path.endsWith('/') ? owned.path : (`${owned.path}/` as PubPath<string>);
+        const dirPath = owned.path.endsWith('/') ? owned.path : (`${owned.path}/` as StoragePath<string>);
         const files = await owned.session.storage.list(dirPath, cursor ?? null, reverse, limit, false);
         Logger.debug('List successful', { baseDirectory, filesCount: files.length });
         return files;
@@ -608,17 +609,57 @@ export class HomeserverService {
   static async get(url: string): Promise<Response> {
     const pubkySdk = this.getPubkySdk();
     try {
-      if (isHttpUrl(url)) {
-        return await pubkySdk.client.fetch(url);
-      }
-
       const owned = this.resolveOwnedSessionPath(url);
       if (owned) {
         return await getOwnedResponse({ session: owned.session, path: owned.path, url });
       }
 
+      if (isHttpUrl(url)) {
+        return await pubkySdk.client.fetch(url);
+      }
+
       return await pubkySdk.publicStorage.get(url as Address);
     } catch (error) {
+      return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
+    }
+  }
+
+  /** Read binary content, rejecting missing resources and failed HTTP responses. */
+  static async getBytes(url: string): Promise<Uint8Array> {
+    try {
+      const response = await this.get(url);
+      await assertOk({ response, url, operation: 'getBytes' });
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      return handleError({ error, additionalContext: { url, method: HttpMethod.GET, operation: 'getBytes' } });
+    }
+  }
+
+  /**
+   * Read an owned resource with its server modification time. Only a 404 means absence;
+   * missing authentication, insufficient permissions and transport failures reject.
+   */
+  static async getBytesIfExists(url: string): Promise<THomeserverBytesResult | null> {
+    const owned = this.resolveOwnedSessionPath(url);
+    if (!owned) {
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Reading owned storage requires a session for the resource owner.', {
+        service: ErrorService.Homeserver,
+        operation: 'getBytesIfExists',
+        context: { url },
+      });
+    }
+
+    try {
+      const response = await owned.session.storage.get(owned.path);
+      if (response.status === HttpStatusCode.NOT_FOUND) return null;
+      await assertOk({ response, url, operation: 'getBytesIfExists' });
+      const lastModified = Date.parse(response.headers.get('last-modified') ?? '');
+      return {
+        bytes: new Uint8Array(await response.arrayBuffer()),
+        modifiedAt: Number.isNaN(lastModified) ? null : lastModified,
+      };
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;
       return handleError({ error, additionalContext: { url, method: HttpMethod.GET } });
     }
   }

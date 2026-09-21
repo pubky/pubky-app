@@ -792,6 +792,144 @@ describe('HomeserverService', () => {
   // ===========================================================================
 
   describe('Data Operations', () => {
+    describe('private storage', () => {
+      beforeEach(() => {
+        mockState.currentSession = createMockSession();
+      });
+
+      it.each(['pubky://user', 'pubkyuser', 'https://_pubky.user', ''])(
+        'reads owned binary content through the session for %s URLs',
+        async (prefix) => {
+          mockState.sessionStorageGet.mockResolvedValue(new Response(new Uint8Array([255, 0])));
+          await expect(HomeserverService.getBytes(`${prefix}/priv/social/one`)).resolves.toEqual(
+            new Uint8Array([255, 0]),
+          );
+          expect(mockState.sessionStorageGet).toHaveBeenCalledWith('/priv/social/one');
+          expect(mockState.clientFetch).not.toHaveBeenCalled();
+          expect(mockState.publicStorageGet).not.toHaveBeenCalled();
+        },
+      );
+
+      it('supports binary writes, listing and deleting private resources', async () => {
+        const blob = new Uint8Array([1, 255]);
+        await HomeserverService.putBlob({ url: '/priv/social/one', blob });
+        await HomeserverService.list({ baseDirectory: 'pubky://user/priv/social' });
+        await HomeserverService.delete('/priv/social/one');
+        expect(mockState.sessionStoragePutBytes).toHaveBeenCalledWith('/priv/social/one', blob);
+        expect(mockState.sessionStorageList).toHaveBeenCalledWith('/priv/social/', null, false, 500, false);
+        expect(mockState.sessionStorageDelete).toHaveBeenCalledWith('/priv/social/one');
+      });
+
+      it.each(['pubky://other/priv/social/one', '/private/social/one', '/pubky/one'])(
+        'rejects a non-owned storage target: %s',
+        async (url) => {
+          await expect(HomeserverService.getBytesIfExists(url)).rejects.toMatchObject({
+            code: AuthErrorCode.UNAUTHORIZED,
+          });
+          await expect(HomeserverService.putBlob({ url, blob: new Uint8Array([1]) })).rejects.toMatchObject({
+            code: ValidationErrorCode.INVALID_INPUT,
+          });
+          expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
+          expect(mockState.sessionStoragePutBytes).not.toHaveBeenCalled();
+        },
+      );
+
+      it('does not report a missing session as a missing file', async () => {
+        mockState.currentSession = null;
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).rejects.toMatchObject({
+          code: AuthErrorCode.UNAUTHORIZED,
+        });
+        expect(mockState.publicStorageGet).not.toHaveBeenCalled();
+      });
+
+      it('returns null for a 404 without logging an error', async () => {
+        mockState.sessionStorageGet.mockResolvedValue(new Response(null, { status: 404 }));
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).resolves.toBeNull();
+        expect(Logger.error).not.toHaveBeenCalled();
+      });
+
+      it('also handles a 404 rejected by the SDK without logging an error', async () => {
+        mockState.sessionStorageGet.mockRejectedValue({
+          name: 'RequestError',
+          message: 'Not Found',
+          data: { statusCode: 404 },
+        });
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).resolves.toBeNull();
+        expect(Logger.error).not.toHaveBeenCalled();
+      });
+
+      it.each([401, 403, 500])('rejects HTTP %i instead of treating content as absent', async (status) => {
+        mockState.sessionStorageGet.mockResolvedValue(new Response(null, { status }));
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).rejects.toMatchObject({
+          name: 'AppError',
+        });
+      });
+
+      it('preserves transport failures', async () => {
+        mockState.sessionStorageGet.mockRejectedValue(new TypeError('Failed to fetch'));
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).rejects.toMatchObject({
+          name: 'AppError',
+        });
+      });
+
+      it('normalizes a binary response interrupted while reading its body', async () => {
+        const body = new ReadableStream({
+          start(controller) {
+            controller.error(new TypeError('Connection interrupted'));
+          },
+        });
+        mockState.sessionStorageGet.mockResolvedValue(new Response(body));
+        await expect(HomeserverService.getBytes('/priv/social/one')).rejects.toMatchObject({ name: 'AppError' });
+      });
+
+      it.each([null, 'not a date'])('uses null for unavailable modification time: %s', async (lastModified) => {
+        mockState.sessionStorageGet.mockResolvedValue(
+          new Response(new Uint8Array([1]), { headers: lastModified ? { 'last-modified': lastModified } : {} }),
+        );
+        await expect(HomeserverService.getBytesIfExists('/priv/social/one')).resolves.toEqual({
+          bytes: new Uint8Array([1]),
+          modifiedAt: null,
+        });
+      });
+
+      it.each([404, 403, 500])('rejects failed binary HTTP reads with status %i', async (status) => {
+        mockState.clientFetch.mockResolvedValue(new Response('error page', { status }));
+        await expect(HomeserverService.getBytes('https://example.com/file')).rejects.toMatchObject({
+          name: 'AppError',
+        });
+      });
+    });
+
+    it('reads private bytes and the server modification time', async () => {
+      mockState.currentSession = createMockSession();
+      mockState.sessionStorageGet.mockResolvedValue(
+        new Response(new Uint8Array([1, 2, 255]), {
+          headers: { 'last-modified': 'Mon, 21 Sep 2026 10:00:00 GMT' },
+        }),
+      );
+
+      await expect(HomeserverService.getBytesIfExists('/priv/social/content/one')).resolves.toEqual({
+        bytes: new Uint8Array([1, 2, 255]),
+        modifiedAt: Date.parse('2026-09-21T10:00:00Z'),
+      });
+      expect(mockState.sessionStorageGet).toHaveBeenCalledWith('/priv/social/content/one');
+    });
+
+    it('writes an owned private resource through the authenticated session', async () => {
+      mockState.currentSession = createMockSession();
+
+      await HomeserverService.request({
+        method: HttpMethod.PUT,
+        url: 'pubky://user/priv/social/purchases/one.json',
+        bodyJson: { unlocked: true },
+      });
+
+      expect(mockState.sessionStoragePutJson).toHaveBeenCalledWith('/priv/social/purchases/one.json', {
+        unlocked: true,
+      });
+      expect(mockState.clientFetch).not.toHaveBeenCalled();
+    });
+
     describe('request', () => {
       describe('GET requests', () => {
         it('should return parsed JSON for successful GET', async () => {
