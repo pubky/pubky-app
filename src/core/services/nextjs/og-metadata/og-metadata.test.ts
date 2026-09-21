@@ -67,6 +67,29 @@ const createErrorResponse = (status: number) => {
   return response;
 };
 
+/** A response with a real body stream, so a test can assert the service releases the connection before retrying. */
+const createCancellableResponse = (status: number, contentType: string) => {
+  let cancelled = false;
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('<html></html>'));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const response = new Response(stream, { status, headers: { 'content-type': contentType } });
+  Object.defineProperty(response, 'ok', { value: status < 400 });
+  return { response, wasCancelled: () => cancelled };
+};
+
+/** Page whose head carries no Open Graph tags, as a client-rendered shell does for a bot-walled identity. */
+const shellHtml = (title?: string) =>
+  `<!DOCTYPE html><html><head>${title ? `<title>${title}</title>` : ''}</head><body><div id="root"></div></body></html>`;
+
+const CRAWLER_USER_AGENT = 'facebookexternalhit/1.1';
+const BOT_WALL_URL = 'https://www.reddit.com/r/Bitcoin/comments/15lu8ps/milk_sad/';
+
 const createDnsError = (code = 'ENOTFOUND') => Object.assign(new Error(code), { code });
 const EXPECTED_DNS_ERROR_CODES = [
   'ENOTFOUND',
@@ -791,4 +814,188 @@ describe('NextJsOgMetadataService', () => {
       );
     },
   );
+
+  // -------------------------------------------------------------------------
+  // Crawler retry: bot walls (403/429) and Open-Graph-less 200 shells
+  // -------------------------------------------------------------------------
+
+  it('should retry once with a crawler identity when the browser identity hits a bot wall', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    const blocked = createCancellableResponse(HttpStatusCode.FORBIDDEN, 'text/html');
+    mockFetch.mockResolvedValueOnce(blocked.response).mockResolvedValueOnce(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValue(
+      simpleHtml('From the Bitcoin community on Reddit', 'https://share.redd.it/preview.png'),
+    );
+
+    const result = await NextJsOgMetadataService.fetch(new URL(BOT_WALL_URL));
+
+    expect(result).toMatchObject({
+      title: 'From the Bitcoin community on Reddit',
+      image: 'https://share.redd.it/preview.png',
+      type: 'website',
+    });
+    expect(result.url).toContain('reddit.com');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      1,
+      BOT_WALL_URL,
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'User-Agent': expect.stringContaining('Mozilla/5.0') }),
+      }),
+    );
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      BOT_WALL_URL,
+      expect.objectContaining({
+        redirect: 'manual',
+        dispatcher: expect.anything(),
+        headers: expect.objectContaining({ 'User-Agent': CRAWLER_USER_AGENT }),
+      }),
+    );
+    // The bot-wall body is released before the retry, so the retry does not queue behind a socket
+    // the first response still holds.
+    expect(blocked.wasCancelled()).toBe(true);
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'crawler_retry',
+        trigger: 'bot_wall',
+        recovered: true,
+        hostname: 'www.reddit.com',
+        statusCode: HttpStatusCode.FORBIDDEN,
+      }),
+    );
+  });
+
+  it('should retry once with a crawler identity when a 200 carries no Open Graph tags', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody
+      .mockResolvedValueOnce(shellHtml('Reddit - The heart of the internet'))
+      .mockResolvedValueOnce(simpleHtml('Milk Sad'));
+
+    const result = await NextJsOgMetadataService.fetch(new URL(BOT_WALL_URL));
+
+    expect(result).toMatchObject({ title: 'Milk Sad' });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'crawler_retry',
+        trigger: 'empty_metadata',
+        recovered: true,
+        hostname: 'www.reddit.com',
+        statusCode: 200,
+      }),
+    );
+  });
+
+  it('should retry once when a 200 page carries neither a title nor an image', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValueOnce(shellHtml()).mockResolvedValueOnce(simpleHtml('Milk Sad'));
+
+    await expect(NextJsOgMetadataService.fetch(new URL(BOT_WALL_URL))).resolves.toMatchObject({ title: 'Milk Sad' });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({ outcome: 'fallback', reason: 'empty_metadata', hostname: 'www.reddit.com' }),
+    );
+  });
+
+  it('should retry a 429 rate limit with the crawler identity', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createErrorResponse(HttpStatusCode.TOO_MANY_REQUESTS))
+      .mockResolvedValueOnce(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValue(simpleHtml('Recovered'));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/rate-limited'))).resolves.toMatchObject({
+      title: 'Recovered',
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('should keep the first fallback when the crawler retry is bot-walled too', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    mockFetch.mockResolvedValue(createErrorResponse(HttpStatusCode.FORBIDDEN));
+
+    const result = await NextJsOgMetadataService.fetch(new URL(BOT_WALL_URL));
+
+    expect(result).toEqual({
+      url: expect.stringContaining('reddit.com'),
+      title: null,
+      image: null,
+      type: 'website',
+    });
+    // One retry, not a loop.
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({
+        outcome: 'crawler_retry',
+        trigger: 'bot_wall',
+        recovered: false,
+        hostname: 'www.reddit.com',
+      }),
+    );
+  });
+
+  it.each([HttpStatusCode.NOT_FOUND, HttpStatusCode.INTERNAL_SERVER_ERROR] as const)(
+    'should not retry a %s response',
+    async (status) => {
+      mockFetch.mockResolvedValue(createErrorResponse(status));
+
+      await NextJsOgMetadataService.fetch(new URL('https://example.com/missing'));
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('should not retry when the browser identity already gets usable metadata', async () => {
+    mockFetch.mockResolvedValue(createOkResponse('text/html'));
+    mockReadResponseBody.mockResolvedValue(simpleHtml('Real title', 'https://example.com/img.png'));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/page'))).resolves.toMatchObject({
+      title: 'Real title',
+      image: 'https://example.com/img.png',
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not retry a 200 that is not HTML', async () => {
+    mockFetch.mockResolvedValue(createOkResponse('application/json'));
+
+    await NextJsOgMetadataService.fetch(new URL('https://example.com/api'));
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not retry a media response', async () => {
+    mockFetch.mockResolvedValue(createOkResponse('image/png'));
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/pic.png'))).resolves.toMatchObject({
+      type: 'image',
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should keep the SSRF guard on every hop of the crawler retry', async () => {
+    const loggerWarnSpy = await spyOnLoggerWarn();
+    mockFetch
+      .mockResolvedValueOnce(createErrorResponse(HttpStatusCode.FORBIDDEN))
+      .mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: 'http://127.0.0.2/' } }));
+    mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
+
+    await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/blocked'))).resolves.toEqual({
+      url: 'http://127.0.0.2/',
+      title: null,
+      image: null,
+      type: 'website',
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      '[og-metadata:fetch]',
+      expect.objectContaining({ outcome: 'fallback', reason: 'blocked_ip', hostname: '127.0.0.2' }),
+    );
+  });
 });

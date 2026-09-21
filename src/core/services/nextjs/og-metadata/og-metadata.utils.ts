@@ -27,6 +27,17 @@ export function detectMediaType(url: string, response: Response): TOgMetadataRes
 }
 
 /**
+ * Whether the HTML carries an Open Graph tag the preview card can use (`og:title` or `og:image`).
+ *
+ * Bot-walled hosts answer a browser identity with a client-rendered shell: a 200 whose head has no
+ * Open Graph tags at all, sometimes with only a generic `<title>`. The service uses this to decide
+ * whether a 200 is worth one retry with a crawler identity.
+ */
+export function hasOgMetadata(html: string): boolean {
+  return extractFromHtml(html, OG_PATTERNS.TITLE) !== null || extractFromHtml(html, OG_PATTERNS.IMAGE) !== null;
+}
+
+/**
  * Extracts OG metadata from HTML, normalizes image URLs, and applies truncation.
  */
 export async function extractMetadata(url: string, html: string): Promise<TOgMetadataResult> {
