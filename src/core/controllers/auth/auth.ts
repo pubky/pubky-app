@@ -14,6 +14,7 @@ import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { clearDatabase } from '@/database/franky/franky.helpers';
+import { hasCapabilities } from '@/libs/auth/capabilities';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
@@ -50,6 +51,12 @@ export class AuthController {
 
   private static activeAuthFlow: { token: symbol; cancel: (() => void) | null } | null = null;
   private static moderationFollowAbortController: AbortController | null = null;
+
+  /** Permission preflight shared by feature hooks; cookie and grant sessions use the same scopes. */
+  static hasCapabilities(required: readonly string[]): boolean {
+    const session = useAuthStore.getState().selectSession();
+    return session !== null && hasCapabilities(session.info.capabilities, required);
+  }
 
   static cancelActiveAuthFlow() {
     const cancel = this.activeAuthFlow?.cancel;

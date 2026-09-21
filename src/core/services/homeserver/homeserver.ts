@@ -11,6 +11,7 @@ import {
   Signer,
 } from '@synonymdev/pubky';
 import type { TKeypairParams } from '@/application/auth/auth.types';
+import { APP_CAPABILITIES } from '@/config/auth';
 import {
   getDefaultHttpRelay,
   getHomeserver,
@@ -63,7 +64,6 @@ import {
   resolveOwnedSessionPath,
 } from './homeserver.utils';
 
-const CAPABILITIES = '/pub/pubky.app/:rw';
 const STORAGE_PATH_PREFIXES = ['/pub/', '/priv/'] as const;
 const DELETE_IDEMPOTENT_MAX_ATTEMPTS = 3;
 const DELETE_IDEMPOTENT_RETRY_DELAY_MS = 500;
@@ -317,7 +317,7 @@ export class HomeserverService {
    * @returns The authentication URL and approval promise
    */
   static async generateAuthUrl(caps?: Capabilities): Promise<TGenerateAuthUrlResult> {
-    const capabilities: Capabilities = caps || CAPABILITIES;
+    const capabilities: Capabilities = caps || APP_CAPABILITIES;
 
     try {
       const pubkySdk = this.getPubkySdk();

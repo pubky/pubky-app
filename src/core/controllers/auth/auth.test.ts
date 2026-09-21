@@ -5,6 +5,7 @@ import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
+import { LOCKS_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { MUTE_SYNC_CURSOR_STORAGE_PREFIX } from '@/config/mute-sync';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
@@ -314,7 +315,8 @@ vi.mock('@/stores/migration/migration.store', () => ({
 }));
 
 // Mock @synonymdev/pubky
-vi.mock('@synonymdev/pubky', () => ({
+vi.mock('@synonymdev/pubky', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@synonymdev/pubky')>()),
   Keypair: {
     fromSecret: vi.fn(() => ({
       pubky: vi.fn(() => ({ z32: () => 'test-public-key' })),
@@ -371,6 +373,23 @@ describe('AuthController', () => {
         wasDbReset: false,
       }),
     );
+  });
+
+  describe('hasCapabilities', () => {
+    it.each([
+      { capabilities: ['/:rw'], expected: true },
+      { capabilities: ['/pub/pubky.app/:rw'], expected: false },
+      { capabilities: [...LOCKS_CAPABILITIES], expected: true },
+    ])('checks actual session permissions: $capabilities', ({ capabilities, expected }) => {
+      const session = buildMockSession({ info: asOpaque({ capabilities }) });
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ session, selectSession: () => session }));
+      expect(AuthController.hasCapabilities(LOCKS_CAPABILITIES)).toBe(expected);
+    });
+
+    it('requires a live session', () => {
+      vi.spyOn(useAuthStore, 'getState').mockReturnValue(mockAuthStore({ session: null, selectSession: () => null }));
+      expect(AuthController.hasCapabilities(LOCKS_CAPABILITIES)).toBe(false);
+    });
   });
 
   describe('bootstrapWithDelay', () => {
