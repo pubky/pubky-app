@@ -68,6 +68,16 @@ describe('inferPostKindForCreate', () => {
     expect(kind).toBe(PubkyAppPostKind.Video);
   });
 
+  it.each([
+    ['Watch https://www.youtube.com/@somechannel', 'youtube channel page'],
+    ['Watch https://www.youtube.com/playlist?list=PL1234567890', 'youtube playlist'],
+    ['Watch https://vimeo.com/channels/staffpicks', 'vimeo channel page'],
+  ])('returns link when the content url is a video host but not a playable video (%s)', (content) => {
+    const kind = inferPostKindForCreate({ content });
+
+    expect(kind).toBe(PubkyAppPostKind.Link);
+  });
+
   it('returns short when there is no attachment and no url', () => {
     const kind = inferPostKindForCreate({
       content: 'Just plain text',

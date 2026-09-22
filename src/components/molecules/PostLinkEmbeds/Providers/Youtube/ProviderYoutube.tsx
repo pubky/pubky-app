@@ -2,59 +2,9 @@ import { Container } from '@/atoms/Container/Container';
 import { Iframe } from '@/atoms/Iframe/Iframe';
 import { convertHmsToSeconds } from '@/libs/utils/utils';
 import { HMS_TIMESTAMP_REGEX } from '@/libs/utils/utils.constants';
+import { extractYouTubeVideoId, YOUTUBE_DOMAINS } from '@/libs/utils/videoUrl';
 import { VIDEO_EMBED_PROPS } from '../Provider.constants';
 import type { EmbedData, EmbedProvider } from '../Provider.types';
-
-/**
- * Extract YouTube video ID from URL
- * Validates that ID is exactly 11 characters with valid characters only
- *
- * @example
- * // Protocol-agnostic - works with or without http(s)://
- * extractYouTubeId('https://youtube.com/watch?v=dQw4w9WgXcQ') // → 'dQw4w9WgXcQ'
- * extractYouTubeId('youtube.com/watch?v=dQw4w9WgXcQ')         // → 'dQw4w9WgXcQ'
- * extractYouTubeId('youtu.be/dQw4w9WgXcQ')                    // → 'dQw4w9WgXcQ'
- */
-const extractYouTubeId = (url: string): string | null => {
-  // Normalize URL to lowercase for case-insensitive domain matching
-  // But preserve original for video ID extraction (video IDs are case-sensitive)
-  const normalizedUrl = url.toLowerCase();
-
-  // Protocol-agnostic patterns - matches with or without http(s)://
-  // Use word boundaries or specific delimiters to ensure exactly 11 characters
-  // Support hash fragments (#) as valid boundaries
-  const patterns = [
-    // Standard watch: youtube.com/watch?v=VIDEO_ID
-    /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?:[&#\s]|$)/,
-    // Short URL: youtu.be/VIDEO_ID
-    /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&#\s]|$)/,
-    // Embed: youtube.com/embed/* or youtube-nocookie.com/embed/*
-    /(?:youtube(?:-nocookie)?\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[?&#\s]|$)/,
-    // Shorts: youtube.com/shorts/VIDEO_ID
-    /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})(?:[?&#\s]|$)/,
-    // Live streams: youtube.com/live/VIDEO_ID
-    /(?:youtube\.com\/live\/)([a-zA-Z0-9_-]{11})(?:[?&#\s]|$)/,
-    // Music subdomain: music.youtube.com/watch?v=VIDEO_ID
-    /(?:music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?:[&#\s]|$)/,
-    // Old embed: youtube.com/v/VIDEO_ID (legacy)
-    /(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{11})(?:[?&#\s]|$)/,
-  ];
-
-  // Match against normalized URL for case-insensitive domain matching
-  for (const pattern of patterns) {
-    const match = normalizedUrl.match(pattern);
-    if (match) {
-      // Extract video ID from the SAME position in original URL to preserve case
-      const idStartIndex = match.index! + match[0].indexOf(match[1]);
-      const id = url.substring(idStartIndex, idStartIndex + 11);
-
-      // Validate video ID format
-      if (/^[a-zA-Z0-9_-]{11}$/.test(id)) return id;
-    }
-  }
-
-  return null;
-};
 
 /**
  * Extract timestamp from YouTube URL and convert to seconds
@@ -99,21 +49,11 @@ const extractVideoIdFromEmbedUrl = (embedUrl: string): string => {
 };
 
 /**
- * YouTube supported domains (lowercase)
- */
-const YOUTUBE_DOMAINS = [
-  'youtube.com',
-  'www.youtube.com',
-  'youtu.be',
-  'm.youtube.com',
-  'music.youtube.com',
-  'www.youtube-nocookie.com',
-  'youtube-nocookie.com',
-] as const;
-
-/**
  * YouTube embed provider
  * Implements the standard EmbedProvider interface
+ *
+ * Domains and video id extraction are shared with post kind inference, so a link
+ * that is stored as kind `video` is a link this provider plays.
  */
 export const Youtube: EmbedProvider = {
   /**
@@ -125,7 +65,7 @@ export const Youtube: EmbedProvider = {
    * Parse YouTube URL and return embed information
    */
   parseEmbed: (url: string): EmbedData | null => {
-    const id = extractYouTubeId(url);
+    const id = extractYouTubeVideoId(url);
 
     if (!id) return null;
 
