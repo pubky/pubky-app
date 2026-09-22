@@ -24,7 +24,7 @@ export function SessionRecovery({ needsAuthorization }: { needsAuthorization: bo
       </p>
       {needsAuthorization && (
         <>
-          <div className="size-48 rounded-md bg-foreground p-2">
+          <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2">
             <QrCodeSlot
               url={url}
               isLoading={isLoading}
