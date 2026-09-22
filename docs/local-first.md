@@ -162,6 +162,8 @@ export function usePostDetails(compositeId: string | null | undefined, options?:
 - `fetchFn` is a `fetch*` controller call that fetches from Nexus and persists to Dexie; the live query then re-renders on its own.
 - `fetchFn` runs **only when local data is `null`**. A cache hit is never refreshed by this hook (TTL does that).
 - Never call a network client, TanStack Query or retry logic inside `useLiveQuery`: it breaks Dexie's PSD.
+- A change to `deps` or `enabled` starts a new query lifetime. While its first local read is pending, `data` is `undefined` and `isLoading` is true; the previous lifetime's hit or miss is hidden. Switching away and back does not reuse the earlier snapshot.
+- When disabled, neither `queryFn` nor `fetchFn` runs. After that lifetime settles, `data` is `null` and `isLoading` is false. Cleanup prevents an earlier fetch from changing the current loading state, but does not abort its network request or persistence; controllers and services must still guard stale-session writes.
 
 `rg -l useLocalFirstQuery src/hooks --glob '!*.test.*'` lists the consumers. Some older hooks still hand-roll the `useEffect` + `useLiveQuery` pair; that is debt to migrate when touched, not a pattern to copy.
 
