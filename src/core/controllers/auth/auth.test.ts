@@ -1274,6 +1274,13 @@ describe('AuthController', () => {
       vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({ session: mockSession });
       vi.spyOn(Identity, 'z32FromSession').mockReturnValue(mockPubky);
       const resolveSpy = vi.spyOn(AuthApplication, 'resolveUserIsSignedUp').mockResolvedValue(true);
+      setupNotificationMocks();
+      vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore());
+      vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue({
+        unread: 0,
+        lastRead: 0,
+        lastPolledTimestamp: undefined,
+      });
 
       const result = await AuthController.restorePersistedSession();
 
@@ -1882,12 +1889,8 @@ describe('AuthController', () => {
       vi.spyOn(useSettingsStore, 'getState').mockReturnValue(mockSettingsStore(settingsStore));
 
       const restorePersistedSessionSpy = vi
-        .spyOn(AuthController, 'restorePersistedSession')
-        .mockImplementation(async () => {
-          authStore.session = restoredSession;
-          authStore.sessionExport = null;
-          return true;
-        });
+        .spyOn(AuthApplication, 'restorePersistedSession')
+        .mockResolvedValue({ session: restoredSession });
 
       await AuthController.logout();
 
@@ -1897,7 +1900,7 @@ describe('AuthController', () => {
       expect(clearDatabaseSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('should not run local cleanup twice when persisted session restore fails', async () => {
+    it('should run local cleanup once when persisted session restore fails', async () => {
       const clearDatabaseSpy = mockClearDatabase.mockResolvedValue(undefined);
       const clearCookiesSpy = await spyOnClearCookies();
       await spyOnClearAllQueryClients();
@@ -1910,13 +1913,13 @@ describe('AuthController', () => {
 
       vi.spyOn(useAuthStore, 'getState').mockImplementation(() => authStore);
       vi.spyOn(useOnboardingStore, 'getState').mockReturnValue(createOnboardingStore());
-      vi.spyOn(AuthController, 'restorePersistedSession').mockResolvedValue(false);
+      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue(null);
 
       await AuthController.logout();
 
       expect(logoutSpy).not.toHaveBeenCalled();
-      expect(clearCookiesSpy).not.toHaveBeenCalled();
-      expect(clearDatabaseSpy).not.toHaveBeenCalled();
+      expect(clearCookiesSpy).toHaveBeenCalledOnce();
+      expect(clearDatabaseSpy).toHaveBeenCalledOnce();
     });
 
     it('should reset PubkySpecsSingleton even when homeserver logout fails (issue #538)', async () => {

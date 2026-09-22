@@ -110,8 +110,11 @@ export class AuthController {
   static async restorePersistedSession(): Promise<boolean> {
     this.cancelModerationFollow();
     const authStore = useAuthStore.getState();
+    let isCurrent = captureViewerSession();
     try {
       const result = await AuthApplication.restorePersistedSession({ authStore });
+      if (!isCurrent() || useAuthStore.getState().isLoggingOut) return false;
+
       if (!result) {
         await this.cleanupLocalState();
         return false;
@@ -124,14 +127,16 @@ export class AuthController {
       // header (issue #2070).
       const hasProfile = authStore.hasProfile;
       authStore.init({ session, currentUserPubky, hasProfile });
+      isCurrent = captureViewerSession();
 
       if (hasProfile === null && !(await this.resolveRestoredProfileState({ pubky: currentUserPubky }))) {
-        await this.cleanupLocalState();
+        if (isCurrent() && !useAuthStore.getState().isLoggingOut) await this.cleanupLocalState();
         return false;
       }
 
       return true;
     } catch (error) {
+      if (!isCurrent() || useAuthStore.getState().isLoggingOut) return false;
       const appError = toAppError(error, ErrorService.Local, 'restorePersistedSession');
       await this.cleanupLocalState();
       if (isWrongEnvironmentHomeserverError(appError)) {
@@ -143,7 +148,7 @@ export class AuthController {
 
   /**
    * Resolves the profile state of a session restored from a persisted export, keeping
-   * `hasProfile` unknown until the homeserver answers.
+   * `hasProfile` unknown until the homeserver answers and sign-in initialization completes.
    *
    * While this runs, useAuthStatus keeps the app loading, so no route decides on an
    * undetermined profile. A state that stays undetermined after the retries signs the session
@@ -154,15 +159,21 @@ export class AuthController {
    * @returns true when the store now holds a definite profile state
    */
   private static async resolveRestoredProfileState({ pubky }: { pubky: Pubky }): Promise<boolean> {
+    const isCurrent = captureViewerSession();
     useAuthStore.getState().setIsResolvingProfile(true);
     try {
       const hasProfile = await AuthApplication.resolveUserIsSignedUp({ pubky });
-      if (hasProfile === null) return false;
+      if (!isCurrent() || useAuthStore.getState().isLoggingOut || hasProfile === null) return false;
+
+      // Reloading during sign-in can interrupt settings sync and bootstrap after the session
+      // export was saved. Resume that work before authenticated routes become accessible.
+      if (hasProfile) await this.hydrateMeImAlive({ pubky });
+      if (!isCurrent() || useAuthStore.getState().isLoggingOut) return false;
 
       useAuthStore.getState().setHasProfile(hasProfile);
       return true;
     } finally {
-      useAuthStore.getState().setIsResolvingProfile(false);
+      if (isCurrent()) useAuthStore.getState().setIsResolvingProfile(false);
     }
   }
 
@@ -461,7 +472,7 @@ export class AuthController {
    */
   static async logout() {
     this.cancelModerationFollow();
-    let authStore = useAuthStore.getState();
+    const authStore = useAuthStore.getState();
 
     // Set logging out flag immediately to prevent flash of weird states in UI
     authStore.setIsLoggingOut(true);
@@ -469,21 +480,14 @@ export class AuthController {
     let session = authStore.session;
 
     // Fresh loads can still have a persisted session export before the live session is restored.
-    // Reuse the restore flow so /logout performs a real homeserver sign-out before local cleanup.
+    // Restore credentials directly: revocation must not depend on profile or bootstrap reads.
     if (!session && authStore.sessionExport) {
       try {
-        const didRestoreSession = await this.restorePersistedSession();
-        if (!didRestoreSession) {
-          return;
-        }
+        session = (await AuthApplication.restorePersistedSession({ authStore }))?.session ?? null;
       } catch (error) {
-        // restorePersistedSession already cleaned up local state; a wrong-environment
-        // rejection needs no toast here — the user asked to log out anyway.
-        Logger.warn('Persisted session restore during logout failed; local state already cleaned up', { error });
-        return;
+        // A wrong-environment rejection needs no toast here — the user asked to log out anyway.
+        Logger.warn('Persisted session restore during logout failed; clearing local state', { error });
       }
-      authStore = useAuthStore.getState();
-      session = authStore.session;
     }
 
     if (session) {

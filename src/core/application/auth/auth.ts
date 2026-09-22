@@ -252,7 +252,6 @@ export class AuthApplication {
           : toAppError(error, ErrorService.Homeserver, 'resolveUserIsSignedUp');
         const canRetry = isRetryable(appError) && attempt < this.PROFILE_CHECK_MAX_ATTEMPTS;
         if (!canRetry) {
-          Logger.error('Failed to resolve profile state for a restored session', appError);
           return null;
         }
         Logger.warn(

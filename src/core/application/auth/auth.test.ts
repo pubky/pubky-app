@@ -7,6 +7,7 @@ import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ServerErrorCode } fro
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import type { THomeserverSignUpParams } from '@/services/homeserver/homeserver.types';
@@ -395,6 +396,20 @@ describe('AuthApplication', () => {
 
   describe('resolveUserIsSignedUp', () => {
     const testPubky = 'test-pubky' as Pubky;
+
+    it('should report a terminal profile failure only at its origin', async () => {
+      const logSpy = vi.spyOn(Logger, 'error');
+      const error = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'Session expired', {
+        service: ErrorService.Homeserver,
+        operation: 'userIsSignedUp',
+      });
+      vi.spyOn(HomeserverService, 'request').mockRejectedValue(error);
+
+      await expect(AuthApplication.resolveUserIsSignedUp({ pubky: testPubky })).resolves.toBeNull();
+
+      expect(logSpy).toHaveBeenCalledOnce();
+      expect(logSpy.mock.calls[0][0]).toBe('[homeserver:userIsSignedUp]');
+    });
 
     const createNetworkError = () =>
       new AppError({
