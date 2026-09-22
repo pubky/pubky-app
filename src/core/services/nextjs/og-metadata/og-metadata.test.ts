@@ -987,7 +987,7 @@ describe('NextJsOgMetadataService', () => {
     mockIsIpSafe.mockImplementation((ip) => ip !== '127.0.0.2');
 
     await expect(NextJsOgMetadataService.fetch(new URL('https://example.com/blocked'))).resolves.toEqual({
-      url: 'http://127.0.0.2/',
+      url: 'https://example.com/blocked',
       title: null,
       image: null,
       type: 'website',
@@ -997,5 +997,64 @@ describe('NextJsOgMetadataService', () => {
       '[og-metadata:fetch]',
       expect.objectContaining({ outcome: 'fallback', reason: 'blocked_ip', hostname: '127.0.0.2' }),
     );
+  });
+
+  describe('crawler retry outcome', () => {
+    beforeEach(async () => {
+      const { readResponseBody } = await vi.importActual<typeof import('../nextjs.utils')>('../nextjs.utils');
+      mockReadResponseBody.mockImplementation(readResponseBody);
+      mockFetch.mockResolvedValueOnce(
+        new Response(shellHtml('Useful document title'), { headers: { 'content-type': 'text/html' } }),
+      );
+    });
+
+    it.each([
+      { outcome: '404', respond: () => createErrorResponse(HttpStatusCode.NOT_FOUND) },
+      { outcome: '500', respond: () => createErrorResponse(HttpStatusCode.INTERNAL_SERVER_ERROR) },
+      { outcome: '403', respond: () => createErrorResponse(HttpStatusCode.FORBIDDEN) },
+      { outcome: '429', respond: () => createErrorResponse(HttpStatusCode.TOO_MANY_REQUESTS) },
+      { outcome: 'non-HTML content', respond: () => createOkResponse('application/json') },
+      { outcome: 'network failure', respond: () => Promise.reject(new TypeError('fetch failed')) },
+      { outcome: 'unreadable body', respond: () => createOkResponse('text/html') },
+      {
+        outcome: 'another title-only shell',
+        respond: () => new Response(shellHtml('Second shell title'), { headers: { 'content-type': 'text/html' } }),
+      },
+    ])('should retain the first title and report no recovery after $outcome', async ({ respond }) => {
+      const loggerWarnSpy = await spyOnLoggerWarn();
+      mockFetch.mockImplementationOnce(respond);
+
+      await expect(NextJsOgMetadataService.fetch(new URL(BOT_WALL_URL))).resolves.toMatchObject({
+        title: 'Useful document title',
+        image: null,
+        type: 'website',
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        BOT_WALL_URL,
+        expect.objectContaining({ headers: expect.objectContaining({ 'User-Agent': CRAWLER_USER_AGENT }) }),
+      );
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        '[og-metadata:fetch]',
+        expect.objectContaining({ outcome: 'crawler_retry', trigger: 'empty_metadata', recovered: false }),
+      );
+    });
+
+    it.each([
+      { contentType: 'image/png', type: 'image' },
+      { contentType: 'video/mp4', type: 'video' },
+      { contentType: 'audio/mpeg', type: 'audio' },
+    ])('should use the crawler $type response and report recovery', async ({ contentType, type }) => {
+      const loggerWarnSpy = await spyOnLoggerWarn();
+      mockFetch.mockResolvedValueOnce(createOkResponse(contentType));
+
+      await expect(NextJsOgMetadataService.fetch(new URL(BOT_WALL_URL))).resolves.toEqual({ url: BOT_WALL_URL, type });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        '[og-metadata:fetch]',
+        expect.objectContaining({ outcome: 'crawler_retry', trigger: 'empty_metadata', recovered: true }),
+      );
+    });
   });
 });

@@ -52,10 +52,10 @@ type TOgMetadataRetryTrigger = 'bot_wall' | 'empty_metadata';
 type TOgMetadataRetry = { trigger: TOgMetadataRetryTrigger; statusCode?: number };
 
 /**
- * One fetch attempt: the metadata it produced plus, when the attempt is worth retrying with a
- * crawler identity, why.
+ * One fetch attempt: its metadata, whether it produced a usable preview, and whether a crawler
+ * identity is worth trying. A terminal fallback is not a successful recovery.
  */
-type TOgMetadataAttempt = { result: TOgMetadataResult; retry?: TOgMetadataRetry };
+type TOgMetadataAttempt = { result: TOgMetadataResult; usable: boolean; retry?: TOgMetadataRetry };
 
 /**
  * Internal transport signal for an expected connection-time DNS miss.
@@ -115,10 +115,10 @@ export class NextJsOgMetadataService {
       }
 
       const retried = await fetchOgMetadataWithHeaders(url, CRAWLER_FETCH_HEADERS);
-      // A second bot wall or shell is not worth another hop: keep the first pass's outcome, which
-      // is the same URL-only card.
-      const result = retried.retry ? attempt.result : retried.result;
-      logCrawlerRetry(url, attempt.retry, result);
+      // Keep the first pass's metadata, including a plain title, unless the crawler produces a
+      // usable preview. A terminal failure is no improvement over another bot wall or shell.
+      const result = retried.usable ? retried.result : attempt.result;
+      logCrawlerRetry(url, attempt.retry, retried.usable);
       return result;
     } catch (error) {
       if (error instanceof AppError) {
@@ -146,7 +146,7 @@ async function fetchOgMetadataWithHeaders(url: string, headers: Record<string, s
   // a preflight check for IP literals/all answers, then a connection-time check that pins the socket to vetted answers.
   const fetchResult = await fetchWithRedirectsForOgMetadata(url, headers);
   if (!fetchResult.ok) {
-    return { result: fallback(fetchResult.url, fetchResult.reason, fetchResult.context) };
+    return { result: fallback(fetchResult.url, fetchResult.reason, fetchResult.context), usable: false };
   }
   const { response } = fetchResult;
 
@@ -154,10 +154,10 @@ async function fetchOgMetadataWithHeaders(url: string, headers: Record<string, s
   if (!response.ok) {
     const result = handleErrorResponse(response, url);
     if (response.status === HttpStatusCode.FORBIDDEN || response.status === HttpStatusCode.TOO_MANY_REQUESTS) {
-      return { result, retry: { trigger: 'bot_wall', statusCode: response.status } };
+      return { result, usable: false, retry: { trigger: 'bot_wall', statusCode: response.status } };
     }
 
-    return { result };
+    return { result, usable: false };
   }
 
   // 3. Check for media content types (image/video/audio)
@@ -165,13 +165,13 @@ async function fetchOgMetadataWithHeaders(url: string, headers: Record<string, s
   if (mediaResult) {
     // If it's valid media content type, return result and stop fetch process
     response.body?.cancel().catch(() => {});
-    return { result: mediaResult };
+    return { result: mediaResult, usable: true };
   }
 
   // 4. Validate HTML content type
   const contentTypeOutcome = resolveHtmlContentType(response, url);
   if (contentTypeOutcome) {
-    return { result: contentTypeOutcome };
+    return { result: contentTypeOutcome, usable: false };
   }
 
   // 5. Read response body under the size cap and read deadline
@@ -180,7 +180,7 @@ async function fetchOgMetadataWithHeaders(url: string, headers: Record<string, s
     // The page exists but its body is unusable for enrichment: release the connection and
     // degrade to the fallback card instead of reporting an expected remote outcome.
     response.body?.cancel().catch(() => {});
-    return { result: fallback(url, bodyResult.reason) };
+    return { result: fallback(url, bodyResult.reason), usable: false };
   }
 
   // 6. Extract and normalize metadata. A 200 whose head has no Open Graph tags (a client-rendered
@@ -188,10 +188,10 @@ async function fetchOgMetadataWithHeaders(url: string, headers: Record<string, s
   const result = await extractMetadata(url, bodyResult.body);
   if (!isPreviewUsable(result, bodyResult.body)) {
     logFallback(url, 'empty_metadata', { statusCode: response.status });
-    return { result, retry: { trigger: 'empty_metadata', statusCode: response.status } };
+    return { result, usable: false, retry: { trigger: 'empty_metadata', statusCode: response.status } };
   }
 
-  return { result };
+  return { result, usable: true };
 }
 
 /**
@@ -208,11 +208,11 @@ function isPreviewUsable(result: TOgMetadataResult, html: string): boolean {
   return hasOgMetadata(html);
 }
 
-function logCrawlerRetry(url: string, retry: TOgMetadataRetry, result: TOgMetadataResult): void {
+function logCrawlerRetry(url: string, retry: TOgMetadataRetry, recovered: boolean): void {
   Logger.warn('[og-metadata:fetch]', {
     outcome: 'crawler_retry',
     trigger: retry.trigger,
-    recovered: Boolean(result.title || result.image),
+    recovered,
     hostname: getHostname(url),
     ...(retry.statusCode ? { statusCode: retry.statusCode } : {}),
   });
