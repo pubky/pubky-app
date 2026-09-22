@@ -75,9 +75,9 @@ describe('extractMentionQuery', () => {
       expect(result.range).toEqual({ start: 6, end: 12 });
     });
 
-    it('trims and collapses the spaces of a name query', () => {
-      const result = extractMentionQuery('Hello @John  Carvalho');
-      expect(result.atQuery).toBe('John Carvalho');
+    it('preserves internal spaces of a name query', () => {
+      const result = extractMentionQuery('Hello @John  Carvalho  ');
+      expect(result.atQuery).toBe('John  Carvalho');
     });
 
     it('keeps the whole typed run when words follow the name', () => {

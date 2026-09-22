@@ -43,11 +43,11 @@ function clampCaret(content: string, caret: number): number {
  * Normalize a name query for the search prefix
  *
  * The pattern keeps the whitespace the caret sits in, so the prefix handed to the
- * name search is trimmed and its space runs collapsed: `@John  ` still searches
- * for `John`.
+ * name search trims only the edges: `@John  ` still searches for `John`, while
+ * internal spaces stay intact to match names in the Nexus index.
  */
 function normalizeNameQuery(query: string): string {
-  return query.replace(/ +/g, ' ').trim();
+  return query.trim();
 }
 
 /**

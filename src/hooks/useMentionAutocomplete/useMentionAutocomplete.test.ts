@@ -142,6 +142,15 @@ describe('useMentionAutocomplete', () => {
     expect(mockGetUsersByName).toHaveBeenCalledWith(expect.objectContaining({ prefix: name }));
   });
 
+  it('preserves repeated internal spaces in the name search prefix', async () => {
+    const content = 'Hello @John  Carvalho ';
+    renderHook(() => useMentionAutocomplete({ content, caret: content.length }));
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(mockGetUsersByName).toHaveBeenCalledWith(expect.objectContaining({ prefix: 'John  Carvalho' }));
+  });
+
   it('triggers search when pk: pattern is detected at end of content (legacy)', async () => {
     renderHook(() => useMentionAutocomplete({ content: 'Hello pk:abc', caret: 12 }));
 
