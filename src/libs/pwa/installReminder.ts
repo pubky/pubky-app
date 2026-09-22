@@ -4,7 +4,7 @@ import { PWA_INSTALL_REMINDER_DELAYS_MS, PWA_INSTALL_STORAGE_ID } from '@/config
 
 /**
  * Per-user snooze state for the "Install Pubky" banner, kept in localStorage under
- * the feature-discovery namespace (same storage pattern as `useCollectionsNavDiscovery`).
+ * the feature-discovery namespace (per-user one-time UI state).
  *
  * "Later" snoozes with escalating delays; installing (or confirming the iOS steps)
  * dismisses the banner permanently. Storage failures never throw: an unreadable
