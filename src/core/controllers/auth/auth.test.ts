@@ -11,6 +11,7 @@ import { NotificationCoordinator } from '@/coordinators/notifications/notificati
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { clearDatabase } from '@/database/franky/franky.helpers';
+import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -22,7 +23,6 @@ import { NotificationType } from '@/models/notification/notification.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
-import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { AuthStore } from '@/stores/auth/auth.types';
 import { useHomeStore } from '@/stores/home/home.store';

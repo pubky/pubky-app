@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { getPassportUrl } from '@/config/network';
 import {
   PASSPORT_ATTEMPT_TIMEOUT_MS,
+  PASSPORT_POPUP_CLOSED_CONFIRMATIONS,
   PASSPORT_POPUP_CLOSED_POLL_MS,
   PASSPORT_POPUP_FEATURES,
   PASSPORT_POPUP_NAME_PREFIX,
 } from '@/config/passport';
 import { AuthController } from '@/controllers/auth/auth';
+import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { isAppError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import {
@@ -21,7 +23,6 @@ import {
 } from '@/libs/passport/passport';
 import type { PassportOutcome } from '@/libs/passport/passport.types';
 import { toast } from '@/molecules/Toaster/toast';
-import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import type {
   PassportAttemptResult,
@@ -34,8 +35,10 @@ import type {
  * One attempt's lifecycle:
  * - `authorizing`: popup open, waiting for the relay. Popup outcomes, popup closure and the
  *   wall-clock timeout can all end the attempt here.
- * - `initializing`: the SDK session was accepted. Authorization signals are torn down first so
- *   nothing at hook level can interrupt or misreport `initializeAuthenticatedSession`.
+ * - `initializing`: the SDK session was accepted. The timeout and the popup-closed poll are torn
+ *   down first so nothing at hook level can interrupt or misreport `initializeAuthenticatedSession`.
+ *   The message listener stays up so a late Passport `success` still gets its ack (otherwise
+ *   Passport falls back to navigating the popup to the callback page).
  * - `settled`: `onAttemptSettled` fired exactly once.
  */
 type AttemptPhase = 'authorizing' | 'initializing' | 'settled';
@@ -47,8 +50,10 @@ type PassportAttempt = {
   /** A validated Passport `success` was received: popup closure is expected and must not fail the attempt. */
   successRecorded: boolean;
   cancelAuthFlow: (() => void) | null;
-  /** Tear down listener, timeout and popup poll. Idempotent. */
-  stopAuthorizationSignals: () => void;
+  /** Tear down the timeout and the popup-closed poll. Idempotent. */
+  stopAuthorizationTimers: () => void;
+  /** Remove the `message` listener. Idempotent. */
+  stopMessageListener: () => void;
 };
 
 const FAILURE_TOAST_COPY: Record<PassportFailureReason, string> = {
@@ -59,12 +64,6 @@ const FAILURE_TOAST_COPY: Record<PassportFailureReason, string> = {
   timeout: 'Google sign-in timed out. Try again.',
   'flow-error': 'Sign in with Google failed. Try again.',
 };
-
-const isAuthFlowCanceledError = (error: unknown): boolean =>
-  typeof error === 'object' &&
-  error !== null &&
-  'name' in error &&
-  (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME;
 
 /**
  * Drive one Pubky Passport ("Continue with Google") attempt.
@@ -98,7 +97,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
   const settle = (attempt: PassportAttempt, result: PassportAttemptResult) => {
     if (attempt.phase === 'settled' || !isCurrent(attempt)) return;
     attempt.phase = 'settled';
-    attempt.stopAuthorizationSignals();
+    attempt.stopAuthorizationTimers();
     onAttemptSettledRef.current?.({ attemptId: attempt.id, result });
   };
 
@@ -135,12 +134,13 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     const passportOrigin = getPassportOrigin(passportUrl);
 
     const onMessage = (event: MessageEvent<unknown>) => {
-      if (attempt.phase !== 'authorizing' || !isCurrent(attempt)) return;
+      if (attempt.phase === 'settled' || !isCurrent(attempt)) return;
 
       const passportOutcome = parsePassportOutcomeMessage(event, attempt.popup, passportOrigin);
       if (passportOutcome) {
         try {
           // Acknowledge immediately so Passport can close instead of navigating to the callback.
+          // Also during initialization: the session may beat Passport's own success message.
           attempt.popup.postMessage(buildPassportOutcomeAck(passportOutcome.messageId), passportOrigin);
         } catch {
           // Passport falls back to callback navigation; the callback page reports the same outcome.
@@ -156,17 +156,31 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     // Registered before the popup navigates so no outcome can be missed.
     window.addEventListener('message', onMessage);
     const timeoutId = window.setTimeout(() => fail(attempt, 'timeout'), PASSPORT_ATTEMPT_TIMEOUT_MS);
+    // The callback page posts its outcome and closes in the same tick, and `popup.closed` flips
+    // before the posted message is delivered. Require consecutive closed observations so the
+    // message task always gets a chance to record `success` first.
+    let closedObservations = 0;
     const popupPollId = window.setInterval(() => {
-      if (attempt.popup.closed && !attempt.successRecorded) fail(attempt, 'popup-closed');
+      if (!attempt.popup.closed || attempt.successRecorded) {
+        closedObservations = 0;
+        return;
+      }
+      closedObservations += 1;
+      if (closedObservations >= PASSPORT_POPUP_CLOSED_CONFIRMATIONS) fail(attempt, 'popup-closed');
     }, PASSPORT_POPUP_CLOSED_POLL_MS);
 
-    let signalsStopped = false;
-    attempt.stopAuthorizationSignals = () => {
-      if (signalsStopped) return;
-      signalsStopped = true;
-      window.removeEventListener('message', onMessage);
+    let timersStopped = false;
+    attempt.stopAuthorizationTimers = () => {
+      if (timersStopped) return;
+      timersStopped = true;
       window.clearTimeout(timeoutId);
       window.clearInterval(popupPollId);
+    };
+    let listenerStopped = false;
+    attempt.stopMessageListener = () => {
+      if (listenerStopped) return;
+      listenerStopped = true;
+      window.removeEventListener('message', onMessage);
     };
 
     try {
@@ -188,7 +202,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
 
       // Session accepted: from here on nothing popup-related may fail or time out the attempt.
       attempt.phase = 'initializing';
-      attempt.stopAuthorizationSignals();
+      attempt.stopAuthorizationTimers();
 
       try {
         await AuthController.initializeAuthenticatedSession({ session });
@@ -210,15 +224,17 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     } catch (error) {
       if (attempt.phase !== 'authorizing' || !isCurrent(attempt)) return;
       if (isAuthFlowCanceledError(error)) {
-        // Superseded by a newer auth flow (for example a Ring request): end quietly.
-        settle(attempt, 'failed');
+        // A newer auth flow (for example a recovery-phrase sign-in) took over: end quietly and
+        // do not report a failure, the other flow owns the session now.
+        settle(attempt, 'superseded');
         return;
       }
       // App errors were already logged and captured by their Err.* factory.
       if (!isAppError(error)) Logger.error('Passport authorization failed:', error);
       fail(attempt, 'flow-error');
     } finally {
-      attempt.stopAuthorizationSignals();
+      attempt.stopAuthorizationTimers();
+      attempt.stopMessageListener();
       try {
         if (!attempt.popup.closed) attempt.popup.close();
       } catch {
@@ -241,17 +257,19 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       return;
     }
 
-    // Abandoned browser-generated keys must never survive into a Passport identity.
-    useOnboardingStore.getState().reset();
-
     const attemptId = crypto.randomUUID();
     // Opened synchronously from the click; awaiting first would trigger popup blocking.
     const popup = window.open('about:blank', `${PASSPORT_POPUP_NAME_PREFIX}${attemptId}`, PASSPORT_POPUP_FEATURES);
     if (!popup) {
+      // No auth flow was started and nothing else was touched: report it as its own outcome so
+      // callers do not regenerate a Ring request that is still perfectly valid.
       toast({ variant: 'error', description: FAILURE_TOAST_COPY['popup-blocked'] });
-      onAttemptSettledRef.current?.({ attemptId, result: 'failed' });
+      onAttemptSettledRef.current?.({ attemptId, result: 'popup-blocked' });
       return;
     }
+
+    // Abandoned browser-generated keys must never survive into a Passport identity.
+    useOnboardingStore.getState().reset();
 
     const attempt: PassportAttempt = {
       id: attemptId,
@@ -259,7 +277,8 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       phase: 'authorizing',
       successRecorded: false,
       cancelAuthFlow: null,
-      stopAuthorizationSignals: () => undefined,
+      stopAuthorizationTimers: () => undefined,
+      stopMessageListener: () => undefined,
     };
     activeAttemptRef.current = attempt;
     setIsPending(true);

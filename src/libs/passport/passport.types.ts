@@ -7,7 +7,7 @@ export type PassportOutcomeMessage = {
   messageId: string;
 };
 
-/** Validated message posted by the same-origin `/passport/return` fallback page. */
+/** Validated message posted by the same-origin static fallback page (`public/passport/return.html`). */
 export type PassportReturnMessage = {
   attemptId: string;
   outcome: PassportOutcome;
@@ -18,13 +18,6 @@ export type PassportOutcomeAck = {
   type: string;
   version: number;
   messageId: string;
-};
-
-/** Message the `/passport/return` page posts to its opener. */
-export type PassportReturnPostMessage = {
-  type: string;
-  attemptId: string;
-  outcome: PassportOutcome;
 };
 
 /** Minimal shape of a `MessageEvent` needed for validation (keeps the helpers testable without DOM types). */

@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import type { PassportAttemptSettledEvent } from '@/hooks/usePassportAuth/usePassportAuth.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { SignInContent, SignInFooter } from './SignIn';
@@ -110,7 +111,7 @@ const passportMocks = vi.hoisted(() => ({
   isPending: false,
   startPassportAuth: vi.fn(),
   lastOptions: null as {
-    onAttemptSettled?: (event: { attemptId: string; result: 'session' | 'failed' }) => void;
+    onAttemptSettled?: (event: PassportAttemptSettledEvent) => void;
   } | null,
 }));
 vi.mock('@/hooks/usePassportEligibility/usePassportEligibility', () => ({
@@ -635,6 +636,28 @@ describe('SignInContent - Passport enabled', () => {
       passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-2', result: 'failed' });
     });
     expect(mockFetchUrl).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not start a Ring flow when a Passport attempt is superseded by another sign-in', () => {
+    render(<SignInContent />);
+
+    act(() => {
+      // A recovery-phrase restore completed while the popup was open: that session is bootstrapping,
+      // and a Ring regeneration would run clearDatabase() underneath it.
+      passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-1', result: 'superseded' });
+    });
+
+    expect(mockFetchUrl).not.toHaveBeenCalled();
+  });
+
+  it('does not start a Ring flow when the Passport popup was blocked', () => {
+    render(<SignInContent />);
+
+    act(() => {
+      passportMocks.lastOptions?.onAttemptSettled?.({ attemptId: 'attempt-1', result: 'popup-blocked' });
+    });
+
+    expect(mockFetchUrl).not.toHaveBeenCalled();
   });
 
   it('does not start a Ring flow when a Passport attempt ends with a session, even after the store reset', () => {

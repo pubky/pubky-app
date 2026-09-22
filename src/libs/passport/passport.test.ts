@@ -10,13 +10,11 @@ import {
   buildPassportAuthorizeUrl,
   buildPassportCallbacks,
   buildPassportOutcomeAck,
-  buildPassportReturnPostMessage,
   buildPassportReturnUrl,
   getPassportOrigin,
   isPassportOutcome,
   parsePassportOutcomeMessage,
   parsePassportReturnMessage,
-  parsePassportReturnQuery,
 } from './passport';
 
 const PASSPORT_URL = 'https://passport.example.com/';
@@ -62,7 +60,8 @@ describe('passport helpers', () => {
       const url = new URL(buildPassportReturnUrl(APP_ORIGIN, ATTEMPT_ID, 'error'));
 
       expect(url.origin).toBe(APP_ORIGIN);
-      expect(url.pathname).toBe('/passport/return');
+      // Static file under public/ (not a Next route), so the popup never boots the app shell.
+      expect(url.pathname).toBe('/passport/return.html');
       expect(url.searchParams.get('attempt')).toBe(ATTEMPT_ID);
       expect(url.searchParams.get('outcome')).toBe('error');
     });
@@ -204,7 +203,7 @@ describe('passport helpers', () => {
     });
   });
 
-  describe('buildPassportOutcomeAck / buildPassportReturnPostMessage', () => {
+  describe('buildPassportOutcomeAck', () => {
     it('builds the acknowledgement for a message id', () => {
       expect(buildPassportOutcomeAck('msg-9')).toEqual({
         type: PASSPORT_ACK_MESSAGE_TYPE,
@@ -212,29 +211,5 @@ describe('passport helpers', () => {
         messageId: 'msg-9',
       });
     });
-
-    it('builds the callback page post message', () => {
-      expect(buildPassportReturnPostMessage(ATTEMPT_ID, 'success')).toEqual({
-        type: PASSPORT_RETURN_MESSAGE_TYPE,
-        attemptId: ATTEMPT_ID,
-        outcome: 'success',
-      });
-    });
-  });
-
-  describe('parsePassportReturnQuery', () => {
-    it('reads attempt and outcome from the callback query string', () => {
-      expect(parsePassportReturnQuery(`?attempt=${ATTEMPT_ID}&outcome=success`)).toEqual({
-        attemptId: ATTEMPT_ID,
-        outcome: 'success',
-      });
-    });
-
-    it.each(['', '?attempt=a', '?outcome=success', `?attempt=${ATTEMPT_ID}&outcome=nope`, '?attempt=&outcome=success'])(
-      'returns null for %s',
-      (search) => {
-        expect(parsePassportReturnQuery(search)).toBeNull();
-      },
-    );
   });
 });

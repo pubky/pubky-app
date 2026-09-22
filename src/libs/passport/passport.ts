@@ -15,13 +15,13 @@ import type {
   PassportOutcomeAck,
   PassportOutcomeMessage,
   PassportReturnMessage,
-  PassportReturnPostMessage,
 } from './passport.types';
 
 /**
  * Pure helpers for the Pubky Passport hand-off. No IO, no DOM access beyond the values passed in.
- * The hook (`usePassportAuth`) owns the popup, listeners and timers; the callback page owns the
- * `window.opener` post. Everything here is deterministic and unit-tested in isolation.
+ * The hook (`usePassportAuth`) owns the popup, listeners and timers; the static callback page
+ * (`public/passport/return.html`) owns the `window.opener` post. Everything here is deterministic
+ * and unit-tested in isolation.
  */
 
 const PASSPORT_OUTCOMES: ReadonlySet<string> = new Set<PassportOutcome>(['success', 'error', 'cancel']);
@@ -123,25 +123,4 @@ export function buildPassportOutcomeAck(messageId: string): PassportOutcomeAck {
     version: PASSPORT_MESSAGE_VERSION,
     messageId,
   };
-}
-
-/** Payload the `/passport/return` page posts to its opener. */
-export function buildPassportReturnPostMessage(attemptId: string, outcome: PassportOutcome): PassportReturnPostMessage {
-  return {
-    type: PASSPORT_RETURN_MESSAGE_TYPE,
-    attemptId,
-    outcome,
-  };
-}
-
-/**
- * Read the untrusted `attempt` / `outcome` query parameters of the callback page.
- * Returns `null` unless both are present and the outcome is a known value.
- */
-export function parsePassportReturnQuery(search: string): PassportReturnMessage | null {
-  const params = new URLSearchParams(search);
-  const attemptId = params.get(PASSPORT_RETURN_QUERY.attempt);
-  const outcome = params.get(PASSPORT_RETURN_QUERY.outcome);
-  if (!attemptId || !isPassportOutcome(outcome)) return null;
-  return { attemptId, outcome };
 }

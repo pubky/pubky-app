@@ -49,10 +49,6 @@ vi.mock('@/stores/auth/auth.store', () => ({
     return selector ? selector(state) : state;
   },
 }));
-vi.mock('@/services/homeserver/error.utils', () => ({
-  AUTH_FLOW_CANCELED_ERROR_NAME: 'AuthFlowCanceled',
-}));
-
 describe('useAuthUrl', () => {
   beforeEach(() => {
     vi.clearAllMocks();

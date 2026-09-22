@@ -103,8 +103,10 @@ export const SignInContent = () => {
   const passportEligibility = usePassportEligibility();
   const isPassportEnabled = passportEligibility === 'enabled';
   // Starting Passport cancels the pending Ring request (single active auth flow), which expires the QR.
-  // Regenerate it exactly once per Passport attempt that ends without a session; a successful
-  // attempt navigates away via RouteGuard and must never start another Ring flow.
+  // Regenerate it exactly once per Passport attempt that genuinely failed. Never on `session`
+  // (RouteGuard navigates away), `superseded` (another sign-in, e.g. a recovery phrase, owns the
+  // session and is bootstrapping: a new Ring flow would clear its database) or `popup-blocked`
+  // (no flow was started, the Ring request on screen is still valid).
   const ringRefetchedForAttemptRef = useRef<string | null>(null);
   const handlePassportAttemptSettled = ({ attemptId, result }: PassportAttemptSettledEvent) => {
     if (result !== 'failed') return;

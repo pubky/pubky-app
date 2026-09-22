@@ -3,20 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@synonymdev/pubky';
 import { AuthController } from '@/controllers/auth/auth';
+import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { isAppError, isAuthError, isTimeoutError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
-import { AUTH_FLOW_CANCELED_ERROR_NAME } from '@/services/homeserver/error.utils';
 import type { UseAuthUrlOptions, UseAuthUrlReturn } from './useAuthUrl.types';
-
-/** Returns true when the auth flow was cancelled by the controller (superseded or torn down), not failed. */
-const isAuthFlowCanceledError = (error: unknown): boolean =>
-  typeof error === 'object' &&
-  error !== null &&
-  'name' in error &&
-  (error as { name?: unknown }).name === AUTH_FLOW_CANCELED_ERROR_NAME;
 
 /** Returns true if the error indicates the auth flow has expired (timeout or SESSION_EXPIRED). */
 const isAuthFlowExpiredError = (error: unknown): boolean => {

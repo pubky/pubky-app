@@ -14,6 +14,7 @@ import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { clearDatabase } from '@/database/franky/franky.helpers';
+import { createCanceledError } from '@/libs/error/auth-flow-canceled';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/libs/error/error.utils';
 import { Identity } from '@/libs/identity/identity';
@@ -25,8 +26,6 @@ import type { Pubky } from '@/models/models.types';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { PubkySpecsSingleton } from '@/pipes/pipes.builder';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
-// Pure error factory shared with the auth-flow poll helper (no IO; keeps one canceled-error shape).
-import { createCanceledError } from '@/services/homeserver/error.utils';
 import type {
   TGenerateAuthUrlResult,
   TGeneratePassportAuthUrlParams,

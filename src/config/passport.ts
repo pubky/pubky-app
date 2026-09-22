@@ -16,8 +16,15 @@ export const PASSPORT_X_SOURCE = 'Pubky';
 /** Path Passport is told to open on `/authorize`. The authorization URL travels in the fragment (`#d=`). */
 export const PASSPORT_AUTHORIZE_PATH = '/authorize';
 
-/** Same-origin HTTPS callback route Passport navigates to when the popup hand-off cannot complete. */
-export const PASSPORT_RETURN_PATH = '/passport/return';
+/**
+ * Same-origin HTTPS callback Passport navigates the popup to when the postMessage hand-off cannot
+ * complete. A static file (`public/passport/return.html`), not a Next route: a route under the root
+ * layout would boot the session restore inside the popup while the opener is bootstrapping the same
+ * origin (see `docs/pwa.md` for the same rule on the offline page). This is the single source of the
+ * path; the page's inline script mirrors {@link PASSPORT_RETURN_MESSAGE_TYPE} and
+ * {@link PASSPORT_RETURN_QUERY}.
+ */
+export const PASSPORT_RETURN_PATH = '/passport/return.html';
 
 /** Query parameter names on {@link PASSPORT_RETURN_PATH}. Untrusted: they never sign the user in. */
 export const PASSPORT_RETURN_QUERY = {
@@ -45,6 +52,12 @@ export const PASSPORT_MESSAGE_VERSION = 1;
 
 /** Interval for detecting that the user closed the popup before Passport reported an outcome. */
 export const PASSPORT_POPUP_CLOSED_POLL_MS = 500;
+
+/**
+ * Consecutive closed observations before a closed popup fails the attempt. The callback page
+ * posts its outcome and closes in the same tick, so a single observation could race the message.
+ */
+export const PASSPORT_POPUP_CLOSED_CONFIRMATIONS = 2;
 
 /**
  * Wall-clock bound for the authorization phase of one Passport attempt. The relay poll helper only

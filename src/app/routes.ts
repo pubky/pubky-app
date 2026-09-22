@@ -18,8 +18,6 @@ export enum ONBOARDING_ROUTES {
 export enum AUTH_ROUTES {
   SIGN_IN = '/sign-in',
   LOGOUT = '/logout',
-  /** Same-origin HTTPS callback Pubky Passport navigates to when the popup hand-off cannot complete. */
-  PASSPORT_RETURN = '/passport/return',
 }
 
 export enum APP_ROUTES {
@@ -104,9 +102,6 @@ export const PUBLIC_ROUTES: string[] = [
   // Sentry verification harness must be reachable without a session on preview deploys.
   // The page returns 404 in production via isSentryTestHarnessEnabled().
   DEV_ROUTES.SENTRY_TEST,
-  // Passport callback page: opened in the popup regardless of the opener's auth state; it only
-  // relays an outcome to the opener and never signs the user in.
-  AUTH_ROUTES.PASSPORT_RETURN,
 ];
 
 export const ALLOWED_ROUTES = [
