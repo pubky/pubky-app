@@ -1,6 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
+import { AuthErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useInlineImageUpload } from './useInlineImageUpload';
@@ -188,6 +191,27 @@ describe('useInlineImageUpload', () => {
       expect(vi.mocked(toast)).toHaveBeenCalledWith(
         expect.objectContaining({ variant: 'error', description: 'Could not upload image. Try again.' }),
       );
+      expect(result.current.getPreviewUrl(fileUri('a'))).toBeNull();
+    });
+
+    it('toasts sign-in once and keeps the tagged rejection when the upload is UNAUTHORIZED (#2555)', async () => {
+      vi.mocked(FileController.commitCreate).mockRejectedValue(
+        Err.auth(AuthErrorCode.UNAUTHORIZED, 'Unauthorized', {
+          service: ErrorService.Homeserver,
+          operation: 'commitCreate',
+        }),
+      );
+      const { result } = setup();
+
+      await expect(result.current.uploadInlineImage(imageFile())).rejects.toMatchObject({
+        name: INLINE_IMAGE_UPLOAD_REJECTION_NAME,
+      });
+
+      expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'error', description: 'Session expired. Please sign in.' }),
+      );
+      expect(result.current.uploadingCount).toBe(0);
       expect(result.current.getPreviewUrl(fileUri('a'))).toBeNull();
     });
 

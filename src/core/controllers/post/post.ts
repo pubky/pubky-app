@@ -4,6 +4,7 @@ import type { EnrichedPostDetails } from '@/application/moderation/moderation.ty
 import { PostApplication } from '@/application/post/post';
 import type { TGetDetailsByIdsParams, TGetOrFetchPostParams } from '@/application/post/post.types';
 import { TagKind, type TCreateTagInput } from '@/application/tag/tag.types';
+import { POST_MAX_TAGS } from '@/config/posts';
 import type {
   TCreateCollectionParams,
   TCreatePostParams,
@@ -21,10 +22,12 @@ import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { toAppError } from '@/libs/error/error.utils';
+import { isAppError, requiresLogin, toAppError } from '@/libs/error/error.utils';
 import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
+import { parseArticleContent } from '@/libs/post/articleContent';
 import { isAuthorFileUri } from '@/libs/post/articleInlineImages';
+import { extractHashtagLabelsFromMarkdown, mergeTagLabels } from '@/libs/post/hashtags';
 import { isPostDeleted } from '@/libs/utils/utils';
 import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { CollectionPost, TAuthoredCollectionsParams } from '@/models/post/collection/collectionPost.types';
@@ -218,7 +221,15 @@ export class PostController {
 
     const { id: postId } = meta;
 
-    if (tags) {
+    // Hashtags in the content become tags of the created post (#1882). Articles store
+    // their title (plain text, never rendered as a hashtag) and body (markdown) as JSON.
+    const hashtagLabels = extractHashtagLabelsFromMarkdown(
+      isArticle ? (parseArticleContent(content)?.body ?? '') : content,
+      isArticle,
+    );
+    const tagLabels = mergeTagLabels(tags ?? [], hashtagLabels, POST_MAX_TAGS);
+
+    if (tagLabels.length > 0) {
       const tagTargetCompositeId = resolveTagTargetCompositeIdForPostCreate({
         authorId,
         newPostId: postId,
@@ -226,7 +237,7 @@ export class PostController {
         content,
         attachments,
       });
-      const tagsMetadata = tags.map((tag) => {
+      const tagsMetadata = tagLabels.map((tag) => {
         return {
           taggerId: authorId,
           taggedId: tagTargetCompositeId,
@@ -269,6 +280,11 @@ export class PostController {
         await FileApplication.commitCreate({ fileAttachments: [fileAttachment] });
         coverImageUrl = fileAttachment.fileResult.meta.url;
       } catch (error) {
+        // Keep an expired-session failure classified instead of wrapping it as
+        // validation, so the caller can ask for a sign-in rather than reporting a
+        // retryable cover-upload failure (issue #2555).
+        if (isAppError(error) && requiresLogin(error)) throw error;
+
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
           service: ErrorService.Local,
           operation: 'commitCreateCollection',
@@ -373,6 +389,10 @@ export class PostController {
         coverImageUrl = fileAttachment.fileResult.meta.url;
         uploadedCoverUri = coverImageUrl;
       } catch (error) {
+        // Same as `commitCreateCollection`: an expired session keeps its auth
+        // classification so the caller can prompt for sign-in (issue #2555).
+        if (isAppError(error) && requiresLogin(error)) throw error;
+
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Failed to upload collection cover image', {
           service: ErrorService.Local,
           operation: 'commitEditCollection',

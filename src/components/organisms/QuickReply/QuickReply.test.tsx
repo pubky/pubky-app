@@ -60,6 +60,7 @@ function createUsePostInputReturn(options: unknown, overrides: Record<string, un
     handleDragOver: vi.fn(),
     handleDrop: vi.fn(),
     handlePaste: vi.fn(),
+    handleSelectionChange: vi.fn(),
     setTags: vi.fn(),
     ...overrides,
   };
@@ -265,6 +266,23 @@ describe('QuickReply', () => {
     expect(screen.getByTestId('quick-reply-connector').parentElement).toHaveClass('absolute', '-inset-y-px', 'left-0');
     expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('height', '175');
     expect(screen.getByTestId('quick-reply-connector')).toHaveAttribute('variant', 'last');
+  });
+
+  it('forwards caret selection events to usePostInput handleSelectionChange', () => {
+    const handleSelectionChange = vi.fn();
+    mockUsePostInput.mockImplementation((options: unknown) =>
+      createUsePostInputReturn(options, { handleSelectionChange }),
+    );
+
+    render(<QuickReply parentPostId="author:post1" />);
+
+    const textarea = screen.getByTestId('quick-reply-textarea');
+    fireEvent.select(textarea);
+    expect(handleSelectionChange).toHaveBeenCalled();
+
+    handleSelectionChange.mockClear();
+    fireEvent.keyUp(textarea, { key: 'ArrowLeft' });
+    expect(handleSelectionChange).toHaveBeenCalled();
   });
 
   it('forwards clipboard paste to usePostInput handlePaste (image attachments)', () => {

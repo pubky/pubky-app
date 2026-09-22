@@ -1,7 +1,11 @@
+import { useEffect } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
 import { ThreadTree } from './ThreadTree';
+
+// The composer keeps the draft in its own state, so a remount is what loses it.
+const { quickReplyMounts } = vi.hoisted(() => ({ quickReplyMounts: { count: 0 } }));
 
 vi.mock('@/hooks/useThreadReplies/useThreadReplies', () => ({
   useThreadReplies: vi.fn(),
@@ -13,9 +17,15 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/organisms/QuickReply/QuickReply', () => {
   return {
-    QuickReply: ({ parentPostId, connectorVariant = 'last' }: { parentPostId: string; connectorVariant?: string }) => (
-      <div data-testid="quick-reply" data-parent-post-id={parentPostId} data-connector-variant={connectorVariant} />
-    ),
+    QuickReply: ({ parentPostId, connectorVariant = 'last' }: { parentPostId: string; connectorVariant?: string }) => {
+      useEffect(() => {
+        quickReplyMounts.count += 1;
+      }, []);
+
+      return (
+        <div data-testid="quick-reply" data-parent-post-id={parentPostId} data-connector-variant={connectorVariant} />
+      );
+    },
   };
 });
 
@@ -47,6 +57,7 @@ vi.mock('@/molecules/ShowMoreReplies/ShowMoreReplies', () => {
 describe('ThreadTree', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    quickReplyMounts.count = 0;
   });
 
   it('renders a terminal quick reply when there are no replies', () => {
@@ -64,6 +75,48 @@ describe('ThreadTree', () => {
     expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-parent-post-id', 'author:post-1');
     expect(screen.getByTestId('quick-reply')).toHaveAttribute('data-connector-variant', 'last');
     expect(screen.queryByTestId('reply-with-nested')).not.toBeInTheDocument();
+  });
+
+  it('keeps the quick reply composer mounted when the first reply appears and is rolled back', () => {
+    const expandAll = vi.fn(async () => {});
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: [],
+      totalCount: 0,
+      hasMore: false,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll,
+    });
+
+    const { rerender } = render(<ThreadTree postId="author:post-1" showQuickReply={true} />);
+    const composer = screen.getByTestId('quick-reply');
+    expect(quickReplyMounts.count).toBe(1);
+
+    // The optimistic local write of a reply lands before the homeserver write is attempted
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: ['author:reply-1'],
+      totalCount: 1,
+      hasMore: false,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll,
+    });
+    rerender(<ThreadTree postId="author:post-1" showQuickReply={true} />);
+    expect(quickReplyMounts.count).toBe(1);
+    expect(screen.getByTestId('quick-reply')).toBe(composer);
+
+    // ... and its rollback, when the homeserver write fails, takes the reply away again
+    vi.mocked(useThreadReplies).mockReturnValue({
+      replyIds: [],
+      totalCount: 0,
+      hasMore: false,
+      showAll: false,
+      isExpandingAll: false,
+      expandAll,
+    });
+    rerender(<ThreadTree postId="author:post-1" showQuickReply={true} />);
+    expect(quickReplyMounts.count).toBe(1);
+    expect(screen.getByTestId('quick-reply')).toBe(composer);
   });
 
   it('renders null when no replies and quick reply is disabled', () => {
