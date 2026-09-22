@@ -9,7 +9,7 @@ import type { RetryConfig } from '@/libs/query-client/query-client.types';
  * returns 404 may become available shortly after, so the budget is sized for that
  * indexing window, not for a missing resource.
  */
-export const NEXUS_RETRY_CONFIG: RetryConfig = {
+const NEXUS_RETRY_CONFIG: RetryConfig = {
   // Don't retry client errors (400), internal errors, or malformed responses
   nonRetryable: [ClientErrorCode.BAD_REQUEST, ServerErrorCode.INTERNAL_ERROR, ServerErrorCode.INVALID_RESPONSE],
   limits: {

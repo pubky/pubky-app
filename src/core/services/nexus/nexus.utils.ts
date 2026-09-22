@@ -160,7 +160,9 @@ export async function queryNexus<T>({
   staleTime,
   notFoundRetries,
 }: TQueryNexusParams): Promise<T> {
-  const queryKey = ['nexus', url, method, body];
+  // Different retry budgets must not share an in-flight request: the first caller's
+  // retryer would otherwise decide when every consumer gives up.
+  const queryKey = ['nexus', url, method, body, ...(notFoundRetries === undefined ? [] : [{ notFoundRetries }])];
   // A scoped 404 budget replaces the client-level retry option wholesale, so the full
   // policy is derived from the shared Nexus config and passed with the query.
   const retryPolicy = notFoundRetries === undefined ? undefined : nexusRetryPolicy(notFoundRetries);

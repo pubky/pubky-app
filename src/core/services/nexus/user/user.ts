@@ -9,10 +9,11 @@ import type {
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { userApi } from '@/services/nexus/user/user.api';
 import {
+  PROFILE_LOOKUP_NOT_FOUND_RETRIES,
+  type TUserDetailsParams,
   type TUserPaginationParams,
   type TUserTaggersParams,
   type TUserTagsParams,
-  USER_DETAILS_NOT_FOUND_RETRIES,
 } from '@/services/nexus/user/user.types';
 
 /**
@@ -58,16 +59,18 @@ export class NexusUserService {
   /**
    * Retrieves user details from Nexus API.
    *
-   * A 404 here is the not-found verdict for a whole page, so the lookup runs on the
-   * short profile budget instead of the shared indexing one (see
-   * `USER_DETAILS_NOT_FOUND_RETRIES`).
+   * Shared detail consumers retain the indexing retry window. Only a profile page
+   * opts into the shorter not-found budget via `profileLookup`.
    *
    * @param params - Parameters containing user ID
    * @returns User details including name, bio, status, image, and links
    */
-  static async details(params: TUserId): Promise<NexusUserDetails> {
+  static async details({ profileLookup, ...params }: TUserDetailsParams): Promise<NexusUserDetails> {
     const url = userApi.details(params);
-    return await queryNexus<NexusUserDetails>({ url, notFoundRetries: USER_DETAILS_NOT_FOUND_RETRIES });
+    return await queryNexus<NexusUserDetails>({
+      url,
+      ...(profileLookup ? { notFoundRetries: PROFILE_LOOKUP_NOT_FOUND_RETRIES } : {}),
+    });
   }
 
   /**

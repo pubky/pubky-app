@@ -7,12 +7,12 @@ import { NexusUserService } from '@/services/nexus/user/user';
 import { buildUrlWithQuery } from '../nexus.utils';
 import { userApi } from './user.api';
 import {
+  PROFILE_LOOKUP_NOT_FOUND_RETRIES,
   TUserPaginationParams,
   TUserRelationshipParams,
   TUserTaggersParams,
   TUserTagsParams,
   TUserViewParams,
-  USER_DETAILS_NOT_FOUND_RETRIES,
   USER_PATH_PARAMS,
 } from './user.types';
 
@@ -221,15 +221,23 @@ describe('NexusUserService', () => {
       expect(result).toEqual(mockUserDetails);
       expect(queryNexusSpy).toHaveBeenCalledWith({
         url: `${getNexusUrl()}/v0/user/${testUserId}/details`,
-        notFoundRetries: USER_DETAILS_NOT_FOUND_RETRIES,
+      });
+    });
+
+    it('uses the short not-found budget only for an explicit profile lookup', async () => {
+      await NexusUserService.details({ user_id: testUserId, profileLookup: true });
+
+      expect(mockQueryNexus).toHaveBeenCalledWith({
+        url: `${getNexusUrl()}/v0/user/${testUserId}/details`,
+        notFoundRetries: PROFILE_LOOKUP_NOT_FOUND_RETRIES,
       });
     });
 
     it('scopes the not-found budget below the shared Nexus one', () => {
       // The shared Nexus budget is 5 retries (~15.5s); the profile lookup must be
       // shorter, or the "User not found" page is parked behind the indexing window.
-      expect(USER_DETAILS_NOT_FOUND_RETRIES).toBeLessThan(5);
-      expect(USER_DETAILS_NOT_FOUND_RETRIES).toBeGreaterThanOrEqual(1);
+      expect(PROFILE_LOOKUP_NOT_FOUND_RETRIES).toBeLessThan(5);
+      expect(PROFILE_LOOKUP_NOT_FOUND_RETRIES).toBeGreaterThanOrEqual(1);
     });
 
     it('should handle user with complete profile data', async () => {

@@ -12,6 +12,11 @@ export type TUserDepthParams = {
   viewer_id?: Pubky;
 };
 
+export type TUserDetailsParams = TUserId & {
+  /** Use the shorter 404 budget only for a profile page's not-found verdict. */
+  profileLookup?: boolean;
+};
+
 export type TUserViewParams = TUserDepthParams & TUserId;
 
 export type TUserPaginationParams = TUserId & TPaginationParams & TPaginationRangeParams;
@@ -42,4 +47,4 @@ export const USER_PATH_PARAMS = ['user_id', 'label'] as const;
  * verdict the visitor is waiting on, the "User not found" page, so it retries twice
  * (~1.5s) and then renders, rather than parking the page behind the full window.
  */
-export const USER_DETAILS_NOT_FOUND_RETRIES = 2;
+export const PROFILE_LOOKUP_NOT_FOUND_RETRIES = 2;

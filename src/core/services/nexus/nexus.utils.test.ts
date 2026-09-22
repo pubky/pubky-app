@@ -583,6 +583,36 @@ describe('nexus.utils', () => {
       expect(mockFetch).toHaveBeenCalledTimes(6);
     });
 
+    it.each([true, false])('keeps concurrent retry budgets separate (profile first: %s)', async (profileFirst) => {
+      const startedAt = Date.now();
+      const details = { id: unknownPubky, name: 'Indexed after two seconds' };
+      mockFetch.mockImplementation(() =>
+        Promise.resolve(Date.now() - startedAt < 2_000 ? notFoundResponse() : new Response(JSON.stringify(details))),
+      );
+      const url = detailsUrl();
+      const profile = () => queryNexus({ url, notFoundRetries: 2 });
+      const background = () => queryNexus({ url });
+      const first = profileFirst ? profile() : background();
+      // Attach rejection handlers before advancing fake timers.
+      const firstResult = first.catch((error: unknown) => error);
+      await vi.advanceTimersByTimeAsync(0);
+      const second = profileFirst ? background() : profile();
+      const secondResult = second.catch((error: unknown) => error);
+      let backgroundSettled = false;
+      void (profileFirst ? secondResult : firstResult).then(() => {
+        backgroundSettled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(1_500);
+      expect(await (profileFirst ? firstResult : secondResult)).toMatchObject({ code: ClientErrorCode.NOT_FOUND });
+      expect(backgroundSettled).toBe(false);
+      expect(mockFetch).toHaveBeenCalledTimes(6);
+
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(await (profileFirst ? secondResult : firstResult)).toEqual(details);
+      expect(mockFetch).toHaveBeenCalledTimes(7);
+    });
+
     it('still resolves a profile that gets indexed during the scoped retries', async () => {
       const details = { id: 'some-pubky', name: 'Newly Indexed' };
       mockFetch.mockResolvedValueOnce(notFoundResponse()).mockResolvedValue(new Response(JSON.stringify(details)));
