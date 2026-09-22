@@ -51,6 +51,22 @@ function normalizeNameQuery(query: string): string {
 }
 
 /**
+ * Nexus searches the lowercased Redis byte interval [prefix, prefix + '~').
+ * An empty interval also rules out extensions whose first added character is
+ * ASCII below '~'. Unicode extensions can leave that interval: `rocket` can be
+ * empty even when `rocket🚀` matches, so startsWith alone is not sufficient.
+ * See pubky-nexus nexus-common/src/models/user/search.rs, get_from_index_name.
+ */
+export function isNameQueryWithinEmptyPrefix(query: string, emptyQuery: string): boolean {
+  const prefix = query.toLowerCase();
+  const emptyPrefix = emptyQuery.toLowerCase();
+  return (
+    prefix.startsWith(emptyPrefix) &&
+    (prefix.length === emptyPrefix.length || prefix.charCodeAt(emptyPrefix.length) < '~'.charCodeAt(0))
+  );
+}
+
+/**
  * Extract the mention query the caret sits in
  *
  * Only the text before the caret can hold the pattern being typed, so a mention
