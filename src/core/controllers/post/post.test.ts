@@ -470,6 +470,25 @@ describe('PostController', () => {
       );
     });
 
+    it('should infer video kind when content links to a video', async () => {
+      const { PostController } = await import('./post');
+
+      await PostController.commitCreate({
+        content: 'Watch https://youtu.be/dQw4w9WgXcQ',
+        authorId: testData.authorPubky,
+      });
+
+      const allPosts = await PostDetailsModel.table.toArray();
+      const savedPost = allPosts.find((p) => p.content === 'Watch https://youtu.be/dQw4w9WgXcQ');
+
+      expect(savedPost?.kind).toBe('video');
+      expect(HomeserverService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bodyJson: expect.objectContaining({ kind: 'video' }),
+        }),
+      );
+    });
+
     it('should use long kind when isArticle is true', async () => {
       const { PostController } = await import('./post');
 
