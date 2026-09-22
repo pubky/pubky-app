@@ -24,6 +24,7 @@ import type {
   TGetConnectUrlParams,
   TGetPaykitSetupUrlParams,
   TLocksSessionResult,
+  TPaykitConnectionState,
   TUnlockedAttachment,
   TUnlockedContent,
   TUnlockedListItem,
@@ -189,6 +190,11 @@ export class LocksController {
   /** Saves a bundle id on the reader's homeserver and submits the payment proof to the Lock Server. */
   static startPayment(params: TStartPaymentParams): Promise<TStartPaymentResult> {
     return LocksApplication.startPayment(params);
+  }
+
+  /** One read of the Paykit link for a submitted payment. Needs the task the submission created. */
+  static fetchPaykitConnectionState(params: TPaymentBundleParams): Promise<TPaykitConnectionState> {
+    return LocksApplication.fetchPaykitConnectionState(params);
   }
 
   /** One read of the payment's verification status, or null when the submission never reached the server. */

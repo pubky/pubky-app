@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   fetchPurchaseBundleId: vi.fn(),
   fetchPaidContent: vi.fn(),
   startPayment: vi.fn(),
+  fetchPaykitConnectionState: vi.fn(),
   fetchPaidContentIfCompleted: vi.fn(),
   fetchPurchasedLockIds: vi.fn(),
   fetchPaymentStatus: vi.fn(),
@@ -46,6 +47,7 @@ vi.mock('@/application/locks/locks', () => ({
     fetchPurchaseBundleId: mocks.fetchPurchaseBundleId,
     fetchPaidContent: mocks.fetchPaidContent,
     startPayment: mocks.startPayment,
+    fetchPaykitConnectionState: mocks.fetchPaykitConnectionState,
     fetchPaidContentIfCompleted: mocks.fetchPaidContentIfCompleted,
     fetchPurchasedLockIds: mocks.fetchPurchasedLockIds,
     fetchPaymentStatus: mocks.fetchPaymentStatus,
@@ -352,6 +354,12 @@ describe('LocksController (payment delegation)', () => {
       'startPayment',
       { lockFile: MOCK_LOCK_FILE, lockUrl: 'u', readerPubky: 'r', rejectBundleId: null },
       { bundleId: 'b', status: 'pending' },
+    ],
+    [
+      'fetchPaykitConnectionState',
+      'fetchPaykitConnectionState',
+      { lockFile: MOCK_LOCK_FILE, bundleId: 'b' },
+      'handshake',
     ],
     [
       'fetchPaidContentIfCompleted',

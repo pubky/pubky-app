@@ -1,5 +1,6 @@
 import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { isAppError } from '@/libs/error/error.utils';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => {
   const fakeViewer = {
     id: 'viewer',
     submitProofBundle: vi.fn(async () => ({ status: 'pending' })),
+    lookupPaykitConnectionState: vi.fn(async () => ({ state: 'handshake' })),
     lookupVerificationTask: vi.fn(async () => ({ status: 'completed' })),
     issueAccessCredential: vi.fn(async () => ({ credential: 'cred-abc', expires_at: '2026-01-01' })),
     proxyReadGuardedResource: vi.fn(async () => new Uint8Array([1, 2, 3])),
@@ -414,12 +416,33 @@ describe('LocksService (reader unlock)', () => {
     expect(task).toEqual({ status: 'completed' });
   });
 
+  it('lookupVerificationTask rejects an unknown lifecycle status', async () => {
+    mocks.fakeViewer.lookupVerificationTask.mockResolvedValueOnce({ status: 'refunded' } as never);
+
+    await expect(LocksService.lookupVerificationTask('creator-b', 'b1')).rejects.toMatchObject({
+      code: ValidationErrorCode.INVALID_INPUT,
+      operation: 'LocksService.lookupVerificationTask',
+    });
+  });
+
   it('submitProof sends the bundle to the viewer', async () => {
     const bundle = { version: 1, bundle_id: 'b1', pubky_lock_resource: 'creator/pub/l.json', proofs: [] };
     const task = await LocksService.submitProof(bundle);
 
     expect(mocks.fakeViewer.submitProofBundle).toHaveBeenCalledWith(bundle);
     expect(task).toEqual({ status: 'pending' });
+  });
+
+  it('lookupPaykitConnectionState returns the state the server reports', async () => {
+    await expect(LocksService.lookupPaykitConnectionState('creator-b', 'b1')).resolves.toBe('handshake');
+  });
+
+  it('lookupPaykitConnectionState rejects an unknown state', async () => {
+    mocks.fakeViewer.lookupPaykitConnectionState.mockResolvedValueOnce({ state: 'weird' } as never);
+
+    await expect(LocksService.lookupPaykitConnectionState('creator-b', 'b1')).rejects.toMatchObject({
+      code: ValidationErrorCode.INVALID_INPUT,
+    });
   });
 
   it('lookupVerificationTask resolves to null when the server has no task for the bundle id', async () => {

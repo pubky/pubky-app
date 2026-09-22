@@ -14,7 +14,7 @@ vi.mock('@/hooks/useLockFile/useLockFile', () => ({ useLockFile: vi.fn() }));
 type PayParams = { open: boolean; onPurchased: (lockId: string) => void; onCompleted: (content: unknown) => void };
 const payMocks = vi.hoisted(() => ({
   params: null as null | PayParams,
-  submit: vi.fn(),
+  retry: vi.fn(),
   viewContent: vi.fn(),
 }));
 const authMocks = vi.hoisted(() => {
@@ -32,7 +32,16 @@ const authMocks = vi.hoisted(() => {
 vi.mock('@/hooks/usePayToUnlock/usePayToUnlock', () => ({
   usePayToUnlock: (params: PayParams) => {
     payMocks.params = params;
-    return { stage: 'pay', isSubmitting: false, submit: payMocks.submit, viewContent: payMocks.viewContent };
+    return {
+      stage: 'retry',
+      isStalled: false,
+      handshakePubky: 'pubkybob',
+      connectionIssue: null,
+      isSubmitting: false,
+      retry: payMocks.retry,
+      recheck: vi.fn(),
+      viewContent: payMocks.viewContent,
+    };
   },
 }));
 // 'lock1' is the id in LOCK_URL, so the payment-lock tests start from an already purchased lock.
@@ -63,14 +72,16 @@ vi.mock('@/molecules/DialogPayToUnlock/DialogPayToUnlock', () => ({
   DialogPayToUnlock: ({
     open,
     priceSats,
+    handshakePubky,
     onViewContent,
   }: {
     open: boolean;
     priceSats: string;
+    handshakePubky: string | null;
     onViewContent: () => void;
   }) =>
     open ? (
-      <div data-testid="pay-dialog">
+      <div data-testid="pay-dialog" data-handshake-pubky={handshakePubky}>
         {priceSats}
         <button onClick={onViewContent}>{'Mock view content'}</button>
       </div>
@@ -186,6 +197,7 @@ describe('LockedPostContent', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Unlock' }));
       // The card defers onUnlock until its slide-over finishes; findBy waits that out.
       expect(await screen.findByTestId('pay-dialog')).toHaveTextContent('1000');
+      expect(screen.getByTestId('pay-dialog')).toHaveAttribute('data-handshake-pubky', 'pubkybob');
       expect(authMocks.requireAuth).toHaveBeenCalled();
     });
 

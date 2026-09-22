@@ -7,7 +7,7 @@ import type { LockFile, TUnlockedContent } from '@/services/locks/locks.types';
  * could mean paying twice, so it is not offered. `unopened` is its own stage because the payment
  * succeeded there and only the content download failed: the reader must never be told to go pay.
  */
-export type TPayToUnlockStage = 'checking' | 'pay' | 'install' | 'waiting' | 'paid' | 'unopened' | 'blocked';
+export type TPayToUnlockStage = 'checking' | 'retry' | 'install' | 'waiting' | 'paid' | 'unopened' | 'blocked';
 
 export interface UsePayToUnlockParams {
   /** The modal's open state; closed keeps the hook idle (no requests, no polling). */
@@ -26,11 +26,14 @@ export interface UsePayToUnlockResult {
   stage: TPayToUnlockStage;
   /** The wait gave up on its own; only `recheck` moves it forward from here. */
   isStalled: boolean;
-  /** True from button press until the submission settles (locks the button). */
+  /** The lock creator's pubky to hand to Bitkit, while the reader has no wallet yet or no Paykit link. */
+  handshakePubky: string | null;
+  /** A link state the reader cannot fix by waiting or paying — shown as a notice instead of the QR. */
+  connectionIssue: 'recovery_required' | 'blocked' | null;
+  /** True while the proof submission is in flight. */
   isSubmitting: boolean;
-  /** The `pay` / `install` primary action. Reuses a stored bundle id when there is one — minting a
-   *  second id for the same lock is how a reader ends up paying twice. */
-  submit: () => void;
+  /** Retries a failed submission, or starts over with a fresh id after a failed/expired payment. */
+  retry: () => void;
   /** Resume a parked wait. The purchase was never abandoned, so this only restarts the polling. */
   recheck: () => void;
   /** Reveals content already downloaded for the paid confirmation screen. */

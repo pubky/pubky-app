@@ -173,7 +173,7 @@ and swaps in the guarded post once it becomes readable.
 | `components/organisms/LockedPostContent/LockedPostContent.tsx` | teaser + lock card + unlock dialog; renders the content once unlocked               |
 | `components/organisms/PostBody/PostBody.tsx`                   | shared text + link-embed + attachment renderer (feed post body **and** lock teaser) |
 | `components/molecules/LockedPostCard/LockedPostCard.tsx`       | lock card: title, shield graphic, Unlock control (also used by the composer)        |
-| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal (checking / pay / install / waiting / blocked)                  |
+| `components/molecules/DialogPayToUnlock/DialogPayToUnlock.tsx` | Pay to Unlock modal (checking, retry, install, waiting, paid, unopened, blocked)    |
 | `hooks/usePayToUnlock/usePayToUnlock.ts`                       | the payment state machine: bundle-id routing, submit, polling, stall/resume         |
 | `hooks/usePurchasedLocks/usePurchasedLocks.ts`                 | one listing of the reader's purchases, shared by every lock post                    |
 | `hooks/usePurchaseResume/usePurchaseResume.ts`                 | finishes a paid purchase whose content never landed, without interaction            |
@@ -212,17 +212,39 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    the bundle id of a purchase in flight (#2297). It is the ONLY handle to reach a purchase
    again (the reader is anonymous to the Lock Server), so it is written **before** the proof
    is submitted, kept after replication, and a failed read blocks paying (fail closed).
-2. Route by the server's answer (`fetchPaymentStatus`; SDK 404 maps to `null`): no task → the submission never landed,
-   Pay again with the SAME id; `pending`/`in_progress` → waiting + polling; `completed` →
-   credential; `failed`/`expired` → a fresh id (those cannot be retried).
-3. Pressing **Pay with Bitkit** (or **I completed the steps** on the no-wallet screen) is the
-   start of the payment: `startPayment` saves the id, then submits the proof (empty payload, reader pubky at
-   the bundle's top level), then wait. Paykit delivers the payment request to the reader's
-   wallet; the app never sees an address or invoice.
-4. Waiting polls every **3 seconds** and has **no server deadline** — polling stops on a wall clock (3 min) without failing
-   the purchase, re-checks when the tab becomes visible again (the reader was in Bitkit), and
-   offers a **Check again** button so a reader who never left the tab is not stuck on a spinner.
-5. Turning a completed payment into content (credential → read) parks the same way when it fails,
+2. Opening the modal starts the payment: nothing asks the reader to confirm before the proof is
+   submitted (#2574). With no saved id, the app first checks the reader's homeserver for Paykit data
+   (`hasPaykitReceiver`). With none it shows the handoff (below) with the Bitkit install steps and
+   store links, submits nothing, and re-checks every 3 seconds with no time limit; the moment a
+   wallet appears it mints, saves and submits. A failed check on open lands on the blocked screen;
+   a failed re-check counts as "not yet". The check reports presence only, so a submission can
+   still fail afterwards (one `502` covers both "wallet not ready" and "Paykit down" — a distinct
+   code is a pending ask on the locks side).
+3. A saved id is looked up first (`fetchPaymentStatus`; SDK 404 maps to `null`). `completed` →
+   credential; `failed`/`expired` → **Try again**, which mints a fresh id (those cannot be retried,
+   and doing it automatically could charge twice). `pending`/`in_progress` → the task is already
+   running, so nothing is submitted and the wait resumes. Only a saved id with **no task** is
+   submitted again: that submission never reached the server.
+4. `startPayment` reuses the saved id or mints and saves a fresh one, then submits the proof (empty
+   payload, reader pubky at the bundle's top level). Replaying the same bundle is safe and creates no
+   second payment request. Paykit delivers the payment request to the reader's wallet; the app never
+   sees an address or invoice. A failed submission (for example `502`) shows **Try again**, which
+   keeps the saved id.
+5. The Paykit link has its own read (`fetchPaykitConnectionState`), bound to the task the submission
+   created. `none` shows the handoff that hands the creator's pubky to Bitkit: a QR on desktop, and
+   below the `lg` breakpoint (1024px) a **Pay with Bitkit** button instead, since a phone cannot
+   scan its own screen (its deeplink format is still unknown, so the button does nothing yet).
+   `handshake` and `connected` remove it; `recovery_required` and `blocked` replace it with a
+   notice, because the reader cannot clear either from here (`blocked` is a policy switch a fresh
+   bundle id does not reset). A failed read keeps the last state and the handoff — it never invents
+   one, and never stops the task polling.
+6. Waiting runs two loops on their own timers, and neither waits on the other: the task lookup every
+   **3 seconds**, the link read every **1 second**. Each skips a tick while its own call is still out,
+   so a link read that hangs cannot delay a finished payment. The task lookup is the only lifecycle
+   truth. `connected` and `blocked` end the link loop; a terminal task status ends both. Visibility
+   return and **Check again** restart the pair, and both park together after 3 wall-clock minutes
+   without failing the purchase.
+7. Turning a completed payment into content (credential → read) parks the same way when it fails,
    and **Check again** runs it again. Retrying is free — the entitlement is durable and the
    credential is minted fresh each time, which is also why an expired credential needs no detection.
    Once the content is ready, the modal shows the paid confirmation; **View Content** closes it and
@@ -231,8 +253,9 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
 Closing during submission or waiting opens a confirmation dialog. Closing only stops this tab's
 polling; the server-side payment continues and reopening resumes it from the saved bundle id.
 
-Two tabs can still race between choosing and saving a bundle id; the post-write read-back that
-elects the stored winner is deferred to #2468.
+`startPayment` holds a Web Lock named `locks-pay:<reader>:<lockId>` (#2468) for its whole run, so
+a quick reopen, a second tab, or React running the effect twice submits one bundle id. Browsers
+without `navigator.locks` run the steps unserialized.
 
 **Paid but never received.** The payment completes on the server whether or not the browser is
 watching, so a reader who closes the tab mid-wait would come back to a post still offering Unlock
@@ -240,10 +263,6 @@ over content they own. `usePurchaseResume` closes that gap: it finishes the purc
 background, with no interaction. What tells it a lock is already paid for is
 `usePurchasedLocks` — **one listing** of `/priv/social/purchases/` per reader per page load,
 shared by every lock post on screen, so the feed never asks per post.
-
-The wallet gate (`hasPaykitReceiver`) decides between the pay and install screens; it reports
-presence only, so a submission can still fail afterwards (one `502` covers both "wallet not
-ready" and "Paykit down" — a distinct code is a pending ask on the locks side).
 
 Replication is what makes path 1 work on later views: no Lock Server call, and the content
 survives the creator revoking access.
@@ -272,7 +291,8 @@ screen does not re-read every marker.
 | types       | `core/services/locks/locks.types.ts` | `LockFile`, `lockPostContentSchema`, `VerifierType`, guarded-post schemas                |
 
 Locks has no local-first controller write, so its server actions do not use the `commit*`
-prefix: `hasPaykitReceiver` is a server query and `startPayment` is a server workflow action.
+prefix: `hasPaykitReceiver` and `fetchPaykitConnectionState` are server queries, while `startPayment`
+is a server workflow action.
 The purchase bundle id file and the purchases listing are always read from the homeserver and
 never cached: they decide whether a payment is reused, so a stale copy could cost money. (#2296
 caches lock files and replicas, which do not change; it does not cover these.)
@@ -285,7 +305,7 @@ Notes:
 - **Reads wait for the restored session.** `currentUserPubky` is persisted and rehydrates
   before the homeserver session exists; every reader-side `/priv` read gates on the session —
   the replica, the own-content read, and the saved bundle id (without the gate a purchase in
-  flight would read back as "none" and offer to pay again).
+  flight would read back as "none" and start a second payment with a fresh id).
 - **Single error origin.** Validation throws `Err.validation` in the application (the factory
   logs + reports to Sentry once). Hooks catch and degrade to the lock card.
 - **Read path.** This is a read flow; there is no local-first `commit*` write.
