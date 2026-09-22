@@ -643,6 +643,31 @@ describe('PostController', () => {
         expect(tagList?.[0]?.taggedKind).toBe(TagKind.POST);
       });
 
+      it.each([false, true])('persists a tag exposed by a table rewrite (article: %s)', async (isArticle) => {
+        const body = '| Topic |\n| --- |\n| #pubky |';
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+        const { PostController } = await import('./post');
+        const createdId = await PostController.commitCreate({
+          ...createPostParams(isArticle ? JSON.stringify({ title: 'Table', body }) : body),
+          isArticle,
+        });
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList?.map((tag) => tag.label)).toEqual(['pubky']);
+        expect(tagList?.[0]?.taggedId).toBe(createdId);
+      });
+
+      it.each([false, true])('preserves article versus short-post link semantics (article: %s)', async (isArticle) => {
+        const body = '[Discuss #pubky here](https://example.com)';
+        const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
+        const { PostController } = await import('./post');
+        await PostController.commitCreate({
+          ...createPostParams(isArticle ? JSON.stringify({ title: 'Link', body }) : body),
+          isArticle,
+        });
+        const { tags: tagList } = postCommitSpy.mock.calls[0][0];
+        expect(tagList?.map((tag) => tag.label)).toEqual(isArticle ? [] : ['pubky']);
+      });
+
       it('keeps the composer tags first and appends the hashtags from the content', async () => {
         const postCommitSpy = vi.spyOn(PostApplication, 'commitCreate');
 

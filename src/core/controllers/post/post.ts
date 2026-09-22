@@ -225,6 +225,7 @@ export class PostController {
     // their title (plain text, never rendered as a hashtag) and body (markdown) as JSON.
     const hashtagLabels = extractHashtagLabelsFromMarkdown(
       isArticle ? (parseArticleContent(content)?.body ?? '') : content,
+      isArticle,
     );
     const tagLabels = mergeTagLabels(tags ?? [], hashtagLabels, POST_MAX_TAGS);
 

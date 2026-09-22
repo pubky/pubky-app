@@ -73,6 +73,26 @@ describe('extractHashtagLabelsFromMarkdown', () => {
     });
   });
 
+  describe('renderer preprocessing', () => {
+    it.each([false, true])('extracts table hashtags (article: %s)', (isArticle) => {
+      expect(extractHashtagLabelsFromMarkdown('| Topic |\n| --- |\n| #pubky |', isArticle)).toEqual(['pubky']);
+    });
+
+    it('extracts text exposed by a short-post Markdown link rewrite', () => {
+      expect(extractHashtagLabelsFromMarkdown('[Discuss #pubky here](https://example.com)')).toEqual(['pubky']);
+    });
+
+    it('leaves genuine article links excluded', () => {
+      expect(extractHashtagLabelsFromMarkdown('[Discuss #pubky here](https://example.com)', true)).toEqual([]);
+    });
+
+    it.each([false, true])('matches table rewrites that expose formatted cell text (article: %s)', (isArticle) => {
+      expect(extractHashtagLabelsFromMarkdown('| Topic |\n| --- |\n| **Talk #pubky here** |', isArticle)).toEqual([
+        'pubky',
+      ]);
+    });
+  });
+
   describe('label validation', () => {
     it('ignores labels longer than the tag limit', () => {
       const tooLong = `#${'a'.repeat(21)}`;

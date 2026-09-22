@@ -5,6 +5,7 @@ import { gfm } from 'micromark-extension-gfm';
 import { visit } from 'unist-util-visit';
 import { canonicalizeTagLabel, isValidTagLabel } from '@/libs/utils/utils';
 import { HASHTAG_IN_TEXT_REGEX } from '@/libs/utils/utils.constants';
+import { remarkDisallowMarkdownLinks, remarkPlaintextTables } from './markdown';
 
 /**
  * Hashtag labels carried by a post's markdown, and the merge rule used when a
@@ -15,19 +16,14 @@ import { HASHTAG_IN_TEXT_REGEX } from '@/libs/utils/utils.constants';
  * which decides which hashtags a reader sees as links, so a created tag always
  * has a visible hashtag behind it and vice versa:
  *
- * - Only paragraph text is scanned. Headings, fenced code, inline code, link
- *   labels, image alt text and autolinked URLs render without a hashtag link,
- *   so they never create a tag.
+ * - Paragraph text is scanned after the same table and short-post link rewrites
+ *   used by the renderer. Genuine article links, headings, code and image alt
+ *   text are excluded unless a table rewrite exposes them as plain text.
  * - The same pattern (`HASHTAG_IN_TEXT_REGEX`, pubky-app-specs `tagInvalidChars`
  *   terminate the body) and the same gate (`isValidTagLabel`) as rendering, so
  *   an over-long or character-invalid hashtag stays a plain hashtag.
  * - Labels are canonicalized (`trim().toLowerCase()`, the form written by
  *   `TagNormalizer.from`) and deduplicated case-insensitively.
- *
- * Deliberate limits: `remarkPlaintextTables` and `remarkDisallowMarkdownLinks`
- * rewrite tables and markdown links of short posts into literal text before
- * `remarkHashtags` runs, so in those two shapes the rendered output can contain
- * a hashtag link that this extractor does not report.
  *
  * This module is pure (markdown in, labels out): no IO, no stores, no React.
  */
@@ -39,22 +35,26 @@ const parseMarkdown = (markdown: string): Root =>
   });
 
 /** The canonical label a rendered hashtag stands for (`#Tag` → `tag`). */
-export const toHashtagLabel = (hashtag: string): string => canonicalizeTagLabel(hashtag.slice(1));
+const toHashtagLabel = (hashtag: string): string => canonicalizeTagLabel(hashtag.slice(1));
 
 /** Whether `remarkHashtags` renders this hashtag as a link (and so creates a tag). */
-export const isConvertibleHashtag = (hashtag: string): boolean => isValidTagLabel(toHashtagLabel(hashtag));
+const isConvertibleHashtag = (hashtag: string): boolean => isValidTagLabel(toHashtagLabel(hashtag));
 
 /**
  * Canonical labels for the hashtags a reader would see linked in `markdown`,
  * in order of first appearance and without duplicates.
  */
-export function extractHashtagLabelsFromMarkdown(markdown: string): string[] {
+export function extractHashtagLabelsFromMarkdown(markdown: string, isArticle = false): string[] {
   if (!markdown.trim()) return [];
 
   const labels: string[] = [];
   const seen = new Set<string>();
 
-  visit(parseMarkdown(markdown), 'paragraph', (paragraph: Paragraph) => {
+  const tree = parseMarkdown(markdown);
+  remarkPlaintextTables()(tree);
+  if (!isArticle) remarkDisallowMarkdownLinks()(tree);
+
+  visit(tree, 'paragraph', (paragraph: Paragraph) => {
     for (const child of paragraph.children) {
       // Only direct text children, exactly like `remarkHashtags`: a hashtag inside a
       // link label, inline code or image alt is not a hashtag the reader can click.
