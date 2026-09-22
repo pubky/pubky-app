@@ -1,6 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { PostController } from '@/controllers/post/post';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
@@ -42,15 +41,9 @@ vi.mock('@/molecules/NewPostsButton/NewPostsButton', () => {
 
 vi.mock('@/molecules/Toaster/toast');
 
-vi.mock('@/application/stream/posts/muting/mute-filter', () => ({
-  MuteFilter: {
-    filterPostsSafe: vi.fn((ids: string[]) => ids),
-  },
-}));
 vi.mock('@/controllers/stream/posts/posts', () => ({
   StreamPostsController: {
-    mergeUnreadStreamWithPostStream: vi.fn(),
-    clearUnreadStream: vi.fn(),
+    markUnreadPostsAsRead: vi.fn(),
     filterDeletedPosts: vi.fn((ids: string[]) => Promise.resolve(ids)),
   },
 }));
@@ -65,6 +58,7 @@ const defaultProps = {
   variant: TIMELINE_FEED_VARIANT.HOME,
   postIds: ['post1', 'post2'],
   mutedUserIdSet: new Set<Pubky>(),
+  mutedUsersLoading: false,
   loading: false,
   prependPosts: vi.fn(),
 };
@@ -73,7 +67,6 @@ describe('NewPostsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
-    vi.mocked(MuteFilter.filterPostsSafe).mockImplementation((ids: string[]) => ids);
     vi.mocked(PostController.getDetailsByIds).mockResolvedValue([{ kind: 'short' } as never]);
     window.scrollTo = vi.fn();
   });
@@ -102,16 +95,42 @@ describe('NewPostsSection', () => {
     expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
   });
 
-  it('filters muted users from new post count', () => {
-    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['new1', 'muted1'], unreadCount: 2 });
-    vi.mocked(MuteFilter.filterPostsSafe).mockReturnValue(['new1']);
-    render(<NewPostsSection {...defaultProps} />);
+  it('waits for the mute list before showing an eligible unread post', () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['author:new-post'], unreadCount: 1 });
+    const { rerender } = render(<NewPostsSection {...defaultProps} mutedUsersLoading={true} />);
+
+    expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
+
+    rerender(<NewPostsSection {...defaultProps} mutedUsersLoading={false} />);
     expect(screen.getByTestId('new-posts-button')).toHaveAttribute('data-count', '1');
   });
 
-  it('does not mute-filter new post count on bookmarks feed', () => {
+  it('filters muted users from new post count', () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['author:new-post', 'muted-user:new-post'], unreadCount: 2 });
+    render(<NewPostsSection {...defaultProps} mutedUserIdSet={new Set(['muted-user'])} />);
+    expect(screen.getByTestId('new-posts-button')).toHaveAttribute('data-count', '1');
+  });
+
+  it('keeps a muted author hidden when the mute list finishes loading', () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['muted-user:new-post'], unreadCount: 1 });
+    const { rerender } = render(<NewPostsSection {...defaultProps} mutedUsersLoading={true} />);
+    expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
+
+    rerender(<NewPostsSection {...defaultProps} mutedUserIdSet={new Set(['muted-user'])} />);
+    expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
+  });
+
+  it('excludes a known muted author without requiring local post details', () => {
+    mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['muted-user:new-post'], unreadCount: 1 });
+    vi.mocked(PostController.getDetailsByIds).mockResolvedValue([]);
+    render(<NewPostsSection {...defaultProps} mutedUserIdSet={new Set(['muted-user'])} />);
+
+    expect(screen.queryByTestId('new-posts-button')).not.toBeInTheDocument();
+    expect(PostController.getDetailsByIds).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('ignores mute filtering and readiness on bookmarks (loading: %s)', (mutedUsersLoading) => {
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: ['muted-user:post-9'], unreadCount: 1 });
-    const filterSpy = vi.mocked(MuteFilter.filterPostsSafe);
 
     render(
       <NewPostsSection
@@ -119,11 +138,11 @@ describe('NewPostsSection', () => {
         variant={TIMELINE_FEED_VARIANT.BOOKMARKS}
         streamId={'timeline:bookmarks:all' as PostStreamId}
         mutedUserIdSet={new Set<Pubky>(['muted-user' as Pubky])}
+        mutedUsersLoading={mutedUsersLoading}
       />,
     );
 
     expect(screen.getByTestId('new-posts-button')).toHaveAttribute('data-count', '1');
-    expect(filterSpy).not.toHaveBeenCalled();
   });
 
   it('calls stream controllers and prependPosts on click', async () => {
@@ -134,11 +153,9 @@ describe('NewPostsSection', () => {
     fireEvent.click(screen.getByTestId('new-posts-button'));
 
     await waitFor(() => {
-      expect(StreamPostsController.mergeUnreadStreamWithPostStream).toHaveBeenCalledWith({
+      expect(StreamPostsController.markUnreadPostsAsRead).toHaveBeenCalledWith({
         streamId: 'timeline:all:all',
-      });
-      expect(StreamPostsController.clearUnreadStream).toHaveBeenCalledWith({
-        streamId: 'timeline:all:all',
+        postIds: ['new1'],
       });
       expect(prependPosts).toHaveBeenCalledWith(['new1']);
     });
@@ -216,7 +233,6 @@ describe('NewPostsSection - Snapshots', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseUnreadPosts.mockReturnValue({ unreadPostIds: [], unreadCount: 0 });
-    vi.mocked(MuteFilter.filterPostsSafe).mockImplementation((ids: string[]) => ids);
   });
 
   it('matches snapshot when hidden', () => {
