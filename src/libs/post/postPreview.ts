@@ -27,3 +27,17 @@ export function deriveTextPreview({ content, kind }: { content: string; kind: st
   }
   return content;
 }
+
+/**
+ * Whether the preview `deriveTextPreview` derives for this post is post copy
+ * the app links mentions in (`PostText`), rather than an article title or a
+ * collection name, which the app shows verbatim. A `long` post whose content is
+ * not an article envelope previews its raw content, and that copy does get
+ * mention links in the app. Shared by the page description and the OG card so
+ * the two never disagree on which previews resolve mentions.
+ */
+export function isMentionResolvablePreview({ content, kind }: { content: string; kind: string }): boolean {
+  if (isPostDeleted(content)) return false;
+  if (kind === 'long') return parseArticleContent(content) === null;
+  return kind !== 'collection';
+}

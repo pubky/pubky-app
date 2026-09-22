@@ -115,6 +115,54 @@ describe('generateMetadata', () => {
     expect(metadata.twitter).not.toHaveProperty('images');
   });
 
+  it('swaps raw pubky mentions in the description for display names, like the app renders them', async () => {
+    const mentioned = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'short', content: `gm pk:${mentioned} and pubky${mentioned}` }))
+      .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
+
+    expect(metadata.description).toBe('gm @Bob and @Bob');
+    expect(metadata.openGraph?.description).toBe('gm @Bob and @Bob');
+    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`https://nexus.staging.pubky.app/v0/user/${mentioned}/details`);
+  });
+
+  it('keeps an article title verbatim without looking up mentions', async () => {
+    const mentioned = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(
+        jsonResponse({ kind: 'long', content: JSON.stringify({ title: `About pk:${mentioned}`, body: 'Body' }) }),
+      );
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
+
+    expect(metadata.description).toBe(`About pk:${mentioned}`);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('resolves mentions in a long-kind post whose content is not an article, like the card does', async () => {
+    const mentioned = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
+      .mockResolvedValueOnce(jsonResponse({ kind: 'long', content: `gm pk:${mentioned} welcome` }))
+      .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+    });
+
+    expect(metadata.description).toBe('gm @Bob welcome');
+  });
+
   it('still emits title (no parent fallback) for a content-less post like a simple repost', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     fetchMock
