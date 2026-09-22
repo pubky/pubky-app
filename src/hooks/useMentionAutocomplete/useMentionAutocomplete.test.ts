@@ -124,17 +124,23 @@ describe('useMentionAutocomplete', () => {
     );
   });
 
-  it.each(['🚀Alice', 'Rocket🚀', '👩🏽‍💻 Alice', '🇷🇸 Alice', '✌️ Alice'])(
-    'searches the emoji display name %s',
-    async (name) => {
-      const content = `Hello @${name}`;
-      renderHook(() => useMentionAutocomplete({ content, caret: content.length }));
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
-      expect(mockGetUsersByName).toHaveBeenCalledWith(expect.objectContaining({ prefix: name }));
-    },
-  );
+  it.each([
+    '🚀Alice',
+    'Rocket🚀',
+    '👩🏽‍💻 Alice',
+    '🇷🇸 Alice',
+    '✌️ Alice',
+    '#️⃣Alice',
+    '*️⃣Alice',
+    '🏴\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f} Alice',
+  ])('searches the emoji display name %s', async (name) => {
+    const content = `Hello @${name}`;
+    renderHook(() => useMentionAutocomplete({ content, caret: content.length }));
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(mockGetUsersByName).toHaveBeenCalledWith(expect.objectContaining({ prefix: name }));
+  });
 
   it('triggers search when pk: pattern is detected at end of content (legacy)', async () => {
     renderHook(() => useMentionAutocomplete({ content: 'Hello pk:abc', caret: 12 }));

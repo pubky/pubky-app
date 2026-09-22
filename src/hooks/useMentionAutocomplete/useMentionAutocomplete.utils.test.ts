@@ -38,7 +38,16 @@ describe('extractMentionQuery', () => {
       expect(result.atQuery).toBe('john');
     });
 
-    it.each(['🚀Alice', 'Rocket🚀', '👩🏽‍💻 Alice', '🇷🇸 Alice', '✌️ Alice'])('preserves emoji in the name %s', (name) => {
+    it.each([
+      '🚀Alice',
+      'Rocket🚀',
+      '👩🏽‍💻 Alice',
+      '🇷🇸 Alice',
+      '✌️ Alice',
+      '#️⃣Alice',
+      '*️⃣Alice',
+      '🏴\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f} Alice',
+    ])('preserves emoji in the name %s', (name) => {
       const prefix = `Hello @${name}`;
       const content = `${prefix} remaining text`;
       expect(extractMentionQuery(content, prefix.length)).toEqual({

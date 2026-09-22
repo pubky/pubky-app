@@ -34,7 +34,7 @@ export const COMPLETE_PUBKY_LENGTH = 52;
  * Matched against the text before the caret, so `$` is the caret, not the end of the value
  */
 export const AT_MENTION_PATTERN =
-  /@(?:[\p{L}\p{M}\p{N}\p{S}\p{Join_Control}._'’-]+(?:[ ][\p{L}\p{M}\p{N}\p{S}\p{Join_Control}._'’-]*)*)?$/u;
+  /@(?:[\p{L}\p{M}\p{N}\p{S}\p{Emoji_Component}\p{Join_Control}._'’-]+(?:[ ][\p{L}\p{M}\p{N}\p{S}\p{Emoji_Component}\p{Join_Control}._'’-]*)*)?$/u;
 
 /**
  * Regex pattern for a pubky ID typed up to the caret
