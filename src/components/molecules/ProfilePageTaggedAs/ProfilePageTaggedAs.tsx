@@ -3,12 +3,15 @@
 import { useRouter } from 'next/navigation';
 import { Tag } from 'lucide-react';
 import { getProfileRoute, PROFILE_ROUTES } from '@/app/routes';
+import { TagKind } from '@/application/tag/tag.types';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { TaggedItem } from '../TaggedItem/TaggedItem';
+import { TaggedList } from '../TaggedList/TaggedList';
 import { TagInput } from '../TagInput/TagInput';
 import { ProfilePageTaggedAsSkeleton } from './ProfilePageTaggedAs.skeleton';
 import type { ProfilePageTaggedAsProps } from './ProfilePageTaggedAs.types';
@@ -25,6 +28,8 @@ export function ProfilePageTaggedAs({
 }: ProfilePageTaggedAsProps) {
   const router = useRouter();
   const { requireAuth } = useRequireAuth();
+  const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
+  const taggedId = pubky || currentUserPubky || undefined;
   const isMobile = variant === 'mobile';
   const inputTags = allTags ?? tags;
 
@@ -60,9 +65,17 @@ export function ProfilePageTaggedAs({
                 addOnSuggestionClick
               />
             )}
-            {tags.map((tag) => (
-              <TaggedItem key={tag.label} tag={tag} onTagClick={onTagClick} hideAvatars={!isMobile} />
-            ))}
+            {isMobile ? (
+              <TaggedList
+                key={taggedId}
+                tags={tags}
+                taggedId={taggedId}
+                taggedKind={TagKind.USER}
+                onTagToggle={onTagClick}
+              />
+            ) : (
+              tags.map((tag) => <TaggedItem key={tag.label} tag={tag} onTagClick={onTagClick} hideAvatars />)
+            )}
             {tags.length === 0 && (
               <Typography as="span" className="text-sm font-medium text-muted-foreground">
                 {'No tags added yet.'}
