@@ -36,7 +36,7 @@ exports[`DialogReportPostIssueStep - Snapshots > matches the issue selection sna
   </div>
   <div
     aria-label="Issue types"
-    class="mx-auto w-full flex-col flex gap-2"
+    class="mx-auto w-full flex-col flex min-w-0 gap-2"
     data-testid="container"
     role="listbox"
   >
@@ -511,7 +511,7 @@ exports[`DialogReportPostIssueStep - Snapshots > matches the selected issue snap
   </div>
   <div
     aria-label="Issue types"
-    class="mx-auto w-full flex-col flex gap-2"
+    class="mx-auto w-full flex-col flex min-w-0 gap-2"
     data-testid="container"
     role="listbox"
   >

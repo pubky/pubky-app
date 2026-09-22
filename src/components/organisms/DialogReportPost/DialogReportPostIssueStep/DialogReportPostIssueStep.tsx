@@ -43,7 +43,7 @@ export function DialogReportPostIssueStep({
         <DialogDescription className="leading-5">{'What sort of issue are you reporting?'}</DialogDescription>
       </DialogHeader>
 
-      <Container className="gap-2" role="listbox" aria-label={'Issue types'}>
+      <Container className="min-w-0 gap-2" role="listbox" aria-label={'Issue types'}>
         {REPORT_ISSUE_TYPE_VALUES.map((issueType) => {
           const Icon = ISSUE_TYPE_ICONS[issueType as ReportIssueType];
           const isSelected = selectedType === issueType;
