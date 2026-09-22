@@ -2,7 +2,7 @@ import type { Session as LocksSdkSession } from '@pubky/locks-sdk';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { isAppError, isNotFound, isValidationError } from '@/libs/error/error.utils';
+import { isAppError, isNotFound, isValidationError, toAppError } from '@/libs/error/error.utils';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -17,6 +17,7 @@ import type {
   TGeneratePaykitSetupUrlParams,
   TGuardedResource,
   TLocksSessionResult,
+  TPaykitConnectionState,
   TRegisterGuardedResourceResult,
   TUnlockedAttachment,
   TUnlockedContent,
@@ -108,26 +109,45 @@ export class LocksApplication {
     readerPubky,
     rejectBundleId,
   }: TStartPaymentParams): Promise<TStartPaymentResult> {
-    // TODO:[Locks] #2468 — the read → mint → write below is not atomic across tabs: two tabs can
-    // both read "no file" and submit different bundle ids (two tasks, possible double charge).
-    let bundleId = await this.fetchPurchaseBundleId({ lockUrl, readerPubky });
-    if (!bundleId || bundleId === rejectBundleId) {
-      bundleId = await LocksService.generateBundleId();
-      // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
-      // leaves a purchase nobody can reach.
-      await HomeserverService.putBlob({
-        url: GuardedContentParser.purchaseUrl(readerPubky, this.requireLockId(lockUrl, 'startPayment')),
-        blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
-      });
+    const lockId = this.requireLockId(lockUrl, 'startPayment');
+    const run = async (): Promise<TStartPaymentResult> => {
+      let bundleId = await this.fetchPurchaseBundleId({ lockUrl, readerPubky });
+      if (!bundleId || bundleId === rejectBundleId) {
+        bundleId = await LocksService.generateBundleId();
+        // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
+        // leaves a purchase nobody can reach.
+        await HomeserverService.putBlob({
+          url: GuardedContentParser.purchaseUrl(readerPubky, lockId),
+          blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
+        });
+      }
+      const bundle = LockProofBundler.buildPayment(lockFile, lockUrl, bundleId, readerPubky);
+      const task = await LocksService.submitProof(bundle);
+      return { bundleId, status: task.status };
+    };
+    // Every browser Next.js supports has Web Locks; only an insecure context (plain-http dev) lacks it.
+    const lockManager = typeof navigator === 'undefined' ? undefined : navigator.locks;
+    if (!lockManager) return run();
+
+    try {
+      return await lockManager.request(`locks-pay:${readerPubky}:${lockId}`, run);
+    } catch (error) {
+      // `request` itself can reject with a DOMException that no Err factory has reported.
+      throw toAppError(error, ErrorService.Locks, 'LocksApplication.startPayment');
     }
-    const bundle = LockProofBundler.buildPayment(lockFile, lockUrl, bundleId, readerPubky);
-    const task = await LocksService.submitProof(bundle);
-    return { bundleId, status: task.status };
+  }
+
+  /**
+   * One read of the Paykit link for a submitted payment. Read-only: it creates no invoice and never
+   * advances the handshake, and it needs the task the proof submission created.
+   */
+  static fetchPaykitConnectionState({ lockFile, bundleId }: TPaymentBundleParams): Promise<TPaykitConnectionState> {
+    return LocksService.lookupPaykitConnectionState(lockFile.creator, bundleId);
   }
 
   /**
    * One read of where the Lock Server's payment verification stands for a saved bundle id, or null
-   * when the submission never reached the server — the caller then offers Pay again with that id.
+   * when the server has no task for it (the submission never reached it).
    */
   static async fetchPaymentStatus({ lockFile, bundleId }: TPaymentBundleParams): Promise<TVerificationStatus | null> {
     const task = await LocksService.lookupVerificationTask(lockFile.creator, bundleId);

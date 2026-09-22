@@ -12,10 +12,14 @@ export interface DialogPayToUnlockProps {
   stage: TPayToUnlockStage;
   /** Waiting stage: polling parked on its deadline, so the reader is offered a manual re-check. */
   isStalled: boolean;
-  /** True while a submission is in flight — locks the primary button. */
+  /** Creator pubky to hand to Bitkit — a QR on desktop, the Pay with Bitkit button on mobile; null hides it. */
+  handshakePubky: string | null;
+  /** Waiting stage: a wallet-link state the reader cannot fix here — replaces the QR with a notice. */
+  connectionIssue: 'recovery_required' | 'blocked' | null;
+  /** True while a submission is in flight — locks the primary button and makes a close ask first. */
   isSubmitting: boolean;
-  /** Primary action of `pay` and `install`: starts the payment. */
-  onSubmit: () => void;
+  /** Retries a failed submission, or starts over with a fresh id after a failed/expired payment. */
+  onRetry: () => void;
   /** Restarts a parked wait. */
   onRecheck: () => void;
   /** Reveals the downloaded content from the paid confirmation screen. */
