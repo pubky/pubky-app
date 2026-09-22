@@ -26,7 +26,7 @@ vi.mock('@/molecules/IllustratedEmptyState/IllustratedEmptyState', () => {
         <div data-testid="image" data-src={imageSrc} data-alt={imageAlt} />
         <Icon data-testid="tag-icon" />
         <h3>{title}</h3>
-        <div>{subtitle}</div>
+        <div data-testid="empty-subtitle">{subtitle}</div>
         {children}
       </div>
     ),
@@ -35,8 +35,8 @@ vi.mock('@/molecules/IllustratedEmptyState/IllustratedEmptyState', () => {
 
 vi.mock('@/molecules/TagInput/TagInput', () => {
   return {
-    TagInput: ({ onTagAdd }: { onTagAdd: (tag: string) => void }) => (
-      <div data-testid="tag-input" onClick={() => onTagAdd('test-tag')}>
+    TagInput: ({ onTagAdd, className }: { onTagAdd: (tag: string) => void; className?: string }) => (
+      <div data-testid="tag-input" className={className} onClick={() => onTagAdd('test-tag')}>
         TagInput
       </div>
     ),
@@ -55,9 +55,22 @@ describe('TaggedEmpty', () => {
     expect(screen.getByText(/No one has tagged you yet/)).toBeInTheDocument();
   });
 
+  it('breaks the subtitle before the Tip hint', () => {
+    render(<TaggedEmpty onTagAdd={mockHandleTagAdd} />);
+    const subtitle = screen.getByTestId('empty-subtitle');
+
+    expect(subtitle.querySelector('br')).toBeInTheDocument();
+    expect(subtitle.textContent).toBe('No one has tagged you yet.Tip: You can add tags to your own profile too.');
+  });
+
   it('renders TagInput when onTagAdd is provided', () => {
     render(<TaggedEmpty onTagAdd={mockHandleTagAdd} />);
     expect(screen.getByTestId('tag-input')).toBeInTheDocument();
+  });
+
+  it('bounds the tag input to the design width instead of the full column', () => {
+    render(<TaggedEmpty onTagAdd={mockHandleTagAdd} />);
+    expect(screen.getByTestId('tag-input')).toHaveClass('w-48');
   });
 
   it('does not render TagInput when onTagAdd is not provided', () => {
