@@ -7,15 +7,18 @@ WASM build output of [`pubky/locks`](https://github.com/pubky/locks)
 
 | | |
 |---|---|
-| Source | `pubky/locks` @ `a9d52b886a98083d6d52423b9f56f3966aefc4df` |
-| Package version | `0.1.0-rc2` |
+| Source | `pubky/locks` @ `34837f8ae516fb1c81fb1aa404517261755e8e44` (tag `v0.1.0-rc4`) |
+| Package version | `0.1.0-rc4` |
 | Rust | `1.91.1` (the repo's pinned `rust-toolchain.toml`, which declares `wasm32-unknown-unknown`) |
 | wasm-pack | `0.13.1` |
 | Command | `wasm-pack build --target web --out-dir pkg` |
 
-The source commit is reconstructed, not recorded: the build shallow-cloned `master`, which
-pointed at `a9d52b88` then and still does. Rebuild from the pinned revision below to confirm
-it, and record the commit directly next time.
+The source commit is recorded, not reconstructed: the build cloned the `v0.1.0-rc4` tag,
+which is lightweight and points straight at `34837f8a`.
+
+`Viewer.lookupPaykitConnectionState` arrives in this revision, added upstream by
+`aecc90f0` (locks #54). The previous vendored build predated it, so `src/` calling that
+method failed the image build's type check while resolving and installing correctly.
 
 `package.json` is wasm-pack's own output with one edit: `name` is `@pubky/locks-sdk` rather
 than the generated `locks-sdk-wasm`, because that is the specifier `src/` imports.
@@ -34,9 +37,8 @@ Pin the revision and the tool. Tracking `master` or "latest wasm-pack" makes the
 binary unreproducible, and a binary nobody can rebuild is a binary nobody can audit.
 
 ```bash
-git clone https://github.com/pubky/locks
-cd locks && git checkout a9d52b886a98083d6d52423b9f56f3966aefc4df
-cd locks-sdk/bindings/js
+git clone --branch v0.1.0-rc4 https://github.com/pubky/locks
+cd locks/locks-sdk/bindings/js
 cargo install wasm-pack --version 0.13.1 --locked
 wasm-pack build --target web --out-dir pkg
 cp pkg/locks_sdk_wasm* <pubky-app>/vendor/locks-sdk/
@@ -56,9 +58,9 @@ No Rust toolchain locally? The build runs in a container:
 
 ```bash
 docker run --rm -i rust:1.91.1-bookworm sh -c '
+  git clone --depth 1 --branch v0.1.0-rc4 https://github.com/pubky/locks /src >&2
+  cd /src && git rev-parse HEAD >&2
   cargo install wasm-pack --version 0.13.1 --locked >&2
-  git clone https://github.com/pubky/locks /src >&2
-  cd /src && git checkout a9d52b886a98083d6d52423b9f56f3966aefc4df >&2
   cd locks-sdk/bindings/js && wasm-pack build --target web --out-dir pkg >&2
   tar -cf - -C pkg .' > pkg.tar
 ```

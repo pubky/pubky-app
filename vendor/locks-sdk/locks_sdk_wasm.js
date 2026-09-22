@@ -1107,6 +1107,15 @@ export class Viewer {
      * @param {VerificationTaskHandleOptions} options
      * @returns {Promise<any>}
      */
+    lookupPaykitConnectionState(options) {
+        _assertClass(options, VerificationTaskHandleOptions);
+        const ret = wasm.viewer_lookupPaykitConnectionState(this.__wbg_ptr, options.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {VerificationTaskHandleOptions} options
+     * @returns {Promise<any>}
+     */
     lookupVerificationTask(options) {
         _assertClass(options, VerificationTaskHandleOptions);
         const ret = wasm.viewer_lookupVerificationTask(this.__wbg_ptr, options.__wbg_ptr);
@@ -1630,12 +1639,12 @@ function __wbg_get_imports() {
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 655, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 660, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h91c6e0a7524f6a5b);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 468, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 473, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h67168fce963d1069);
             return ret;
         },

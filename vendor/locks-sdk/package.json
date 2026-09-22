@@ -2,7 +2,7 @@
   "name": "@pubky/locks-sdk",
   "type": "module",
   "description": "Browser JS/WASM bindings for the Pubky Locks Creator SDK",
-  "version": "0.1.0-rc2",
+  "version": "0.1.0-rc4",
   "license": "MIT",
   "repository": {
     "type": "git",
