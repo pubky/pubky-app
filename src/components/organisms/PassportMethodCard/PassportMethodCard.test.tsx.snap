@@ -41,7 +41,7 @@ exports[`PassportMethodCard > renders the Quick & Easy card with the cloud illus
             class="text-base font-medium leading-6 text-secondary-foreground/80"
             data-testid="typography"
           >
-            Use your existing sign-in methods.
+            Use legacy sign-in methods.
           </p>
         </div>
         <button

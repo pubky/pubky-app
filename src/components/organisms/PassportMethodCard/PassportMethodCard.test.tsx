@@ -16,7 +16,7 @@ describe('PassportMethodCard', () => {
 
     expect(screen.getByTestId('passport-method-card')).toBeInTheDocument();
     expect(screen.getByText('Quick & Easy')).toBeInTheDocument();
-    expect(screen.getByText('Use your existing sign-in methods.')).toBeInTheDocument();
+    expect(screen.getByText('Use legacy sign-in methods.')).toBeInTheDocument();
     expect(screen.getByRole('img')).toHaveAttribute('src', '/images/passport-cloud.webp');
 
     fireEvent.click(screen.getByTestId('continue-with-google'));

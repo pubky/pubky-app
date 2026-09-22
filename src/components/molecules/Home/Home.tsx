@@ -61,7 +61,7 @@ export const HomeFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
         <Link href={getPubkyCoreLink()} target="_blank">
           {'Pubky Core'}
         </Link>
-        {' and was built with love and dedication by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.'}
+        {' and was built by Synonym Software, S.A. DE C.V. ©2026. All rights reserved.'}
       </FooterLinks>
       <Container className="mt-2 flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
         <HomeBrandFooter />

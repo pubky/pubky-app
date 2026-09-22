@@ -9,7 +9,7 @@ import { IllustratedCard } from '@/molecules/IllustratedCard/IllustratedCard';
 import type { PassportMethodCardProps } from './PassportMethodCard.types';
 
 export const PASSPORT_METHOD_TITLE = 'Quick & Easy';
-export const PASSPORT_METHOD_DESCRIPTION = 'Use your existing sign-in methods.';
+export const PASSPORT_METHOD_DESCRIPTION = 'Use legacy sign-in methods.';
 
 /**
  * Desktop "Quick & Easy" method card: cloud illustration, title, description and the
