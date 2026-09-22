@@ -1,7 +1,9 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { COLLECTIONS_SECTION_PAGE_SIZE } from '@/config/collections';
 import { PostController } from '@/controllers/post/post';
+import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { Pubky } from '@/models/models.types';
 import { buildAuthorCollectionsStreamId } from '@/models/stream/post/postStream.types';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
@@ -101,5 +103,73 @@ describe('useStreamPagination over a cached stream whose replacement fetch fails
 
     expect(await LocalStreamPostsService.read({ streamId: STREAM_ID })).toBeNull();
     expect(await PostController.getAuthoredCollections({ authorId: VIEWER })).toBeNull();
+  });
+});
+
+describe('useStreamPagination extends a retained cached collection stream', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    postStreamQueue.clear();
+    useAuthStore.setState({ currentUserPubky: VIEWER });
+    vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    postStreamQueue.clear();
+  });
+
+  it.each([false, true])('keeps all 85 targets with a concurrent cache reader: %s', async (concurrentReader) => {
+    const ids = Array.from({ length: 85 }, (_, index) => `${VIEWER}:collection-${index + 1}`);
+    const posts = ids.map(cachedCollectionPost);
+    // Server stream scores deliberately differ from indexed_at: an edited collection's
+    // revision must never replace the stored pagination cursor.
+    const scores = ids.map((_, index) => Date.now() - 2 * 60 * 60 * 1000 - index * 100);
+    const cachedCount = 35;
+    const tailCursor = scores[cachedCount - 1];
+    await LocalStreamPostsService.persistPosts({ posts: posts.slice(0, cachedCount) });
+    await LocalStreamPostsService.upsert({ streamId: STREAM_ID, stream: ids.slice(0, cachedCount), tailCursor });
+
+    const fetchPage = vi.spyOn(NexusPostStreamService, 'fetch').mockImplementation(async ({ params }) => {
+      const selected = ids
+        .map((id, index) => ({ id, score: scores[index] }))
+        .filter(({ score }) => params.start === undefined || score <= params.start)
+        .slice(0, params.limit);
+      return { post_keys: selected.map(({ id }) => id), last_post_score: selected.at(-1)?.score ?? null };
+    });
+    vi.spyOn(NexusPostStreamService, 'fetchByIds').mockImplementation(async ({ post_ids }) =>
+      posts.filter((_, index) => post_ids.includes(ids[index])),
+    );
+
+    const feed = renderHook(() => useStreamPagination({ streamId: STREAM_ID, limit: 20, preserveCachedStream: true }));
+    await waitFor(() => expect(feed.result.current.loading).toBe(false));
+    expect(feed.result.current.postIds).toEqual(ids.slice(0, 20));
+    expect(fetchPage).not.toHaveBeenCalled();
+
+    if (concurrentReader) {
+      await StreamPostsController.getOrFetchStreamSlice({
+        streamId: STREAM_ID,
+        lastPostId: ids[cachedCount - 1],
+        streamTail: tailCursor,
+        limit: 20,
+      });
+    }
+    for (let round = 0; round < 12 && feed.result.current.hasMore; round += 1) {
+      await act(async () => {
+        await feed.result.current.loadMore();
+      });
+    }
+
+    expect(feed.result.current.hasMore).toBe(false);
+    expect(feed.result.current.postIds).toEqual(ids);
+    const collections = await PostController.getAuthoredCollections({ authorId: VIEWER });
+    expect(collections?.map((collection) => collection.details.id)).toEqual(ids);
+    expect(fetchPage).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        params: expect.objectContaining({ start: tailCursor - 1 }),
+      }),
+    );
+    expect((await LocalStreamPostsService.read({ streamId: STREAM_ID }))?.tailCursor).toBe(scores.at(-1));
   });
 });
