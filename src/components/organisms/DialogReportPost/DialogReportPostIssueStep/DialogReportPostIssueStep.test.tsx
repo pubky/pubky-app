@@ -52,6 +52,28 @@ describe('DialogReportPostIssueStep', () => {
       const label = REPORT_ISSUE_LABELS[issueType];
       expect(screen.getByText(label)).toBeInTheDocument();
     });
+    expect(screen.getAllByRole('option')).toHaveLength(9);
+  });
+
+  it('requires one selection and continues with the most recently selected issue', async () => {
+    const user = userEvent.setup();
+    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
+
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    const personalInfo = screen.getByRole('option', { name: REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.PERSONAL_INFO] });
+    const hateSpeech = screen.getByRole('option', { name: REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.HATE_SPEECH] });
+    expect(continueButton).toBeDisabled();
+
+    await user.click(personalInfo);
+    expect(continueButton).toBeEnabled();
+    expect(personalInfo).toHaveAttribute('aria-selected', 'true');
+    await user.click(hateSpeech);
+    expect(personalInfo).toHaveAttribute('aria-selected', 'false');
+    expect(hateSpeech).toHaveAttribute('aria-selected', 'true');
+    expect(mockOnSelectIssueType).not.toHaveBeenCalled();
+
+    await user.click(continueButton);
+    expect(mockOnSelectIssueType).toHaveBeenCalledExactlyOnceWith(REPORT_ISSUE_TYPES.HATE_SPEECH);
   });
 
   it('renders the footer as a primary Continue action and an outline Cancel action', () => {
@@ -149,8 +171,15 @@ describe('DialogReportPostIssueStep - Snapshots', () => {
   const mockOnSelectIssueType = vi.fn();
   const mockOnCancel = vi.fn();
 
-  it('matches footer snapshot', () => {
+  it('matches the issue selection snapshot', () => {
     renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
-    expect(screen.getByRole('button', { name: 'Cancel' }).parentElement).toMatchSnapshot();
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
+  });
+
+  it('matches the selected issue snapshot', async () => {
+    const user = userEvent.setup();
+    renderWithDialog(<DialogReportPostIssueStep onSelectIssueType={mockOnSelectIssueType} onCancel={mockOnCancel} />);
+    await user.click(screen.getByRole('option', { name: REPORT_ISSUE_LABELS[REPORT_ISSUE_TYPES.HATE_SPEECH] }));
+    expect(screen.getByRole('dialog')).toMatchSnapshot();
   });
 });

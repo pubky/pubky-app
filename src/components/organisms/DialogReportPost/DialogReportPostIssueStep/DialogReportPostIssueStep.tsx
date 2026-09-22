@@ -38,12 +38,12 @@ export function DialogReportPostIssueStep({
   };
   return (
     <>
-      <DialogHeader>
+      <DialogHeader className="pr-0">
         <DialogTitle>{'Report Post'}</DialogTitle>
-        <DialogDescription>{'What sort of issue are you reporting?'}</DialogDescription>
+        <DialogDescription className="leading-5">{'What sort of issue are you reporting?'}</DialogDescription>
       </DialogHeader>
 
-      <Container className="gap-1 py-2" role="listbox" aria-label={'Issue types'}>
+      <Container className="gap-2" role="listbox" aria-label={'Issue types'}>
         {REPORT_ISSUE_TYPE_VALUES.map((issueType) => {
           const Icon = ISSUE_TYPE_ICONS[issueType as ReportIssueType];
           const isSelected = selectedType === issueType;
@@ -57,29 +57,35 @@ export function DialogReportPostIssueStep({
               aria-selected={isSelected}
               aria-label={label}
               className={cn(
-                'h-auto w-full justify-start gap-3 rounded-lg px-3 py-3 hover:bg-muted',
-                isSelected && 'bg-muted',
+                'h-6 w-full min-w-0 justify-start gap-2 rounded-sm p-0 text-muted-foreground shadow-none has-[>svg]:px-0',
+                isSelected && 'text-popover-foreground',
               )}
               onClick={() => handleSelect(issueType as ReportIssueType)}
             >
-              <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <Typography as="span" size="sm" className="flex-1 text-left text-foreground">
+              <Icon className="size-4 shrink-0" aria-hidden="true" />
+              <Typography as="span" size="md" className="min-w-0 flex-1 truncate text-left text-inherit">
                 {label}
               </Typography>
-              {isSelected && <Check className="size-5 shrink-0 text-foreground" aria-hidden="true" />}
+              {isSelected && <Check className="size-5 shrink-0" aria-hidden="true" />}
             </Button>
           );
         })}
       </Container>
 
       <DialogFooter>
-        <Button data-cy="report-issue-step-cancel" variant="outline" size="lg" onClick={onCancel} aria-label={'Cancel'}>
+        <Button
+          data-cy="report-issue-step-cancel"
+          variant="outline"
+          className="border-border bg-foreground/5 font-bold"
+          onClick={onCancel}
+          aria-label={'Cancel'}
+        >
           {'Cancel'}
         </Button>
         <Button
           data-cy="report-issue-step-next"
           variant="default"
-          size="lg"
+          className="font-bold"
           onClick={handleNext}
           disabled={!selectedType}
           aria-label={'Continue'}
