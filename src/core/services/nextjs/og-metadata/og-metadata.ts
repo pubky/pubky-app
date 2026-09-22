@@ -114,12 +114,19 @@ export class NextJsOgMetadataService {
         return attempt.result;
       }
 
-      const retried = await fetchOgMetadataWithHeaders(url, CRAWLER_FETCH_HEADERS);
-      // Keep the first pass's metadata, including a plain title, unless the crawler produces a
-      // usable preview. A terminal failure is no improvement over another bot wall or shell.
-      const result = retried.usable ? retried.result : attempt.result;
-      logCrawlerRetry(url, attempt.retry, retried.usable);
-      return result;
+      try {
+        const retried = await fetchOgMetadataWithHeaders(url, CRAWLER_FETCH_HEADERS);
+        // Keep the first pass's metadata, including a plain title, unless the crawler produces a
+        // usable preview. A terminal failure is no improvement over another bot wall or shell.
+        const result = retried.usable ? retried.result : attempt.result;
+        logCrawlerRetry(url, attempt.retry, retried.usable);
+        return result;
+      } catch {
+        // Enrichment is optional: rejected redirects or a failed retry must not discard the
+        // first result. The retry still goes through every DNS, protocol and redirect guard.
+        logCrawlerRetry(url, attempt.retry, false);
+        return attempt.result;
+      }
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -265,7 +272,13 @@ async function fetchWithRedirectsForOgMetadata(url: string, headers: Record<stri
     if (!fetchResult.ok) return fetchResult;
 
     const { response } = fetchResult;
-    const redirectUrl = validateRedirectUrl(response, currentUrl);
+    let redirectUrl: URL | null;
+    try {
+      redirectUrl = validateRedirectUrl(response, currentUrl);
+    } catch (error) {
+      response.body?.cancel().catch(() => {});
+      throw error;
+    }
     if (!redirectUrl) {
       return { ok: true, response };
     }

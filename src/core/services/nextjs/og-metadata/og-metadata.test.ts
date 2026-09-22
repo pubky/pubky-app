@@ -1041,6 +1041,44 @@ describe('NextJsOgMetadataService', () => {
       );
     });
 
+    it.each(['file:///etc/passwd', 'javascript:alert(1)'])(
+      'should retain the first title when the crawler redirects to %s',
+      async (location) => {
+        const loggerWarnSpy = await spyOnLoggerWarn();
+        const redirect = createCancellableResponse(302, 'text/html');
+        redirect.response.headers.set('location', location);
+        mockFetch.mockResolvedValueOnce(redirect.response);
+
+        await expect(NextJsOgMetadataService.fetch(new URL(BOT_WALL_URL))).resolves.toMatchObject({
+          title: 'Useful document title',
+          image: null,
+          type: 'website',
+        });
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(redirect.wasCancelled()).toBe(true);
+        expect(loggerWarnSpy).toHaveBeenCalledWith(
+          '[og-metadata:fetch]',
+          expect.objectContaining({ outcome: 'crawler_retry', recovered: false }),
+        );
+      },
+    );
+
+    it('should retain the first title when the crawler exhausts its redirect budget', async () => {
+      const loggerWarnSpy = await spyOnLoggerWarn();
+      mockFetch.mockImplementation(() => new Response(null, { status: 302, headers: { location: BOT_WALL_URL } }));
+
+      await expect(NextJsOgMetadataService.fetch(new URL(BOT_WALL_URL))).resolves.toMatchObject({
+        title: 'Useful document title',
+        image: null,
+        type: 'website',
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(6);
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        '[og-metadata:fetch]',
+        expect.objectContaining({ outcome: 'crawler_retry', recovered: false }),
+      );
+    });
+
     it.each([
       { contentType: 'image/png', type: 'image' },
       { contentType: 'video/mp4', type: 'video' },
