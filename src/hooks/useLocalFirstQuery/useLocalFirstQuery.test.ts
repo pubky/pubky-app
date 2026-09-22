@@ -30,7 +30,7 @@ vi.mock('react', async () => {
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: (queryFn: () => Promise<unknown>, _deps: unknown[], defaultValue: unknown) => {
     queryFn();
-    return queryResult === undefined ? defaultValue : queryResult;
+    return queryResult === undefined ? defaultValue : { query: _deps[0], data: queryResult };
   },
 }));
 

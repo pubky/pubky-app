@@ -443,14 +443,13 @@ describe('PostAttachments', () => {
       const pendingMetadata = new Promise<NexusFileDetails[]>((_, reject) => {
         rejectMetadata = reject;
       });
-      // A removed surface abandons the read: nothing awaits this promise, so its
-      // rejection is handled here rather than escaping as an unhandled rejection.
-      pendingMetadata.catch(() => undefined);
       mockGetMetadata.mockReturnValue(pendingMetadata);
 
       const { container, rerender } = render(
         <PostAttachments attachments={attachments} localAttachments={undefined} />,
       );
+
+      await waitFor(() => expect(mockGetMetadata).toHaveBeenCalled());
 
       // Removing the attachments retires the in-flight read
       rerender(<PostAttachments attachments={null} localAttachments={undefined} />);

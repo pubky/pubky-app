@@ -1,71 +1,26 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FileController } from '@/controllers/file/file';
+import { usePostArticle } from '@/hooks/usePostArticle/usePostArticle';
+import { NetworkErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
+import { Logger } from '@/libs/logger/logger';
+import { FileDetailsModel } from '@/models/file/fileDetails';
+import { toast } from '@/molecules/Toaster/toast';
+import { NexusFileService } from '@/services/nexus/file/file';
+import { FileVariant } from '@/services/nexus/file/file.types';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 import { useAttachmentsMetadata } from './useAttachmentsMetadata';
 
-const { liveQueryRegistry, mockGetMetadata, mockFetchFiles } = vi.hoisted(() => ({
-  liveQueryRegistry: { rerun: () => undefined },
-  mockGetMetadata: vi.fn(),
-  mockFetchFiles: vi.fn(),
-}));
-
-/**
- * Executable stand-in for `dexie-react-hooks`: it runs the querier the hook
- * hands in, exactly like the real one, and `liveQueryRegistry.rerun()` stands in
- * for a `file_details` write so a row that lands after the first read is
- * observed without remounting the consumer.
- */
-vi.mock('dexie-react-hooks', async () => {
-  const React = await import('react');
-  const reruns = new Set<() => void>();
-  liveQueryRegistry.rerun = () => {
-    reruns.forEach((rerun) => rerun());
-  };
-
-  return {
-    useLiveQuery: (querier: () => unknown, deps: unknown[] = [], defaultValue?: unknown) => {
-      const [value, setValue] = React.useState(defaultValue);
-      const querierRef = React.useRef(querier);
-      querierRef.current = querier;
-
-      React.useEffect(() => {
-        let cancelled = false;
-        const run = () => {
-          void Promise.resolve(querierRef.current()).then((result) => {
-            if (!cancelled) setValue(result);
-          });
-        };
-
-        reruns.add(run);
-        run();
-
-        return () => {
-          cancelled = true;
-          reruns.delete(run);
-        };
-        // The deps list is the hook's own, forwarded verbatim; it is not a literal here.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, deps);
-
-      return value;
-    },
-  };
-});
-
-vi.mock('@/controllers/file/file', () => ({
-  FileController: {
-    getMetadata: mockGetMetadata,
-    fetchFiles: mockFetchFiles,
-    getFileUrl: vi.fn(),
-  },
-}));
+vi.mock('@/services/nexus/file/file', () => ({ NexusFileService: { fetchFiles: vi.fn() } }));
+vi.mock('@/molecules/Toaster/toast', () => ({ toast: vi.fn() }));
 
 const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 const fileUri = (fileId: string) => `pubky://${AUTHOR}/pub/pubky.app/files/${fileId}`;
-
-const createFileRow = (fileId: string, name = 'image.jpg'): NexusFileDetails => ({
+const createFileRow = (fileId: string): NexusFileDetails => ({
   id: `${AUTHOR}:${fileId}`,
-  name,
+  name: `${fileId}.jpg`,
   src: `https://cdn.example.com/${fileId}`,
   content_type: 'image/jpeg',
   size: 1024,
@@ -80,84 +35,216 @@ const createFileRow = (fileId: string, name = 'image.jpg'): NexusFileDetails => 
     small: `https://cdn.example.com/${fileId}/small`,
   },
 });
+const articleProps = {
+  content: JSON.stringify({ title: 'Title', body: 'Body' }),
+  coverImageVariant: FileVariant.FEED,
+};
 
-describe('useAttachmentsMetadata', () => {
-  beforeEach(() => {
-    mockGetMetadata.mockReset();
-    mockFetchFiles.mockReset();
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
   });
+  return { promise, resolve, reject };
+}
+
+describe('useAttachmentsMetadata with real Dexie subscriptions', () => {
+  beforeEach(() => {
+    vi.mocked(NexusFileService.fetchFiles).mockReset().mockResolvedValue([]);
+  });
+  afterEach(() => vi.restoreAllMocks());
 
   it('renders a file row that lands after the post details did', async () => {
-    const localRows: NexusFileDetails[] = [];
-    mockGetMetadata.mockImplementation(async () => localRows);
-    mockFetchFiles.mockResolvedValue(undefined);
-    const attachment = fileUri('image1');
-
-    const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [attachment] }));
-
-    // The post row is already on screen while the file table is still empty, and
-    // the missing metadata has been requested from Nexus.
-    await waitFor(() => expect(mockFetchFiles).toHaveBeenCalledWith({ fileUris: [attachment] }));
+    const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1')] }));
+    await waitFor(() => expect(NexusFileService.fetchFiles).toHaveBeenCalledWith([fileUri('image1')]));
     expect(result.current.files).toEqual([]);
 
-    // The row lands through a separate write (persistFiles / bootstrap).
-    localRows.push(createFileRow('image1'));
-    act(() => liveQueryRegistry.rerun());
-
-    await waitFor(() => expect(result.current.files.map((file) => file.name)).toEqual(['image.jpg']));
+    await act(async () => {
+      await FileDetailsModel.table.put(createFileRow('image1'));
+    });
+    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image1')]));
   });
 
-  it('returns the rows that are local while fetching only the missing ones', async () => {
-    const localRows = [createFileRow('image1')];
-    mockGetMetadata.mockImplementation(async () => localRows);
-    mockFetchFiles.mockResolvedValue(undefined);
-
+  it('returns local rows while fetching and persisting only the missing ones', async () => {
+    await FileDetailsModel.table.put(createFileRow('image1'));
+    const pending = deferred<NexusFileDetails[]>();
+    vi.mocked(NexusFileService.fetchFiles).mockReturnValue(pending.promise);
     const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('image2')] }));
+    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image1')]));
+    expect(NexusFileService.fetchFiles).toHaveBeenCalledWith([fileUri('image2')]);
 
-    await waitFor(() => expect(result.current.files.map((file) => file.name)).toEqual(['image.jpg']));
-    expect(mockFetchFiles).toHaveBeenCalledWith({ fileUris: [fileUri('image2')] });
+    await act(async () => {
+      pending.resolve([createFileRow('image2')]);
+    });
+    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image1'), createFileRow('image2')]));
   });
 
   it('does not re-request a URI whose fetch settled with no row', async () => {
-    mockGetMetadata.mockImplementation(async () => []);
-    mockFetchFiles.mockResolvedValue(undefined);
-
-    renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1')] }));
-
-    await waitFor(() => expect(mockFetchFiles).toHaveBeenCalledTimes(1));
-
-    // Another write re-runs the live read; the settled URI is not requested again.
-    act(() => liveQueryRegistry.rerun());
-    await waitFor(() => expect(mockGetMetadata).toHaveBeenCalledTimes(2));
-    expect(mockFetchFiles).toHaveBeenCalledTimes(1);
-  });
-
-  it('reports a failed fetch once for the current attachment set', async () => {
-    mockGetMetadata.mockImplementation(async () => []);
-    mockFetchFiles.mockRejectedValue(new Error('offline'));
-    const onError = vi.fn();
-
-    renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1')], onError }));
-
-    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
-
-    act(() => liveQueryRegistry.rerun());
+    const read = vi.spyOn(FileController, 'getMetadata');
+    renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('image2')] }));
+    await waitFor(() => expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1));
     await act(async () => {
-      await Promise.resolve();
+      await FileDetailsModel.table.put(createFileRow('image2'));
     });
-
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(mockFetchFiles).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
+    expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1);
   });
 
-  it('does not resolve anything while the caller gate is off', () => {
-    mockGetMetadata.mockResolvedValue([]);
-    mockFetchFiles.mockResolvedValue(undefined);
+  it('reports a failed fetch once without duplicating the factory log', async () => {
+    const log = vi.spyOn(Logger, 'error').mockImplementation(() => undefined);
+    vi.mocked(NexusFileService.fetchFiles).mockImplementation(async () => {
+      throw Err.network(NetworkErrorCode.OFFLINE, 'offline', { service: ErrorService.Nexus, operation: 'fetchFiles' });
+    });
+    const onError = vi.fn();
+    const { result } = renderHook(() =>
+      useAttachmentsMetadata({ fileUris: [fileUri('image1'), fileUri('image2')], onError }),
+    );
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await FileDetailsModel.table.put(createFileRow('image2'));
+    });
+    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image2')]));
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1);
+  });
 
+  it('reports a model read failure without duplicating its factory log', async () => {
+    const log = vi.spyOn(Logger, 'error').mockImplementation(() => undefined);
+    vi.spyOn(FileDetailsModel.table, 'where').mockImplementation(() => {
+      throw new Error('database failure');
+    });
+    const onError = vi.fn();
+    renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1')], onError }));
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0][0]).toContain(':findByIds]');
+  });
+
+  it('does not resolve anything while the caller gate is off', async () => {
+    const read = vi.spyOn(FileController, 'getMetadata');
     const { result } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1')], enabled: false }));
-
+    await act(async () => {
+      await FileDetailsModel.table.put(createFileRow('image1'));
+    });
     expect(result.current.files).toEqual([]);
-    expect(mockGetMetadata).not.toHaveBeenCalled();
-    expect(mockFetchFiles).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled();
+    expect(NexusFileService.fetchFiles).not.toHaveBeenCalled();
+  });
+
+  it('waits for a replacement cover locally without fetching or showing a false toast', async () => {
+    await FileDetailsModel.table.bulkPut([createFileRow('image1'), createFileRow('image2')]);
+    vi.mocked(NexusFileService.fetchFiles).mockRejectedValue(new Error('Nexus unavailable'));
+    const { result, rerender } = renderHook(
+      ({ id }) => usePostArticle({ ...articleProps, attachments: [fileUri(id)] }),
+      { initialProps: { id: 'image1' } },
+    );
+    await waitFor(() => expect(result.current.coverImage?.alt).toBe('image1.jpg'));
+    rerender({ id: 'image2' });
+    await waitFor(() => expect(result.current.coverImage?.alt).toBe('image2.jpg'));
+    expect(NexusFileService.fetchFiles).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('does not fetch a changed URI while disabled, then reads its cache when re-enabled', async () => {
+    await FileDetailsModel.table.bulkPut([createFileRow('image1'), createFileRow('image2')]);
+    const read = vi.spyOn(FileController, 'getMetadata');
+    const { result, rerender } = renderHook(
+      ({ id, enabled }) => useAttachmentsMetadata({ fileUris: [fileUri(id)], enabled }),
+      { initialProps: { id: 'image1', enabled: true } },
+    );
+    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image1')]));
+    rerender({ id: 'image2', enabled: false });
+    await act(async () => {
+      await FileDetailsModel.table.put(createFileRow('image3'));
+    });
+    expect(result.current.files).toEqual([]);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(NexusFileService.fetchFiles).not.toHaveBeenCalled();
+    rerender({ id: 'image2', enabled: true });
+    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image2')]));
+    expect(NexusFileService.fetchFiles).not.toHaveBeenCalled();
+  });
+
+  it('does not treat the previous cache miss as a miss for a cached replacement', async () => {
+    await FileDetailsModel.table.put(createFileRow('image2'));
+    const { result, rerender } = renderHook(({ id }) => useAttachmentsMetadata({ fileUris: [fileUri(id)] }), {
+      initialProps: { id: 'image1' },
+    });
+    await waitFor(() => expect(NexusFileService.fetchFiles).toHaveBeenCalledWith([fileUri('image1')]));
+    rerender({ id: 'image2' });
+    await waitFor(() => expect(result.current.files).toEqual([createFileRow('image2')]));
+    expect(NexusFileService.fetchFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['local read', 'fetch'] as const)('does not toast when a pending %s fails after unmount', async (source) => {
+    const pending = deferred<NexusFileDetails[]>();
+    const request =
+      source === 'local read'
+        ? vi.spyOn(FileController, 'getMetadata').mockReturnValue(pending.promise)
+        : vi.mocked(NexusFileService.fetchFiles).mockReturnValue(pending.promise);
+    const { unmount } = renderHook(() => usePostArticle({ ...articleProps, attachments: [fileUri('image1')] }));
+    await waitFor(() => expect(request).toHaveBeenCalled());
+    unmount();
+    await act(async () => {
+      pending.reject(new Error('deferred failure'));
+    });
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it.each(['local read', 'fetch'] as const)(
+    'keeps the replacement cover when an old pending %s fails',
+    async (source) => {
+      await FileDetailsModel.table.put(createFileRow('image2'));
+      const pending = deferred<NexusFileDetails[]>();
+      const request =
+        source === 'local read'
+          ? vi.spyOn(FileController, 'getMetadata').mockReturnValueOnce(pending.promise)
+          : vi.mocked(NexusFileService.fetchFiles).mockReturnValueOnce(pending.promise);
+      const { result, rerender } = renderHook(
+        ({ id }) => usePostArticle({ ...articleProps, attachments: [fileUri(id)] }),
+        { initialProps: { id: 'image1' } },
+      );
+      await waitFor(() => expect(request).toHaveBeenCalled());
+      rerender({ id: 'image2' });
+      await waitFor(() => expect(result.current.coverImage?.alt).toBe('image2.jpg'));
+      await act(async () => {
+        pending.reject(new Error('obsolete failure'));
+      });
+      expect(result.current.coverImage?.alt).toBe('image2.jpg');
+      expect(toast).not.toHaveBeenCalled();
+    },
+  );
+
+  it('suppresses a pending failure after disabling its consumer', async () => {
+    const pending = deferred<NexusFileDetails[]>();
+    vi.mocked(NexusFileService.fetchFiles).mockReturnValue(pending.promise);
+    const onError = vi.fn();
+    const { rerender } = renderHook(
+      ({ enabled }) => useAttachmentsMetadata({ fileUris: [fileUri('image1')], enabled, onError }),
+      { initialProps: { enabled: true } },
+    );
+    await waitFor(() => expect(NexusFileService.fetchFiles).toHaveBeenCalled());
+    rerender({ enabled: false });
+    await act(async () => {
+      pending.reject(new Error('deferred failure'));
+    });
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('allows a pending fetch to persist after unmount', async () => {
+    const pending = deferred<NexusFileDetails[]>();
+    vi.mocked(NexusFileService.fetchFiles).mockReturnValue(pending.promise);
+    const { unmount } = renderHook(() => useAttachmentsMetadata({ fileUris: [fileUri('image1')] }));
+    await waitFor(() => expect(NexusFileService.fetchFiles).toHaveBeenCalled());
+    unmount();
+    await act(async () => {
+      pending.resolve([createFileRow('image1')]);
+    });
+    await waitFor(async () =>
+      expect(await FileDetailsModel.table.get(createFileRow('image1').id)).toEqual(createFileRow('image1')),
+    );
   });
 });

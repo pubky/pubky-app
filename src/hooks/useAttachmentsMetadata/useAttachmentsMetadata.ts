@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileController } from '@/controllers/file/file';
 import { isLocalFirstQueryEnabled, useLocalFirstQuery } from '@/hooks/useLocalFirstQuery/useLocalFirstQuery';
-import { Logger } from '@/libs/logger/logger';
 import type { NexusFileDetails } from '@/services/nexus/nexus.types';
 
 interface UseAttachmentsMetadataParams {
@@ -66,10 +65,13 @@ export function useAttachmentsMetadata({
   // The live `fileUris` key and error handler, read when a request settles:
   // a failure that belongs to a set the caller has since replaced (an edit
   // removed the attachments) is not the current surface's failure to report.
-  const currentFileUrisKeyRef = useRef(fileUrisKey);
+  const currentFileUrisKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    currentFileUrisKeyRef.current = fileUrisKey;
-  }, [fileUrisKey]);
+    currentFileUrisKeyRef.current = isEnabled ? fileUrisKey : null;
+    return () => {
+      currentFileUrisKeyRef.current = null;
+    };
+  }, [fileUrisKey, isEnabled]);
 
   const onErrorRef = useRef(onError);
   useEffect(() => {
@@ -100,7 +102,6 @@ export function useAttachmentsMetadata({
       // A failed fetch is not fatal: the caller renders whatever is local, and
       // the row may still arrive through a later write on another surface. It
       // is settled below either way, so one failure cannot re-request forever.
-      Logger.error('[useAttachmentsMetadata] Failed to fetch file metadata', { fileUris: requested, error });
       reportError(requestedFileUrisKey, error);
     } finally {
       requested.forEach((uri) => inFlightFileUris.current.delete(uri));
@@ -123,7 +124,6 @@ export function useAttachmentsMetadata({
         // those rows render while the effect below completes the rest.
         return files.length > 0 ? files : null;
       } catch (error) {
-        Logger.error('[useAttachmentsMetadata] Failed to read file metadata', { fileUris: [...fileUris], error });
         reportError(fileUrisKey, error);
         return null;
       }
@@ -136,7 +136,7 @@ export function useAttachmentsMetadata({
   // The fetch arm above only fires when nothing resolved locally. A partial set
   // counts as a cache hit, so complete it here, once per URI.
   useEffect(() => {
-    if (!data) return;
+    if (!isEnabled || !data) return;
 
     const resolved = new Set(data.map((file) => file.uri));
     void requestMissingFiles(
@@ -145,7 +145,7 @@ export function useAttachmentsMetadata({
     );
     // `requestMissingFiles` closes over `settledFileUris`, which is a dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, fileUrisKey, settledFileUris]);
+  }, [data, fileUrisKey, isEnabled, settledFileUris]);
 
   return { files: data ?? [] };
 }

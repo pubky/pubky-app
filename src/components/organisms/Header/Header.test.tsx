@@ -15,7 +15,7 @@ vi.mock('next/navigation', () => ({
 let mockCurrentUserPubky: string | null = null;
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: vi.fn(() => ({ name: 'Test User', image: 'test-image.jpg' })),
+  useLiveQuery: vi.fn((_queryFn, deps) => ({ query: deps[0], data: { name: 'Test User', image: 'test-image.jpg' } })),
 }));
 
 // Mock atoms, libs, config, and app
