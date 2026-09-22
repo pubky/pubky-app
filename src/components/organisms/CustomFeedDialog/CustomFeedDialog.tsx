@@ -446,6 +446,9 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                       event.preventDefault();
                       setIsLayoutTooltipOpen((tooltipOpen) => !tooltipOpen);
                     }}
+                    // A touch tap can emit a click after pointer-up. Keep Radix from
+                    // closing the hint that the pointer-down handler just opened.
+                    onClick={(event) => event.preventDefault()}
                   >
                     <CircleHelp className="size-3.5" />
                   </button>

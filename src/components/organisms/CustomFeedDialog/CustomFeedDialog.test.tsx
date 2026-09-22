@@ -991,7 +991,7 @@ describe('CustomFeedDialog', () => {
     });
   });
 
-  it('toggles the desktop-only hint when the layout info affordance is tapped', async () => {
+  it.each([true, false])('keeps a completed touch tap usable (synthesized click: %s)', async (synthesizeClick) => {
     render(
       <CustomFeedDialog mode="create">
         <button>Create Feed</button>
@@ -1001,6 +1001,8 @@ describe('CustomFeedDialog', () => {
     const trigger = screen.getByTestId('layout-tooltip-trigger');
 
     fireEvent.pointerDown(trigger, { pointerType: 'touch' });
+    fireEvent.pointerUp(trigger, { pointerType: 'touch' });
+    if (synthesizeClick) fireEvent.click(trigger);
     await waitFor(() => {
       expect(screen.getByRole('tooltip')).toHaveTextContent(
         'Layout settings only affect how your feed appears on desktop.',
@@ -1008,6 +1010,8 @@ describe('CustomFeedDialog', () => {
     });
 
     fireEvent.pointerDown(trigger, { pointerType: 'touch' });
+    fireEvent.pointerUp(trigger, { pointerType: 'touch' });
+    if (synthesizeClick) fireEvent.click(trigger);
     await waitFor(() => {
       expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     });
