@@ -47,7 +47,7 @@ The first install claims open tabs without a reload or a toast. Rollout note: `s
 
 `public/offline.html` is a self-contained page (inline CSS, `#05050A` background, the precached `/pubky-logo.svg`, a Retry button that reloads the page the user actually asked for, and an `online` listener that does the same). Prettier and ESLint ignore `public/`, so keep it hand-formatted. It is in the precache allow-list, and Serwist revisions it by content hash, so edits invalidate automatically.
 
-Do not replace it with a Next route: `/offline` under the root layout would render `DatabaseProvider` → `RouteGuardProvider`, start the session restore, and log the user out in the background.
+Do not replace it with a Next route: `/offline` under the root layout would render `DatabaseProvider` → `RouteGuardProvider`, start the session restore, and log the user out in the background. The same rule applies to the Pubky Passport callback page (`public/passport/return.html`), which opens in a popup on the origin the opener is signing into.
 
 ## Precache diet
 
