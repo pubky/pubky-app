@@ -31,6 +31,8 @@ export class LocalProfileService {
    * `social_graph_status`; the tier is only known from a full user view. A whole-row put
    * would erase a tier persisted earlier, so the existing one is carried over. Read and
    * write share a transaction so a concurrent full-view persist cannot slip in between.
+   * Concurrent details requests may use different retry budgets and finish out of order;
+   * keep the newer indexed profile when an older response arrives last.
    *
    * @param userDetails - The user details to upsert
    * @returns Promise resolving to void
@@ -38,6 +40,7 @@ export class LocalProfileService {
   static async upsertDetails(userDetails: NexusUserDetails): Promise<void> {
     await db.transaction('rw', UserDetailsModel.table, async () => {
       const existing = await UserDetailsModel.findById(userDetails.id);
+      if (existing && existing.indexed_at > userDetails.indexed_at) return;
       const social_graph_status = existing?.social_graph_status;
       await UserDetailsModel.upsert(
         social_graph_status === undefined ? userDetails : { ...userDetails, social_graph_status },
