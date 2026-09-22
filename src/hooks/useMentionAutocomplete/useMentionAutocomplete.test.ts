@@ -124,6 +124,18 @@ describe('useMentionAutocomplete', () => {
     );
   });
 
+  it.each(['🚀Alice', 'Rocket🚀', '👩🏽‍💻 Alice', '🇷🇸 Alice', '✌️ Alice'])(
+    'searches the emoji display name %s',
+    async (name) => {
+      const content = `Hello @${name}`;
+      renderHook(() => useMentionAutocomplete({ content, caret: content.length }));
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+      expect(mockGetUsersByName).toHaveBeenCalledWith(expect.objectContaining({ prefix: name }));
+    },
+  );
+
   it('triggers search when pk: pattern is detected at end of content (legacy)', async () => {
     renderHook(() => useMentionAutocomplete({ content: 'Hello pk:abc', caret: 12 }));
 

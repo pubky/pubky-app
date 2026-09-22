@@ -38,6 +38,20 @@ describe('extractMentionQuery', () => {
       expect(result.atQuery).toBe('john');
     });
 
+    it.each(['🚀Alice', 'Rocket🚀', '👩🏽‍💻 Alice', '🇷🇸 Alice', '✌️ Alice'])('preserves emoji in the name %s', (name) => {
+      const prefix = `Hello @${name}`;
+      const content = `${prefix} remaining text`;
+      expect(extractMentionQuery(content, prefix.length)).toEqual({
+        atQuery: name,
+        pkQuery: null,
+        range: { start: 6, end: prefix.length },
+      });
+      expect(getContentWithMention(content, prefix.length, 'selected-user')).toEqual({
+        content: 'Hello pubkyselected-user  remaining text',
+        caret: 'Hello pubkyselected-user '.length,
+      });
+    });
+
     it('extracts a multiword name up to the caret', () => {
       // 'Hello @John Carvalho' - the space between the name's words does not end the query (#1638)
       const result = extractMentionQuery('Hello @John Carvalho');
