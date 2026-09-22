@@ -12,17 +12,16 @@ let frameId = 0;
 
 function Harness({
   heights = [100, 200, 80],
+  ids = heights.map((_, index) => String(index)),
   columns = 2,
   trailing = false,
 }: {
   heights?: number[];
+  ids?: string[];
   columns?: number;
   trailing?: boolean;
 }) {
-  const ref = useMasonryLayout(
-    heights.map((_, index) => String(index)),
-    trailing,
-  );
+  const ref = useMasonryLayout(ids, trailing);
   return (
     <div
       data-testid="masonry"
@@ -30,8 +29,8 @@ function Harness({
       style={{ display: 'grid', gridTemplateColumns: Array(columns).fill('294px').join(' '), columnGap: 12 }}
     >
       {heights.map((height, index) => (
-        <div key={index} data-height={height} data-testid={`card-${index}`}>
-          Post {index}
+        <div key={ids[index]} data-height={height} data-testid={`card-${ids[index]}`}>
+          Post {ids[index]}
         </div>
       ))}
       {trailing && (
@@ -127,5 +126,17 @@ describe('useMasonryLayout', () => {
     rerender(<Harness columns={3} />);
     flushMeasurements();
     expect(screen.getByTestId('card-2')).toHaveStyle({ top: '0px', left: '408px' });
+  });
+
+  it('closes gaps after removal and measures only the remaining cards', () => {
+    const { rerender } = render(<Harness />);
+    const previousObserver = observers.at(-1)!;
+    rerender(<Harness ids={['1', '2']} heights={[200, 80]} />);
+    expect(screen.queryByTestId('card-0')).not.toBeInTheDocument();
+    expect(screen.getByTestId('card-1')).toHaveStyle({ top: '0px', left: '306px' });
+    expect(screen.getByTestId('card-2')).toHaveStyle({ top: '0px', left: '0px' });
+    expect(screen.getByTestId('masonry')).toHaveStyle({ height: '200px' });
+    expect(previousObserver.disconnect).toHaveBeenCalledOnce();
+    expect(observers.at(-1)?.observe).toHaveBeenCalledTimes(3);
   });
 });

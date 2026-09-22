@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
-import { type MasonryPlacement, placeMasonryItems } from './MasonryPosts.utils';
+import { type MasonryPlacement, placeMasonryItems } from './useMasonryLayout.utils';
 
 /** One observer batches card and container changes; DOM order always remains the feed order. */
 export function useMasonryLayout(itemIds: string[], hasTrailing: boolean) {

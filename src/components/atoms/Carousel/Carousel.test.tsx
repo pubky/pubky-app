@@ -139,6 +139,32 @@ describe('Carousel', () => {
     expect(mockScrollPrev).toHaveBeenCalledTimes(1);
   });
 
+  it('leaves native media arrow keys to the browser', () => {
+    render(
+      <Carousel>
+        <video controls aria-label="Video" />
+        <audio controls aria-label="Audio" />
+      </Carousel>,
+    );
+    for (const label of ['Video', 'Audio']) {
+      for (const key of ['ArrowLeft', 'ArrowRight']) {
+        expect(fireEvent.keyDown(screen.getByLabelText(label), { key })).toBe(true);
+      }
+    }
+    expect(mockScrollPrev).not.toHaveBeenCalled();
+    expect(mockScrollNext).not.toHaveBeenCalled();
+  });
+
+  it('keeps subscriptions stable through rerenders and cleans up both listeners', () => {
+    const { rerender, unmount } = render(<Carousel aria-label="Gallery" />);
+    const subscriptions = [...mockOn.mock.calls];
+    expect(subscriptions.map(([event]) => event)).toEqual(['reInit', 'select']);
+    rerender(<Carousel aria-label="Updated gallery" />);
+    expect(mockOn).toHaveBeenCalledTimes(2);
+    unmount();
+    expect(mockOff.mock.calls).toEqual(subscriptions);
+  });
+
   it('handles keyboard navigation with ArrowRight', () => {
     render(
       <Carousel>

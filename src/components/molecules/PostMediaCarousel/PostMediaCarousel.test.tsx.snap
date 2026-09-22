@@ -10,71 +10,76 @@ exports[`PostMediaCarousel - Snapshots > renders a portrait carousel with all na
   tabindex="0"
 >
   <div
-    class="overflow-hidden"
-    data-slot="carousel-content"
+    class=""
+    data-testid="container"
   >
     <div
-      class="flex ml-0"
+      class="overflow-hidden"
+      data-slot="carousel-content"
     >
       <div
-        aria-hidden="false"
-        aria-label="1 of 2"
-        aria-roledescription="slide"
-        class="min-w-0 shrink-0 grow-0 basis-full pl-0"
-        data-slot="carousel-item"
-        role="group"
+        class="flex ml-0"
       >
         <div
-          class="relative max-h-160 w-full overflow-hidden bg-background"
-          data-testid="container"
-          style="aspect-ratio: 0.6666666666666666 / 1;"
+          aria-hidden="false"
+          aria-label="1 of 2"
+          aria-roledescription="slide"
+          class="min-w-0 shrink-0 grow-0 basis-full pl-0"
+          data-slot="carousel-item"
+          role="group"
         >
-          <button
-            aria-label="Open image 1 of 2: Portrait"
-            class="absolute inset-0 h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            data-slot="button"
+          <div
+            class="relative max-h-160 w-full overflow-hidden bg-background"
+            data-testid="container"
+            style="aspect-ratio: 0.6666666666666666 / 1;"
           >
-            <img
-              alt="Portrait"
-              class="h-auto max-w-full object-contain"
-              data-nimg="fill"
-              decoding="async"
-              loading="lazy"
-              src="http://localhost:3000/portrait.png"
-              style="position: absolute; height: 100%; width: 100%; left: 0px; top: 0px; right: 0px; bottom: 0px; color: transparent;"
-            />
-          </button>
+            <button
+              aria-label="Open image 1 of 2: Portrait"
+              class="absolute inset-0 h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              data-slot="button"
+            >
+              <img
+                alt="Portrait"
+                class="h-auto max-w-full object-contain"
+                data-nimg="fill"
+                decoding="async"
+                loading="lazy"
+                src="http://localhost:3000/portrait.png"
+                style="position: absolute; height: 100%; width: 100%; left: 0px; top: 0px; right: 0px; bottom: 0px; color: transparent;"
+              />
+            </button>
+          </div>
         </div>
-      </div>
-      <div
-        aria-hidden="true"
-        aria-label="2 of 2"
-        aria-roledescription="slide"
-        class="min-w-0 shrink-0 grow-0 basis-full pl-0"
-        data-slot="carousel-item"
-        inert=""
-        role="group"
-      >
         <div
-          class="relative max-h-160 w-full overflow-hidden bg-background"
-          data-testid="container"
-          style="aspect-ratio: 0.6666666666666666 / 1;"
+          aria-hidden="true"
+          aria-label="2 of 2"
+          aria-roledescription="slide"
+          class="min-w-0 shrink-0 grow-0 basis-full pl-0"
+          data-slot="carousel-item"
+          inert=""
+          role="group"
         >
-          <button
-            aria-label="Open image 2 of 2: Landscape"
-            class="absolute inset-0 h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            data-slot="button"
+          <div
+            class="relative max-h-160 w-full overflow-hidden bg-background"
+            data-testid="container"
+            style="aspect-ratio: 0.6666666666666666 / 1;"
           >
-            <img
-              alt="Landscape"
-              class="h-auto max-w-full object-contain"
-              data-nimg="fill"
-              decoding="async"
-              loading="lazy"
-              src="http://localhost:3000/landscape.png"
-              style="position: absolute; height: 100%; width: 100%; left: 0px; top: 0px; right: 0px; bottom: 0px; color: transparent;"
-            />
-          </button>
+            <button
+              aria-label="Open image 2 of 2: Landscape"
+              class="absolute inset-0 h-full w-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              data-slot="button"
+            >
+              <img
+                alt="Landscape"
+                class="h-auto max-w-full object-contain"
+                data-nimg="fill"
+                decoding="async"
+                loading="lazy"
+                src="http://localhost:3000/landscape.png"
+                style="position: absolute; height: 100%; width: 100%; left: 0px; top: 0px; right: 0px; bottom: 0px; color: transparent;"
+              />
+            </button>
+          </div>
         </div>
       </div>
     </div>

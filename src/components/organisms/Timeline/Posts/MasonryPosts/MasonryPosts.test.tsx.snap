@@ -1,62 +1,190 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`TimelineMasonryPosts - Mobile Snapshots > retains the card presentation on mobile 1`] = `
+exports[`TimelineMasonryPosts - Mobile Snapshots > renders initial placeholders using the shared loading count on mobile 1`] = `
 <div
-  class="mx-auto w-full flex-col flex"
-  data-cy="timeline-container"
+  class="grid items-start grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-6"
+  data-cy="masonry-skeleton"
   data-testid="container"
 >
   <div
-    class="relative grid items-start gap-3 lg:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
-    data-cy="timeline-posts-masonry"
+    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
     data-testid="container"
-    role="feed"
   >
     <div
-      aria-posinset="1"
-      aria-setsize="3"
-      class="mx-auto w-full flex-col flex @container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      data-cy="post-card"
+      class="flex items-center gap-2"
       data-testid="container"
-      role="article"
-      tabindex="0"
     >
       <div
-        data-presentation="masonry"
-      >
-        a:1
-      </div>
+        class="animate-pulse bg-muted size-8 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="animate-pulse rounded-md bg-muted h-4 w-24"
+        data-slot="skeleton"
+      />
     </div>
     <div
-      aria-posinset="2"
-      aria-setsize="3"
-      class="mx-auto w-full flex-col flex @container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      data-cy="post-card"
+      class="animate-pulse rounded-md bg-muted h-64 w-full"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-4 w-3/4"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-6 w-full"
+      data-slot="skeleton"
+    />
+  </div>
+  <div
+    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center gap-2"
       data-testid="container"
-      role="article"
-      tabindex="0"
     >
       <div
-        data-presentation="masonry"
-      >
-        b:2
-      </div>
+        class="animate-pulse bg-muted size-8 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="animate-pulse rounded-md bg-muted h-4 w-24"
+        data-slot="skeleton"
+      />
     </div>
     <div
-      aria-posinset="3"
-      aria-setsize="3"
-      class="mx-auto w-full flex-col flex @container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      data-cy="post-card"
+      class="animate-pulse rounded-md bg-muted h-32 w-full"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-4 w-3/4"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-6 w-full"
+      data-slot="skeleton"
+    />
+  </div>
+  <div
+    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center gap-2"
       data-testid="container"
-      role="article"
-      tabindex="0"
     >
       <div
-        data-presentation="masonry"
-      >
-        c:3
-      </div>
+        class="animate-pulse bg-muted size-8 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="animate-pulse rounded-md bg-muted h-4 w-24"
+        data-slot="skeleton"
+      />
     </div>
+    <div
+      class="animate-pulse rounded-md bg-muted h-64 w-full"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-4 w-3/4"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-6 w-full"
+      data-slot="skeleton"
+    />
+  </div>
+  <div
+    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center gap-2"
+      data-testid="container"
+    >
+      <div
+        class="animate-pulse bg-muted size-8 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="animate-pulse rounded-md bg-muted h-4 w-24"
+        data-slot="skeleton"
+      />
+    </div>
+    <div
+      class="animate-pulse rounded-md bg-muted h-32 w-full"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-4 w-3/4"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-6 w-full"
+      data-slot="skeleton"
+    />
+  </div>
+  <div
+    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center gap-2"
+      data-testid="container"
+    >
+      <div
+        class="animate-pulse bg-muted size-8 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="animate-pulse rounded-md bg-muted h-4 w-24"
+        data-slot="skeleton"
+      />
+    </div>
+    <div
+      class="animate-pulse rounded-md bg-muted h-64 w-full"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-4 w-3/4"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-6 w-full"
+      data-slot="skeleton"
+    />
+  </div>
+  <div
+    class="mx-auto w-full flex-col flex gap-4 rounded-md bg-card p-4"
+    data-testid="container"
+  >
+    <div
+      class="flex items-center gap-2"
+      data-testid="container"
+    >
+      <div
+        class="animate-pulse bg-muted size-8 rounded-full"
+        data-slot="skeleton"
+      />
+      <div
+        class="animate-pulse rounded-md bg-muted h-4 w-24"
+        data-slot="skeleton"
+      />
+    </div>
+    <div
+      class="animate-pulse rounded-md bg-muted h-32 w-full"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-4 w-3/4"
+      data-slot="skeleton"
+    />
+    <div
+      class="animate-pulse rounded-md bg-muted h-6 w-full"
+      data-slot="skeleton"
+    />
   </div>
 </div>
 `;

@@ -12,6 +12,7 @@ import {
 } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Typography } from '@/atoms/Typography/Typography';
 import { COLLECTION_LAYOUT, type CollectionViewLayout } from '@/config/collections';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 
 interface CollectionLayoutPickerProps {
   layout: CollectionViewLayout;
@@ -100,7 +101,13 @@ function CollectionLayoutPickerContent({ layout, onSelect, layouts }: Collection
 
 export function CollectionLayoutPicker({ layout, onLayoutChange, layouts }: CollectionLayoutPickerProps) {
   const [open, setOpen] = useState(false);
-  const activeOption = getPickerOption(layout);
+  const isPhoneViewport = useIsMobile({ breakpoint: 'md' });
+  // Visual falls back to Grid on phones; retain the viewer's preference for larger screens.
+  const displayedLayout = isPhoneViewport && layout === COLLECTION_LAYOUT.VISUAL ? COLLECTION_LAYOUT.GRID : layout;
+  const availableLayouts = COLLECTION_LAYOUT_PICKER_OPTIONS.map((option) => option.value).filter(
+    (value) => (!layouts || layouts.includes(value)) && (!isPhoneViewport || value !== COLLECTION_LAYOUT.VISUAL),
+  );
+  const activeOption = getPickerOption(displayedLayout);
   const layoutLabel = activeOption.label;
   const ActiveIcon = activeOption.icon;
 
@@ -129,7 +136,7 @@ export function CollectionLayoutPicker({ layout, onLayoutChange, layouts }: Coll
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-70">
-        <CollectionLayoutPickerContent layout={layout} onSelect={handleSelect} layouts={layouts} />
+        <CollectionLayoutPickerContent layout={displayedLayout} onSelect={handleSelect} layouts={availableLayouts} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -780,6 +780,24 @@ describe('Single collection — visual layout — visual regression', () => {
     await renderSingleCollection('visual', VRT_VIEWPORT_DESKTOP);
     await matchVrtFrameScreenshot('single-collection-visual-desktop');
   });
+
+  it('shows the phone Grid fallback and restores the Visual preference after resize', async () => {
+    await renderSingleCollection('visual', VRT_VIEWPORT_MOBILE);
+    await page.getByRole('button', { name: 'Layout: Grid', exact: true }).click();
+    await expect.element(page.getByRole('menuitem', { name: 'Visual', exact: true })).not.toBeInTheDocument();
+    await page.getByRole('menuitem', { name: 'Masonry', exact: true }).click();
+    await expect.poll(() => document.querySelector('[data-cy="timeline-posts-masonry"]')).not.toBeNull();
+    await page.viewport(VRT_VIEWPORT_DESKTOP.width, VRT_VIEWPORT_DESKTOP.height);
+    await page.getByRole('button', { name: 'Layout: Masonry', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Visual', exact: true }).click();
+    const f = await fixtures;
+    await expect.element(page.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
+    await page.viewport(VRT_VIEWPORT_MOBILE.width, VRT_VIEWPORT_MOBILE.height);
+    await expect.element(page.getByRole('button', { name: 'Layout: Grid', exact: true })).toBeVisible();
+    await page.viewport(VRT_VIEWPORT_DESKTOP.width, VRT_VIEWPORT_DESKTOP.height);
+    await expect.element(page.getByRole('button', { name: 'Layout: Visual', exact: true })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: `Open post ${f.collectionItemIds[0]}` })).toBeVisible();
+  });
 });
 
 describe('Bookmarks collection — visual regression', () => {
@@ -891,6 +909,35 @@ async function renderMasonryCards(viewport: { width: number; height: number }, f
 }
 
 describe('Masonry cards — browser coverage', () => {
+  it('pauses a later video slide when its frame scrolls out while the caption stays visible', async () => {
+    const { PostMediaCarousel } = await import('@/molecules/PostMediaCarousel/PostMediaCarousel');
+    const videos = [1, 2, 3].map((number) => ({
+      name: `Video ${number}`,
+      type: 'video/mp4',
+      width: 400,
+      height: 225,
+      urls: { main: '/pubky.mp4' },
+    }));
+    await renderForVRT(
+      <div data-testid="media-scroll" className="h-80 w-80 overflow-y-auto p-4">
+        <PostMediaCarousel media={videos} onOpenPreview={() => {}} isPreviewOpen={false} />
+        <p className="h-160">The caption remains visible below the video.</p>
+      </div>,
+      { viewport: VRT_VIEWPORT_DESKTOP },
+    );
+    await page.getByRole('button', { name: 'Next slide' }).click();
+    await page.getByRole('button', { name: 'Next slide' }).click();
+    await expect.element(page.getByText('3 / 3', { exact: true })).toBeVisible();
+    const video = document.querySelectorAll('video')[2];
+    video.muted = true;
+    await video.play();
+    await expect.poll(() => video.currentTime).toBeGreaterThan(0);
+    const scroller = document.querySelector<HTMLElement>('[data-testid="media-scroll"]')!;
+    scroller.scrollTop = video.getBoundingClientRect().bottom - scroller.getBoundingClientRect().top + 1;
+    await expect.poll(() => video.paused).toBe(true);
+    await expect.element(page.getByText('The caption remains visible below the video.')).toBeVisible();
+  });
+
   it.each([
     ['desktop', VRT_VIEWPORT_DESKTOP],
     ['mobile', VRT_VIEWPORT_MOBILE],

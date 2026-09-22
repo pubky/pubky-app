@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { placeMasonryItems } from './MasonryPosts.utils';
+import { placeMasonryItems } from './useMasonryLayout.utils';
 
 const items = [100, 200, 50, 80, 40].map((height, index) => ({ id: String(index), height }));
 

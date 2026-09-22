@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostMediaCarousel } from './PostMediaCarousel';
 
 // jsdom has no slide geometry; exercise our event bridge against Embla's public API.
@@ -30,6 +30,10 @@ const embla = vi.hoisted(() => {
 });
 vi.mock('embla-carousel-react', () => ({ default: () => [embla.ref, embla.api] }));
 beforeEach(() => embla.reset());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 const media = [
   { name: 'Portrait', type: 'image/png', width: 600, height: 900, urls: { main: '/portrait.png' } },
@@ -74,6 +78,54 @@ describe('PostMediaCarousel', () => {
     expect(pause).toHaveBeenCalledTimes(2);
     pause.mockRestore();
     paused.mockRestore();
+  });
+
+  it.each([1, 2])('preserves native video seek keys with %i media items', (count) => {
+    const videoMedia = [{ ...media[0], type: 'video/mp4' }, media[1]].slice(0, count);
+    render(<PostMediaCarousel media={videoMedia} onOpenPreview={vi.fn()} isPreviewOpen={false} />);
+    const video = screen.getByTestId('video');
+    for (const key of ['ArrowRight', 'ArrowLeft']) {
+      expect(fireEvent.keyDown(video, { key })).toBe(true);
+      expect(embla.api.selectedScrollSnap()).toBe(0);
+    }
+    if (count > 1) {
+      fireEvent.keyDown(screen.getByRole('region', { name: 'Post media' }), { key: 'ArrowRight' });
+      expect(screen.getByText('2 / 2')).toBeInTheDocument();
+    }
+  });
+
+  it('pauses when the media frame leaves view even if its caption and controls remain visible', () => {
+    let intersect: ((entries: Array<{ isIntersecting: boolean }>) => void) | undefined;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(callback: typeof intersect) {
+          intersect = callback;
+        }
+        observe = observe;
+        disconnect = disconnect;
+      },
+    );
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    const videoMedia = [{ ...media[0], type: 'video/mp4' }, media[1]];
+    const { unmount } = render(
+      <div>
+        <PostMediaCarousel media={videoMedia} onOpenPreview={vi.fn()} isPreviewOpen={false} />
+        <p>A long caption stays visible after scrolling past the video.</p>
+      </div>,
+    );
+    const observed = observe.mock.calls[0][0];
+    expect(observed).toContainElement(screen.getByTestId('video'));
+    expect(observed).not.toContainElement(screen.getByText(/A long caption/));
+    expect(observed).not.toContainElement(screen.getByRole('button', { name: 'Next slide' }));
+    intersect?.([{ isIntersecting: true }]);
+    expect(pause).not.toHaveBeenCalled();
+    intersect?.([{ isIntersecting: false }]);
+    expect(pause).toHaveBeenCalledOnce();
+    unmount();
+    expect(disconnect).toHaveBeenCalledOnce();
   });
 
   it('uses loaded dimensions when metadata is absent and keeps failures usable', async () => {

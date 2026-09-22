@@ -3,6 +3,7 @@
 import { Container } from '@/atoms/Container/Container';
 import { GRID_FEED_COLUMNS_CLASS, GRID_FEED_GAP_CLASS, TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS } from '@/config/feed';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
+import { useMasonryLayout } from '@/hooks/useMasonryLayout/useMasonryLayout';
 import { usePostHeaderVisibility } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility';
 import { getDisplayedPostId } from '@/hooks/usePostHeaderVisibility/usePostHeaderVisibility.utils';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
@@ -17,7 +18,6 @@ import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/
 import { PostMain } from '@/organisms/PostMain/PostMain';
 import type { TimelineGridPostsProps } from '../GridPosts/GridPosts.types';
 import { MasonryPostsSkeleton } from './MasonryPosts.skeleton';
-import { useMasonryLayout } from './useMasonryLayout';
 
 function MasonryPost({
   postId,

@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT, type CollectionViewLayout } from '@/config/collections';
+import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
 import { CollectionLayoutPicker } from './CollectionLayoutPicker';
 
 function renderPicker({
@@ -37,12 +38,6 @@ describe('CollectionLayoutPicker', () => {
     fireEvent.click(listOption);
 
     expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.LIST);
-  });
-
-  it('makes the viewing layout available on mobile', () => {
-    renderPicker();
-
-    expect(screen.getByRole('button', { name: 'Layout: Grid' })).not.toHaveClass('hidden');
   });
 
   it('uses the standard List icon in the trigger', () => {
@@ -84,6 +79,47 @@ describe('CollectionLayoutPicker', () => {
     openDesktopPicker();
     await screen.findByRole('menuitem', { name: 'Grid' });
 
+    expect(document.body).toMatchSnapshot();
+  });
+});
+
+describe('CollectionLayoutPicker - Mobile', () => {
+  beforeEach(() => setMobileViewport());
+  afterEach(() => resetViewport());
+
+  it('offers the layouts supported by the phone feed', async () => {
+    const { onLayoutChange } = renderPicker();
+    openDesktopPicker();
+    await screen.findByRole('menuitem', { name: 'Grid' });
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Grid', 'Masonry', 'List']);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Masonry' }));
+    expect(onLayoutChange).toHaveBeenCalledExactlyOnceWith('masonry');
+  });
+
+  it('shows the Grid fallback without replacing the desktop Visual preference', async () => {
+    const { onLayoutChange } = renderPicker({ layout: COLLECTION_LAYOUT.VISUAL });
+    openDesktopPicker();
+    const gridOption = await screen.findByRole('menuitem', { name: 'Grid' });
+    expect(gridOption.querySelector('.lucide-check')).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Visual' })).not.toBeInTheDocument();
+    resetViewport();
+    fireEvent(window, new Event('resize'));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Layout: Visual', hidden: true })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('menuitem', { name: 'Visual' }).querySelector('.lucide-check')).toBeInTheDocument();
+    expect(onLayoutChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('CollectionLayoutPicker - Mobile Snapshots', () => {
+  beforeEach(() => setMobileViewport());
+  afterEach(() => resetViewport());
+
+  it('matches the open mobile picker snapshot', async () => {
+    renderPicker();
+    openDesktopPicker();
+    await screen.findByRole('menuitem', { name: 'Grid' });
     expect(document.body).toMatchSnapshot();
   });
 });

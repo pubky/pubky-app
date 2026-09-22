@@ -95,8 +95,8 @@ describe('TimelineMasonryPosts - Mobile Snapshots', () => {
   beforeEach(() => setMobileViewport());
   afterEach(() => resetViewport());
 
-  it('retains the card presentation on mobile', () => {
-    const { container } = render(<TimelineMasonryPosts {...props} />);
+  it('renders initial placeholders using the shared loading count on mobile', () => {
+    const { container } = render(<TimelineMasonryPosts {...props} postIds={[]} loading />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
