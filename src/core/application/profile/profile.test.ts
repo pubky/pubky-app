@@ -4,6 +4,7 @@ import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
+import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { asOpaque } from '@/test-utils/type-assertions';
 
@@ -106,7 +107,10 @@ describe('ProfileApplication', () => {
         image: profileJson.image,
         links: profileJson.links,
         status: null,
+        localUpdatedAt: expect.any(Number),
       });
+      expect(localProfile?.nexusIndexedAt).toBeUndefined();
+      expect(await UserTtlModel.findById(pubky)).toMatchObject({ lastUpdatedAt: localProfile?.localUpdatedAt });
     });
 
     it('does not persist the local profile when the homeserver write fails', async () => {

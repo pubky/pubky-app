@@ -84,6 +84,7 @@ describe('LocalProfileService', () => {
         status: 'Available',
         links: [{ title: 'Website', url: 'https://example.com' }],
         indexed_at: 2,
+        nexusIndexedAt: 2,
         social_graph_status: NexusSocialGraphStatus.NETWORKED,
       };
       await UserDetailsModel.upsert(newerDetails);
