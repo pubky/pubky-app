@@ -909,6 +909,122 @@ async function renderMasonryCards(viewport: { width: number; height: number }, f
 }
 
 describe('Masonry cards — browser coverage', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('loads three pages through the real Masonry sentinel on %s', async (_name, viewport) => {
+    const { useState } = await import('react');
+    const { PostMainLayoutProvider } = await import('@/organisms/PostMain/PostMainLayoutContext');
+    const { TimelineMasonryPosts } = await import('@/organisms/Timeline/Posts/MasonryPosts/MasonryPosts');
+    const f = await fixtures;
+    routeState.masonryFixtures = true;
+    routeState.failedMedia = false;
+    routeState.pathname = '/collections';
+    const ids = [0, 4, 5, 1, 2, 3].map((index) => f.collectionItemIds[index]);
+    type Page = { postIds: string[]; hasMore: boolean };
+    const secondPage = Promise.withResolvers<Page>();
+    const thirdPage = Promise.withResolvers<Page>();
+    const fetchPage = vi
+      .fn<() => Promise<Page>>()
+      .mockReturnValueOnce(secondPage.promise)
+      .mockReturnValueOnce(thirdPage.promise);
+
+    // Only the page-data boundary is controlled. Both layout/scroll hooks,
+    // observers, card content and pagination controls use their real implementations.
+    function PaginatedMasonry() {
+      const [postIds, setPostIds] = useState(ids.slice(0, 2));
+      const [loadingMore, setLoadingMore] = useState(false);
+      const [hasMore, setHasMore] = useState(true);
+      const loadMore = async () => {
+        setLoadingMore(true);
+        const next = await fetchPage();
+        setPostIds((current) => [...current, ...next.postIds]);
+        setHasMore(next.hasMore);
+        setLoadingMore(false);
+      };
+      return (
+        <PostMainLayoutProvider tagsLayout="inline">
+          <div aria-hidden="true" className="h-screen" />
+          <TimelineMasonryPosts
+            postIds={postIds}
+            loading={false}
+            loadingMore={loadingMore}
+            error={null}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            showEndMessage={false}
+          />
+        </PostMainLayoutProvider>
+      );
+    }
+
+    const screen = await renderForVRT(<PaginatedMasonry />, { viewport });
+    // The screenshot harness clips its root; make that root scrollable for this interaction test.
+    const scroller = screen.getByTestId('vrt-root').element();
+    scroller.style.overflowY = 'auto';
+    const feed = screen.getByRole('feed').element();
+    const sentinel = feed.parentElement!.lastElementChild!;
+    const cards = () => Array.from(feed.querySelectorAll<HTMLElement>(':scope > [role="article"]'));
+    const assertSentinelPosition = () => {
+      assertMasonryGeometry();
+      expect(feed.contains(sentinel)).toBe(false);
+      expect(sentinel.getBoundingClientRect().height).toBeGreaterThan(0);
+      expect(sentinel.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        Math.max(...cards().map((card) => card.getBoundingClientRect().bottom)) - 1,
+      );
+      return true;
+    };
+    // Allow observer delivery and the renderer's 20ms debounce before negative call-count assertions.
+    const settleScroll = () => new Promise((resolve) => setTimeout(resolve, 100));
+    await expect.poll(assertSentinelPosition).toBe(true);
+    await settleScroll();
+    expect(fetchPage).not.toHaveBeenCalled();
+    const initialColumns = cards().map((card) => card.getBoundingClientRect().left);
+
+    scroller.scrollTop = scroller.scrollHeight;
+    await expect.poll(() => fetchPage.mock.calls.length).toBe(1);
+    scroller.scrollTop = 0;
+    await settleScroll();
+    scroller.scrollTop = scroller.scrollHeight;
+    await settleScroll();
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+
+    secondPage.resolve({ postIds: ids.slice(2, 4), hasMore: true });
+    await expect.poll(() => cards().length).toBe(4);
+    await expect.poll(assertSentinelPosition).toBe(true);
+    expect(
+      cards()
+        .slice(0, 2)
+        .map((card) => card.getBoundingClientRect().left),
+    ).toEqual(initialColumns);
+    scroller.scrollTop = scroller.scrollHeight;
+    await expect.poll(() => fetchPage.mock.calls.length).toBe(2);
+
+    const captionCard = cards()[1];
+    const collapsedHeight = captionCard.getBoundingClientRect().height;
+    await page.getByRole('button', { name: 'Show full post content', exact: true }).click();
+    await expect.poll(() => captionCard.getBoundingClientRect().height).toBeGreaterThan(collapsedHeight);
+    await expect.poll(assertSentinelPosition).toBe(true);
+    scroller.scrollTop = scroller.scrollHeight;
+    await settleScroll();
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+
+    thirdPage.resolve({ postIds: ids.slice(4), hasMore: false });
+    await expect.poll(() => cards().length).toBe(6);
+    await expect.poll(() => sentinel.isConnected).toBe(false);
+    await expect
+      .poll(() => {
+        assertMasonryGeometry();
+        return true;
+      })
+      .toBe(true);
+    scroller.scrollTop = 0;
+    await settleScroll();
+    scroller.scrollTop = scroller.scrollHeight;
+    await settleScroll();
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+  });
+
   it('pauses a later video slide when its frame scrolls out while the caption stays visible', async () => {
     const { PostMediaCarousel } = await import('@/molecules/PostMediaCarousel/PostMediaCarousel');
     const videos = [1, 2, 3].map((number) => ({
