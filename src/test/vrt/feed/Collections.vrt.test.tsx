@@ -2,6 +2,8 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
+import { page } from 'vitest/browser';
+import type { AttachmentConstructed } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
 import { describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
@@ -15,6 +17,8 @@ import { Collections } from '@/templates/Collections/Collections';
 
 const routeState = vi.hoisted(() => ({
   pathname: '/collections',
+  masonryFixtures: false,
+  failedMedia: false,
   params: {} as { userId?: string; postId?: string },
 }));
 
@@ -157,13 +161,42 @@ vi.mock('@/stores/notification/notification.store', () => ({
   }),
 }));
 
-vi.mock('@/stores/localFiles/localFiles.store', () => ({
-  useLocalFilesStore: createZustandLikeHook({
-    profile: null,
-    posts: {} as Record<string, never>,
-    collections: {} as Record<string, never>,
-  }),
-}));
+vi.mock('@/stores/localFiles/localFiles.store', async () => {
+  const f = await fixtures;
+  const portrait =
+    'data:image/svg+xml,' +
+    encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="800"><rect width="400" height="800" fill="darkslategray"/><circle cx="200" cy="260" r="140" fill="palegreen"/><text x="40" y="550" font-size="40" fill="white">Portrait study</text></svg>',
+    );
+  const landscape = '/images/collections-onboarding.webp';
+  const media: AttachmentConstructed[] = [
+    { type: 'image/svg+xml', name: 'Portrait study', width: 400, height: 800, urls: { main: portrait } },
+    { type: 'image/webp', name: 'Collections on a desk', urls: { main: landscape } },
+  ];
+  const empty = { profile: null, posts: {}, collections: {} };
+  const withMedia = {
+    ...empty,
+    posts: {
+      [f.collectionItemIds[0]]: media,
+      [f.collectionItemIds[1]]: [media[0]],
+      [f.collectionItemIds[5]]: [media[1]],
+      [f.bookmarkPostIds[0]]: media,
+    },
+  };
+  const withFailedMedia = {
+    ...withMedia,
+    posts: {
+      ...withMedia.posts,
+      [f.collectionItemIds[0]]: [
+        { type: 'image/png', name: 'Missing image', urls: { main: 'data:image/png;base64,invalid' } },
+      ],
+    },
+  };
+  return {
+    useLocalFilesStore: <T,>(selector: (state: typeof empty) => T) =>
+      selector(routeState.masonryFixtures ? (routeState.failedMedia ? withFailedMedia : withMedia) : empty),
+  };
+});
 
 vi.mock('@/hooks/useKeyboardVisible/useKeyboardVisible', () => ({
   useKeyboardVisible: () => false,
@@ -253,18 +286,36 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', async () => {
   return {
     usePostDetails: (compositeId: string | null) => {
       if (!compositeId) return EMPTY;
-      const cached = cache.get(compositeId);
+      const cacheKey = `${routeState.masonryFixtures}:${compositeId}`;
+      const cached = cache.get(cacheKey);
       if (cached) return cached;
       const fixture = f.entitiesByCompositeId.get(compositeId);
       if (!fixture) {
-        cache.set(compositeId, EMPTY);
+        cache.set(cacheKey, EMPTY);
         return EMPTY;
       }
       const result = {
-        postDetails: { ...fixture.details, is_moderated: false, is_blurred: false },
+        postDetails: {
+          ...fixture.details,
+          ...(routeState.masonryFixtures && compositeId === f.collectionItemIds[5]
+            ? {
+                kind: 'long',
+                content: JSON.stringify({
+                  title: 'Designing a useful collection',
+                  body: 'Keep the original proportions. Let the content determine how much room it needs. This article explains why independent columns make browsing a mixed collection easier.',
+                }),
+                attachments: ['pubky://fixture/pub/pubky.app/files/cover'],
+              }
+            : {}),
+          ...(routeState.masonryFixtures && compositeId === f.collectionItemIds[4]
+            ? { content: 'A longer notebook entry. '.repeat(50) }
+            : {}),
+          is_moderated: false,
+          is_blurred: false,
+        },
         isLoading: false as const,
       };
-      cache.set(compositeId, result);
+      cache.set(cacheKey, result);
       return result;
     },
   };
@@ -641,6 +692,7 @@ async function expectCollectionsOverviewReady(screen: Awaited<ReturnType<typeof 
 }
 
 async function renderCollectionsOverview(viewport: { width: number; height: number }) {
+  routeState.masonryFixtures = false;
   const f = await fixtures;
   routeState.pathname = '/collections';
   routeState.params = {};
@@ -654,7 +706,10 @@ async function renderCollectionsOverview(viewport: { width: number; height: numb
 async function renderSingleCollection(
   layout: keyof Awaited<typeof fixtures>['singleCollections'],
   viewport: { width: number; height: number },
+  masonry = false,
 ) {
+  routeState.masonryFixtures = masonry;
+  routeState.failedMedia = false;
   const f = await fixtures;
   const collection = f.singleCollections[layout];
   routeState.pathname = `/collections/${collection.details.author}/${collection.postId}`;
@@ -673,7 +728,9 @@ async function renderSingleCollection(
   return screen;
 }
 
-async function renderBookmarks(viewport: { width: number; height: number }) {
+async function renderBookmarks(viewport: { width: number; height: number }, masonry = false) {
+  routeState.masonryFixtures = masonry;
+  routeState.failedMedia = false;
   routeState.pathname = '/collections/bookmarks';
   routeState.params = {};
 
@@ -734,5 +791,143 @@ describe('Bookmarks collection — visual regression', () => {
   it('renders bookmarks at mobile viewport', async () => {
     await renderBookmarks(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('bookmarks-collection-mobile');
+  });
+});
+
+async function chooseMasonry() {
+  await page.getByRole('button', { name: 'Layout: Grid', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Masonry', exact: true }).click();
+  await expect.element(page.getByRole('button', { name: 'Layout: Masonry', exact: true })).toBeVisible();
+  await expect.poll(() => document.querySelector('[data-cy="timeline-posts-masonry"]')).not.toBeNull();
+}
+
+function assertMasonryGeometry() {
+  const feed = document.querySelector<HTMLElement>('[data-cy="timeline-posts-masonry"]')!;
+  const cards = Array.from(feed.children).map((node) => node.getBoundingClientRect());
+  expect(cards.length).toBeGreaterThan(1);
+  cards.forEach((card, index) => {
+    expect(card.right).toBeLessThanOrEqual(feed.getBoundingClientRect().right + 1);
+    for (const other of cards.slice(index + 1)) {
+      const overlaps =
+        card.left < other.right - 1 &&
+        card.right > other.left + 1 &&
+        card.top < other.bottom - 1 &&
+        card.bottom > other.top + 1;
+      expect(overlaps).toBe(false);
+    }
+  });
+  expect(feed.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(Math.max(...cards.map((card) => card.bottom)) - 1);
+}
+
+describe('Masonry — mixed content and interactions', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders a collection on %s', async (name, viewport) => {
+    await renderSingleCollection('grid', viewport, true);
+    await chooseMasonry();
+    await expect
+      .poll(() => {
+        assertMasonryGeometry();
+        return true;
+      })
+      .toBe(true);
+    await matchVrtFrameScreenshot(`single-collection-masonry-${name}`);
+  });
+
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('renders Bookmarks on %s', async (name, viewport) => {
+    await renderBookmarks(viewport, true);
+    await chooseMasonry();
+    await expect
+      .poll(() => {
+        assertMasonryGeometry();
+        return true;
+      })
+      .toBe(true);
+    await matchVrtFrameScreenshot(`bookmarks-masonry-${name}`);
+  });
+
+  it('keeps its frame stable through carousel navigation and opens the selected media', async () => {
+    await renderBookmarks(VRT_VIEWPORT_DESKTOP, true);
+    await chooseMasonry();
+    const carousel = page.getByRole('region', { name: 'Post media' }).first();
+    const frame = document.querySelector('[data-cy="timeline-posts-masonry"] [data-slot="carousel"]')!;
+    const height = frame.getBoundingClientRect().height;
+    await carousel.getByRole('button', { name: 'Next slide' }).click();
+    await expect.element(carousel.getByText('2 / 2', { exact: true })).toBeVisible();
+    expect(frame.getBoundingClientRect().height).toBeCloseTo(height, 0);
+    await carousel.getByRole('button', { name: 'Open image 2 of 2: Collections on a desk' }).click();
+    await expect.element(page.getByRole('dialog')).toBeVisible();
+    await expect.element(page.getByRole('dialog').getByText('2/2', { exact: true })).toBeVisible();
+    assertMasonryGeometry();
+  });
+});
+
+async function renderMasonryCards(viewport: { width: number; height: number }, failedMedia = false) {
+  const { PostMainLayoutProvider } = await import('@/organisms/PostMain/PostMainLayoutContext');
+  const { TimelineMasonryPosts } = await import('@/organisms/Timeline/Posts/MasonryPosts/MasonryPosts');
+  routeState.masonryFixtures = true;
+  routeState.failedMedia = failedMedia;
+  routeState.pathname = '/collections';
+  const f = await fixtures;
+  const cardIds = [0, 4, 5, 1, 2, 3].map((index) => f.collectionItemIds[index]);
+  return renderForVRT(
+    <PostMainLayoutProvider tagsLayout="inline">
+      <TimelineMasonryPosts
+        postIds={cardIds}
+        loading={false}
+        loadingMore={false}
+        error={null}
+        hasMore={false}
+        loadMore={async () => {}}
+        showEndMessage={false}
+      />
+    </PostMainLayoutProvider>,
+    { viewport },
+  );
+}
+
+describe('Masonry cards — browser coverage', () => {
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('captures the mixed card treatments on %s', async (name, viewport) => {
+    await renderMasonryCards(viewport);
+    await expect.element(page.getByText('Designing a useful collection')).toBeVisible();
+    await expect
+      .poll(() => {
+        assertMasonryGeometry();
+        return true;
+      })
+      .toBe(true);
+    await matchVrtFrameScreenshot(`masonry-cards-${name}`);
+  });
+
+  it('reflows expanded text without moving cards between columns', async () => {
+    await renderMasonryCards(VRT_VIEWPORT_DESKTOP);
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-cy="timeline-posts-masonry"] > [role="article"]'),
+    );
+    const before = cards.map((card) => card.getBoundingClientRect().left);
+    await page.getByRole('button', { name: 'Show full post content', exact: true }).click();
+    await expect
+      .poll(() => {
+        assertMasonryGeometry();
+        return true;
+      })
+      .toBe(true);
+    expect(cards.map((card) => card.getBoundingClientRect().left)).toEqual(before);
+  });
+
+  it('keeps failed media usable', async () => {
+    await renderMasonryCards(VRT_VIEWPORT_MOBILE, true);
+    await expect.element(page.getByRole('status')).toHaveTextContent('Media unavailable');
+    await expect.element(page.getByRole('button', { name: 'Open original' })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Reply to post (22)', exact: true })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'More options' }).first()).toBeVisible();
+    assertMasonryGeometry();
   });
 });

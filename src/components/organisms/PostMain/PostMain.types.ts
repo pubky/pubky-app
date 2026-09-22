@@ -2,6 +2,7 @@ export type TagsLayout = 'inline' | 'side' | 'list';
 
 export interface PostMainProps {
   postId: string;
+  presentation?: 'default' | 'masonry';
   className?: string;
   isReply?: boolean;
   isLastReply?: boolean;

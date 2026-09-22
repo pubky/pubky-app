@@ -1,8 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import type { CollectionViewLayout } from '@/config/collections';
 import { useBookmarksCollectionSummary } from '@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary';
 import { BookmarksCollection } from './BookmarksCollection';
+
+const selection = vi.hoisted(() => ({ change: (_layout: CollectionViewLayout) => {}, layout: 'grid' }));
 
 vi.mock('@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary', () => ({
   useBookmarksCollectionSummary: vi.fn(),
@@ -15,30 +18,38 @@ vi.mock('@/organisms/Bookmarks/BookmarksHero/BookmarksHero', () => ({
     avatarUrl,
     bookmarkCount,
     isProfileResolved,
+    onLayoutChange,
   }: {
     avatarName: string;
     avatarSeed: string;
     avatarUrl?: string;
     bookmarkCount?: number;
     isProfileResolved: boolean;
-  }) => (
-    <div
-      data-testid="bookmarks-hero"
-      data-avatar-name={avatarName}
-      data-avatar-seed={avatarSeed}
-      data-avatar-url={avatarUrl ?? ''}
-      data-bookmark-count={String(bookmarkCount)}
-      data-is-profile-resolved={String(isProfileResolved)}
-    />
-  ),
+    onLayoutChange: (layout: CollectionViewLayout) => void;
+  }) => {
+    selection.change = onLayoutChange;
+    return (
+      <div
+        data-testid="bookmarks-hero"
+        data-avatar-name={avatarName}
+        data-avatar-seed={avatarSeed}
+        data-avatar-url={avatarUrl ?? ''}
+        data-bookmark-count={String(bookmarkCount)}
+        data-is-profile-resolved={String(isProfileResolved)}
+      />
+    );
+  },
 }));
 
 vi.mock('@/organisms/Bookmarks/BookmarksItems/BookmarksItems', () => ({
-  BookmarksItems: ({ header }: { header: ReactNode }) => (
-    <div data-testid="bookmarks-items">
-      <div data-testid="bookmarks-items-header">{header}</div>
-    </div>
-  ),
+  BookmarksItems: ({ header, layout }: { header: ReactNode; layout: string }) => {
+    selection.layout = layout;
+    return (
+      <div data-testid="bookmarks-items">
+        <div data-testid="bookmarks-items-header">{header}</div>
+      </div>
+    );
+  },
 }));
 
 vi.mock('@/organisms/Collections/CollectionsSections/CollectionsSections', () => ({
@@ -77,6 +88,23 @@ vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
 const mockUseBookmarksCollectionSummary = vi.mocked(useBookmarksCollectionSummary);
 
 describe('BookmarksCollection', () => {
+  it('starts in Grid, keeps a local choice through updates, and resets on a new visit', () => {
+    mockUseBookmarksCollectionSummary.mockReturnValue({
+      avatarName: 'Alice',
+      avatarSeed: 'alice',
+      bookmarkCount: 4,
+      isProfileResolved: true,
+    });
+    const { rerender, unmount } = render(<BookmarksCollection />);
+    expect(selection.layout).toBe('grid');
+    act(() => selection.change('masonry'));
+    rerender(<BookmarksCollection />);
+    expect(selection.layout).toBe('masonry');
+    unmount();
+    render(<BookmarksCollection />);
+    expect(selection.layout).toBe('grid');
+  });
+
   it('renders collection-style chrome with hero, items, and collections sections', () => {
     mockUseBookmarksCollectionSummary.mockReturnValue({
       avatarName: 'Alice',

@@ -14,35 +14,12 @@ import { TimelineError } from '@/molecules/Timeline/TimelineError';
 import { TimelineLoadingMore } from '@/molecules/Timeline/TimelineLoadingMore';
 import { TimelineLoadMore } from '@/molecules/Timeline/TimelineLoadMore';
 import { TimelineStateWrapper } from '@/molecules/Timeline/TimelineStateWrapper/TimelineStateWrapper';
-import { PostMain } from '../../../PostMain/PostMain';
-import { GridPostsSkeleton } from './GridPosts.skeleton';
-import type { TimelineGridPostsProps } from './GridPosts.types';
+import { PostMain } from '@/organisms/PostMain/PostMain';
+import type { TimelineGridPostsProps } from '../GridPosts/GridPosts.types';
+import { MasonryPostsSkeleton } from './MasonryPosts.skeleton';
+import { useMasonryLayout } from './useMasonryLayout';
 
-/**
- * TimelineGridPosts
- *
- * Presentational renderer that lays the timeline's post cards out in a fixed,
- * responsive card grid with infinite scroll. Sibling to `TimelinePosts` (vertical
- * list) and `VisualTimelinePosts` (media tiles); shares the same data contract.
- *
- * Variant-agnostic — it carries no collection-specific logic. `TimelineFeedContent`
- * selects it whenever `layoutResolution.isGridActive` (driven by `GRID_LAYOUT_VARIANTS`),
- * and wraps it in `PostMainLayoutProvider` so each `PostMain` inherits the `inline`
- * tags layout (the only sensible layout in a narrow cell, decision D2).
- *
- * Each cell is a named container (`@container/grid`, `container-type: inline-size`)
- * so the Phase C grid-scoped container-query overrides can adapt the card to the
- * narrow cell width. Because a container query with no ancestor container resolves
- * to `false`, those overrides are inert on every non-grid surface (decision D4).
- *
- * When `trailingSlot` is set, it becomes the last grid cell after all posts.
- * When there are no posts but a trailing slot is present, `emptyState` is still
- * rendered above the grid so the user sees both the empty copy and the CTA tile.
- */
-const GRID_TRAILING_CELL_CLASS =
-  '@container/grid block h-full w-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1';
-
-function GridPost({
+function MasonryPost({
   postId,
   index,
   totalCount,
@@ -65,14 +42,14 @@ function GridPost({
       aria-setsize={totalCount}
       tabIndex={0}
       onKeyDown={(e) => handlePostKeyDown(displayedPostId, e)}
-      className="@container/grid rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&>*:first-child]:flex-1"
+      className="@container/grid min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <PostMain postId={postId} isReply={false} />
+      <PostMain postId={postId} isReply={false} presentation="masonry" />
     </Container>
   );
 }
 
-export function TimelineGridPosts({
+export function TimelineMasonryPosts({
   postIds,
   loading,
   loadingMore,
@@ -95,6 +72,7 @@ export function TimelineGridPosts({
     maxUnproductiveLoads: TIMELINE_MAX_UNPRODUCTIVE_AUTO_LOADS,
   });
 
+  const masonryRef = useMasonryLayout(postIds, trailingSlot != null);
   const { setCardRef, onListKeyDown } = usePostListKeyboard();
   const hasGridContent = postIds.length > 0 || trailingSlot != null;
   const showEmptyMessageWithTrailingSlot = postIds.length === 0 && trailingSlot != null && emptyState != null;
@@ -106,7 +84,7 @@ export function TimelineGridPosts({
       hasItems={hasGridContent}
       hasMore={hasMore}
       stalled={isStalled}
-      loadingComponent={<GridPostsSkeleton />}
+      loadingComponent={<MasonryPostsSkeleton />}
       emptyComponent={emptyState}
     >
       <Container
@@ -116,15 +94,16 @@ export function TimelineGridPosts({
       >
         {showEmptyMessageWithTrailingSlot ? emptyState : null}
         <Container
-          data-cy="timeline-posts-grid"
+          data-cy="timeline-posts-masonry"
+          ref={masonryRef}
           overrideDefaults
           role="feed"
-          className={cn('grid', GRID_FEED_GAP_CLASS, GRID_FEED_COLUMNS_CLASS)}
+          className={cn('relative grid items-start', GRID_FEED_GAP_CLASS, GRID_FEED_COLUMNS_CLASS)}
           onKeyDown={onListKeyDown}
         >
           {postIds.map((postId, index) => (
-            <GridPost
-              key={`grid_${postId}`}
+            <MasonryPost
+              key={postId}
               postId={postId}
               index={index}
               totalCount={postIds.length}
@@ -132,7 +111,7 @@ export function TimelineGridPosts({
             />
           ))}
           {trailingSlot != null ? (
-            <Container overrideDefaults className={GRID_TRAILING_CELL_CLASS}>
+            <Container overrideDefaults className="@container/grid min-h-48 [&>*:first-child]:min-h-48">
               {trailingSlot}
             </Container>
           ) : null}

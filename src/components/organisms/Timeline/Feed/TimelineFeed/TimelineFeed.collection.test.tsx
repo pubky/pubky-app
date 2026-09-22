@@ -44,6 +44,7 @@ vi.mock('@/stores/auth/auth.store', () => ({
 const gridLayoutResolution = (): FeedLayoutResolution => ({
   requestedLayout: LAYOUT.COLUMNS,
   effectiveLayout: LAYOUT.COLUMNS,
+  isMasonryActive: false,
   isVisualRequested: false,
   isVisualActive: false,
   isGridActive: true,
@@ -132,6 +133,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
       ...gridLayoutResolution(),
       requestedLayout: LAYOUT.VISUAL,
       effectiveLayout: LAYOUT.VISUAL,
+      isMasonryActive: false,
       isVisualRequested: true,
       isVisualActive: true,
       isGridActive: false,

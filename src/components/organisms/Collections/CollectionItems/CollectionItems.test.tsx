@@ -1,8 +1,8 @@
 import { createRef, type ReactNode, type RefObject } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
-import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
+import { COLLECTION_LAYOUT, type CollectionViewLayout } from '@/config/collections';
 import { CollectionHeroSkeleton } from '@/organisms/Collections/CollectionHero/CollectionHero.skeleton';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -14,6 +14,7 @@ import { CollectionItems } from './CollectionItems';
 
 const mockUseAuthStore = vi.fn();
 const mockTimelineFeedProps = vi.hoisted(() => vi.fn());
+const heroSelection = vi.hoisted(() => ({ change: (_layout: CollectionViewLayout) => {} }));
 const mockReorderState = vi.hoisted(() => ({
   isReorderMode: false,
   isSaving: false,
@@ -57,11 +58,12 @@ vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
     authorPubky: string;
     postId: string;
     postDetails?: EnrichedPostDetails | null;
-    layout: CollectionLayout;
-    onLayoutChange: (layout: CollectionLayout) => void;
+    layout: CollectionViewLayout;
+    onLayoutChange: (layout: CollectionViewLayout) => void;
     reorder?: { isActive: boolean };
-  }) =>
-    postDetails ? (
+  }) => {
+    heroSelection.change = onLayoutChange;
+    return postDetails ? (
       <div
         data-testid="collection-hero"
         data-author-pubky={authorPubky}
@@ -77,7 +79,8 @@ vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
       </div>
     ) : (
       <CollectionHeroSkeleton />
-    ),
+    );
+  },
 }));
 
 vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
@@ -488,4 +491,26 @@ describe('CollectionItems - Snapshots', () => {
 
     expect(container.firstChild).toMatchSnapshot();
   });
+});
+
+describe('Masonry viewer selection', () => {
+  it.each([AUTHOR_PUBKY, 'visitor', null])(
+    'allows %s to select Masonry through post updates and reorder mode',
+    (viewer) => {
+      setAuthStore(viewer);
+      const details = buildPostDetails(COLLECTION_CONTENT);
+      const { rerender } = renderCollectionItems({ postDetails: details });
+      act(() => heroSelection.change('masonry'));
+      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', 'masonry');
+      rerender(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} postDetails={{ ...details }} />);
+      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', 'masonry');
+      mockReorderState.isReorderMode = true;
+      rerender(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} postDetails={details} />);
+      expect(screen.getByTestId('collection-reorder-grid')).toBeInTheDocument();
+      mockReorderState.isReorderMode = false;
+      rerender(<CollectionItems authorPubky={AUTHOR_PUBKY} postId={POST_ID} postDetails={details} />);
+      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-requested-layout', 'masonry');
+      expect(mockReorderState.saveOrder).not.toHaveBeenCalled();
+    },
+  );
 });

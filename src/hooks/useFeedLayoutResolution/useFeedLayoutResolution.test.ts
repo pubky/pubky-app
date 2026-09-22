@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isCollectionLayout } from '@/config/collections';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { LAYOUT } from '@/stores/home/home.types';
 import { resolveFeedLayout } from './useFeedLayoutResolution';
@@ -235,5 +236,21 @@ describe('resolveFeedLayout', () => {
 
       expect(result.effectiveLayout).toBe(LAYOUT.COLUMNS);
     });
+  });
+});
+
+describe('Masonry scope', () => {
+  it('keeps Masonry out of the persisted collection layout validator', () => {
+    expect(isCollectionLayout('masonry')).toBe(false);
+  });
+  it.each(Object.values(TIMELINE_FEED_VARIANT))('supports only Collections and Bookmarks: %s', (variant) => {
+    for (const isPhoneViewport of [false, true]) {
+      const result = resolveFeedLayout({ requestedLayout: 'masonry', variant, isPhoneViewport });
+      const supported = variant === TIMELINE_FEED_VARIANT.COLLECTION || variant === TIMELINE_FEED_VARIANT.BOOKMARKS;
+      expect(result.isMasonryActive).toBe(supported);
+      expect(result.effectiveLayout).toBe(supported ? 'masonry' : LAYOUT.COLUMNS);
+      expect(result.isGridActive).toBe(false);
+      expect(result.isVisualActive).toBe(false);
+    }
   });
 });

@@ -7,15 +7,19 @@ import { useHomeStore } from '@/stores/home/home.store';
 import { LAYOUT, type LayoutType } from '@/stores/home/home.types';
 import { pubkyLayoutToHomeLayout } from '@/utils/pubky-app-spec-feed-mappers';
 
+/** Includes the library-only, non-persisted Masonry view. */
+export type FeedViewLayout = LayoutType | 'masonry';
+
 export interface FeedLayoutResolutionInput {
-  requestedLayout: LayoutType;
+  requestedLayout: FeedViewLayout;
   variant: TimelineFeedVariant;
   isPhoneViewport: boolean;
 }
 
 export interface FeedLayoutResolution {
-  requestedLayout: LayoutType;
-  effectiveLayout: LayoutType;
+  requestedLayout: FeedViewLayout;
+  effectiveLayout: FeedViewLayout;
+  isMasonryActive: boolean;
   isVisualRequested: boolean;
   isVisualActive: boolean;
   /**
@@ -39,12 +43,15 @@ export function resolveFeedLayout({
 }: FeedLayoutResolutionInput): FeedLayoutResolution {
   const isRichLayoutSupported = RICH_LAYOUT_SUPPORTED_FEED_VARIANTS.has(variant);
   const isCollectionVariant = variant === TIMELINE_FEED_VARIANT.COLLECTION;
+  const isMasonryRequested = requestedLayout === 'masonry';
+  const isMasonrySupported = isCollectionVariant || variant === TIMELINE_FEED_VARIANT.BOOKMARKS;
   const isVisualRequested = requestedLayout === LAYOUT.VISUAL;
   const isVisualSupported = !isPhoneViewport && (isRichLayoutSupported || isCollectionVariant);
   const isWideRequested = requestedLayout === LAYOUT.WIDE;
   const isListRequested = requestedLayout === LAYOUT.LIST;
   const isListSupported = isRichLayoutSupported || isCollectionVariant;
   const effectiveLayout =
+    (isMasonryRequested && !isMasonrySupported) ||
     (isVisualRequested && !isVisualSupported) ||
     (isWideRequested && !isRichLayoutSupported) ||
     (isListRequested && !isListSupported)
@@ -56,16 +63,18 @@ export function resolveFeedLayout({
     effectiveLayout,
     isVisualRequested,
     isVisualActive: effectiveLayout === LAYOUT.VISUAL,
+    isMasonryActive: effectiveLayout === 'masonry',
     isGridActive:
-      GRID_LAYOUT_VARIANTS.has(variant) ||
-      (variant === TIMELINE_FEED_VARIANT.COLLECTION && effectiveLayout === LAYOUT.COLUMNS),
+      effectiveLayout !== 'masonry' &&
+      (GRID_LAYOUT_VARIANTS.has(variant) ||
+        (variant === TIMELINE_FEED_VARIANT.COLLECTION && effectiveLayout === LAYOUT.COLUMNS)),
     isPhoneViewport,
   };
 }
 
 export function useFeedLayoutResolution(
   variant: TimelineFeedVariant,
-  requestedLayoutOverride?: LayoutType,
+  requestedLayoutOverride?: FeedViewLayout,
 ): FeedLayoutResolution {
   const homeLayout = useHomeStore((state) => state.layout);
   const customFeed = useCustomFeed();

@@ -11,6 +11,9 @@ import type { PubkyAppCollectionLayout } from 'pubky-app-specs';
 // layouts remain unsupported until their rendering and controls are added.
 export type CollectionLayout = Extract<PubkyAppCollectionLayout, 'grid' | 'list' | 'visual'>;
 
+/** Page-local viewing choices; Masonry is never serialized to collection settings. */
+export type CollectionViewLayout = CollectionLayout | 'masonry';
+
 export const COLLECTION_LAYOUT: Record<'GRID' | 'LIST' | 'VISUAL', CollectionLayout> = {
   GRID: 'grid',
   LIST: 'list',

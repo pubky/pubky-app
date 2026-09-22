@@ -16,6 +16,7 @@ interface PostInlineTagsActionsProps {
   onReplyClick: () => void;
   onRepostClick: () => void;
   className?: string;
+  presentation?: 'default' | 'masonry';
   actionsClassName?: string;
 }
 
@@ -26,6 +27,7 @@ export function PostInlineTagsActions({
   onRepostClick,
   className,
   actionsClassName,
+  presentation = 'default',
 }: PostInlineTagsActionsProps) {
   const [tagsExpanded, setTagsExpanded] = useState(false);
   // The tag button only reveals the tags. On mobile it must not focus the input and pop the soft
@@ -36,11 +38,14 @@ export function PostInlineTagsActions({
     <Container
       onClick={(event) => event.stopPropagation()}
       className={cn(
-        'flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4',
+        presentation === 'masonry'
+          ? 'flex-col items-start gap-3'
+          : 'flex-col items-start gap-3 md:flex-row md:justify-between md:gap-4',
         // Grid-scoped (decision D4): inside a narrow grid cell keep tags + actions
         // stacked. `!` beats the still-active viewport `md:` row classes; inert off-grid.
-        '@max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3!',
-        tagsExpanded ? 'md:items-end' : 'md:items-start',
+        presentation !== 'masonry' &&
+          '@max-xl/grid:mt-auto @max-xl/grid:flex-col! @max-xl/grid:items-start! @max-xl/grid:gap-3!',
+        presentation !== 'masonry' && (tagsExpanded ? 'md:items-end' : 'md:items-start'),
         className,
       )}
     >
@@ -60,11 +65,12 @@ export function PostInlineTagsActions({
           maxTotalChars={POST_TAGS_MAX_TOTAL_CHARS}
           showCount={true}
           showInput={false}
-          showAddButton={true}
+          showAddButton={presentation !== 'masonry'}
           addMode={true}
         />
       )}
       <PostActionsBar
+        variant={presentation === 'masonry' ? 'masonry' : 'default'}
         postId={postId}
         savePostId={savePostId}
         onTagClick={() => setTagsExpanded((prev) => !prev)}

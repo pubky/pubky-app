@@ -11,6 +11,8 @@ import type { FileVariant } from '@/services/nexus/file/file.types';
 interface CoverImage {
   src: string;
   alt: string;
+  width?: number;
+  height?: number;
 }
 
 interface UsePostArticleParams {
@@ -97,7 +99,13 @@ export function usePostArticle({
 
         if (attachment && attachment.content_type.startsWith('image')) {
           const src = FileController.getFileUrl({ fileId: attachment.id, variant: coverImageVariant });
-          const coverImage = { src, alt: attachment.name };
+          const width = Number(attachment.metadata?.width);
+          const height = Number(attachment.metadata?.height);
+          const coverImage = {
+            src,
+            alt: attachment.name,
+            ...(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0 ? { width, height } : {}),
+          };
           setCoverImage(coverImage);
         } else {
           setCoverImage(null);

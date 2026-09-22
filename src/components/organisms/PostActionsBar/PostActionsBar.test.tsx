@@ -134,6 +134,32 @@ describe('PostActionsBar', () => {
     });
   });
 
+  it('keeps every count and action in the quiet Masonry row, saving the feed entry', () => {
+    mockUsePostCounts.mockReturnValue({ postCounts: { unique_tags: 0, replies: 8, reposts: 3 }, isLoading: false });
+    const onTagClick = vi.fn();
+    const onReplyClick = vi.fn();
+    const onRepostClick = vi.fn();
+    render(
+      <PostActionsBar
+        postId="author:original"
+        savePostId="viewer:repost"
+        variant="masonry"
+        onTagClick={onTagClick}
+        onReplyClick={onReplyClick}
+        onRepostClick={onRepostClick}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Tag post (0)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reply to post (8)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Repost (3)' }));
+    expect(onTagClick).toHaveBeenCalledOnce();
+    expect(onReplyClick).toHaveBeenCalledOnce();
+    expect(onRepostClick).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('post-save-picker')).toHaveAttribute('data-post-id', 'viewer:repost');
+    expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button')).toHaveLength(5);
+  });
+
   it('keeps saved membership on the repost while actions address the original', () => {
     mockUsePostCounts.mockReturnValue({
       postCounts: { tags: 0, unique_tags: 0, replies: 1, reposts: 1 },

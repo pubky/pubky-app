@@ -444,12 +444,12 @@ describe('CollectionHero', () => {
     expect(layoutButton.compareDocumentPosition(tagButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('hides the temporary layout override from the collection owner', () => {
+  it('shows the temporary layout override to the collection owner', () => {
     setAuthStore(AUTHOR_PUBKY);
 
     renderHero();
 
-    expect(screen.queryByRole('button', { name: /Layout: Grid/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Layout: Grid/ })).toBeInTheDocument();
   });
 
   it('shows a skeleton (not the raw pubky) for the owner name while the profile is null', () => {

@@ -174,6 +174,7 @@ const COLLECTION_STREAM_ID = buildCollectionItemsStreamId('author-pubky', 'colle
 const gridLayoutResolution: FeedLayoutResolution = {
   requestedLayout: LAYOUT.COLUMNS,
   effectiveLayout: LAYOUT.COLUMNS,
+  isMasonryActive: false,
   isVisualRequested: false,
   isVisualActive: false,
   isGridActive: true,
@@ -184,6 +185,7 @@ const visualGridLayoutResolution: FeedLayoutResolution = {
   ...gridLayoutResolution,
   requestedLayout: LAYOUT.VISUAL,
   effectiveLayout: LAYOUT.VISUAL,
+  isMasonryActive: false,
   isVisualRequested: true,
   isVisualActive: true,
 };

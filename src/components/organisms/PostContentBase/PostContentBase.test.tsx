@@ -219,13 +219,13 @@ describe('PostContentBase', () => {
     );
   });
 
-  it('renders PostContentBlurred when is_blurred is true', () => {
+  it.each(['default', 'masonry'] as const)('keeps moderated content hidden in %s', (mediaVariant) => {
     mockUsePostDetails.mockReturnValue({
       postDetails: createMockPostDetails({ content: 'Test content', is_blurred: true }),
       isLoading: false,
     });
 
-    render(<PostContentBase postId="post-123" className="custom-class" />);
+    render(<PostContentBase postId="post-123" className="custom-class" mediaVariant={mediaVariant} />);
 
     expect(screen.getByTestId('post-content-blurred')).toBeInTheDocument();
     expect(mockPostContentBlurred).toHaveBeenCalledWith({ postId: 'post-123', className: 'custom-class' }, undefined);

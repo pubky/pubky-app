@@ -449,7 +449,7 @@ function CollectionHeroContent({
               </Button>
             </>
           )}
-          {!isOwn && <CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />}
+          {!isReorderActive && <CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />}
           {tagToggle}
         </Container>
       </CardContent>

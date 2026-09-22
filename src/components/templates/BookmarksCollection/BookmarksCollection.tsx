@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
+import type { CollectionViewLayout } from '@/config/collections';
 import { useBookmarksCollectionSummary } from '@/hooks/useBookmarksCollectionSummary/useBookmarksCollectionSummary';
 import { BookmarksHero } from '@/organisms/Bookmarks/BookmarksHero/BookmarksHero';
 import { BookmarksItems } from '@/organisms/Bookmarks/BookmarksItems/BookmarksItems';
@@ -8,6 +10,7 @@ import { CollectionsSections } from '@/organisms/Collections/CollectionsSections
 import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 
 export function BookmarksCollection() {
+  const [layout, setLayout] = useState<CollectionViewLayout>('grid');
   const { avatarName, avatarSeed, avatarUrl, bookmarkCount, isProfileResolved } = useBookmarksCollectionSummary();
 
   return (
@@ -20,8 +23,11 @@ export function BookmarksCollection() {
     >
       <Container className="gap-12">
         <BookmarksItems
+          layout={layout}
           header={
             <BookmarksHero
+              layout={layout}
+              onLayoutChange={setLayout}
               avatarName={avatarName}
               avatarSeed={avatarSeed}
               avatarUrl={avatarUrl}

@@ -104,6 +104,14 @@ describe('PostInlineTagsActions', () => {
     onRepostClick: vi.fn(),
   };
 
+  it('omits the empty add-tag row in Masonry while retaining the tag panel', () => {
+    render(<PostInlineTagsActions {...defaultProps} presentation="masonry" />);
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-show-add-button', 'false');
+    expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-show-count', 'true');
+    fireEvent.click(screen.getByTestId('tag-button'));
+    expect(screen.getByTestId('post-tags-panel')).toBeInTheDocument();
+  });
+
   it('renders the collapsed inline tags list by default', () => {
     render(<PostInlineTagsActions {...defaultProps} />);
 

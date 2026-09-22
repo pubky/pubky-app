@@ -104,7 +104,9 @@ export function PostMain({
   pinActionsToBottom = false,
   isNavigable = true,
   showFullContentInListLayout = false,
+  presentation = 'default',
 }: PostMainProps) {
+  const isMasonry = presentation === 'masonry';
   const effectiveTagsLayout = useEffectiveTagsLayout();
   const isWideLayout = effectiveTagsLayout === 'side';
   const isListLayout = effectiveTagsLayout === 'list';
@@ -165,7 +167,12 @@ export function PostMain({
         overrideDefaults
         onClick={isNavigable ? (e) => handlePostClick(displayedPostId, e) : undefined}
         onAuxClick={isNavigable ? (e) => handlePostAuxClick(displayedPostId, e) : undefined}
-        className={cn('relative flex min-w-0 @max-xl/grid:h-full', isNavigable && 'cursor-pointer', isReply && 'pl-3')}
+        className={cn(
+          'relative flex min-w-0',
+          !isMasonry && '@max-xl/grid:h-full',
+          isNavigable && 'cursor-pointer',
+          isReply && 'pl-3',
+        )}
       >
         {isReply && (
           <Container overrideDefaults className="absolute top-0 bottom-0 left-0 w-3">
@@ -208,8 +215,9 @@ export function PostMain({
               ) : (
                 <CardContent
                   className={cn(
-                    'flex min-w-0 flex-col @max-xl/grid:flex-1',
-                    isWideLayout || isListLayout ? 'p-0' : 'gap-4 p-6',
+                    'flex min-w-0 flex-col',
+                    !isMasonry && '@max-xl/grid:flex-1',
+                    isWideLayout || isListLayout ? 'p-0' : isMasonry ? 'gap-4 p-4' : 'gap-4 p-6',
                   )}
                 >
                   {isListLayout ? (
@@ -277,9 +285,12 @@ export function PostMain({
                     </Container>
                   ) : (
                     <>
-                      {showDisplayedPostHeader && <PostHeader postId={displayedPostId} />}
-                      <PostContent postId={displayedPostId} />
+                      {showDisplayedPostHeader && (
+                        <PostHeader postId={displayedPostId} {...(isMasonry ? { size: 'compact' as const } : {})} />
+                      )}
+                      <PostContent postId={displayedPostId} mediaVariant={isMasonry ? 'masonry' : 'default'} />
                       <PostInlineTagsActions
+                        presentation={presentation}
                         postId={displayedPostId}
                         savePostId={postId}
                         onReplyClick={openReplyDialog}

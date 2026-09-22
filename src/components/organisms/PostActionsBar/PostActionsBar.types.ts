@@ -8,7 +8,7 @@ export interface PostActionsBarProps {
   onReplyClick?: () => void;
   onRepostClick?: () => void;
   className?: string;
-  variant?: 'default' | 'visual';
+  variant?: 'default' | 'visual' | 'masonry';
 }
 
 export interface ActionButtonConfig {

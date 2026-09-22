@@ -3,14 +3,22 @@ import { useEffect, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { FileController } from '@/controllers/file/file';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
+import { cn } from '@/libs/utils/utils';
 import { PostAttachmentsAudios } from '@/molecules/PostAttachmentsAudios/PostAttachmentsAudios';
 import { PostAttachmentsGenericFiles } from '@/molecules/PostAttachmentsGenericFiles/PostAttachmentsGenericFiles';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
+import { PostMediaCarousel } from '@/molecules/PostMediaCarousel/PostMediaCarousel';
 import { toast } from '@/molecules/Toaster/toast';
 import { categorizeAttachments, splitAttachmentsByMediaType } from './PostAttachments.helpers';
 import type { AttachmentConstructed, CategorizedAttachments, PostAttachmentsProps } from './PostAttachments.types';
 
-export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 'default' }: PostAttachmentsProps) => {
+export const PostAttachments = ({
+  attachments,
+  localAttachments,
+  mediaVariant = 'default',
+  className,
+  children,
+}: PostAttachmentsProps) => {
   const mediaContainerRef = usePauseMediaOutsideViewport();
   const [imagesAndVideos, setImagesAndVideos] = useState<AttachmentConstructed[]>([]);
   const [audios, setAudios] = useState<AttachmentConstructed[]>([]);
@@ -58,16 +66,29 @@ export const PostAttachments = ({ attachments, localAttachments, mediaVariant = 
     };
   }, [attachments, localAttachments]);
 
-  if (!imagesAndVideos.length && !audios.length && !genericFiles.length) return null;
+  if (!imagesAndVideos.length && !audios.length && !genericFiles.length && !children) return null;
 
   return (
-    <Container ref={mediaContainerRef} className="gap-3">
+    <Container ref={mediaContainerRef} className={cn('gap-3', className)}>
       {imagesAndVideos.length ? (
         <PostAttachmentsImagesAndVideos
           imagesAndVideos={imagesAndVideos}
-          {...(mediaVariant !== 'default' ? { variant: mediaVariant } : {})}
+          {...(mediaVariant === 'list' ? { variant: mediaVariant } : {})}
+          renderTrigger={
+            mediaVariant === 'masonry'
+              ? ({ imagesAndVideos, openPreview, isPreviewOpen }) => (
+                  <PostMediaCarousel
+                    key={imagesAndVideos.map((media) => media.urls.main).join(',')}
+                    media={imagesAndVideos}
+                    onOpenPreview={openPreview}
+                    isPreviewOpen={isPreviewOpen}
+                  />
+                )
+              : undefined
+          }
         />
       ) : null}
+      {children}
       {audios.length ? <PostAttachmentsAudios audios={audios} /> : null}
       {genericFiles.length ? <PostAttachmentsGenericFiles genericFiles={genericFiles} /> : null}
     </Container>

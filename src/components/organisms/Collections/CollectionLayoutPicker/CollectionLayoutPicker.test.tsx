@@ -1,14 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
+import { COLLECTION_LAYOUT, type CollectionViewLayout } from '@/config/collections';
 import { CollectionLayoutPicker } from './CollectionLayoutPicker';
 
 function renderPicker({
   layout = COLLECTION_LAYOUT.GRID,
   onLayoutChange = vi.fn(),
 }: {
-  layout?: CollectionLayout;
-  onLayoutChange?: (layout: CollectionLayout) => void;
+  layout?: CollectionViewLayout;
+  onLayoutChange?: (layout: CollectionViewLayout) => void;
 } = {}) {
   const result = render(<CollectionLayoutPicker layout={layout} onLayoutChange={onLayoutChange} />);
   return { ...result, onLayoutChange };
@@ -39,10 +39,10 @@ describe('CollectionLayoutPicker', () => {
     expect(onLayoutChange).toHaveBeenCalledWith(COLLECTION_LAYOUT.LIST);
   });
 
-  it('hides the override trigger below the desktop breakpoint', () => {
+  it('makes the viewing layout available on mobile', () => {
     renderPicker();
 
-    expect(screen.getByRole('button', { name: 'Layout: Grid' })).toHaveClass('hidden', 'lg:inline-flex');
+    expect(screen.getByRole('button', { name: 'Layout: Grid' })).not.toHaveClass('hidden');
   });
 
   it('uses the standard List icon in the trigger', () => {
@@ -85,5 +85,22 @@ describe('CollectionLayoutPicker', () => {
     await screen.findByRole('menuitem', { name: 'Grid' });
 
     expect(document.body).toMatchSnapshot();
+  });
+});
+
+describe('CollectionLayoutPicker Masonry', () => {
+  it('reports a Masonry selection and closes the picker', async () => {
+    const { onLayoutChange } = renderPicker();
+    openDesktopPicker();
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Masonry' }));
+    expect(onLayoutChange).toHaveBeenCalledExactlyOnceWith('masonry');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('limits Bookmarks options to Grid and Masonry', async () => {
+    render(<CollectionLayoutPicker layout="masonry" onLayoutChange={vi.fn()} layouts={['grid', 'masonry']} />);
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Layout: Masonry' }), { button: 0, ctrlKey: false });
+    await screen.findByRole('menuitem', { name: 'Masonry' });
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Grid', 'Masonry']);
   });
 });
